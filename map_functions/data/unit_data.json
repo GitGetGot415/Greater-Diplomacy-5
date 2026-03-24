@@ -1,0 +1,18 @@
+{
+    "Chadian Toyota Hilux": {
+        "health": 50,
+        "attack": 10,
+        "defense": 1,
+        "speed": 3,
+        "cost": 100,
+        "order": {}
+    },
+    "Libyan T-55": {
+        "health": 100,
+        "attack": 20,
+        "defense": 10,
+        "speed": 2,
+        "cost": 100,
+        "order": {}
+    }
+}

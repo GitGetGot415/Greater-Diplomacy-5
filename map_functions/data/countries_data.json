@@ -1,0 +1,50 @@
+{   
+    "ocean": {
+        "color": [20, 40, 80],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": false,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "lakes": {
+        "color": [40, 80, 160],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": false,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "rome": {
+        "color": [200, 30, 30],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "carthage": {
+        "color": [30, 150, 30],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "gaul": {
+        "color": [150, 100, 50],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "empty": {
+        "color": [255, 255, 255],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": false,
+        "at_war_with": [],
+        "allied_with": []
+    }
+}

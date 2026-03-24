@@ -1,0 +1,9 @@
+__pycache__/
+
+*.png
+*.pyc
+*.json
+!countries_data.json
+!settings_config.json
+!unit_data.json
+*.txt
