@@ -47,7 +47,9 @@ class CountryEditor:
             "color": self.current_color,
             "money": int(self.money_ent.get() or 0),
             "manpower": 0,
-            "is_playable": True
+            "is_playable": True,
+            "at_war_with": [],
+            "allied_with": []
         }
         
         with open(PATH, "w") as f:

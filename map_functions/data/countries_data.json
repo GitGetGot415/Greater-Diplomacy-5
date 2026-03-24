@@ -15,6 +15,14 @@
         "at_war_with": [],
         "allied_with": []
     },
+    "empty": {
+        "color": [255, 255, 255],
+        "money": 0,
+        "manpower": 0,
+        "is_playable": false,
+        "at_war_with": [],
+        "allied_with": []
+    },
     "rome": {
         "color": [200, 30, 30],
         "money": 0,
@@ -36,14 +44,6 @@
         "money": 0,
         "manpower": 0,
         "is_playable": true,
-        "at_war_with": [],
-        "allied_with": []
-    },
-    "empty": {
-        "color": [255, 255, 255],
-        "money": 0,
-        "manpower": 0,
-        "is_playable": false,
         "at_war_with": [],
         "allied_with": []
     }
