@@ -1,4 +1,5 @@
 import pygame
+import random
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler
 from map_functions.data import load_map, save_map
@@ -6,6 +7,7 @@ from map_functions.logic import edit_province_ownership, political_refresher, tu
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
 from map_functions.data import country_io
+from map_functions.logic import map_utils
 from map_functions.logic import diplomacy_logic
 
 class Map(GameState):
@@ -141,7 +143,24 @@ class Map(GameState):
         political_refresher.refresh_political_map(self)
 
     def conquer_province(self): 
-        edit_province_ownership.conquer_province(self)
+        """
+        Maintains the original behavior: picks a random nation 
+        and assigns it to the currently selected province.
+        """
+        if self.selected_province:
+            
+            # 1. Get the list of possible countries (just like the old script did)
+            # nations_dict = country_io.get_nation_colors()
+            # nations_list = list(nations_dict.keys())
+            
+            # To match your previous specific logic exactly:
+            nations_list = ["rome", "gaul", "carthage"] 
+            
+            # 2. Pick one at random
+            new_owner = random.choice(nations_list)
+            
+            # 3. Call the refactored function with the necessary arguments
+            edit_province_ownership.conquer_province(self, self.selected_province, new_owner)
 
     def exit_to_menu(self): 
         self.next_state, self.done = "MENU", True

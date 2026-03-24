@@ -19,40 +19,41 @@ def process_next_turn(self):
 
 def process_movement(self):
     moves_to_execute = []
-    for color_key, province in self.map_data.items():
-        # Using a list copy to safely modify the list
+    for province in self.map_data.values():
         units = list(province.get("units", []))
-        province["units"] = [] # Temporarily clear to redistribute
+        province["units"] = [] 
         
         remaining_in_tile = []
         for unit in units:
             order = unit.get("order")
             if order and order.get("type") == "MOVE":
                 moves_to_execute.append((unit, order["target_id"]))
-                # Clear order so they don't move again next turn unless told
                 unit["order"] = {} 
             else:
                 remaining_in_tile.append(unit)
-        
         province["units"] = remaining_in_tile
 
-    # Place moving units
+    # Place moving units and handle Annexation/Combat
     for unit, target_id in moves_to_execute:
         target_province = self.id_to_province.get(target_id)
         if target_province:
-            # Re-check logic here if you want to be strict, 
-            # otherwise units just teleport to the new list:
+            # Simple Combat Check: If destination has units from a country at war with us
+            # For now, let's just stack them (Combat logic usually goes here)
             target_province["units"].append(unit)
             
-            # Simple occupancy logic: If land unit moves into empty land, it takes it
+            # --- ANNEXATION & VISUAL UPDATE ---
+            # Check if this is a land unit moving onto a non-water tile
+            WATER_TYPES = ["ocean", "coastal_sea", "inland_sea", "lakes"]
             if "boat" not in unit["type"].lower() and "frigate" not in unit["type"].lower():
-                WATER_TYPES = ["ocean", "coastal_sea", "inland_sea", "lakes"]
                 if target_province.get("terrain") not in WATER_TYPES:
-                    # If empty or at war, take the province
                     old_owner = target_province.get("owner", "empty")
                     player_data = self.nation_data.get(unit["owner"], {})
+                    
+                    # Annex if tile is empty or owned by an enemy
                     if old_owner == "empty" or old_owner in player_data.get("at_war_with", []):
-                        target_province["owner"] = unit["owner"]
+                        from map_functions.logic import edit_province_ownership
+                        # Trigger the visual update we refactored above
+                        edit_province_ownership.conquer_province(self, target_province, unit["owner"])
 
 def process_economy(self):
     """Calculates income for ALL countries based on the provinces they own."""
