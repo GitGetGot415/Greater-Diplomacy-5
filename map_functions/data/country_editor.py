@@ -61,7 +61,8 @@ class CountryEditor:
     def refresh_list(self):
         self.listbox.delete(0, tk.END)
         for name in self.data:
-            self.listbox.insert(tk.END, f"{name} (Gold: {self.data[name]['money']})")
+            # self.listbox.insert(tk.END, f"{name} (Gold: {self.data[name]['money']})")
+            self.listbox.insert(tk.END, f"{name} (Color: {self.data[name]['color']})")
 
 if __name__ == "__main__":
     root = tk.Tk()
