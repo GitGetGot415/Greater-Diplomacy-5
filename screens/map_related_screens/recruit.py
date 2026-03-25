@@ -45,7 +45,8 @@ class Recruit_Screen(GameState):
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.exit_to_map),
             Button(300, 300, "large", "green", "Recruit Hilux (100g)", self.buy_toyota),
-            Button(300, 400, "large", "blue", "Recruit T-55 (300g)", self.buy_tank)
+            Button(300, 400, "large", "blue", "Recruit T-55 (300g)", self.buy_tank),
+            Button(300, 500, "large", "blue", "Recruit Main Battle Tank (300g)", self.buy_MBT)
         ]
 
     def buy_toyota(self):
@@ -59,6 +60,12 @@ class Recruit_Screen(GameState):
             order = {"unit_type": "Libyan T-55", "days_remaining": 10}
             self.target_province["deployment_queue"].append(order)
             self.map_screen.show_feedback("T-55 Ordered!")
+    
+    def buy_MBT(self):
+        if self.target_province:
+            order = {"unit_type": "Main Battle Tank", "days_remaining": 10}
+            self.target_province["deployment_queue"].append(order)
+            self.map_screen.show_feedback("MBT Ordered!")
 
     """def additional_draw(self, surface):
         if self.target_province:

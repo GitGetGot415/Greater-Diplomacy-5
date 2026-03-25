@@ -77,7 +77,8 @@ def draw_unit_icon(self, surface, sx, sy, province):
     unit_owner = primary_unit_data["owner"]
     
     # Determine icon by type
-    symbol_name = "hilux_icon" if "Toyota" in unit_type else "tank_icon"
+    # symbol_name = "hilux_icon" if "Toyota" in unit_type else "tank_icon"
+    symbol_name = unit_type
     symbol = symbol_loader.get_symbol(symbol_name, self.camera.zoom)
     
     if symbol:

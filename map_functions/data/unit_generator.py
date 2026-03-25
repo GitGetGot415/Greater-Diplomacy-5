@@ -13,7 +13,10 @@ def generate_unit_json(health, attack, defense, speed, cost):
 
 data_to_file = {
     "Chadian Toyota Hilux": generate_unit_json(50, 10, 1, 3, 100),
-    "Libyan T-55": generate_unit_json(100, 20, 10, 2, 100)
+    "Libyan T-55": generate_unit_json(100, 20, 10, 2, 100),
+    "Militia": generate_unit_json(9, 6, 0, 1, 100),
+    "Infantry": generate_unit_json(15, 9, 0, 1, 100),
+    "Main Battle Tank": generate_unit_json(15, 9, 0, 2, 100)
 }
 
 # Define the filename

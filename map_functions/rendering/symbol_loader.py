@@ -5,7 +5,7 @@ SYMBOLS = {}
 
 def load_symbols():
     """Load small icons for units, factories, etc."""
-    path = "assets/symbols/"
+    path = "assets"
     if not os.path.exists(path):
         os.makedirs(path)
         return
@@ -16,7 +16,8 @@ def load_symbols():
             # Load and keep transparency
             img = pygame.image.load(os.path.join(path, file)).convert_alpha()
             # Scale it to a base size (e.g., 32x32)
-            SYMBOLS[name] = pygame.transform.scale(img, (32, 32))
+            # SYMBOLS[name] = pygame.transform.scale(img, (32, 32))
+            SYMBOLS[name] = img
 
 def get_symbol(name, zoom):
     """Returns a scaled version of the requested icon."""

@@ -9,6 +9,7 @@ from screens.map_related_screens.recruit import Recruit_Screen # Renamed from Ne
 from screens.map_related_screens.orders import Orders_Screen   # Renamed from New_Game
 from screens.map_related_screens.navy_recruit import Navy_Recruit_Screen
 from map_functions.data import keybind_io
+from map_functions.rendering import symbol_loader
 
 pygame.display.set_caption("Greater Diplomacy Pygame Edition")
 
@@ -17,6 +18,9 @@ class Controller:
         pygame.init() # Ensure pygame is init before accessing K_ constants
         self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
         
+        # 0. Load symbols
+        symbol_loader.load_symbols()
+
         # 1. Define Hardcoded Defaults
         default_keys = {
             "BACK": pygame.K_ESCAPE,

@@ -1,6 +1,7 @@
 import json
 import os
 from map_functions.logic import diplomacy_logic
+from map_functions.logic import edit_province_ownership
 
 def process_next_turn(self):
     days_to_advance = 5
@@ -112,7 +113,6 @@ def process_movement(self):
                 # Only conquer if there are NO defenders from an enemy nation
                 if not defenders:
                     if dest_owner == "empty" or dest_owner in player_data.get("at_war_with", []):
-                        from map_functions.logic import edit_province_ownership
                         edit_province_ownership.conquer_province(self, target_prov, unit["owner"])
 
                 # Stop if an enemy was present
