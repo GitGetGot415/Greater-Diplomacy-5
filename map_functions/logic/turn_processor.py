@@ -9,17 +9,66 @@ def process_next_turn(self):
     # 1. Process Diplomacy
     diplomacy_logic.process_diplomacy_turn(self)
 
+    # 2. Process Movement (Handles the "stop to fight" logic)
     process_movement(self)
     
-    # 2. Process Economy
+    # 3. Process Combat (New: Damage calculations)
+    process_combat(self)
+    
+    # 4. Process Economy
     process_economy(self)
     
-    # 3. Process Recruitment
+    # 5. Process Recruitment
     process_recruitment(self, days_to_advance)
+
+def process_combat(self):
+    """Calculates turn-based damage for units sharing a province."""
+    for province in self.map_data.values():
+        units = province.get("units", [])
+        if len(units) < 2:
+            continue
+            
+        # Group units by owner to calculate total attack per side
+        sides = {}
+        for u in units:
+            owner = u["owner"]
+            if owner not in sides:
+                sides[owner] = {"units": [], "total_atk": 0}
+            sides[owner]["units"].append(u)
+            # Fetch attack power (default to 5 if missing)
+            sides[owner]["total_atk"] += u.get("attack", 5)
+
+        owners = list(sides.keys())
+        for i in range(len(owners)):
+            for j in range(i + 1, len(owners)):
+                nation_a = owners[i]
+                nation_b = owners[j]
+                
+                # Check if they are actually at war
+                at_war = nation_b in self.nation_data.get(nation_a, {}).get("at_war_with", [])
+                
+                if at_war:
+                    # Side A attacks Side B
+                    apply_group_damage(sides[nation_a]["total_atk"], sides[nation_b]["units"])
+                    # Side B attacks Side A
+                    apply_group_damage(sides[nation_b]["total_atk"], sides[nation_a]["units"])
+
+        # Remove dead units (HP <= 0)
+        province["units"] = [u for u in units if u.get("health", 0) > 0]
+
+def apply_group_damage(total_atk, target_units):
+    """Distributes total attack among target units, reduced by their individual defense."""
+    if not target_units: return
+    # Simple distribution: Divide total attack by number of units
+    damage_per_unit = total_atk / len(target_units)
+    
+    for u in target_units:
+        defense = u.get("defense", 0)
+        actual_dmg = max(0, damage_per_unit - defense)
+        u["health"] -= actual_dmg
 
 def process_movement(self):
     moving_units = []
-    # 1. Clear units from map and store those with orders
     for province in self.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
@@ -32,10 +81,8 @@ def process_movement(self):
         province["units"] = units_to_keep
 
     if not moving_units: return
-
     max_speed = max(unit.get("speed", 1) for unit in moving_units)
 
-    # 2. Process steps
     for step in range(max_speed):
         for unit in moving_units:
             order = unit.get("order")
@@ -48,52 +95,39 @@ def process_movement(self):
             player_data = self.nation_data.get(unit["owner"], {})
             dest_owner = target_prov.get("owner", "empty")
             
-            at_war = dest_owner in player_data.get("at_war_with", [])
-            is_allied = dest_owner in player_data.get("allied_with", [])
-            is_self = dest_owner == unit["owner"]
-            is_empty = dest_owner == "empty"
+            # Check for existing defenders before moving
+            # We look for units belonging to anyone NOT the mover and NOT an ally
+            defenders = [u for u in target_prov.get("units", []) 
+                        if u["owner"] != unit["owner"] and u["owner"] not in player_data.get("allied_with", [])]
 
-            # COMBAT CHECK: Is an enemy unit physically present right now?
-            # We check both stationary units and units that already moved this step
-            enemy_unit_present = any(u["owner"] in player_data.get("at_war_with", []) 
-                                   for u in target_prov.get("units", []))
+            can_enter = dest_owner in ["empty", "None", unit["owner"]] or \
+                        dest_owner in player_data.get("at_war_with", []) or \
+                        dest_owner in player_data.get("allied_with", [])
 
-            # Logic: Can enter if empty, allied, self, or at war.
-            can_enter_territory = is_empty or is_self or at_war or is_allied
-            
-            if can_enter_territory:
-                # Move unit logically
+            if can_enter:
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
-                # Capture logic
-                if is_empty or at_war:
-                    from map_functions.logic import edit_province_ownership
-                    edit_province_ownership.conquer_province(self, target_prov, unit["owner"])
+                # --- UPDATED ANNEXATION LOGIC ---
+                # Only conquer if there are NO defenders from an enemy nation
+                if not defenders:
+                    if dest_owner == "empty" or dest_owner in player_data.get("at_war_with", []):
+                        from map_functions.logic import edit_province_ownership
+                        edit_province_ownership.conquer_province(self, target_prov, unit["owner"])
 
-                # STOP LOGIC: If we moved onto a tile with an enemy unit, 
-                # we MUST stop here to fight, regardless of remaining speed/path.
-                if enemy_unit_present:
+                # Stop if an enemy was present
+                if defenders:
                     order["path"] = [] 
             else:
-                # BLOCKED by neutral/non-allied borders
                 order["path"] = []
 
-        # 3. CRITICAL: Place units back into provinces briefly after each sub-step
-        # This ensures that units moving later in the same "step" see units that moved earlier
+        # Sync units back to provinces so units moving later in the same sub-step "see" each other
         for unit in moving_units:
             prov = self.id_to_province.get(unit["_current_province_id"])
-            if unit not in prov["units"]:
-                prov["units"].append(unit)
-        
-        # Now clear them again for the next sub-step (except those who finished)
+            if unit not in prov["units"]: prov["units"].append(unit)
         if step < max_speed - 1:
             for province in self.map_data.values():
                 province["units"] = [u for u in province["units"] if u not in moving_units]
-
-    # Final cleanup of temp variables
-    for unit in moving_units:
-        if "_current_province_id" in unit: del unit["_current_province_id"]
 
 def process_economy(self):
     """Calculates income for ALL countries based on the provinces they own."""
@@ -163,6 +197,8 @@ def process_recruitment(self, days_passed):
                     "health": max_health,
                     "max_health": max_health, # Useful for showing health bars later
                     "speed": unit_speed, # <--- ADD SPEED HERE
+                    "attack": stats.get("attack", 5),   # ADDED
+                    "defense": stats.get("defense", 0), # ADDED
                     "order": {"type": "MOVE", "path": []} # Initialize with an empty path list
                 }
                 
