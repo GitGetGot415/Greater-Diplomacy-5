@@ -51,6 +51,11 @@ class CountryEditor:
         
         self.data[name] = {
             "color": self.current_color,
+            "research": {
+                "cavalry": 0,
+                "destroyer": 0,
+                "armored_car": 0
+            },
             "money": 0,
             "manpower": 0,
             "materials": 0, 

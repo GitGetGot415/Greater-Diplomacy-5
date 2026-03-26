@@ -281,3 +281,8 @@ class Map(GameState):
 
     def additional_draw(self, surface): 
         map_renderer.draw_map_screen(self, surface)
+    
+    def open_research(self):
+        """Transition to research screen without needing a province."""
+        self.next_state = "RESEARCH"
+        self.done = True

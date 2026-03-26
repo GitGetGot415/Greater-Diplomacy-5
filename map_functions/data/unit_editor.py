@@ -20,7 +20,11 @@ class UnitEditor:
             ("Cost (Money)", "cost_money"),
             ("Cost (Materials)", "cost_materials"),
             ("Cost (Manpower)", "cost_manpower"),
-            ("Fuel Usage", "fuel_usage")
+            ("Cost (Money)", "cost_fuel"),
+            ("Upkeep (Money)", "upkeep_money"),
+            ("Upkeep (Materials)", "upkeep_materials"),
+            ("Upkeep (Manpower)", "upkeep_manpower"),
+            ("Upkeep (Fuel)", "upkeep_fuel")
         ]
 
         self.entries = {}
@@ -55,7 +59,12 @@ class UnitEditor:
                 "cost_money": int(self.entries["cost_money"].get() or 0),
                 "cost_materials": int(self.entries["cost_materials"].get() or 0),
                 "cost_manpower": int(self.entries["cost_manpower"].get() or 0),
-                "fuel_usage": int(self.entries["fuel_usage"].get() or 0),
+                "cost_fuel": int(self.entries["cost_fuel"].get() or 0),
+                "upkeep_money": int(self.entries["upkeep_money"].get() or 0),
+                "upkeep_materials": int(self.entries["upkeep_materials"].get() or 0),
+                "upkeep_manpower": int(self.entries["upkeep_manpower"].get() or 0),
+                "upkeep_fuel": int(self.entries["upkeep_fuel"].get() or 0),
+                "naval_unit": False,
                 "order": {}
             }
             with open(PATH, "w") as f:

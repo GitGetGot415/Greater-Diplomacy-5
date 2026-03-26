@@ -10,6 +10,7 @@ from screens.map_related_screens.orders import Orders_Screen   # Renamed from Ne
 from screens.map_related_screens.navy_recruit import Navy_Recruit_Screen
 from map_functions.data import keybind_io
 from map_functions.rendering import symbol_loader
+from screens.map_related_screens.research import Research_Screen
 
 pygame.display.set_caption("Greater Diplomacy Pygame Edition")
 
@@ -37,7 +38,8 @@ class Controller:
             "MAP": Map(),
             "RECRUIT": Recruit_Screen(),
             "ORDERS": Orders_Screen(),
-            "NAVY": Navy_Recruit_Screen()
+            "NAVY": Navy_Recruit_Screen(),
+            "RESEARCH": Research_Screen()
         }
         self.active_state = self.states["MENU"]
 
@@ -51,6 +53,12 @@ class Controller:
             map_ref = self.states["MAP"]
             if map_ref.selected_province:
                 self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)
+        
+        # NEW: Separate handoff for Research since it doesn't care about provinces
+        if next_state_name == "RESEARCH":
+            map_ref = self.states["MAP"]
+            # We create a simpler start method that only takes the map reference
+            self.states["RESEARCH"].start_research(map_ref)
 
         # 2. Map Persistence
         if next_state_name == "MAP":

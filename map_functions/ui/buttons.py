@@ -11,6 +11,10 @@ def render_buttons(self):
             Button(240, SCREEN_HEIGHT - 50, "small", "grey", "Reset", self.reset_view),
             Button(360, SCREEN_HEIGHT - 50, "small", "grey", "Full Refresh", self.refresh_political_map),
             Button(480, SCREEN_HEIGHT - 50, "small", "grey", "Save Map", self.save_map_data),
+
+            # NEW: Persistent Research Button (placed next to Save Map)
+            Button(590, SCREEN_HEIGHT - 50, "small", "blue", "Research", self.open_research),
+
             Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "green", "Next Turn", self.advance_time),
             Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "grey", "View Mode", self.cycle_secondary_mode),
         ]
