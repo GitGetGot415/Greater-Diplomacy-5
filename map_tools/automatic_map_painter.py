@@ -129,7 +129,7 @@ def run_generator(progress_var, root):
             "is_coastal": is_coastal,  # <--- New Field added here
             "center": data["center"],
             "neighbors": list(neighbors),
-            "owner": "empty",
+            "owner": "Unclaimed",
             "units": [],
             "deployment_queue": [],
             "orders": [],

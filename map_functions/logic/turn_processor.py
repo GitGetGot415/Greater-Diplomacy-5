@@ -97,7 +97,7 @@ def check_for_post_combat_captures(self):
         if not units:
             continue
             
-        current_owner = province.get("owner", "empty")
+        current_owner = province.get("owner", "Unclaimed")
         
         # Get a list of unique owners of units currently in the tile
         unit_owners = list(set(u["owner"] for u in units))
@@ -113,10 +113,10 @@ def check_for_post_combat_captures(self):
         if occupier != current_owner:
             player_data = self.nation_data.get(occupier, {})
             at_war = current_owner in player_data.get("at_war_with", [])
-            is_empty = current_owner in ["empty", "None", ""]
+            is_unclaimed = current_owner in ["Unclaimed", "None", ""]
             
-            # Flip ownership if the tile is empty or if they are at war with the owner
-            if is_empty or at_war:
+            # Flip ownership if the tile is unclaimed or if they are at war with the owner
+            if is_unclaimed or at_war:
                 edit_province_ownership.conquer_province(self, province, occupier)
                 
 def apply_group_damage(total_atk, target_units):
@@ -156,14 +156,14 @@ def process_movement(self):
             if not target_prov: continue
 
             player_data = self.nation_data.get(unit["owner"], {})
-            dest_owner = target_prov.get("owner", "empty")
+            dest_owner = target_prov.get("owner", "Unclaimed")
             
             # Check for existing defenders before moving
             # We look for units belonging to anyone NOT the mover and NOT an ally
             defenders = [u for u in target_prov.get("units", []) 
                         if u["owner"] != unit["owner"] and u["owner"] not in player_data.get("allied_with", [])]
 
-            can_enter = dest_owner in ["empty", "None", unit["owner"]] or \
+            can_enter = dest_owner in ["Unclaimed", "None", unit["owner"]] or \
                         dest_owner in player_data.get("at_war_with", []) or \
                         dest_owner in player_data.get("allied_with", [])
 
@@ -174,7 +174,7 @@ def process_movement(self):
                 # --- UPDATED ANNEXATION LOGIC ---
                 # Only conquer if there are NO defenders from an enemy nation
                 if not defenders:
-                    if dest_owner == "empty" or dest_owner in player_data.get("at_war_with", []):
+                    if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         edit_province_ownership.conquer_province(self, target_prov, unit["owner"])
 
                 # Stop if an enemy was present

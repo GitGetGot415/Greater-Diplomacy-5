@@ -112,9 +112,9 @@ class Orders_Screen(GameState):
             return False
 
         # Diplomacy
-        dest_owner = dest.get("owner", "empty")
+        dest_owner = dest.get("owner", "Unclaimed")
         player_country = self.map_screen.player_country
-        if dest_owner not in ["empty", "None", player_country]:
+        if dest_owner not in ["Unclaimed", "None", player_country]:
             player_data = self.map_screen.nation_data.get(player_country, {})
             if not (dest_owner in player_data.get("at_war_with", []) or dest_owner in player_data.get("allied_with", [])):
                 self.map_screen.show_feedback(f"Neutral {dest_owner} territory!")

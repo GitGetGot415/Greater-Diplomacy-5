@@ -10,7 +10,7 @@ def conquer_province(self, province, new_owner):
         
         # 2. Visual Update
         nations_dict = country_io.get_nation_colors() 
-        new_color = nations_dict.get(new_owner, (255, 255, 255)) # Fallback to white if empty
+        new_color = nations_dict.get(new_owner, (255, 255, 255)) # Fallback to white if unclaimed
         
         map_utils.update_single_province_surface(
             self.political_map, 

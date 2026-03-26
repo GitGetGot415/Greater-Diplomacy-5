@@ -11,10 +11,10 @@ def refresh_political_map(self):
     # Define mapping for water terrain types to their 'pseudo-country' names
     # This matches the terrain types generated in your automatic_map_painter.py
     water_mapping = {
-        "ocean": "ocean",
-        "coastal_sea": "ocean",
-        "inland_sea": "ocean",
-        "lakes": "lakes"
+        "ocean": "Ocean",
+        "coastal_sea": "Ocean",
+        "inland_sea": "Ocean",
+        "lakes": "Lakes"
     }
     
     for color_key, data in self.map_data.items():
@@ -22,7 +22,7 @@ def refresh_political_map(self):
         
         # 1. Determine the visual owner
         if terrain_type in water_mapping:
-            if (terrain_type == "lakes"):
+            if (terrain_type == "Lakes"):
                 print(terrain_type)
             # If it's water, assign it to the visual 'Ocean' or 'Lakes' nation
             owner = water_mapping[terrain_type]
@@ -30,11 +30,11 @@ def refresh_political_map(self):
             data["owner"] = owner
         else:
             # Otherwise, use the standard nation owner
-            owner = data.get("owner", "empty")
+            owner = data.get("owner", "Unclaimed")
             
         # 2. Get the color from your nation_colors dictionary
         # Fallback to white if the nation name isn't found
-        if not (owner == "ocean" or owner == "empty"):
+        if not (owner == "Ocean" or owner == "Unclaimed"):
             print(owner)
         if (owner == "Lakes" or owner == "lakes"):
             # idk why this isn't working im just gonna bandaid this

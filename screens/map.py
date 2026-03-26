@@ -103,7 +103,7 @@ class Map(GameState):
         self.show_feedback(f"View Mode: {self.secondary_mode}")
         
     def select_player_country(self, province):
-        owner = province.get("owner", "empty")
+        owner = province.get("owner", "Unclaimed")
         # Check if it's a real playable country
         if owner in self.nation_data and self.nation_data[owner].get("is_playable"):
             self.pending_selection = owner
@@ -166,7 +166,7 @@ class Map(GameState):
             # nations_list = list(nations_dict.keys())
             
             # To match your previous specific logic exactly:
-            nations_list = ["rome", "gaul", "carthage"] 
+            nations_list = ["Rome", "Gaul", "Carthage"] 
             
             # 2. Pick one at random
             new_owner = random.choice(nations_list)
@@ -221,7 +221,7 @@ class Map(GameState):
 
         if is_sel:
             self.btn_conquer.visible = True
-            owner = self.selected_province.get("owner", "empty")
+            owner = self.selected_province.get("owner", "Unclaimed")
             player_data = self.nation_data.get(self.player_country, {})
             pending = player_data.get("pending_diplomacy", {})
             
