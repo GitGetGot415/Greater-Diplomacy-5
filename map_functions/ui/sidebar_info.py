@@ -55,7 +55,7 @@ def draw_sidebar_info(self, surface):
                 u_name = u["type"]
                 # If it's infantry, maybe show the level next to the name
                 display_name = f"{u_name} (Lvl {u['level']})" if u.get('level') else u_name
-                txt = self.small_font.render(f" - {display_name} (ATK: {u['attack']})", True, (200, 200, 200))
+                txt = self.small_font.render(f" - {display_name} (ATK: {u['attack']}) (HP: {u['health']}) (DEF: {u['defense']})", True, (200, 200, 200))
                 surface.blit(txt, (30, current_y))
                 current_y += 20
             current_y += 10
