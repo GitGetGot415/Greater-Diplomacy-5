@@ -30,10 +30,12 @@ def draw_unit_info(self, surface):
         surface.blit(txt, (info_rect.x + 15, info_rect.y + 45))
     else:
         for i, unit_data in enumerate(units[:10]):
-            # Accessing keys from the new dictionary format
-            u_name = unit_data["type"].replace("Chadian ", "").replace("Libyan ", "")
-            u_owner = unit_data["owner"]
+            u_name = unit_data["type"]
+            u_owner_id = unit_data["owner"]
             
-            display_text = f"- {u_name} ({u_owner})"
+            # Resolve the owner's Display Name
+            u_owner_display = self.nation_data.get(u_owner_id, {}).get("name", u_owner_id)
+            
+            display_text = f"- {u_name} ({u_owner_display})"
             txt = self.small_font.render(display_text, True, (200, 200, 200))
             surface.blit(txt, (info_rect.x + 15, info_rect.y + 45 + (i * 25)))

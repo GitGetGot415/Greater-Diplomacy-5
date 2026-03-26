@@ -72,7 +72,8 @@ def draw_map_screen(self, surface):
         manpower_surf = self.font.render(f"Manpower: {self.player_manpower}", True, (100, 200, 255))
         surface.blit(manpower_surf, (250, 20))
 
-        name_surf = self.font.render(f"Playing as: {self.player_country.title()}", True, (200, 200, 200))
+        player_display = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
+        name_surf = self.font.render(f"Playing as: {player_display.title()}", True, (200, 200, 200))
         surface.blit(name_surf, (surface.get_width() - name_surf.get_width() - 20, 20))
         
         if self.selected_province: 

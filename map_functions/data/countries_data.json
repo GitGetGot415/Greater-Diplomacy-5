@@ -300,5 +300,488 @@
         "is_playable": true,
         "at_war_with": [],
         "allied_with": []
+    },
+    "Canada": {
+        "name": "Canada",
+        "color": [
+            200,
+            0,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Soviet Union": {
+        "name": "Soviet Union",
+        "color": [
+            128,
+            0,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Hungary": {
+        "name": "Hungary",
+        "color": [
+            255,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Italy": {
+        "name": "Italy",
+        "color": [
+            0,
+            255,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Bulgaria": {
+        "name": "Bulgaria",
+        "color": [
+            0,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Romania": {
+        "name": "Romania",
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Spain": {
+        "name": "Spain",
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Belgium": {
+        "name": "Belgium",
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Netherlands": {
+        "name": "Netherlands",
+        "color": [
+            255,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Luxembourg": {
+        "name": "Luxembourg",
+        "color": [
+            0,
+            128,
+            192
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Ukraine": {
+        "name": "Ukraine",
+        "color": [
+            0,
+            128,
+            255
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Russia": {
+        "name": "Russia",
+        "color": [
+            0,
+            128,
+            64
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Sweden": {
+        "name": "Sweden",
+        "color": [
+            0,
+            128,
+            255
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Czechoslovakia": {
+        "name": "Czechoslovakia",
+        "color": [
+            0,
+            128,
+            192
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Czechia": {
+        "name": "Czechia",
+        "color": [
+            0,
+            128,
+            192
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Slovakia": {
+        "name": "Slovakia",
+        "color": [
+            128,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Turkey": {
+        "name": "Turkey",
+        "color": [
+            255,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Ottoman Empire": {
+        "name": "Ottoman Empire",
+        "color": [
+            128,
+            255,
+            128
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Serbia": {
+        "name": "Serbia",
+        "color": [
+            0,
+            128,
+            192
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Norway": {
+        "name": "Norway",
+        "color": [
+            255,
+            0,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Portugal": {
+        "name": "Portugal",
+        "color": [
+            0,
+            128,
+            0
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "United Kingdom": {
+        "name": "United Kingdom",
+        "color": [
+            255,
+            0,
+            128
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Japan": {
+        "name": "Japan",
+        "color": [
+            255,
+            185,
+            255
+        ],
+        "research": {
+            "cavalry": 0,
+            "destroyer": 0,
+            "armored_car": 0,
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
     }
 }
