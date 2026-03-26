@@ -31,18 +31,24 @@ class Research_Screen(GameState):
         
         res = country_data["research"]
         queue = country_data["research_queue"]
+        queue_count = len(queue)
 
         y_pos = 150
         for tech, level in res.items():
-            # Check if this tech is already being researched
+            # Check if this tech is specifically in the queue
             queued_item = next((item for item in queue if item["tech_name"] == tech), None)
             
             if queued_item:
                 status_text = f"{tech.title()}: Researching... ({queued_item['days_remaining']} days)"
+                color = "green" # Changed to green to show it's active
+                callback = lambda: None
+            elif queue_count >= 2:
+                # Slot limit reached
+                status_text = f"{tech.title()} (Research Slots Full)"
                 color = "grey"
-                callback = lambda: None # Do nothing if already researching
+                callback = lambda: self.map_screen.show_feedback("Maximum 2 research projects allowed!")
             else:
-                status_text = f"Research {tech.title()} (Level {level} -> {level+1})"
+                status_text = f"Research {tech.title()} (Lvl {level} -> {level+1})"
                 color = "blue"
                 callback = lambda t=tech: self.add_to_research_queue(t)
 
@@ -54,18 +60,22 @@ class Research_Screen(GameState):
         player = self.map_screen.player_country
         country_data = self.map_screen.nation_data[player]
         
-        # Determine duration based on current level (it gets harder)
+        # Final safety check for the 2-slot limit
+        if len(country_data.get("research_queue", [])) >= 2:
+            self.map_screen.show_feedback("Research slots full!")
+            return
+
         current_level = country_data["research"].get(tech_name, 0)
-        duration = (current_level + 1) * RESEARCH_BASE_TIME
+        # Using 30 days as a base for this example
+        duration = 30 + (current_level * 15) 
         
         new_project = {
             "tech_name": tech_name,
-            "days_remaining": duration,
-            "target_level": current_level + 1
+            "days_remaining": duration
         }
         
         country_data["research_queue"].append(new_project)
-        self.map_screen.show_feedback(f"Started research on {tech_name.title()}")
+        self.map_screen.show_feedback(f"Started {tech_name.title()}")
         self.refresh_ui()
 
     def exit_to_map(self):

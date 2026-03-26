@@ -29,27 +29,33 @@ def process_next_turn(self):
     process_national_research(self, days_to_advance)
 
 def process_national_research(self, days_passed):
-    """Progresses research for all nations."""
+    """Progresses all active research for all nations simultaneously."""
     for country_name, country_data in self.nation_data.items():
         queue = country_data.get("research_queue", [])
         if not queue:
             continue
 
-        # Process the first item in the queue (Sequential research)
-        current_project = queue[0]
-        current_project["days_remaining"] -= days_passed
+        # We iterate backwards through the queue so we can safely remove items
+        for i in range(len(queue) - 1, -1, -1):
+            project = queue[i]
+            project["days_remaining"] -= days_passed
 
-        if current_project["days_remaining"] <= 0:
-            tech_key = current_project["tech_name"]
-            # Complete research: increment level
-            country_data["research"][tech_key] += 1
-            
-            # Remove from queue
-            queue.pop(0)
-            
-            if country_name == self.player_country:
-                self.show_feedback(f"RESEARCH COMPLETE: {tech_key.replace('_', ' ').title()} Level {country_data['research'][tech_key]}")
+            if project["days_remaining"] <= 0:
+                tech_key = project["tech_name"]
                 
+                # Logic update: Increment the actual level
+                if "research" not in country_data:
+                    country_data["research"] = {}
+                
+                country_data["research"][tech_key] = country_data["research"].get(tech_key, 0) + 1
+                
+                # Notify player
+                if country_name == self.player_country:
+                    self.show_feedback(f"TECH FINISHED: {tech_key.replace('_', ' ').title()}")
+                
+                # Remove completed tech from queue
+                queue.pop(i)
+
 def process_combat(self):
     """Calculates turn-based damage for units sharing a province."""
     for province in self.map_data.values():
