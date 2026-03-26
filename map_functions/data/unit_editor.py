@@ -20,11 +20,12 @@ class UnitEditor:
             ("Cost (Money)", "cost_money"),
             ("Cost (Materials)", "cost_materials"),
             ("Cost (Manpower)", "cost_manpower"),
-            ("Cost (Money)", "cost_fuel"),
-            ("Upkeep (Money)", "upkeep_money"),
-            ("Upkeep (Materials)", "upkeep_materials"),
-            ("Upkeep (Manpower)", "upkeep_manpower"),
-            ("Upkeep (Fuel)", "upkeep_fuel")
+            ("Cost (Fuel)", "cost_fuel")
+            #("Upkeep (Money)", "upkeep_money"),
+            #("Upkeep (Materials)", "upkeep_materials"),
+            #("Upkeep (Manpower)", "upkeep_manpower"),
+            #("Upkeep (Fuel)", "upkeep_fuel")
+            # upkeep can be determined by just taking 10% of the cost
         ]
 
         self.entries = {}
@@ -60,10 +61,11 @@ class UnitEditor:
                 "cost_materials": int(self.entries["cost_materials"].get() or 0),
                 "cost_manpower": int(self.entries["cost_manpower"].get() or 0),
                 "cost_fuel": int(self.entries["cost_fuel"].get() or 0),
-                "upkeep_money": int(self.entries["upkeep_money"].get() or 0),
-                "upkeep_materials": int(self.entries["upkeep_materials"].get() or 0),
-                "upkeep_manpower": int(self.entries["upkeep_manpower"].get() or 0),
-                "upkeep_fuel": int(self.entries["upkeep_fuel"].get() or 0),
+                #"upkeep_money": int(self.entries["upkeep_money"].get() or 0),
+                #"upkeep_materials": int(self.entries["upkeep_materials"].get() or 0),
+                #"upkeep_manpower": int(self.entries["upkeep_manpower"].get() or 0),
+                #"upkeep_fuel": int(self.entries["upkeep_fuel"].get() or 0),
+                # upkeep can be determined by just taking 10% of the cost
                 "naval_unit": False,
                 "order": {}
             }
