@@ -10,7 +10,8 @@ class Menu(GameState):
         self.elements = [
             Button("centered", "centered - 80", "medium", "green", "New Game", self.new_game),
             Button("centered", "centered", "medium", "green", "Load Game", self.load_game),
-            Button("centered", "centered + 80", "medium", "grey", "Settings", self.settings)
+            Button("centered", "centered + 80", "medium", "green", "Map Editor", self.map_editor),
+            Button("centered", "centered + 160", "medium", "grey", "Settings", self.settings)
         ]
 
     def new_game(self):
@@ -23,4 +24,8 @@ class Menu(GameState):
 
     def settings(self):
         self.next_state = "SETTINGS"
+        self.done = True
+
+    def map_editor(self):
+        self.next_state = "MAP"
         self.done = True
