@@ -45,13 +45,20 @@ def handle_map_events(self, event):
     # 4. EDITOR PAINTING LOGIC
     # We do this AFTER hover logic so we know what we are hovering over
     if getattr(self, 'is_editor', False) and not on_ui:
-        if pygame.mouse.get_pressed()[0]: # Left Click held
+        # Left Click: Paint
+        if pygame.mouse.get_pressed()[0]: 
             if self.hovered_province:
                 from map_functions.logic import edit_province_ownership
                 if self.hovered_province.get("owner") != self.brush_nation:
                     # do not paint over oceans or lakes
                     if self.hovered_province.get("owner") != "Ocean" or self.hovered_province.get("owner") != "Lakes":
                         edit_province_ownership.conquer_province(self, self.hovered_province, self.brush_nation)
+        
+        # ADD THIS: Right Click (or Middle Click) to "Pick" the country under cursor
+        if pygame.mouse.get_pressed()[2]: # Right Click
+            if self.hovered_province:
+                self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
+                self.show_feedback(f"Picked: {self.brush_nation}")
         
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return 

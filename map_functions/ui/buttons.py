@@ -18,7 +18,7 @@ def render_buttons(self):
             self.elements.extend([
                 Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "blue", "Save", self.save_map_data),
                 Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "blue", "Load", self.editor_load_map),
-                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Brush", self.cycle_brush_nation)
+                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Brush", self.select_brush_nation)
             ])
         else:
             # GAME SPECIFIC BUTTONS (Right Side)

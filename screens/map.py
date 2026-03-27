@@ -1,5 +1,7 @@
 import pygame
 import random
+import tkinter as tk
+from tkinter import Listbox
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler
 from map_functions.data import load_map, save_map
@@ -104,13 +106,60 @@ class Map(GameState):
             return self.nation_data[self.player_country].get("fuel", 0)
         return 0
     
-    def cycle_brush_nation(self):
-        """Cycles through available nations in the JSON to use as a paint brush."""
-        nations = list(self.nation_data.keys())
-        current_idx = nations.index(self.brush_nation) if self.brush_nation in nations else 0
-        next_idx = (current_idx + 1) % len(nations)
-        self.brush_nation = nations[next_idx]
-        self.show_feedback(f"Brush: {self.brush_nation}")
+    def select_brush_nation(self):
+        """Opens a Tkinter selection window with a graceful exit to prevent TclErrors."""
+        import tkinter as tk
+        
+        root = tk.Tk()
+        root.title("Select Nation")
+        root.geometry("300x450")
+        root.attributes("-topmost", True)
+        
+        # We use a flag to track if the window is still active
+        self.menu_active = True
+
+        def on_select(event=None):
+            selection = lb.curselection()
+            if selection:
+                self.brush_nation = lb.get(selection[0])
+                self.show_feedback(f"Brush: {self.brush_nation}")
+            close_menu()
+
+        def close_menu():
+            self.menu_active = False
+            root.destroy()
+
+        # Intercept the 'X' button in the corner to close safely
+        root.protocol("WM_DELETE_WINDOW", close_menu)
+
+        tk.Label(root, text="Select Paint Nation:", font=("Arial", 12)).pack(pady=10)
+        
+        frame = tk.Frame(root)
+        frame.pack(fill="both", expand=True, padx=10)
+        
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side="right", fill="y")
+        
+        nations = sorted(list(self.nation_data.keys()))
+        lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+        for n in nations:
+            lb.insert(tk.END, n)
+        lb.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=lb.yview)
+        
+        tk.Button(root, text="Confirm Selection", command=on_select, 
+                bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+
+        lb.bind('<Double-1>', on_select)
+
+        # Manual loop that won't crash when root is destroyed
+        while self.menu_active:
+            try:
+                root.update()
+                pygame.event.pump()
+            except (tk.TclError, Exception):
+                # If the window is closed/destroyed, just break the loop
+                break
 
     def editor_load_map(self):
         """Opens a file dialog to load a map folder directly into the editor."""
