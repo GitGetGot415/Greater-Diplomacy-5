@@ -87,8 +87,11 @@ def handle_map_events(self, event):
         # ADD THIS: Right Click (or Middle Click) to "Pick" the country under cursor
         if pygame.mouse.get_pressed()[2]: # Right Click
             if self.hovered_province:
-                self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
-                self.show_feedback(f"Picked: {self.brush_nation}")
+                if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
+                    self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
+                    self.show_feedback(f"Picked: {self.brush_nation}")
+                else:
+                    self.show_feedback(f"You can't select water!")
         
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return 
