@@ -10,6 +10,7 @@ def render_buttons(self):
             Button(130, SCREEN_HEIGHT - 50, "small", "blue", "Political", self.set_political),
             Button(240, SCREEN_HEIGHT - 50, "small", "grey", "Reset", self.reset_view),
             Button(360, SCREEN_HEIGHT - 50, "small", "grey", "Full Refresh", self.refresh_political_map),
+            Button(480, SCREEN_HEIGHT - 50, "small", "grey", "View Mode", self.cycle_secondary_mode),
         ]
 
         if self.is_editor:

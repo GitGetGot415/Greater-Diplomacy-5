@@ -243,7 +243,7 @@ class Map(GameState):
         if self.is_editor:
             # Only show basic map buttons in Editor mode
             for el in self.elements:
-                if el.text in ["Terrain", "Political", "Reset", "Save", "Load", "Brush", "Full Refresh", "Exit"]:
+                if el.text in ["Terrain", "Political", "Reset", "Save", "Load", "Brush", "Full Refresh", "Exit", "View Mode"]:
                     el.visible = True
             return # Skip the rest of the game UI logic (recruit, orders, etc.)
 
@@ -253,8 +253,8 @@ class Map(GameState):
             return
 
         # funny, a hardcoded number
-        # this will be a problem later if more than 7 buttons are ever added
-        for i in range(min(7, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 8 buttons are ever added
+        for i in range(min(8, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
 
