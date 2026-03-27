@@ -2,13 +2,22 @@ import json
 import pygame
 import os
 from datetime import datetime
+from pathlib import Path
 
 def save_map_data(self, save_name=None):
-    """Saves logical data and visual state into a named folder."""
+    """Saves logical data and visual state."""
     if not save_name:
         save_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
-    save_path = os.path.join("saves", save_name)
+    # --- CONDITIONAL PATH LOGIC ---
+    if getattr(self, 'is_editor', False):
+        # Save to User's Downloads Folder
+        downloads_path = str(Path.home() / "Downloads")
+        save_path = os.path.join(downloads_path, f"MapExport_{save_name}")
+    else:
+        # Standard Game Save
+        save_path = os.path.join("saves", save_name)
+
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -19,10 +28,10 @@ def save_map_data(self, save_name=None):
             "month": self.time_manager.month_index,
             "year": self.time_manager.year
         },
-        "loop_map": self.loop_map, # Save the preference here
-        "player_country": self.player_country, # <--- ADD THIS LINE
-        "nation_data": self.nation_data, # <--- Save the whole dictionary here!
-        "provinces": {} # All data for a specific province goes here
+        "loop_map": self.loop_map,
+        "player_country": self.player_country,
+        "nation_data": self.nation_data,
+        "provinces": {}
     }
     
     for data in self.map_data.values():
@@ -44,4 +53,4 @@ def save_map_data(self, save_name=None):
     pygame.image.save(self.terrain_map, os.path.join(save_path, "terrain.png"))
     pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
     
-    self.show_feedback(f"Saved: {save_name}")
+    self.show_feedback(f"Exported: {save_name}" if self.is_editor else f"Saved: {save_name}")
