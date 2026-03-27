@@ -143,7 +143,9 @@ class Map(GameState):
         nations = sorted(list(self.nation_data.keys()))
         lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
         for n in nations:
-            lb.insert(tk.END, n)
+            # do not add ocean or lake as a selectable country
+            if (n != "Ocean") and (n != "Lakes"):
+                lb.insert(tk.END, n)
         lb.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=lb.yview)
         

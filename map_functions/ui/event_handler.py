@@ -51,7 +51,7 @@ def handle_map_events(self, event):
                 from map_functions.logic import edit_province_ownership
                 if self.hovered_province.get("owner") != self.brush_nation:
                     # do not paint over oceans or lakes
-                    if self.hovered_province.get("owner") != "Ocean" or self.hovered_province.get("owner") != "Lakes":
+                    if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
                         edit_province_ownership.conquer_province(self, self.hovered_province, self.brush_nation)
         
         # ADD THIS: Right Click (or Middle Click) to "Pick" the country under cursor

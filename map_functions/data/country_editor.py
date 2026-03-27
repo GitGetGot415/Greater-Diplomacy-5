@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, colorchooser
 import json
 import os
-import colorsys # Useful for sorting colors naturally
+import colorsys
 
 PATH = "map_functions/data/countries_data.json"
 
@@ -11,7 +11,7 @@ class CountryEditor:
         self.root = root
         self.root.title("Greater Diplomacy - Country Editor")
         self.data = self.load_data()
-        self.sort_mode = "NAME" # Options: "NAME", "COLOR"
+        self.sort_mode = "NAME"
 
         # --- Editor UI (Top) ---
         editor_frame = tk.LabelFrame(root, text="Country Details", padx=10, pady=10)
@@ -35,18 +35,23 @@ class CountryEditor:
         tk.Button(editor_frame, text="Save/Update Country", bg="#4CAF50", fg="white", 
                   command=self.save_country).grid(row=3, column=0, columnspan=3, sticky="we")
 
+        # --- Utility Bar (New Section for Bulk Actions) ---
+        util_frame = tk.Frame(root, padx=10)
+        util_frame.pack(fill="x", pady=5)
+        
+        tk.Button(util_frame, text="⚠️ Reset All Countries to Template ⚠️", bg="#f44336", fg="white",
+                  command=self.bulk_reset_template).pack(fill="x")
+
         # --- Control Bar (Middle) ---
         controls_frame = tk.Frame(root, padx=10)
         controls_frame.pack(fill="x", pady=5)
 
-        # Search
         tk.Label(controls_frame, text="Search:").pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *args: self.refresh_list())
         self.search_ent = tk.Entry(controls_frame, textvariable=self.search_var)
         self.search_ent.pack(side="left", fill="x", expand=True, padx=5)
 
-        # Sort Toggle
         self.btn_sort = tk.Button(controls_frame, text="Sort: Name", width=12, command=self.toggle_sort)
         self.btn_sort.pack(side="right")
 
@@ -70,6 +75,35 @@ class CountryEditor:
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        self.refresh_list()
+
+    # --- NEW METHOD: Bulk Reset ---
+    def bulk_reset_template(self):
+        """Updates every country in the list to the new data format while keeping Name/Color."""
+        msg = ("This will reset research, money, and relations for ALL countries to the default template.\n\n"
+               "Names and Colors will be preserved. Proceed?")
+        if not messagebox.askyesno("Confirm Bulk Reset", msg):
+            return
+
+        for int_id in self.data:
+            # Preserve existing identifying info
+            old_name = self.data[int_id].get("name", int_id)
+            old_color = self.data[int_id].get("color", [150, 150, 150])
+
+            # Overwrite with the template
+            self.data[int_id] = {
+                "name": old_name,
+                "color": old_color,
+                "research": {"infantry": 1800},
+                "money": 0, "manpower": 0, "materials": 0, "fuel": 0,      
+                "is_playable": True,
+                "at_war_with": [], "allied_with": []
+            }
+
+        with open(PATH, "w") as f:
+            json.dump(self.data, f, indent=4)
+        
+        messagebox.showinfo("Success", "All countries have been synchronized to the new template.")
         self.refresh_list()
 
     def toggle_sort(self):
@@ -113,7 +147,7 @@ class CountryEditor:
             self.data[int_id] = {
                 "name": disp_name,
                 "color": self.current_color,
-                "research": {"cavalry": 0, "destroyer": 0, "armored_car": 0, "infantry": 1800},
+                "research": {"infantry": 1800},
                 "money": 0, "manpower": 0, "materials": 0, "fuel": 0,      
                 "is_playable": True,
                 "at_war_with": [], "allied_with": []
@@ -123,7 +157,6 @@ class CountryEditor:
             json.dump(self.data, f, indent=4)
         
         self.refresh_list()
-        # Optional: clear entries after save
         self.id_ent.delete(0, tk.END)
         self.name_ent.delete(0, tk.END)
 
@@ -148,9 +181,7 @@ class CountryEditor:
         if self.sort_mode == "NAME":
             return int_id.lower()
         else:
-            # Sort by HSV (Hue, Saturation, Value) for a natural rainbow look
             rgb = self.data[int_id].get("color", [0, 0, 0])
-            # Normalize to 0-1 for colorsys
             return colorsys.rgb_to_hsv(rgb[0]/255, rgb[1]/255, rgb[2]/255)
 
     def refresh_list(self):
@@ -158,8 +189,6 @@ class CountryEditor:
             widget.destroy()
 
         search_query = self.search_var.get().lower()
-        
-        # Determine sorted order
         sorted_keys = sorted(self.data.keys(), key=self.get_sort_key)
 
         for int_id in sorted_keys:
@@ -184,6 +213,6 @@ class CountryEditor:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("500x750")
+    root.geometry("500x800") # Slightly taller to fit the new button
     CountryEditor(root)
     root.mainloop()

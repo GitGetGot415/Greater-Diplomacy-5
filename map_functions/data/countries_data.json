@@ -1,71 +1,67 @@
 {
     "Ocean": {
+        "name": "Ocean",
         "color": [
             20,
             40,
             80
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": false,
+        "is_playable": true,
         "at_war_with": [],
         "allied_with": []
     },
     "Lakes": {
+        "name": "Lakes",
         "color": [
             40,
             80,
             160
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": false,
+        "is_playable": true,
         "at_war_with": [],
         "allied_with": []
     },
     "Unclaimed": {
+        "name": "Unclaimed",
         "color": [
             255,
             255,
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": false,
+        "is_playable": true,
         "at_war_with": [],
         "allied_with": []
     },
     "Rome": {
+        "name": "Rome",
         "color": [
             200,
             30,
             30
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
@@ -76,15 +72,14 @@
         "allied_with": []
     },
     "Carthage": {
+        "name": "Carthage",
         "color": [
             30,
             150,
             30
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
@@ -95,15 +90,14 @@
         "allied_with": []
     },
     "Gaul": {
+        "name": "Gaul",
         "color": [
             150,
             100,
             50
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0
+            "infantry": 1800
         },
         "money": 0,
         "manpower": 0,
@@ -114,15 +108,13 @@
         "allied_with": []
     },
     "Germany": {
+        "name": "Germany",
         "color": [
             128,
             0,
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -141,9 +133,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -162,9 +151,6 @@
             192
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -183,9 +169,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -204,9 +187,6 @@
             128
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -225,9 +205,6 @@
             128
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -246,9 +223,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -267,9 +241,6 @@
             160
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -288,9 +259,6 @@
             200
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -309,9 +277,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -330,9 +295,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -351,9 +313,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -372,9 +331,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -393,9 +349,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -414,9 +367,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -435,9 +385,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -456,9 +403,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -477,9 +421,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -498,9 +439,6 @@
             192
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -519,9 +457,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -540,9 +475,6 @@
             64
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -561,9 +493,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -582,9 +511,6 @@
             192
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -603,9 +529,6 @@
             192
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -624,9 +547,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -645,9 +565,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -666,9 +583,6 @@
             128
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -687,9 +601,6 @@
             192
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -708,9 +619,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -729,9 +637,6 @@
             0
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -750,9 +655,6 @@
             128
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
@@ -771,9 +673,6 @@
             255
         ],
         "research": {
-            "cavalry": 0,
-            "destroyer": 0,
-            "armored_car": 0,
             "infantry": 1800
         },
         "money": 0,
