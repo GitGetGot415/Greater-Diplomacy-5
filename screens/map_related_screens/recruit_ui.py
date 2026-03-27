@@ -3,7 +3,7 @@ import pygame
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def draw_recruitment_overlay(surface, target_province):
-    """Draws the deployment queue and returns a list of (rect, index) for cancellation."""
+    """Draws the combined deployment and construction queue."""
     cancel_buttons = []
     
     panel_rect = pygame.Rect(SCREEN_WIDTH - 400, 100, 350, SCREEN_HEIGHT - 200)
@@ -13,7 +13,7 @@ def draw_recruitment_overlay(surface, target_province):
     font = pygame.font.SysFont("Arial", 28)
     small_font = pygame.font.SysFont("Arial", 20)
     
-    title = font.render("Deployment Queue", True, (255, 255, 255))
+    title = font.render("Queued Orders", True, (255, 255, 255))
     surface.blit(title, (panel_rect.x + 20, panel_rect.y + 20))
 
     queue = target_province.get("deployment_queue", [])
@@ -21,9 +21,15 @@ def draw_recruitment_overlay(surface, target_province):
     for i, item in enumerate(queue):
         y_pos = panel_rect.y + 70 + (i * 35)
         
-        # Draw the unit info
-        name = item['unit_type'].replace("Chadian ", "")
-        txt = small_font.render(f"{name} ({item['days_remaining']}d)", True, (255, 200, 50))
+        # --- THE FIX: Handle both Units and Buildings ---
+        # Look for 'unit_type' first, then 'item_name', fallback to 'Order'
+        raw_name = item.get('unit_type', item.get('item_name', 'Unknown Order'))
+        
+        # Clean up the display name
+        display_name = raw_name.replace("Chadian ", "").replace("Synthetic ", "Syn. ")
+        
+        # Draw the info text
+        txt = small_font.render(f"{display_name} ({item['days_remaining']}d)", True, (255, 200, 50))
         surface.blit(txt, (panel_rect.x + 20, y_pos))
         
         # Draw a small Red "X" button for cancellation
@@ -32,7 +38,7 @@ def draw_recruitment_overlay(surface, target_province):
         x_txt = small_font.render("X", True, (255, 255, 255))
         surface.blit(x_txt, (cancel_rect.x + 7, cancel_rect.y + 2))
         
-        # Store the rect and the index of the item it represents
+        # Store the rect and the index for the click handler
         cancel_buttons.append((cancel_rect, i))
         
     return cancel_buttons

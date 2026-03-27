@@ -1,0 +1,16 @@
+BUILDING_LIBRARY = {
+    "Workshop Lvl 1": {"time": 10, "cost": 100, "group": "industry", "req": None},
+    "Workshop Lvl 2": {"time": 15, "cost": 200, "group": "industry", "req": "Workshop Lvl 1"},
+    "Workshop Lvl 3": {"time": 20, "cost": 300, "group": "industry", "req": "Workshop Lvl 2"},
+    "Workshop Lvl 4": {"time": 25, "cost": 400, "group": "industry", "req": "Workshop Lvl 3"},
+    "Workshop Lvl 5": {"time": 30, "cost": 500, "group": "industry", "req": "Workshop Lvl 4"},
+    "Basic Factory": {"time": 40, "cost": 800, "group": "industry", "req": "Workshop Lvl 5"},
+    "Factory Lvl 1": {"time": 50, "cost": 1200, "group": "industry", "req": "Basic Factory"},
+    "Factory Lvl 2": {"time": 50, "cost": 1200, "group": "industry", "req": "Factory Lvl 1"},
+    "Factory Lvl 3": {"time": 50, "cost": 1200, "group": "industry", "req": "Factory Lvl 2"},
+    "Factory Lvl 4": {"time": 50, "cost": 1200, "group": "industry", "req": "Factory Lvl 3"},
+    "Factory Lvl 5": {"time": 50, "cost": 1200, "group": "industry", "req": "Factory Lvl 4"},
+    "Synthetic Refinery Lvl 1": {"time": 30, "cost": 1000, "group": "refinery", "req": None},
+    "Synthetic Refinery Lvl 2": {"time": 40, "cost": 1500, "group": "refinery", "req": "Synthetic Refinery Lvl 1"},
+    "Synthetic Refinery Lvl 3": {"time": 50, "cost": 2000, "group": "refinery", "req": "Synthetic Refinery Lvl 2"},
+}

@@ -342,6 +342,11 @@ class Map(GameState):
                 pygame.event.pump()
             except (tk.TclError, Exception):
                 break
+    
+    def open_construction(self):
+        if self.selected_province and self.selected_province.get("owner") == self.player_country:
+            self.next_state = "CONSTRUCTION"
+            self.done = True
 
     # Update the toggle method to switch modes
     def toggle_editor_brush_type(self):
@@ -359,20 +364,42 @@ class Map(GameState):
         if self.is_editor:
             # Only show basic map buttons in Editor mode
             for el in self.elements:
+                # Standard Editor Buttons
                 if el.text in ["Terrain", "Political", "Reset", "Save", "Load", "Nation", "Building", "Full Refresh", "Exit", "View Mode"]:
                     el.visible = True
-            return # Skip the rest of the game UI logic (recruit, orders, etc.)
+                
+                # Dynamic Color for "Nation" button
+                if el.text == "Nation":
+                    el.visible = True
+                    if self.editor_mode == "NATION":
+                        el.color = (0, 150, 0)        # Active Green
+                        el.hover_color = (0, 200, 0)
+                    else:
+                        el.color = (100, 100, 100)    # Inactive Grey
+                        el.hover_color = (150, 150, 150)
+
+                # Dynamic Color for "Building" button
+                if el.text == "Building":
+                    el.visible = True
+                    if self.editor_mode == "BUILDING":
+                        el.color = (0, 100, 200)      # Active Blue
+                        el.hover_color = (50, 150, 255)
+                    else:
+                        el.color = (100, 100, 100)    # Inactive Grey
+                        el.hover_color = (150, 150, 150)
+            return
 
         is_sel = bool(self.selected_province)
         if self.selection_mode:
             self.btn_exit_to_menu.visible = True
             return
-
+                
         # funny, a hardcoded number
         # this will be a problem later if more than 8 buttons are ever added
         for i in range(min(8, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
+        # self.btn_go_build.visible = is_sel and owner == self.player_country
 
         if is_sel:
             self.btn_conquer.visible = True
@@ -389,6 +416,7 @@ class Map(GameState):
                 if owner == self.player_country:
                     terrain = self.selected_province.get("terrain", "")
                     is_land = terrain not in ["ocean", "coastal_sea", "inland_sea", "lakes"]
+                    self.btn_go_build.visible = True
                     self.btn_go_recruit.visible = is_land
                     self.btn_go_navy.visible = is_land and self.selected_province.get("is_coastal", False)
 

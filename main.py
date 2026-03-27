@@ -11,6 +11,7 @@ from screens.map_related_screens.navy_recruit import Navy_Recruit_Screen
 from map_functions.data import keybind_io
 from map_functions.rendering import symbol_loader
 from screens.map_related_screens.research import Research_Screen
+from screens.map_related_screens.construction import Construction_Screen
 
 pygame.display.set_caption("Greater Diplomacy Pygame Edition")
 
@@ -41,6 +42,7 @@ class Controller:
             "NAVY": Navy_Recruit_Screen(),
             "RESEARCH": Research_Screen()
         }
+        self.states["CONSTRUCTION"] = Construction_Screen()
         self.active_state = self.states["MENU"]
 
     def flip_state(self):
@@ -49,7 +51,7 @@ class Controller:
         next_state_name = self.active_state.next_state
         
         # 1. Data Handoff
-        if next_state_name in ["RECRUIT", "ORDERS", "NAVY"]:
+        if next_state_name in ["RECRUIT", "ORDERS", "NAVY", "CONSTRUCTION"]:
             map_ref = self.states["MAP"]
             if map_ref.selected_province:
                 self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)

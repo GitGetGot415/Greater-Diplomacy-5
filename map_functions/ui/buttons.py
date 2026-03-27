@@ -29,6 +29,9 @@ def render_buttons(self):
                 Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Save Game", self.save_map_data)
             ])
     
+    self.btn_go_build = Button(1390, 550, "medium", "grey", "Construction", self.open_construction)
+    self.elements.append(self.btn_go_build)
+
     # Add this to your contextual buttons
     self.btn_go_navy = Button(1390, 490, "medium", "blue", "Navy Menu", self.open_navy)
     self.btn_go_navy.visible = False

@@ -221,3 +221,6 @@ class Orders_Screen(GameState):
 
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True
+    
+    def handle_back_key(self):
+        self.exit_to_map()

@@ -3,6 +3,7 @@ import os
 import math
 from map_functions.logic import diplomacy_logic
 from map_functions.logic import edit_province_ownership
+from map_functions.data.building_data import BUILDING_LIBRARY
 
 def process_next_turn(self):
     days_to_advance = 5
@@ -26,8 +27,44 @@ def process_next_turn(self):
     # 5. Process Recruitment
     process_recruitment(self, days_to_advance)
 
-    # 6. Process National Research
+    # 6. Process Construction
+    process_construction(self, days_to_advance)
+
+    # 7. Process National Research
     process_national_research(self, days_to_advance)
+
+def process_construction(self, days_passed):
+    for province in self.map_data.values():
+        queue = province.get("deployment_queue", [])
+        if not queue: continue
+            
+        still_deploying = []
+        for item in queue:
+            if item.get("order_type") == "BUILDING":
+                item["days_remaining"] -= days_passed
+                
+                if item["days_remaining"] <= 0:
+                    b_name = item["item_name"]
+                    b_data = BUILDING_LIBRARY[b_name]
+                    
+                    current_buildings = province.get("buildings", [])
+                    # OVERWRITE LOGIC:
+                    # Remove any building that belongs to the same group (e.g., industry or refinery)
+                    updated_buildings = [b for b in current_buildings 
+                                    if BUILDING_LIBRARY.get(b, {}).get("group") != b_data["group"]]
+                    
+                    updated_buildings.append(b_name)
+                    province["buildings"] = updated_buildings
+                    
+                    if province.get("owner") == self.player_country:
+                        self.show_feedback(f"CONSTRUCTION COMPLETE: {b_name}")
+                else:
+                    still_deploying.append(item)
+            else:
+                # Keep units in the queue
+                still_deploying.append(item)
+        
+        province["deployment_queue"] = still_deploying
 
 def process_national_research(self, days_passed):
     for country_name, country_data in self.nation_data.items():

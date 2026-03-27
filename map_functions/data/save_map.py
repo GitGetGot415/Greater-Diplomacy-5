@@ -42,7 +42,8 @@ def save_map_data(self, save_name=None):
             "units": data.get("units", []),
             "deployment_queue": data.get("deployment_queue", []),
             "orders": data.get("orders", []),
-            "resources": data.get("resources", [])
+            "resources": data.get("resources", []),
+            "buildings": data.get("buildings", [])
         }
 
     with open(os.path.join(save_path, "meta.json"), "w") as f:

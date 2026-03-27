@@ -45,7 +45,7 @@ def load_map_assets(self, load_path):
     else:
         self.player_country = "None"
         self.loop_map = True
-        self.time_manager = TimeHandler(start_year=272)
+        self.time_manager = TimeHandler(start_year=1900)
 
     # --- 5. Province Processing ---
     with open("map_tools/map_data.json", "r") as f:
