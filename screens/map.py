@@ -25,7 +25,7 @@ class Map(GameState):
         self.pending_selection = None 
         self.player_country = "None"
 
-        self.secondary_modes = ["UNITS", "ECONOMY", "MILITARY", "BLANK"]
+        self.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
         self.sec_idx = 0
         self.secondary_mode = self.secondary_modes[self.sec_idx]
         

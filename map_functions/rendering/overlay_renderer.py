@@ -88,11 +88,6 @@ def draw_overlay_content(self, surface):
                             pygame.draw.rect(surface, color, rect)
                             pygame.draw.rect(surface, (255, 255, 255), rect, 1) # Border
 
-                # --- MILITARY VIEW ---
-                elif self.secondary_mode == "MILITARY":
-                    # Future: draw forts or trenches
-                    pass
-
 def draw_unit_icon(self, surface, sx, sy, province):
     # Units are now dictionaries: {"type": "...", "owner": "..."}
     primary_unit_data = province["units"][0]
