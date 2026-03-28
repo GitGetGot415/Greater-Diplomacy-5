@@ -133,6 +133,9 @@ def draw_map_screen(self, surface):
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
     if self.feedback_text and pygame.time.get_ticks() - self.feedback_timer < 2000:
         tsurf = self.font.render(self.feedback_text, True, (0, 255, 0))
-        surface.blit(tsurf, (surface.get_width() - 350, 20))
+        # Logic: HUD Y is SCREEN_HEIGHT - 40. 
+        # We'll place it slightly above the bottom bar or inside it.
+        # This puts it in the bottom right corner of the screen
+        surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 20, SCREEN_HEIGHT - 40))
 
     if self.hovered_province: tooltip.draw_tooltip(self, surface)

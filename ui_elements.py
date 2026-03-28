@@ -48,13 +48,28 @@ class Button:
         self.visible = True
         self.is_pressed = False # Tracks if we are currently holding the button down
 
+    def draw_gradient_rect(self, surface, color, rect):
+        """Draws a simple vertical gradient from light to dark."""
+        # Top color (brighter)
+        c1 = (min(255, color[0] + 30), min(255, color[1] + 30), min(255, color[2] + 30))
+        # Bottom color (darker)
+        c2 = (max(0, color[0] - 30), max(0, color[1] - 30), max(0, color[2] - 30))
+        
+        for i in range(rect.height):
+            # Linearly interpolate between c1 and c2
+            lerp = i / rect.height
+            r = int(c1[0] + (c2[0] - c1[0]) * lerp)
+            g = int(c1[1] + (c2[1] - c1[1]) * lerp)
+            b = int(c1[2] + (c2[2] - c1[2]) * lerp)
+            pygame.draw.line(surface, (r, g, b), (rect.x, rect.y + i), (rect.right - 1, rect.y + i))
+
     def draw(self, surface):
         if not self.visible: return
 
         mouse_pos = pygame.mouse.get_pos()
         is_hovered = self.rect.collidepoint(mouse_pos)
         
-        # Determine color based on state
+        # 1. Determine base color
         if self.is_pressed and is_hovered:
             current_color = self.pressed_color
         elif is_hovered:
@@ -62,14 +77,25 @@ class Button:
         else:
             current_color = self.color
         
-        pygame.draw.rect(surface, current_color, self.rect)
+        # 2. Draw the Gradient Background
+        self.draw_gradient_rect(surface, current_color, self.rect)
         
-        # Draw a small border if pressed for visual feedback
-        if self.is_pressed and is_hovered:
-            pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        # 3. Draw the Outline (Border)
+        # We draw a dark border always, and a white highlight if hovered
+        border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
+        pygame.draw.rect(surface, border_color, self.rect, 2)
+        
+        # 4. Draw a slight inner "shine" for better 3D effect (Optional)
+        pygame.draw.line(surface, (min(255, current_color[0]+60), min(255, current_color[1]+60), min(255, current_color[2]+60)), 
+                         (self.rect.x+2, self.rect.y+2), (self.rect.right-2, self.rect.y+2), 1)
 
+        # 5. Draw Text
         text_surf = self.font.render(self.text, True, (255, 255, 255))
         text_rect = text_surf.get_rect(center=self.rect.center)
+        
+        # Add a small text shadow for readability
+        shadow = self.font.render(self.text, True, (0, 0, 0))
+        surface.blit(shadow, (text_rect.x + 1, text_rect.y + 1))
         surface.blit(text_surf, text_rect)
 
     def handle_event(self, event):
