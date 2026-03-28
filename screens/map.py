@@ -110,6 +110,10 @@ class Map(GameState):
             return self.nation_data[self.player_country].get("fuel", 0)
         return 0
 
+    def set_view_mode(self, mode):
+        self.secondary_mode = mode
+        self.show_feedback(f"View: {mode}")
+
     def editor_load_map(self):
         """Opens a file dialog to load a map folder directly into the editor."""
         import tkinter as tk
@@ -395,8 +399,8 @@ class Map(GameState):
             return
                 
         # funny, a hardcoded number
-        # this will be a problem later if more than 8 buttons are ever added
-        for i in range(min(8, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 10 buttons are ever added
+        for i in range(min(10, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
         # self.btn_go_build.visible = is_sel and owner == self.player_country
