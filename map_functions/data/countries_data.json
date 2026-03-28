@@ -14,7 +14,7 @@
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": true,
+        "is_playable": false,
         "at_war_with": [],
         "allied_with": []
     },
@@ -33,7 +33,7 @@
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": true,
+        "is_playable": false,
         "at_war_with": [],
         "allied_with": []
     },
@@ -52,7 +52,7 @@
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
-        "is_playable": true,
+        "is_playable": false,
         "at_war_with": [],
         "allied_with": []
     },
@@ -708,6 +708,614 @@
             255,
             185,
             255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Mexico": {
+        "name": "Mexico",
+        "color": [
+            0,
+            180,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Argentina": {
+        "name": "Argentina",
+        "color": [
+            128,
+            255,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Chile": {
+        "name": "Chile",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Yugoslavia": {
+        "name": "Yugoslavia",
+        "color": [
+            128,
+            128,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "India": {
+        "name": "India",
+        "color": [
+            255,
+            128,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Nationalist China": {
+        "name": "Nationalist China",
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Communist China": {
+        "name": "Communist China",
+        "color": [
+            255,
+            0,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Australia": {
+        "name": "Australia",
+        "color": [
+            0,
+            128,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "New Zealand": {
+        "name": "New Zealand",
+        "color": [
+            189,
+            15,
+            146
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Denmark": {
+        "name": "Denmark",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Finland": {
+        "name": "Finland",
+        "color": [
+            159,
+            255,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Estonia": {
+        "name": "Estonia",
+        "color": [
+            0,
+            128,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Latvia": {
+        "name": "Latvia",
+        "color": [
+            185,
+            7,
+            70
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Lithuania": {
+        "name": "Lithuania",
+        "color": [
+            255,
+            255,
+            128
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Switzerland": {
+        "name": "Switzerland",
+        "color": [
+            255,
+            0,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Iran": {
+        "name": "Iran",
+        "color": [
+            0,
+            255,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Iraq": {
+        "name": "Iraq",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Saudi Arabia": {
+        "name": "Saudi Arabia",
+        "color": [
+            0,
+            128,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Oman": {
+        "name": "Oman",
+        "color": [
+            128,
+            255,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Yemen": {
+        "name": "Yemen",
+        "color": [
+            255,
+            173,
+            91
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Afganistan": {
+        "name": "Afganistan",
+        "color": [
+            128,
+            128,
+            192
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Mongolia": {
+        "name": "Mongolia",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Venezuela": {
+        "name": "Venezuela",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Peru": {
+        "name": "Peru",
+        "color": [
+            255,
+            193,
+            164
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Bolivia": {
+        "name": "Bolivia",
+        "color": [
+            128,
+            128,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Paraguay": {
+        "name": "Paraguay",
+        "color": [
+            128,
+            0,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Ecuador": {
+        "name": "Ecuador",
+        "color": [
+            255,
+            255,
+            102
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Morroco": {
+        "name": "Morroco",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Algeria": {
+        "name": "Algeria",
+        "color": [
+            255,
+            0,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Tunisia": {
+        "name": "Tunisia",
+        "color": [
+            0,
+            255,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Poland": {
+        "name": "Poland",
+        "color": [
+            255,
+            128,
+            192
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Belarus": {
+        "name": "Belarus",
+        "color": [
+            0,
+            255,
+            64
         ],
         "research": {
             "infantry": 1800,
