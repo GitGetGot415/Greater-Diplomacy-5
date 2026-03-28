@@ -14,7 +14,13 @@ class Recruit_Screen(GameState):
         self.map_screen = None
         self.cancel_hitboxes = []
         self.is_naval = is_naval
+        
+        # Stat Tooltip tracking
+        self.hovered_unit_stats = None
+        
         self.unit_library = self.load_unit_data()
+        # Pre-calculate the groups in JSON order
+        self.ordered_groups = self.get_ordered_groups()
 
     def load_unit_data(self):
         path = 'map_functions/data/unit_data.json'
@@ -23,46 +29,53 @@ class Recruit_Screen(GameState):
                 return json.load(f)
         return {}
 
+    def get_group_name(self, name):
+        """Groups 'Destroyer I' and 'Destroyer II' into 'Destroyer'"""
+        return re.sub(r'\s+[IVXLCDM]+$', '', name).strip()
+
+    def get_ordered_groups(self):
+        """Returns unique group names in the order they first appear in the JSON."""
+        groups = []
+        for name, stats in self.unit_library.items():
+            if stats.get("naval_unit", False) == self.is_naval:
+                base = self.get_group_name(name)
+                if base not in groups:
+                    groups.append(base)
+        return groups
+
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
         self.refresh_ui()
 
-    def get_group_name(self, name):
-        """Groups 'Destroyer I' and 'Destroyer II' into 'Destroyer'"""
-        return re.sub(r'\s+[IVXLCDM]+$', '', name).strip()
-
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
-        # 1. Group units by their base name
-        groups = {}
+        # 1. Map units to their groups while preserving JSON order
+        grouped_units = {group: [] for group in self.ordered_groups}
         for name, stats in self.unit_library.items():
             if stats.get("naval_unit", False) == self.is_naval:
-                base_name = self.get_group_name(name)
-                if base_name not in groups:
-                    groups[base_name] = []
-                groups[base_name].append((name, stats))
+                base = self.get_group_name(name)
+                grouped_units[base].append((name, stats))
 
-        # 2. Render groups into horizontal rows
+        # 2. Render rows based on the order of self.ordered_groups
         y_offset = 120
         row_height = 60
-        btn_width = 110 # Approximate width of 'small' button preset
+        btn_width = 110 
         
-        for base_name, units in groups.items():
-            # Draw label for the row
-            # (Labels are drawn in additional_draw to avoid button collision logic)
+        for group_name in self.ordered_groups:
+            units = grouped_units[group_name]
+            # No sorting here; we want JSON order within the row too
             
-            # Sort units within group (so I comes before II)
-            units.sort(key=lambda x: x[0])
-
-            x_offset = 250 # Start buttons after the label
+            x_offset = 250 
             for name, stats in units:
-                # Shorten the name for the button display (e.g. 'Destroyer III' -> 'III')
-                display_label = name.replace(base_name, "").strip() or base_name
+                display_label = name.replace(group_name, "").strip() or group_name
                 
                 btn = Button(x_offset, y_offset, "small", "blue" if self.is_naval else "green", 
                              display_label, lambda n=name: self.buy_unit(n))
+                
+                # Attach the full name to the button object for tooltip detection
+                btn.internal_unit_name = name 
                 self.elements.append(btn)
                 x_offset += btn_width + 10
             
@@ -74,7 +87,6 @@ class Recruit_Screen(GameState):
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         
-        # Comprehensive Affordability Check
         costs = {
             "money": stats.get("cost_money", 0),
             "manpower": stats.get("cost_manpower", 0),
@@ -91,35 +103,73 @@ class Recruit_Screen(GameState):
                 "days_remaining": stats.get("production_time", 5),
             }
             self.target_province.setdefault("deployment_queue", []).append(order)
-            self.map_screen.show_feedback(f"Started production: {unit_name}")
+            self.map_screen.show_feedback(f"Production started: {unit_name}")
         else:
-            self.map_screen.show_feedback("Insufficient resources for this unit!")
+            self.map_screen.show_feedback("Insufficient resources!")
+
+    def draw_tooltip(self, surface):
+        if not self.hovered_unit_stats: return
+        
+        mx, my = pygame.mouse.get_pos()
+        stats = self.hovered_unit_stats
+        
+        # Prepare text lines
+        lines = [
+            f"--- {stats['name']} ---",
+            f"HP: {stats.get('health', 0)} | ATK: {stats.get('attack', 0)}",
+            f"DEF: {stats.get('defense', 0)} | SPD: {stats.get('speed', 0)}",
+            f"Time: {stats.get('production_time', 0)} days",
+            f"Cost: {stats.get('cost_money', 0)} Money",
+            f"      {stats.get('cost_materials', 0)} Mat | {stats.get('cost_manpower', 0)} Man"
+        ]
+        
+        font = pygame.font.SysFont("Arial", 16)
+        # Calculate tooltip size
+        max_w = max(font.size(l)[0] for l in lines) + 20
+        height = len(lines) * 20 + 10
+        
+        tip_rect = pygame.Rect(mx + 15, my + 15, max_w, height)
+        # Boundary check
+        if tip_rect.right > SCREEN_WIDTH: tip_rect.x -= (max_w + 30)
+        
+        pygame.draw.rect(surface, (40, 40, 40), tip_rect)
+        pygame.draw.rect(surface, (200, 200, 200), tip_rect, 1)
+        
+        for i, line in enumerate(lines):
+            color = (255, 255, 255) if i != 0 else (255, 215, 0)
+            surface.blit(font.render(line, True, color), (tip_rect.x + 10, tip_rect.y + 5 + i * 20))
 
     def additional_draw(self, surface):
         if not self.target_province: return
         
-        # 1. Draw Title
+        # 1. Title
         title_font = pygame.font.SysFont("Arial", 28, bold=True)
         title_str = "NAVAL SHIPYARD" if self.is_naval else "ARMY RECRUITMENT"
         surface.blit(title_font.render(title_str, True, (255, 255, 255)), (150, 25))
 
-        # 2. Draw Group Labels
+        # 2. Draw Group Labels using the ordered list
         label_font = pygame.font.SysFont("Arial", 20)
-        groups = sorted(list(set(self.get_group_name(n) for n, s in self.unit_library.items() 
-                                if s.get("naval_unit") == self.is_naval)))
-        
-        for i, group_name in enumerate(groups):
+        for i, group_name in enumerate(self.ordered_groups):
             txt = label_font.render(f"{group_name}:", True, (200, 200, 200))
             surface.blit(txt, (50, 130 + (i * 60)))
 
-        # 3. RESOURCE HUD (Bottom Bar)
+        # 3. Detect Hover for Tooltips
+        mouse_pos = pygame.mouse.get_pos()
+        self.hovered_unit_stats = None
+        for el in self.elements:
+            if hasattr(el, 'rect') and el.rect.collidepoint(mouse_pos):
+                if hasattr(el, 'internal_unit_name'):
+                    name = el.internal_unit_name
+                    self.hovered_unit_stats = self.unit_library[name].copy()
+                    self.hovered_unit_stats['name'] = name
+
+        # 4. RESOURCE HUD
         hud_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_font = pygame.font.SysFont("Arial", 22)
-        
         resources = [
             (f"Money: {p_data.get('money', 0)}", (255, 215, 0)),
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
@@ -128,11 +178,11 @@ class Recruit_Screen(GameState):
         ]
 
         for i, (text, color) in enumerate(resources):
-            surf = res_font.render(text, True, color)
-            surface.blit(surf, (50 + (i * 300), hud_rect.y + 15))
+            surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
 
-        # 4. Draw Queued Orders Sidebar
+        # 5. Sidebar & Tooltip
         self.cancel_hitboxes = recruit_ui.draw_recruitment_overlay(surface, self.target_province)
+        self.draw_tooltip(surface)
 
     def handle_events(self, events):
         for event in events:
