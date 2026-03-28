@@ -19,28 +19,36 @@ class Construction_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = [Button(50, 50, "small", "red", "Back", self.exit_to_map)]
-        
         current_buildings = self.target_province.get("buildings", [])
         y_offset = 150
 
-        # Define the categories for display
         categories = {
             "Industry": ["Workshop Lvl 1", "Workshop Lvl 2", "Workshop Lvl 3", "Workshop Lvl 4", "Workshop Lvl 5", "Basic Factory", "Factory Lvl 1", "Factory Lvl 2", "Factory Lvl 3", "Factory Lvl 4", "Factory Lvl 5"],
             "Refinery": ["Synthetic Refinery Lvl 1", "Synthetic Refinery Lvl 2", "Synthetic Refinery Lvl 3"]
         }
 
         for cat_name, b_list in categories.items():
-            # Find the first building in this category that the player doesn't have yet
-            # OR the one immediately after the highest owned level
             target = None
-            for b in b_list:
-                req = BUILDING_LIBRARY[b]["req"]
-                if b not in current_buildings:
-                    # If it has no requirement, or the requirement is met, this is our next upgrade
-                    if req is None or req in current_buildings:
-                        target = b
-                        break
             
+            # Check if ANY building of this group already exists
+            # We determine the 'group' by checking the first item in the list's group in BUILDING_LIBRARY
+            sample_b = b_list[0]
+            group_id = BUILDING_LIBRARY[sample_b]["group"]
+            
+            owned_in_group = [b for b in current_buildings if BUILDING_LIBRARY.get(b, {}).get("group") == group_id]
+            
+            if not owned_in_group:
+                # If nothing owned in group, Level 1 is the target
+                target = b_list[0]
+            else:
+                # Find the building immediately following the highest one we own
+                # (Assuming b_list is ordered by tier)
+                for i, b_name in enumerate(b_list):
+                    if b_name in owned_in_group:
+                        if i + 1 < len(b_list):
+                            target = b_list[i+1]
+                        # else: MAX LEVEL (target remains None)
+
             if target:
                 data = BUILDING_LIBRARY[target]
                 txt = f"{target} ({data['cost']}g, {data['time']}d)"

@@ -2,6 +2,7 @@ import pygame
 import json
 import os
 import re
+import math
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
@@ -48,42 +49,58 @@ class Recruit_Screen(GameState):
         self.map_screen = map_ref
         self.refresh_ui()
 
+    def get_scaled_stats(self, unit_name):
+        """Calculates stats based on research levels for Infantry."""
+        tech_key = self.get_group_name(unit_name).lower().replace(" ", "_")
+        # Use a copy so we don't accidentally modify the library itself
+        base_stats = self.unit_library.get(unit_name, {}).copy()
+        
+        if tech_key == "infantry":
+            player_research = self.map_screen.nation_data[self.map_screen.player_country].get("research", {})
+            level = player_research.get("infantry", 1800)
+            n = level - 1800
+            # Formula: HP = 1000 * 1.01^n
+            base_stats["health"] = int(1000 * math.pow(1.01, n))
+            base_stats["attack"] = int(100 * math.pow(1.01, n))
+            base_stats["level"] = level
+        return base_stats
+
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         player_research = self.map_screen.nation_data[self.map_screen.player_country].get("research", {})
 
         y_offset = 120
         for group_name in self.ordered_groups:
-            # 1. Find the highest unlocked version for this group
             highest_unlocked = None
-            highest_lvl = -1
+            tech_key = group_name.lower().replace(" ", "_")
+            researched_lvl = player_research.get(tech_key, 0)
 
-            # Filter units belonging to this specific group
-            group_units = [ (n, s) for n, s in self.unit_library.items() 
-                           if self.get_group_name(n) == group_name]
-
-            for name, stats in group_units:
-                lvl = self.roman_to_int(name.replace(group_name, "").strip())
-                tech_key = group_name.lower().replace(" ", "_")
-                researched_lvl = player_research.get(tech_key, 0)
-
-                # Unit is available if level matches research or it's base tech (lvl 0)
-                if lvl <= researched_lvl or lvl == 0:
-                    if lvl > highest_lvl:
-                        highest_lvl = lvl
-                        highest_unlocked = name
-
-            # 2. Render Button (Only showing the single best version)
-            if highest_unlocked:
-                btn = Button(250, y_offset, "small", "blue" if self.is_naval else "green", 
-                             highest_unlocked, lambda n=highest_unlocked: self.buy_unit(n))
-                btn.internal_unit_name = highest_unlocked
+            # Check for Infantry special display
+            if tech_key == "infantry":
+                highest_unlocked = f"Infantry Lvl {researched_lvl}"
             else:
-                # Group exists but no version is unlocked yet
-                btn = Button(250, y_offset, "small", "grey", "LOCKED", lambda: None)
+                # Standard Roman Numeral logic for others
+                group_units = [(n, s) for n, s in self.unit_library.items() if self.get_group_name(n) == group_name]
+                highest_lvl = -1
+                for name, stats in group_units:
+                    lvl = self.roman_to_int(name.replace(group_name, "").strip())
+                    if lvl <= researched_lvl or lvl == 0:
+                        if lvl > highest_lvl:
+                            highest_lvl = lvl
+                            highest_unlocked = name
+
+            x_pos = 250
+            if highest_unlocked:
+                # If it's infantry, the 'internal_unit_name' must stay "Infantry" to look it up in JSON
+                lookup_name = "Infantry" if tech_key == "infantry" else highest_unlocked
+                btn = Button(x_pos, y_offset, "small", "blue" if self.is_naval else "green", 
+                             highest_unlocked, lambda n=lookup_name: self.buy_unit(n))
+                btn.internal_unit_name = lookup_name
+                self.elements.append(btn)
+            else:
+                self.elements.append(Button(x_pos, y_offset, "small", "grey", "LOCKED", lambda: None))
             
-            self.elements.append(btn)
-            y_offset += 60 # Vertical spacing stays constant regardless of what is unlocked
+            y_offset += 60
 
     def roman_to_int(self, s):
         if not s: return 0

@@ -292,6 +292,11 @@ def process_recruitment(self, days_passed):
             
         still_deploying = []
         for item in queue:
+            # FIX: Skip building orders (they use 'item_name' and 'order_type': 'BUILDING')
+            if item.get("order_type") == "BUILDING":
+                still_deploying.append(item)
+                continue
+
             item["days_remaining"] -= days_passed
             
             if item["days_remaining"] <= 0:
