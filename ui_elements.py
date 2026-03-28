@@ -157,3 +157,5 @@ class Slider:
             self.handle_rect.centerx = max(self.rect.left, min(event.pos[0], self.rect.right))
             self.value = (self.handle_rect.centerx - self.rect.left) / self.rect.width
             self.callback(self.value)
+            if slider_sound:
+                slider_sound.play()

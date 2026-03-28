@@ -26,6 +26,12 @@ class Controller:
             ui_elements.click_sound = pygame.mixer.Sound("assets/click.mp3")
         except:
             print("Warning: click.mp3 not found in assets folder")
+
+        try:
+            ui_elements.slider_sound = pygame.mixer.Sound("assets/slider.wav")
+        except:
+            print("Warning: slider.wav not found in assets folder")
+
         self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
         
         # 0. Load symbols
