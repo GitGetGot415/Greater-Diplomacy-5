@@ -36,5 +36,14 @@ def get_symbol(name, zoom):
     return None
 
 def _scale_img(img, zoom):
-    size = max(8, int(32 * zoom))
-    return pygame.transform.scale(img, (size, size))
+    # Base target size is 32. We scale the width by zoom.
+    target_w = max(8, int(32 * zoom))
+    
+    # Get original proportions
+    orig_w, orig_h = img.get_size()
+    aspect_ratio = orig_h / orig_w
+    
+    # Calculate height based on aspect ratio
+    target_h = int(target_w * aspect_ratio)
+    
+    return pygame.transform.scale(img, (target_w, target_h))
