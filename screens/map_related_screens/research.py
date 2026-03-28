@@ -79,7 +79,6 @@ class Research_Screen(GameState):
 
     def draw_category_menu(self, res_levels, queue, progress_cache):
         y_pos = 150
-        # Filter techs by current category
         cat_techs = [t for t, data in self.tech_tree.items() if data[0] == self.current_category]
         
         for tech in cat_techs:
@@ -87,7 +86,6 @@ class Research_Screen(GameState):
             max_lvl = self.tech_tree[tech][1]
             reqs = self.tech_tree[tech][2]
             
-            # Check Requirements
             req_met = self.check_requirements(res_levels, reqs)
             queued_item = next((item for item in queue if item["tech_name"] == tech), None)
 
@@ -102,7 +100,19 @@ class Research_Screen(GameState):
                 color, callback = "red", lambda: self.map_screen.show_feedback("Requirements not met!")
             elif len(queue) < 2:
                 has_progress = tech in progress_cache
-                days = progress_cache[tech] if has_progress else (30 + (level * 15))
+                
+                # --- THE FIX STARTS HERE ---
+                if has_progress:
+                    days = progress_cache[tech]
+                else:
+                    # Apply the specific 1800 offset for infantry labels
+                    if tech == "infantry":
+                        effective_lvl = max(0, level - 1800)
+                    else:
+                        effective_lvl = level
+                    days = 30 + (effective_lvl * 15)
+                # --- THE FIX ENDS HERE ---
+
                 prefix = "Resume" if has_progress else "Start"
                 status_text = f"{prefix} {tech.replace('_',' ').title()} ({days}d)"
                 color, callback = "blue", lambda t=tech: self.start_or_resume_research(t)
@@ -127,8 +137,13 @@ class Research_Screen(GameState):
             duration = progress_cache.pop(tech_name)
         else:
             level = player_data["research"].get(tech_name, 0)
-            # Subtract 1800 if it's a "Year based" tech, otherwise use level
-            effective_lvl = (level - 1800) if level >= 1800 else level
+            
+            # FIXED LOGIC: Only apply 1800 offset to the specific infantry key
+            if tech_name == "infantry":
+                effective_lvl = max(0, level - 1800)
+            else:
+                effective_lvl = level
+                
             duration = 30 + (effective_lvl * 15)
             
         player_data["research_queue"].append({"tech_name": tech_name, "days_remaining": duration})
