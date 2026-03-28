@@ -2,6 +2,7 @@ import pygame
 from map_functions.rendering import hover_renderer, province_select, overlay_renderer
 from map_functions.ui import minimap, tooltip
 from map_functions.ui import ui_info_popup as unit_info_popup
+from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def draw_map_screen(self, surface):
     # --- LAYER 1: THE BASE MAP ---
@@ -59,24 +60,25 @@ def draw_map_screen(self, surface):
     # --- LAYER 4: UI BARS & HUD ---
 
     # these are the ui bars. i don't care if you're selecting a country or not, SHOW THESE
+    # Inside Layer 4: UI BARS & HUD
     pygame.draw.rect(surface, (40, 40, 40), self.top_bar_rect)
     pygame.draw.rect(surface, (40, 40, 40), self.bot_bar_rect)
     
     if not self.selection_mode:
+        # Date stays top center
         date_surf = self.font.render(self.time_manager.get_date_string(), True, (255, 255, 255))
-        surface.blit(date_surf, (surface.get_width() // 2 - date_surf.get_width() // 2, 20))
-        
-        money_surf = self.font.render(f"Money: {self.player_money}", True, (255, 215, 0))
-        surface.blit(money_surf, (100, 20))
-        
-        manpower_surf = self.font.render(f"Manpower: {self.player_manpower}", True, (100, 200, 255))
-        surface.blit(manpower_surf, (250, 20))
+        surface.blit(date_surf, (SCREEN_WIDTH // 2 - date_surf.get_width() // 2, 20))
 
-        materials_surf = self.font.render(f"Materials: {self.player_materials}", True, (150, 150, 150))
-        surface.blit(materials_surf, (420, 20))
-
-        fuel_surf = self.font.render(f"Fuel: {self.player_fuel}", True, (200, 100, 255))
-        surface.blit(fuel_surf, (580, 20))
+        # RESOURCES MOVED TO BOTTOM BAR
+        hud_y = SCREEN_HEIGHT - 40
+        resources = [
+            (f"Money: {self.player_money}", (255, 215, 0)),
+            (f"Manpower: {self.player_manpower}", (100, 200, 255)),
+            (f"Materials: {self.player_materials}", (180, 180, 180)),
+            (f"Fuel: {self.player_fuel}", (200, 100, 255))
+        ]
+        for i, (text, color) in enumerate(resources):
+            surface.blit(self.font.render(text, True, color), (50 + (i * 300), hud_y))
 
         player_display = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
         name_surf = self.font.render(f"Playing as: {player_display.title()}", True, (200, 200, 200))

@@ -4,31 +4,30 @@ from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def render_buttons(self):
     if not self.selection_mode:
-        # Standard Left Side Buttons
+        # ALL BUTTONS NOW IN TOP BAR (y=10)
         self.elements = [
-            Button(20, SCREEN_HEIGHT - 50, "small", "green", "Terrain", self.set_terrain),
-            Button(130, SCREEN_HEIGHT - 50, "small", "blue", "Political", self.set_political),
-            Button(240, SCREEN_HEIGHT - 50, "small", "grey", "Reset", self.reset_view),
-            Button(360, SCREEN_HEIGHT - 50, "small", "grey", "Full Refresh", self.refresh_political_map),
-            Button(480, SCREEN_HEIGHT - 50, "small", "grey", "Units", lambda: self.set_view_mode("UNITS")),
-            Button(590, SCREEN_HEIGHT - 50, "small", "grey", "Economy", lambda: self.set_view_mode("ECONOMY")),
-            Button(700, SCREEN_HEIGHT - 50, "small", "grey", "Blank", lambda: self.set_view_mode("BLANK")),
+            Button(120, 10, "small", "green", "Terrain", self.set_terrain),
+            Button(230, 10, "small", "blue", "Political", self.set_political),
+            Button(340, 10, "small", "grey", "Reset", self.reset_view),
+            Button(450, 10, "small", "grey", "Refresh", self.refresh_political_map),
+            Button(480, 10, "small", "grey", "Units", lambda: self.set_view_mode("UNITS")),
+            Button(590, 10, "small", "grey", "Economy", lambda: self.set_view_mode("ECONOMY")),
+            Button(700, 10, "small", "grey", "Blank", lambda: self.set_view_mode("BLANK")),
         ]
 
+        # Right-side top buttons
         if self.is_editor:
-            # EDITOR SPECIFIC BUTTONS (Right Side)
             self.elements.extend([
-                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "blue", "Save", self.save_map_data),
-                Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "blue", "Load", self.editor_load_map),
-                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Nation", self.select_brush_nation),
-                Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 50, "small", "grey", "Building", self.select_building_brush)
+                Button(SCREEN_WIDTH - 120, 10, "small", "blue", "Save", self.save_map_data),
+                Button(SCREEN_WIDTH - 230, 10, "small", "blue", "Load", self.editor_load_map),
+                Button(SCREEN_WIDTH - 340, 10, "small", "grey", "Nation", self.select_brush_nation),
+                Button(SCREEN_WIDTH - 450, 10, "small", "grey", "Building", self.select_building_brush)
             ])
         else:
-            # GAME SPECIFIC BUTTONS (Right Side)
             self.elements.extend([
-                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "green", "Next Turn", self.advance_time),
-                Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "blue", "Research", self.open_research),
-                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Save Game", self.save_map_data)
+                Button(SCREEN_WIDTH - 120, 10, "small", "green", "Next Turn", self.advance_time),
+                Button(SCREEN_WIDTH - 230, 10, "small", "blue", "Research", self.open_research),
+                Button(SCREEN_WIDTH - 340, 10, "small", "grey", "Save Game", self.save_map_data)
             ])
     
     self.btn_go_build = Button(1390, 550, "medium", "grey", "Construction", self.open_construction)
