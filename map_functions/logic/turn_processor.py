@@ -9,62 +9,16 @@ def process_next_turn(self):
     days_to_advance = 5
     self.time_manager.process_time(days_to_advance)
     
-    # 1. Process Diplomacy
     diplomacy_logic.process_diplomacy_turn(self)
-
-    # 2. Process Movement (Handles the "stop to fight" logic)
     process_movement(self)
-    
-    # 3. Process Combat (New: Damage calculations)
     process_combat(self)
-
-    # 4. NEW: Check if winners of a battle should flip the province ownership
     check_for_post_combat_captures(self)
-    
-    # 4. Process Economy
     process_economy(self)
     
-    # 5. Process Recruitment
-    process_recruitment(self, days_to_advance)
-
-    # 6. Process Construction
-    process_construction(self, days_to_advance)
-
-    # 7. Process National Research
+    # 5. Process Unified Queue (Sequential)
+    process_queues(self, days_to_advance)
+    
     process_national_research(self, days_to_advance)
-
-def process_construction(self, days_passed):
-    for province in self.map_data.values():
-        queue = province.get("deployment_queue", [])
-        if not queue: continue
-            
-        still_deploying = []
-        for item in queue:
-            if item.get("order_type") == "BUILDING":
-                item["days_remaining"] -= days_passed
-                
-                if item["days_remaining"] <= 0:
-                    b_name = item["item_name"]
-                    b_data = BUILDING_LIBRARY[b_name]
-                    
-                    current_buildings = province.get("buildings", [])
-                    # OVERWRITE LOGIC:
-                    # Remove any building that belongs to the same group (e.g., industry or refinery)
-                    updated_buildings = [b for b in current_buildings 
-                                    if BUILDING_LIBRARY.get(b, {}).get("group") != b_data["group"]]
-                    
-                    updated_buildings.append(b_name)
-                    province["buildings"] = updated_buildings
-                    
-                    if province.get("owner") == self.player_country:
-                        self.show_feedback(f"CONSTRUCTION COMPLETE: {b_name}")
-                else:
-                    still_deploying.append(item)
-            else:
-                # Keep units in the queue
-                still_deploying.append(item)
-        
-        province["deployment_queue"] = still_deploying
 
 def process_national_research(self, days_passed):
     # Load template to know costs
@@ -242,30 +196,39 @@ def process_movement(self):
                 province["units"] = [u for u in province["units"] if u not in moving_units]
 
 def process_economy(self):
-    """Calculates income and deducts unit upkeep for ALL countries."""
-    # yes i know the values here are comically high just keep it this way (for testing)
+    """Calculates income, applies building yields, and deducts unit upkeep."""
     YIELD_MONEY = 999500
     YIELD_MANPOWER = 99950
     YIELD_MATERIALS = 999100
     YIELD_FUEL = 9991
     UPKEEP_MODIFIER = 0.05
 
-    # 1. Load Unit Library for cost reference
     unit_stats_path = 'map_functions/data/unit_data.json'
+    building_stats_path = 'map_functions/data/building_data.json'
+    
     with open(unit_stats_path, 'r') as f:
         unit_library = json.load(f)
+    with open(building_stats_path, 'r') as f:
+        building_library = json.load(f)
 
-    # 2. Trackers
-    turn_data = {name: {"inc": 0, "upkeep": {"money":0, "manpower":0, "materials":0, "fuel":0}} 
+    # Added "bonus" dict for building yields
+    turn_data = {name: {"inc": 0, "upkeep": {"money":0, "manpower":0, "materials":0, "fuel":0}, "bonus": {"money":0, "manpower":0, "materials":0, "fuel":0}} 
                  for name in self.nation_data.keys()}
 
-    # 3. Sum Province Income
+    # Sum Province Income & Building Yields
     for province in self.map_data.values():
         owner = province.get("owner")
         if owner in turn_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
             turn_data[owner]["inc"] += 1
+            
+            for b_name in province.get("buildings", []):
+                stats = building_library.get(b_name, {})
+                turn_data[owner]["bonus"]["money"] += stats.get("prod_money", 0)
+                turn_data[owner]["bonus"]["manpower"] += stats.get("prod_manpower", 0)
+                turn_data[owner]["bonus"]["materials"] += stats.get("prod_materials", 0)
+                turn_data[owner]["bonus"]["fuel"] += stats.get("prod_fuel", 0)
 
-    # 4. Calculate Upkeep
+    # Calculate Upkeep
     for province in self.map_data.values():
         for unit in province.get("units", []):
             owner = unit["owner"]
@@ -276,70 +239,78 @@ def process_economy(self):
                 turn_data[owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
                 turn_data[owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
 
-    # 5. Apply to Nation Data
+    # Apply to Nation Data
     for name, data in turn_data.items():
         stats = self.nation_data[name]
-        stats["money"] += (data["inc"] * YIELD_MONEY) - data["upkeep"]["money"]
-        stats["manpower"] += (data["inc"] * YIELD_MANPOWER) - data["upkeep"]["manpower"]
-        stats["materials"] += (data["inc"] * YIELD_MATERIALS) - data["upkeep"]["materials"]
-        stats["fuel"] += (data["inc"] * YIELD_FUEL) - data["upkeep"]["fuel"]
+        stats["money"] += (data["inc"] * YIELD_MONEY) + data["bonus"]["money"] - data["upkeep"]["money"]
+        stats["manpower"] += (data["inc"] * YIELD_MANPOWER) + data["bonus"]["manpower"] - data["upkeep"]["manpower"]
+        stats["materials"] += (data["inc"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
+        stats["fuel"] += (data["inc"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
 
-        # Clamp resources at 0 so they don't go negative
         for res in ["money", "manpower", "materials", "fuel"]:
             stats[res] = max(0, stats[res])
 
     return self.nation_data.get(self.player_country, {}).get("money", 0)
 
-def process_recruitment(self, days_passed):
-    """Handles the deployment of units from the queue to the field with dynamic scaling."""
+def process_queues(self, days_passed):
+    """Processes only the VERY FIRST item in the deployment queue sequentially."""
     unit_stats_path = 'map_functions/data/unit_data.json'
+    building_stats_path = 'map_functions/data/building_data.json'
+    
     unit_library = {}
+    building_library = {}
     
     if os.path.exists(unit_stats_path):
-        with open(unit_stats_path, 'r') as f:
-            unit_library = json.load(f)
+        with open(unit_stats_path, 'r') as f: unit_library = json.load(f)
+    if os.path.exists(building_stats_path):
+        with open(building_stats_path, 'r') as f: building_library = json.load(f)
 
     for province in self.map_data.values():
         queue = province.get("deployment_queue", [])
         if not queue: continue
             
-        still_deploying = []
-        for item in queue:
-            # FIX: Skip building orders (they use 'item_name' and 'order_type': 'BUILDING')
-            if item.get("order_type") == "BUILDING":
-                still_deploying.append(item)
-                continue
-
-            item["days_remaining"] -= days_passed
+        # ONLY touch the first item!
+        item = queue[0]
+        item["days_remaining"] -= days_passed
+        
+        if item["days_remaining"] <= 0:
+            current_owner = province.get("owner", "None")
             
-            if item["days_remaining"] <= 0:
-                current_owner = province.get("owner", "None")
-                unit_type = item["unit_type"]
+            # IS BUILDING?
+            if item.get("order_type") == "BUILDING":
+                b_name = item["item_name"]
+                b_data = building_library.get(b_name, {})
                 
-                # 1. Get Base Stats from Library
+                current_buildings = province.get("buildings", [])
+                updated_buildings = [b for b in current_buildings 
+                                     if building_library.get(b, {}).get("group") != b_data.get("group")]
+                
+                updated_buildings.append(b_name)
+                province["buildings"] = updated_buildings
+                
+                if current_owner == self.player_country:
+                    self.show_feedback(f"CONSTRUCTION COMPLETE: {b_name}")
+
+            # IS UNIT?
+            else:
+                unit_type = item["unit_type"]
                 stats = unit_library.get(unit_type, {})
                 
-                # 2. Dynamic Scaling for Infantry
                 if unit_type == "Infantry":
-                    # Get research level for this country (Default to 1800)
                     owner_data = self.nation_data.get(current_owner, {})
                     inf_level = owner_data.get("research", {}).get("infantry", 1800)
-                    
                     n = inf_level - 1800
-                    # HP = 1000 * 1.01^n
                     max_health = int(1000 * math.pow(1.01, n))
-                    # ATK = 100 * 1.01^n
                     attack = int(100 * math.pow(1.01, n))
-                    defense = stats.get("defense", 0) # Keep base defense or scale if desired
+                    defense = stats.get("defense", 0)
                     speed = stats.get("speed", 1)
                 else:
-                    # Standard logic for manually defined units (Cavalry I, etc.)
+                    inf_level = 0
                     max_health = stats.get("health", 100)
                     attack = stats.get("attack", 5)
                     defense = stats.get("defense", 0)
                     speed = stats.get("speed", 1)
 
-                # 3. Create the Unit object
                 new_unit_data = {
                     "type": unit_type,
                     "owner": current_owner,
@@ -348,12 +319,13 @@ def process_recruitment(self, days_passed):
                     "speed": speed,
                     "attack": attack,
                     "defense": defense,
-                    "level": inf_level if unit_type == "Infantry" else 0, # Tag with level
+                    "level": inf_level,
                     "order": {"type": "MOVE", "path": []}
                 }
                 
                 province["units"].append(new_unit_data)
-            else:
-                still_deploying.append(item)
-        
-        province["deployment_queue"] = still_deploying
+                if current_owner == self.player_country:
+                    self.show_feedback(f"DEPLOYED: {unit_type}")
+            
+            # Remove the finished item so the next one can start on the next turn
+            queue.pop(0)

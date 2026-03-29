@@ -44,6 +44,6 @@ def combine_files(output_filename="combined_scripts.txt", search_directory=".", 
 
 # Example usage:
 # List the exact JSON files you want to include here
-specific_jsons = ["map_functions/data/unit_data.json", "map_functions/data/countries_data.json", "map_functions/data/research_template.json"]
+specific_jsons = ["map_functions/data/unit_data.json", "map_functions/data/countries_data.json", "map_functions/data/research_template.json", "map_functions/data/building_data.json"]
 
 combine_files(json_files_to_include=specific_jsons)

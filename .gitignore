@@ -8,4 +8,5 @@ __pycache__/
 !settings_config.json
 !unit_data.json
 !research_template.json
+!building_data.json
 *.txt
