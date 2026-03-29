@@ -67,6 +67,13 @@ def process_construction(self, days_passed):
         province["deployment_queue"] = still_deploying
 
 def process_national_research(self, days_passed):
+    # Load template to know costs
+    with open("map_functions/data/research_template.json", "r") as f:
+        template = json.load(f)
+    
+    points_per_day = 10
+    total_points_generated = days_passed * points_per_day # e.g., 50 points
+
     for country_name, country_data in self.nation_data.items():
         queue = country_data.get("research_queue", [])
         if not queue: continue
@@ -74,10 +81,16 @@ def process_national_research(self, days_passed):
         # We iterate backwards through the queue so we can safely remove items
         for i in range(len(queue) - 1, -1, -1):
             project = queue[i]
-            project["days_remaining"] -= days_passed
+            tech_key = project["tech_name"]
+            
+            # Use 'points_remaining' instead of 'days_remaining'
+            # (First time initialization if coming from an old save)
+            if "points_remaining" not in project:
+                project["points_remaining"] = project.get("days_remaining", 30) * points_per_day
+            
+            project["points_remaining"] -= total_points_generated
 
-            if project["days_remaining"] <= 0:
-                tech_key = project["tech_name"]
+            if project["points_remaining"] <= 0:
                 country_data["research"][tech_key] = country_data["research"].get(tech_key, 0) + 1
                 
                 # CLEANUP: Remove from progress cache if it was there

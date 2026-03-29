@@ -70,45 +70,44 @@ class Research_Screen(GameState):
 
         for tech in cat_techs:
             level = res_levels.get(tech, 0)
-            max_lvl = self.tech_tree[tech]["max_lvl"]
-            reqs = self.tech_tree[tech]["req"]
+            tech_data = self.tech_tree[tech]
+            max_lvl = tech_data["max_lvl"]
+            reqs = tech_data["req"]
             req_met = self.check_requirements(res_levels, reqs)
             queued_item = next((item for item in queue if item["tech_name"] == tech), None)
 
             if has_drawn_infinite and max_lvl != 9999:
                 y_pos += 25 
                 has_drawn_infinite = False
-            
-            if max_lvl == 9999:
-                has_drawn_infinite = True
+            if max_lvl == 9999: has_drawn_infinite = True
 
             display_name = tech.replace('_',' ').title()
             
             # --- Type vs Lvl Logic ---
+            level_str = ""
             if max_lvl == 9999:
-                level_str = f" Type {level + 1}" if not queued_item else f" Type {level}"
-            elif max_lvl == 1:
-                level_str = ""
-            else:
-                level_str = f" Lvl {level + 1}" if not queued_item else f" Lvl {level}"
+                level_str = f" Type {level + (0 if queued_item else 1)}"
+            elif max_lvl > 1:
+                level_str = f" Lvl {level + (0 if queued_item else 1)}"
 
-            # --- Button Logic ---
+            # --- Cost & Progress Logic ---
+            total_cost = tech_data.get("cost", 300)
+            
             if level >= max_lvl and max_lvl != 9999:
                 status_text = f"{display_name}: MAXED"
                 color, callback = "grey", lambda: None
             elif queued_item:
-                status_text = f"{display_name}: {queued_item['days_remaining']}d (PAUSE)"
+                pts = queued_item.get('points_remaining', total_cost)
+                status_text = f"{display_name}: {pts} pts left (PAUSE)"
                 color, callback = "green", lambda t=tech: self.pause_research(t)
             elif not req_met:
                 status_text = f"{display_name} (Locked)"
                 color, callback = "red", lambda: self.map_screen.show_feedback("Requirements not met!")
             elif len(queue) < 2:
-                # Setup days calculation
-                effective_lvl = max(0, level - 1800) if tech in ["infantry", "industry"] else level
-                base_days = 30 + (effective_lvl * 15)
-                days = progress_cache.get(tech, base_days)
-                prefix = "Resume" if tech in progress_cache else "Start"
-                status_text = f"{prefix} {display_name}{level_str} ({days}d)"
+                has_progress = tech in progress_cache
+                pts_needed = progress_cache.get(tech, total_cost)
+                prefix = "Resume" if has_progress else "Start"
+                status_text = f"{prefix} {display_name}{level_str} ({pts_needed} pts)"
                 color, callback = "blue", lambda t=tech: self.start_or_resume_research(t)
             else:
                 status_text = f"{display_name} (Slots Full)"
@@ -118,9 +117,7 @@ class Research_Screen(GameState):
             self.elements.append(btn)
 
             if queued_item:
-                effective_lvl = max(0, level - 1800) if tech in ["infantry", "industry"] else level
-                total_days = 30 + (effective_lvl * 15)
-                progress = 1 - (queued_item['days_remaining'] / total_days)
+                progress = 1 - (queued_item.get('points_remaining', total_cost) / total_cost)
                 self.draw_inline_progress(btn, progress)
 
             y_pos += 75
@@ -155,14 +152,14 @@ class Research_Screen(GameState):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
         progress_cache = player_data.setdefault("research_progress", {})
         
-        if tech_name in progress_cache:
-            duration = progress_cache.pop(tech_name)
-        else:
-            level = player_data["research"].get(tech_name, 0)
-            effective_lvl = max(0, level - 1800) if tech_name in ["infantry", "industry"] else level
-            duration = 30 + (effective_lvl * 15)
+        # Get point cost from tech tree
+        total_cost = self.tech_tree[tech_name].get("cost", 300)
+        points_remaining = progress_cache.pop(tech_name, total_cost)
             
-        player_data["research_queue"].append({"tech_name": tech_name, "days_remaining": duration})
+        player_data["research_queue"].append({
+            "tech_name": tech_name, 
+            "points_remaining": points_remaining
+        })
         self.refresh_ui()
 
     def pause_research(self, tech_name):
@@ -170,7 +167,7 @@ class Research_Screen(GameState):
         queue = player_data["research_queue"]
         for i, project in enumerate(queue):
             if project["tech_name"] == tech_name:
-                player_data["research_progress"][tech_name] = project["days_remaining"]
+                player_data["research_progress"][tech_name] = project["points_remaining"]
                 queue.pop(i)
                 break
         self.refresh_ui()
@@ -187,12 +184,18 @@ class Research_Screen(GameState):
         ts = font.render(title_str, True, (255, 255, 255))
         surface.blit(ts, (SCREEN_WIDTH//2 - ts.get_width()//2, 75))
 
+        # --- Research Output Indicator ---
+        output_font = pygame.font.SysFont("Arial", 22, bold=True)
+        # For now, this is hardcoded to 10/day as per your requirement
+        output_text = output_font.render("RESEARCH OUTPUT: 10 pts/day", True, (0, 255, 255))
+        surface.blit(output_text, (SCREEN_WIDTH - output_text.get_width() - 30, 85))
+
         # --- COMPLETED TAB TEXT RENDERING ---
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)
         else:
-            # --- Standard HUD (Slots) for active research tabs ---
-            hud_rect = pygame.Rect(20, SCREEN_HEIGHT - 120, 350, 100)
+            # --- Updated HUD (Slots) ---
+            hud_rect = pygame.Rect(20, SCREEN_HEIGHT - 120, 400, 100)
             pygame.draw.rect(surface, (40, 40, 60), hud_rect)
             pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
             hud_font = pygame.font.SysFont("Arial", 20)
@@ -203,7 +206,16 @@ class Research_Screen(GameState):
                 y_off = SCREEN_HEIGHT - 80 + (i * 25)
                 if i < len(queue):
                     p = queue[i]
-                    txt = f"Slot {i+1}: {p['tech_name'].replace('_',' ').title()} ({p['days_remaining']}d)"
+                    tech_name = p['tech_name'].replace('_',' ').title()
+                    
+                    # Fix for the KeyError: Use points_remaining
+                    pts_left = p.get('points_remaining', 0)
+                    total_cost = self.tech_tree.get(p['tech_name'], {}).get("cost", 300)
+                    
+                    # Optional: Add a percentage for clarity
+                    progress_pct = int((1 - (pts_left / total_cost)) * 100)
+                    
+                    txt = f"Slot {i+1}: {tech_name} ({pts_left} pts left | {progress_pct}%)"
                     surface.blit(hud_font.render(txt, True, (100, 255, 100)), (40, y_off))
                 else:
                     surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (40, y_off))
