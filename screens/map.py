@@ -78,6 +78,14 @@ class Map(GameState):
 
         # Add the new Relations Map layer
         self.relations_map = self.id_map.copy()
+        # self.refresh_relations_map() # <-- ADD THIS LINE
+
+        # New: Scramble the map if requested
+        if is_random:
+            self.randomize_all_provinces()
+            # Force a visual refresh after changing logic data
+            self.refresh_political_map()
+            # self.refresh_relations_map() # <-- ADD THIS LINE HERE TOO
         
         # New: Scramble the map if requested
         if is_random:

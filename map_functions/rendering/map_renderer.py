@@ -6,7 +6,7 @@ from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
 def draw_map_screen(self, surface):
     # --- LAYER 1: THE BASE MAP ---
-    current_base = self.terrain_map if self.base_layer == "TERRAIN" else self.political_map
+    current_base = self.active_map # <-- Use the dynamically updated active_map!
 
     vw = surface.get_width() / self.camera.zoom
     vh = (surface.get_height() - self.total_ui_h) / self.camera.zoom
