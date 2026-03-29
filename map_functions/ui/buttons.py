@@ -5,33 +5,34 @@ from map_functions.rendering import symbol_loader
 
 def render_buttons(self):
     if not self.selection_mode:
-        # ALL BUTTONS NOW IN TOP BAR (y=10)
-
         unit_icon = symbol_loader.get_symbol("Infantry", 0.8)
         economy_icon = symbol_loader.get_symbol("Factory", 0.8)
         blank_icon = symbol_loader.get_symbol("Star", 0.8)
         terrain_icon = symbol_loader.get_symbol("Mountains", 0.8)
         political_icon = symbol_loader.get_symbol("Flag", 0.8)
+        relations_icon = symbol_loader.get_symbol("Flag", 0.8) # Re-using Flag for relations
         research_icon = symbol_loader.get_symbol("Research", 0.8)
         save_icon = symbol_loader.get_symbol("Save", 0.8)
 
         self.elements = [
-            # Terrain
-            Button(120, 10, "small", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
-            # Political
-            Button(230, 10, "small", "green", "Political", self.set_political, image=political_icon, show_text=False),
-            # Reset (this just resets the camera prolly not needed)
-            # Button(340, 10, "small", "grey", "Reset", self.reset_view),
-            # Refresh
-            Button(450, 10, "small", "grey", "Refresh", self.refresh_political_map),
-
-            # Units
-            Button(600, 10, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
-            # Economy
-            Button(650, 10, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
-            # Blank
-            Button(700, 10, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
+            # Refresh remains in the top bar
+            Button(120, 10, "small", "grey", "Refresh", self.refresh_political_map),
+            Button(220, 10, "small", "grey", "Relation", self.refresh_relations_map),
         ]
+
+        # Primary View Buttons (Inside the bottom bar)
+        self.elements.extend([
+            Button(20, SCREEN_HEIGHT - 50, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
+            Button(70, SCREEN_HEIGHT - 50, "small_square", "blue", "Political", self.set_political, image=political_icon, show_text=False),
+            Button(120, SCREEN_HEIGHT - 50, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
+        ])
+
+        # Secondary View Buttons (Floating directly above the primary buttons)
+        self.elements.extend([
+            Button(20, SCREEN_HEIGHT - 100, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
+            Button(70, SCREEN_HEIGHT - 100, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
+            Button(120, SCREEN_HEIGHT - 100, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
+        ])
 
         # Right-side top buttons
         if self.is_editor:

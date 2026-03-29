@@ -75,6 +75,9 @@ class Map(GameState):
         
         # Load standard assets
         load_map.load_map_assets(self, load_path)
+
+        # Add the new Relations Map layer
+        self.relations_map = self.id_map.copy()
         
         # New: Scramble the map if requested
         if is_random:
@@ -378,8 +381,8 @@ class Map(GameState):
         if self.is_editor:
             # Only show basic map buttons in Editor mode
             for el in self.elements:
-                # Standard Editor Buttons
-                if el.text in ["Terrain", "Political", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                # Standard Editor Buttons (Added "Relations")
+                if el.text in ["Terrain", "Political", "Relations", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 # Dynamic Color for "Nation" button
@@ -409,8 +412,8 @@ class Map(GameState):
             return
                 
         # funny, a hardcoded number
-        # this will be a problem later if more than 9 buttons are ever added
-        for i in range(min(9, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 11 buttons are ever added
+        for i in range(min(11, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
         # self.btn_go_build.visible = is_sel and owner == self.player_country
@@ -526,3 +529,59 @@ class Map(GameState):
     def confirm_exit(self):
         """Actually leaves the game"""
         self.next_state, self.done = "MENU", True
+    
+    def set_relations(self): 
+        self.base_layer = "RELATIONS"
+        self.active_map = self.relations_map
+        self.show_feedback("Mode: Relations")
+
+    #def refresh_relations(self):
+        #self.refresh_relations_map()
+
+    def refresh_relations_map(self): 
+        political_refresher.refresh_relations_map(self)
+
+    def get_player_economy_projections(self):
+        """Calculates expected daily resource changes for the UI"""
+        YIELD_MONEY = 999500
+        YIELD_MANPOWER = 99950
+        YIELD_MATERIALS = 999100
+        YIELD_FUEL = 9991
+        UPKEEP_MODIFIER = 0.05
+
+        inc = 0
+        bonus = {"money":0, "manpower":0, "materials":0, "fuel":0}
+        upkeep = {"money":0, "manpower":0, "materials":0, "fuel":0}
+
+        # Cache library loads to prevent lag
+        if not hasattr(self, 'cached_unit_library'):
+            import json, os
+            self.cached_unit_library = json.load(open('map_functions/data/unit_data.json')) if os.path.exists('map_functions/data/unit_data.json') else {}
+            self.cached_building_library = json.load(open('map_functions/data/building_data.json')) if os.path.exists('map_functions/data/building_data.json') else {}
+
+        for province in self.map_data.values():
+            owner = province.get("owner")
+            if owner == self.player_country and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                inc += 1
+                for b_name in province.get("buildings", []):
+                    stats = self.cached_building_library.get(b_name, {})
+                    bonus["money"] += stats.get("prod_money", 0)
+                    bonus["manpower"] += stats.get("prod_manpower", 0)
+                    bonus["materials"] += stats.get("prod_materials", 0)
+                    bonus["fuel"] += stats.get("prod_fuel", 0)
+            
+            for unit in province.get("units", []):
+                if unit.get("owner") == self.player_country:
+                    stats = self.cached_unit_library.get(unit["type"], {})
+                    upkeep["money"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
+                    upkeep["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
+                    upkeep["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
+                    upkeep["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
+
+        total_inc = {
+            "money": (inc * YIELD_MONEY) + bonus["money"],
+            "manpower": (inc * YIELD_MANPOWER) + bonus["manpower"],
+            "materials": (inc * YIELD_MATERIALS) + bonus["materials"],
+            "fuel": (inc * YIELD_FUEL) + bonus["fuel"]
+        }
+        return total_inc, upkeep

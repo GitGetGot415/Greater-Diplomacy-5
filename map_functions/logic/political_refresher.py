@@ -52,3 +52,46 @@ def refresh_political_map(self):
         self.active_map = self.political_map
         
     print(f"Political map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+def refresh_relations_map(self):
+    """Rebuilds the relations map surface based on diplomacy."""
+    timer = pygame.time.get_ticks()
+    new_rel_surf = self.id_map.copy()
+    px = pygame.PixelArray(new_rel_surf)
+    
+    water_mapping = {
+        "ocean": "Ocean", "coastal_sea": "Ocean", "inland_sea": "Ocean", "lakes": "Lakes"
+    }
+    
+    player_data = self.nation_data.get(self.player_country, {})
+    at_war = player_data.get("at_war_with", [])
+    allies = player_data.get("allied_with", [])
+    
+    for color_key, data in self.map_data.items():
+        terrain_type = data.get("terrain", "plains")
+        
+        if terrain_type in water_mapping:
+            color = (40, 80, 160) if terrain_type == "lakes" else (20, 40, 80)
+        else:
+            owner = data.get("owner", "Unclaimed")
+            
+            if owner == "Unclaimed" or owner == "None":
+                color = (255, 255, 255)  # Neutral / Unclaimed (White)
+            elif owner == self.player_country:
+                color = (0, 0, 255)      # Self (Blue)
+            elif owner in at_war:
+                color = (255, 0, 0)      # Enemies (Red)
+            elif owner in allies:
+                color = (0, 255, 0)      # Allies (Green)
+            else:
+                color = (255, 255, 255)  # Other Neutrals (White)
+        
+        px.replace(new_rel_surf.map_rgb(color_key), new_rel_surf.map_rgb(color))
+    
+    del px
+    self.relations_map = new_rel_surf
+    
+    if self.map_mode == "RELATIONS":
+        self.active_map = self.relations_map
+        
+    print(f"Relations map refreshed in {pygame.time.get_ticks() - timer} ms")
