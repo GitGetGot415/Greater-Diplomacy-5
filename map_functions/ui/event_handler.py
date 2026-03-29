@@ -5,6 +5,22 @@ from map_functions.logic import edit_province_ownership
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
+
+    # NEW: Confirmation Logic Hijack
+    if getattr(self, 'show_exit_confirmation', False):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # We calculate these positions relative to the screen center
+            # which we'll define in the renderer
+            center_x, center_y = 1600 // 2, 900 // 2 # or g.SCREEN_WIDTH
+            
+            yes_rect = pygame.Rect(center_x - 130, center_y + 20, 100, 40)
+            no_rect = pygame.Rect(center_x + 30, center_y + 20, 100, 40)
+
+            if yes_rect.collidepoint(mx, my):
+                self.confirm_exit()
+            elif no_rect.collidepoint(mx, my):
+                self.cancel_exit()
+        return # Block all other map events while confirming
     
     # 1. UI Check
     on_ui = (self.top_bar_rect.collidepoint(mx, my) or 

@@ -139,3 +139,41 @@ def draw_map_screen(self, surface):
         surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 20, SCREEN_HEIGHT - 40))
 
     if self.hovered_province: tooltip.draw_tooltip(self, surface)
+
+    # --- LAYER 7: EXIT CONFIRMATION MODAL ---
+    if getattr(self, 'show_exit_confirmation', False):
+        # 1. Dim the whole screen
+        overlay = pygame.Surface((surface.get_width(), surface.get_height()), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        # 2. Draw the Box
+        box_rect = pygame.Rect(0, 0, 450, 200)
+        box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
+        pygame.draw.rect(surface, (40, 40, 40), box_rect)
+        pygame.draw.rect(surface, (200, 200, 200), box_rect, 2)
+
+        # 3. Text
+        font = pygame.font.SysFont("Arial", 26, bold=True)
+        msg = "Quit to Main Menu?"
+        sub_msg = "Unsaved progress will be lost."
+        
+        txt_surf = font.render(msg, True, (255, 255, 255))
+        sub_surf = pygame.font.SysFont("Arial", 18).render(sub_msg, True, (200, 200, 200))
+        
+        surface.blit(txt_surf, txt_surf.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
+        surface.blit(sub_surf, sub_surf.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
+
+        # 4. Buttons (Visual Only, logic is in event_handler)
+        yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 120, 100, 40)
+        no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 120, 100, 40)
+
+        # Highlight if hovered
+        mx, my = pygame.mouse.get_pos()
+        
+        pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
+        pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
+        
+        btn_font = pygame.font.SysFont("Arial", 20, bold=True)
+        surface.blit(btn_font.render("EXIT", True, (255, 255, 255)), (yes_rect.x + 25, yes_rect.y + 8))
+        surface.blit(btn_font.render("STAY", True, (255, 255, 255)), (no_rect.x + 25, no_rect.y + 8))

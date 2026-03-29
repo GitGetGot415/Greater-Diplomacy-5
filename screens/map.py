@@ -70,6 +70,9 @@ class Map(GameState):
         self.feedback_text = ""
         self.feedback_timer = 0
 
+        self.show_exit_confirmation = False # New state variable
+        self.confirm_box_rect = pygame.Rect(0, 0, 400, 200) # For the modal
+        
         # Load standard assets
         load_map.load_map_assets(self, load_path)
         
@@ -78,7 +81,7 @@ class Map(GameState):
             self.randomize_all_provinces()
             # Force a visual refresh after changing logic data
             self.refresh_political_map()
-            
+
         # Build UI Buttons
         buttons.render_buttons(self)
 
@@ -512,3 +515,20 @@ class Map(GameState):
                 province["owner"] = new_owner
         
         self.show_feedback("Map Randomized!")
+    
+    def exit_to_menu(self): 
+        """This now just triggers the UI instead of exiting"""
+        self.show_exit_confirmation = True
+        # Hide standard UI elements while confirming to avoid clicks
+        for el in self.elements:
+            el.visible = False
+
+    def cancel_exit(self):
+        """Returns to the game"""
+        self.show_exit_confirmation = False
+        # Re-trigger button visibility logic in next update()
+        self.show_feedback("Exit cancelled")
+
+    def confirm_exit(self):
+        """Actually leaves the game"""
+        self.next_state, self.done = "MENU", True
