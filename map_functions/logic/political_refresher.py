@@ -1,66 +1,81 @@
 import pygame
+import numpy as np
 
 def refresh_political_map(self):
-    """Rebuilds the entire political map surface from map_data."""
+    """Rebuilds the entire political map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
-    # Create a fresh canvas
-    new_pol_surf = self.id_map.copy()
-    px = pygame.PixelArray(new_pol_surf)
+    # 1. Extract raw 3D pixel data from the ID map (Width x Height x RGB)
+    id_array = pygame.surfarray.pixels3d(self.id_map)
     
-    # Define mapping for water terrain types to their 'pseudo-country' names
-    # This matches the terrain types generated in your automatic_map_painter.py
+    # 2. Pack the RGB values into a single 2D array of 24-bit integers
+    # We cast to uint32 BEFORE shifting so the numbers don't overflow
+    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
+            (id_array[:, :, 1].astype(np.uint32) << 8) | \
+             id_array[:, :, 2].astype(np.uint32)
+             
+    # 3. Create a Lookup Table (LUT) for all 16.7 million possible RGB colors (~67 MB in RAM)
+    lut = np.zeros(16777216, dtype=np.uint32)
+    
     water_mapping = {
-        "ocean": "Ocean",
-        "coastal_sea": "Ocean",
-        "inland_sea": "Ocean",
-        "lakes": "Lakes"
+        "ocean": "Ocean", "coastal_sea": "Ocean", 
+        "inland_sea": "Ocean", "lakes": "Lakes"
     }
     
+    # 4. Populate the Lookup Table with your nation logic
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        # 1. Determine the visual owner
         if terrain_type in water_mapping:
-            if (terrain_type == "Lakes"):
-                print(terrain_type)
-            # If it's water, assign it to the visual 'Ocean' or 'Lakes' nation
             owner = water_mapping[terrain_type]
-            # Optional: sync the logic data so they aren't 'owned' by None
             data["owner"] = owner
         else:
-            # Otherwise, use the standard nation owner
             owner = data.get("owner", "Unclaimed")
             
-        # 2. Get the color from your nation_colors dictionary
-        # Fallback to white if the nation name isn't found
-        if not (owner == "Ocean" or owner == "Unclaimed"):
-            print(owner)
-        if (owner == "Lakes" or owner == "lakes"):
-            # idk why this isn't working im just gonna bandaid this
+        if owner.lower() == "lakes":
             color = (40, 80, 160)
         else:
             color = self.nation_colors.get(owner, (255, 255, 255))
+            
+        # Pack the keys and target colors
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
         
-        # 3. Replace the unique ID color with the Nation color
-        px.replace(new_pol_surf.map_rgb(color_key), new_pol_surf.map_rgb(color))
+        lut[packed_key] = packed_color
+        
+    # 5. INSTANTLY map every pixel on the screen in a single pass
+    out_2d = lut[id_2d]
     
-    del px # Unlock surface
+    # 6. Unpack back into an RGB 3D array
+    out_3d = np.empty_like(id_array)
+    out_3d[:, :, 0] = (out_2d >> 16) & 0xFF
+    out_3d[:, :, 1] = (out_2d >> 8) & 0xFF
+    out_3d[:, :, 2] = out_2d & 0xFF
+    
+    # 7. Apply to a fresh Pygame Surface
+    new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    pygame.surfarray.blit_array(new_pol_surf, out_3d)
+    
     self.political_map = new_pol_surf
-    
     if self.map_mode == "POLITICAL":
         self.active_map = self.political_map
         
     print(f"Political map refreshed in {pygame.time.get_ticks() - timer} ms")
 
 def refresh_relations_map(self):
-    """Rebuilds the relations map surface based on diplomacy."""
+    """Rebuilds the relations map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
-    new_rel_surf = self.id_map.copy()
-    px = pygame.PixelArray(new_rel_surf)
+    
+    id_array = pygame.surfarray.pixels3d(self.id_map)
+    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
+            (id_array[:, :, 1].astype(np.uint32) << 8) | \
+             id_array[:, :, 2].astype(np.uint32)
+             
+    lut = np.zeros(16777216, dtype=np.uint32)
     
     water_mapping = {
-        "ocean": "Ocean", "coastal_sea": "Ocean", "inland_sea": "Ocean", "lakes": "Lakes"
+        "ocean": "Ocean", "coastal_sea": "Ocean", 
+        "inland_sea": "Ocean", "lakes": "Lakes"
     }
     
     player_data = self.nation_data.get(self.player_country, {})
@@ -75,20 +90,31 @@ def refresh_relations_map(self):
         else:
             owner = data.get("owner", "Unclaimed")
             
-            if owner == "Unclaimed" or owner == "None":
-                color = (255, 255, 255)  # Neutral / Unclaimed (White)
+            if owner in ["Unclaimed", "None", ""]:
+                color = (255, 255, 255)
             elif owner == self.player_country:
-                color = (0, 0, 255)      # Self (Blue)
+                color = (0, 0, 255)
             elif owner in at_war:
-                color = (255, 0, 0)      # Enemies (Red)
+                color = (255, 0, 0)
             elif owner in allies:
-                color = (0, 255, 0)      # Allies (Green)
+                color = (0, 255, 0)
             else:
-                color = (255, 255, 255)  # Other Neutrals (White)
+                color = (255, 255, 255)
+                
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
+        lut[packed_key] = packed_color
         
-        px.replace(new_rel_surf.map_rgb(color_key), new_rel_surf.map_rgb(color))
+    out_2d = lut[id_2d]
     
-    del px
+    out_3d = np.empty_like(id_array)
+    out_3d[:, :, 0] = (out_2d >> 16) & 0xFF
+    out_3d[:, :, 1] = (out_2d >> 8) & 0xFF
+    out_3d[:, :, 2] = out_2d & 0xFF
+    
+    new_rel_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    pygame.surfarray.blit_array(new_rel_surf, out_3d)
+    
     self.relations_map = new_rel_surf
     
     if self.map_mode == "RELATIONS":
