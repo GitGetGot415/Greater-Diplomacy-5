@@ -76,9 +76,6 @@ class Research_Screen(GameState):
     def draw_category_content(self, res_levels, queue, progress_cache):
         y_pos = 120
         cat_techs = [t for t, data in self.tech_tree.items() if data[0] == self.current_category]
-        
-        # --- Separate Infinite vs Standard ---
-        # Sort so that 9999 (infinite) techs come first
         cat_techs.sort(key=lambda t: self.tech_tree[t][1] != 9999)
 
         has_drawn_infinite = False
@@ -90,47 +87,65 @@ class Research_Screen(GameState):
             req_met = self.check_requirements(res_levels, reqs)
             queued_item = next((item for item in queue if item["tech_name"] == tech), None)
 
-            # Add extra space after the last infinite research item
             if has_drawn_infinite and max_lvl != 9999:
                 y_pos += 25 
-                has_drawn_infinite = False # Only add space once
+                has_drawn_infinite = False
             
-            if max_lvl == 9999:
-                has_drawn_infinite = True
+            if max_lvl == 9999: has_drawn_infinite = True
 
-            # 1. Handle Display Name Logic
             display_name = tech.replace('_',' ').title()
             
-            # 2. Logic for Level display
-            if max_lvl == 1:
-                # One-off tech: just show the name
+            # --- Type vs Lvl vs One-off ---
+            if max_lvl == 9999:
+                level_str = f" Type {level + 1}" if not queued_item else f" Type {level}"
+            elif max_lvl == 1:
                 level_str = ""
             else:
-                # Multi-level or infinite: show current progress/target
                 level_str = f" Lvl {level + 1}" if not queued_item else f" Lvl {level}"
 
             if level >= max_lvl and max_lvl != 9999:
                 status_text = f"{display_name}: MAXED"
                 color, callback = "grey", lambda: None
             elif queued_item:
-                status_text = f"{display_name}: {queued_item['days_remaining']}d (PAUSE)"
+                status_text = f"{display_name}: {queued_item['days_remaining']}d"
                 color, callback = "green", lambda t=tech: self.pause_research(t)
             elif not req_met:
                 status_text = f"{display_name} (Locked)"
                 color, callback = "red", lambda: self.map_screen.show_feedback("Requirements not met!")
             elif len(queue) < 2:
-                has_progress = tech in progress_cache
+                # Setup days calculation
                 effective_lvl = max(0, level - 1800) if tech in ["infantry", "industry"] else level
-                days = 30 + (effective_lvl * 15) if not has_progress else progress_cache[tech]
-                prefix = "Resume" if has_progress else "Start"
+                base_days = 30 + (effective_lvl * 15)
+                days = progress_cache.get(tech, base_days)
+                prefix = "Resume" if tech in progress_cache else "Start"
                 status_text = f"{prefix} {display_name}{level_str} ({days}d)"
                 color, callback = "blue", lambda t=tech: self.start_or_resume_research(t)
             else:
                 status_text = f"{display_name} (Slots Full)"
                 color, callback = "grey", lambda: self.map_screen.show_feedback("Research slots full!")
 
-            self.elements.append(Button("centered", y_pos, "large", color, status_text, callback))
+            btn = Button("centered", y_pos, "large", color, status_text, callback)
+            self.elements.append(btn)
+
+            # --- DRAW PROGRESS BAR ---
+            if queued_item:
+                effective_lvl = max(0, level - 1800) if tech in ["infantry", "industry"] else level
+                total_days = 30 + (effective_lvl * 15)
+                progress = 1 - (queued_item['days_remaining'] / total_days)
+                self.draw_inline_progress(btn, progress)
+
             y_pos += 75
+
+    def draw_inline_progress(self, btn, progress):
+        """Draws a small progress bar at the bottom of the button."""
+        # This is a bit of a 'hack' because we draw it after the button element is created
+        # but before the frame finishes. 
+        # Since additional_draw happens after self.elements are drawn in GameState, 
+        # we can just draw right over the button.
+        surf = pygame.display.get_surface()
+        bar_rect = pygame.Rect(btn.rect.x + 5, btn.rect.bottom - 8, btn.rect.width - 10, 4)
+        pygame.draw.rect(surf, (20, 20, 20), bar_rect) # Background
+        pygame.draw.rect(surf, (0, 255, 0), (bar_rect.x, bar_rect.y, bar_rect.width * progress, 4))
 
     def draw_completed_tab(self, res_levels):
         """
@@ -244,7 +259,9 @@ class Research_Screen(GameState):
                 display_name = tech_id.replace('_', ' ').title()
                 
                 # Logic: Hide level if max is 1 and level is 0 or 1
-                if max_lvl == 1:
+                if max_lvl == 9999:
+                    val_text = f": Type {lvl}"
+                elif max_lvl == 1:
                     val_text = ": Level 1" if lvl >= 1 else ": Level 0"
                 else:
                     val_text = f": Level {lvl}"

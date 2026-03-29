@@ -77,7 +77,7 @@ class Recruit_Screen(GameState):
 
             # Check for Infantry special display
             if tech_key == "infantry":
-                highest_unlocked = f"Infantry Lvl {researched_lvl}"
+                highest_unlocked = f"Infantry Type {researched_lvl}"
             else:
                 # Standard Roman Numeral logic for others
                 group_units = [(n, s) for n, s in self.unit_library.items() if self.get_group_name(n) == group_name]

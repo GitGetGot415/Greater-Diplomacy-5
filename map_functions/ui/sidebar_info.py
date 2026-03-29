@@ -78,7 +78,10 @@ def draw_sidebar_info(self, surface):
                 
                 # Formatting string based on whether it's scaled Infantry or standard
                 if u.get('level'):
-                    u_stats = f" - {u_type} Lvl {u['level']} (HP: {hp})"
+                    # Refactor based on whether it's an infinite type
+                    label = "Type" if u_type.lower() == "infantry" else "Lvl"
+                    print (u_type.lower())
+                    u_stats = f" - {u_type} {label} {u['level']} (HP: {hp})"
                 else:
                     u_stats = f" - {u_type} (ATK: {atk}) (HP: {hp})"
 
