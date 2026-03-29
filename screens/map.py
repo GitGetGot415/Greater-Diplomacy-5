@@ -84,14 +84,14 @@ class Map(GameState):
         if is_random:
             self.randomize_all_provinces()
             # Force a visual refresh after changing logic data
-            self.refresh_political_map()
+            # self.refresh_political_map()
             # self.refresh_relations_map() # <-- ADD THIS LINE HERE TOO
         
         # New: Scramble the map if requested
         if is_random:
             self.randomize_all_provinces()
             # Force a visual refresh after changing logic data
-            self.refresh_political_map()
+            # self.refresh_political_map()
 
         # Build UI Buttons
         buttons.render_buttons(self)
