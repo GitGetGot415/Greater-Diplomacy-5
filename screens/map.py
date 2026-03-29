@@ -27,7 +27,10 @@ class Map(GameState):
 
         self.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
         self.sec_idx = 0
-        self.secondary_mode = self.secondary_modes[self.sec_idx]
+        # this first one chooses units
+        # self.secondary_mode = self.secondary_modes[self.sec_idx]
+        # this second one chooses BLANK because it's the second one in the list!
+        self.secondary_mode = self.secondary_modes[2]
         
         self.base_layer = "POLITICAL" 
         self.load_path = load_path
