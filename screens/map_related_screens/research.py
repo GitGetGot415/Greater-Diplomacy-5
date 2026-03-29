@@ -9,12 +9,11 @@ class Research_Screen(GameState):
         super().__init__()
         self.bg_color = (20, 20, 30)
         self.map_screen = None
-        self.current_category = "INFANTRY" # Start in a category instead of a menu
+        self.current_category = "INFANTRY" 
 
-        # Define categories for the navigation bar
-        self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY"]
+        # 1. Added COMPLETED category
+        self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY", "COMPLETED"]
 
-        # Tech Tree Structure (Matches your template)
         self.tech_tree = {
             "cavalry": ["INFANTRY", 20, {}],
             "infantry": ["INFANTRY", 9999, {}],
@@ -42,7 +41,6 @@ class Research_Screen(GameState):
 
     def start_research(self, map_ref):
         self.map_screen = map_ref
-        # Default to Infantry on open
         self.current_category = "INFANTRY"
         self.refresh_ui()
 
@@ -52,18 +50,14 @@ class Research_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = []
-        
-        # --- 1. Top Navigation Bar ---
-        # Exit Button (Top Left)
         self.elements.append(Button(20, 10, "small", "red", "Exit", self.exit_to_map))
 
-        # Category Tabs
-        # We space them out across the top
-        start_x = 200
+        # Persistent Navigation Bar
+        start_x = 180 # Shifted slightly left to fit 5 buttons
         for i, cat in enumerate(self.categories):
-            # Highlight the current category with a different color
             color = "green" if self.current_category == cat else "blue"
-            btn = Button(start_x + (i * 210), 10, "medium", color, cat, lambda c=cat: self.set_category(c))
+            # Adjusted spacing to 205 to fit all 5 comfortably
+            btn = Button(start_x + (i * 205), 10, "medium", color, cat, lambda c=cat: self.set_category(c))
             self.elements.append(btn)
 
         if not self.map_screen or self.map_screen.player_country == "None": return
@@ -73,23 +67,25 @@ class Research_Screen(GameState):
         queue = player_data.setdefault("research_queue", [])
         progress_cache = player_data.setdefault("research_progress", {})
 
-        # --- 2. Draw Research Items for current category ---
-        self.draw_category_content(res_levels, queue, progress_cache)
+        # 2. Logic to switch between Tech Tree and History
+        if self.current_category == "COMPLETED":
+            self.draw_completed_tab(res_levels)
+        else:
+            self.draw_category_content(res_levels, queue, progress_cache)
 
     def draw_category_content(self, res_levels, queue, progress_cache):
-        y_pos = 150
+        y_pos = 120 # Moved up slightly to fit more
         cat_techs = [t for t, data in self.tech_tree.items() if data[0] == self.current_category]
         
         for tech in cat_techs:
             level = res_levels.get(tech, 0)
             max_lvl = self.tech_tree[tech][1]
             reqs = self.tech_tree[tech][2]
-            
             req_met = self.check_requirements(res_levels, reqs)
             queued_item = next((item for item in queue if item["tech_name"] == tech), None)
 
             if level >= max_lvl and max_lvl != 9999:
-                status_text = f"{tech.replace('_',' ').title()}: MAX"
+                status_text = f"{tech.replace('_',' ').title()}: MAX ({level})"
                 color, callback = "grey", lambda: None
             elif queued_item:
                 status_text = f"{tech.replace('_',' ').title()}: {queued_item['days_remaining']}d (PAUSE)"
@@ -99,23 +95,37 @@ class Research_Screen(GameState):
                 color, callback = "red", lambda: self.map_screen.show_feedback("Requirements not met!")
             elif len(queue) < 2:
                 has_progress = tech in progress_cache
-                
-                # Handling the 1800 offset logic for Infantry/Industry
-                if tech in ["infantry", "industry"]:
-                    effective_lvl = max(0, level - 1800)
-                else:
-                    effective_lvl = level
-                
+                effective_lvl = max(0, level - 1800) if tech in ["infantry", "industry"] else level
                 days = 30 + (effective_lvl * 15) if not has_progress else progress_cache[tech]
                 prefix = "Resume" if has_progress else "Start"
-                status_text = f"{prefix} {tech.replace('_',' ').title()} ({days}d)"
+                status_text = f"{prefix} {tech.replace('_',' ').title()} Lvl {level+1} ({days}d)"
                 color, callback = "blue", lambda t=tech: self.start_or_resume_research(t)
             else:
                 status_text = f"{tech.replace('_',' ').title()} (Slots Full)"
                 color, callback = "grey", lambda: self.map_screen.show_feedback("Research slots full!")
 
             self.elements.append(Button("centered", y_pos, "large", color, status_text, callback))
-            y_pos += 85
+            y_pos += 75
+
+    def draw_completed_tab(self, res_levels):
+        """3. New method to display finished tech and their levels."""
+        y_pos = 120
+        # Sort them alphabetically for better readability
+        sorted_techs = sorted(res_levels.items())
+        
+        found_any = False
+        for tech, level in sorted_techs:
+            # Logic: Hide if level 0. For infantry/industry, hide if they haven't progressed past start
+            is_baseline = tech in ["infantry", "industry"] and level <= 1800
+            if level > 0 and not is_baseline:
+                found_any = True
+                display_name = tech.replace('_', ' ').title()
+                # These are non-interactive buttons just for display
+                self.elements.append(Button("centered", y_pos, "large", "grey", f"{display_name}: Level {level}", lambda: None))
+                y_pos += 60
+
+        if not found_any:
+            self.elements.append(Button("centered", 300, "large", "red", "No advanced research completed", lambda: None))
 
     def check_requirements(self, res_levels, reqs):
         if not reqs: return True
@@ -131,10 +141,7 @@ class Research_Screen(GameState):
             duration = progress_cache.pop(tech_name)
         else:
             level = player_data["research"].get(tech_name, 0)
-            if tech_name in ["infantry", "industry"]:
-                effective_lvl = max(0, level - 1800)
-            else:
-                effective_lvl = level
+            effective_lvl = max(0, level - 1800) if tech_name in ["infantry", "industry"] else level
             duration = 30 + (effective_lvl * 15)
             
         player_data["research_queue"].append({"tech_name": tech_name, "days_remaining": duration})
@@ -152,16 +159,19 @@ class Research_Screen(GameState):
 
     def additional_draw(self, surface):
         if not self.map_screen: return
-        
-        # --- Draw Navigation Bar Background ---
         pygame.draw.rect(surface, (40, 40, 50), (0, 0, SCREEN_WIDTH, 70))
         pygame.draw.line(surface, (200, 200, 200), (0, 70), (SCREEN_WIDTH, 70), 2)
 
-        # --- THE HUD (Bottom Left) ---
+        # Title
+        font = pygame.font.SysFont("Arial", 32)
+        title_str = f"VIEWING: {self.current_category}"
+        ts = font.render(title_str, True, (255, 255, 255))
+        surface.blit(ts, (SCREEN_WIDTH//2 - ts.get_width()//2, 75))
+
+        # HUD (Slots)
         hud_rect = pygame.Rect(20, SCREEN_HEIGHT - 120, 350, 100)
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
-        
         hud_font = pygame.font.SysFont("Arial", 20)
         surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, SCREEN_HEIGHT - 110))
         
