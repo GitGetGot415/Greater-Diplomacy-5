@@ -83,14 +83,25 @@ class CountryEditor:
         if os.path.exists(template_path):
             with open(template_path, "r") as f:
                 struct = json.load(f)
-            # We initialize everything to 0, except the infinites which start at 1800
-            return {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
-        return {"infantry": 1800, "industry": 1800} # Hardcoded fallback
+            
+            # 1. Build the base dict (0 for standard, 1800 for infinite)
+            res_dict = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
+            
+            # 2. Set Carracks to 1 by default if it exists in the template
+            if "carrack" in res_dict:
+                res_dict["carrack"] = 1
+            if "cavalry" in res_dict:
+                res_dict["cavalry"] = 0
+                
+            return res_dict
+            
+        # Hardcoded fallback including carrack
+        return {"infantry": 1800, "industry": 1800, "carrack": 1}
 
     def bulk_reset_template(self):
         """Synchronizes all countries to have every tech defined in the template."""
         msg = ("This will add any NEW technologies from your JSON to ALL countries.\n"
-               "Existing research levels will be PRESERVED. Proceed?")
+               "Existing research levels will NOT be preserved. Proceed?")
         if not messagebox.askyesno("Confirm Sync", msg):
             return
 
@@ -104,7 +115,7 @@ class CountryEditor:
                 # 2. Add missing keys from the template to existing research dicts
                 current_res = self.data[int_id]["research"]
                 for tech_key, start_val in default_research.items():
-                    if tech_key not in current_res:
+                    #if tech_key not in current_res:
                         current_res[tech_key] = start_val
                         print(f"Added {tech_key} to {int_id}")
 

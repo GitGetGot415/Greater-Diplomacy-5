@@ -83,8 +83,16 @@ class Recruit_Screen(GameState):
                 group_units = [(n, s) for n, s in self.unit_library.items() if self.get_group_name(n) == group_name]
                 highest_lvl = -1
                 for name, stats in group_units:
-                    lvl = self.roman_to_int(name.replace(group_name, "").strip())
-                    if lvl <= researched_lvl or lvl == 0:
+                    # Get the level suffix (e.g., "II" -> 2, "" -> 0)
+                    lvl_str = name.replace(group_name, "").strip()
+                    lvl = self.roman_to_int(lvl_str)
+                    
+                    # THE FIX: 
+                    # 1. If it's a base unit (lvl 0, like "WW1 Tank"), it now requires tech level 1.
+                    # 2. If it's a tiered unit (lvl > 0, like "Cavalry II"), it requires tech level 2.
+                    required_research = max(1, lvl) 
+                    
+                    if researched_lvl >= required_research:
                         if lvl > highest_lvl:
                             highest_lvl = lvl
                             highest_unlocked = name
