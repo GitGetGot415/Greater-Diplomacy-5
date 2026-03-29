@@ -13,6 +13,8 @@ class New_Game(GameState):
     def refresh_scenarios(self):
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.exit_to_menu),
+            # Added the Random button here
+            Button("centered", 130, "large", "orange", "RANDOM SCENARIO", self.start_random_scenario),
             Button("centered", "centered", "big", "red", "Check map tools", self.map_selected),
         ]
         
@@ -48,3 +50,9 @@ class New_Game(GameState):
 
     def handle_back_key(self):
         self.exit_to_menu()
+
+    def start_random_scenario(self):
+        # Set a flag that we can check in flip_state
+        self.selected_save_path = "RANDOM"
+        self.next_state = "MAP"
+        self.done = True

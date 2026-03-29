@@ -13,7 +13,7 @@ from map_functions.logic import map_utils
 from map_functions.logic import diplomacy_logic
 
 class Map(GameState):
-    def __init__(self, load_path=None, is_scenario=False):
+    def __init__(self, load_path=None, is_scenario=False, is_random=False): # Added is_random
         super().__init__()
 
         # Add these to Map.__init__ in screens/map.py
@@ -70,6 +70,15 @@ class Map(GameState):
         self.feedback_text = ""
         self.feedback_timer = 0
 
+        # Load standard assets
+        load_map.load_map_assets(self, load_path)
+        
+        # New: Scramble the map if requested
+        if is_random:
+            self.randomize_all_provinces()
+            # Force a visual refresh after changing logic data
+            self.refresh_political_map()
+            
         # Build UI Buttons
         buttons.render_buttons(self)
 
@@ -478,3 +487,28 @@ class Map(GameState):
         """Transition to research screen without needing a province."""
         self.next_state = "RESEARCH"
         self.done = True
+    
+    def randomize_all_provinces(self):
+        """Assigns every land province to a random playable nation."""
+        import random
+        
+        # 1. Get list of playable nations (excluding utility nations like Ocean/Unclaimed)
+        playable_nations = [
+            name for name, stats in self.nation_data.items() 
+            if stats.get("is_playable") and name not in ["Ocean", "Lakes", "Unclaimed"]
+        ]
+        
+        if not playable_nations:
+            return
+
+        # 2. Iterate through map data
+        for province in self.map_data.values():
+            terrain = province.get("terrain", "")
+            # Only paint land provinces
+            is_water = terrain in ["ocean", "coastal_sea", "inland_sea", "lakes"]
+            
+            if not is_water:
+                new_owner = random.choice(playable_nations)
+                province["owner"] = new_owner
+        
+        self.show_feedback("Map Randomized!")

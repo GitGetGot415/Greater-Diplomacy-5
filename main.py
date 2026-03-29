@@ -80,10 +80,15 @@ class Controller:
         if next_state_name == "MAP":
             if hasattr(previous_state, 'selected_save_path'):
                 path = previous_state.selected_save_path
-                # Check if the path contains 'scenarios' to set the flag
-                is_scen = "scenarios" in path
-                from screens.map import Map
-                self.states["MAP"] = Map(load_path=path, is_scenario=is_scen)
+                
+                if path == "RANDOM":
+                    # Pass a new flag called is_random
+                    from screens.map import Map
+                    self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True)
+                else:
+                    is_scen = "scenarios" in path
+                    from screens.map import Map
+                    self.states["MAP"] = Map(load_path=path, is_scenario=is_scen)
             elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
                 from screens.map import Map
                 self.states["MAP"] = Map()
