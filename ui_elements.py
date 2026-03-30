@@ -41,7 +41,6 @@ def parse_pos(val, limit, size):
     return val
 
 class Button:
-    # Added show_text=True as a default parameter
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True):
         self.width, self.height = SIZES.get(size_preset, (200, 50))
         final_x = parse_pos(x, g.SCREEN_WIDTH, self.width)
@@ -58,6 +57,9 @@ class Button:
         self.font = pygame.font.SysFont("Arial", 20, bold=True)
         self.visible = True
         self.is_pressed = False
+        
+        # Add the selected state property
+        self.is_selected = False
 
     def draw(self, surface):
         if not self.visible: return
@@ -71,8 +73,16 @@ class Button:
         
         # 1. Background Gradient & Outline
         self.draw_gradient_rect(surface, current_color, self.rect)
-        border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
-        pygame.draw.rect(surface, border_color, self.rect, 2)
+        
+        # Apply the highlight color and thickness if the button is selected
+        if getattr(self, 'is_selected', False):
+            border_color = (255, 215, 0) # Gold Highlight
+            border_thickness = 3
+        else:
+            border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
+            border_thickness = 2
+            
+        pygame.draw.rect(surface, border_color, self.rect, border_thickness)
 
         # 2. Content Layout Logic
         # CASE A: Image exists and we WANT to show text alongside it

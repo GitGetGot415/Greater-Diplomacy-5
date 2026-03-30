@@ -57,7 +57,8 @@ class Map(GameState):
         self.total_ui_h = 120
         self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
-        self.raised_rect = pygame.Rect(0, SCREEN_HEIGHT - 110, 175, 50)
+        # CHANGED: Increased height from 50 to 110 so it covers the bottom bar
+        self.raised_rect = pygame.Rect(0, SCREEN_HEIGHT - 110, 175, 110)
         
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (SCREEN_HEIGHT - self.total_ui_h) / self.map_h 
@@ -382,7 +383,31 @@ class Map(GameState):
             
     def update(self):
         self.camera.update(self, SCREEN_HEIGHT)
-        for el in self.elements: el.visible = False
+        for el in self.elements:
+            el.visible = False
+
+            # --- HIGHLIGHT SELECTED BUTTONS ---
+            # Tie button highlight states to your view variables
+            if hasattr(el, 'text'):
+                if el.text == "Terrain":
+                    el.is_selected = (self.base_layer == "TERRAIN")
+                elif el.text == "Political":
+                    el.is_selected = (self.base_layer == "POLITICAL")
+                elif el.text == "Relations":
+                    el.is_selected = (self.base_layer == "RELATIONS")
+                elif el.text == "Units":
+                    el.is_selected = (self.secondary_mode == "UNITS")
+                elif el.text == "Blank":
+                    el.is_selected = (self.secondary_mode == "BLANK")
+                elif el.text == "Economy":
+                    # Because there is a separate primary Economy button with text, we verify 
+                    # we are grabbing the "Secondary mode" icon button by checking `show_text`
+                    if not getattr(el, 'show_text', True):
+                        el.is_selected = (self.secondary_mode == "ECONOMY")
+                    else:
+                        el.is_selected = False
+                else:
+                    el.is_selected = False
 
         if self.is_editor:
             # Only show basic map buttons in Editor mode
