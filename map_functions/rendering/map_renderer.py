@@ -66,7 +66,10 @@ def draw_map_screen(self, surface):
     
     # NEW: Raised left corner for secondary view buttons
     # self.raised_rect = pygame.Rect(0, SCREEN_HEIGHT - 110, 175, 50)
-    pygame.draw.rect(surface, (160, 40, 40), self.raised_rect) # this is just so it stands out
+    
+    # --- ADD THIS IF STATEMENT ---
+    if not self.selection_mode and not getattr(self, 'hide_raised_rect', False):
+        pygame.draw.rect(surface, (160, 40, 40), self.raised_rect) # this is just so it stands out
     
     if not self.selection_mode:
         # Date stays top center

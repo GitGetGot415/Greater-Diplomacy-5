@@ -131,6 +131,7 @@ class Orders_Screen(GameState):
             return self.map_screen.map_data.get((color.r, color.g, color.b))
         return None
 
+    # ... (around line 125)
     def additional_draw(self, surface):
         if not self.map_screen or not self.target_province: 
             return
@@ -139,11 +140,15 @@ class Orders_Screen(GameState):
         # This prevents map_renderer from drawing the dark overlay and sidebars.
         temp_province = self.map_screen.selected_province
         self.map_screen.selected_province = None
+        
+        # --- NEW FLAG TO HIDE THE RED CORNER UI ---
+        self.map_screen.hide_raised_rect = True
 
         # 1. Draw the actual map underneath (Terrain/Political)
         self.map_screen.additional_draw(surface)
 
         # Restore the selected province state
+        self.map_screen.hide_raised_rect = False
         self.map_screen.selected_province = temp_province
 
         # Re-draw the yellow selection circle manually so we still know our active target
