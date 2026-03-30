@@ -598,15 +598,31 @@ class Map(GameState):
         from map_functions.data import country_io
         new_data = country_io.load_all_country_data()
         added_count = 0
+        updated_count = 0
         
         for country, data in new_data.items():
             if country not in self.nation_data:
+                # Add entirely new countries
                 self.nation_data[country] = data
                 added_count += 1
+            else:
+                # Update existing countries without overwriting their live game stats (like money/troops)
+                if "color" in data and self.nation_data[country].get("color") != data["color"]:
+                    self.nation_data[country]["color"] = data["color"]
+                    updated_count += 1
+                
+                # Good idea to update the display name too just in case you changed it
+                if "name" in data:
+                    self.nation_data[country]["name"] = data["name"]
                 
         # Resync the visual colors for the renderer
         self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
-        self.show_feedback(f"Data Resynced! Added {added_count} missing nations.")
+        
+        # CRITICAL: Force the visual map layers to immediately redraw using the new colors
+        self.refresh_political_map()
+        self.refresh_relations_map()
+        
+        self.show_feedback(f"Data Resynced! Added {added_count}, Updated {updated_count}.")
     
     def open_map_research_editor(self):
         """Opens a UI to edit research for countries currently existing on the map."""
