@@ -86,12 +86,6 @@ class Map(GameState):
             # Force a visual refresh after changing logic data
             # self.refresh_political_map()
             # self.refresh_relations_map() # <-- ADD THIS LINE HERE TOO
-        
-        # New: Scramble the map if requested
-        if is_random:
-            self.randomize_all_provinces()
-            # Force a visual refresh after changing logic data
-            # self.refresh_political_map()
 
         # Build UI Buttons
         buttons.render_buttons(self)
@@ -206,6 +200,7 @@ class Map(GameState):
     def set_political(self): 
         self.base_layer = "POLITICAL"
         self.active_map = self.political_map
+        self.refresh_political_map()
         self.show_feedback("Mode: Political")
 
     def save_map_data(self): 
@@ -541,6 +536,7 @@ class Map(GameState):
     def set_relations(self): 
         self.base_layer = "RELATIONS"
         self.active_map = self.relations_map
+        self.refresh_relations_map()
         self.show_feedback("Mode: Relations")
 
     #def refresh_relations(self):
@@ -551,10 +547,11 @@ class Map(GameState):
 
     def get_player_economy_projections(self):
         """Calculates expected daily resource changes for the UI"""
-        YIELD_MONEY = 999500
-        YIELD_MANPOWER = 99950
-        YIELD_MATERIALS = 999100
-        YIELD_FUEL = 9991
+        # other increase in turn processor might be different if this is modified
+        YIELD_MONEY = 500
+        YIELD_MANPOWER = 50
+        YIELD_MATERIALS = 100
+        YIELD_FUEL = 1
         UPKEEP_MODIFIER = 0.05
 
         inc = 0

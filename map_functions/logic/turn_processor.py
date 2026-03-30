@@ -197,10 +197,11 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    YIELD_MONEY = 999500
-    YIELD_MANPOWER = 99950
-    YIELD_MATERIALS = 999100
-    YIELD_FUEL = 9991
+    # other increase in map.py might be different if this is modified
+    YIELD_MONEY = 500
+    YIELD_MANPOWER = 50
+    YIELD_MATERIALS = 100
+    YIELD_FUEL = 1
     UPKEEP_MODIFIER = 0.05
 
     unit_stats_path = 'map_functions/data/unit_data.json'
