@@ -6,15 +6,21 @@ def draw_tooltip(self, surface):
 
     mx, my = pygame.mouse.get_pos()
     prov = self.hovered_province
-    owner_id = prov['owner']
+    owner_id = prov.get('owner', 'Unclaimed')
     owner_display = self.nation_data.get(owner_id, {}).get("name", owner_id)
     
-    # 1. Start with the basic header info
-    lines = [f"ID: {prov['id']} | {owner_display}"]
-
-    # 2. Add contextual info based on view mode
-    if self.secondary_mode == "BLANK":
+    # 1. Start with the basic header info based on the primary map mode
+    if getattr(self, 'base_layer', '') == "TERRAIN":
+        terrain_display = prov.get('terrain', 'Unknown').replace('_', ' ').title()
+        lines = [f"ID: {prov['id']} | {terrain_display}"]
+    else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
+
+    # 2. Add contextual info based on secondary view mode
+    if self.secondary_mode == "BLANK":
+        # The header is already set correctly above, no need to overwrite it
+        pass
+        
     elif self.secondary_mode == "UNITS":
         units = prov.get("units", [])
         if not units:

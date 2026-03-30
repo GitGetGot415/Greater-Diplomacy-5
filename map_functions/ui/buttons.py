@@ -26,7 +26,7 @@ def render_buttons(self):
         
         self.elements.extend([
             Button(20, SCREEN_HEIGHT - 50, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
-            Button(70, SCREEN_HEIGHT - 50, "small_square", "blue", "Political", self.set_political, image=political_icon, show_text=False),
+            Button(70, SCREEN_HEIGHT - 50, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
             Button(120, SCREEN_HEIGHT - 50, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
             # NEW BUTTON nestled into the bottom bar:
             Button(180, SCREEN_HEIGHT - 50, "small", "orange", "Economy", econ_callback)
