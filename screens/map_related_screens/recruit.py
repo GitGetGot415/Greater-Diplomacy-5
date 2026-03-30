@@ -70,6 +70,13 @@ class Recruit_Screen(GameState):
         def process_groups(groups, is_navy):
             nonlocal y_offset
             for group_name in groups:
+                # --- OBSOLESCENCE CHECKS ---
+                if group_name == "WW1 Armored Car" and player_research.get("armored_car", 0) >= 1:
+                    continue
+                if group_name == "WW1 Tank" and (player_research.get("medium_tank", 0) >= 1 or player_research.get("heavy_tank", 0) >= 1):
+                    continue
+                # ---------------------------
+
                 highest_unlocked = None
                 tech_key = group_name.lower().replace(" ", "_")
                 researched_lvl = player_research.get(tech_key, 0)

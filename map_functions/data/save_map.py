@@ -30,6 +30,7 @@ def save_map_data(self, save_name=None):
         },
         "loop_map": self.loop_map,
         "player_country": self.player_country,
+        "default_research": getattr(self, "default_research", None),  # <-- ADDED THIS
         "nation_data": self.nation_data,
         "provinces": {}
     }

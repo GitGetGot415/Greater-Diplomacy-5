@@ -722,19 +722,21 @@ class Map(GameState):
                     stats = unit_library.get(unit["type"], {})
                     econ_data[u_owner]["upkeep"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
 
-        columns = ("Country", "Gross Income", "Upkeep", "Net Income", "Treasury")
+        # NEW: Added "Provinces" column
+        columns = ("Country", "Provinces", "Gross Income", "Upkeep", "Net Income", "Treasury")
         tree = ttk.Treeview(root, columns=columns, show="headings")
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=110, anchor="center")
+            tree.column(col, width=95, anchor="center")
         
         for c in sorted(active_countries):
             d = econ_data[c]
+            provinces = d["inc"]
             gross = (d["inc"] * YIELD_MONEY) + d["bonus"]
             upk = int(d["upkeep"])
             net = gross - upk
             treasury = self.nation_data.get(c, {}).get("money", 0)
-            tree.insert("", tk.END, values=(c, f"+{gross}", f"-{upk}", f"{'+' if net>=0 else ''}{net}", treasury))
+            tree.insert("", tk.END, values=(c, provinces, f"+{gross}", f"-{upk}", f"{'+' if net>=0 else ''}{net}", treasury))
 
         scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
         tree.configure(yscroll=scrollbar.set)
@@ -764,8 +766,11 @@ class Map(GameState):
             self.show_feedback("No active countries on map!")
             return
 
-        # 2. Get default tech dict dynamically
+        # 2. Get default tech dict dynamically (Now checks map-specific state first)
         def get_default_research():
+            if getattr(self, "default_research", None) is not None:
+                return self.default_research
+
             template_path = "map_functions/data/research_template.json"
             res_dict = {}
             if os.path.exists(template_path):
@@ -809,9 +814,9 @@ class Map(GameState):
         populate_listbox()
         lb.pack(fill="both", expand=True, padx=10, pady=5)
 
-        def open_edit_window(target_country, is_bulk=False):
-            # If bulk, load default as base. If specific, load their current
-            if is_bulk:
+        def open_edit_window(target_country, is_bulk=False, is_default_only=False):
+            # If bulk/default, load default as base. If specific, load their current
+            if is_bulk or is_default_only:
                 base_data = default_res.copy()
             else:
                 actual_name = target_country.replace("[MODIFIED] ", "") # Strip prefix
@@ -823,7 +828,7 @@ class Map(GameState):
                     base_data[k] = v
 
             edit_win = tk.Toplevel(root)
-            title_text = "ALL COUNTRIES" if is_bulk else actual_name
+            title_text = "MAP DEFAULT" if is_default_only else ("ALL COUNTRIES" if is_bulk else actual_name)
             edit_win.title(f"{title_text} Research")
             edit_win.geometry("300x500")
             edit_win.attributes("-topmost", True)
@@ -846,6 +851,7 @@ class Map(GameState):
                 entries[tech] = ent
                 
             def save_res():
+                nonlocal default_res
                 new_data = {}
                 for tech, ent in entries.items():
                     try:
@@ -853,12 +859,18 @@ class Map(GameState):
                     except ValueError: 
                         new_data[tech] = base_data.get(tech, 0)
                 
-                if is_bulk:
+                if is_default_only:
+                    self.default_research = new_data.copy()
+                    default_res = new_data.copy()
+                    self.show_feedback("Updated Map Default Tech")
+                elif is_bulk:
+                    self.default_research = new_data.copy()
+                    default_res = new_data.copy()
                     for c in active_countries:
                         if "research" not in self.nation_data[c]:
                             self.nation_data[c]["research"] = {}
                         self.nation_data[c]["research"].update(new_data)
-                    self.show_feedback("Saved research for ALL countries")
+                    self.show_feedback("Saved research for ALL & Set Default")
                 else:
                     if "research" not in self.nation_data[actual_name]:
                         self.nation_data[actual_name]["research"] = {}
@@ -878,8 +890,12 @@ class Map(GameState):
         def edit_all():
             open_edit_window(None, is_bulk=True)
 
+        def edit_default_only():
+            open_edit_window(None, is_default_only=True)
+
         tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
-        tk.Button(root, text="Edit ALL Nations (Bulk)", command=edit_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
+        tk.Button(root, text="Edit ALL Nations (Bulk)", command=edit_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
+        tk.Button(root, text="Edit Map Default Tech", command=edit_default_only, bg="#FF9800", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
 
         while self.menu_active:
             try:

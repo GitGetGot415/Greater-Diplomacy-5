@@ -42,6 +42,7 @@ def load_map_assets(self, load_path):
     if save_meta:
         self.player_country = save_meta.get("player_country", "None")
         self.loop_map = save_meta.get("loop_map", False)
+        self.default_research = save_meta.get("default_research", None) # <-- ADDED THIS
         # Time
         self.time_manager = TimeHandler(start_year=save_meta["date"]["year"])
         self.time_manager.day = save_meta["date"]["day"]
@@ -49,6 +50,7 @@ def load_map_assets(self, load_path):
     else:
         self.player_country = "None"
         self.loop_map = True
+        self.default_research = None # <-- ADDED THIS
         self.time_manager = TimeHandler(start_year=1900)
 
     # --- 5. Province Processing ---

@@ -29,7 +29,7 @@ class Orders_Screen(GameState):
                 continue
                 
             color = "blue" if self.selected_unit_index == i else "grey"
-            unit_name = unit["type"].split(" ")[-1]
+            unit_name = unit["type"]  # Removed the .split() so the full name shows
             
             # Main button to select the unit for giving a new order
             btn = Button(100, 150 + (i * 60), "medium", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
