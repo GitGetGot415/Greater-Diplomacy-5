@@ -18,6 +18,7 @@ class Map(GameState):
 
         # Add these to Map.__init__ in screens/map.py
         self.brush_building = "None" 
+        self.brush_unit = "None"    # <-- ADDED THIS
         self.editor_mode = "NATION" # Toggle between painting nations and buildings
 
         # --- 1. Basic State Variables ---
@@ -385,7 +386,7 @@ class Map(GameState):
             # Only show basic map buttons in Editor mode
             for el in self.elements:
                 # Standard Editor Buttons (Added "Relations")
-                if el.text in ["Terrain", "Political", "Relations", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                if el.text in ["Terrain", "Pol Refresh", "Rel Refresh", "Data Refresh", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 # Dynamic Color for "Nation" button
@@ -415,8 +416,8 @@ class Map(GameState):
             return
                 
         # funny, a hardcoded number
-        # this will be a problem later if more than 11 buttons are ever added
-        for i in range(min(11, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 12 buttons are ever added
+        for i in range(min(12, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
         # self.btn_go_build.visible = is_sel and owner == self.player_country
@@ -590,3 +591,149 @@ class Map(GameState):
             "fuel": (inc * YIELD_FUEL) + bonus["fuel"]
         }
         return total_inc, upkeep
+    
+    def refresh_nation_data(self):
+        from map_functions.data import country_io
+        new_data = country_io.load_all_country_data()
+        added_count = 0
+        
+        for country, data in new_data.items():
+            if country not in self.nation_data:
+                self.nation_data[country] = data
+                added_count += 1
+                
+        # Resync the visual colors for the renderer
+        self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
+        self.show_feedback(f"Data Resynced! Added {added_count} missing nations.")
+    
+    def open_map_research_editor(self):
+        """Opens a UI to edit research for countries currently existing on the map."""
+        import tkinter as tk
+        
+        # 1. Find only countries that actually own territory
+        active_countries = set()
+        for prov in self.map_data.values():
+            owner = prov.get("owner")
+            if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                active_countries.add(owner)
+
+        if not active_countries:
+            self.show_feedback("No active countries on map!")
+            return
+
+        root = tk.Tk()
+        root.title("Map Tech Editor")
+        root.geometry("300x400")
+        root.attributes("-topmost", True)
+        self.menu_active = True
+
+        def close_menu():
+            self.menu_active = False
+            root.destroy()
+
+        root.protocol("WM_DELETE_WINDOW", close_menu)
+        tk.Label(root, text="Select Country to Edit:", font=("Arial", 12)).pack(pady=10)
+        
+        lb = tk.Listbox(root, font=("Arial", 11))
+        for c in sorted(active_countries):
+            lb.insert(tk.END, c)
+        lb.pack(fill="both", expand=True, padx=10, pady=5)
+
+        def edit_selected():
+            sel = lb.curselection()
+            if not sel: return
+            country = lb.get(sel[0])
+            res_data = self.nation_data.get(country, {}).get("research", {})
+            
+            edit_win = tk.Toplevel(root)
+            edit_win.title(f"{country} Research")
+            edit_win.geometry("280x400")
+            edit_win.attributes("-topmost", True)
+            
+            # Scrollable Canvas setup
+            canvas = tk.Canvas(edit_win)
+            scrollbar = tk.Scrollbar(edit_win, orient="vertical", command=canvas.yview)
+            scroll_frame = tk.Frame(canvas)
+            scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            canvas.pack(side="left", fill="both", expand=True, pady=5)
+            scrollbar.pack(side="right", fill="y")
+            
+            entries = {}
+            for i, (tech, lvl) in enumerate(res_data.items()):
+                tk.Label(scroll_frame, text=tech.replace("_", " ").title()).grid(row=i, column=0, sticky="e", padx=5)
+                ent = tk.Entry(scroll_frame, width=8)
+                ent.insert(0, str(lvl))
+                ent.grid(row=i, column=1, pady=2)
+                entries[tech] = ent
+                
+            def save_res():
+                for tech, ent in entries.items():
+                    try:
+                        res_data[tech] = int(ent.get())
+                    except ValueError: pass
+                self.nation_data[country]["research"] = res_data
+                edit_win.destroy()
+                self.show_feedback(f"Saved research for {country}")
+                
+            tk.Button(edit_win, text="Save Tech Levels", command=save_res, bg="#4CAF50", fg="white").pack(side="bottom", fill="x", pady=5)
+
+        tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=10)
+
+        while self.menu_active:
+            try:
+                root.update()
+                pygame.event.pump()
+            except:
+                break
+    
+    def select_unit_brush(self):
+        """Opens a selection window for unit types and sets mode to UNIT."""
+        import tkinter as tk
+        import json, os
+        
+        root = tk.Tk()
+        root.title("Select Unit")
+        root.geometry("300x400")
+        root.attributes("-topmost", True)
+        self.menu_active = True
+
+        unit_path = 'map_functions/data/unit_data.json'
+        units = list(json.load(open(unit_path, 'r')).keys()) if os.path.exists(unit_path) else []
+
+        def on_select(event=None):
+            selection = lb.curselection()
+            if selection:
+                self.brush_unit = lb.get(selection[0])
+                self.editor_mode = "UNIT"
+                self.show_feedback(f"Brush: {self.brush_unit}")
+            close_menu()
+
+        def close_menu():
+            self.menu_active = False
+            root.destroy()
+
+        root.protocol("WM_DELETE_WINDOW", close_menu)
+        tk.Label(root, text="Select Unit to Place:", font=("Arial", 12)).pack(pady=10)
+        
+        frame = tk.Frame(root)
+        frame.pack(fill="both", expand=True, padx=10)
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side="right", fill="y")
+        
+        lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+        for u in ["None"] + units:
+            lb.insert(tk.END, u)
+        lb.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=lb.yview)
+        
+        tk.Button(root, text="Confirm Selection", command=on_select, bg="#f44336", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
+        lb.bind('<Double-1>', on_select)
+
+        while self.menu_active:
+            try:
+                root.update()
+                pygame.event.pump()
+            except:
+                break

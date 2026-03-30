@@ -18,6 +18,7 @@ def render_buttons(self):
             # Refresh remains in the top bar
             Button(120, 10, "small", "grey", "Pol Refresh", self.refresh_political_map),
             Button(220, 10, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(320, 10, "small", "grey", "Data Refresh", self.refresh_nation_data), # <-- ADDED THIS
         ]
 
         # Primary View Buttons (Inside the bottom bar)
@@ -40,7 +41,9 @@ def render_buttons(self):
                 Button(SCREEN_WIDTH - 120, 10, "small", "blue", "Save", self.save_map_data),
                 Button(SCREEN_WIDTH - 230, 10, "small", "blue", "Load", self.editor_load_map),
                 Button(SCREEN_WIDTH - 340, 10, "small", "grey", "Nation", self.select_brush_nation),
-                Button(SCREEN_WIDTH - 450, 10, "small", "grey", "Building", self.select_building_brush)
+                Button(SCREEN_WIDTH - 450, 10, "small", "grey", "Building", self.select_building_brush),
+                Button(SCREEN_WIDTH - 560, 10, "small", "grey", "Unit", self.select_unit_brush),      # <-- ADDED THIS
+                Button(SCREEN_WIDTH - 670, 10, "small", "purple", "Map Tech", self.open_map_research_editor) # <-- ADDED THIS
             ])
         else:
             self.elements.extend([

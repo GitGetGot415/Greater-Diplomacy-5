@@ -108,9 +108,41 @@ def handle_map_events(self, event):
                     self.show_feedback(f"Picked: {self.brush_nation}")
                 else:
                     self.show_feedback(f"You can't select water!")
+
+        # --- NEW UNIT PLACEMENT LOGIC ---
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.hovered_province and getattr(self, "editor_mode", "") == "UNIT":
+                if getattr(self, "brush_unit", "None") == "None":
+                    self.hovered_province["units"] = []
+                    self.show_feedback("Units cleared from province")
+                else:
+                    owner = self.hovered_province.get("owner", "Unclaimed")
+                    if owner in ["Unclaimed", "Ocean", "Lakes", "None"]:
+                        self.show_feedback("Cannot place units in unowned territory!")
+                    else:
+                        import json, os
+                        unit_stats = {}
+                        if os.path.exists('map_functions/data/unit_data.json'):
+                            with open('map_functions/data/unit_data.json', 'r') as f:
+                                unit_stats = json.load(f).get(self.brush_unit, {})
+                        
+                        new_unit = {
+                            "type": self.brush_unit,
+                            "owner": owner,
+                            "health": unit_stats.get("health", 100),
+                            "max_health": unit_stats.get("health", 100),
+                            "speed": unit_stats.get("speed", 1),
+                            "attack": unit_stats.get("attack", 5),
+                            "defense": unit_stats.get("defense", 0),
+                            "level": 1800 if self.brush_unit.lower() == "infantry" else 0,
+                            "order": {"type": "MOVE", "path": []}
+                        }
+                        self.hovered_province.setdefault("units", []).append(new_unit)
+                        self.show_feedback(f"Placed {self.brush_unit} for {owner}")
+        # --------------------------------
         
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
-        return 
+        return
 
     # 5. COUNTRY SELECTION MODE (Scenarios)
     if self.selection_mode:
