@@ -183,7 +183,7 @@ def draw_map_screen(self, surface):
     if self.hovered_province and not self.selected_province: 
         tooltip.draw_tooltip(self, surface)
         
-    if self.hovered_province: tooltip.draw_tooltip(self, surface)
+    # if self.hovered_province: tooltip.draw_tooltip(self, surface)
 
     # --- LAYER 7: EXIT CONFIRMATION MODAL ---
     if getattr(self, 'show_exit_confirmation', False):
