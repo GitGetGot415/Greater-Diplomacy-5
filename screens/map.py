@@ -57,6 +57,7 @@ class Map(GameState):
         self.total_ui_h = 120
         self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
+        self.raised_rect = pygame.Rect(0, SCREEN_HEIGHT - 110, 175, 50)
         
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (SCREEN_HEIGHT - self.total_ui_h) / self.map_h 
@@ -416,8 +417,8 @@ class Map(GameState):
             return
                 
         # funny, a hardcoded number
-        # this will be a problem later if more than 14 buttons are ever added
-        for i in range(min(14, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 12 buttons are ever added
+        for i in range(min(12, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
         # self.btn_go_build.visible = is_sel and owner == self.player_country
