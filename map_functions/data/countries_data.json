@@ -3083,9 +3083,9 @@
     "Uruguay": {
         "name": "Uruguay",
         "color": [
-            128,
-            255,
-            255
+            0,
+            191,
+            191
         ],
         "research": {
             "infantry": 1800,
@@ -3110,6 +3110,246 @@
             "bergius_process": 0,
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Colombia": {
+        "name": "Colombia",
+        "color": [
+            217,
+            217,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Panama": {
+        "name": "Panama",
+        "color": [
+            0,
+            0,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Guatemala": {
+        "name": "Guatemala",
+        "color": [
+            128,
+            128,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Honduras": {
+        "name": "Honduras",
+        "color": [
+            255,
+            0,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "El Salvador": {
+        "name": "El Salvador",
+        "color": [
+            0,
+            255,
+            64
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Nicaragua": {
+        "name": "Nicaragua",
+        "color": [
+            0,
+            64,
+            128
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Costa Rica": {
+        "name": "Costa Rica",
+        "color": [
+            43,
+            149,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Guangxi Clique": {
+        "name": "Guangxi Clique",
+        "color": [
+            0,
+            128,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Yunnan": {
+        "name": "Yunnan",
+        "color": [
+            0,
+            223,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Xibei San Ma": {
+        "name": "Xibei San Ma",
+        "color": [
+            64,
+            0,
+            128
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Xinjiang": {
+        "name": "Xinjiang",
+        "color": [
+            0,
+            255,
+            255
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "Manchuria": {
+        "name": "Manchuria",
+        "color": [
+            255,
+            128,
+            0
+        ],
+        "research": {
+            "infantry": 1800,
+            "cavalry": 1,
+            "industry": 1800
         },
         "money": 0,
         "manpower": 0,
