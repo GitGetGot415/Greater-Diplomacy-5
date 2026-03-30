@@ -667,9 +667,91 @@ class Map(GameState):
         self.next_state = "ECONOMY"
         self.done = True
 
+    def open_editor_economy(self):
+        """Opens a Tkinter window listing the income of every active country."""
+        import tkinter as tk
+        from tkinter import ttk
+        import json, os
+
+        active_countries = set()
+        for prov in self.map_data.values():
+            owner = prov.get("owner")
+            if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                active_countries.add(owner)
+
+        if not active_countries:
+            self.show_feedback("No active countries on map!")
+            return
+
+        root = tk.Tk()
+        root.title("Global Economy Overview")
+        root.geometry("600x400")
+        root.attributes("-topmost", True)
+        self.menu_active = True
+
+        def close_menu():
+            self.menu_active = False
+            root.destroy()
+            
+        root.protocol("WM_DELETE_WINDOW", close_menu)
+
+        # Economy logic
+        YIELD_MONEY = 500
+        UPKEEP_MODIFIER = 0.05
+        
+        unit_library = {}
+        building_library = {}
+        if os.path.exists('map_functions/data/unit_data.json'):
+            with open('map_functions/data/unit_data.json', 'r') as f: unit_library = json.load(f)
+        if os.path.exists('map_functions/data/building_data.json'):
+            with open('map_functions/data/building_data.json', 'r') as f: building_library = json.load(f)
+
+        econ_data = {c: {"inc": 0, "bonus": 0, "upkeep": 0} for c in active_countries}
+
+        for prov in self.map_data.values():
+            owner = prov.get("owner")
+            if owner in econ_data:
+                econ_data[owner]["inc"] += 1
+                for b_name in prov.get("buildings", []):
+                    stats = building_library.get(b_name, {})
+                    econ_data[owner]["bonus"] += stats.get("prod_money", 0)
+            
+            for unit in prov.get("units", []):
+                u_owner = unit.get("owner")
+                if u_owner in econ_data:
+                    stats = unit_library.get(unit["type"], {})
+                    econ_data[u_owner]["upkeep"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
+
+        columns = ("Country", "Gross Income", "Upkeep", "Net Income", "Treasury")
+        tree = ttk.Treeview(root, columns=columns, show="headings")
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=110, anchor="center")
+        
+        for c in sorted(active_countries):
+            d = econ_data[c]
+            gross = (d["inc"] * YIELD_MONEY) + d["bonus"]
+            upk = int(d["upkeep"])
+            net = gross - upk
+            treasury = self.nation_data.get(c, {}).get("money", 0)
+            tree.insert("", tk.END, values=(c, f"+{gross}", f"-{upk}", f"{'+' if net>=0 else ''}{net}", treasury))
+
+        scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+
+        while self.menu_active:
+            try:
+                root.update()
+                pygame.event.pump()
+            except:
+                break
+
     def open_map_research_editor(self):
         """Opens a UI to edit research for countries currently existing on the map."""
         import tkinter as tk
+        import json, os
         
         # 1. Find only countries that actually own territory
         active_countries = set()
@@ -682,9 +764,23 @@ class Map(GameState):
             self.show_feedback("No active countries on map!")
             return
 
+        # 2. Get default tech dict dynamically
+        def get_default_research():
+            template_path = "map_functions/data/research_template.json"
+            res_dict = {}
+            if os.path.exists(template_path):
+                with open(template_path, "r") as f:
+                    struct = json.load(f)
+                res_dict = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
+                if "carrack" in res_dict: res_dict["carrack"] = 1
+                if "cavalry" in res_dict: res_dict["cavalry"] = 0
+            return res_dict
+
+        default_res = get_default_research()
+
         root = tk.Tk()
         root.title("Map Tech Editor")
-        root.geometry("300x400")
+        root.geometry("350x500")
         root.attributes("-topmost", True)
         self.menu_active = True
 
@@ -693,25 +789,45 @@ class Map(GameState):
             root.destroy()
 
         root.protocol("WM_DELETE_WINDOW", close_menu)
-        tk.Label(root, text="Select Country to Edit:", font=("Arial", 12)).pack(pady=10)
+        tk.Label(root, text="Select Country to Edit:", font=("Arial", 12)).pack(pady=5)
         
         lb = tk.Listbox(root, font=("Arial", 11))
-        for c in sorted(active_countries):
-            lb.insert(tk.END, c)
+        
+        def populate_listbox():
+            lb.delete(0, tk.END)
+            for c in sorted(active_countries):
+                c_res = self.nation_data.get(c, {}).get("research", {})
+                is_diff = False
+                # Check if it deviates from the default template
+                for k, v in default_res.items():
+                    if c_res.get(k, v) != v:
+                        is_diff = True
+                        break
+                prefix = "[MODIFIED] " if is_diff else ""
+                lb.insert(tk.END, f"{prefix}{c}")
+
+        populate_listbox()
         lb.pack(fill="both", expand=True, padx=10, pady=5)
 
-        def edit_selected():
-            sel = lb.curselection()
-            if not sel: return
-            country = lb.get(sel[0])
-            res_data = self.nation_data.get(country, {}).get("research", {})
+        def open_edit_window(target_country, is_bulk=False):
+            # If bulk, load default as base. If specific, load their current
+            if is_bulk:
+                base_data = default_res.copy()
+            else:
+                actual_name = target_country.replace("[MODIFIED] ", "") # Strip prefix
+                base_data = self.nation_data.get(actual_name, {}).get("research", default_res.copy())
             
+            # Ensure all keys from default exist in base_data visually
+            for k, v in default_res.items():
+                if k not in base_data:
+                    base_data[k] = v
+
             edit_win = tk.Toplevel(root)
-            edit_win.title(f"{country} Research")
-            edit_win.geometry("280x400")
+            title_text = "ALL COUNTRIES" if is_bulk else actual_name
+            edit_win.title(f"{title_text} Research")
+            edit_win.geometry("300x500")
             edit_win.attributes("-topmost", True)
             
-            # Scrollable Canvas setup
             canvas = tk.Canvas(edit_win)
             scrollbar = tk.Scrollbar(edit_win, orient="vertical", command=canvas.yview)
             scroll_frame = tk.Frame(canvas)
@@ -722,25 +838,48 @@ class Map(GameState):
             scrollbar.pack(side="right", fill="y")
             
             entries = {}
-            for i, (tech, lvl) in enumerate(res_data.items()):
+            for i, tech in enumerate(sorted(base_data.keys())):
                 tk.Label(scroll_frame, text=tech.replace("_", " ").title()).grid(row=i, column=0, sticky="e", padx=5)
                 ent = tk.Entry(scroll_frame, width=8)
-                ent.insert(0, str(lvl))
+                ent.insert(0, str(base_data[tech]))
                 ent.grid(row=i, column=1, pady=2)
                 entries[tech] = ent
                 
             def save_res():
+                new_data = {}
                 for tech, ent in entries.items():
                     try:
-                        res_data[tech] = int(ent.get())
-                    except ValueError: pass
-                self.nation_data[country]["research"] = res_data
+                        new_data[tech] = int(ent.get())
+                    except ValueError: 
+                        new_data[tech] = base_data.get(tech, 0)
+                
+                if is_bulk:
+                    for c in active_countries:
+                        if "research" not in self.nation_data[c]:
+                            self.nation_data[c]["research"] = {}
+                        self.nation_data[c]["research"].update(new_data)
+                    self.show_feedback("Saved research for ALL countries")
+                else:
+                    if "research" not in self.nation_data[actual_name]:
+                        self.nation_data[actual_name]["research"] = {}
+                    self.nation_data[actual_name]["research"].update(new_data)
+                    self.show_feedback(f"Saved research for {actual_name}")
+                
+                populate_listbox()
                 edit_win.destroy()
-                self.show_feedback(f"Saved research for {country}")
                 
             tk.Button(edit_win, text="Save Tech Levels", command=save_res, bg="#4CAF50", fg="white").pack(side="bottom", fill="x", pady=5)
 
-        tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=10)
+        def edit_selected():
+            sel = lb.curselection()
+            if not sel: return
+            open_edit_window(lb.get(sel[0]), is_bulk=False)
+
+        def edit_all():
+            open_edit_window(None, is_bulk=True)
+
+        tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
+        tk.Button(root, text="Edit ALL Nations (Bulk)", command=edit_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
 
         while self.menu_active:
             try:
