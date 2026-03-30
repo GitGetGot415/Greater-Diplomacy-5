@@ -386,7 +386,7 @@ class Map(GameState):
             # Only show basic map buttons in Editor mode
             for el in self.elements:
                 # Standard Editor Buttons (Added "Relations")
-                if el.text in ["Terrain", "Pol Refresh", "Rel Refresh", "Data Refresh", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Data Refresh", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 # Dynamic Color for "Nation" button
@@ -416,8 +416,8 @@ class Map(GameState):
             return
                 
         # funny, a hardcoded number
-        # this will be a problem later if more than 12 buttons are ever added
-        for i in range(min(12, len(self.elements))): self.elements[i].visible = True
+        # this will be a problem later if more than 14 buttons are ever added
+        for i in range(min(14, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
         # self.btn_go_build.visible = is_sel and owner == self.player_country
