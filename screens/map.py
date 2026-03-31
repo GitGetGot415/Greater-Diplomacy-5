@@ -10,6 +10,7 @@ from map_functions.data import country_io
 from map_functions.logic import map_utils
 from map_functions.logic import diplomacy_logic
 from map_functions.data.economy_data import BASE_YIELDS, UPKEEP_MODIFIER
+from map_functions.ui.minimap import UI_LEFT_OFFSET
 
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False): 
@@ -51,7 +52,8 @@ class Map(GameState):
         self.total_ui_h = 120
         self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
-        self.raised_rect = pygame.Rect(0, SCREEN_HEIGHT - 110, 175, 110)
+        # red thingy to the left
+        self.raised_rect = pygame.Rect(0, 0, UI_LEFT_OFFSET, SCREEN_HEIGHT)
         
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (SCREEN_HEIGHT - self.total_ui_h) / self.map_h 
