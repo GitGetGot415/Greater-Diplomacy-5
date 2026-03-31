@@ -23,7 +23,7 @@ class Controller:
         pygame.mixer.init() # Initialize sound engine
 
         # Initialize fonts (Optionally pass a path here: fonts.init_fonts("assets/my_font.ttf"))
-        fonts.init_fonts("assets/fonts/Anime_Inept.otf")
+        fonts.init_fonts("assets/fonts/font.otf")
 
         self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
         
