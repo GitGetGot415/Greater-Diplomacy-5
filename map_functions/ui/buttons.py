@@ -29,7 +29,7 @@ def render_buttons(self):
             Button(60, SCREEN_HEIGHT - 50, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
             Button(110, SCREEN_HEIGHT - 50, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
             # NEW BUTTON nestled into the bottom bar:
-            Button(30, 420, "small", "orange", "Economy", econ_callback)
+            Button(20, 420, "left_ui_bar", "orange", "Economy", econ_callback)
         ])
 
         # Secondary View Buttons (Floating directly above the primary buttons)
@@ -55,11 +55,11 @@ def render_buttons(self):
                 # Change the Y coordinate from 10 to SCREEN_HEIGHT - 50
                 Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "purple", "Next Turn", self.advance_time),
                 # Research
-                Button(30, 220, "small", "blue", "R&D", self.open_research, image=research_icon),
+                Button(20, 220, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
                 # Save
-                Button(30, 320, "small", "green", "Save", self.save_map_data, image=save_icon),
+                Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
                 # --- NEW BUTTON ---
-                Button(30, 120, "small", "orange", "Edit Nation", self.open_edit_country)
+                Button(20, 120, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country)
             ])
     
     self.btn_go_build = Button(1390, 550, "medium", "grey", "Construction", self.open_construction)
