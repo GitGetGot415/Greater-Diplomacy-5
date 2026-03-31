@@ -59,7 +59,7 @@ def draw_map_screen(self, surface):
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
-    if self.base_layer == "POLITICAL":
+    """if self.base_layer == "POLITICAL":
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(self, 'country_name_surfs'):
@@ -85,7 +85,10 @@ def draw_map_screen(self, surface):
                 country = blob["owner"]
                 
                 # Skip small island groups ONLY IF the country already has a name on the map
-                if blob["count"] <= 3 and country in drawn_countries:
+                # if blob["count"] <= 3 and country in drawn_countries:
+                #     continue
+
+                if blob["count"] <= 5:
                     continue
 
                 surf, shadow = self.country_name_surfs.get(country, (None, None))
@@ -107,45 +110,16 @@ def draw_map_screen(self, surface):
                         scale_by_thickness = (blob["thickness"] * 0.8) / surf.get_height()
                         
                         land_scale = min(scale_by_length, scale_by_thickness)
-                        land_scale = min(max(land_scale, 0.05), 1.0)
+                        land_scale = min(max(land_scale, 0.1), 1.0)
                         
-                        # --- NEW: DYNAMIC FADE LOGIC ---
-                        # Invert the scale: A smaller text scale means we need to zoom in MORE to trigger the fade.
-                        inv_scale = 1.0 - land_scale 
+                        # --- UNIVERSAL LINEAR FADE LOGIC ---
+                        # Every country now fades at the exact same zoom levels.
+                        # Tweak these two variables to your liking:
+                        fade_start = 2.0   # Zoom level where text begins to fade out
+                        fade_window = 1.5  # Additional zoom required to become fully invisible
                         
-                        # Examples:
-                        # Massive country (land_scale 1.0) -> Fades from zoom 1.0 to 2.5
-                        # Tiny country (land_scale 0.05) -> Fades from zoom ~3.8 to ~5.3
-                        
-                        # --- NEW: EXPONENTIAL FADE LOGIC ---
-                        # First, get the linear inversion (0.0 for huge, ~0.95 for tiny)
-                        linear_inv_scale = 1.0 - land_scale 
-                        
-                        # --- TWEAK THESE VARIABLES ---
-                        base_start = 1.0         # Zoom level where the LARGEST country starts fading.
-                        delay_multiplier = 4.0   # Max extra zoom tiny countries get before fading. 
-                        fade_window = 1.5        # How long the fade lasts.
-                        exponent = 2.0           # NEW: The curve! 2.0 squares it, 3.0 cubes it.
-                        # -----------------------------------
-
-                        # Apply the exponent to curve the scaling
-                        exponential_inv_scale = linear_inv_scale ** exponent
-
-                        dynamic_fade_start = base_start + (exponential_inv_scale * delay_multiplier)
-                        dynamic_fade_end = dynamic_fade_start + fade_window
-                        
-                        if self.camera.zoom > dynamic_fade_start:
-                            alpha_ratio = 1.0 - min(1.0, (self.camera.zoom - dynamic_fade_start) / (dynamic_fade_end - dynamic_fade_start))
-                        else:
-                            alpha_ratio = 1.0
-                        
-                        if self.camera.zoom > dynamic_fade_start:
-                            alpha_ratio = 1.0 - min(1.0, (self.camera.zoom - dynamic_fade_start) / (dynamic_fade_end - dynamic_fade_start))
-                        else:
-                            alpha_ratio = 1.0
-                        
-                        if self.camera.zoom > dynamic_fade_start:
-                            alpha_ratio = 1.0 - min(1.0, (self.camera.zoom - dynamic_fade_start) / (dynamic_fade_end - dynamic_fade_start))
+                        if self.camera.zoom > fade_start:
+                            alpha_ratio = 1.0 - min(1.0, (self.camera.zoom - fade_start) / fade_window)
                         else:
                             alpha_ratio = 1.0
                             
@@ -177,7 +151,7 @@ def draw_map_screen(self, surface):
                             surface.blit(scaled_text, txt_rect)
                             
                             # Record that this country has successfully been drawn
-                            drawn_countries.add(country)
+                            drawn_countries.add(country)"""
                             
     # --- LAYER 4: UI BARS & HUD ---
     pygame.draw.rect(surface, (40, 40, 40), self.top_bar_rect)
