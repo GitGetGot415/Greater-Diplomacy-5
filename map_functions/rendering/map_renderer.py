@@ -69,17 +69,43 @@ def draw_map_screen(self, surface):
             for c_id, data in self.nation_data.items():
                 if c_id not in ["Ocean", "Lakes", "Unclaimed", "None"]:
                     disp = data.get("name", c_id).upper()
-                    # Render white text and a black shadow
-                    surf = name_font.render(disp, True, (255, 255, 255))
-                    shadow = name_font.render(disp, True, (20, 20, 20))
+                    surf = name_font.render(disp, True, (255, 255, 255)).convert_alpha()
+                    shadow = name_font.render(disp, True, (20, 20, 20)).convert_alpha()
                     self.country_name_surfs[c_id] = (surf, shadow)
 
-        # 2. Draw the names
-        if hasattr(self, 'country_centers'):
-            for country, (cx, cy) in self.country_centers.items():
+        # 2. Calculate dynamic alpha (fade out when zooming in)
+        fade_start_zoom = 2.0  # Start fading at this zoom
+        fade_end_zoom = 4.0    # Completely invisible at this zoom
+        
+        if self.camera.zoom > fade_start_zoom:
+            alpha_ratio = 1.0 - min(1.0, (self.camera.zoom - fade_start_zoom) / (fade_end_zoom - fade_start_zoom))
+        else:
+            alpha_ratio = 1.0
+            
+        alpha = int(255 * alpha_ratio)
+
+        # 3. Draw the names
+        if alpha > 0 and hasattr(self, 'country_text_blobs'):
+            import math
+            
+            # --- THE FIX: Track drawn countries and sort blobs by size ---
+            drawn_countries = set()
+            # Sort largest to smallest so mainlands are always processed first!
+            sorted_blobs = sorted(self.country_text_blobs, key=lambda b: b["size"], reverse=True)
+            
+            for blob in sorted_blobs:
+                country = blob["owner"]
+                
+                # Skip 1-province landmasses ONLY IF the country already has a name on the map
+                if blob["size"] <= 3 and country in drawn_countries:
+                    continue
+                # -------------------------------------------------------------
+
                 surf, shadow = self.country_name_surfs.get(country, (None, None))
                 if not surf: continue
 
+                cx, cy = blob["cx"], blob["cy"]
+                
                 # Wrap logic for looped maps
                 offsets = [0, -self.map_w, self.map_w] if self.loop_map else [0]
                 for offset in offsets:
@@ -89,21 +115,26 @@ def draw_map_screen(self, surface):
                     # Frustum Culling: Only draw if it's actually on the screen
                     if -200 < sx < surface.get_width() + 200 and 0 < sy < surface.get_height():
                         
-                        # Adjust this multiplier (0.3) to make the text larger/smaller relative to the map
-                        base_scale = 0.3 
-                        scaled_w = int(surf.get_width() * self.camera.zoom * base_scale)
-                        scaled_h = int(surf.get_height() * self.camera.zoom * base_scale)
+                        land_scale = 0.15 + (math.sqrt(blob["size"]) * 0.05)
+                        land_scale = min(land_scale, 1.5)
+                        
+                        scaled_w = int(surf.get_width() * self.camera.zoom * land_scale)
+                        scaled_h = int(surf.get_height() * self.camera.zoom * land_scale)
                         
                         if scaled_w > 0 and scaled_h > 0:
-                            # Scale the cached surfaces
                             scaled_text = pygame.transform.scale(surf, (scaled_w, scaled_h))
                             scaled_shadow = pygame.transform.scale(shadow, (scaled_w, scaled_h))
                             
+                            scaled_text.set_alpha(alpha)
+                            scaled_shadow.set_alpha(alpha)
+                            
                             txt_rect = scaled_text.get_rect(center=(int(sx), int(sy)))
                             
-                            # Blit shadow (offset by 2 pixels), then the actual text
                             surface.blit(scaled_shadow, (txt_rect.x + 2, txt_rect.y + 2))
                             surface.blit(scaled_text, txt_rect)
+                            
+                            # Record that this country has successfully been drawn
+                            drawn_countries.add(country)
                             
     # --- LAYER 4: UI BARS & HUD ---
     pygame.draw.rect(surface, (40, 40, 40), self.top_bar_rect)

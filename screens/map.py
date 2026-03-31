@@ -381,27 +381,50 @@ class Map(GameState):
             self.next_state, self.done = "EDIT_COUNTRY", True
 
     def update_country_centers(self):
-        """Calculates the visual center for every country on the map."""
-        owner_coords = {}
-        
-        # 1. Group all province centers by owner
-        for prov in self.map_data.values():
+        """Calculates the visual center for disconnected parts of every country."""
+        self.country_text_blobs = []
+        visited = set()
+
+        # Iterate through every province by ID
+        for prov_id, prov in self.id_to_province.items():
             owner = prov.get("owner")
-            if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-                owner_coords.setdefault(owner, []).append(prov["center"])
-
-        self.country_centers = {}
-        
-        # 2. Find the average center, then snap to the closest owned province
-        for owner, coords in owner_coords.items():
-            if not coords: continue
+            if not owner or owner in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                continue
             
-            avg_x = sum(c[0] for c in coords) / len(coords)
-            avg_y = sum(c[1] for c in coords) / len(coords)
-
-            # Snap to the closest actual province so the name isn't in the ocean
-            closest_prov = min(coords, key=lambda c: (c[0]-avg_x)**2 + (c[1]-avg_y)**2)
-            self.country_centers[owner] = closest_prov
+            # If we haven't checked this province yet, it's a new landmass
+            if prov_id not in visited:
+                comp = []
+                queue = [prov]
+                visited.add(prov_id)
+                
+                # Flood-fill to find all connected provinces with the SAME owner
+                while queue:
+                    curr = queue.pop(0)
+                    comp.append(curr)
+                    for n_id in curr.get("neighbors", []):
+                        if n_id not in visited:
+                            n_prov = self.id_to_province.get(n_id)
+                            if n_prov and n_prov.get("owner") == owner:
+                                visited.add(n_id)
+                                queue.append(n_prov)
+                
+                count = len(comp)
+                if count == 0: continue
+                
+                # Average center of this specific component
+                avg_x = sum(c["center"][0] for c in comp) / count
+                avg_y = sum(c["center"][1] for c in comp) / count
+                
+                # Snap to the closest actual province in this component
+                closest_prov = min(comp, key=lambda c: (c["center"][0] - avg_x)**2 + (c["center"][1] - avg_y)**2)
+                
+                # Save the center point and the size of the landmass
+                self.country_text_blobs.append({
+                    "owner": owner,
+                    "cx": closest_prov["center"][0],
+                    "cy": closest_prov["center"][1],
+                    "size": count
+                })
 
     # --- Pygame Core Loop Updates ---
     def update(self):
