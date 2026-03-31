@@ -9,7 +9,7 @@ def editor_load_map(self):
     """Opens a file dialog to load a map folder directly into the editor."""
     root = tk.Tk()
     root.withdraw()
-    path = filedialog.askdirectory(initialdir="saves", title="Select Map Folder to Edit")
+    path = filedialog.askdirectory(initialdir="scenarios", title="Select Map Folder to Edit")
     root.destroy()
 
     if path:

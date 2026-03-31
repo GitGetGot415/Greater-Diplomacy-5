@@ -2,9 +2,9 @@
     "Ocean": {
         "name": "Ocean",
         "color": [
+            10,
             20,
-            40,
-            80
+            40
         ],
         "research": {
             "infantry": 1800,
@@ -42,9 +42,9 @@
     "Lakes": {
         "name": "Lakes",
         "color": [
-            40,
-            80,
-            160
+            10,
+            20,
+            40
         ],
         "research": {
             "infantry": 1800,

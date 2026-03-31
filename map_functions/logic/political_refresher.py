@@ -35,10 +35,9 @@ def refresh_political_map(self):
         else:
             owner = data.get("owner", "Unclaimed")
             
-        if owner.lower() == "lakes":
-            color = (40, 80, 160)
-        else:
-            color = self.nation_colors.get(owner, (255, 255, 255))
+        # Removed the hardcoded lake color. 
+        # It will now pull [10, 20, 40] straight from countries_data.json!
+        color = self.nation_colors.get(owner, (255, 255, 255))
             
         # Map string owner to a unique integer
         if owner not in owner_to_int:
@@ -150,7 +149,9 @@ def refresh_relations_map(self):
         terrain_type = data.get("terrain", "plains")
         
         if terrain_type in water_mapping:
-            color = (40, 80, 160) if terrain_type == "lakes" else (20, 40, 80)
+            # Use water_mapping to get "Lakes" or "Ocean", then fetch from nation_colors
+            water_owner = water_mapping[terrain_type]
+            color = self.nation_colors.get(water_owner, (10, 20, 40))
         else:
             owner = data.get("owner", "Unclaimed")
             
