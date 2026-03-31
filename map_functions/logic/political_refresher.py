@@ -68,10 +68,11 @@ def refresh_political_map(self):
         is_gap = (filled_owner == 0)
         filled_owner[is_gap] = np.roll(filled_owner, -1, axis=0)[is_gap]
 
-    # Identify water IDs to exclude them from shading
+    # Identify water IDs and unclaimed IDs to exclude them from shading
     ocean_id = owner_to_int.get("Ocean", -1)
     lakes_id = owner_to_int.get("Lakes", -1)
-    is_land = (filled_owner != ocean_id) & (filled_owner != lakes_id)
+    unclaimed_id = owner_to_int.get("Unclaimed", -1)
+    is_land = (filled_owner != ocean_id) & (filled_owner != lakes_id)& (filled_owner != unclaimed_id)
 
     # Shift arrays to look at neighboring owners
     shift_u = np.roll(filled_owner, 1, axis=1)
