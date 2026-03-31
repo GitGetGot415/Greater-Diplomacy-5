@@ -160,10 +160,12 @@ def draw_map_screen(self, surface):
             surface.blit(c_txt, c_txt.get_rect(center=self.confirm_rect.center))
             surface.blit(x_txt, x_txt.get_rect(center=self.cancel_rect.center))
 
-    # --- LAYER 6: FEEDBACK & TOOLTIPS ---
+   # --- LAYER 6: FEEDBACK & TOOLTIPS ---
+   # this is the green text stuff
     if self.feedback_text and pygame.time.get_ticks() - self.feedback_timer < 2000:
         tsurf = self.font.render(self.feedback_text, True, (0, 255, 0))
-        surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 20, SCREEN_HEIGHT - 40))
+        # Change SCREEN_HEIGHT - 40 to 20
+        surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 1120, 20))
 
     # Check flag before drawing the tooltip
     # this is the stuff that makes it so that if you select a province you don't display the tooltip

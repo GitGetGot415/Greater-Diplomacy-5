@@ -2,6 +2,7 @@
 from ui_elements import Button
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering import symbol_loader
+from map_functions.ui.minimap import UI_LEFT_OFFSET
 
 def render_buttons(self):
     if not self.selection_mode:
@@ -51,8 +52,8 @@ def render_buttons(self):
             ])
         else:
             self.elements.extend([
-                # Next Turn
-                Button(SCREEN_WIDTH - 120, 10, "small", "purple", "Next Turn", self.advance_time),
+                # Change the Y coordinate from 10 to SCREEN_HEIGHT - 50
+                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "purple", "Next Turn", self.advance_time),
                 # Research
                 Button(SCREEN_WIDTH - 230, 10, "small", "blue", "R&D", self.open_research, image=research_icon),
                 # Save
@@ -68,12 +69,12 @@ def render_buttons(self):
     self.elements.append(self.btn_conquer)
 
     # Close/Deselect button
-    self.btn_close_info = Button(15, 15, "small", "red", "X", self.deselect_province)
+    self.btn_close_info = Button(SCREEN_WIDTH - 120, 10, "small", "red", "X", self.deselect_province)
     self.btn_close_info.visible = False
     self.elements.append(self.btn_close_info)
 
     # Exit to menu button
-    self.btn_exit_to_menu = Button(15, 15, "small", "red", "Exit", self.exit_to_menu)
+    self.btn_exit_to_menu = Button(SCREEN_WIDTH - 120, 10, "small", "red", "Exit", self.exit_to_menu)
     self.btn_exit_to_menu.visible = False
     self.elements.append(self.btn_exit_to_menu)
 
