@@ -113,8 +113,9 @@ def draw_map_screen(self, surface):
         # Check flag before drawing "Playing as" text
         if not getattr(self, 'hide_top_info', False):
             player_display = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
-            name_surf = self.font.render(f"Playing as: {player_display.title()}", True, (200, 200, 200))
-            surface.blit(name_surf, (surface.get_width() - name_surf.get_width() - 420, 20))
+            name_surf = self.font.render(f"{player_display.title()}", True, (200, 200, 200))
+            # surface.blit(name_surf, (surface.get_width() - name_surf.get_width() - 220, 20))
+            surface.blit(name_surf, (200, 20))
         
         if self.selected_province: 
             from map_functions.ui import sidebar_info

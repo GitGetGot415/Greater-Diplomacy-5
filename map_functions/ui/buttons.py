@@ -16,9 +16,9 @@ def render_buttons(self):
 
         self.elements = [
             # Refresh remains in the top bar
-            Button(120, 10, "small", "grey", "Pol Refresh", self.refresh_political_map),
-            Button(220, 10, "small", "grey", "Rel Refresh", self.refresh_relations_map),
-            Button(320, 10, "small", "grey", "Data Refresh", self.refresh_nation_data), # <-- ADDED THIS
+            Button(1120, 210, "small", "grey", "Pol Refresh", self.refresh_political_map),
+            Button(1220, 210, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(1320, 210, "small", "grey", "Data Refresh", self.refresh_nation_data), # <-- ADDED THIS
         ]
 
         # Primary View Buttons (Inside the bottom bar)
