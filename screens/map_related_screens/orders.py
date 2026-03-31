@@ -2,6 +2,7 @@ import pygame
 import gameState as g
 from gameState import GameState
 from ui_elements import Button
+from map_functions.rendering.font_manager import fonts
 
 class Orders_Screen(GameState):
     def __init__(self):
@@ -174,8 +175,8 @@ class Orders_Screen(GameState):
         self.cancel_rects = []
         from map_functions.rendering import overlay_renderer
         
-        font = pygame.font.SysFont("Arial", 32)
-        small_font = pygame.font.SysFont("Arial", 18)
+        font = fonts.get("heading1")
+        small_font = fonts.get("normal")
         
         title = font.render(f"Orders: Province {self.target_province['id']}", True, (255, 255, 255))
         surface.blit(title, (g.SCREEN_WIDTH//2 - title.get_width()//2, 50))

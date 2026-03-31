@@ -1,5 +1,6 @@
 import pygame
 import gameState as g
+from map_functions.rendering.font_manager import fonts # <-- Import here
 
 # --- Presets ---
 COLORS = {
@@ -55,7 +56,9 @@ class Button:
         self.callback = callback
         self.image = image 
         self.show_text = show_text # Store the boolean
-        self.font = pygame.font.SysFont("Arial", 20, bold=True)
+
+        self.font = fonts.get("button") # <-- NEW
+
         self.visible = True
         self.is_pressed = False
         
@@ -159,8 +162,9 @@ class Slider:
         pygame.draw.rect(surface, (100, 100, 100), self.rect) # Track
         pygame.draw.rect(surface, (200, 200, 200), self.handle_rect) # Handle
         
-        font = pygame.font.SysFont("Arial", 18)
-        txt = font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
+        slider_font = fonts.get("normal") # <-- NEW (Renamed to avoid shadowing)
+
+        txt = slider_font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
         surface.blit(txt, (self.rect.x, self.rect.y - 25))
 
     def handle_event(self, event):

@@ -11,6 +11,7 @@ from map_functions.logic import map_utils
 from map_functions.logic import diplomacy_logic
 from map_functions.data.economy_data import BASE_YIELDS, UPKEEP_MODIFIER
 from map_functions.ui.minimap import UI_LEFT_OFFSET
+from map_functions.rendering.font_manager import fonts # <-- Import here
 
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False): 
@@ -45,8 +46,8 @@ class Map(GameState):
 
         # --- 3. Visuals & UI Setup ---
         self.bg_color = (20, 20, 20)
-        self.font = pygame.font.SysFont("Arial", 18)
-        self.small_font = pygame.font.SysFont("Arial", 14)
+        self.font = fonts.get("normal") # <-- NEW
+        self.small_font = fonts.get("tiny") # <-- NEW
         
         self.top_ui_height = self.bot_ui_height = 60
         self.total_ui_h = 120

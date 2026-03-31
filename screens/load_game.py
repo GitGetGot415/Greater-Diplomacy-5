@@ -7,6 +7,7 @@ from tkinter import filedialog, messagebox
 import tkinter as tk
 from gameState import GameState
 from ui_elements import Button
+from map_functions.rendering.font_manager import fonts
 
 class Load_Game(GameState):
     def __init__(self):
@@ -105,7 +106,7 @@ class Load_Game(GameState):
             pygame.draw.rect(surface, (100, 100, 100), input_rect)
             pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
             
-            font = pygame.font.SysFont("Arial", 24)
+            font = fonts.get("heading2")
             txt_surf = font.render(self.new_name_text + "|", True, (255, 255, 255))
             surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
             
@@ -124,7 +125,7 @@ class Load_Game(GameState):
             pygame.draw.rect(surface, (60, 20, 20), pop_rect)
             pygame.draw.rect(surface, (255, 50, 50), pop_rect, 3)
             
-            font = pygame.font.SysFont("Arial", 24)
+            font = fonts.get("heading2")
             msg = font.render(f"Delete '{self.deleting_folder}'?", True, (255, 255, 255))
             msg_rect = msg.get_rect(center=(800, 400))
             surface.blit(msg, msg_rect)

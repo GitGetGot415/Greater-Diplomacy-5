@@ -1,6 +1,7 @@
 import pygame
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
+from map_functions.rendering.font_manager import fonts
 
 class Economy_Screen(GameState):
     def __init__(self):
@@ -19,7 +20,7 @@ class Economy_Screen(GameState):
         if not self.map_screen: return
         
         # Title
-        font_title = pygame.font.SysFont("Arial", 40, bold=True)
+        font_title = fonts.get("title")
         title = font_title.render("National Economy", True, (255, 255, 255))
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
@@ -27,8 +28,8 @@ class Economy_Screen(GameState):
         total_inc, upkeep = self.map_screen.get_player_economy_projections()
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         
-        font_large = pygame.font.SysFont("Arial", 28)
-        font_med = pygame.font.SysFont("Arial", 24)
+        font_large = fonts.get("heading1")
+        font_med = fonts.get("heading2")
         
         y_offset = 150
         resources = [

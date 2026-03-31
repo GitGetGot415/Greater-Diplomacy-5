@@ -3,6 +3,7 @@ from map_functions.rendering import hover_renderer, province_select, overlay_ren
 from map_functions.ui import minimap, tooltip
 from map_functions.ui import ui_info_popup as unit_info_popup
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
+from map_functions.rendering.font_manager import fonts # <-- Import the manager
 
 def draw_map_screen(self, surface):
     # --- LAYER 1: THE BASE MAP ---
@@ -130,7 +131,7 @@ def draw_map_screen(self, surface):
     # --- LAYER 5: SELECTION MODE ---
     else:
         prompt_txt = "Select a Country to Play As" if not self.pending_selection else f"Play as {self.pending_selection.title()}?"
-        big_font = pygame.font.SysFont("Arial", 40)
+        big_font = fonts.get("title")
         txt = big_font.render(prompt_txt, True, (255, 255, 255))
         bg_rect = txt.get_rect(center=(surface.get_width()//2, 50))
         pygame.draw.rect(surface, (0, 0, 0, 180), bg_rect.inflate(20, 10))
@@ -146,7 +147,7 @@ def draw_map_screen(self, surface):
             pygame.draw.rect(surface, (40, 40, 40), box_rect)
             pygame.draw.rect(surface, (200, 200, 200), box_rect, 2)
             
-            confirm_font = pygame.font.SysFont("Arial", 24)
+            confirm_font = fonts.get("heading2")
             instr = confirm_font.render(f"Start Game as {self.pending_selection.title()}?", True, (255, 255, 255))
             surface.blit(instr, instr.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
             
@@ -184,12 +185,12 @@ def draw_map_screen(self, surface):
         pygame.draw.rect(surface, (40, 40, 40), box_rect)
         pygame.draw.rect(surface, (200, 200, 200), box_rect, 2)
 
-        font = pygame.font.SysFont("Arial", 26, bold=True)
+        font = fonts.get("heading2")
         msg = "Quit to Main Menu?"
         sub_msg = "Unsaved progress will be lost."
         
         txt_surf = font.render(msg, True, (255, 255, 255))
-        sub_surf = pygame.font.SysFont("Arial", 18).render(sub_msg, True, (200, 200, 200))
+        sub_surf = fonts.get("normal").render(sub_msg, True, (200, 200, 200))
         
         surface.blit(txt_surf, txt_surf.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
         surface.blit(sub_surf, sub_surf.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
@@ -202,6 +203,6 @@ def draw_map_screen(self, surface):
         pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
         pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
         
-        btn_font = pygame.font.SysFont("Arial", 20, bold=True)
+        btn_font = fonts.get("button")
         surface.blit(btn_font.render("EXIT", True, (255, 255, 255)), (yes_rect.x + 25, yes_rect.y + 8))
         surface.blit(btn_font.render("STAY", True, (255, 255, 255)), (no_rect.x + 25, no_rect.y + 8))

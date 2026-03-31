@@ -4,6 +4,7 @@ import os
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
+from map_functions.rendering.font_manager import fonts
 
 class Construction_Screen(GameState):
     def __init__(self):
@@ -122,7 +123,7 @@ class Construction_Screen(GameState):
     def additional_draw(self, surface):
         if not self.target_province: return
         
-        title_font = pygame.font.SysFont("Arial", 32, bold=True)
+        title_font = fonts.get("heading1")
         surface.blit(title_font.render("CONSTRUCTION & CIVIL WORKS", True, (255, 255, 255)), (150, 25))
 
         # --- Draw Orange Background for General ---
@@ -130,7 +131,7 @@ class Construction_Screen(GameState):
             land_rect = pygame.Rect(30, self.other_start_y - 15, 840, self.other_end_y - self.other_start_y + 15)
             pygame.draw.rect(surface, (60, 40, 20), land_rect)
             pygame.draw.rect(surface, (200, 100, 30), land_rect, 2)
-            lbl = pygame.font.SysFont("Arial", 20, bold=True).render("GENERAL BUILDINGS", True, (255, 150, 50))
+            lbl = fonts.get("heading2").render("GENERAL BUILDINGS", True, (255, 150, 50))
             surface.blit(lbl, (40, self.other_start_y - 45))
 
         # --- Draw Purple Background for Fuel ---
@@ -138,11 +139,11 @@ class Construction_Screen(GameState):
             navy_rect = pygame.Rect(30, self.fuel_start_y - 15, 840, self.fuel_end_y - self.fuel_start_y + 15)
             pygame.draw.rect(surface, (50, 30, 60), navy_rect)
             pygame.draw.rect(surface, (150, 50, 200), navy_rect, 2)
-            lbl = pygame.font.SysFont("Arial", 20, bold=True).render("FUEL REFINERIES", True, (200, 100, 255))
+            lbl = fonts.get("heading2").render("FUEL REFINERIES", True, (200, 100, 255))
             surface.blit(lbl, (40, self.fuel_start_y - 45))
 
         # --- Draw Custom UI Bars Next to Buttons ---
-        bar_font = pygame.font.SysFont("Arial", 16)
+        bar_font = fonts.get("small")
         for bar_rect, stats in self.active_bars:
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
@@ -160,7 +161,7 @@ class Construction_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        res_font = pygame.font.SysFont("Arial", 22)
+        res_font = fonts.get("heading2")
         resources = [
             (f"Money: {p_data.get('money', 0)}", (255, 215, 0)),
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),

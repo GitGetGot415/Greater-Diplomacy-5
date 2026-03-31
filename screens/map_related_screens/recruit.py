@@ -6,6 +6,7 @@ import math
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
+from map_functions.rendering.font_manager import fonts # <-- Import the manager
 
 class Recruit_Screen(GameState):
     def __init__(self):
@@ -177,7 +178,7 @@ class Recruit_Screen(GameState):
     def additional_draw(self, surface):
         if not self.target_province: return
         
-        title_font = pygame.font.SysFont("Arial", 32, bold=True)
+        title_font = fonts.get("heading1")
         surface.blit(title_font.render("RECRUITMENT & DOCKYARDS", True, (255, 255, 255)), (150, 25))
 
         # --- Draw Green Background for Infantry Forces ---
@@ -185,7 +186,7 @@ class Recruit_Screen(GameState):
             inf_rect = pygame.Rect(30, self.infantry_start_y - 15, 840, self.infantry_end_y - self.infantry_start_y + 15)
             pygame.draw.rect(surface, (30, 60, 30), inf_rect)
             pygame.draw.rect(surface, (50, 150, 50), inf_rect, 2)
-            lbl = pygame.font.SysFont("Arial", 20, bold=True).render("INFANTRY", True, (100, 255, 100))
+            lbl = fonts.get("heading2").render("INFANTRY", True, (100, 255, 100))
             surface.blit(lbl, (40, self.infantry_start_y - 45))
 
         # --- Draw Darker Green Background for Tanks ---
@@ -193,7 +194,7 @@ class Recruit_Screen(GameState):
             tank_rect = pygame.Rect(30, self.tank_start_y - 15, 840, self.tank_end_y - self.tank_start_y + 15)
             pygame.draw.rect(surface, (20, 45, 20), tank_rect) # Darker green background
             pygame.draw.rect(surface, (40, 120, 40), tank_rect, 2) # Darker border
-            lbl = pygame.font.SysFont("Arial", 20, bold=True).render("TANKS", True, (80, 200, 80))
+            lbl = fonts.get("heading2").render("TANKS", True, (80, 200, 80))
             surface.blit(lbl, (40, self.tank_start_y - 45))
 
         # --- Draw Blue Background for Naval Forces ---
@@ -201,11 +202,11 @@ class Recruit_Screen(GameState):
             navy_rect = pygame.Rect(30, self.navy_start_y - 15, 840, self.navy_end_y - self.navy_start_y + 15)
             pygame.draw.rect(surface, (30, 30, 60), navy_rect)
             pygame.draw.rect(surface, (50, 50, 150), navy_rect, 2)
-            lbl = pygame.font.SysFont("Arial", 20, bold=True).render("NAVAL FORCES", True, (100, 150, 255))
+            lbl = fonts.get("heading2").render("NAVAL FORCES", True, (100, 150, 255))
             surface.blit(lbl, (40, self.navy_start_y - 45))
 
         # --- Draw Custom UI Bars Next to Buttons ---
-        bar_font = pygame.font.SysFont("Arial", 16)
+        bar_font = fonts.get("small")
         for bar_rect, stats in self.active_bars:
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
@@ -228,7 +229,7 @@ class Recruit_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        res_font = pygame.font.SysFont("Arial", 22)
+        res_font = fonts.get("heading2")
         resources = [
             (f"Money: {p_data.get('money', 0)}", (255, 215, 0)),
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),

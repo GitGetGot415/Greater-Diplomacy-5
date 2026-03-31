@@ -1,4 +1,5 @@
 import pygame
+from map_functions.rendering.font_manager import fonts # <-- Import the manager
 import ui_elements
 import gameState as g
 from screens.load_game import Load_Game
@@ -20,6 +21,10 @@ class Controller:
     def __init__(self):
         pygame.init() # Ensure pygame is init before accessing K_ constants
         pygame.mixer.init() # Initialize sound engine
+
+        # Initialize fonts (Optionally pass a path here: fonts.init_fonts("assets/my_font.ttf"))
+        fonts.init_fonts("assets/fonts/Anime_Inept.otf")
+
         self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
         
         # Load the sound into the ui_elements module

@@ -1,6 +1,7 @@
 # screens/map_related_screens/recruit_ui.py
 import pygame
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
+from map_functions.rendering.font_manager import fonts
 
 def draw_recruitment_overlay(surface, target_province):
     """Draws the combined deployment and construction queue."""
@@ -10,8 +11,8 @@ def draw_recruitment_overlay(surface, target_province):
     pygame.draw.rect(surface, (30, 30, 50), panel_rect)
     pygame.draw.rect(surface, (100, 100, 250), panel_rect, 2)
 
-    font = pygame.font.SysFont("Arial", 28)
-    small_font = pygame.font.SysFont("Arial", 20)
+    font = fonts.get("heading1")
+    small_font = fonts.get("button")
     
     title = font.render("Queued Orders", True, (255, 255, 255))
     surface.blit(title, (panel_rect.x + 20, panel_rect.y + 20))

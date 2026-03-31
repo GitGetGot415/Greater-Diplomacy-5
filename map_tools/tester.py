@@ -2,6 +2,7 @@ import pygame
 import json
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
+from map_functions.rendering.font_manager import fonts
 
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
@@ -11,7 +12,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
 pygame.display.set_caption("Map Tester")
-font = pygame.font.SysFont("Arial", 18)
+font = fonts.get("normal")
 
 # --- 1. Optimized Data Loading ---
 # visual_map = pygame.image.load("map_tools/provinces_id_map.png").convert()

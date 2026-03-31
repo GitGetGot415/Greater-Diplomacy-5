@@ -3,6 +3,7 @@ import json
 import os
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
+from map_functions.rendering.font_manager import fonts
 
 class Research_Screen(GameState):
     def __init__(self):
@@ -179,13 +180,13 @@ class Research_Screen(GameState):
         pygame.draw.rect(surface, (40, 40, 50), (0, 0, SCREEN_WIDTH, 70))
         pygame.draw.line(surface, (200, 200, 200), (0, 70), (SCREEN_WIDTH, 70), 2)
 
-        font = pygame.font.SysFont("Arial", 32)
+        font = fonts.get("heading1")
         title_str = f"VIEWING: {self.current_category}"
         ts = font.render(title_str, True, (255, 255, 255))
         surface.blit(ts, (SCREEN_WIDTH//2 - ts.get_width()//2, 75))
 
         # --- Research Output Indicator ---
-        output_font = pygame.font.SysFont("Arial", 22, bold=True)
+        output_font = fonts.get("heading1")
         # For now, this is hardcoded to 10/day as per your requirement
         output_text = output_font.render("RESEARCH OUTPUT: 10 pts/day", True, (0, 255, 255))
         surface.blit(output_text, (SCREEN_WIDTH - output_text.get_width() - 30, 85))
@@ -198,7 +199,7 @@ class Research_Screen(GameState):
             hud_rect = pygame.Rect(20, SCREEN_HEIGHT - 120, 400, 100)
             pygame.draw.rect(surface, (40, 40, 60), hud_rect)
             pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
-            hud_font = pygame.font.SysFont("Arial", 20)
+            hud_font = fonts.get("button")
             surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, SCREEN_HEIGHT - 110))
             
             queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
@@ -225,8 +226,8 @@ class Research_Screen(GameState):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_levels = player_data.get("research", {})
         
-        text_font = pygame.font.SysFont("Arial", 22)
-        label_font = pygame.font.SysFont("Arial", 24, bold=True)
+        text_font = fonts.get("button")
+        label_font = fonts.get("heading2")
         
         organized = {cat: [] for cat in self.categories if cat != "COMPLETED"}
         for tech_id, data in self.tech_tree.items():
