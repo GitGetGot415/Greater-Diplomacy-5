@@ -65,11 +65,6 @@ def render_buttons(self):
     self.btn_go_build = Button(1390, 550, "medium", "grey", "Construction", self.open_construction)
     self.elements.append(self.btn_go_build)
 
-    # --- Contextual Buttons (Visible when province selected) ---
-    self.btn_conquer = Button(190, 440, "small", "red", "Conquer", self.conquer_province)
-    self.btn_conquer.visible = False 
-    self.elements.append(self.btn_conquer)
-
     # Close/Deselect button
     self.btn_close_info = Button(SCREEN_WIDTH - 120, 10, "small", "red", "X", self.deselect_province)
     self.btn_close_info.visible = False
@@ -89,14 +84,12 @@ def render_buttons(self):
     self.btn_form_alliance = Button(1390, 430, "medium", "green", "Form Alliance", self.handle_form_alliance)
 
     # Initial Visibility
-    self.btn_conquer.visible = False 
     self.btn_close_info.visible = False
     self.btn_go_recruit.visible = False
     self.btn_go_orders.visible = False
 
     # Add them to the elements list
     self.elements.extend([
-        self.btn_conquer, 
         self.btn_close_info, 
         self.btn_exit_to_menu,
         self.btn_go_recruit,

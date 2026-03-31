@@ -429,7 +429,7 @@ class Map(GameState):
             return
         
         contextual_buttons = {
-            getattr(self, 'btn_go_build', None), getattr(self, 'btn_conquer', None),
+            getattr(self, 'btn_go_build', None),
             getattr(self, 'btn_close_info', None), getattr(self, 'btn_exit_to_menu', None),
             getattr(self, 'btn_go_recruit', None), getattr(self, 'btn_go_orders', None),
             getattr(self, 'btn_declare_war', None), getattr(self, 'btn_form_alliance', None)
@@ -448,7 +448,6 @@ class Map(GameState):
         self.btn_close_info.visible = is_sel
 
         if is_sel:
-            self.btn_conquer.visible = True
             owner = self.selected_province.get("owner", "Unclaimed")
             player_data = self.nation_data.get(self.player_country, {})
             pending = player_data.get("pending_diplomacy", {})
