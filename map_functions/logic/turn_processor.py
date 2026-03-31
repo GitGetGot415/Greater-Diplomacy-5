@@ -19,6 +19,11 @@ def process_next_turn(self):
     process_queues(self, days_to_advance)
     
     process_national_research(self, days_to_advance)
+    
+    # might want to add a loading screen if you're going to have this
+    # self.refresh_political_map()
+    # self.refresh_relations_map()
+    # also if you do add this prevent the political and relations button from manually doing this, this can take like 0.3 seconds which is a not insignificant delay
 
 def process_national_research(self, days_passed):
     # Load template to know costs
