@@ -19,6 +19,16 @@ class Research_Screen(GameState):
         self.building_library = self.load_json("data/json/building_data.json")
         
         self.active_modal = None # Holds data for the tech subscreen
+
+        # --- ADD THIS: Load custom backgrounds ---
+        try:
+            # Make sure to use .convert() for large background images to optimize performance
+            self.navy_bg = pygame.image.load("assets/ocean_bg.png").convert()
+            # Optional: Scale it to fit the area below your top bar
+            self.navy_bg = pygame.transform.scale(self.navy_bg, (SCREEN_WIDTH, SCREEN_HEIGHT - 70))
+        except:
+            self.navy_bg = None
+            
         self.setup_nodes()
 
     def load_json(self, path):
@@ -299,6 +309,19 @@ class Research_Screen(GameState):
     def additional_draw(self, surface):
         if not self.map_screen: return
         
+        # --- ADD THIS: CUSTOM BACKGROUNDS / HARDCODED TEXT ---
+        if self.current_category == "NAVY" and self.navy_bg:
+            # Draw ocean background starting just below the top UI bar (y=70)
+            surface.blit(self.navy_bg, (0, 70))
+            
+        elif self.current_category == "TANKS":
+            # Example: Draw some hardcoded watermark text in the background
+            bg_font = fonts.get("country_name_display") # Using your massive font preset
+            # Dark, faint color so it blends into the background
+            bg_text = bg_font.render("ARMOR DEVELOPMENT", True, (40, 40, 50)) 
+            surface.blit(bg_text, (SCREEN_WIDTH//2 - bg_text.get_width()//2, 300))
+        # -----------------------------------------------------
+
         pygame.draw.rect(surface, (40, 40, 50), (0, 0, SCREEN_WIDTH, 70))
         pygame.draw.line(surface, (200, 200, 200), (0, 70), (SCREEN_WIDTH, 70), 2)
 
