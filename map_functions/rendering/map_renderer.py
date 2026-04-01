@@ -187,7 +187,8 @@ def draw_map_screen(self, surface):
 
         # Check if we should hide the HUD (active if a province is selected or explicitly hidden)
         # hud in this case is the resource stuff
-        hide_hud = getattr(self, 'hide_resource_hud', False) or self.selected_province or self.is_editor
+        hide_hud = getattr(self, 'hide_resource_hud', False) or self.is_editor
+        # or self.selected_province
         
         if not hide_hud:
             # --- NEW CLEAN RESOURCE HUD WITH NET INCOME ---
