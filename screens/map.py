@@ -56,6 +56,8 @@ class Map(GameState):
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
         # red thingy to the left
         self.raised_rect = pygame.Rect(0, 0, UI_LEFT_OFFSET, SCREEN_HEIGHT)
+        # ui background
+        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 220, SCREEN_HEIGHT)
         
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (SCREEN_HEIGHT - self.total_ui_h) / self.map_h 

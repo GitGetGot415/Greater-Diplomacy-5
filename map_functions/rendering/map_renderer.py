@@ -159,6 +159,7 @@ def draw_map_screen(self, surface):
     
     if not self.selection_mode and not getattr(self, 'hide_raised_rect', False):
         pygame.draw.rect(surface, (160, 40, 40), self.raised_rect)
+        pygame.draw.rect(surface, (80, 80, 40), self.ui_background_rect)
     
     if not self.selection_mode:
         # --- DRAW NATION FLAG ---

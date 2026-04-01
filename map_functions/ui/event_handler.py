@@ -25,7 +25,8 @@ def handle_map_events(self, event):
     # 1. UI Check (make sure the mouse can't go through the ui bars)
     on_ui = (self.top_bar_rect.collidepoint(mx, my) or 
             self.bot_bar_rect.collidepoint(mx, my) or
-            self.raised_rect.collidepoint(mx, my))
+            self.raised_rect.collidepoint(mx, my) or
+            self.ui_background_rect.collidepoint(mx, my))
 
     # 2. Camera Controls (Always allow these so you can move while editing!)
     if event.type == pygame.MOUSEWHEEL:
