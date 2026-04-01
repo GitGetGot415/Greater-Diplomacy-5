@@ -55,5 +55,6 @@ def save_map_data(self, save_name=None):
     pygame.image.save(self.political_map, os.path.join(save_path, "political.png"))
     pygame.image.save(self.terrain_map, os.path.join(save_path, "terrain.png"))
     pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
+    pygame.image.save(self.cores_map, os.path.join(save_path, "cores.png")) # <--- ADDED
     
     self.show_feedback(f"Exported: {save_name}" if self.is_editor else f"Saved: {save_name}")

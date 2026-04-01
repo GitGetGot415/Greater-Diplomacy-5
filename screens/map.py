@@ -75,7 +75,7 @@ class Map(GameState):
         load_map.load_map_assets(self, load_path)
 
         self.relations_map = self.id_map.copy()
-        self.cores_map = self.id_map.copy()
+        # self.cores_map = self.id_map.copy()
 
         if is_random:
             self.randomize_all_provinces()
@@ -206,6 +206,21 @@ class Map(GameState):
 
     def refresh_cores_map(self): 
         refresh_map.refresh_cores_map(self)
+
+    def auto_assign_cores(self):
+        """Automatically assigns a core to whoever owns the province."""
+        for province in self.map_data.values():
+            owner = province.get("owner", "Unclaimed")
+            if owner not in ["Unclaimed", "None", "Ocean", "Lakes"]:
+                province["cores"] = [owner]
+            else:
+                province["cores"] = []
+                
+        self.show_feedback("Auto-assigned all cores!")
+        
+        # Rebuild the visual map immediately if we are looking at it
+        if self.map_mode == "CORES":
+            self.refresh_cores_map()
 
     def conquer_province(self): 
         if self.selected_province:
@@ -504,7 +519,7 @@ class Map(GameState):
 
         if self.is_editor:
             for el in self.elements:
-                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 if el.text == "Nation":

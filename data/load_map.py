@@ -14,10 +14,18 @@ def load_map_assets(self, load_path):
             self.political_map = pygame.image.load(os.path.join(load_path, "political.png")).convert()
         except:
             self.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
+            
+        # --- NEW: Load Cores Map ---
+        try:
+            self.cores_map = pygame.image.load(os.path.join(load_path, "cores.png")).convert()
+        except:
+            self.cores_map = self.id_map.copy() 
+            
     else:
         self.terrain_map = pygame.image.load("map_tools/terrain_map.png").convert()
         self.id_map = pygame.image.load("map_tools/provinces_id_map.png").convert()
         self.political_map = self.id_map.copy()
+        self.cores_map = self.id_map.copy() # <--- NEW: Initialize default
 
     # --- 2. Load Metadata (The Save File) ---
     save_meta = None

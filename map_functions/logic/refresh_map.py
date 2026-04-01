@@ -211,11 +211,33 @@ def refresh_cores_map(self):
         
         if terrain_type in water_mapping:
             owner = water_mapping[terrain_type]
+            color = self.nation_colors.get(owner, (255, 255, 255))
         else:
             cores = data.get("cores", [])
-            owner = cores[0] if cores else "Unclaimed" # Primary core defines color
             
-        color = self.nation_colors.get(owner, (255, 255, 255))
+            # --- NEW COLOR MIXING LOGIC ---
+            if not cores:
+                owner = "Unclaimed"
+                color = self.nation_colors.get(owner, (255, 255, 255))
+            elif len(cores) == 1:
+                owner = cores[0]
+                color = self.nation_colors.get(owner, (255, 255, 255))
+            else:
+                # Use a combined string as a unique ID for the border logic
+                owner = ",".join(sorted(cores)) 
+                
+                r = g = b = valid = 0
+                for c in cores:
+                    c_color = self.nation_colors.get(c)
+                    if c_color:
+                        r += c_color[0]
+                        g += c_color[1]
+                        b += c_color[2]
+                        valid += 1
+                
+                # Average out the RGB values
+                color = (r // valid, g // valid, b // valid) if valid > 0 else (255, 255, 255)
+            # ------------------------------
             
         if owner not in owner_to_int:
             owner_to_int[owner] = next_owner_id

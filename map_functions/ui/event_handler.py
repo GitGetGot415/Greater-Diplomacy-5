@@ -77,7 +77,11 @@ def handle_map_events(self, event):
                 # --- CORE MODE ---
                 elif self.editor_mode == "CORE":
                     if self.hovered_province.get("owner") not in ["Ocean", "Lakes"]:
-                        edit_province_ownership.add_core(self, self.hovered_province, self.brush_nation)
+                        # If painting with Unclaimed, wipe the tile
+                        if self.brush_nation in ["Unclaimed", "None", ""]:
+                            edit_province_ownership.clear_cores(self, self.hovered_province)
+                        else:
+                            edit_province_ownership.add_core(self, self.hovered_province, self.brush_nation)
                 
                 # --- BUILDING MODE ---
                 elif self.editor_mode == "BUILDING":

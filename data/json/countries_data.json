@@ -4135,5 +4135,41 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": ""
+    },
+    "Tannu Tuva": {
+        "name": "Tannu Tuva",
+        "color": [
+            128,
+            128,
+            192
+        ],
+        "research": {
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
+    },
+    "British Raj": {
+        "name": "British Raj",
+        "color": [
+            128,
+            64,
+            64
+        ],
+        "research": {
+            "infantry": 1800
+        },
+        "money": 0,
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": []
     }
 }
