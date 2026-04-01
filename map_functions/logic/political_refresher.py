@@ -186,3 +186,98 @@ def refresh_relations_map(self):
         self.active_map = self.relations_map
         
     print(f"Relations map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+def refresh_cores_map(self):
+    """Rebuilds the cores map surface instantly using a NumPy LUT."""
+    timer = pygame.time.get_ticks()
+    id_array = pygame.surfarray.pixels3d(self.id_map)
+    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
+            (id_array[:, :, 1].astype(np.uint32) << 8) | \
+             id_array[:, :, 2].astype(np.uint32)
+             
+    lut = np.zeros(16777216, dtype=np.uint32)
+    owner_lut = np.zeros(16777216, dtype=np.uint32)
+    
+    owner_to_int = {}
+    next_owner_id = 1 
+    
+    water_mapping = {
+        "ocean": "Ocean", "coastal_sea": "Ocean", 
+        "inland_sea": "Ocean", "lakes": "Lakes"
+    }
+    
+    for color_key, data in self.map_data.items():
+        terrain_type = data.get("terrain", "plains")
+        
+        if terrain_type in water_mapping:
+            owner = water_mapping[terrain_type]
+        else:
+            cores = data.get("cores", [])
+            owner = cores[0] if cores else "Unclaimed" # Primary core defines color
+            
+        color = self.nation_colors.get(owner, (255, 255, 255))
+            
+        if owner not in owner_to_int:
+            owner_to_int[owner] = next_owner_id
+            next_owner_id += 1
+            
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
+        
+        lut[packed_key] = packed_color
+        owner_lut[packed_key] = owner_to_int[owner]
+        
+    out_2d = lut[id_2d]
+    owner_2d = owner_lut[id_2d]
+    
+    # --- BORDER HIGHLIGHT LOGIC (Owner-Based) ---
+    filled_owner = np.copy(owner_2d)
+    for _ in range(2): 
+        is_gap = (filled_owner == 0)
+        filled_owner[is_gap] = np.roll(filled_owner, 1, axis=1)[is_gap]
+        is_gap = (filled_owner == 0)
+        filled_owner[is_gap] = np.roll(filled_owner, -1, axis=1)[is_gap]
+        is_gap = (filled_owner == 0)
+        filled_owner[is_gap] = np.roll(filled_owner, 1, axis=0)[is_gap]
+        is_gap = (filled_owner == 0)
+        filled_owner[is_gap] = np.roll(filled_owner, -1, axis=0)[is_gap]
+
+    ocean_id = owner_to_int.get("Ocean", -1)
+    lakes_id = owner_to_int.get("Lakes", -1)
+    unclaimed_id = owner_to_int.get("Unclaimed", -1)
+    is_land = (filled_owner != ocean_id) & (filled_owner != lakes_id)& (filled_owner != unclaimed_id)
+
+    shift_u = np.roll(filled_owner, 1, axis=1)
+    shift_d = np.roll(filled_owner, -1, axis=1)
+    shift_l = np.roll(filled_owner, 1, axis=0)
+    shift_r = np.roll(filled_owner, -1, axis=0)
+
+    edge_1 = is_land & ((filled_owner != shift_u) | (filled_owner != shift_d) | \
+                        (filled_owner != shift_l) | (filled_owner != shift_r))
+    edge_2 = is_land & ~edge_1 & (np.roll(edge_1, 1, axis=1) | np.roll(edge_1, -1, axis=1) | \
+                                  np.roll(edge_1, 1, axis=0) | np.roll(edge_1, -1, axis=0))
+    edge_3 = is_land & ~edge_1 & ~edge_2 & (np.roll(edge_2, 1, axis=1) | np.roll(edge_2, -1, axis=1) | \
+                                            np.roll(edge_2, 1, axis=0) | np.roll(edge_2, -1, axis=0))
+    edge_4 = is_land & ~edge_1 & ~edge_2 & ~edge_3 & (np.roll(edge_3, 1, axis=1) | np.roll(edge_3, -1, axis=1) | \
+                                                      np.roll(edge_3, 1, axis=0) | np.roll(edge_3, -1, axis=0))
+
+    interior = is_land & ~edge_1 & ~edge_2 & ~edge_3 & ~edge_4
+
+    out_3d = np.empty_like(id_array)
+    out_3d[:, :, 0] = (out_2d >> 16) & 0xFF
+    out_3d[:, :, 1] = (out_2d >> 8) & 0xFF
+    out_3d[:, :, 2] = out_2d & 0xFF
+    
+    out_3d[edge_1] = (out_3d[edge_1] * 0.7).astype(np.uint8)
+    out_3d[edge_3] = (out_3d[edge_3] * 0.8).astype(np.uint8)
+    out_3d[edge_4] = (out_3d[edge_4] * 0.6).astype(np.uint8)
+    out_3d[interior] = (out_3d[interior] * 0.4).astype(np.uint8)
+    
+    new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    pygame.surfarray.blit_array(new_pol_surf, out_3d)
+    
+    self.cores_map = new_pol_surf
+    if self.map_mode == "CORES":
+        self.active_map = self.cores_map
+        
+    print(f"Cores map refreshed in {pygame.time.get_ticks() - timer} ms")

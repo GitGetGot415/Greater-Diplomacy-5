@@ -74,6 +74,11 @@ def handle_map_events(self, event):
                         if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
                             edit_province_ownership.conquer_province(self, self.hovered_province, self.brush_nation)
                 
+                # --- CORE MODE ---
+                elif self.editor_mode == "CORE":
+                    if self.hovered_province.get("owner") not in ["Ocean", "Lakes"]:
+                        edit_province_ownership.add_core(self, self.hovered_province, self.brush_nation)
+                
                 # --- BUILDING MODE ---
                 elif self.editor_mode == "BUILDING":
                     current_buildings = self.hovered_province.get("buildings", [])
@@ -101,14 +106,16 @@ def handle_map_events(self, event):
                         
                         self.hovered_province["buildings"] = new_list
         
-        # ADD THIS: Right Click (or Middle Click) to "Pick" the country under cursor
+        # ADD THIS: Right Click (or Middle Click)
         if pygame.mouse.get_pressed()[2]: # Right Click
             if self.hovered_province:
                 if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
-                    self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
-                    self.show_feedback(f"Picked: {self.brush_nation}")
-                else:
-                    self.show_feedback(f"You can't select water!")
+                    
+                    if self.editor_mode == "CORE":
+                        edit_province_ownership.remove_core(self, self.hovered_province, self.brush_nation)
+                    else:
+                        self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
+                        self.show_feedback(f"Picked: {self.brush_nation}")
 
         # --- NEW UNIT PLACEMENT LOGIC ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

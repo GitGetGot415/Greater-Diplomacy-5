@@ -71,6 +71,7 @@ def load_map_assets(self, load_path):
         
         # Standardize defaults
         v["owner"] = v.get("owner", "None")
+        v["cores"] = v.get("cores", [])
         v["units"] = v.get("units", [])
         v["deployment_queue"] = v.get("deployment_queue", [])
         v["json_key"], v["map_color"] = k, color_tuple

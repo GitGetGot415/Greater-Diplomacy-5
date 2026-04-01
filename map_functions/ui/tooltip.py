@@ -17,6 +17,10 @@ def draw_tooltip(self, surface):
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
 
+    cores = prov.get("cores", [])
+    if cores:
+        lines.append(f"Cores: {', '.join(cores)}")
+
     # 2. Add contextual info based on secondary view mode
     if self.secondary_mode == "BLANK":
         # The header is already set correctly above, no need to overwrite it

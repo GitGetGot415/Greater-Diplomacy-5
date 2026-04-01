@@ -202,7 +202,6 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    # other increase in map.py might be different if this is modified
     YIELD_MONEY = BASE_YIELDS["money"]
     YIELD_MANPOWER = BASE_YIELDS["manpower"]
     YIELD_MATERIALS = BASE_YIELDS["materials"]
@@ -216,22 +215,29 @@ def process_economy(self):
     with open(building_stats_path, 'r') as f:
         building_library = json.load(f)
 
-    # Added "bonus" dict for building yields
-    turn_data = {name: {"inc": 0, "upkeep": {"money":0, "manpower":0, "materials":0, "fuel":0}, "bonus": {"money":0, "manpower":0, "materials":0, "fuel":0}} 
+    # Updated dict to split money/mat/fuel multiplier from manpower multiplier
+    turn_data = {name: {"inc_money": 0, "inc_manpower": 0, "upkeep": {"money":0, "manpower":0, "materials":0, "fuel":0}, "bonus": {"money":0, "manpower":0, "materials":0, "fuel":0}} 
                  for name in self.nation_data.keys()}
 
     # Sum Province Income & Building Yields
     for province in self.map_data.values():
         owner = province.get("owner")
         if owner in turn_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-            turn_data[owner]["inc"] += 1
+            
+            # --- CORE CHECK ---
+            is_core = owner in province.get("cores", [])
+            core_mult = 1.0 if is_core else 0.5
+            manpower_mult = 1.0 if is_core else 0.0
+            
+            turn_data[owner]["inc_money"] += core_mult
+            turn_data[owner]["inc_manpower"] += manpower_mult
             
             for b_name in province.get("buildings", []):
                 stats = building_library.get(b_name, {})
-                turn_data[owner]["bonus"]["money"] += stats.get("prod_money", 0)
-                turn_data[owner]["bonus"]["manpower"] += stats.get("prod_manpower", 0)
-                turn_data[owner]["bonus"]["materials"] += stats.get("prod_materials", 0)
-                turn_data[owner]["bonus"]["fuel"] += stats.get("prod_fuel", 0)
+                turn_data[owner]["bonus"]["money"] += stats.get("prod_money", 0) * core_mult
+                turn_data[owner]["bonus"]["manpower"] += stats.get("prod_manpower", 0) * manpower_mult
+                turn_data[owner]["bonus"]["materials"] += stats.get("prod_materials", 0) * core_mult
+                turn_data[owner]["bonus"]["fuel"] += stats.get("prod_fuel", 0) * core_mult
 
     # Calculate Upkeep
     for province in self.map_data.values():
@@ -247,10 +253,10 @@ def process_economy(self):
     # Apply to Nation Data
     for name, data in turn_data.items():
         stats = self.nation_data[name]
-        stats["money"] += (data["inc"] * YIELD_MONEY) + data["bonus"]["money"] - data["upkeep"]["money"]
-        stats["manpower"] += (data["inc"] * YIELD_MANPOWER) + data["bonus"]["manpower"] - data["upkeep"]["manpower"]
-        stats["materials"] += (data["inc"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
-        stats["fuel"] += (data["inc"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
+        stats["money"] += (data["inc_money"] * YIELD_MONEY) + data["bonus"]["money"] - data["upkeep"]["money"]
+        stats["manpower"] += (data["inc_manpower"] * YIELD_MANPOWER) + data["bonus"]["manpower"] - data["upkeep"]["manpower"]
+        stats["materials"] += (data["inc_money"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
+        stats["fuel"] += (data["inc_money"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
 
         for res in ["money", "manpower", "materials", "fuel"]:
             stats[res] = max(0, stats[res])

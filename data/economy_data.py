@@ -1,7 +1,7 @@
 BASE_YIELDS = {
     "money": 50,
     "manpower": 50,
-    "materials": 0,
+    "materials": 50,
     "fuel": 0
 }
 

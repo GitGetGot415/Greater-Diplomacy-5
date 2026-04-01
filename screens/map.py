@@ -75,6 +75,7 @@ class Map(GameState):
         load_map.load_map_assets(self, load_path)
 
         self.relations_map = self.id_map.copy()
+        self.cores_map = self.id_map.copy()
 
         if is_random:
             self.randomize_all_provinces()
@@ -193,6 +194,18 @@ class Map(GameState):
         
     def refresh_relations_map(self): 
         political_refresher.refresh_relations_map(self)
+    
+    def select_core_brush(self): 
+        editor_menus.select_core_brush(self)
+    
+    def set_cores(self): 
+        self.base_layer = "CORES"
+        self.active_map = self.cores_map
+        self.refresh_cores_map()
+        self.show_feedback("Mode: Cores")
+
+    def refresh_cores_map(self): 
+        political_refresher.refresh_cores_map(self)
 
     def conquer_province(self): 
         if self.selected_province:
@@ -273,7 +286,8 @@ class Map(GameState):
         YIELD_MATERIALS = BASE_YIELDS["materials"]
         YIELD_FUEL = BASE_YIELDS["fuel"]
 
-        inc = 0
+        inc_money = 0
+        inc_manpower = 0
         bonus = {"money":0, "manpower":0, "materials":0, "fuel":0}
         upkeep = {"money":0, "manpower":0, "materials":0, "fuel":0}
 
@@ -285,13 +299,19 @@ class Map(GameState):
         for province in self.map_data.values():
             owner = province.get("owner")
             if owner == self.player_country and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-                inc += 1
+                is_core = owner in province.get("cores", [])
+                core_mult = 1.0 if is_core else 0.5
+                manpower_mult = 1.0 if is_core else 0.0
+
+                inc_money += core_mult
+                inc_manpower += manpower_mult
+
                 for b_name in province.get("buildings", []):
                     stats = self.cached_building_library.get(b_name, {})
-                    bonus["money"] += stats.get("prod_money", 0)
-                    bonus["manpower"] += stats.get("prod_manpower", 0)
-                    bonus["materials"] += stats.get("prod_materials", 0)
-                    bonus["fuel"] += stats.get("prod_fuel", 0)
+                    bonus["money"] += stats.get("prod_money", 0) * core_mult
+                    bonus["manpower"] += stats.get("prod_manpower", 0) * manpower_mult
+                    bonus["materials"] += stats.get("prod_materials", 0) * core_mult
+                    bonus["fuel"] += stats.get("prod_fuel", 0) * core_mult
             
             for unit in province.get("units", []):
                 if unit.get("owner") == self.player_country:
@@ -302,10 +322,10 @@ class Map(GameState):
                     upkeep["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
 
         total_inc = {
-            "money": (inc * YIELD_MONEY) + bonus["money"],
-            "manpower": (inc * YIELD_MANPOWER) + bonus["manpower"],
-            "materials": (inc * YIELD_MATERIALS) + bonus["materials"],
-            "fuel": (inc * YIELD_FUEL) + bonus["fuel"]
+            "money": (inc_money * YIELD_MONEY) + bonus["money"],
+            "manpower": (inc_manpower * YIELD_MANPOWER) + bonus["manpower"],
+            "materials": (inc_money * YIELD_MATERIALS) + bonus["materials"],
+            "fuel": (inc_money * YIELD_FUEL) + bonus["fuel"]
         }
         return total_inc, upkeep
     
@@ -468,6 +488,8 @@ class Map(GameState):
                     el.is_selected = (self.base_layer == "POLITICAL")
                 elif el.text == "Relations":
                     el.is_selected = (self.base_layer == "RELATIONS")
+                elif el.text == "Cores":
+                    el.is_selected = (self.base_layer == "CORES")
                 elif el.text == "Units":
                     el.is_selected = (self.secondary_mode == "UNITS")
                 elif el.text == "Blank":
@@ -482,7 +504,7 @@ class Map(GameState):
 
         if self.is_editor:
             for el in self.elements:
-                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Data Refresh", "Set Date", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 if el.text == "Nation":

@@ -39,6 +39,7 @@ def save_map_data(self, save_name=None):
         # Store all associated lists and variables inside one key per province
         save_dict["provinces"][data["json_key"]] = {
             "owner": data["owner"],
+            "cores": data.get("cores", []),
             "is_coastal": data.get("is_coastal", False),
             "units": data.get("units", []),
             "deployment_queue": data.get("deployment_queue", []),

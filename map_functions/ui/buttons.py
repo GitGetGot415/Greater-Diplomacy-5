@@ -14,6 +14,7 @@ def render_buttons(self):
         relations_icon = symbol_loader.get_symbol("Heart", 2)
         research_icon = symbol_loader.get_symbol("Research", 2)
         save_icon = symbol_loader.get_symbol("Save", 2)
+        core_icon = symbol_loader.get_symbol("Star", 1.5) # Using star as a symbol for cores
 
         self.elements = [
             # Refresh remains in the top bar
@@ -28,7 +29,7 @@ def render_buttons(self):
             Button(10, SCREEN_HEIGHT - 50, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
             Button(60, SCREEN_HEIGHT - 50, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
             Button(110, SCREEN_HEIGHT - 50, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
-            # NEW BUTTON nestled into the bottom bar:
+            Button(160, SCREEN_HEIGHT - 50, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False), # <--- NEW
             Button(20, 420, "left_ui_bar", "orange", "Economy", econ_callback)
         ])
 
@@ -45,6 +46,7 @@ def render_buttons(self):
                 Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "blue", "Save", self.save_map_data),
                 Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "blue", "Load", self.editor_load_map),
                 Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Nation", self.select_brush_nation),
+                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 100, "small", "pink", "Core Brush", self.select_core_brush),
                 Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 50, "small", "grey", "Building", self.select_building_brush),
                 Button(SCREEN_WIDTH - 560, SCREEN_HEIGHT - 50, "small", "grey", "Unit", self.select_unit_brush),
                 Button(SCREEN_WIDTH - 670, SCREEN_HEIGHT - 50, "small", "purple", "Map Tech", self.open_map_research_editor),

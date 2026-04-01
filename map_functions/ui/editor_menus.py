@@ -69,6 +69,53 @@ def select_brush_nation(self):
         except (tk.TclError, Exception):
             break
 
+def select_core_brush(self):
+    """Opens a Tkinter selection window and sets mode to CORE."""
+    root = tk.Tk()
+    root.title("Select Core Nation")
+    root.geometry("300x450")
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.brush_nation = lb.get(selection[0])
+            self.editor_mode = "CORE" 
+            self.show_feedback(f"Core Brush: {self.brush_nation}")
+        close_menu()
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+    tk.Label(root, text="Select Nation to Add Cores:", font=("Arial", 12)).pack(pady=10)
+    
+    frame = tk.Frame(root)
+    frame.pack(fill="both", expand=True, padx=10)
+    scrollbar = tk.Scrollbar(frame)
+    scrollbar.pack(side="right", fill="y")
+    
+    nations = sorted(list(self.nation_data.keys()))
+    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+    for n in nations:
+        if n not in ["Ocean", "Lakes"]:
+            lb.insert(tk.END, n)
+    lb.pack(side="left", fill="both", expand=True)
+    scrollbar.config(command=lb.yview)
+    
+    tk.Button(root, text="Confirm Selection", command=on_select, 
+              bg="#FF69B4", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+
+    lb.bind('<Double-1>', on_select)
+
+    while self.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+        except (tk.TclError, Exception):
+            break
 
 def select_building_brush(self):
     """Opens a selection window for building types and sets mode to BUILDING."""
