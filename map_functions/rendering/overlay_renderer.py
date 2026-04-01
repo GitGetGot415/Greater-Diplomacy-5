@@ -73,7 +73,8 @@ def draw_overlay_content(self, surface):
                         offset_y = (i // 2) * 20
                         
                         # Try to load a symbol (e.g., "workshop_icon") or use a colored square
-                        sym_name = b_name.lower().replace(" ", "_")
+                        # sym_name = b_name.lower().replace(" ", "_")
+                        sym_name = b_name
                         symbol = symbol_loader.get_symbol(sym_name, self.camera.zoom * 0.8)
                         
                         if symbol:

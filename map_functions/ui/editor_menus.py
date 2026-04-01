@@ -1,6 +1,6 @@
 import pygame
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 import json
 import os
 from map_functions.data.economy_data import BASE_YIELDS, UPKEEP_MODIFIER
@@ -124,6 +124,68 @@ def select_building_brush(self):
         except (tk.TclError, Exception):
             break
 
+def open_editor_date(self):
+    """Opens a Tkinter window to edit the game's starting date."""
+    root = tk.Tk()
+    root.title("Set Start Date")
+    root.geometry("250x300")
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+        
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+
+    # --- Directly use tk.Entry instead of StringVar ---
+    tk.Label(root, text="Day (1-30):", font=("Arial", 10)).pack(pady=(10, 2))
+    day_ent = tk.Entry(root, justify="center")
+    day_ent.insert(0, str(self.time_manager.day))
+    day_ent.pack()
+
+    # We add 1 for the UI since month_index is 0-11 in the backend
+    tk.Label(root, text="Month (1-12):", font=("Arial", 10)).pack(pady=(10, 2))
+    month_ent = tk.Entry(root, justify="center")
+    month_ent.insert(0, str(self.time_manager.month_index + 1))
+    month_ent.pack()
+
+    tk.Label(root, text="Year:", font=("Arial", 10)).pack(pady=(10, 2))
+    year_ent = tk.Entry(root, justify="center")
+    year_ent.insert(0, str(self.time_manager.year))
+    year_ent.pack()
+
+    def apply_date():
+        try:
+            # Pull directly from the Entry widget
+            d = int(day_ent.get())
+            m = int(month_ent.get()) - 1
+            y = int(year_ent.get())
+            
+            if not (1 <= d <= 30):
+                messagebox.showerror("Error", "Day must be between 1 and 30.")
+                return
+            if not (0 <= m <= 11):
+                messagebox.showerror("Error", "Month must be between 1 and 12.")
+                return
+                
+            self.time_manager.day = d
+            self.time_manager.month_index = m
+            self.time_manager.year = y
+            
+            self.show_feedback(f"Date set: {self.time_manager.get_date_string()}")
+            close_menu()
+        except ValueError:
+            messagebox.showerror("Error", "Please enter valid integers.")
+
+    tk.Button(root, text="Apply Date", command=apply_date, bg="#FF9800", fg="white", pady=5).pack(pady=15, fill="x", padx=20)
+
+    while self.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+        except:
+            break
 
 def open_editor_economy(self):
     """Opens a Tkinter window listing the income of every active country."""

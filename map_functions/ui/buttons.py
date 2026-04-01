@@ -48,7 +48,10 @@ def render_buttons(self):
                 Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 50, "small", "grey", "Building", self.select_building_brush),
                 Button(SCREEN_WIDTH - 560, SCREEN_HEIGHT - 50, "small", "grey", "Unit", self.select_unit_brush),
                 Button(SCREEN_WIDTH - 670, SCREEN_HEIGHT - 50, "small", "purple", "Map Tech", self.open_map_research_editor),
-                Button(SCREEN_WIDTH - 780, SCREEN_HEIGHT - 50, "small", "grey", "Data Refresh", self.refresh_nation_data)
+                Button(SCREEN_WIDTH - 780, SCREEN_HEIGHT - 50, "small", "grey", "Data Refresh", self.refresh_nation_data),
+                
+                # --- NEW BUTTON ---
+                Button(SCREEN_WIDTH - 890, SCREEN_HEIGHT - 50, "small", "orange", "Set Date", self.open_editor_date)
             ])
         else:
             self.elements.extend([

@@ -377,6 +377,9 @@ class Map(GameState):
     def select_unit_brush(self):
         editor_menus.select_unit_brush(self)
     
+    def open_editor_date(self):
+        editor_menus.open_editor_date(self)
+    
     def open_edit_country(self):
         if self.player_country and self.player_country != "None":
             self.next_state, self.done = "EDIT_COUNTRY", True
@@ -479,7 +482,7 @@ class Map(GameState):
 
         if self.is_editor:
             for el in self.elements:
-                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Data Refresh", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
+                if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Data Refresh", "Set Date", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank"]:
                     el.visible = True
                 
                 if el.text == "Nation":
