@@ -13,7 +13,6 @@
     "dreadnaught": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {"pre-dreadnaught": 1} },
     "destroyer": { "category": "NAVY", "max_lvl": 8, "cost": 300, "req": {"dreadnaught": 1} },
     "aircraft_carrier": { "category": "NAVY", "max_lvl": 4, "cost": 300, "req": {"destroyer": 1} },
-    "industry": { "category": "INDUSTRY", "max_lvl": 9999, "cost": 300, "req": {} },
     "workshop": { "category": "INDUSTRY", "max_lvl": 5, "cost": 300, "req": {} },
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 300, "req": {"workshop": 5} },
     "factory": { "category": "INDUSTRY", "max_lvl": 5, "cost": 300, "req": {"basic_factory": 1} },

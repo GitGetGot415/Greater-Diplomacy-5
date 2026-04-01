@@ -94,7 +94,7 @@ class CountryEditor:
             return res_dict
             
         # Hardcoded fallback including carrack
-        return {"infantry": 1800, "industry": 1800, "carrack": 1}
+        return {"infantry": 1800, "carrack": 1}
 
     def bulk_reset_template(self):
         """Synchronizes all countries to have every tech defined in the template."""
@@ -207,7 +207,7 @@ class CountryEditor:
             self.data[int_id] = {
                 "name": disp_name,
                 "color": self.current_color,
-                "research": {"infantry": 1800, "industry": 1800},
+                "research": {"infantry": 1800},
                 "money": 0, "manpower": 0, "materials": 0, "fuel": 0,      
                 "is_playable": True,
                 "at_war_with": [], "allied_with": []

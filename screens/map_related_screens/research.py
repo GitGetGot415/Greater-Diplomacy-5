@@ -267,7 +267,7 @@ class Research_Screen(GameState):
                     val_text = f": Level {lvl}"
 
                 color = (200, 200, 200) if lvl > 0 else (100, 100, 100)
-                if tech_id in ["infantry", "industry"] and lvl <= 1800:
+                if tech_id in ["infantry"] and lvl <= 1800:
                     color = (140, 140, 140)
 
                 txt_surf = text_font.render(f"{display_name}{val_text}", True, color)
