@@ -62,8 +62,9 @@ def draw_overlay_content(self, surface):
                 # --- ECONOMY VIEW ---
                 elif self.secondary_mode == "ECONOMY":
                     # Draw standard resources first (your existing logic)
-                    if province.get("resources"):
-                        pygame.draw.rect(surface, (255, 215, 0), (sx-15, sy-15, 10, 10))
+                    # hahaha NO don't do that we have a dedicated tab for that now
+                    """if province.get("resources"):
+                        pygame.draw.rect(surface, (255, 215, 0), (sx-15, sy-15, 10, 10))"""
                     
                     # Draw Buildings
                     buildings = province.get("buildings", [])

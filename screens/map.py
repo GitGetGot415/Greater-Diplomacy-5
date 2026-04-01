@@ -376,8 +376,7 @@ class Map(GameState):
 
         # 3. Random Resources and Buildings
         building_pool = [
-            "Workshop Lvl 1", "Workshop Lvl 2", "Workshop Lvl 3", 
-            "Synthetic Refinery Lvl 1"
+            "Workshop Lvl 1", "Workshop Lvl 2", "Workshop Lvl 3", "Synthetic Refinery Lvl 1"
         ]
         
         for prov in land_provinces:
