@@ -4,7 +4,7 @@ import math
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler, editor_menus
 from data import save_map
-from map_functions.logic import edit_province_ownership, political_refresher, turn_processor
+from map_functions.logic import edit_province_ownership, refresh_map, turn_processor
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
 from data import country_io, load_map
@@ -190,10 +190,10 @@ class Map(GameState):
         save_map.save_map_data(self)
 
     def refresh_political_map(self): 
-        political_refresher.refresh_political_map(self)
+        refresh_map.refresh_political_map(self)
         
     def refresh_relations_map(self): 
-        political_refresher.refresh_relations_map(self)
+        refresh_map.refresh_relations_map(self)
     
     def select_core_brush(self): 
         editor_menus.select_core_brush(self)
@@ -205,7 +205,7 @@ class Map(GameState):
         self.show_feedback("Mode: Cores")
 
     def refresh_cores_map(self): 
-        political_refresher.refresh_cores_map(self)
+        refresh_map.refresh_cores_map(self)
 
     def conquer_province(self): 
         if self.selected_province:
