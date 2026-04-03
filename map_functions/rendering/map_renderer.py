@@ -59,7 +59,9 @@ def draw_map_screen(self, surface):
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
-    """if self.base_layer == "POLITICAL":
+    # if self.base_layer == "POLITICAL":
+    # if self.secondary_mode == "BLANK":
+    if False: # ignore this for now
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(self, 'country_name_surfs'):
@@ -85,11 +87,11 @@ def draw_map_screen(self, surface):
                 country = blob["owner"]
                 
                 # Skip small island groups ONLY IF the country already has a name on the map
-                # if blob["count"] <= 3 and country in drawn_countries:
-                #     continue
-
-                if blob["count"] <= 5:
+                if blob["count"] <= 1 and country in drawn_countries:
                     continue
+
+                # if blob["count"] <= 3:
+                #     continue
 
                 surf, shadow = self.country_name_surfs.get(country, (None, None))
                 if not surf: continue
@@ -110,12 +112,12 @@ def draw_map_screen(self, surface):
                         scale_by_thickness = (blob["thickness"] * 0.8) / surf.get_height()
                         
                         land_scale = min(scale_by_length, scale_by_thickness)
-                        land_scale = min(max(land_scale, 0.1), 1.0)
+                        land_scale = min(max(land_scale, 0.05), 1.0)
                         
                         # --- UNIVERSAL LINEAR FADE LOGIC ---
                         # Every country now fades at the exact same zoom levels.
                         # Tweak these two variables to your liking:
-                        fade_start = 2.0   # Zoom level where text begins to fade out
+                        fade_start = 9.0   # Zoom level where text begins to fade out (was originally 2.0)
                         fade_window = 1.5  # Additional zoom required to become fully invisible
                         
                         if self.camera.zoom > fade_start:
@@ -151,7 +153,7 @@ def draw_map_screen(self, surface):
                             surface.blit(scaled_text, txt_rect)
                             
                             # Record that this country has successfully been drawn
-                            drawn_countries.add(country)"""
+                            drawn_countries.add(country)
                             
     # --- LAYER 4: UI BARS & HUD ---
     pygame.draw.rect(surface, (40, 40, 40), self.top_bar_rect)
