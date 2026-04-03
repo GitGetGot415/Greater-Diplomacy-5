@@ -27,5 +27,5 @@ class Menu(GameState):
         self.done = True
 
     def map_editor(self):
-        self.next_state = "MAP"
+        self.next_state = "SELECT_BASE_MAP" # <--- Change this
         self.done = True

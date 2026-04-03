@@ -1,25 +1,36 @@
 import pygame
 import json
 import sys, os
+import tkinter as tk
+from tkinter import filedialog
+
 sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
 from map_functions.rendering.font_manager import fonts
-
 from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
 
+# --- NEW: Ask which map to test BEFORE starting Pygame ---
+root = tk.Tk()
+root.withdraw()
+target_dir = filedialog.askdirectory(initialdir="base_maps", title="Select Map to Test")
+root.destroy()
+
+if not target_dir:
+    print("No map selected.")
+    sys.exit()
+
 pygame.init()
-WIDTH, HEIGHT = SCREEN_WIDTH,SCREEN_HEIGHT
+WIDTH, HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
-pygame.display.set_caption("Map Tester")
+pygame.display.set_caption(f"Map Tester - {os.path.basename(target_dir)}")
 font = fonts.get("normal")
 
-# --- 1. Optimized Data Loading ---
-# visual_map = pygame.image.load("map_tools/provinces_id_map.png").convert()
-visual_map = pygame.image.load("map_tools/terrain_map.png").convert()
-id_map = pygame.image.load("map_tools/provinces_id_map.png").convert()
+# --- 1. Optimized Data Loading (Using selected folder) ---
+visual_map = pygame.image.load(os.path.join(target_dir, "terrain.png")).convert()
+id_map = pygame.image.load(os.path.join(target_dir, "id_map.png")).convert()
 
-with open("map_tools/map_data.json", "r") as f:
+with open(os.path.join(target_dir, "map_data.json"), "r") as f:
     raw_data = json.load(f)
 
 # Optimization: Store by ID for instant lookups later

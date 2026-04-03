@@ -15,7 +15,7 @@ from map_functions.ui.minimap import UI_LEFT_OFFSET
 from map_functions.rendering.font_manager import fonts # <-- Import here
 
 class Map(GameState):
-    def __init__(self, load_path=None, is_scenario=False, is_random=False): 
+    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False): 
         super().__init__()
 
         self.brush_building = "None" 
@@ -34,7 +34,7 @@ class Map(GameState):
         self.base_layer = "POLITICAL" 
         self.load_path = load_path
 
-        self.is_editor = (self.load_path is None and not is_scenario) 
+        self.is_editor = force_editor or (self.load_path is None and not is_scenario)
         if self.is_editor:
             self.player_country = "Editor"
             self.selection_mode = False 

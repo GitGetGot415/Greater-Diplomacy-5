@@ -15,6 +15,7 @@ from screens.map_related_screens.research import Research_Screen
 from screens.map_related_screens.construction import Construction_Screen
 from screens.map_related_screens.economy import Economy_Screen
 from screens.map_related_screens.edit_country import Edit_Country_Screen
+from screens.select_base_map import Select_Base_Map
 
 pygame.display.set_caption("Greater Diplomacy Pygame Edition")
 
@@ -65,6 +66,7 @@ class Controller:
             "NEW_GAME": New_Game(),
             "LOAD_GAME": Load_Game(),
             "SETTINGS": Settings(self), 
+            "SELECT_BASE_MAP": Select_Base_Map(), # <--- ADD THIS
             "MAP": Map(),
             "RECRUIT": Recruit_Screen(),
             "ORDERS": Orders_Screen(),
@@ -98,7 +100,13 @@ class Controller:
 
         # 2. Map Persistence
         if next_state_name == "MAP":
-            if hasattr(previous_state, 'selected_save_path'):
+            if previous_state == self.states["SELECT_BASE_MAP"]:
+                path = previous_state.selected_save_path
+                from screens.map import Map
+                # Force editor to True so the UI buttons load properly!
+                self.states["MAP"] = Map(load_path=path, is_scenario=False, force_editor=True)
+            
+            elif hasattr(previous_state, 'selected_save_path'):
                 path = previous_state.selected_save_path
                 
                 if path == "RANDOM":
