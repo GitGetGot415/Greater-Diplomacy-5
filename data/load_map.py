@@ -62,8 +62,15 @@ def load_map_assets(self, load_path):
         self.time_manager = TimeHandler(start_year=1900)
 
     # --- 5. Province Processing ---
-    with open("map_tools/map_data.json", "r") as f:
-        self.raw_json_data = json.load(f) 
+    # Determine which map_data.json to use
+    json_path = "map_tools/map_data.json" # Legacy fallback
+    
+    # If a load_path is provided and it contains map_data.json, prioritize it!
+    if load_path and os.path.exists(os.path.join(load_path, "map_data.json")):
+        json_path = os.path.join(load_path, "map_data.json")
+
+    with open(json_path, "r") as f:
+        self.raw_json_data = json.load(f)
 
     self.map_data = {}
     self.id_to_province = {}

@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, ttk, simpledialog
+import os
 from PIL import Image
 import json
 
@@ -33,8 +34,17 @@ def run_generator(progress_var, root):
     path = filedialog.askopenfilename(title="Select Terrain Map")
     if not path: return
 
+    # --- NEW: Ask for a Map Name and Create a Folder ---
+    map_name = simpledialog.askstring("Map Name", "Enter a name for this new map base:", parent=root)
+    if not map_name: return # Cancel if they close the prompt
+    
+    map_dir = os.path.join("base_maps", map_name)
+    os.makedirs(map_dir, exist_ok=True)
+    # ---------------------------------------------------
+
     img = Image.open(path).convert("RGB")
-    img.save("map_tools/terrain_map.png")
+    # Save the terrain image directly into the new map directory
+    img.save(os.path.join(map_dir, "terrain.png")) 
     width, height = img.size
     pixels = img.load()
     
@@ -137,12 +147,13 @@ def run_generator(progress_var, root):
             "resources": []
         }
 
-    id_img.save("map_tools/provinces_id_map.png")
-    with open("map_tools/map_data.json", "w") as f:
+    # --- At the very bottom of the function, update the final save paths ---
+    id_img.save(os.path.join(map_dir, "id_map.png"))
+    with open(os.path.join(map_dir, "map_data.json"), "w") as f:
         json.dump(final_json, f, indent=4)
     
     progress_var.set(100)
-    messagebox.showinfo("Success", f"Done! Found {current_id-1} provinces.")
+    messagebox.showinfo("Success", f"Done! Created '{map_name}' with {current_id-1} provinces.")
     root.destroy()
 
 # --- GUI Setup ---
