@@ -22,7 +22,7 @@ def refresh_political_map(self):
     
     water_mapping = {
         "ocean": "Ocean", "coastal_sea": "Ocean", 
-        "inland_sea": "Ocean", "lakes": "Lakes"
+        "inland_sea": "Ocean", "lakes": "Ocean"
     }
     
     # 4. Populate both LUTs
@@ -32,12 +32,10 @@ def refresh_political_map(self):
         if terrain_type in water_mapping:
             owner = water_mapping[terrain_type]
             data["owner"] = owner
+            color = (255, 0, 255) # <-- MAGIC PINK for transparency
         else:
             owner = data.get("owner", "Unclaimed")
-            
-        # Removed the hardcoded lake color. 
-        # It will now pull [10, 20, 40] straight from countries_data.json!
-        color = self.nation_colors.get(owner, (255, 255, 255))
+            color = self.nation_colors.get(owner, (255, 255, 255))
             
         # Map string owner to a unique integer
         if owner not in owner_to_int:
@@ -117,13 +115,13 @@ def refresh_political_map(self):
     new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_pol_surf, out_3d)
     
+    new_pol_surf.set_colorkey((255, 0, 255)) # <-- Makes the magic pink fully transparent
+    
     self.political_map = new_pol_surf
     if self.map_mode == "POLITICAL":
         self.active_map = self.political_map
         
     print(f"Political map refreshed in {pygame.time.get_ticks() - timer} ms")
-
-# (Keep your existing refresh_relations_map underneath this)
 
 def refresh_relations_map(self):
     """Rebuilds the relations map surface instantly using a NumPy LUT."""
@@ -138,7 +136,7 @@ def refresh_relations_map(self):
     
     water_mapping = {
         "ocean": "Ocean", "coastal_sea": "Ocean", 
-        "inland_sea": "Ocean", "lakes": "Lakes"
+        "inland_sea": "Ocean", "lakes": "Ocean"
     }
     
     player_data = self.nation_data.get(self.player_country, {})
@@ -149,9 +147,8 @@ def refresh_relations_map(self):
         terrain_type = data.get("terrain", "plains")
         
         if terrain_type in water_mapping:
-            # Use water_mapping to get "Lakes" or "Ocean", then fetch from nation_colors
             water_owner = water_mapping[terrain_type]
-            color = self.nation_colors.get(water_owner, (10, 20, 40))
+            color = (255, 0, 255) # <-- MAGIC PINK
         else:
             owner = data.get("owner", "Unclaimed")
             
@@ -180,8 +177,13 @@ def refresh_relations_map(self):
     new_rel_surf = pygame.Surface(self.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_rel_surf, out_3d)
     
+    # 1. Apply the colorkey to the surface we just made
+    new_rel_surf.set_colorkey((255, 0, 255)) 
+    
+    # 2. Assign it to the class variable
     self.relations_map = new_rel_surf
     
+    # 3. Update the active map if we are currently looking at it
     if self.map_mode == "RELATIONS":
         self.active_map = self.relations_map
         
@@ -203,7 +205,7 @@ def refresh_cores_map(self):
     
     water_mapping = {
         "ocean": "Ocean", "coastal_sea": "Ocean", 
-        "inland_sea": "Ocean", "lakes": "Lakes"
+        "inland_sea": "Ocean", "lakes": "Ocean"
     }
     
     for color_key, data in self.map_data.items():
@@ -211,7 +213,7 @@ def refresh_cores_map(self):
         
         if terrain_type in water_mapping:
             owner = water_mapping[terrain_type]
-            color = self.nation_colors.get(owner, (255, 255, 255))
+            color = (255, 0, 255) # <-- MAGIC PINK
         else:
             cores = data.get("cores", [])
             
@@ -298,7 +300,13 @@ def refresh_cores_map(self):
     new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_pol_surf, out_3d)
     
+    # 1. Apply the colorkey immediately
+    new_pol_surf.set_colorkey((255, 0, 255)) 
+    
+    # 2. Assign it to the class variable
     self.cores_map = new_pol_surf
+    
+    # 3. Update the active map if needed
     if self.map_mode == "CORES":
         self.active_map = self.cores_map
         

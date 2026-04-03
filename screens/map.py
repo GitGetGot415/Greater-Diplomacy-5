@@ -600,6 +600,27 @@ class Map(GameState):
     # --- Pygame Core Loop Updates ---
     def update(self):
         self.camera.update(self, SCREEN_HEIGHT)
+
+        # --- NEW: DYNAMIC OCEAN COLOR ---
+        # Calculate zoom progress (0.0 when fully zoomed out, 1.0 when fully zoomed in)
+        zoom_range = 6.0 - self.min_zoom
+        if zoom_range > 0:
+            t = (self.camera.zoom - self.min_zoom) / zoom_range
+            t = max(0.0, min(1.0, t))
+        else:
+            t = 0.0
+
+        # Lerp from Dark Blue to Light Blue
+        dark_blue = (10, 20, 40)
+        light_blue = (40, 100, 180) # Tweak this to whatever shade you prefer!
+
+        r = int(dark_blue[0] + t * (light_blue[0] - dark_blue[0]))
+        g = int(dark_blue[1] + t * (light_blue[1] - dark_blue[1]))
+        b = int(dark_blue[2] + t * (light_blue[2] - dark_blue[2]))
+        
+        self.bg_color = (r, g, b)
+        # --------------------------------
+
         for el in self.elements:
             el.visible = False
 
