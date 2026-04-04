@@ -337,7 +337,6 @@ def open_editor_economy(self):
         "Net Manpower", 
         "Net Materials", 
         "Net Fuel", 
-        "Treasury"
     )
     
     tree = ttk.Treeview(root, columns=columns, show="headings")
@@ -378,7 +377,6 @@ def open_editor_economy(self):
         "Net Manpower": 120,
         "Net Materials": 120,
         "Net Fuel": 110,
-        "Treasury": 100
     }
 
     for col in columns:
