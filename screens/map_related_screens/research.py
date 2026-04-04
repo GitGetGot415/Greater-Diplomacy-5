@@ -93,12 +93,10 @@ class Research_Screen(GameState):
 
     def update(self):
         super().update()
-        # Smooth horizontal scrolling mechanic
         if hasattr(self, 'target_scroll_x'):
             if abs(self.scroll_x - self.target_scroll_x) > 0.5:
                 self.scroll_x += (self.target_scroll_x - self.scroll_x) * 0.15
                 
-                # Instantly move dynamically generated buttons to stick to the scrolling
                 for el in self.elements:
                     if getattr(el, 'is_tech_node', False):
                         el.rect.x = el.base_x + self.scroll_x
@@ -197,7 +195,6 @@ class Research_Screen(GameState):
         if self.current_category == "COMPLETED":
             pass 
         else:
-            # We now render Infantry just like everything else!
             self.draw_tech_nodes(res_levels, queue)
 
     def draw_tech_nodes(self, res_levels, queue):
@@ -209,7 +206,6 @@ class Research_Screen(GameState):
             year = node["year"]
             base_y = node["base_y"]
             
-            # 80px size button offset by 40 so the center of the button lands exactly on the timeline tick
             base_x = (year - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) - 40
             
             cur_lvl = res_levels.get(tech_key, 0)
@@ -246,7 +242,6 @@ class Research_Screen(GameState):
             btn = Button(base_x + self.scroll_x, base_y, "tech_square", btn_color, display_name, 
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
             
-            # Apply dynamic tracking flags
             btn.base_x = base_x
             btn.is_tech_node = True
             
@@ -258,7 +253,6 @@ class Research_Screen(GameState):
             return any(res_levels.get(k, 0) >= v for sub in reqs["OR"] for k, v in sub.items())
         return all(res_levels.get(k, 0) >= v for k, v in reqs.items())
 
-    # --- MODAL ACTIONS ---
     def open_modal(self, node_info):
         self.active_modal = node_info
         self.refresh_ui()
@@ -297,7 +291,6 @@ class Research_Screen(GameState):
                 break
         self.refresh_ui()
 
-    # --- RENDERING ---
     def draw_timeline_axis(self, surface):
         if self.current_category in ["COMPLETED"] or self.active_modal:
             return
@@ -308,7 +301,6 @@ class Research_Screen(GameState):
         pygame.draw.line(surface, (150, 150, 150), (0, axis_y), (SCREEN_WIDTH, axis_y), 3)
         year_font = fonts.get("heading2")
 
-        # Map current window limits to game years
         start_year = int((-self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - 5
         end_year = int((SCREEN_WIDTH - self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
 
@@ -378,6 +370,46 @@ class Research_Screen(GameState):
             else:
                 surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (40, y_off))
 
+    def draw_resource_string(self, surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
+        """Helper function to blit image icons directly into the string, hiding zero values."""
+        base_surf = font.render(base_text, True, color)
+        surface.blit(base_surf, (x, y))
+        curr_x = x + base_surf.get_width()
+        
+        icons = [("Iron", mat), ("Infantry", man), ("Oil", fuel)]
+        drawn_any = False
+
+        for icon_name, val in icons:
+            # Skip drawing if the cost/yield is zero
+            try:
+                if float(val) == 0:
+                    continue
+            except (ValueError, TypeError):
+                continue
+                
+            drawn_any = True
+            display_val = str(val)
+            
+            # Format positive yields with a '+'
+            if is_yield and float(val) > 0 and not display_val.startswith("+"):
+                display_val = f"+{display_val}"
+
+            icon_surf = symbol_loader.SYMBOLS.get(icon_name)
+            if icon_surf:
+                icon_surf = pygame.transform.smoothscale(icon_surf, (16, 16))
+                surface.blit(icon_surf, (curr_x, y + 2))
+                curr_x += 20
+            
+            val_surf = font.render(f"{display_val}   ", True, color)
+            surface.blit(val_surf, (curr_x, y))
+            curr_x += val_surf.get_width()
+            
+        # Handle the edge case where everything costs 0 or yields 0
+        if not drawn_any:
+            fallback_text = "None" if is_yield else "Free"
+            val_surf = font.render(fallback_text, True, color)
+            surface.blit(val_surf, (curr_x, y))
+
     def draw_subscreen_modal(self, surface):
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
@@ -403,28 +435,47 @@ class Research_Screen(GameState):
         cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({time} days)", True, (255, 215, 0))
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
-        stats = self.get_stats_for_modal(self.active_modal["display_name"])
         y_off = panel_rect.y + 160
-        for line in stats:
-            surf_line = font_small.render(line, True, (200, 200, 200))
-            surface.blit(surf_line, (panel_rect.x + 200, y_off))
-            y_off += 30
-
-    def get_stats_for_modal(self, display_name):
+        display_name = self.active_modal["display_name"]
+        
         if display_name in self.unit_library:
             s = self.unit_library[display_name]
-            return [
-                f"Combat Stats:   ❤️ HP: {s.get('health',0)}   |   ⚔️ Attack: {s.get('attack',0)}   |   🛡️ Defense: {s.get('defense',0)}   |   ⚡ Speed: {s.get('speed',0)}",
-                f"Production Cost:   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}   |   ⛽ {s.get('cost_fuel',0)}"
-            ]
+            
+            txt1 = f"Combat Stats:   ⚔️ ATK: {s.get('attack',0)}   🛡️ DEF: {s.get('defense',0)}   ❤️ HP: {s.get('health',0)}   ⚡ SPD: {s.get('speed',0)}"
+            surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
+            y_off += 30
+            
+            self.draw_resource_string(
+                surface, font_small, "Production Cost:   ",
+                s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
+                panel_rect.x + 200, y_off, (200, 200, 200)
+            )
+            y_off += 30
+            
         elif display_name in self.building_library:
             s = self.building_library[display_name]
-            return [
-                f"Construction Time: {s.get('time',0)} days",
-                f"Daily Yield:   ⚙️ +{s.get('prod_materials',0)}   |   👤 +{s.get('prod_manpower',0)}   |   ⛽ +{s.get('prod_fuel',0)}",
-                f"Construction Cost:   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}"
-            ]
-        return ["Advanced statistical data unavailable."]
+            
+            txt1 = f"Construction Time: {s.get('time',0)} days"
+            surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
+            y_off += 30
+            
+            self.draw_resource_string(
+                surface, font_small, "Daily Yield:   ",
+                s.get('prod_materials', 0), s.get('prod_manpower', 0), s.get('prod_fuel', 0),
+                panel_rect.x + 200, y_off, (150, 255, 150), is_yield=True
+            )
+            y_off += 30
+            
+            self.draw_resource_string(
+                surface, font_small, "Construction Cost:   ",
+                s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
+                panel_rect.x + 200, y_off, (200, 200, 200)
+            )
+            y_off += 30
+        else:
+            txt1 = "Advanced statistical data unavailable."
+            surface.blit(font_small.render(txt1, True, (150, 150, 150)), (panel_rect.x + 200, y_off))
+            y_off += 30
 
     def render_completed_text_list(self, surface):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
