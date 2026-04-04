@@ -157,7 +157,6 @@ class Recruit_Screen(GameState):
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         costs = {
-            "money": stats.get("cost_money", 0),
             "manpower": stats.get("cost_manpower", 0),
             "materials": stats.get("cost_materials", 0),
             "fuel": stats.get("cost_fuel", 0)
@@ -212,12 +211,11 @@ class Recruit_Screen(GameState):
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
             t = stats.get('production_time', 0)
-            money = stats.get('cost_money', 0)
             mat = stats.get('cost_materials', 0)
             man = stats.get('cost_manpower', 0)
             fuel = stats.get('cost_fuel', 0)
             
-            txt1 = f"Deploy: {t}d   |   Cost: 💰{money}   ⚙️{mat}   👤{man}   ⛽{fuel}"
+            txt1 = f"Deploy: {t}d   |   Cost: ⚙️{mat}   👤{man}   ⛽{fuel}"
             txt2 = f"Combat Stats:   ⚔️ATK: {stats.get('attack', 0)}   🛡️DEF: {stats.get('defense', 0)}   ❤️HP: {stats.get('health', 0)}   ⚡SPD: {stats.get('speed', 0)}"
             
             surface.blit(bar_font.render(txt1, True, (255, 215, 0)), (bar_rect.x + 15, bar_rect.y + 6))
@@ -231,7 +229,6 @@ class Recruit_Screen(GameState):
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_font = fonts.get("heading2")
         resources = [
-            (f"Money: {p_data.get('money', 0)}", (255, 215, 0)),
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
             (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),
             (f"Fuel: {p_data.get('fuel', 0)}", (200, 100, 255))
@@ -274,7 +271,6 @@ class Recruit_Screen(GameState):
                         with open('data/building_data.json', 'r') as f:
                             stats = json.load(f).get(item.get("item_name"), {})
                             
-                p_data["money"] = p_data.get("money", 0) + stats.get("cost_money", 0)
                 p_data["materials"] = p_data.get("materials", 0) + stats.get("cost_materials", 0)
                 p_data["manpower"] = p_data.get("manpower", 0) + stats.get("cost_manpower", 0)
                 p_data["fuel"] = p_data.get("fuel", 0) + stats.get("cost_fuel", 0)

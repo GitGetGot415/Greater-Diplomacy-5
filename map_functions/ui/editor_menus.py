@@ -279,7 +279,6 @@ def open_editor_economy(self):
                     font=('Arial', 10))
                     
     # Economy logic
-    YIELD_MONEY = BASE_YIELDS.get("money", 0)
     YIELD_MANPOWER = BASE_YIELDS.get("manpower", 0)
     YIELD_MATERIALS = BASE_YIELDS.get("materials", 0)
     YIELD_FUEL = BASE_YIELDS.get("fuel", 0)
@@ -293,7 +292,6 @@ def open_editor_economy(self):
 
     # Updated data structure to track all 4 resources
     econ_data = {c: {
-        "money_core": 0, "money_noncore": 0, "money_bldg": 0, "money_upk": 0,
         "man_inc": 0, "man_upk": 0,
         "mat_inc": 0, "mat_upk": 0,
         "fuel_inc": 0, "fuel_upk": 0
@@ -306,12 +304,7 @@ def open_editor_economy(self):
             core_mult = 1.0 if is_core else 0.25
             man_mult = 1.0 if is_core else 0.0
             
-            # --- Base Yields ---
-            if is_core:
-                econ_data[owner]["money_core"] += core_mult * YIELD_MONEY
-            else:
-                econ_data[owner]["money_noncore"] += core_mult * YIELD_MONEY
-                
+            # --- Base Yields --- 
             econ_data[owner]["man_inc"] += man_mult * YIELD_MANPOWER
             econ_data[owner]["mat_inc"] += core_mult * YIELD_MATERIALS
             econ_data[owner]["fuel_inc"] += core_mult * YIELD_FUEL
@@ -325,7 +318,6 @@ def open_editor_economy(self):
             # --- Buildings ---
             for b_name in prov.get("buildings", []):
                 stats = building_library.get(b_name, {})
-                econ_data[owner]["money_bldg"] += stats.get("prod_money", 0) * core_mult
                 econ_data[owner]["man_inc"] += stats.get("prod_manpower", 0) * man_mult
                 econ_data[owner]["mat_inc"] += stats.get("prod_materials", 0) * core_mult
                 econ_data[owner]["fuel_inc"] += stats.get("prod_fuel", 0) * core_mult
@@ -335,7 +327,6 @@ def open_editor_economy(self):
             u_owner = unit.get("owner")
             if u_owner in econ_data:
                 stats = unit_library.get(unit["type"], {})
-                econ_data[u_owner]["money_upk"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
                 econ_data[u_owner]["man_upk"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
                 econ_data[u_owner]["mat_upk"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
                 econ_data[u_owner]["fuel_upk"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
@@ -343,8 +334,6 @@ def open_editor_economy(self):
     # --- Treeview UI Setup ---
     columns = (
         "Country", 
-        "Money (Core/Non/Bldg)", 
-        "Money (Gross/Upk/Net)", 
         "Net Manpower", 
         "Net Materials", 
         "Net Fuel", 
@@ -368,12 +357,9 @@ def open_editor_economy(self):
         def get_val(c):
             d = econ_data[c]
             if col == "Country": return c
-            if col == "Money (Core/Non/Bldg)": return d["money_core"] + d["money_noncore"] + d["money_bldg"]
-            if col == "Money (Gross/Upk/Net)": return (d["money_core"] + d["money_noncore"] + d["money_bldg"]) - d["money_upk"]
             if col == "Net Manpower": return d["man_inc"] - d["man_upk"]
             if col == "Net Materials": return d["mat_inc"] - d["mat_upk"]
             if col == "Net Fuel": return d["fuel_inc"] - d["fuel_upk"]
-            if col == "Treasury": return self.nation_data.get(c, {}).get("money", 0)
             return 0
 
         # Sort the countries using the dynamic value generator
@@ -389,8 +375,6 @@ def open_editor_economy(self):
     # Set up column headers and bind the sorting command
     widths = {
         "Country": 140,
-        "Money (Core/Non/Bldg)": 180,
-        "Money (Gross/Upk/Net)": 180,
         "Net Manpower": 120,
         "Net Materials": 120,
         "Net Fuel": 110,
@@ -414,31 +398,19 @@ def open_editor_economy(self):
         for i, c in enumerate(country_list):
             d = econ_data[c]
             
-            # Calculate Money
-            c_inc = int(d["money_core"])
-            nc_inc = int(d["money_noncore"])
-            b_inc = int(d["money_bldg"])
-            m_gross = c_inc + nc_inc + b_inc
-            m_upk = int(d["money_upk"])
-            
             # Calculate other Nets
             man_net = d["man_inc"] - d["man_upk"]
             mat_net = d["mat_inc"] - d["mat_upk"]
             fuel_net = d["fuel_inc"] - d["fuel_upk"]
-            
-            treasury = self.nation_data.get(c, {}).get("money", 0)
-            
+                        
             # Apply zebra stripe tags
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
             
             tree.insert("", tk.END, values=(
                 c, 
-                f"+{c_inc} / +{nc_inc} / +{b_inc}", 
-                fmt_full(m_gross, m_upk), 
                 fmt(man_net), 
                 fmt(mat_net), 
                 fmt(fuel_net), 
-                int(treasury)
             ), tags=(tag,))
 
     # Initial population (Defaults to alphabetical)

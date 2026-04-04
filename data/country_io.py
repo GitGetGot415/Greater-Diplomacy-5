@@ -16,6 +16,6 @@ def get_nation_colors():
     return {name: tuple(stats["color"]) for name, stats in data.items()}
 
 def get_country_stats(name):
-    """Returns the dictionary for a specific country (money, etc)."""
+    """Returns the dictionary for a specific country"""
     data = load_all_country_data()
-    return data.get(name, {"color": [80,80,80], "money": 0})
+    return data.get(name, {"color": [80,80,80]})

@@ -98,17 +98,6 @@ class Map(GameState):
 
     # --- Properties ---
     @property
-    def player_money(self):
-        if self.player_country in self.nation_data:
-            return self.nation_data[self.player_country].get("money", 0)
-        return 0
-
-    @player_money.setter
-    def player_money(self, value):
-        if self.player_country in self.nation_data:
-            self.nation_data[self.player_country]["money"] = value
-
-    @property
     def player_manpower(self):
         if self.player_country in self.nation_data:
             return self.nation_data[self.player_country].get("manpower", 0)
@@ -162,6 +151,9 @@ class Map(GameState):
             
             self.show_feedback(f"Now playing as {self.player_country}")
             buttons.render_buttons(self)
+
+            # yeah don't want this to not be rendered
+            self.refresh_relations_map()
             
     def cancel_selection(self):
         self.pending_selection = None
@@ -396,19 +388,17 @@ class Map(GameState):
         self.show_feedback("Map Randomized with Organic Borders!")
 
     def get_player_economy_projections(self):
-        YIELD_MONEY = BASE_YIELDS["money"]
         YIELD_MANPOWER = BASE_YIELDS["manpower"]
         YIELD_MATERIALS = BASE_YIELDS["materials"]
         YIELD_FUEL = BASE_YIELDS["fuel"]
 
         # Detailed tracking dictionary
         breakdown = {
-            "money": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
             "manpower": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
             "materials": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
             "fuel": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0}
         }
-        upkeep = {"money":0, "manpower":0, "materials":0, "fuel":0}
+        upkeep = {"manpower":0, "materials":0, "fuel":0}
 
         if not hasattr(self, 'cached_unit_library'):
             import json, os
@@ -425,7 +415,6 @@ class Map(GameState):
                 # Determine if we file this under core or non-core base income
                 cat = "core" if is_core else "non_core"
 
-                breakdown["money"][cat] += core_mult * YIELD_MONEY
                 breakdown["manpower"][cat] += manpower_mult * YIELD_MANPOWER
                 breakdown["materials"][cat] += core_mult * YIELD_MATERIALS
                 breakdown["fuel"][cat] += core_mult * YIELD_FUEL
@@ -442,7 +431,6 @@ class Map(GameState):
 
                 for b_name in province.get("buildings", []):
                     stats = self.cached_building_library.get(b_name, {})
-                    breakdown["money"]["buildings"] += stats.get("prod_money", 0) * core_mult
                     breakdown["manpower"]["buildings"] += stats.get("prod_manpower", 0) * manpower_mult
                     breakdown["materials"]["buildings"] += stats.get("prod_materials", 0) * core_mult
                     breakdown["fuel"]["buildings"] += stats.get("prod_fuel", 0) * core_mult
@@ -451,13 +439,11 @@ class Map(GameState):
             for unit in province.get("units", []):
                 if unit.get("owner") == self.player_country:
                     stats = self.cached_unit_library.get(unit["type"], {})
-                    upkeep["money"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
                     upkeep["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
                     upkeep["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
                     upkeep["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
 
         total_inc = {
-            "money": sum(breakdown["money"].values()),
             "manpower": sum(breakdown["manpower"].values()),
             "materials": sum(breakdown["materials"].values()),
             "fuel": sum(breakdown["fuel"].values())

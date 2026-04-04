@@ -433,14 +433,14 @@ class Research_Screen(GameState):
             s = self.unit_library[display_name]
             return [
                 f"Combat Stats:   ❤️ HP: {s.get('health',0)}   |   ⚔️ Attack: {s.get('attack',0)}   |   🛡️ Defense: {s.get('defense',0)}   |   ⚡ Speed: {s.get('speed',0)}",
-                f"Production Cost:   💰 {s.get('cost_money',0)}   |   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}   |   ⛽ {s.get('cost_fuel',0)}"
+                f"Production Cost:   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}   |   ⛽ {s.get('cost_fuel',0)}"
             ]
         elif display_name in self.building_library:
             s = self.building_library[display_name]
             return [
                 f"Construction Time: {s.get('time',0)} days",
-                f"Daily Yield:   💰 +{s.get('prod_money',0)}   |   ⚙️ +{s.get('prod_materials',0)}   |   👤 +{s.get('prod_manpower',0)}   |   ⛽ +{s.get('prod_fuel',0)}",
-                f"Construction Cost:   💰 {s.get('cost_money',0)}   |   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}"
+                f"Daily Yield:   ⚙️ +{s.get('prod_materials',0)}   |   👤 +{s.get('prod_manpower',0)}   |   ⛽ +{s.get('prod_fuel',0)}",
+                f"Construction Cost:   ⚙️ {s.get('cost_materials',0)}   |   👤 {s.get('cost_manpower',0)}"
             ]
         return ["Advanced statistical data unavailable."]
 

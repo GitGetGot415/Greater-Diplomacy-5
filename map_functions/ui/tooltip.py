@@ -61,14 +61,14 @@ def draw_tooltip(self, surface):
         buildings = prov.get("buildings", [])
         if not buildings:
             # Base production from the tile itself dynamically pulled from config
-            lines.append(f"Base Yield: +{BASE_YIELDS['money']}M, +{BASE_YIELDS['manpower']}Man, +{BASE_YIELDS['materials']}Mat, +{BASE_YIELDS['fuel']}Fuel")
+            lines.append(f"Base Yield: +{BASE_YIELDS['manpower']}Man, +{BASE_YIELDS['materials']}Mat, +{BASE_YIELDS['fuel']}Fuel")
         else:
             lines.append("--- Buildings ---")
             for b in buildings:
                 # Determine production text based on building name
                 prod_hint = ""
                 if "Workshop" in b or "Factory" in b:
-                    prod_hint = "(+Materials/Money)"
+                    prod_hint = "(+Materials)"
                 elif "Refinery" in b:
                     prod_hint = "(+Fuel)"
                 

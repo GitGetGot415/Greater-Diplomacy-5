@@ -205,15 +205,14 @@ def draw_map_screen(self, surface):
             if cached_data and len(cached_data) == 3:
                 total_inc, total_upkeep, _ = cached_data
             else:
-                total_inc = {"money":0, "manpower":0, "materials":0, "fuel":0}
-                total_upkeep = {"money":0, "manpower":0, "materials":0, "fuel":0}
+                total_inc = {"manpower":0, "materials":0, "fuel":0}
+                total_upkeep = {"manpower":0, "materials":0, "fuel":0}
 
             def fmt_net(inc, exp):
                 net = int(inc - exp)
                 return f"+{net}" if net >= 0 else str(net)
 
             resources = [
-                (f"Money: {int(self.player_money)} ({fmt_net(total_inc['money'], total_upkeep['money'])})", (255, 215, 0)),
                 (f"Manpower: {int(self.player_manpower)} ({fmt_net(total_inc['manpower'], total_upkeep['manpower'])})", (100, 200, 255)),
                 (f"Materials: {int(self.player_materials)} ({fmt_net(total_inc['materials'], total_upkeep['materials'])})", (180, 180, 180)),
                 (f"Fuel: {int(self.player_fuel)} ({fmt_net(total_inc['fuel'], total_upkeep['fuel'])})", (200, 100, 255))

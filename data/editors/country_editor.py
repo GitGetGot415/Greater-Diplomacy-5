@@ -118,7 +118,7 @@ class CountryEditor:
                         print(f"Added {tech_key} to {int_id}")
 
             # 3. Ensure other basic keys exist (money, manpower, etc)
-            for key in ["money", "manpower", "materials", "fuel"]:
+            for key in ["manpower", "materials", "fuel"]:
                 self.data[int_id].setdefault(key, 0)
             
             self.data[int_id].setdefault("at_war_with", [])
@@ -154,7 +154,7 @@ class CountryEditor:
                 "name": disp_name,
                 "color": self.current_color,
                 "research": self.get_default_research_dict(),
-                "money": 0, "manpower": 0, "materials": 0, "fuel": 0,      
+                 "manpower": 0, "materials": 0, "fuel": 0,      
                 "is_playable": True,
                 "at_war_with": [], "allied_with": []
             }
@@ -208,7 +208,7 @@ class CountryEditor:
                 "name": disp_name,
                 "color": self.current_color,
                 "research": {"infantry": 1800},
-                "money": 0, "manpower": 0, "materials": 0, "fuel": 0,      
+                 "manpower": 0, "materials": 0, "fuel": 0,      
                 "is_playable": True,
                 "at_war_with": [], "allied_with": []
             }

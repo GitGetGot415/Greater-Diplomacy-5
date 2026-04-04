@@ -202,7 +202,6 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    YIELD_MONEY = BASE_YIELDS["money"]
     YIELD_MANPOWER = BASE_YIELDS["manpower"]
     YIELD_MATERIALS = BASE_YIELDS["materials"]
     YIELD_FUEL = BASE_YIELDS["fuel"]
@@ -216,7 +215,7 @@ def process_economy(self):
         building_library = json.load(f)
 
     # Updated dict to split money/mat/fuel multiplier from manpower multiplier
-    turn_data = {name: {"inc_money": 0, "inc_manpower": 0, "upkeep": {"money":0, "manpower":0, "materials":0, "fuel":0}, "bonus": {"money":0, "manpower":0, "materials":0, "fuel":0}} 
+    turn_data = {name: {"inc_manpower": 0, "inc_materials": 0, "inc_fuel": 0, "upkeep": {"manpower":0, "materials":0, "fuel":0}, "bonus": {"manpower":0, "materials":0, "fuel":0}} 
                  for name in self.nation_data.keys()}
 
     # Sum Province Income & Building Yields
@@ -227,15 +226,15 @@ def process_economy(self):
             # --- CORE CHECK ---
             is_core = owner in province.get("cores", [])
             # ah so this is where the multiplier is
-            money_mult = 1.0 if is_core else 0.2
             materials_mult = 1.0 if is_core else 0.5
             fuel_mult = 1.0 if is_core else 0
             manpower_mult = 1.0 if is_core else 0
             
             # Apply Core/Manpower Multipliers...
             # CHECK CHECK CHECK IS THIS RIGHT WAS THIS ALREADY DONE SOMEWHERE ELSE
-            turn_data[owner]["inc_money"] += money_mult
             turn_data[owner]["inc_manpower"] += manpower_mult
+            turn_data[owner]["inc_materials"] += materials_mult
+            turn_data[owner]["inc_fuel"] += fuel_mult
             
             # --- RESOURCE LOGIC ---
             res = province.get("resources", {})
@@ -250,7 +249,6 @@ def process_economy(self):
             
             for b_name in province.get("buildings", []):
                 stats = building_library.get(b_name, {})
-                turn_data[owner]["bonus"]["money"] += stats.get("prod_money", 0) * money_mult
                 turn_data[owner]["bonus"]["manpower"] += stats.get("prod_manpower", 0) * manpower_mult
                 turn_data[owner]["bonus"]["materials"] += stats.get("prod_materials", 0) * materials_mult
                 turn_data[owner]["bonus"]["fuel"] += stats.get("prod_fuel", 0) * fuel_mult
@@ -261,7 +259,6 @@ def process_economy(self):
             owner = unit["owner"]
             stats = unit_library.get(unit["type"])
             if owner in turn_data and stats:
-                turn_data[owner]["upkeep"]["money"] += stats.get("cost_money", 0) * UPKEEP_MODIFIER
                 turn_data[owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
                 turn_data[owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
                 turn_data[owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
@@ -269,15 +266,14 @@ def process_economy(self):
     # Apply to Nation Data
     for name, data in turn_data.items():
         stats = self.nation_data[name]
-        stats["money"] += (data["inc_money"] * YIELD_MONEY) + data["bonus"]["money"] - data["upkeep"]["money"]
         stats["manpower"] += (data["inc_manpower"] * YIELD_MANPOWER) + data["bonus"]["manpower"] - data["upkeep"]["manpower"]
-        stats["materials"] += (data["inc_money"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
-        stats["fuel"] += (data["inc_money"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
+        stats["materials"] += (data["inc_materials"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
+        stats["fuel"] += (data["inc_fuel"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
 
-        for res in ["money", "manpower", "materials", "fuel"]:
+        for res in ["manpower", "materials", "fuel"]:
             stats[res] = max(0, stats[res])
 
-    return self.nation_data.get(self.player_country, {}).get("money", 0)
+    return self.nation_data.get(self.player_country, {}).get("manpower", 0)
 
 def process_queues(self, days_passed):
     """Processes only the VERY FIRST item in the deployment queue sequentially."""

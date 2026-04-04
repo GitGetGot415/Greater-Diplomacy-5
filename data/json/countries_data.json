@@ -30,7 +30,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -73,7 +73,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -116,7 +116,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -159,7 +159,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -202,7 +202,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -245,7 +245,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -288,7 +288,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -331,7 +331,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -374,7 +374,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -417,7 +417,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -460,7 +460,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -503,7 +503,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -546,7 +546,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -589,7 +589,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -632,7 +632,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -675,7 +675,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -718,7 +718,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -761,7 +761,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -804,7 +804,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -847,7 +847,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -890,7 +890,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -933,7 +933,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -976,7 +976,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1019,7 +1019,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1062,7 +1062,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1105,7 +1105,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1148,7 +1148,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1191,7 +1191,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1234,7 +1234,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1277,7 +1277,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1320,7 +1320,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1363,7 +1363,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1406,7 +1406,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1449,7 +1449,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1492,7 +1492,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1535,7 +1535,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1578,7 +1578,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1621,7 +1621,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1664,7 +1664,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1707,7 +1707,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1750,7 +1750,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1793,7 +1793,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1836,7 +1836,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1879,7 +1879,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1922,7 +1922,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -1965,7 +1965,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2008,7 +2008,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2051,7 +2051,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2094,7 +2094,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2137,7 +2137,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2180,7 +2180,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2223,7 +2223,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2266,7 +2266,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2309,7 +2309,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2352,7 +2352,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2395,7 +2395,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2438,7 +2438,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2481,7 +2481,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2524,7 +2524,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2567,7 +2567,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2610,7 +2610,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2653,7 +2653,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2696,7 +2696,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2739,7 +2739,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2782,7 +2782,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2825,7 +2825,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2868,7 +2868,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2911,7 +2911,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2954,7 +2954,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -2997,7 +2997,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3040,7 +3040,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3083,7 +3083,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3126,7 +3126,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3169,7 +3169,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3212,7 +3212,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3255,7 +3255,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3298,7 +3298,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3341,7 +3341,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3384,7 +3384,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3427,7 +3427,7 @@
             "ww1_armored_car": 0,
             "ww1_tank": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3468,7 +3468,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3509,7 +3509,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3550,7 +3550,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3591,7 +3591,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3632,7 +3632,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3673,7 +3673,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3714,7 +3714,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3755,7 +3755,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3796,7 +3796,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3837,7 +3837,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3878,7 +3878,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3919,7 +3919,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -3960,7 +3960,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4001,7 +4001,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4042,7 +4042,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4083,7 +4083,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4124,7 +4124,7 @@
             "synthetic_fuel_experiments": 0,
             "fuel_refining": 0
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4146,7 +4146,7 @@
         "research": {
             "infantry": 1800
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,
@@ -4164,7 +4164,7 @@
         "research": {
             "infantry": 1800
         },
-        "money": 0,
+        
         "manpower": 0,
         "materials": 0,
         "fuel": 0,

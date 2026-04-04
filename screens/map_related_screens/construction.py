@@ -99,7 +99,6 @@ class Construction_Screen(GameState):
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
 
         costs = {
-            "money": data.get("cost_money", 0),
             "manpower": data.get("cost_manpower", 0),
             "materials": data.get("cost_materials", 0),
             "fuel": data.get("cost_fuel", 0)
@@ -149,8 +148,8 @@ class Construction_Screen(GameState):
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
             t = stats.get('time', 0)
-            txt1 = f"Build Time: {t}d   |   Cost: 💰{stats.get('cost_money', 0)}   ⚙️{stats.get('cost_materials', 0)}   👤{stats.get('cost_manpower', 0)}   ⛽{stats.get('cost_fuel', 0)}"
-            txt2 = f"Yield (Daily):   💰+{stats.get('prod_money', 0)}   ⚙️+{stats.get('prod_materials', 0)}   👤+{stats.get('prod_manpower', 0)}   ⛽+{stats.get('prod_fuel', 0)}"
+            txt1 = f"Build Time: {t}d   |   ⚙️{stats.get('cost_materials', 0)}   👤{stats.get('cost_manpower', 0)}   ⛽{stats.get('cost_fuel', 0)}"
+            txt2 = f"Yield (Daily):   ⚙️+{stats.get('prod_materials', 0)}   👤+{stats.get('prod_manpower', 0)}   ⛽+{stats.get('prod_fuel', 0)}"
             
             surface.blit(bar_font.render(txt1, True, (255, 215, 0)), (bar_rect.x + 15, bar_rect.y + 6))
             surface.blit(bar_font.render(txt2, True, (150, 255, 150)), (bar_rect.x + 15, bar_rect.y + 26))
@@ -163,7 +162,6 @@ class Construction_Screen(GameState):
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_font = fonts.get("heading2")
         resources = [
-            (f"Money: {p_data.get('money', 0)}", (255, 215, 0)),
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
             (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),
             (f"Fuel: {p_data.get('fuel', 0)}", (200, 100, 255))
@@ -206,7 +204,6 @@ class Construction_Screen(GameState):
                         with open('data/json/unit_data.json', 'r') as f:
                             stats = json.load(f).get(item["unit_type"], {})
                             
-                p_data["money"] = p_data.get("money", 0) + stats.get("cost_money", 0)
                 p_data["materials"] = p_data.get("materials", 0) + stats.get("cost_materials", 0)
                 p_data["manpower"] = p_data.get("manpower", 0) + stats.get("cost_manpower", 0)
                 p_data["fuel"] = p_data.get("fuel", 0) + stats.get("cost_fuel", 0)

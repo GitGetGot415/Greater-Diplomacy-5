@@ -30,7 +30,7 @@ class Economy_Screen(GameState):
             total_inc, upkeep, breakdown = econ_tuple
         else:
             total_inc, upkeep = econ_tuple
-            breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0} for k in ["money", "manpower", "materials", "fuel"]}
+            breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0} for k in ["manpower", "materials", "fuel"]}
             
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         
@@ -40,7 +40,6 @@ class Economy_Screen(GameState):
         
         y_offset = 120
         resources = [
-            ("money", "Money", p_data.get('money', 0), (255, 215, 0)),
             ("manpower", "Manpower", p_data.get('manpower', 0), (100, 200, 255)),
             ("materials", "Materials", p_data.get('materials', 0), (180, 180, 180)),
             ("fuel", "Fuel", p_data.get('fuel', 0), (200, 100, 255))
