@@ -9,7 +9,7 @@
     "medium_tank": { "category": "TANKS", "max_lvl": 3, "cost": 300, "req": {"light_tank": 1}, "years": [1925, 1932, 1939] },
     "heavy_tank": { "category": "TANKS", "max_lvl": 3, "cost": 300, "req": {"medium_tank": 1}, "years": [1930, 1935, 1940] },
     "main_battle_tank": { "category": "TANKS", "max_lvl": 1, "cost": 300, "req": {"OR": [{"medium_tank": 3}, {"heavy_tank": 3}]}, "years": [1945] },
-    "carrack": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {}, "years": [1500] },
+    "carrack": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {}, "years": [1850] },
     "ironclad": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {"carrack": 1}, "years": [1860] },
     "pre-dreadnaught": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {"ironclad": 1}, "years": [1880] },
     "dreadnaught": { "category": "NAVY", "max_lvl": 1, "cost": 300, "req": {"pre-dreadnaught": 1}, "years": [1900] },
