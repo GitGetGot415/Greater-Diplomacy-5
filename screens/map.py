@@ -372,7 +372,7 @@ class Map(GameState):
             "aircraft_carrier": [1920, 1930, 1940, 1950],
             
             # Economy & Industry
-            "workshop": [1800, 1820, 1840, 1860, 1880],
+            "workshop": [1850, 1860, 1870, 1880, 1890],
             "basic_factory": [1900],
             "factory": [1910, 1920, 1930, 1940, 1950],
             "bergius_process": [1910],

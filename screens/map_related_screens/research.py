@@ -47,7 +47,7 @@ class Research_Screen(GameState):
             ("destroyer", 1): 1910, ("destroyer", 2): 1916, ("destroyer", 3): 1922, ("destroyer", 4): 1928, ("destroyer", 5): 1934, ("destroyer", 6): 1940, ("destroyer", 7): 1946, ("destroyer", 8): 1952,
             ("aircraft_carrier", 1): 1920, ("aircraft_carrier", 2): 1930, ("aircraft_carrier", 3): 1940, ("aircraft_carrier", 4): 1950,
             
-            ("workshop", 1): 1800, ("workshop", 2): 1820, ("workshop", 3): 1840, ("workshop", 4): 1860, ("workshop", 5): 1880,
+            ("workshop", 1): 1850, ("workshop", 2): 1860, ("workshop", 3): 1870, ("workshop", 4): 1880, ("workshop", 5): 1890,
             ("basic_factory", 1): 1900,
             ("factory", 1): 1910, ("factory", 2): 1920, ("factory", 3): 1930, ("factory", 4): 1940, ("factory", 5): 1950,
             ("bergius_process", 1): 1910, ("synthetic_fuel_experiments", 1): 1920,
