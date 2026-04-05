@@ -315,69 +315,19 @@ class Map(GameState):
         map_renderer.draw_map_screen(self, surface)
 
     def get_player_economy_projections(self):
-        YIELD_MANPOWER = BASE_YIELDS["manpower"]
-        YIELD_MATERIALS = BASE_YIELDS["materials"]
-        YIELD_FUEL = BASE_YIELDS["fuel"]
-
-        # Detailed tracking dictionary
-        breakdown = {
-            "manpower": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
-            "materials": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
-            "fuel": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0}
-        }
-        upkeep = {"manpower":0, "materials":0, "fuel":0}
-
-        if not hasattr(self, 'cached_unit_library'):
-            import json, os
-            self.cached_unit_library = json.load(open('data/json/unit_data.json')) if os.path.exists('data/json/unit_data.json') else {}
-            self.cached_building_library = json.load(open('data/json/building_data.json')) if os.path.exists('data/json/building_data.json') else {}
-
-        for province in self.map_data.values():
-            owner = province.get("owner")
-            if owner == self.player_country and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-                is_core = owner in province.get("cores", [])
-                core_mult = 1.0 if is_core else 0.25
-                manpower_mult = 1.0 if is_core else 0.0
-
-                # Determine if we file this under core or non-core base income
-                cat = "core" if is_core else "non_core"
-
-                breakdown["manpower"][cat] += manpower_mult * YIELD_MANPOWER
-                breakdown["materials"][cat] += core_mult * YIELD_MATERIALS
-                breakdown["fuel"][cat] += core_mult * YIELD_FUEL
-                
-                # --- RESOURCE PROJECTIONS ---
-                res = province.get("resources", {})
-                if isinstance(res, dict):
-                    iron = int(res.get("Iron", 0))
-                    coal = int(res.get("Coal", 0))
-                    oil = int(res.get("Oil", 0))
-                    
-                    breakdown["materials"]["resources"] += iron * core_mult
-                    breakdown["fuel"]["resources"] += (coal + oil) * core_mult
-
-                for b_name in province.get("buildings", []):
-                    stats = self.cached_building_library.get(b_name, {})
-                    breakdown["manpower"]["buildings"] += stats.get("prod_manpower", 0) * manpower_mult
-                    breakdown["materials"]["buildings"] += stats.get("prod_materials", 0) * core_mult
-                    breakdown["fuel"]["buildings"] += stats.get("prod_fuel", 0) * core_mult
+        """Pulls the player's UI data from the unified calculator."""
+        all_econ = self.calculate_all_economies()
+        p_econ = all_econ.get(self.player_country, {})
         
-        for province in self.map_data.values():
-            for unit in province.get("units", []):
-                if unit.get("owner") == self.player_country:
-                    stats = self.cached_unit_library.get(unit["type"], {})
-                    upkeep["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
-                    upkeep["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
-                    upkeep["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
-
-        total_inc = {
-            "manpower": sum(breakdown["manpower"].values()),
-            "materials": sum(breakdown["materials"].values()),
-            "fuel": sum(breakdown["fuel"].values())
-        }
-        
-        # Return 3 values now!
-        return total_inc, upkeep, breakdown
+        # Safely return defaults if player data isn't set up yet
+        if not p_econ:
+            return (
+                {"manpower": 0, "materials": 0, "fuel": 0},
+                {"manpower": 0, "materials": 0, "fuel": 0},
+                {"manpower": {}, "materials": {}, "fuel": {}}
+            )
+            
+        return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")
     
     def refresh_nation_data(self):
         from data.io import country_io
@@ -464,6 +414,81 @@ class Map(GameState):
         if self.player_country and self.player_country != "None":
             self.next_state, self.done = "EDIT_COUNTRY", True
 
+    def calculate_all_economies(self):
+        """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
+        YIELD_MANPOWER = BASE_YIELDS["manpower"]
+        YIELD_MATERIALS = BASE_YIELDS["materials"]
+        YIELD_FUEL = BASE_YIELDS["fuel"]
+
+        if not hasattr(self, 'cached_unit_library'):
+            import json, os
+            self.cached_unit_library = json.load(open('data/json/unit_data.json')) if os.path.exists('data/json/unit_data.json') else {}
+            self.cached_building_library = json.load(open('data/json/building_data.json')) if os.path.exists('data/json/building_data.json') else {}
+
+        # Initialize data structure for all active nations
+        econ_data = {}
+        for name in self.nation_data.keys():
+            econ_data[name] = {
+                "breakdown": {
+                    "manpower": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
+                    "materials": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
+                    "fuel": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0}
+                },
+                "upkeep": {"manpower": 0, "materials": 0, "fuel": 0},
+                "total_inc": {"manpower": 0, "materials": 0, "fuel": 0}
+            }
+
+        # Single efficient pass over the map
+        for province in self.map_data.values():
+            owner = province.get("owner")
+            
+            # --- INCOME LOGIC ---
+            if owner and owner in econ_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                is_core = owner in province.get("cores", [])
+
+                # The Standardized Multipliers (Edit these here and it updates the whole game)
+                mat_mult = 1.0 if is_core else 0.5
+                fuel_mult = 1.0 if is_core else 0.0
+                man_mult = 1.0 if is_core else 0.0
+
+                cat = "core" if is_core else "non_core"
+                bd = econ_data[owner]["breakdown"]
+
+                # Base Yields
+                bd["manpower"][cat] += man_mult * YIELD_MANPOWER
+                bd["materials"][cat] += mat_mult * YIELD_MATERIALS
+                bd["fuel"][cat] += fuel_mult * YIELD_FUEL
+
+                # Natural Resources
+                res = province.get("resources", {})
+                if isinstance(res, dict):
+                    bd["materials"]["resources"] += int(res.get("Iron", 0)) * mat_mult
+                    bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * fuel_mult
+
+                # Buildings
+                for b_name in province.get("buildings", []):
+                    stats = self.cached_building_library.get(b_name, {})
+                    bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) * man_mult
+                    bd["materials"]["buildings"] += stats.get("prod_materials", 0) * mat_mult
+                    bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) * fuel_mult
+
+            # --- UPKEEP LOGIC ---
+            for unit in province.get("units", []):
+                u_owner = unit.get("owner")
+                if u_owner in econ_data:
+                    stats = self.cached_unit_library.get(unit["type"], {})
+                    econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
+                    econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
+                    econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
+
+        # Finalize totals
+        for data in econ_data.values():
+            data["total_inc"]["manpower"] = sum(data["breakdown"]["manpower"].values())
+            data["total_inc"]["materials"] = sum(data["breakdown"]["materials"].values())
+            data["total_inc"]["fuel"] = sum(data["breakdown"]["fuel"].values())
+
+        return econ_data
+    
     def update_country_centers(self):
         """Calculates the visual center, rotation, and physical spread for every country landmass."""
         self.country_text_blobs = []

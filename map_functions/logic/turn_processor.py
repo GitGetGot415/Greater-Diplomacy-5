@@ -205,74 +205,19 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    YIELD_MANPOWER = BASE_YIELDS["manpower"]
-    YIELD_MATERIALS = BASE_YIELDS["materials"]
-    YIELD_FUEL = BASE_YIELDS["fuel"]
+    all_econ = self.calculate_all_economies()
 
-    unit_stats_path = 'data/json/unit_data.json'
-    building_stats_path = 'data/json/building_data.json'
-    
-    with open(unit_stats_path, 'r') as f:
-        unit_library = json.load(f)
-    with open(building_stats_path, 'r') as f:
-        building_library = json.load(f)
+    for name, stats in self.nation_data.items():
+        if name in ["None", "Unclaimed", "Ocean", "Lakes"] or name not in all_econ:
+            continue
 
-    # Updated dict to split money/mat/fuel multiplier from manpower multiplier
-    turn_data = {name: {"inc_manpower": 0, "inc_materials": 0, "inc_fuel": 0, "upkeep": {"manpower":0, "materials":0, "fuel":0}, "bonus": {"manpower":0, "materials":0, "fuel":0}} 
-                 for name in self.nation_data.keys()}
+        econ = all_econ[name]
 
-    # Sum Province Income & Building Yields
-    for province in self.map_data.values():
-        owner = province.get("owner")
-        if owner in turn_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-            
-            # --- CORE CHECK ---
-            is_core = owner in province.get("cores", [])
-            # ah so this is where the multiplier is
-            materials_mult = 1.0 if is_core else 0.5
-            fuel_mult = 1.0 if is_core else 0
-            manpower_mult = 1.0 if is_core else 0
-            
-            # Apply Core/Manpower Multipliers...
-            # CHECK CHECK CHECK IS THIS RIGHT WAS THIS ALREADY DONE SOMEWHERE ELSE
-            turn_data[owner]["inc_manpower"] += manpower_mult
-            turn_data[owner]["inc_materials"] += materials_mult
-            turn_data[owner]["inc_fuel"] += fuel_mult
-            
-            # --- RESOURCE LOGIC ---
-            res = province.get("resources", {})
-            if isinstance(res, dict):
-                iron = int(res.get("Iron", 0))
-                coal = int(res.get("Coal", 0))
-                oil = int(res.get("Oil", 0))
-                
-                # Yield mapping
-                turn_data[owner]["bonus"]["materials"] += iron * materials_mult
-                turn_data[owner]["bonus"]["fuel"] += (coal + oil) * fuel_mult
-            
-            for b_name in province.get("buildings", []):
-                stats = building_library.get(b_name, {})
-                turn_data[owner]["bonus"]["manpower"] += stats.get("prod_manpower", 0) * manpower_mult
-                turn_data[owner]["bonus"]["materials"] += stats.get("prod_materials", 0) * materials_mult
-                turn_data[owner]["bonus"]["fuel"] += stats.get("prod_fuel", 0) * fuel_mult
+        stats["manpower"] += econ["total_inc"]["manpower"] - econ["upkeep"]["manpower"]
+        stats["materials"] += econ["total_inc"]["materials"] - econ["upkeep"]["materials"]
+        stats["fuel"] += econ["total_inc"]["fuel"] - econ["upkeep"]["fuel"]
 
-    # Calculate Upkeep
-    for province in self.map_data.values():
-        for unit in province.get("units", []):
-            owner = unit["owner"]
-            stats = unit_library.get(unit["type"])
-            if owner in turn_data and stats:
-                turn_data[owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
-                turn_data[owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
-                turn_data[owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
-
-    # Apply to Nation Data
-    for name, data in turn_data.items():
-        stats = self.nation_data[name]
-        stats["manpower"] += (data["inc_manpower"] * YIELD_MANPOWER) + data["bonus"]["manpower"] - data["upkeep"]["manpower"]
-        stats["materials"] += (data["inc_materials"] * YIELD_MATERIALS) + data["bonus"]["materials"] - data["upkeep"]["materials"]
-        stats["fuel"] += (data["inc_fuel"] * YIELD_FUEL) + data["bonus"]["fuel"] - data["upkeep"]["fuel"]
-
+        # Prevent negative resources
         for res in ["manpower", "materials", "fuel"]:
             stats[res] = max(0, stats[res])
 
