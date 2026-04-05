@@ -31,3 +31,10 @@ BASE_YIELDS = {
 }
 
 UPKEEP_MODIFIER = 0.05
+
+# Non-core penalties
+NON_CORE_MULTIPLIERS = {
+    "manpower": 0.0,
+    "materials": 0.5,
+    "fuel": 0.0
+}

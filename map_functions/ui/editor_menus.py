@@ -279,64 +279,9 @@ def open_editor_economy(self):
                     font=('Arial', 10))
                     
     # Economy logic
-    YIELD_MANPOWER = BASE_YIELDS.get("manpower", 0)
-    YIELD_MATERIALS = BASE_YIELDS.get("materials", 0)
-    YIELD_FUEL = BASE_YIELDS.get("fuel", 0)
-    
-    unit_library = {}
-    building_library = {}
-    if os.path.exists('data/json/unit_data.json'):
-        with open('data/json/unit_data.json', 'r') as f: unit_library = json.load(f)
-    if os.path.exists('data/json/building_data.json'):
-        with open('data/json/building_data.json', 'r') as f: building_library = json.load(f)
-
-    # Detailed data structure
-    econ_data = {c: {
-        "man_bld": 0, "man_core": 0, "man_non": 0, "man_res": 0, "man_upk": 0,
-        "mat_bld": 0, "mat_core": 0, "mat_non": 0, "mat_res": 0, "mat_upk": 0,
-        "fuel_bld": 0, "fuel_core": 0, "fuel_non": 0, "fuel_res": 0, "fuel_upk": 0
-    } for c in active_countries}
-
-    # Sum Province Income & Building Yields
-    for prov in self.map_data.values():
-        owner = prov.get("owner")
-        if owner in econ_data:
-            is_core = owner in prov.get("cores", [])
-            core_mult = 1.0 if is_core else 0.25
-            man_mult = 1.0 if is_core else 0.0
-            
-            # --- Base Yields --- 
-            if is_core:
-                econ_data[owner]["man_core"] += man_mult * YIELD_MANPOWER
-                econ_data[owner]["mat_core"] += core_mult * YIELD_MATERIALS
-                econ_data[owner]["fuel_core"] += core_mult * YIELD_FUEL
-            else:
-                econ_data[owner]["man_non"] += man_mult * YIELD_MANPOWER
-                econ_data[owner]["mat_non"] += core_mult * YIELD_MATERIALS
-                econ_data[owner]["fuel_non"] += core_mult * YIELD_FUEL
-            
-            # --- Natural Resources ---
-            res = prov.get("resources", {})
-            if isinstance(res, dict):
-                econ_data[owner]["mat_res"] += int(res.get("Iron", 0)) * core_mult
-                econ_data[owner]["fuel_res"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * core_mult
-
-            # --- Buildings ---
-            for b_name in prov.get("buildings", []):
-                stats = building_library.get(b_name, {})
-                econ_data[owner]["man_bld"] += stats.get("prod_manpower", 0) * man_mult
-                econ_data[owner]["mat_bld"] += stats.get("prod_materials", 0) * core_mult
-                econ_data[owner]["fuel_bld"] += stats.get("prod_fuel", 0) * core_mult
-        
-    # --- Unit Upkeeps ---
-    for prov in self.map_data.values():
-        for unit in prov.get("units", []):
-            u_owner = unit.get("owner")
-            if u_owner in econ_data:
-                stats = unit_library.get(unit["type"], {})
-                econ_data[u_owner]["man_upk"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
-                econ_data[u_owner]["mat_upk"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
-                econ_data[u_owner]["fuel_upk"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
+    # We delete all the JSON loading and manual province looping here!
+    # Instead, we just grab the unified dictionary from the Map class:
+    all_econ = self.calculate_all_economies()
 
     col_man = "Manpower [Bld/Core/Non/Res/Net]"
     col_mat = "Materials [Bld/Core/Non/Res/Net]"
@@ -360,11 +305,12 @@ def open_editor_economy(self):
         sort_dirs[col] = not reverse 
         
         def get_val(c):
-            d = econ_data[c]
+            if c not in all_econ: return 0
+            d = all_econ[c]
             if col == "Country": return c
-            if col == col_man: return (d["man_bld"] + d["man_core"] + d["man_non"] + d["man_res"]) - d["man_upk"]
-            if col == col_mat: return (d["mat_bld"] + d["mat_core"] + d["mat_non"] + d["mat_res"]) - d["mat_upk"]
-            if col == col_fuel: return (d["fuel_bld"] + d["fuel_core"] + d["fuel_non"] + d["fuel_res"]) - d["fuel_upk"]
+            if col == col_man: return d["total_inc"]["manpower"] - d["upkeep"]["manpower"]
+            if col == col_mat: return d["total_inc"]["materials"] - d["upkeep"]["materials"]
+            if col == col_fuel: return d["total_inc"]["fuel"] - d["upkeep"]["fuel"]
             return 0
 
         # Sort the countries using the dynamic value generator
@@ -400,11 +346,17 @@ def open_editor_economy(self):
         
     def populate_tree(country_list):
         for i, c in enumerate(country_list):
-            d = econ_data[c]
+            if c not in all_econ: continue
+            d = all_econ[c]
             
-            man_str = fmt_cell(d["man_bld"], d["man_core"], d["man_non"], d["man_res"], d["man_upk"])
-            mat_str = fmt_cell(d["mat_bld"], d["mat_core"], d["mat_non"], d["mat_res"], d["mat_upk"])
-            fuel_str = fmt_cell(d["fuel_bld"], d["fuel_core"], d["fuel_non"], d["fuel_res"], d["fuel_upk"])
+            def get_cell_str(res_key):
+                bd = d["breakdown"][res_key]
+                upk = d["upkeep"][res_key]
+                return fmt_cell(bd["buildings"], bd["core"], bd["non_core"], bd["resources"], upk)
+
+            man_str = get_cell_str("manpower")
+            mat_str = get_cell_str("materials")
+            fuel_str = get_cell_str("fuel")
                         
             # Apply zebra stripe tags
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'

@@ -15,7 +15,7 @@ from map_functions.logic import (
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS
 from map_functions.rendering.font_manager import fonts
 
 class Map(GameState):
@@ -446,10 +446,11 @@ class Map(GameState):
             if owner and owner in econ_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
                 is_core = owner in province.get("cores", [])
 
-                # The Standardized Multipliers (Edit these here and it updates the whole game)
-                mat_mult = 1.0 if is_core else 0.5
-                fuel_mult = 1.0 if is_core else 0.0
-                man_mult = 1.0 if is_core else 0.0
+                # --- THE UPDATE IS HERE ---
+                # Now pulling directly from your constants.py!
+                mat_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["materials"]
+                fuel_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["fuel"]
+                man_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["manpower"]
 
                 cat = "core" if is_core else "non_core"
                 bd = econ_data[owner]["breakdown"]
@@ -468,9 +469,12 @@ class Map(GameState):
                 # Buildings
                 for b_name in province.get("buildings", []):
                     stats = self.cached_building_library.get(b_name, {})
-                    bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) * man_mult
-                    bd["materials"]["buildings"] += stats.get("prod_materials", 0) * mat_mult
-                    bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) * fuel_mult
+                    # Notice we don't apply the non-core multiplier to buildings here, 
+                    # assuming factories produce 100% output regardless of core status. 
+                    # You can change this by multiplying by man_mult/mat_mult/fuel_mult if desired!
+                    bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) 
+                    bd["materials"]["buildings"] += stats.get("prod_materials", 0) 
+                    bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) 
 
             # --- UPKEEP LOGIC ---
             for unit in province.get("units", []):
