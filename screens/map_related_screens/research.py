@@ -7,6 +7,9 @@ from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
 
+minimum_year = 1850
+maximum_year = 2000
+
 class Research_Screen(GameState):
     def __init__(self):
         super().__init__()
@@ -36,32 +39,14 @@ class Research_Screen(GameState):
 
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
-        self.tech_years = {
-            ("ww1_armored_car", 1): 1910, ("ww1_tank", 1): 1915, ("civilian_car", 1): 1905,
-            ("light_tank", 1): 1918, ("light_tank", 2): 1924, ("light_tank", 3): 1930, ("light_tank", 4): 1936, ("light_tank", 5): 1942,
-            ("medium_tank", 1): 1925, ("medium_tank", 2): 1932, ("medium_tank", 3): 1939,
-            ("heavy_tank", 1): 1930, ("heavy_tank", 2): 1935, ("heavy_tank", 3): 1940,
-            ("main_battle_tank", 1): 1945,
-            ("armored_car", 1): 1916, ("armored_car", 2): 1922, ("armored_car", 3): 1928, ("armored_car", 4): 1934, ("armored_car", 5): 1940,
-            
-            ("carrack", 1): 1500, ("ironclad", 1): 1860, ("pre-dreadnaught", 1): 1880, ("dreadnaught", 1): 1900,
-            ("destroyer", 1): 1910, ("destroyer", 2): 1916, ("destroyer", 3): 1922, ("destroyer", 4): 1928, ("destroyer", 5): 1934, ("destroyer", 6): 1940, ("destroyer", 7): 1946, ("destroyer", 8): 1952,
-            ("aircraft_carrier", 1): 1920, ("aircraft_carrier", 2): 1930, ("aircraft_carrier", 3): 1940, ("aircraft_carrier", 4): 1950,
-            
-            ("workshop", 1): 1850, ("workshop", 2): 1860, ("workshop", 3): 1870, ("workshop", 4): 1880, ("workshop", 5): 1890,
-            ("basic_factory", 1): 1900,
-            ("factory", 1): 1910, ("factory", 2): 1920, ("factory", 3): 1930, ("factory", 4): 1940, ("factory", 5): 1950,
-            ("bergius_process", 1): 1910, ("synthetic_fuel_experiments", 1): 1920,
-            ("fuel_refining", 1): 1930, ("fuel_refining", 2): 1940, ("fuel_refining", 3): 1950
-        }
+        
+        self.tech_years = {}
+        for tech_key, data in self.tech_tree.items():
+            years = data.get("years", [1900] * data["max_lvl"])
+            for i, y in enumerate(years):
+                self.tech_years[(tech_key, i + 1)] = y
 
-        # Map Infantry Years
-        inf_years = [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948]
-        for i, y in enumerate(inf_years):
-            self.tech_years[("infantry_type", i+1)] = y
-        self.tech_years[("cavalry", 1)] = 1850
-
-        # Stagger the Y positions to prevent branches overlapping
+        # Stagger the Y positions to prevent branches overlapping (Keep this hardcoded since it's visual layout, not logic)
         self.tech_rows = {
             "infantry_type": 350,
             "cavalry": 450,
@@ -95,6 +80,9 @@ class Research_Screen(GameState):
     def update(self):
         super().update()
         if hasattr(self, 'target_scroll_x'):
+            
+            self.enforce_scroll_bounds() # <-- Add this to catch any edge cases
+            
             if abs(self.scroll_x - self.target_scroll_x) > 0.5:
                 self.scroll_x += (self.target_scroll_x - self.scroll_x) * 0.15
                 
@@ -109,14 +97,17 @@ class Research_Screen(GameState):
             elif event.type == pygame.MOUSEMOTION and event.buttons[2]: 
                 self.target_scroll_x += event.rel[0]
                 self.scroll_x += event.rel[0] 
-                
-                for el in self.elements:
-                    if getattr(el, 'is_tech_node', False):
-                        el.rect.x = el.base_x + self.scroll_x
+            
+            # --- Clamp user input immediately ---
+            self.enforce_scroll_bounds()
+            
+            for el in self.elements:
+                if getattr(el, 'is_tech_node', False):
+                    el.rect.x = el.base_x + self.scroll_x
 
     def get_display_name(self, tech_key, lvl):
         if tech_key == "infantry_type":
-            inf_years = [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948]
+            inf_years = self.tech_tree.get("infantry_type", {}).get("years", [1850])
             year = inf_years[min(lvl - 1, len(inf_years)-1)]
             return f"Infantry Type {year}"
         
@@ -150,6 +141,7 @@ class Research_Screen(GameState):
         self.active_modal = None
         self.scroll_x = 0
         self.target_scroll_x = 0
+        self.enforce_scroll_bounds()
         self.refresh_ui()
 
     def set_category(self, cat):
@@ -157,6 +149,7 @@ class Research_Screen(GameState):
         self.active_modal = None
         self.scroll_x = 0
         self.target_scroll_x = 0
+        self.enforce_scroll_bounds()
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -304,6 +297,11 @@ class Research_Screen(GameState):
 
         start_year = int((-self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - 5
         end_year = int((SCREEN_WIDTH - self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
+
+        # --- NEW: Clamp the visual tick marks ---
+        start_year = max(1850, start_year)
+        end_year = min(2001, end_year) # 2001 so 2000 is included
+        # ----------------------------------------
 
         for year in range(start_year, end_year):
             x = (year - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) + self.scroll_x
@@ -517,6 +515,17 @@ class Research_Screen(GameState):
                 txt_surf = text_font.render(f"{display_name}{val_text}", True, color)
                 surface.blit(txt_surf, (curr_x + 10, curr_y))
                 curr_y += 28
+
+    def enforce_scroll_bounds(self):
+        """Prevents the timeline from scrolling past 1850 or 2000."""
+        if self.map_screen:
+            current_year = self.map_screen.time_manager.year
+            # Negative scroll moves the camera to future years (right), positive to past years (left)
+            min_scroll_x = -((2000 - current_year) * self.pixels_per_year)
+            max_scroll_x = -((1850 - current_year) * self.pixels_per_year)
+            
+            self.target_scroll_x = max(min_scroll_x, min(self.target_scroll_x, max_scroll_x))
+            self.scroll_x = max(min_scroll_x, min(self.scroll_x, max_scroll_x))
 
     def additional_draw(self, surface):
         if not self.map_screen: return

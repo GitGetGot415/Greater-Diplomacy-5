@@ -75,6 +75,7 @@ def randomize_all_provinces(map_screen, settings):
     # 1. Load the full baseline template so nobody is missing keys
     template_path = "data/json/research_template.json"
     res_template = {}
+    struct = {} # Store the struct to read the years later
     if os.path.exists(template_path):
         with open(template_path, "r") as f:
             struct = json.load(f)
@@ -83,37 +84,8 @@ def randomize_all_provinces(map_screen, settings):
             if "infantry_type" in res_template: res_template["infantry_type"] = 1
             if "cavalry" in res_template: res_template["cavalry"] = 1
 
-    tech_timeline = {
-        # Infantry & Cavalry
-        "infantry_type": [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948],
-        "cavalry": [1850],
-        
-        # Vehicles & Armor
-        "civilian_car": [1905],
-        "ww1_armored_car": [1910],
-        "ww1_tank": [1915],
-        "armored_car": [1916, 1922, 1928, 1934, 1940],
-        "light_tank": [1918, 1924, 1930, 1936, 1942],
-        "medium_tank": [1925, 1932, 1939],
-        "heavy_tank": [1930, 1935, 1940],
-        "main_battle_tank": [1945],
-        
-        # Naval Forces
-        "carrack": [1500],
-        "ironclad": [1860],
-        "pre-dreadnaught": [1880],
-        "dreadnaught": [1900],
-        "destroyer": [1910, 1916, 1922, 1928, 1934, 1940, 1946, 1952],
-        "aircraft_carrier": [1920, 1930, 1940, 1950],
-        
-        # Economy & Industry
-        "workshop": [1850, 1860, 1870, 1880, 1890],
-        "basic_factory": [1900],
-        "factory": [1910, 1920, 1930, 1940, 1950],
-        "bergius_process": [1910],
-        "synthetic_fuel_experiments": [1920],
-        "fuel_refining": [1930, 1940, 1950]
-    }
+    # Dynamically read years from the loaded JSON struct
+    tech_timeline = {tech: data.get("years", [1850]) for tech, data in struct.items()}
     
     # Calculate what tech levels everyone gets based on the Start Year
     baseline_tech = {}

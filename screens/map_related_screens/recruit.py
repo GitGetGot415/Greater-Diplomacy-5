@@ -18,7 +18,9 @@ class Recruit_Screen(GameState):
         self.map_screen = None
         self.cancel_hitboxes = []
         
-        self.unit_library = self.load_unit_data()
+        # Load both libraries generically
+        self.unit_library = self.load_json('data/json/unit_data.json')
+        self.tech_tree = self.load_json('data/json/research_template.json') # <-- NEW
         
         self.infantry_groups, self.tank_groups, self.navy_groups = self.get_ordered_groups()
         self.active_bars = []
@@ -26,6 +28,11 @@ class Recruit_Screen(GameState):
         self.infantry_start_y = self.infantry_end_y = 0
         self.tank_start_y = self.tank_end_y = 0
         self.navy_start_y = self.navy_end_y = 0
+
+    def load_json(self, path):
+        if os.path.exists(path):
+            with open(path, 'r') as f: return json.load(f)
+        return {}
 
     def load_unit_data(self):
         path = 'data/json/unit_data.json'
@@ -79,7 +86,8 @@ class Recruit_Screen(GameState):
 
                 # --- NEW: Infantry & Cavalry Processing ---
                 if tech_key == "infantry_type":
-                    inf_years = [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948]
+                    # Pull the array directly from the JSON template
+                    inf_years = self.tech_tree.get("infantry_type", {}).get("years", [1850])
                     if researched_lvl > 0:
                         year = inf_years[min(researched_lvl - 1, len(inf_years)-1)]
                         highest_unlocked = f"Infantry Type {year}"
