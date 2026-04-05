@@ -1,6 +1,8 @@
 import pygame
 import random
 import math
+import os
+import json
 from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler, editor_menus
 from data import save_map
@@ -347,7 +349,18 @@ class Map(GameState):
                     if n_id in unassigned_land: frontiers[nation].append(n_id)
 
         # --- Step C: Tech & Building Assignment ---
-        # Full mapping of all techs to their historical unlock years
+        
+        # 1. Load the full baseline template so nobody is missing keys
+        template_path = "data/json/research_template.json"
+        res_template = {}
+        if os.path.exists(template_path):
+            with open(template_path, "r") as f:
+                struct = json.load(f)
+                res_template = {tech: 0 for tech in struct.keys()}
+                if "carrack" in res_template: res_template["carrack"] = 1
+                if "infantry_type" in res_template: res_template["infantry_type"] = 1
+                if "cavalry" in res_template: res_template["cavalry"] = 1
+
         tech_timeline = {
             # Infantry & Cavalry
             "infantry_type": [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948],
@@ -390,6 +403,13 @@ class Map(GameState):
         for nation in active_nations:
             if "research" not in self.nation_data[nation]:
                 self.nation_data[nation]["research"] = {}
+            
+            # First, lay down the foundational template so every key exists
+            for k, v in res_template.items():
+                if k not in self.nation_data[nation]["research"]:
+                    self.nation_data[nation]["research"][k] = v
+            
+            # Then, overwrite with the calculated timeline tech levels
             self.nation_data[nation]["research"].update(baseline_tech)
 
         # Determine which buildings are legally allowed to spawn
@@ -491,6 +511,16 @@ class Map(GameState):
                     updated_count += 1
                 if "name" in data:
                     self.nation_data[country]["name"] = data["name"]
+
+                # --- SYNC RESEARCH ---
+                # This ensures the active map inherits any new tech you added 
+                # to the JSON without deleting existing research progress.
+                if "research" in data:
+                    current_res = self.nation_data[country].setdefault("research", {})
+                    for tech_key, start_val in data["research"].items():
+                        if tech_key not in current_res:
+                            current_res[tech_key] = start_val
+                            updated_count += 1
                 
         self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
         self.refresh_political_map()

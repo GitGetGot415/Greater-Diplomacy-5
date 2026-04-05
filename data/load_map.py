@@ -36,12 +36,25 @@ def load_map_assets(self, load_path):
                 save_meta = json.load(f)
 
     # --- 3. Load Nation Data (The Critical Fix) ---
-    # We load the dictionary FIRST, then extract player info
+    base_nation_data = country_io.load_all_country_data()
+
     if save_meta and "nation_data" in save_meta:
         self.nation_data = save_meta["nation_data"]
+        
+        # SYNC FIX: Merge any missing research keys from the base template 
+        # so old map saves instantly get the updated tech tree.
+        for country, base_data in base_nation_data.items():
+            if country not in self.nation_data:
+                self.nation_data[country] = base_data
+            else:
+                if "research" in base_data:
+                    current_res = self.nation_data[country].setdefault("research", {})
+                    for tech_key, tech_val in base_data["research"].items():
+                        if tech_key not in current_res:
+                            current_res[tech_key] = tech_val
     else:
         # Fallback to default starting data
-        self.nation_data = country_io.load_all_country_data()
+        self.nation_data = base_nation_data
 
     # Update visual colors from the loaded data
     self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
