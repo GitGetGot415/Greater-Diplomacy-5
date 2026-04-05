@@ -1,7 +1,8 @@
 import pygame
 import json
 import os
-from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
+from gameState import GameState
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts

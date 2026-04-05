@@ -1,7 +1,8 @@
 import pygame
 import random
 import math
-from gameState import GameState, SCREEN_WIDTH, SCREEN_HEIGHT
+from gameState import GameState
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler, editor_menus
 from data import save_map, load_map
 from map_functions.logic import (

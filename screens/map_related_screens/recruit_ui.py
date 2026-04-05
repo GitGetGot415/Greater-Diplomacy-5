@@ -1,6 +1,5 @@
-# screens/map_related_screens/recruit_ui.py
 import pygame
-from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering.font_manager import fonts
 
 def draw_recruitment_overlay(surface, target_province):

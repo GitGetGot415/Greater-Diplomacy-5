@@ -1,5 +1,5 @@
 import pygame
-from gameState import SCREEN_WIDTH
+from data.constants import SCREEN_WIDTH
 
 def draw_province_select(self, surface):
     cx, cy = self.selected_province["center"]

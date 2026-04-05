@@ -1,7 +1,7 @@
 import pygame
 from map_functions.rendering.font_manager import fonts # <-- Import the manager
 import ui_elements
-import gameState as g
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from screens.load_game import Load_Game
 from screens.map import Map
 from screens.menu import Menu
@@ -31,7 +31,7 @@ class Controller:
         # font_path = "assets/fonts/hemi head bd it.otf"
         fonts.init_fonts(font_path)
 
-        self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         
         # Load the sound into the ui_elements module
         try:
@@ -44,7 +44,7 @@ class Controller:
         except:
             print("Warning: slider.wav not found in assets folder")
 
-        self.screen = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         
         # 0. Load symbols
         symbol_loader.load_symbols()

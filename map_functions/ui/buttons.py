@@ -1,6 +1,6 @@
 # map_functions/ui/buttons.py
 from ui_elements import Button
-from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering import symbol_loader
 from map_functions.ui.minimap import UI_LEFT_OFFSET
 

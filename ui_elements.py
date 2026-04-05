@@ -1,5 +1,5 @@
 import pygame
-import gameState as g
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering.font_manager import fonts # <-- Import here
 
 # --- Presets ---
@@ -47,8 +47,8 @@ def parse_pos(val, limit, size):
 class Button:
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True):
         self.width, self.height = SIZES.get(size_preset, (200, 50))
-        final_x = parse_pos(x, g.SCREEN_WIDTH, self.width)
-        final_y = parse_pos(y, g.SCREEN_HEIGHT, self.height)
+        final_x = parse_pos(x, SCREEN_WIDTH, self.width)
+        final_y = parse_pos(y, SCREEN_HEIGHT, self.height)
         self.rect = pygame.Rect(final_x, final_y, self.width, self.height)
         
         self.color, self.hover_color = COLORS.get(color_preset, COLORS["grey"])

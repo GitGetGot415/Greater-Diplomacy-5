@@ -16,3 +16,7 @@ VISUAL_WATER_MAPPING = {
 
 # Handy list since you check if terrain is water in several movement/combat files
 WATER_TERRAINS = ["ocean", "coastal_sea", "inland_sea", "lakes"]
+
+# Width and Height
+SCREEN_WIDTH = 1600
+SCREEN_HEIGHT = 900

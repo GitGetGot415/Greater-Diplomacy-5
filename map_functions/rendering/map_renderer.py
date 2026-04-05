@@ -2,8 +2,8 @@ import pygame
 from map_functions.rendering import hover_renderer, province_select, overlay_renderer
 from map_functions.ui import minimap, tooltip
 from map_functions.ui import ui_info_popup as unit_info_popup
-from gameState import SCREEN_WIDTH, SCREEN_HEIGHT
-from map_functions.rendering.font_manager import fonts # <-- Import the manager
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from map_functions.rendering.font_manager import fonts
 
 def draw_map_screen(self, surface):
     # --- LAYER 1: THE BASE MAP ---

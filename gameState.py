@@ -1,9 +1,5 @@
 import pygame
 
-# In gameState.py
-SCREEN_WIDTH = 1600
-SCREEN_HEIGHT = 900
-
 # Default Keybinds
 DEFAULT_KEYS = {
     "BACK": pygame.K_ESCAPE,
