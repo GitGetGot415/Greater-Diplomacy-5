@@ -3,10 +3,10 @@ import os
 import math
 from map_functions.logic import diplomacy_logic
 from map_functions.logic import edit_province_ownership
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN
 
 def process_next_turn(self):
-    days_to_advance = 5
+    days_to_advance = DAYS_PER_TURN
     self.time_manager.process_time(days_to_advance)
     
     diplomacy_logic.process_diplomacy_turn(self)

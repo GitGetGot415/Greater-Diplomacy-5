@@ -1,6 +1,8 @@
+from data.constants import DAYS_PER_TURN
+
 class TimeHandler:
-    def __init__(self, start_year=100):
-        self.day = 5
+    def __init__(self, start_year=1850):
+        self.day = DAYS_PER_TURN
         self.month_index = 0
         self.year = start_year
         
