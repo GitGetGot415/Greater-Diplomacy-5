@@ -12,6 +12,7 @@ class Settings(GameState):
         
         # Grab the volume that was loaded in main.py
         self.volume = self.controller.volume 
+        self.num_players = getattr(self.controller, 'num_players', 1)
         self.fullscreen = False
         self.listening_for = None
         
@@ -28,6 +29,7 @@ class Settings(GameState):
             Button(50, 50, "small", "red", "Back", self.go_back),
             Button("centered", "centered", "medium", "blue", "Toggle Fullscreen", self.toggle_full),
             Slider(300, 300, 200, "Volume", self.volume, self.set_volume),
+            Slider(300, 400, 200, f"Players: {self.num_players}", (self.num_players - 1) / 7.0, self.set_players),
             Button("centered", "centered - 100", "large", "grey", back_btn_text, self.start_listening_back),
             Button("centered", "centered - 200", "medium", "blue", "Reset Keybinds", self.reset_defaults)
         ]
@@ -49,9 +51,14 @@ class Settings(GameState):
             self.listening_for = None
             self.refresh_ui()
 
+    def set_players(self, val):
+        self.num_players = 1 + int(val * 7)
+        self.controller.num_players = self.num_players
+        self.elements[3].text = f"Players: {self.num_players}" # Updates slider text
+
     def save_and_go_back(self):
-        # Save both keybinds and volume when leaving settings
-        keybind_io.save_settings(self.controller.keybinds, self.volume)
+        # Save all configs
+        keybind_io.save_settings(self.controller.keybinds, self.volume, self.num_players)
         self.next_state = "MENU"
         self.done = True
 

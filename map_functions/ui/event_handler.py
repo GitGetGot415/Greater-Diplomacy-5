@@ -6,6 +6,19 @@ from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
 
+    # --- HOTSEAT MULTIPLAYER HIJACK ---
+    if getattr(self, 'show_player_ready_screen', False):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if hasattr(self, 'ready_btn_rect') and self.ready_btn_rect.collidepoint(mx, my):
+                self.show_player_ready_screen = False
+                
+                # CRITICAL: Re-bake the relations/cores from the perspective of the new player!
+                self.refresh_relations_map() 
+                self.refresh_political_map() 
+                
+                self.show_feedback(f"Turn started for {self.player_country}")
+        return # Block all other map events!
+        
     # NEW: Confirmation Logic Hijack
     if getattr(self, 'show_exit_confirmation', False):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

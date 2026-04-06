@@ -63,6 +63,17 @@ def load_map_assets(self, load_path):
     # --- 4. Set Player/Map Properties ---
     if save_meta:
         self.player_country = save_meta.get("player_country", "None")
+        
+        # --- HOTSEAT FIX ---
+        # If we are in selection mode (new scenario/random map), we MUST start with an empty list
+        if getattr(self, 'selection_mode', False):
+            self.active_players = []
+        else:
+            # If loading a save, get the active players. Prevent ["None"] bug from older saves.
+            loaded_players = save_meta.get("active_players", [self.player_country])
+            self.active_players = [] if loaded_players == ["None"] else loaded_players
+            
+        self.current_player_index = save_meta.get("current_player_index", 0)
         self.loop_map = save_meta.get("loop_map", False)
         self.default_research = save_meta.get("default_research", None) # <-- ADDED THIS
         # Time
@@ -71,6 +82,8 @@ def load_map_assets(self, load_path):
         self.time_manager.month_index = save_meta["date"]["month"]
     else:
         self.player_country = "None"
+        self.active_players = []
+        self.current_player_index = 0
         self.loop_map = True
         self.default_research = None # <-- ADDED THIS
         self.time_manager = TimeHandler(start_year=1850)

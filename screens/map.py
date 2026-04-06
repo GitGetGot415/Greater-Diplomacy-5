@@ -19,8 +19,13 @@ from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_COR
 from map_functions.rendering.font_manager import fonts
 
 class Map(GameState):
-    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None):
+    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, num_players=1):
         super().__init__()
+
+        self.num_players = num_players
+        self.active_players = getattr(self, 'active_players', []) # Usually empty on boot unless loaded from save
+        self.current_player_index = getattr(self, 'current_player_index', 0)
+        self.show_player_ready_screen = False
 
         self.brush_building = "None" 
         self.brush_unit = "None"    
@@ -146,21 +151,28 @@ class Map(GameState):
         else:
             self.show_feedback("Cannot select unowned or non-playable territory")
 
+    # 2. UPDATE confirm logic to loop until all players are picked
     def confirm_player_country(self):
         if self.pending_selection:
-            self.player_country = self.pending_selection
-            self.selection_mode = False
-            self.pending_selection = None
+            self.active_players.append(self.pending_selection)
             
             self.selected_province = None 
             self.hovered_province = None
             self.hover_glow_surf = None
             
-            self.show_feedback(f"Now playing as {self.player_country}")
-            buttons.render_buttons(self)
-
-            # yeah don't want this to not be rendered
-            self.refresh_relations_map()
+            if len(self.active_players) < self.num_players:
+                self.show_feedback(f"Player {len(self.active_players) + 1}, pick a country!")
+                self.pending_selection = None
+            else:
+                # Everyone picked, start with Player 1
+                self.current_player_index = 0
+                self.player_country = self.active_players[0]
+                self.selection_mode = False
+                self.pending_selection = None
+                
+                self.show_feedback(f"Now playing as {self.player_country}")
+                buttons.render_buttons(self)
+                self.refresh_relations_map()
             
     def cancel_selection(self):
         self.pending_selection = None
@@ -253,8 +265,24 @@ class Map(GameState):
     def reset_view(self): 
         self.camera.target_zoom, self.camera.target_pos = self.min_zoom, pygame.Vector2(0, 0)
 
+    # 3. INTERCEPT NEXT TURN
     def advance_time(self):
-        turn_processor.process_next_turn(self)
+        if hasattr(self, 'active_players') and len(self.active_players) > 1:
+            self.current_player_index += 1
+            
+            if self.current_player_index < len(self.active_players):
+                # Next player's turn to issue orders
+                self.player_country = self.active_players[self.current_player_index]
+                self.show_player_ready_screen = True
+            else:
+                # All players have gone, loop back to player 1 and actually process the turn!
+                self.current_player_index = 0
+                self.player_country = self.active_players[0]
+                turn_processor.process_next_turn(self)
+                self.show_player_ready_screen = True
+        else:
+            # Singleplayer bypass
+            turn_processor.process_next_turn(self)
 
     def show_feedback(self, text): 
         self.feedback_text, self.feedback_timer = text, pygame.time.get_ticks()
@@ -570,6 +598,12 @@ class Map(GameState):
     # --- Pygame Core Loop Updates ---
     def update(self):
         self.camera.update(self, SCREEN_HEIGHT)
+
+        # NEW: Prevent UI drawing if ready screen is active
+        if getattr(self, 'show_player_ready_screen', False):
+            for el in self.elements:
+                el.visible = False
+            return
 
         # --- NEW: DYNAMIC OCEAN COLOR ---
         # Calculate zoom progress (0.0 when fully zoomed out, 1.0 when fully zoomed in)

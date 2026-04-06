@@ -30,7 +30,9 @@ def save_map_data(self, save_name=None):
         },
         "loop_map": self.loop_map,
         "player_country": self.player_country,
-        "default_research": getattr(self, "default_research", None),  # <-- ADDED THIS
+        "active_players": getattr(self, "active_players", [self.player_country]),
+        "current_player_index": getattr(self, "current_player_index", 0),
+        "default_research": getattr(self, "default_research", None),
         "nation_data": self.nation_data,
         "provinces": {}
     }

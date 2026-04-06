@@ -55,8 +55,8 @@ class Controller:
             "BACK": pygame.K_ESCAPE,
         }
 
-        # 2. Load settings (Keybinds & Volume)
-        self.keybinds, self.volume = keybind_io.load_settings(default_keys, 0.5)
+        # 2. Load settings (Keybinds, Volume, & Players)
+        self.keybinds, self.volume, self.num_players = keybind_io.load_settings(default_keys, 0.5)
 
         # 3. Apply volume to global sounds on boot
         if ui_elements.click_sound:
@@ -109,15 +109,13 @@ class Controller:
         # 2. Map Persistence
         if next_state_name == "MAP":
             if previous_state == self.states["RANDOM_SETUP"]:
-                # Pass the settings dict from the setup screen to the map
-                self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings)
+                self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
             
             elif hasattr(previous_state, 'selected_save_path'):
                 path = previous_state.selected_save_path
                 
                 if path == "RANDOM":
-                    # Pass a new flag called is_random
-                    self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True)
+                    self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True, num_players=self.num_players)
                 else:
                     is_scen = "scenarios" in path
                     
@@ -125,11 +123,10 @@ class Controller:
                     # Check if we just came from the Map Editor selection screen
                     is_map_editor = (previous_state == self.states["SELECT_BASE_MAP"])
                     
-                    # Pass the force_editor flag to the Map class
-                    self.states["MAP"] = Map(load_path=path, is_scenario=is_scen, force_editor=is_map_editor)
+                    self.states["MAP"] = Map(load_path=path, is_scenario=is_scen, force_editor=is_map_editor, num_players=self.num_players)
                     
             elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
-                self.states["MAP"] = Map()
+                self.states["MAP"] = Map(num_players=self.num_players)
 
         # 3. Load Game Refresh
         if next_state_name == "LOAD_GAME":

@@ -6,8 +6,24 @@ from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering.font_manager import fonts
 
 def draw_map_screen(self, surface):
+    # --- HOTSEAT MULTIPLAYER OVERRIDE ---
+    if getattr(self, 'show_player_ready_screen', False):
+        surface.fill((10, 10, 15)) # Deep black/blue
+        
+        font = fonts.get("title")
+        txt = font.render(f"Player {self.current_player_index + 1} ({self.player_country.title()}) Ready?", True, (255, 255, 255))
+        surface.blit(txt, txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 - 50)))
+
+        btn_font = fonts.get("heading2")
+        btn_txt = btn_font.render("Click here to start turn", True, (150, 255, 150))
+        self.ready_btn_rect = btn_txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 + 50))
+        surface.blit(btn_txt, self.ready_btn_rect)
+        
+        return # Skip drawing the map and UI completely!
+        
     # --- LAYER 1: THE BASE MAP ---
     current_base = self.active_map
+    # ... rest of function ...
 
     vw = surface.get_width() / self.camera.zoom
     vh = (surface.get_height() - self.total_ui_h) / self.camera.zoom
