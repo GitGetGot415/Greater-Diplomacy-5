@@ -7,6 +7,10 @@ import json
 
 class Random_Setup(GameState):
     def __init__(self):
+
+        # Inside __init__, add a variable to track if we are doing a procedural world
+        self.procedural_world = False
+
         super().__init__()
         self.bg_color = (20, 50, 20)
         
@@ -41,39 +45,39 @@ class Random_Setup(GameState):
         self.map_index = 1
 
     def refresh_ui(self):
-        # CRITICAL: We keep the Sliders at Index 1 and 2 so the math below doesn't break
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.go_back),
             
-            # Sliders (Moved down)
+            # Sliders 
             Slider((SCREEN_WIDTH/2) - 100, 500, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
             Slider((SCREEN_WIDTH/2) - 100, 600, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
             
             # Controls
             Button("centered", 700, "medium", "grey", "Reset Defaults", self.do_reset),
-            Button("centered", 800, "large", "green", "START GAME", self.start_game)
+            Button("centered", 800, "large", "green", "START GAME", self.start_game),
+            
+            # --- NEW: The Procedural Generation Button ---
+            Button(100, 100, "large", "orange" if self.procedural_world else "grey", 
+                "RANDOM NEW WORLD (PROCEDURAL)", self.toggle_procedural)
         ]
         
-        # --- Map Selection Grid ---
-        if not self.available_maps:
-            self.elements.append(Button("centered", 200, "large", "grey", "No Maps Found", lambda: None))
-        else:
-            # Center the grid automatically based on how many maps there are
-            cols = min(5, len(self.available_maps))
-            grid_width = cols * 220
-            start_x = (SCREEN_WIDTH - grid_width) // 2 + 10 
-            start_y = 180
-            
-            for i, map_name in enumerate(self.available_maps):
-                col = i % cols
-                row = i // cols
-                btn_x = start_x + (col * 220)
-                btn_y = start_y + (row * 60)
+        # Hide the map selection grid if procedural world is checked
+        if not self.procedural_world:
+            if not self.available_maps:
+                self.elements.append(Button("centered", 200, "large", "grey", "No Maps Found", lambda: None))
+            else:
+                cols = min(5, len(self.available_maps))
+                grid_width = cols * 220
+                start_x = (SCREEN_WIDTH - grid_width) // 2 + 10 
+                start_y = 180
                 
-                btn = Button(btn_x, btn_y, "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
-                if i == self.map_index:
-                    btn.is_selected = True  # Activates the gold highlight!
-                self.elements.append(btn)
+                for i, map_name in enumerate(self.available_maps):
+                    col = i % cols
+                    row = i // cols
+                    btn = Button(start_x + (col * 220), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
+                    if i == self.map_index:
+                        btn.is_selected = True 
+                    self.elements.append(btn)
 
     def select_map(self, idx):
         self.map_index = idx
@@ -102,12 +106,19 @@ class Random_Setup(GameState):
         map_title = fonts.get("heading2").render("Select Base Map", True, (200, 200, 200))
         surface.blit(map_title, (SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
 
+    # Add the toggle function
+    def toggle_procedural(self):
+        self.procedural_world = not self.procedural_world
+        self.refresh_ui()
+
+    # Modify start_game to pass the flag
     def start_game(self):
-        if not self.available_maps: return
+        if not self.procedural_world and not self.available_maps: return
         
-        # Package settings to pass to the Map state
+        selected_path = "PROCEDURAL" if self.procedural_world else os.path.join("base_maps", self.available_maps[self.map_index])
+        
         self.random_settings = {
-            "map_path": os.path.join("base_maps", self.available_maps[self.map_index]),
+            "map_path": selected_path,
             "countries": self.current_countries,
             "year": self.current_year
         }

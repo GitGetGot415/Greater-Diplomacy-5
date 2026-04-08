@@ -6,6 +6,23 @@ from data.io import country_io
 from data.constants import WATER_MAPPING
 
 def load_map_assets(self, load_path):
+    # --- PROCEDURAL INTERCEPT ---
+    if load_path == "PROCEDURAL":
+        from map_functions.logic import procedural_map_generator
+        procedural_map_generator.generate_new_world(self)
+        
+        # After generating the base geography, setup standard variables
+        self.player_country = "None"
+        self.active_players = []
+        self.current_player_index = 0
+        self.loop_map = True
+        self.time_manager = TimeHandler(start_year=1850)
+        
+        # Load the base nation templates so they are ready for the randomizer
+        self.nation_data = country_io.load_all_country_data()
+        self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
+        return # Skip the rest of the normal loading process!
+    
     # --- 1. Image Assets ---
     if load_path:
         self.terrain_map = pygame.image.load(os.path.join(load_path, "terrain.png")).convert()
