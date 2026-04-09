@@ -21,7 +21,7 @@ def randomize_all_provinces(map_screen, settings):
         prov.update({"owner": "Unclaimed", "cores": [], "resources": {}, "buildings": [], "units": []})
 
     # --- Step 1: Island Filtering (Connected Components) ---
-    # We find all landmasses and only keep those with 3 or more connected provinces.
+    # We find all landmasses and only keep those with 4 or more connected provinces.
     valid_land_provinces = []
     visited = set()
     land_ids = set(p["id"] for p in land_provinces)
@@ -42,7 +42,7 @@ def randomize_all_provinces(map_screen, settings):
                     visited.add(n_id)
                     queue.append(n_id)
 
-        if len(comp) >= 3:
+        if len(comp) >= 4:
             valid_land_provinces.extend(comp)
             
     if not valid_land_provinces: return
@@ -97,6 +97,27 @@ def randomize_all_provinces(map_screen, settings):
             unassigned_land.remove(target_id)
             for n_id in map_screen.id_to_province[target_id].get("neighbors", []):
                 if n_id in unassigned_land: frontiers[nation].append(n_id)
+
+    # --- Step B.5: Assign Bordering Cores ---
+    for nation in active_nations:
+        # Get all land provinces this nation ended up owning
+        owned_provs = [p for p in valid_land_provinces if p.get("owner") == nation]
+        
+        for prov in owned_provs:
+            # Check every neighbor of the owned province
+            for n_id in prov.get("neighbors", []):
+                n_prov = map_screen.id_to_province.get(n_id)
+                
+                if n_prov:
+                    # Ignore water tiles
+                    if n_prov.get("terrain", "") in water_terrains:
+                        continue
+                    
+                    # If this neighbor belongs to someone else (or is unclaimed)
+                    if n_prov.get("owner") != nation:
+                        # Add a core for our nation if it doesn't have one already
+                        if nation not in n_prov.setdefault("cores", []):
+                            n_prov["cores"].append(nation)
 
     # --- Step C: Tech & Building Assignment ---
     
