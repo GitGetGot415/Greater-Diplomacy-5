@@ -83,11 +83,13 @@ class Construction_Screen(GameState):
                     is_building = any(q.get("group") == data["group"] for q in queue)
                     req_tech, req_lvl = self.get_required_tech(target)
 
+                    # --- CHANGED LOGIC HERE ---
+                    # If we don't have the tech, skip this group entirely
                     if req_tech and player_research.get(req_tech, 0) < req_lvl:
-                        btn_txt = f"Requires {req_tech.replace('_', ' ').title()} {req_lvl}"
-                        cb = lambda: None
-                        btn_color = "grey"
-                    elif is_building:
+                        continue 
+
+                    # We no longer need the 'elif', just use a standard 'if'
+                    if is_building:
                         btn_txt = "Building..."
                         cb = lambda: None
                         btn_color = "grey"
@@ -95,6 +97,7 @@ class Construction_Screen(GameState):
                         btn_txt = target
                         cb = lambda t=target: self.start_construction(t)
                         btn_color = "purple" if is_fuel else "orange"
+                    # --------------------------
 
                     btn = Button(x_pos, y_offset, "medium", btn_color, btn_txt, cb)
                     self.elements.append(btn)
