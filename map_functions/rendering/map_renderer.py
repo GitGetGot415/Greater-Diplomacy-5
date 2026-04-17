@@ -1,6 +1,6 @@
 import pygame
 from map_functions.rendering import hover_renderer, province_select, overlay_renderer
-from map_functions.ui import minimap, tooltip
+from map_functions.ui import minimap, tooltip, flag_renderer, top_bar_text, resource_hud
 from map_functions.ui import ui_info_popup as unit_info_popup
 from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.rendering.font_manager import fonts
@@ -180,82 +180,12 @@ def draw_map_screen(self, surface):
         pygame.draw.rect(surface, (80, 80, 40), self.ui_background_rect)
     
     if not self.selection_mode:
-        # --- DRAW NATION FLAG ---
-        player_data = self.nation_data.get(self.player_country, {})
-        flag_str = player_data.get("flag_data")
-        if flag_str and not getattr(self, 'hide_top_info', False):
-            try:
-                import base64
-                img_bytes = base64.b64decode(flag_str)
-                # this has to be the exact width and length of the flag (60x40 in this case)
-                flag_surf = pygame.image.fromstring(img_bytes, (60, 40), "RGB")
-
-                # Scale it up
-                flag_surf = pygame.transform.scale(flag_surf, (120, 80))
-                
-                # Draw the flag at (20, 20) so it's vertically centered in the 60px top bar
-                surface.blit(flag_surf, (20, 20))
-                pygame.draw.rect(surface, (200, 200, 200), (20, 20, 120, 80), 1) # Optional border
-            except Exception as e:
-                pass # If parsing fails, just skip drawing
-        # ------------------------
-
-        if not getattr(self, 'hide_top_info', False):
-            date_surf = self.font.render(self.time_manager.get_date_string(), True, (255, 255, 255))
-            surface.blit(date_surf, (SCREEN_WIDTH // 2 - date_surf.get_width() // 2, 20))
-
-        # Check if we should hide the HUD (active if a province is selected or explicitly hidden)
-        # hud in this case is the resource stuff
-        hide_hud = getattr(self, 'hide_resource_hud', False) or self.is_editor
-        # or self.selected_province
+        # Call our clean, separated functions instead!
+        flag_renderer.draw_flag(self, surface)
+        top_bar_text.draw_top_text(self, surface)
+        resource_hud.draw_bottom_text(self, surface)
         
-        if not hide_hud:
-            # --- NEW CLEAN RESOURCE HUD WITH NET INCOME ---
-            hud_y = SCREEN_HEIGHT - 40
-            
-            if not hasattr(self, 'econ_cache_time') or pygame.time.get_ticks() - getattr(self, 'econ_cache_time', 0) > 1000:
-                self.econ_cache = self.get_player_economy_projections()
-                self.econ_cache_time = pygame.time.get_ticks()
-                
-            # Safely unpack the 3-length tuple
-            cached_data = getattr(self, 'econ_cache', None)
-            if cached_data and len(cached_data) == 3:
-                total_inc, total_upkeep, _ = cached_data
-            else:
-                total_inc = {"manpower":0, "materials":0, "fuel":0}
-                total_upkeep = {"manpower":0, "materials":0, "fuel":0}
-
-            def fmt_net(inc, exp):
-                net = int(inc - exp)
-                return f"+{net}" if net >= 0 else str(net)
-
-            resources = [
-                (f"Manpower: {int(self.player_manpower)} ({fmt_net(total_inc['manpower'], total_upkeep['manpower'])})", (100, 200, 255)),
-                (f"Materials: {int(self.player_materials)} ({fmt_net(total_inc['materials'], total_upkeep['materials'])})", (180, 180, 180)),
-                (f"Fuel: {int(self.player_fuel)} ({fmt_net(total_inc['fuel'], total_upkeep['fuel'])})", (200, 100, 255))
-            ]
-            
-            start_x = 250
-            spacing = 200
-            
-            bg_width = (len(resources) * spacing) - 40
-            bg_surf = pygame.Surface((bg_width, 30), pygame.SRCALPHA)
-            bg_surf.fill((0, 0, 0, 200))
-            
-            bg_rect = pygame.Rect(start_x - 15, hud_y - 5, bg_width, 30)
-            surface.blit(bg_surf, bg_rect.topleft)
-            pygame.draw.rect(surface, (100, 100, 100), bg_rect, 1) 
-
-            for i, (text, color) in enumerate(resources):
-                surface.blit(self.font.render(text, True, color), (start_x + (i * spacing), hud_y))
-
-        # Check flag before drawing "Playing as" text
-        if not getattr(self, 'hide_top_info', False):
-            player_display = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
-            name_surf = self.font.render(f"{player_display.title()}", True, (200, 200, 200))
-            # surface.blit(name_surf, (surface.get_width() - name_surf.get_width() - 220, 20))
-            surface.blit(name_surf, (200, 20))
-        
+        # Note: Sidebar info and minimap logic goes below here just like before
         if self.selected_province: 
             from map_functions.ui import sidebar_info
             sidebar_info.draw_sidebar_info(self, surface)
