@@ -70,11 +70,11 @@ def render_buttons(self):
                 # Change the Y coordinate from 10 to SCREEN_HEIGHT - 50
                 Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "purple", "Next Turn", self.advance_time),
                 # Research
-                Button(20, 220, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
+                Button(20, 120, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
                 # Save
                 Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
                 # Edit Nation
-                Button(20, 120, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
+                Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
                 
                 # --- NEW BUTTON ADDED HERE ---
                 Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)

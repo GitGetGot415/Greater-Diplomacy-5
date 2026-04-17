@@ -234,7 +234,7 @@ def draw_map_screen(self, surface):
     if self.feedback_text and pygame.time.get_ticks() - self.feedback_timer < 2000:
         tsurf = self.font.render(self.feedback_text, True, (0, 255, 0))
         # Change SCREEN_HEIGHT - 40 to 20
-        surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 1120, 20))
+        surface.blit(tsurf, (surface.get_width() - tsurf.get_width() - 1120, 220))
 
     # Check flag before drawing the tooltip
     # this is the stuff that makes it so that if you select a province you don't display the tooltip

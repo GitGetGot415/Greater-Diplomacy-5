@@ -15,5 +15,5 @@ def draw_top_text(map_screen, surface):
     player_display = map_screen.nation_data.get(map_screen.player_country, {}).get("name", map_screen.player_country)
     name_surf = map_screen.font.render(f"{player_display.title()}", True, (200, 200, 200))
     
-    # Position it (Adjust X here if you want it further right)
-    surface.blit(name_surf, (200, 20))
+    # Position it
+    surface.blit(name_surf, (350, 20))
