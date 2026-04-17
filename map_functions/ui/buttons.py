@@ -12,6 +12,7 @@ def render_buttons(self):
         political_icon = symbol_loader.get_symbol("Flag", 1.5)
         relations_icon = symbol_loader.get_symbol("Heart", 2)
         research_icon = symbol_loader.get_symbol("Research", 2)
+        mail_icon = symbol_loader.get_symbol("Mail", 2)
         save_icon = symbol_loader.get_symbol("Save", 2)
         core_icon = symbol_loader.get_symbol("Star", 1.5) # Using star as a symbol for cores
         # Add a resource icon (falls back to something else if Iron.png fails)
@@ -76,7 +77,7 @@ def render_buttons(self):
                 Button(20, 120, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
                 
                 # --- NEW BUTTON ADDED HERE ---
-                Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages)
+                Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
             ])
     
     self.btn_go_build = Button(1390, 550, "medium", "grey", "Construction", self.open_construction)
