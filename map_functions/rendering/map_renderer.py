@@ -187,7 +187,8 @@ def draw_map_screen(self, surface):
             try:
                 import base64
                 img_bytes = base64.b64decode(flag_str)
-                flag_surf = pygame.image.fromstring(img_bytes, (30, 20), "RGB")
+                # this has to be the exact width and length of the flag (60x40 in this case)
+                flag_surf = pygame.image.fromstring(img_bytes, (60, 40), "RGB")
 
                 # Scale it up
                 flag_surf = pygame.transform.scale(flag_surf, (120, 80))
