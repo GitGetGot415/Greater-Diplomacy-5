@@ -179,6 +179,18 @@ class Map(GameState):
         self.selected_province = None
 
     def deselect_province(self):
+        # --- Auto-save or clear direct message draft on exit ---
+        if self.selected_province:
+            owner = self.selected_province.get("owner")
+            is_foreign = owner != self.player_country and owner in self.nation_data and self.nation_data[owner].get("is_playable")
+            if is_foreign:
+                draft = getattr(self, "mail_draft_text", "").strip()
+                if draft:
+                    diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
+                else:
+                    diplomacy_logic.cancel_text_message(self.nation_data, self.player_country, owner)
+                self.mail_input_active = False
+
         self.selected_province = None
         self.hovered_province = None
         self.hover_glow_surf = None
@@ -318,19 +330,26 @@ class Map(GameState):
             is_foreign = owner != self.player_country and owner in self.nation_data and self.nation_data[owner].get("is_playable")
             if is_foreign:
                 mail_rect = pygame.Rect(1380, 420, 210, 300)
+                
+                # 1. Handle clicking the box to activate/deactivate it
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if mail_rect.collidepoint(event.pos):
                         self.mail_input_active = True
                     else:
                         self.mail_input_active = False
                 
-                if getattr(self, "mail_input_active", False) and event.type == pygame.KEYDOWN:
+                # 2. Handle typing and sending if the box is active
+                elif getattr(self, "mail_input_active", False) and event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_BACKSPACE:
                         self.mail_draft_text = getattr(self, "mail_draft_text", "")[:-1]
                     elif event.key == pygame.K_RETURN:
-                        if getattr(self, "mail_draft_text", "").strip():
-                            msg = diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, self.mail_draft_text)
+                        draft = getattr(self, "mail_draft_text", "").strip()
+                        if draft:
+                            msg = diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
                             self.show_feedback(msg)
+                        else:
+                            diplomacy_logic.cancel_text_message(self.nation_data, self.player_country, owner)
+                            self.show_feedback("Draft cleared.")
                         self.mail_input_active = False
                     else:
                         if len(getattr(self, "mail_draft_text", "")) < 120 and event.unicode.isprintable():
@@ -799,6 +818,12 @@ class Map(GameState):
         for i in range(min(10, len(self.elements))): self.elements[i].visible = True
         self.btn_exit_to_menu.visible = not is_sel
         self.btn_close_info.visible = is_sel
+
+        # --- NEW: Hide Next Turn if in province view ---
+        for el in self.elements:
+            if el.text == "Next Turn":
+                el.visible = not is_sel
+                break
 
         if is_sel:
             owner = self.selected_province.get("owner", "Unclaimed")
