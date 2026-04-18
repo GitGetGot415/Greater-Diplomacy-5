@@ -22,38 +22,6 @@ class Messages_Screen(GameState):
         self.scroll_y = 0
         self.refresh_ui()
 
-    def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
-
-        self.elements.append(Button(200, 20, "medium", "blue" if self.active_tab == "INBOX" else "grey", "Inbox", lambda: self.set_tab("INBOX")))
-        self.elements.append(Button(420, 20, "medium", "blue" if self.active_tab == "COMPOSE" else "grey", "Compose", lambda: self.set_tab("COMPOSE")))
-
-        if self.active_tab == "COMPOSE":
-            y_off = 100
-            
-            # --- THE FIX ---
-            # 1. Scan the map to find who is actually alive right now
-            active_nations = set()
-            for prov in self.map_screen.map_data.values():
-                owner = prov.get("owner")
-                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
-                    active_nations.add(owner)
-            
-            # 2. Filter the playable list to only include living nations
-            playable = [c for c, d in self.map_screen.nation_data.items() 
-                        if d.get("is_playable") and c != self.map_screen.player_country and c in active_nations]
-            # ---------------
-            
-            playable.sort()
-            for i, c in enumerate(playable):
-                x_off = 50 + (i % 5) * 220
-                row_y = y_off + (i // 5) * 60
-                color = "green" if self.selected_recipient == c else "grey"
-                self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
-
-            if self.selected_recipient:
-                self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Send Message", self.send_message))
-
     def set_tab(self, tab):
         self.active_tab = tab
         self.scroll_y = 0
@@ -205,6 +173,98 @@ class Messages_Screen(GameState):
                 x_off = 50 + (i % 5) * 220
                 row_y = y_off + (i // 5) * 60
                 color = "green" if self.selected_recipient == c else "grey"
+                self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
+
+            # DYNAMIC DRAFT BUTTONS
+            if self.selected_recipient:
+                player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+                pending = player_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
+                action = pending.get("action", "") if isinstance(pending, dict) else pending
+                turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+
+                if turns > 0:
+                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))
+                elif isinstance(action, str) and action.startswith("MSG:"):
+                    self.elements.append(Button(SCREEN_WIDTH - 420, SCREEN_HEIGHT - 80, "medium", "orange", "Update Draft", self.send_message))
+                    self.elements.append(Button(SCREEN_WIDTH - 200, SCREEN_HEIGHT - 80, "medium", "red", "Clear Draft", self.clear_draft))
+                elif isinstance(action, str) and action:
+                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Diplomat Busy", lambda: None))
+                else:
+                    self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Queue Message", self.send_message))
+
+    """def refresh_ui(self):
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+
+        self.elements.append(Button(200, 20, "medium", "blue" if self.active_tab == "INBOX" else "grey", "Inbox", lambda: self.set_tab("INBOX")))
+        self.elements.append(Button(420, 20, "medium", "blue" if self.active_tab == "COMPOSE" else "grey", "Compose", lambda: self.set_tab("COMPOSE")))
+
+        if self.active_tab == "COMPOSE":
+            y_off = 100
+            
+            # --- THE FIX ---
+            # 1. Scan the map to find who is actually alive right now
+            active_nations = set()
+            for prov in self.map_screen.map_data.values():
+                owner = prov.get("owner")
+                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                    active_nations.add(owner)
+            
+            # 2. Filter the playable list to only include living nations
+            playable = [c for c, d in self.map_screen.nation_data.items() 
+                        if d.get("is_playable") and c != self.map_screen.player_country and c in active_nations]
+            # ---------------
+            
+            playable.sort()
+            for i, c in enumerate(playable):
+                x_off = 50 + (i % 5) * 220
+                row_y = y_off + (i // 5) * 60
+                color = "green" if self.selected_recipient == c else "grey"
+                self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
+
+            if self.selected_recipient:
+                self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Send Message", self.send_message))"""
+
+    # --- UI Elements Refresh Update ---
+    # Put this at the end of the file to override the default refresh_ui rendering
+    def refresh_ui(self):
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+
+        self.elements.append(Button(200, 20, "medium", "blue" if self.active_tab == "INBOX" else "grey", "Inbox", lambda: self.set_tab("INBOX")))
+        self.elements.append(Button(420, 20, "medium", "blue" if self.active_tab == "COMPOSE" else "grey", "Compose", lambda: self.set_tab("COMPOSE")))
+
+        if self.active_tab == "COMPOSE":
+            y_off = 100
+            
+            # Scan map for living nations
+            active_nations = set()
+            for prov in self.map_screen.map_data.values():
+                owner = prov.get("owner")
+                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                    active_nations.add(owner)
+            
+            playable = [c for c, d in self.map_screen.nation_data.items() 
+                        if d.get("is_playable") and c != self.map_screen.player_country and c in active_nations]
+            
+            playable.sort()
+            
+            # Grab player data once to check for pending messages
+            player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+            
+            for i, c in enumerate(playable):
+                x_off = 50 + (i % 5) * 220
+                row_y = y_off + (i // 5) * 60
+                
+                # Check for pending messages to this country
+                pending = player_data.get("pending_diplomacy", {}).get(c, {})
+                action = pending.get("action", "") if isinstance(pending, dict) else pending
+                
+                if self.selected_recipient == c:
+                    color = "green"
+                elif isinstance(action, str) and action.startswith("MSG:"):
+                    color = "green"
+                else:
+                    color = "grey"
+                    
                 self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
 
             # DYNAMIC DRAFT BUTTONS
