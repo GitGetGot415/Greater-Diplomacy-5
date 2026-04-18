@@ -198,7 +198,8 @@ def handle_map_events(self, event):
         return 
 
     # 6. STANDARD GAME SELECTION
-    if self.selected_province:
+    # Ignore clicks if a province is already selected, or if we are watching AI moves
+    if self.selected_province or getattr(self, 'viewing_ai_moves', False):
         return 
 
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

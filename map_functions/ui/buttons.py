@@ -60,16 +60,25 @@ def render_buttons(self):
             ])
         else:
             # --- NEW: Dynamic Next Turn Button ---
-            next_btn_text = "Resolve Turn" if getattr(self, 'viewing_ai_moves', False) else "Next Turn"
-            next_btn_color = "red" if getattr(self, 'viewing_ai_moves', False) else "purple"
+            viewing_ai = getattr(self, 'viewing_ai_moves', False)
+            next_btn_text = "Resolve Turn" if viewing_ai else "Next Turn"
+            next_btn_color = "red" if viewing_ai else "purple"
             
-            self.elements.extend([
-                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", next_btn_color, next_btn_text, self.advance_time),
-                Button(20, 120, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
-                Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
-                Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
-                Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
-            ])
+            # We ALWAYS want the next/resolve button to appear
+            self.elements.append(
+                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", next_btn_color, next_btn_text, self.advance_time)
+            )
+            
+            # Hide the management tools while the AI is moving
+            if not viewing_ai:
+                self.elements.extend([
+                    Button(20, 120, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
+                    Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
+                    Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
+                    Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
+                ])
+        
+        self.btn_go_recruit = Button(1380, 70, "medium", "green", "Recruit Menu", self.open_recruit)
     
     self.btn_go_recruit = Button(1380, 70, "medium", "green", "Recruit Menu", self.open_recruit)
     self.btn_go_orders = Button(1380, 130, "medium", "blue", "Give Orders", self.open_orders)
