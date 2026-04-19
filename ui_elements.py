@@ -78,7 +78,11 @@ class Button:
         elif is_hovered: current_color = self.hover_color
         
         # 1. Background Gradient & Outline
-        self.draw_gradient_rect(surface, current_color, self.rect)
+        # Check if the button has shading disabled; default to True if the attribute doesn't exist
+        if getattr(self, 'shading', True):
+            self.draw_gradient_rect(surface, current_color, self.rect)
+        else:
+            pygame.draw.rect(surface, current_color, self.rect)
         
         # Apply the highlight color and thickness if the button is selected
         if getattr(self, 'is_selected', False):

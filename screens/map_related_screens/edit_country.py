@@ -58,31 +58,54 @@ class Edit_Country_Screen(GameState):
         # https://smilebasic.com/en/e-manual/manual28/
         self.palette = [
             (0,0,0),            # Black
+            (32,32,32),         # Very Dark Grey
             (64,64,64),         # Dark Grey
-            (96,96,96),         # Dark Grey
+            (96,96,96),         # Darkish Grey
             (128,128,128),      # Grey
             (196,196,196),      # Light Grey
+            (220,220,220),      # Very Light Grey
             (255,255,255),      # White
             
+            (255,96,96),        # Light Red
+            (255,200,20),       # Light Orange
+            (255,255,128),      # Light Yellow
+            (96,255,128),       # Lime
+            (128,255,255),      # Light Indigo
+            (64,64,255),        # Light Blue
+            (200,64,255),       # Light Purple
+            (255,128,255),      # Light Pink
+
             (255,0,0),          # Red
-            #(255,80,8),         # Red-Orange
             (255,160,16),       # Orange
-            #(255,200,20),       # Orange-Yellow
             (255,255,32),       # Yellow
-            
-
             (0,192,0),          # Green
-            #(96,255,128),       # Lime
-            (80,208,255),       # Light Blue
-            (64,64,255),        # Blue
-            
-            (255,96,208),       # Pink
+            (80,200,255),       # Indigo
+            (0,0,255),          # Blue
             (160,32,255),       # Purple
-            (160,128,96),       # Oak Tree
-            (255,208,160),      # White Skin
+            (255,96,208),       # Pink
+            
+            (196,0,0),          # Dark Red
+            (200,120,12),       # Dark Orange
+            (200,200,0),        # Dark Yellow
+            (0,128,0),          # Dark Green
+            (60,160,200),       # Dark Indigo
+            (0,0,196),          # Dark Blue
+            (120,16,200),       # Dark Purple
+            (200,80,160),       # Dark Pink
 
-            (128,0,128),        # Austria-Hungary
-            (139,69,19)         # Brown
+            # (160,128,96),       # Oak Tree
+            # (255,208,160),      # White Skin
+
+            (128,0,0),          # Very Dark Red
+            (160,80,10),        # Brown
+            (128,128,0),        # Very Dark Yellow
+            (0,64,0),           # Very Dark Green
+            (32,128,160),       # Very Dark Indigo
+            (0,0,128),          # Very Dark Blue
+            (80,12,160),        # Very Dark Purple
+            (160,60,120),       # Very Dark Pink
+
+            # (128,0,128),        # Austria-Hungary
         ]
 
     def start_editor(self, map_ref):
@@ -144,24 +167,25 @@ class Edit_Country_Screen(GameState):
         
         # Build Palette Buttons
         for i, color in enumerate(self.palette):
-            colors_per_row = 6
+            colors_per_row = 8
             space_between_colors = 45
             x = right_ui_x + (i % colors_per_row) * space_between_colors
             y = 150 + (i // colors_per_row) * space_between_colors
             btn = Button(x, y, "small_square", "grey", "", lambda c=color: self.set_color(c), show_text=False)
             btn.color = btn.hover_color = color
+            btn.shading = False # <-- Disable the gradient shading for palette buttons
             self.elements.append(btn)
 
         # Tool Selection Buttons
         brush_color = "blue" if self.draw_mode == "BRUSH" else "grey"
         fill_color = "blue" if self.draw_mode == "FILL" else "grey"
         
-        self.elements.append(Button(right_ui_x, 820, "small", brush_color, "Brush", lambda: self.set_tool("BRUSH")))
-        self.elements.append(Button(right_ui_x + 120, 820, "small", fill_color, "Fill", lambda: self.set_tool("FILL")))
+        self.elements.append(Button(right_ui_x, 375, "small_square", brush_color, "Brush", lambda: self.set_tool("BRUSH")))
+        self.elements.append(Button(right_ui_x + 120, 375, "small_square", fill_color, "Fill", lambda: self.set_tool("FILL")))
         
         # Updated Buttons to have both Map Color and Custom Brush Color pickers side-by-side
-        self.elements.append(Button(right_ui_x, 460, "small", "orange", "Map Color", self.pick_map_color))
-        self.elements.append(Button(right_ui_x + 110, 460, "small", "purple", "Brush Color", self.pick_custom_brush_color))
+        self.elements.append(Button(right_ui_x, 550, "small", "orange", "Map Color", self.pick_map_color))
+        self.elements.append(Button(right_ui_x + 300, 375, "small", "purple", "Brush Color", self.pick_custom_brush_color))
 
     def set_color(self, color):
         self.active_color = color
@@ -291,31 +315,35 @@ class Edit_Country_Screen(GameState):
         surface.blit(heading_font.render("Leader Portrait (100x100)", True, (200, 200, 200)), (600, 110))
         
         # Render Palette & Tool Header
-        surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (1180, 110))
+        surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
         
-        # Render Active Color Indicator
-        color_x = 1500
-        pygame.draw.rect(surface, self.active_color, (color_x, 150, 60, 60))
-        pygame.draw.rect(surface, (255, 255, 255), (color_x, 150, 60, 60), 2)
-        surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x - 5, 220))
+        # Render Active Color Indicator ("selected")
+        color_x = 1450
+        color_y = 500
+        pygame.draw.rect(surface, self.active_color, (color_x, color_y, 60, 60))
+        pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
+        surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x - 5, color_y + 70))
 
         # --- NEW: Map Color Preview ---
         # Shifted slightly right to fit cleanly next to the side-by-side buttons
-        surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (1430, 430))
-        pygame.draw.rect(surface, self.new_map_color, (1430, 460, 60, 40))
-        pygame.draw.rect(surface, (255, 255, 255), (1430, 460, 60, 40), 2)
+        map_color_x = 1430
+        map_color_y = 700
+        surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (map_color_x, map_color_y - 30))
+        pygame.draw.rect(surface, self.new_map_color, (map_color_x, map_color_y, 60, 40))
+        pygame.draw.rect(surface, (255, 255, 255), (map_color_x, map_color_y, 60, 40), 2)
 
         # Draw Text Inputs
+        input_box_x = 100
         def draw_input_box(y_pos, label_text, input_state, value):
-            surface.blit(heading_font.render(label_text, True, (200, 200, 200)), (right_ui_x, y_pos - 40))
-            rect = pygame.Rect(right_ui_x, y_pos, 300, 40)
+            surface.blit(heading_font.render(label_text, True, (200, 200, 200)), (input_box_x, y_pos - 40))
+            rect = pygame.Rect(input_box_x, y_pos, 300, 40)
             color = (200, 255, 200) if self.active_input == input_state else (100, 100, 100)
             pygame.draw.rect(surface, color, rect, 2)
-            surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (right_ui_x + 10, y_pos + 10))
+            surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (input_box_x + 10, y_pos + 10))
 
-        draw_input_box(520, "Country Name:", "COUNTRY_NAME", self.country_name)
-        draw_input_box(620, "Leader Name:", "NAME", self.leader_name)
-        draw_input_box(720, "Leader Title:", "TITLE", self.leader_title)
+        draw_input_box(600, "Country Name:", "COUNTRY_NAME", self.country_name)
+        draw_input_box(700, "Leader Name:", "NAME", self.leader_name)
+        draw_input_box(800, "Leader Title:", "TITLE", self.leader_title)
 
     def handle_back_key(self):
         self.exit_to_map()
