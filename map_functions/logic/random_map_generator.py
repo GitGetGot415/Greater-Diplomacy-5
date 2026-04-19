@@ -216,8 +216,9 @@ def randomize_all_provinces(map_screen, settings):
                 prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
                 # cavalry also exists (check if ai knows it can move them at 2x speed)
                 prov.setdefault("units", []).append(generate_unit(nation, "Cavalry"))
-                # carrack (yes these might be summoned on land but that's just to check if the ai knows it can't move it)
-                prov.setdefault("units", []).append(generate_unit(nation, "Carrack"))
+                # carrack (only summon if coastal)
+                if prov.get("is_coastal", False):
+                    prov.setdefault("units", []).append(generate_unit(nation, "Carrack"))
         
         # If the nation randomly got zero factories, guarantee them one + a garrison unit
         if not has_factory:

@@ -144,22 +144,41 @@ def check_for_post_combat_captures(self):
         # Get a list of unique owners of units currently in the tile
         unit_owners = list(set(u["owner"] for u in units))
         
-        # If there's more than one owner present, it's still a contested combat zone
-        if len(unit_owners) > 1:
+        # If the current owner still has units here, they successfully defended it.
+        if current_owner in unit_owners:
             continue
             
-        # There is exactly one nation with units here
-        occupier = unit_owners[0]
-        
-        # If the occupier doesn't own the tile
-        if occupier != current_owner:
-            player_data = self.nation_data.get(occupier, {})
+        # Tally HP for all foreign units on the tile that are eligible to capture it
+        hp_totals = {}
+        for u in units:
+            o = u["owner"]
+            player_data = self.nation_data.get(o, {})
             at_war = current_owner in player_data.get("at_war_with", [])
             is_unclaimed = current_owner in ["Unclaimed", "None", ""]
             
             # Flip ownership if the tile is unclaimed or if they are at war with the owner
             if is_unclaimed or at_war:
-                edit_province_ownership.conquer_province(self, province, occupier)
+                hp_totals[o] = hp_totals.get(o, 0) + u.get("health", 0)
+        
+        if not hp_totals:
+            continue
+
+        # Find the nation(s) with the highest combined HP
+        max_hp = -1
+        top_nations = []
+        for o, hp in hp_totals.items():
+            if hp > max_hp:
+                max_hp = hp
+                top_nations = [o]
+            elif hp == max_hp:
+                top_nations.append(o)
+                
+        # If one clear winner, they take it
+        if len(top_nations) == 1:
+            edit_province_ownership.conquer_province(self, province, top_nations[0])
+        # If there's a tie, it becomes unclaimed
+        elif len(top_nations) > 1:
+            edit_province_ownership.conquer_province(self, province, "Unclaimed")
                 
 def apply_group_damage(total_atk, target_units):
     """Distributes total attack among target units, reduced by their individual defense."""
