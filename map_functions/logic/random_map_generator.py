@@ -214,11 +214,13 @@ def randomize_all_provinces(map_screen, settings):
             if any("Workshop" in b or "Factory" in b or "Refinery" in b for b in bldgs):
                 has_factory = True
                 prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
+
+                # other test summons (do not actually implement)
                 # cavalry also exists (check if ai knows it can move them at 2x speed)
-                prov.setdefault("units", []).append(generate_unit(nation, "Cavalry"))
+                # prov.setdefault("units", []).append(generate_unit(nation, "Cavalry"))
                 # carrack (only summon if coastal)
-                if prov.get("is_coastal", False):
-                    prov.setdefault("units", []).append(generate_unit(nation, "Carrack"))
+                # if prov.get("is_coastal", False):
+                #     prov.setdefault("units", []).append(generate_unit(nation, "Carrack"))
         
         # If the nation randomly got zero factories, guarantee them one + a garrison unit
         if not has_factory:

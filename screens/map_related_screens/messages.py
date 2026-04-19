@@ -100,8 +100,29 @@ class Messages_Screen(GameState):
             else:
                 y_pos = 100 + self.scroll_y
                 for msg in inbox:
-                    if y_pos > 80 and y_pos < SCREEN_HEIGHT:
-                        rect = pygame.Rect(50, y_pos, SCREEN_WIDTH - 100, 80)
+                    # 1. Calculate word wrapping
+                    words = msg['content'].split(" ")
+                    lines = []
+                    current_line = ""
+                    max_width = (SCREEN_WIDTH - 100) - 40 # 40 for text padding
+                    
+                    for word in words:
+                        test_line = current_line + word + " "
+                        if font_small.size(test_line)[0] < max_width:
+                            current_line = test_line
+                        else:
+                            lines.append(current_line)
+                            current_line = word + " "
+                    if current_line:
+                        lines.append(current_line)
+
+                    # 2. Calculate dynamic box height based on number of lines
+                    box_height = 45 + (len(lines) * 20) + 15
+                    box_height = max(80, box_height) # Ensure it's at least 80px tall
+
+                    # 3. Draw if it's on screen
+                    if y_pos + box_height > 80 and y_pos < SCREEN_HEIGHT:
+                        rect = pygame.Rect(50, y_pos, SCREEN_WIDTH - 100, box_height)
                         pygame.draw.rect(surface, (40, 40, 50), rect)
                         pygame.draw.rect(surface, (100, 100, 200), rect, 2)
 
@@ -110,11 +131,16 @@ class Messages_Screen(GameState):
                         else:
                             sender_txt = font_med.render(f"From: {msg['sender']}", True, (200, 200, 255))
 
-                        content_txt = font_small.render(msg['content'], True, (255, 255, 255))
-
                         surface.blit(sender_txt, (rect.x + 20, rect.y + 10))
-                        surface.blit(content_txt, (rect.x + 20, rect.y + 45))
-                    y_pos += 100
+                        
+                        # 4. Render each line of text
+                        ly = rect.y + 45
+                        for l in lines:
+                            surface.blit(font_small.render(l, True, (255, 255, 255)), (rect.x + 20, ly))
+                            ly += 20
+                            
+                    # Move down for the next message box
+                    y_pos += box_height + 20
 
         elif self.active_tab == "COMPOSE":
             title = font_title.render("COMPOSE MESSAGE", True, (255, 255, 255))
