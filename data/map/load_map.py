@@ -36,9 +36,11 @@ def _load_default_images(map_obj):
                 if os.path.exists(p_path): img = pygame.image.load(p_path).convert()
                 elif os.path.exists(d_path): img = pygame.image.load(d_path).convert()
                 else:
-                    img = pygame.Surface((100, 100))
+                    # FIX: Match the 60x60 size used by sidebar_info.py
+                    img = pygame.Surface((60, 60))
                     img.fill((200, 200, 200))
-                img = pygame.transform.scale(img, (100, 100))
+                # FIX: Match the 60x60 size used by sidebar_info.py
+                img = pygame.transform.scale(img, (60, 60))
                 n_data["portrait_data"] = encode_surf_to_b64(img)
             except: pass
 

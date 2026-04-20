@@ -15,7 +15,7 @@ from map_functions.logic import (
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS, WATER_TERRAINS
 from map_functions.rendering.font_manager import fonts
 
 class Map(GameState):
@@ -856,7 +856,7 @@ class Map(GameState):
                 self.btn_go_orders.visible = True
                 if owner == self.player_country:
                     terrain = self.selected_province.get("terrain", "")
-                    is_land = terrain not in ["ocean", "coastal_sea", "inland_sea", "lakes"]
+                    is_land = terrain not in WATER_TERRAINS
                     self.btn_go_build.visible = True
                     self.btn_go_recruit.visible = is_land
 
