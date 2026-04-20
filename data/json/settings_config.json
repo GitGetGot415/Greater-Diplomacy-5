@@ -1,6 +1,7 @@
 {
     "keybinds": {
-        "BACK": "escape"
+        "BACK": "escape",
+        "ORDERS": "q"
     },
     "volume": 1.0,
     "num_players": 1,

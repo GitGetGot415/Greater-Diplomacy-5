@@ -458,6 +458,16 @@ class Map(GameState):
         if self.selected_province:
             self.deselect_province()
 
+    # Add the new handle_orders_key method right underneath it:
+    def handle_orders_key(self):
+        if self.selected_province and not self.selection_mode:
+            owner = self.selected_province.get("owner", "Unclaimed")
+            has_player_units = any(u['owner'] == self.player_country for u in self.selected_province.get("units", []))
+            
+            # Replicate the button visibility condition
+            if owner == self.player_country or has_player_units:
+                self.open_orders()
+
     def additional_draw(self, surface): 
         map_renderer.draw_map_screen(self, surface)
 

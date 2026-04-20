@@ -41,11 +41,15 @@ class Settings(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        back_key_name = pygame.key.name(self.controller.keybinds["BACK"]).upper()
-        
+        back_key_name = pygame.key.name(self.controller.keybinds.get("BACK", pygame.K_ESCAPE)).upper()
         back_btn_text = f"Back Key: {back_key_name}"
         if self.listening_for == "BACK":
             back_btn_text = "Press any key..."
+
+        orders_key_name = pygame.key.name(self.controller.keybinds.get("ORDERS", pygame.K_q)).upper()
+        orders_btn_text = f"Orders Key: {orders_key_name}"
+        if self.listening_for == "ORDERS":
+            orders_btn_text = "Press any key..."
     
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.go_back),
@@ -66,8 +70,9 @@ class Settings(GameState):
         self.elements.extend([
             Slider(300, 420, 200, "Volume", self.volume, self.set_volume),
             Slider(300, 500, 200, f"Players: {self.num_players}", (self.num_players - 1) / 7.0, self.set_players),
-            Button("centered", 600, "large", "grey", back_btn_text, self.start_listening_back),
-            Button("centered", 700, "medium", "blue", "Reset Keybinds", self.reset_defaults)
+            Button("centered", 580, "large", "grey", back_btn_text, lambda: self.start_listening("BACK")),
+            Button("centered", 670, "large", "grey", orders_btn_text, lambda: self.start_listening("ORDERS")),
+            Button("centered", 760, "medium", "blue", "Reset Keybinds", self.reset_defaults)
         ])
 
     def toggle_ai(self):
@@ -76,14 +81,16 @@ class Settings(GameState):
         self.controller.ai_mode = self.ai_mode
         self.refresh_ui()
 
-    def start_listening_back(self):
-        self.listening_for = "BACK"
+    def start_listening(self, action):
+        self.listening_for = action
         self.refresh_ui()
 
     def reset_defaults(self):
-        default_keys = {"BACK": pygame.K_ESCAPE}
+        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q}
         self.controller.keybinds = default_keys
-        keybind_io.save_settings(default_keys, self.volume, self.num_players, self.ai_mode)
+        # Safely fetch api_key to ensure we don't accidentally wipe it during a reset
+        api_key = getattr(self.controller, 'api_key', '')
+        keybind_io.save_settings(default_keys, self.volume, self.num_players, self.ai_mode, api_key)
         self.refresh_ui()
         
     def additional_events(self, event):

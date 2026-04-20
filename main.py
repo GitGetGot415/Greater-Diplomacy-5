@@ -54,6 +54,7 @@ class Controller:
         # 1. Define Hardcoded Defaults
         default_keys = {
             "BACK": pygame.K_ESCAPE,
+            "ORDERS": pygame.K_q
         }
 
         # 2. Load settings (Keybinds, Volume, Players, AI Mode, & API Key)
@@ -149,9 +150,12 @@ class Controller:
                     is_listening = getattr(self.active_state, "listening_for", None)
                     
                     if not is_listening:
-                        if event.key == self.keybinds["BACK"]:
+                        if event.key == self.keybinds.get("BACK", pygame.K_ESCAPE):
                             if hasattr(self.active_state, "handle_back_key"):
                                 self.active_state.handle_back_key()
+                        elif event.key == self.keybinds.get("ORDERS", pygame.K_q):
+                            if hasattr(self.active_state, "handle_orders_key"):
+                                self.active_state.handle_orders_key()
 
             self.active_state.handle_events(events)
             self.active_state.update()

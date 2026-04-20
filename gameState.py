@@ -3,7 +3,8 @@ import pygame
 # Default Keybinds
 DEFAULT_KEYS = {
     "BACK": pygame.K_ESCAPE,
-    "NEXT_TURN": pygame.K_SPACE
+    "NEXT_TURN": pygame.K_SPACE,
+    "ORDERS": pygame.K_q
 }
 
 class GameState:
