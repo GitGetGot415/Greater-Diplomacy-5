@@ -15,7 +15,6 @@ def draw_flag(map_screen, surface):
             
     player_data = map_screen.nation_data.get(display_country, {})
     flag_str = player_data.get("flag_data")
-    portrait_str = player_data.get("portrait_data")
     
     if flag_str:
         try:

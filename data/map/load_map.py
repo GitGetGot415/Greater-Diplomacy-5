@@ -18,7 +18,7 @@ def _load_default_images(map_obj):
     for country_name, n_data in map_obj.nation_data.items():
         if not n_data.get("flag_data"):
             f_path = f"assets/flags/{country_name}.png"
-            d_path = "assets/flags/default.png"
+            d_path = "assets/flags/default_flag.png"
             try:
                 if os.path.exists(f_path): img = pygame.image.load(f_path).convert()
                 elif os.path.exists(d_path): img = pygame.image.load(d_path).convert()
@@ -31,7 +31,7 @@ def _load_default_images(map_obj):
             
         if not n_data.get("portrait_data"):
             p_path = f"assets/portraits/{country_name}.png"
-            d_path = "assets/portraits/default.png"
+            d_path = "assets/portraits/default_portrait.png"
             try:
                 if os.path.exists(p_path): img = pygame.image.load(p_path).convert()
                 elif os.path.exists(d_path): img = pygame.image.load(d_path).convert()

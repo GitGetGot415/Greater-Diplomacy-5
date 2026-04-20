@@ -2,6 +2,8 @@ __pycache__/
 
 *.png
 !assets/*
+!assets/flags/*
+!assets/portraits/*
 *.pyc
 *.json
 !countries_data.json
