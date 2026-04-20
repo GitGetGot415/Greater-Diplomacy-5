@@ -189,7 +189,13 @@ def draw_map_screen(self, surface):
         if self.selected_province: 
             from map_functions.ui import sidebar_info
             sidebar_info.draw_sidebar_info(self, surface)
+            sidebar_info.draw_owner_portrait(self, surface) # <-- NEW CALL
             unit_info_popup.draw_unit_info(self, surface)
+            
+            # --- NEW: Draw the queue if it's the player's province ---
+            if self.selected_province.get("owner") == self.player_country:
+                from screens.map_related_screens import recruit_ui
+                recruit_ui.draw_map_queue_overlay(surface, self.selected_province)
 
         hide_mini = getattr(self, 'hide_minimap', False) or self.selected_province
         if not hide_mini:

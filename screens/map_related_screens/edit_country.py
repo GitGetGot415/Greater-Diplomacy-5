@@ -10,6 +10,7 @@ from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 
 right_ui_x = 1150
+input_box_x = 100
 
 # Helper functions for encoding/decoding surfaces to JSON strings
 def encode_surf(surf):
@@ -285,11 +286,11 @@ class Edit_Country_Screen(GameState):
         # 1. Text Input Selection Logic
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            if pygame.Rect(right_ui_x, 520, 300, 40).collidepoint(mx, my):
+            if pygame.Rect(input_box_x, 600, 300, 40).collidepoint(mx, my):
                 self.active_input = "COUNTRY_NAME"
-            elif pygame.Rect(right_ui_x, 620, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 700, 300, 40).collidepoint(mx, my):
                 self.active_input = "NAME"
-            elif pygame.Rect(right_ui_x, 720, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 800, 300, 40).collidepoint(mx, my):
                 self.active_input = "TITLE"
             else:
                 self.active_input = None
@@ -358,7 +359,7 @@ class Edit_Country_Screen(GameState):
         pygame.draw.rect(surface, (255, 255, 255), (map_color_x, map_color_y, 60, 40), 2)
 
         # Draw Text Inputs
-        input_box_x = 100
+        
         def draw_input_box(y_pos, label_text, input_state, value):
             surface.blit(heading_font.render(label_text, True, (200, 200, 200)), (input_box_x, y_pos - 40))
             rect = pygame.Rect(input_box_x, y_pos, 300, 40)

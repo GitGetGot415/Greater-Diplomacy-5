@@ -6,8 +6,16 @@ def draw_flag(map_screen, surface):
     if getattr(map_screen, 'hide_top_info', False):
         return
         
-    player_data = map_screen.nation_data.get(map_screen.player_country, {})
+    # Determine which country to display
+    display_country = map_screen.player_country
+    if map_screen.selected_province:
+        owner = map_screen.selected_province.get("owner", "Unclaimed")
+        if owner not in ["Unclaimed", "Ocean", "Lakes", "None"]:
+            display_country = owner
+            
+    player_data = map_screen.nation_data.get(display_country, {})
     flag_str = player_data.get("flag_data")
+    portrait_str = player_data.get("portrait_data")
     
     if flag_str:
         try:

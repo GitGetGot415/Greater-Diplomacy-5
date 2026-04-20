@@ -42,3 +42,44 @@ def draw_recruitment_overlay(surface, target_province):
         cancel_buttons.append((cancel_rect, i))
         
     return cancel_buttons
+
+
+# --- NEW FUNCTION FOR THE READ-ONLY MAP VIEW QUEUE ---
+def draw_map_queue_overlay(surface, target_province):
+    """Draws a read-only queue under the construction button on the map screen."""
+    queue = target_province.get("deployment_queue", [])
+    if not queue: return
+    
+    # Construction button is at x=1380, y=190, width=200, height=50.
+    # Start the panel at y = 250 so it's seamlessly below the buttons
+    panel_rect = pygame.Rect(1380, 250, 200, min(400, len(queue) * 35 + 40))
+    
+    # Draw semi-transparent background
+    panel_surf = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
+    panel_surf.fill((30, 30, 50, 200))
+    surface.blit(panel_surf, panel_rect.topleft)
+    pygame.draw.rect(surface, (100, 100, 250), panel_rect, 2)
+    
+    font = fonts.get("normal")
+    small_font = fonts.get("tiny")
+    
+    title = font.render("Queued Orders", True, (255, 255, 255))
+    surface.blit(title, (panel_rect.x + 10, panel_rect.y + 10))
+    
+    for i, item in enumerate(queue):
+        y_pos = panel_rect.y + 35 + (i * 35)
+        if y_pos + 30 > panel_rect.bottom: 
+            # If it exceeds the box, just show a "+X more" and break
+            more_txt = small_font.render(f"+{len(queue) - i} more...", True, (150, 150, 150))
+            surface.blit(more_txt, (panel_rect.x + 10, y_pos))
+            break
+        
+        raw_name = item.get('unit_type', item.get('item_name', 'Unknown Order'))
+        display_name = raw_name.replace("Chadian ", "").replace("Synthetic ", "Syn. ")
+        
+        # Truncate long names to fit in the 200px width window
+        if len(display_name) > 16:
+            display_name = display_name[:14] + ".."
+            
+        txt = small_font.render(f"{display_name} ({item['days_remaining']}d)", True, (255, 200, 50))
+        surface.blit(txt, (panel_rect.x + 10, y_pos))

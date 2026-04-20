@@ -2,7 +2,8 @@
     "keybinds": {
         "BACK": "escape"
     },
-    "volume": 0.3,
+    "volume": 1.0,
     "num_players": 1,
-    "ai_mode": "OLLAMA"
+    "ai_mode": "OLLAMA",
+    "api_key": ""
 }
