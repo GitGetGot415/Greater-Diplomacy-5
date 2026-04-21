@@ -44,3 +44,31 @@ NON_CORE_MULTIPLIERS = {
     "materials": 0.5,
     "fuel": 0.5
 }
+
+# --- File Paths ---
+# Directories
+ASSETS_DIR = "assets"
+FLAGS_DIR = "assets/flags"
+PORTRAITS_DIR = "assets/portraits"
+SAVES_DIR = "saves"
+SCENARIOS_DIR = "scenarios"
+BASE_MAPS_DIR = "base_maps"
+
+# Default Map Assets
+DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
+DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
+DEFAULT_TERRAIN_MAP_PATH = "map_tools/terrain_map.png"
+DEFAULT_ID_MAP_PATH = "map_tools/provinces_id_map.png"
+DEFAULT_MAP_DATA_PATH = "map_tools/map_data.json"
+
+# Fonts & Sounds
+FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"
+SOUND_CLICK_PATH = "assets/sounds/click.mp3"
+SOUND_SLIDER_PATH = "assets/sounds/slider.wav"
+
+# JSON Data
+UNIT_DATA_PATH = "data/json/unit_data.json"
+COUNTRIES_DATA_PATH = "data/json/countries_data.json"
+RESEARCH_TEMPLATE_PATH = "data/json/research_template.json"
+BUILDING_DATA_PATH = "data/json/building_data.json"
+SETTINGS_CONFIG_PATH = "data/json/settings_config.json"

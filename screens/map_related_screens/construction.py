@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, BUILDING_DATA_PATH
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
@@ -22,7 +22,7 @@ class Construction_Screen(GameState):
         self.fuel_start_y = self.fuel_end_y = 0
 
     def load_building_data(self):
-        path = 'data/json/building_data.json'
+        path = BUILDING_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}

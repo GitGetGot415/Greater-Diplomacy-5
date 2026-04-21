@@ -1,6 +1,7 @@
 import os
 from gameState import GameState
 from ui_elements import Button
+from data.constants import BASE_MAPS_DIR
 
 class Select_Base_Map(GameState):
     def __init__(self):
@@ -14,7 +15,7 @@ class Select_Base_Map(GameState):
             Button(50, 50, "small", "red", "Back", self.exit_to_menu),
         ]
         
-        base_dir = "base_maps"
+        base_dir = BASE_MAPS_DIR
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
             
@@ -28,7 +29,7 @@ class Select_Base_Map(GameState):
 
     def start_editor_with_map(self, map_name):
         # Pass the specific base map folder
-        self.selected_save_path = os.path.join("base_maps", map_name)
+        self.selected_save_path = os.path.join(BASE_MAPS_DIR, map_name)
         self.next_state = "MAP"
         self.done = True
 

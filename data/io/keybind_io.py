@@ -1,8 +1,9 @@
 import json
 import os
 import pygame
+from data.constants import SETTINGS_CONFIG_PATH
 
-CONFIG_PATH = "data/json/settings_config.json"
+CONFIG_PATH = SETTINGS_CONFIG_PATH
 
 def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", api_key=""):
     """Converts key codes to strings and saves along with volume/players/AI/API to JSON."""

@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 import gameState as g
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS, UNIT_DATA_PATH
 from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
@@ -20,7 +20,7 @@ class Orders_Screen(GameState):
         self.unit_library = self.load_unit_data()
 
     def load_unit_data(self):
-        path = 'data/json/unit_data.json'
+        path = UNIT_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}

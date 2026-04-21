@@ -2,7 +2,7 @@ import pygame
 from screens.map_related_screens.messages import Messages_Screen
 from map_functions.rendering.font_manager import fonts
 import ui_elements
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, FONT_PATH_DEFAULT, SOUND_CLICK_PATH, SOUND_SLIDER_PATH
 from screens.load_game import Load_Game
 from screens.map import Map
 from screens.menu import Menu
@@ -29,7 +29,7 @@ class Controller:
         pygame.mixer.init() # Initialize sound engine
 
         # Initialize fonts (Optionally pass a path here: fonts.init_fonts("assets/my_font.ttf"))
-        font_path = "assets/fonts/idk.ttf"
+        font_path = FONT_PATH_DEFAULT
         # font_path = "assets/fonts/hemi head bd it.otf"
         fonts.init_fonts(font_path)
 
@@ -37,14 +37,14 @@ class Controller:
         
         # Load the sound into the ui_elements module
         try:
-            ui_elements.click_sound = pygame.mixer.Sound("assets/sounds/click.mp3")
+            ui_elements.click_sound = pygame.mixer.Sound(SOUND_CLICK_PATH)
         except:
-            print("Warning: click.mp3 not found in assets folder")
+            print(f"Warning: {SOUND_CLICK_PATH} not found in assets folder")
 
         try:
-            ui_elements.slider_sound = pygame.mixer.Sound("assets/sounds/slider.wav")
+            ui_elements.slider_sound = pygame.mixer.Sound(SOUND_SLIDER_PATH)
         except:
-            print("Warning: slider.wav not found in assets folder")
+            print(f"Warning: {SOUND_SLIDER_PATH} not found in assets folder")
 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         

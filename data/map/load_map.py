@@ -4,12 +4,12 @@ import os
 import base64
 from map_functions.logic.time_handler import TimeHandler
 from data.io import country_io
-from data.constants import WATER_MAPPING
+from data.constants import WATER_MAPPING, FLAGS_DIR, PORTRAITS_DIR, DEFAULT_FLAG_PATH, DEFAULT_PORTRAIT_PATH, DEFAULT_TERRAIN_MAP_PATH, DEFAULT_ID_MAP_PATH, DEFAULT_MAP_DATA_PATH
 
 def _load_default_images(map_obj):
     """Helper to auto-load flags and portraits from the local assets folder."""
-    os.makedirs("assets/flags", exist_ok=True)
-    os.makedirs("assets/portraits", exist_ok=True)
+    os.makedirs(FLAGS_DIR, exist_ok=True)
+    os.makedirs(PORTRAITS_DIR, exist_ok=True)
     
     def encode_surf_to_b64(surf):
         img_str = pygame.image.tostring(surf, "RGB")
@@ -17,8 +17,8 @@ def _load_default_images(map_obj):
         
     for country_name, n_data in map_obj.nation_data.items():
         if not n_data.get("flag_data"):
-            f_path = f"assets/flags/{country_name}.png"
-            d_path = "assets/flags/default_flag.png"
+            f_path = f"{FLAGS_DIR}/{country_name}.png"
+            d_path = DEFAULT_FLAG_PATH
             try:
                 if os.path.exists(f_path): img = pygame.image.load(f_path).convert()
                 elif os.path.exists(d_path): img = pygame.image.load(d_path).convert()
@@ -30,8 +30,8 @@ def _load_default_images(map_obj):
             except: pass
             
         if not n_data.get("portrait_data"):
-            p_path = f"assets/portraits/{country_name}.png"
-            d_path = "assets/portraits/default_portrait.png"
+            p_path = f"{PORTRAITS_DIR}/{country_name}.png"
+            d_path = DEFAULT_PORTRAIT_PATH
             try:
                 if os.path.exists(p_path): img = pygame.image.load(p_path).convert()
                 elif os.path.exists(d_path): img = pygame.image.load(d_path).convert()
@@ -82,10 +82,10 @@ def load_map_assets(self, load_path):
             self.cores_map = self.id_map.copy() 
             
     else:
-        self.terrain_map = pygame.image.load("map_tools/terrain_map.png").convert()
-        self.id_map = pygame.image.load("map_tools/provinces_id_map.png").convert()
+        self.terrain_map = pygame.image.load(DEFAULT_TERRAIN_MAP_PATH).convert()
+        self.id_map = pygame.image.load(DEFAULT_ID_MAP_PATH).convert()
         self.political_map = self.id_map.copy()
-        self.cores_map = self.id_map.copy() # <--- NEW: Initialize default
+        self.cores_map = self.id_map.copy()
 
     # --- 2. Load Metadata (The Save File) ---
     save_meta = None
@@ -150,7 +150,7 @@ def load_map_assets(self, load_path):
 
     # --- 5. Province Processing ---
     # Determine which map_data.json to use
-    json_path = "map_tools/map_data.json" # Legacy fallback
+    json_path = DEFAULT_MAP_DATA_PATH # Legacy fallback
     
     if load_path and os.path.exists(os.path.join(load_path, "map_data.json")):
         json_path = os.path.join(load_path, "map_data.json")

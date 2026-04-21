@@ -1,6 +1,6 @@
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, BASE_MAPS_DIR, COUNTRIES_DATA_PATH
 from ui_elements import Button, Slider
 from map_functions.rendering.font_manager import fonts
 import json
@@ -15,7 +15,7 @@ class Random_Setup(GameState):
         self.bg_color = (20, 50, 20)
         
         # Load maps and calculate max countries
-        self.available_maps = os.listdir("base_maps") if os.path.exists("base_maps") else []
+        self.available_maps = os.listdir(BASE_MAPS_DIR) if os.path.exists(BASE_MAPS_DIR) else []
         self.map_index = 0
         
         self.max_countries = self.calculate_max_countries()
@@ -25,7 +25,7 @@ class Random_Setup(GameState):
 
     def calculate_max_countries(self):
         # Count playable nations
-        countries_path = "data/json/countries_data.json"
+        countries_path = COUNTRIES_DATA_PATH
         playable = 0
         if os.path.exists(countries_path):
             with open(countries_path, "r") as f:
@@ -115,7 +115,7 @@ class Random_Setup(GameState):
     def start_game(self):
         if not self.procedural_world and not self.available_maps: return
         
-        selected_path = "PROCEDURAL" if self.procedural_world else os.path.join("base_maps", self.available_maps[self.map_index])
+        selected_path = "PROCEDURAL" if self.procedural_world else os.path.join(BASE_MAPS_DIR, self.available_maps[self.map_index])
         
         self.random_settings = {
             "map_path": selected_path,

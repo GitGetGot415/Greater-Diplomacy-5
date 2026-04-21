@@ -8,6 +8,7 @@ import tkinter as tk
 from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
+from data.constants import SAVES_DIR
 
 class Load_Game(GameState):
     def __init__(self):
@@ -30,10 +31,10 @@ class Load_Game(GameState):
             Button(160, 50, "medium", "green", "Import .zip", self.import_save_zip)
         ]
         
-        if not os.path.exists("saves"):
-            os.makedirs("saves")
+        if not os.path.exists(SAVES_DIR):
+            os.makedirs(SAVES_DIR)
             
-        save_folders = os.listdir("saves")
+        save_folders = os.listdir(SAVES_DIR)
         for i, folder in enumerate(save_folders):
             btn_y = 120 + (i * 60)
             
@@ -61,7 +62,7 @@ class Load_Game(GameState):
 
     def confirm_delete(self):
         """Actually deletes the folder."""
-        path = os.path.join("saves", self.deleting_folder)
+        path = os.path.join(SAVES_DIR, self.deleting_folder)
         if os.path.exists(path):
             shutil.rmtree(path)
         self.deleting_folder = None

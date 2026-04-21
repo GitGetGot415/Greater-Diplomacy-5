@@ -2,13 +2,14 @@ import pygame
 import os
 import re
 import numpy as np # <-- Add numpy
+from data.constants import ASSETS_DIR
 
 SYMBOLS = {}
 COLORED_SYMBOLS = {} # <-- NEW: Cache for colored variants
 
 def load_symbols():
     """Load small icons for units, factories, etc."""
-    path = "assets"
+    path = ASSETS_DIR
     if not os.path.exists(path):
         os.makedirs(path)
         return

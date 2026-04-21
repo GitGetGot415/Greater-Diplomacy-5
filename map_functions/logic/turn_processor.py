@@ -3,7 +3,7 @@ import os
 from map_functions.logic import diplomacy_logic
 from map_functions.logic import edit_province_ownership
 from map_functions.ai import ai_movement
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
 
 def prepare_turn(self):
     """Phase 1: Calculate diplomacy and generate AI movement paths."""
@@ -59,7 +59,7 @@ def process_conversions(self):
 
 def process_national_research(self):
     # Load template to know costs
-    with open("data/json/research_template.json", "r") as f:
+    with open(RESEARCH_TEMPLATE_PATH, "r") as f:
         template = json.load(f)
     
     points_per_turn = 10 * DAYS_PER_TURN # Standardized 10/day * 10 days
@@ -282,8 +282,8 @@ def process_economy(self):
 
 def process_queues(self):
     """Processes only the VERY FIRST item in the deployment queue sequentially."""
-    unit_stats_path = 'data/json/unit_data.json'
-    building_stats_path = 'data/json/building_data.json'
+    unit_stats_path = UNIT_DATA_PATH
+    building_stats_path = BUILDING_DATA_PATH
     
     unit_library = {}
     building_library = {}

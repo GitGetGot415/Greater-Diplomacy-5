@@ -1,13 +1,12 @@
 import json
 import os
-
-COUNTRY_DATA_PATH = "data/json/countries_data.json"
+from data.constants import COUNTRIES_DATA_PATH
 
 def load_all_country_data():
     """Returns the full dictionary of country objects."""
-    if not os.path.exists(COUNTRY_DATA_PATH):
+    if not os.path.exists(COUNTRIES_DATA_PATH):
         return {}
-    with open(COUNTRY_DATA_PATH, "r") as f:
+    with open(COUNTRIES_DATA_PATH, "r") as f:
         return json.load(f)
 
 def get_nation_colors():

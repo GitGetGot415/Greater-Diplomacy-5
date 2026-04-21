@@ -1,7 +1,7 @@
 import random
 import os
 import json
-from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS
+from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH
 
 def randomize_all_provinces(map_screen, settings):
     target_country_count = settings["countries"]
@@ -122,7 +122,7 @@ def randomize_all_provinces(map_screen, settings):
     # --- Step C: Tech & Building Assignment ---
     
     # 1. Load the full baseline template so nobody is missing keys
-    template_path = "data/json/research_template.json"
+    template_path = RESEARCH_TEMPLATE_PATH
     res_template = {}
     struct = {} # Store the struct to read the years later
     if os.path.exists(template_path):
@@ -174,7 +174,7 @@ def randomize_all_provinces(map_screen, settings):
 
     # --- Step D: Guarantee Minimums & Garrison Units ---
     unit_library = {}
-    unit_stats_path = 'data/json/unit_data.json'
+    unit_stats_path = UNIT_DATA_PATH
     if os.path.exists(unit_stats_path):
         with open(unit_stats_path, 'r') as f:
             unit_library = json.load(f)

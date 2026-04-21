@@ -3,6 +3,7 @@ import pygame
 import os
 from datetime import datetime
 from pathlib import Path
+from data.constants import SAVES_DIR
 
 def save_map_data(self, save_name=None):
     """Saves logical data and visual state."""
@@ -16,7 +17,7 @@ def save_map_data(self, save_name=None):
         save_path = os.path.join(downloads_path, f"MapExport_{save_name}")
     else:
         # Standard Game Save
-        save_path = os.path.join("saves", save_name)
+        save_path = os.path.join(SAVES_DIR, save_name)
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)

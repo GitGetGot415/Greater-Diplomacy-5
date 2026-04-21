@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
 import os
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, WATER_NATIONS, UNPLAYABLE_NATIONS
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, WATER_NATIONS, UNPLAYABLE_NATIONS, BASE_MAPS_DIR, UNIT_DATA_PATH, RESEARCH_TEMPLATE_PATH, SCENARIOS_DIR
 from data.map import load_map
 
 def editor_load_map(self):
@@ -12,7 +12,7 @@ def editor_load_map(self):
     root.withdraw()
     # Point it to your new base_maps folder instead of scenarios
     # path = filedialog.askdirectory(initialdir="base_maps", title="Select Map Folder to Edit")
-    path = filedialog.askdirectory(initialdir="scenarios", title="Select Map Folder to Edit")
+    path = filedialog.askdirectory(initialdir=SCENARIOS_DIR, title="Select Map Folder to Edit")
     root.destroy()
 
     if path:
@@ -404,7 +404,7 @@ def open_map_research_editor(self):
 
     def get_default_research():
         # 1. ALWAYS generate a fresh template from the JSON first
-        template_path = "data/json/research_template.json"
+        template_path = RESEARCH_TEMPLATE_PATH
         fresh_template = {}
         if os.path.exists(template_path):
             with open(template_path, "r") as f:
@@ -555,7 +555,7 @@ def select_unit_brush(self):
     root.attributes("-topmost", True)
     self.menu_active = True
 
-    unit_path = 'data/json/unit_data.json'
+    unit_path = UNIT_DATA_PATH
     units = list(json.load(open(unit_path, 'r')).keys()) if os.path.exists(unit_path) else []
 
     def on_select(event=None):

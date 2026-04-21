@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
@@ -18,9 +18,9 @@ class Research_Screen(GameState):
         self.current_category = "INFANTRY" 
         self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY", "COMPLETED"]
 
-        self.tech_tree = self.load_json("data/json/research_template.json")
-        self.unit_library = self.load_json("data/json/unit_data.json")
-        self.building_library = self.load_json("data/json/building_data.json")
+        self.tech_tree = self.load_json(RESEARCH_TEMPLATE_PATH)
+        self.unit_library = self.load_json(UNIT_DATA_PATH)
+        self.building_library = self.load_json(BUILDING_DATA_PATH)
         
         self.active_modal = None
 

@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
+from data.constants import WATER_TERRAINS
 import os
 from PIL import Image
 import json
@@ -107,7 +108,7 @@ def run_generator(progress_var, root):
     total_provinces = len(temp_registry)
     
     # Define what counts as water for coastal detection
-    WATER_TYPES = ["ocean", "coastal_sea", "inland_sea", "lakes"]
+    WATER_TYPES = WATER_TERRAINS
     
     for i, (id_color, data) in enumerate(temp_registry.items()):
         if i % 50 == 0:

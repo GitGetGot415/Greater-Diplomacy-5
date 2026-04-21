@@ -4,7 +4,7 @@ import os
 import re
 import math
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, UNIT_DATA_PATH, RESEARCH_TEMPLATE_PATH, BUILDING_DATA_PATH
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
@@ -19,8 +19,8 @@ class Recruit_Screen(GameState):
         self.cancel_hitboxes = []
         
         # Load both libraries generically
-        self.unit_library = self.load_json('data/json/unit_data.json')
-        self.tech_tree = self.load_json('data/json/research_template.json')
+        self.unit_library = self.load_json(UNIT_DATA_PATH)
+        self.tech_tree = self.load_json(RESEARCH_TEMPLATE_PATH)
         
         self.infantry_groups, self.tank_groups, self.navy_groups = self.get_ordered_groups()
         self.active_bars = []
@@ -35,7 +35,7 @@ class Recruit_Screen(GameState):
         return {}
 
     def load_unit_data(self):
-        path = 'data/json/unit_data.json'
+        path = UNIT_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}
@@ -302,8 +302,8 @@ class Recruit_Screen(GameState):
                     stats = self.unit_library.get(item["unit_type"], {})
                 elif item.get("order_type") == "BUILDING":
                     import json, os
-                    if os.path.exists('data/building_data.json'):
-                        with open('data/building_data.json', 'r') as f:
+                    if os.path.exists(BUILDING_DATA_PATH):
+                        with open(BUILDING_DATA_PATH, 'r') as f:
                             stats = json.load(f).get(item.get("item_name"), {})
                             
                 p_data["materials"] = p_data.get("materials", 0) + stats.get("cost_materials", 0)
