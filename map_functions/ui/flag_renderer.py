@@ -1,6 +1,6 @@
 import pygame
 import base64
-from data.constants import UNPLAYABLE_NATIONS # In flag_renderer.py
+from data.constants import UNPLAYABLE_NATIONS
 
 def draw_flag(map_screen, surface):
     """Handles decoding and drawing the nation's flag in the top UI bar."""
