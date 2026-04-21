@@ -3,7 +3,7 @@ import os
 import math
 from map_functions.logic import diplomacy_logic
 from map_functions.logic import edit_province_ownership
-from map_functions.logic import ai_movement
+from map_functions.ai import ai_movement
 from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS
 
 def prepare_turn(self):

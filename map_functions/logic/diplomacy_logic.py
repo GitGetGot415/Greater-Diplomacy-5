@@ -1,7 +1,7 @@
 import random
 import concurrent.futures
 import pygame
-from map_functions.logic import ai_handler
+from map_functions.ai import ai_handler
 from map_functions.rendering.font_manager import fonts
 from data.constants import UNPLAYABLE_NATIONS
 
