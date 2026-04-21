@@ -199,7 +199,7 @@ class Edit_Country_Screen(GameState):
             y = 150 + (i // colors_per_row) * space_between_colors
             btn = Button(x, y, "small_square", "grey", "", lambda c=color: self.set_color(c), show_text=False)
             btn.color = btn.hover_color = color
-            btn.shading = False # <-- Disable the gradient shading for palette buttons
+            btn.shading = False
             self.elements.append(btn)
 
         # Tool Selection Buttons

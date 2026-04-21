@@ -135,7 +135,7 @@ def load_map_assets(self, load_path):
             
         self.current_player_index = save_meta.get("current_player_index", 0)
         self.loop_map = save_meta.get("loop_map", False)
-        self.default_research = save_meta.get("default_research", None) # <-- ADDED THIS
+        self.default_research = save_meta.get("default_research", None)
         # Time
         self.time_manager = TimeHandler(start_year=save_meta["date"]["year"])
         self.time_manager.day = save_meta["date"]["day"]
@@ -145,7 +145,7 @@ def load_map_assets(self, load_path):
         self.active_players = []
         self.current_player_index = 0
         self.loop_map = True
-        self.default_research = None # <-- ADDED THIS
+        self.default_research = None
         self.time_manager = TimeHandler(start_year=1850)
 
     # --- 5. Province Processing ---

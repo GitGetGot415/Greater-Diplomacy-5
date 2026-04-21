@@ -1,11 +1,11 @@
 import pygame
 import os
 import re
-import numpy as np # <-- Add numpy
+import numpy as np
 from data.constants import ASSETS_DIR
 
 SYMBOLS = {}
-COLORED_SYMBOLS = {} # <-- NEW: Cache for colored variants
+COLORED_SYMBOLS = {}
 
 def load_symbols():
     """Load small icons for units, factories, etc."""
@@ -60,7 +60,7 @@ def colorize_red_image(img, new_color):
 
     return new_img
 
-def get_symbol(name, zoom, color=None): # <-- Added 'color' parameter
+def get_symbol(name, zoom, color=None):
     """Returns scaled icon. Generates and caches colored variants if a color is provided."""
     # 1. Resolve base name
     base_name = name

@@ -49,7 +49,7 @@ class Map(GameState):
             
         self.painting_active = False 
         self.brush_nation = "Unclaimed" 
-        self.viewing_ai_moves = False # <--- NEW: Tracks if we are pausing for AI
+        self.viewing_ai_moves = False
         
         # --- 2. Data Loading (FIXED ORDER) ---
         # Load the selected map BEFORE we do any camera math!

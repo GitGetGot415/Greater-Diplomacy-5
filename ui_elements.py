@@ -1,6 +1,6 @@
 import pygame
 from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from map_functions.rendering.font_manager import fonts # <-- Import here
+from map_functions.rendering.font_manager import fonts
 
 # --- Presets ---
 COLORS = {
@@ -59,7 +59,7 @@ class Button:
         self.image = image 
         self.show_text = show_text # Store the boolean
 
-        self.font = fonts.get("button") # <-- NEW
+        self.font = fonts.get("button")
 
         self.visible = True
         self.is_pressed = False
@@ -170,7 +170,7 @@ class Slider:
         pygame.draw.rect(surface, (100, 100, 100), self.rect) # Track
         pygame.draw.rect(surface, (200, 200, 200), self.handle_rect) # Handle
         
-        slider_font = fonts.get("normal") # <-- NEW (Renamed to avoid shadowing)
+        slider_font = fonts.get("normal")
 
         txt = slider_font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
         surface.blit(txt, (self.rect.x, self.rect.y - 25))

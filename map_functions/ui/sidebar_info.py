@@ -1,7 +1,7 @@
 import pygame
-import base64 # <-- NEW: Needed for portrait decoding
+import base64
 from data.constants import UI_LEFT_OFFSET, UNPLAYABLE_NATIONS # In sidebar_info.py
-from map_functions.rendering.font_manager import fonts # <-- NEW: Needed for text
+from map_functions.rendering.font_manager import fonts
 
 # Define the area for the sidebar info panel
 sidebar_x = 580

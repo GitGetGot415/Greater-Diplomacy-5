@@ -52,7 +52,7 @@ def load_settings(default_binds, default_volume=0.5):
         # NEW: Safely get num_players (default to 1 if it's an old save)
         saved_num_players = saved_data.get("num_players", 1) if isinstance(saved_data, dict) else 1
         saved_ai_mode = saved_data.get("ai_mode", "GEMINI") if isinstance(saved_data, dict) else "GEMINI"
-        saved_api_key = saved_data.get("api_key", "") if isinstance(saved_data, dict) else "" # <-- NEW
+        saved_api_key = saved_data.get("api_key", "") if isinstance(saved_data, dict) else ""
                 
         return loaded_binds, saved_vol, saved_num_players, saved_ai_mode, saved_api_key
     except Exception as e:

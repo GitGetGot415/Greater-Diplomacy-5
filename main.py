@@ -79,7 +79,7 @@ class Controller:
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),
-            "MESSAGES": Messages_Screen() # <--- NEW
+            "MESSAGES": Messages_Screen()
         }
         self.states["CONSTRUCTION"] = Construction_Screen()
         self.active_state = self.states["MENU"]

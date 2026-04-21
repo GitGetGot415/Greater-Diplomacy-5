@@ -81,7 +81,7 @@ class Research_Screen(GameState):
         super().update()
         if hasattr(self, 'target_scroll_x'):
             
-            self.enforce_scroll_bounds() # <-- Add this to catch any edge cases
+            self.enforce_scroll_bounds()
             
             if abs(self.scroll_x - self.target_scroll_x) > 0.5:
                 self.scroll_x += (self.target_scroll_x - self.scroll_x) * 0.15

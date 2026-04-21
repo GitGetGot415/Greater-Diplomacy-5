@@ -137,7 +137,7 @@ def run_generator(progress_var, root):
         final_json[str(id_color)] = {
             "id": data["id"],
             "terrain": data["terrain"],
-            "is_coastal": is_coastal,  # <--- New Field added here
+            "is_coastal": is_coastal,
             "center": data["center"],
             "neighbors": list(neighbors),
             "owner": "Unclaimed",

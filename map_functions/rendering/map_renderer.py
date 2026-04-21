@@ -189,7 +189,7 @@ def draw_map_screen(self, surface):
         if self.selected_province: 
             from map_functions.ui import sidebar_info
             sidebar_info.draw_sidebar_info(self, surface)
-            sidebar_info.draw_owner_portrait(self, surface) # <-- NEW CALL
+            sidebar_info.draw_owner_portrait(self, surface)
             unit_info_popup.draw_unit_info(self, surface)
             
             # --- NEW: Draw the queue if it's the player's province ---
