@@ -1,4 +1,4 @@
-from data.constants import WATER_TERRAINS
+from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, WATER_NATIONS
 
 def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments):
     """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
@@ -41,7 +41,7 @@ def process_ai_unit_orders(map_screen):
     """Generates movement orders for AI-controlled units to balance borders or attack."""
     ai_nations = []
     for name, data in map_screen.nation_data.items():
-        if name not in getattr(map_screen, 'active_players', []) and name not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+        if name not in getattr(map_screen, 'active_players', []) and name not in UNPLAYABLE_NATIONS:
             ai_nations.append(name)
 
     # Build a list of which units are where
@@ -84,7 +84,7 @@ def process_ai_unit_orders(map_screen):
                 if n_owner in enemies:
                     is_war_border = True
                     enemy_targets.add(n_id)
-                elif n_owner != ai_name and n_owner not in ["Ocean", "Lakes"]:
+                elif n_owner != ai_name and n_owner not in WATER_NATIONS:
                     is_peace_border = True
 
             if is_war_border:

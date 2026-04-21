@@ -2,7 +2,7 @@ import pygame
 from map_functions.rendering import hover_renderer, province_select, overlay_renderer
 from map_functions.ui import minimap, tooltip, flag_renderer, top_bar_text, resource_hud
 from map_functions.ui import ui_info_popup as unit_info_popup
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, UNPLAYABLE_NATIONS
 from map_functions.rendering.font_manager import fonts
 
 def draw_map_screen(self, surface):
@@ -85,7 +85,7 @@ def draw_map_screen(self, surface):
             # Use your biggest font preset for maximum resolution before scaling down
             name_font = fonts.get("country_name_display") 
             for c_id, data in self.nation_data.items():
-                if c_id not in ["Ocean", "Lakes", "Unclaimed", "None"]:
+                if c_id not in UNPLAYABLE_NATIONS:
                     disp = data.get("name", c_id).upper()
                     surf = name_font.render(disp, True, (255, 255, 255)).convert_alpha()
                     shadow = name_font.render(disp, True, (20, 20, 20)).convert_alpha()

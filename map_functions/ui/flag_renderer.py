@@ -1,5 +1,6 @@
 import pygame
 import base64
+from data.constants import UNPLAYABLE_NATIONS # In flag_renderer.py
 
 def draw_flag(map_screen, surface):
     """Handles decoding and drawing the nation's flag in the top UI bar."""
@@ -10,7 +11,7 @@ def draw_flag(map_screen, surface):
     display_country = map_screen.player_country
     if map_screen.selected_province:
         owner = map_screen.selected_province.get("owner", "Unclaimed")
-        if owner not in ["Unclaimed", "Ocean", "Lakes", "None"]:
+        if owner not in UNPLAYABLE_NATIONS:
             display_country = owner
             
     player_data = map_screen.nation_data.get(display_country, {})

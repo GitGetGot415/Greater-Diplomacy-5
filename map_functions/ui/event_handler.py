@@ -1,7 +1,7 @@
 import pygame
 from map_functions.logic import map_utils
 from map_functions.logic import edit_province_ownership
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_NATIONS, UNPLAYABLE_NATIONS
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
@@ -91,12 +91,13 @@ def handle_map_events(self, event):
                         # do not paint over oceans or lakes
                         # i swear to god if you edit this line again im going to throw you into the sun
                         # "but it's not optimal" don't care stop touching it
-                        if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
+                        # bleh i touched it :P
+                        if self.hovered_province.get("owner") not in WATER_NATIONS:
                             edit_province_ownership.conquer_province(self, self.hovered_province, self.brush_nation)
                 
                 # --- CORE MODE ---
                 elif self.editor_mode == "CORE":
-                    if self.hovered_province.get("owner") not in ["Ocean", "Lakes"]:
+                    if self.hovered_province.get("owner") not in WATER_NATIONS:
                         # If painting with Unclaimed, wipe the tile
                         if self.brush_nation in ["Unclaimed", "None", ""]:
                             edit_province_ownership.clear_cores(self, self.hovered_province)
@@ -141,7 +142,7 @@ def handle_map_events(self, event):
         # ADD THIS: Right Click (or Middle Click)
         if pygame.mouse.get_pressed()[2]: # Right Click
             if self.hovered_province:
-                if self.hovered_province.get("owner") != "Ocean" and self.hovered_province.get("owner") != "Lakes":
+                if self.hovered_province.get("owner") not in WATER_NATIONS:
                     
                     if self.editor_mode == "CORE":
                         edit_province_ownership.remove_core(self, self.hovered_province, self.brush_nation)
@@ -157,7 +158,7 @@ def handle_map_events(self, event):
                     self.show_feedback("Units cleared from province")
                 else:
                     owner = self.hovered_province.get("owner", "Unclaimed")
-                    if owner in ["Unclaimed", "Ocean", "Lakes", "None"]:
+                    if owner in UNPLAYABLE_NATIONS:
                         self.show_feedback("Cannot place units in unowned territory!")
                     else:
                         import json, os

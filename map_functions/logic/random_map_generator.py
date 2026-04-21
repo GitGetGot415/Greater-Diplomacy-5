@@ -1,6 +1,7 @@
 import random
 import os
 import json
+from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS
 
 def randomize_all_provinces(map_screen, settings):
     target_country_count = settings["countries"]
@@ -8,11 +9,10 @@ def randomize_all_provinces(map_screen, settings):
 
     playable_nations = [
         name for name, stats in map_screen.nation_data.items()
-        if stats.get("is_playable") and name not in ["Ocean", "Lakes", "Unclaimed"]
+        if stats.get("is_playable") and name not in UNPLAYABLE_NATIONS
     ]
     
-    water_terrains = ["ocean", "coastal_sea", "inland_sea", "lakes"]
-    land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in water_terrains]
+    land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in WATER_TERRAINS]
     
     if not land_provinces or not playable_nations: return
 
@@ -110,7 +110,7 @@ def randomize_all_provinces(map_screen, settings):
                 
                 if n_prov:
                     # Ignore water tiles
-                    if n_prov.get("terrain", "") in water_terrains:
+                    if n_prov.get("terrain", "") in WATER_TERRAINS:
                         continue
                     
                     # If this neighbor belongs to someone else (or is unclaimed)

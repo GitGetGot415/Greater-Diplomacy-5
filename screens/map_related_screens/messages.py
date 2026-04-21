@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, UNPLAYABLE_NATIONS
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 from map_functions.logic import diplomacy_logic
@@ -188,7 +188,7 @@ class Messages_Screen(GameState):
             active_nations = set()
             for prov in self.map_screen.map_data.values():
                 owner = prov.get("owner")
-                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                if owner and owner not in UNPLAYABLE_NATIONS:
                     active_nations.add(owner)
             
             playable = [c for c, d in self.map_screen.nation_data.items() 
@@ -232,7 +232,7 @@ class Messages_Screen(GameState):
             active_nations = set()
             for prov in self.map_screen.map_data.values():
                 owner = prov.get("owner")
-                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                if owner and owner not in UNPLAYABLE_NATIONS:
                     active_nations.add(owner)
             
             # 2. Filter the playable list to only include living nations
@@ -265,7 +265,7 @@ class Messages_Screen(GameState):
             active_nations = set()
             for prov in self.map_screen.map_data.values():
                 owner = prov.get("owner")
-                if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+                if owner and owner not in UNPLAYABLE_NATIONS:
                     active_nations.add(owner)
             
             playable = [c for c, d in self.map_screen.nation_data.items() 

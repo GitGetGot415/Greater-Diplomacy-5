@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
 import os
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER
+from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, WATER_NATIONS, UNPLAYABLE_NATIONS
 from data.map import load_map
 
 def editor_load_map(self):
@@ -102,7 +102,7 @@ def select_core_brush(self):
     nations = sorted(list(self.nation_data.keys()))
     lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
     for n in nations:
-        if n not in ["Ocean", "Lakes"]:
+        if n not in WATER_NATIONS:
             lb.insert(tk.END, n)
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
@@ -241,7 +241,7 @@ def open_editor_economy(self):
     active_countries = set()
     for prov in self.map_data.values():
         owner = prov.get("owner")
-        if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+        if owner and owner not in UNPLAYABLE_NATIONS:
             active_countries.add(owner)
 
     if not active_countries:
@@ -395,7 +395,7 @@ def open_map_research_editor(self):
     active_countries = set()
     for prov in self.map_data.values():
         owner = prov.get("owner")
-        if owner and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+        if owner and owner not in UNPLAYABLE_NATIONS:
             active_countries.add(owner)
 
     if not active_countries:

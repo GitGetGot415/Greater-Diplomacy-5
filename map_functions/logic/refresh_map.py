@@ -128,8 +128,6 @@ def refresh_relations_map(self):
     owner_to_int = {}
     next_owner_id = 1
     
-    water_mapping = {"ocean": "Ocean", "coastal_sea": "Ocean", "inland_sea": "Ocean", "lakes": "Ocean"}
-    
     player_data = self.nation_data.get(self.player_country, {})
     at_war = player_data.get("at_war_with", [])
     allies = player_data.get("allied_with", [])
@@ -137,8 +135,8 @@ def refresh_relations_map(self):
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in water_mapping:
-            owner = water_mapping[terrain_type]
+        if terrain_type in VISUAL_WATER_MAPPING:
+            owner = VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) 
         else:
             # We track the owner for the borders...
@@ -201,14 +199,12 @@ def refresh_cores_map(self):
     
     owner_to_int = {}
     next_owner_id = 1 
-    
-    water_mapping = {"ocean": "Ocean", "coastal_sea": "Ocean", "inland_sea": "Ocean", "lakes": "Ocean"}
-    
+        
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in water_mapping:
-            owner = water_mapping[terrain_type]
+        if terrain_type in VISUAL_WATER_MAPPING:
+            owner = VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) 
         else:
             cores = data.get("cores", [])

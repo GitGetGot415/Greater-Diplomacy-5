@@ -1,6 +1,6 @@
 import pygame
 import base64 # <-- NEW: Needed for portrait decoding
-from data.constants import UI_LEFT_OFFSET
+from data.constants import UI_LEFT_OFFSET, UNPLAYABLE_NATIONS # In sidebar_info.py
 from map_functions.rendering.font_manager import fonts # <-- NEW: Needed for text
 
 # Define the area for the sidebar info panel
@@ -99,7 +99,7 @@ def draw_owner_portrait(self, surface):
     if not province: return
 
     owner_id = province.get("owner", "Unclaimed")
-    if owner_id in ["Unclaimed", "Ocean", "Lakes", "None"]: return
+    if owner_id in UNPLAYABLE_NATIONS: return
 
     owner_data = self.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")

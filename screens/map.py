@@ -3,7 +3,6 @@ import random
 import math
 from data.map import load_map
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from map_functions.ui import buttons, event_handler, editor_menus
 from data.map import save_map
 from map_functions.logic import (
@@ -15,7 +14,7 @@ from map_functions.logic import (
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS, WATER_TERRAINS
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT,BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS, WATER_TERRAINS, UNPLAYABLE_NATIONS
 from map_functions.rendering.font_manager import fonts
 
 class Map(GameState):
@@ -600,7 +599,7 @@ class Map(GameState):
             owner = province.get("owner")
             
             # --- INCOME LOGIC ---
-            if owner and owner in econ_data and owner not in ["None", "Unclaimed", "Ocean", "Lakes"]:
+            if owner and owner in econ_data and owner not in UNPLAYABLE_NATIONS:
                 is_core = owner in province.get("cores", [])
 
                 mat_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["materials"]
@@ -657,7 +656,7 @@ class Map(GameState):
         # Iterate through every province by ID
         for prov_id, prov in self.id_to_province.items():
             owner = prov.get("owner")
-            if not owner or owner in ["None", "Unclaimed", "Ocean", "Lakes"]:
+            if not owner or owner in UNPLAYABLE_NATIONS:
                 continue
             
             # If we haven't checked this province yet, it's a new landmass
