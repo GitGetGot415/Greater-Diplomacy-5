@@ -27,6 +27,10 @@ SCREEN_HEIGHT = 900
 
 UI_LEFT_OFFSET = 160
 
+# This probably needs to be implemented in more places than just orders.py / buttons.py
+TOP_BAR_UI_CENTER_Y = 10
+BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
+
 # Economy Data
 BASE_YIELDS = {
     "manpower": 50,

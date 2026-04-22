@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 import gameState as g
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS, UNIT_DATA_PATH
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS, UNIT_DATA_PATH, TOP_BAR_UI_CENTER_Y
 from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
@@ -32,7 +32,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, 50, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(50, TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
         
         units = self.target_province.get("units", [])
         for i, unit in enumerate(units):
@@ -298,7 +298,7 @@ class Orders_Screen(GameState):
         small_font = fonts.get("normal")
         
         title = font.render(f"Orders: Province {self.target_province['id']}", True, (255, 255, 255))
-        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, TOP_BAR_UI_CENTER_Y))
         
         # --- Draw Background Panel for Units ---
         units = self.target_province.get("units", [])

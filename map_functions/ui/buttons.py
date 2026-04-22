@@ -1,6 +1,6 @@
 # map_functions/ui/buttons.py
 from ui_elements import Button
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, TOP_BAR_UI_CENTER_Y, BOTTOM_BAR_UI_CENTER_Y
 from map_functions.rendering import symbol_loader
 
 def render_buttons(self):
@@ -17,24 +17,22 @@ def render_buttons(self):
         core_icon = symbol_loader.get_symbol("Star", 1.5)
         resource_icon = symbol_loader.get_symbol("Iron", 2)
 
+        # Refresh Buttons
         self.elements = [
-            Button(1120, 10, "small", "grey", "Pol Refresh", self.refresh_political_map),
-            Button(1220, 10, "small", "grey", "Rel Refresh", self.refresh_relations_map),
-            Button(1320, 10, "small", "grey", "Core Refresh", self.refresh_cores_map),
+            Button(1120, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
+            Button(1220, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(1320, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
         ]
 
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen
         
+        # View Type Buttons
         self.elements.extend([
-            Button(10, SCREEN_HEIGHT - 50, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
-            Button(60, SCREEN_HEIGHT - 50, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
-            Button(110, SCREEN_HEIGHT - 50, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
-            Button(160, SCREEN_HEIGHT - 50, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
-            Button(20, 420, "left_ui_bar", "orange", "Economy", econ_callback),
+            Button(10, BOTTOM_BAR_UI_CENTER_Y, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
+            Button(60, BOTTOM_BAR_UI_CENTER_Y, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
+            Button(110, BOTTOM_BAR_UI_CENTER_Y, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
+            Button(160, BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
             Button(10, SCREEN_HEIGHT - 100, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=resource_icon, show_text=False),
-        ])
-
-        self.elements.extend([
             Button(110, SCREEN_HEIGHT - 100, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
             Button(160, SCREEN_HEIGHT - 100, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
             Button(60, SCREEN_HEIGHT - 100, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
@@ -42,21 +40,21 @@ def render_buttons(self):
 
         if self.is_editor:
             self.elements.extend([
-                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", "blue", "Save", self.save_map_data),
-                Button(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 50, "small", "blue", "Load", self.editor_load_map),
-                Button(SCREEN_WIDTH - 340, SCREEN_HEIGHT - 50, "small", "grey", "Nation", self.select_brush_nation),
-                Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 50, "small", "pink", "Core Brush", self.select_core_brush),
+                Button(SCREEN_WIDTH - 120, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
+                Button(SCREEN_WIDTH - 230, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
+                Button(SCREEN_WIDTH - 340, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
+                Button(SCREEN_WIDTH - 450, BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush),
                 Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores),
                 
                 Button(SCREEN_WIDTH - 560, SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush),
-                Button(SCREEN_WIDTH - 560, SCREEN_HEIGHT - 50, "small", "grey", "Building", self.select_building_brush),
+                Button(SCREEN_WIDTH - 560, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush),
                 
                 Button(SCREEN_WIDTH - 670, SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
-                Button(SCREEN_WIDTH - 670, SCREEN_HEIGHT - 50, "small", "grey", "Unit", self.select_unit_brush),
+                Button(SCREEN_WIDTH - 670, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
                 
-                Button(SCREEN_WIDTH - 780, SCREEN_HEIGHT - 50, "small", "purple", "Map Tech", self.open_map_research_editor),
-                Button(SCREEN_WIDTH - 890, SCREEN_HEIGHT - 50, "small", "purple", "Data Refresh", self.refresh_nation_data),
-                Button(SCREEN_WIDTH - 1000, SCREEN_HEIGHT - 50, "small", "purple", "Set Date", self.open_editor_date)
+                Button(SCREEN_WIDTH - 780, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Map Tech", self.open_map_research_editor),
+                Button(SCREEN_WIDTH - 890, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
+                Button(SCREEN_WIDTH - 1000, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
             ])
         else:
             # --- NEW: Dynamic Next Turn Button ---
@@ -66,12 +64,13 @@ def render_buttons(self):
             
             # We ALWAYS want the next/resolve button to appear
             self.elements.append(
-                Button(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 50, "small", next_btn_color, next_btn_text, self.advance_time)
+                Button(SCREEN_WIDTH - 120, BOTTOM_BAR_UI_CENTER_Y, "small", next_btn_color, next_btn_text, self.advance_time)
             )
             
             # Hide the management tools while the AI is moving
             if not viewing_ai:
                 self.elements.extend([
+                    Button(20, 420, "left_ui_bar", "orange", "Economy", econ_callback),
                     Button(20, 120, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
                     Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
                     Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
@@ -89,11 +88,11 @@ def render_buttons(self):
 
     self.elements.append(self.btn_go_build)
 
-    self.btn_close_info = Button(SCREEN_WIDTH - 120, 10, "small", "red", "X", self.deselect_province)
+    self.btn_close_info = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
     self.btn_close_info.visible = False
     self.elements.append(self.btn_close_info)
 
-    self.btn_exit_to_menu = Button(SCREEN_WIDTH - 120, 10, "small", "red", "Exit", self.exit_to_menu)
+    self.btn_exit_to_menu = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
     self.btn_exit_to_menu.visible = False
     self.elements.append(self.btn_exit_to_menu)
 
