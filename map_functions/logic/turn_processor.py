@@ -145,7 +145,7 @@ def process_combat(self):
                 nation_b = owners[j]
                 
                 # Check if they are actually at war
-                at_war = nation_b in self.nation_data.get(nation_a, {}).get("at_war_with", [])
+                at_war = state_queries.are_at_war(nation_a, nation_b, self.nation_data)
                 
                 if at_war:
                     # Side A attacks Side B
@@ -332,7 +332,7 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    all_econ = self.calculate_all_economies()
+    all_econ = state_queries.calculate_all_economies(self.map_data, self.nation_data)
 
     for name, stats in self.nation_data.items():
         if name in UNPLAYABLE_NATIONS or name not in all_econ:

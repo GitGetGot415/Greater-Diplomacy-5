@@ -1,5 +1,6 @@
 import pygame
 from data.constants import SCREEN_HEIGHT
+from map_functions.logic import state_queries
 
 def draw_bottom_text(map_screen, surface):
     """Draws the bottom resource bar with net income overlays."""
@@ -12,7 +13,7 @@ def draw_bottom_text(map_screen, surface):
     
     # Cache logic to prevent calculating economy 60 times a second
     if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - getattr(map_screen, 'econ_cache_time', 0) > 1000:
-        map_screen.econ_cache = map_screen.get_player_economy_projections()
+        map_screen.econ_cache = state_queries.get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
         map_screen.econ_cache_time = pygame.time.get_ticks()
         
     cached_data = getattr(map_screen, 'econ_cache', None)

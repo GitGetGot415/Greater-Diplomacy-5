@@ -1,18 +1,21 @@
+from map_functions.logic import state_queries
+
 def get_relation(nation_data, country_a, country_b):
-    """Returns the status between two countries. Defaults to NEUTRAL."""
+    """Legacy helper. Please use nation_data lists directly or state_queries."""
     if country_a == country_b:
         return "SELF"
     
-    # Check country A's opinion of B
-    relations = nation_data.get(country_a, {}).get("relations", {})
-    return relations.get(country_b, "NEUTRAL")
+    if state_queries.are_at_war(country_a, country_b, nation_data):
+        return "WAR"
+    if state_queries.are_allied(country_a, country_b, nation_data):
+        return "ALLIED"
+        
+    return "NEUTRAL"
 
 def set_relation(nation_data, country_a, country_b, status):
-    """Updates the relation for both parties (Symmetric)."""
-    for a, b in [(country_a, country_b), (country_b, country_a)]:
-        if "relations" not in nation_data[a]:
-            nation_data[a]["relations"] = {}
-        nation_data[a]["relations"][b] = status
+    """Deprecated. Diplomacy logic now handles list updates."""
+    pass
 
 def are_at_war(nation_data, country_a, country_b):
-    return get_relation(nation_data, country_a, country_b) == "WAR"
+    """Redirects to state queries."""
+    return state_queries.are_at_war(country_a, country_b, nation_data)

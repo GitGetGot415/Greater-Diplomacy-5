@@ -9,6 +9,7 @@ from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
+from map_functions.logic import state_queries
 
 class Recruit_Screen(GameState):
     def __init__(self):
@@ -110,8 +111,7 @@ class Recruit_Screen(GameState):
                     lookup_name = highest_unlocked
                     
                     # --- NEW: Gray out button if no industry is present ---
-                    buildings = self.target_province.get("buildings", [])
-                    has_industry = any("Workshop" in b or "Factory" in b for b in buildings)
+                    has_industry = state_queries.has_industry(self.target_province)
                     
                     final_btn_color = btn_color if has_industry else "grey"
                     # ------------------------------------------------------
@@ -165,10 +165,7 @@ class Recruit_Screen(GameState):
         if not stats or not self.map_screen: return
 
         # --- NEW: Check if the province has a Workshop or Factory ---
-        buildings = self.target_province.get("buildings", [])
-        has_industry = any("Workshop" in b or "Factory" in b for b in buildings)
-        
-        if not has_industry:
+        if not state_queries.has_industry(self.target_province):
             self.map_screen.show_feedback("Requires a Workshop or Factory to recruit!")
             return
         # ------------------------------------------------------------

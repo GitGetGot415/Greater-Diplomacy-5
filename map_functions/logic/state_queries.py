@@ -1,4 +1,35 @@
-from data.constants import WATER_TERRAINS
+import json
+import os
+from data.constants import WATER_TERRAINS, NON_CORE_MULTIPLIERS, BASE_YIELDS, UPKEEP_MODIFIER, UNPLAYABLE_NATIONS, UNIT_DATA_PATH, BUILDING_DATA_PATH
+
+# --- CACHE LIBRARIES ---
+_cached_unit_library = None
+_cached_building_library = None
+
+def _get_unit_library():
+    global _cached_unit_library
+    if _cached_unit_library is None:
+        _cached_unit_library = json.load(open(UNIT_DATA_PATH)) if os.path.exists(UNIT_DATA_PATH) else {}
+    return _cached_unit_library
+
+def _get_building_library():
+    global _cached_building_library
+    if _cached_building_library is None:
+        _cached_building_library = json.load(open(BUILDING_DATA_PATH)) if os.path.exists(BUILDING_DATA_PATH) else {}
+    return _cached_building_library
+
+
+# ==========================================
+# DIPLOMACY & COMBAT QUERIES
+# ==========================================
+
+def are_at_war(nation_a, nation_b, nation_data):
+    """Returns True if nation_b is in nation_a's war list."""
+    return nation_b in nation_data.get(nation_a, {}).get("at_war_with", [])
+
+def are_allied(nation_a, nation_b, nation_data):
+    """Returns True if nation_b is in nation_a's ally list."""
+    return nation_b in nation_data.get(nation_a, {}).get("allied_with", [])
 
 def is_province_in_active_combat(province, nation_data):
     """Returns True if ANY units from mutually hostile nations occupy this province."""
@@ -10,8 +41,7 @@ def is_province_in_active_combat(province, nation_data):
     
     for i in range(len(owners_present)):
         for j in range(i + 1, len(owners_present)):
-            nation_a = nation_data.get(owners_present[i], {})
-            if owners_present[j] in nation_a.get("at_war_with", []):
+            if are_at_war(owners_present[i], owners_present[j], nation_data):
                 return True
     return False
 
@@ -25,9 +55,12 @@ def is_hostile_territory(moving_nation, target_owner, nation_data):
     """Checks if a nation is actively at war with the target territory."""
     if target_owner in ["None", "Unclaimed", "Ocean", "Lakes"]:
         return False
-    
-    enemies = nation_data.get(moving_nation, {}).get("at_war_with", [])
-    return target_owner in enemies
+    return are_at_war(moving_nation, target_owner, nation_data)
+
+
+# ==========================================
+# MOVEMENT QUERIES
+# ==========================================
 
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
@@ -39,10 +72,9 @@ def can_ships_enter(moving_nation, target_province, nation_data):
         return False
         
     target_owner = target_province.get("owner", "Unclaimed")
-    allies = nation_data.get(moving_nation, {}).get("allied_with", [])
     
     # Ships can only enter friendly or unowned ports
-    return target_owner == moving_nation or target_owner in allies or target_owner == "Unclaimed"
+    return target_owner == moving_nation or are_allied(moving_nation, target_owner, nation_data) or target_owner == "Unclaimed"
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
     """Centralized rules for land movement."""
@@ -50,14 +82,124 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
         return False
 
     target_owner = target_province.get("owner", "Unclaimed")
-    allies = nation_data.get(moving_nation, {}).get("allied_with", [])
-    enemies = nation_data.get(moving_nation, {}).get("at_war_with", [])
 
     # Whitelist neutral water countries so they act as open international waters
     allowed_owners = ["Unclaimed", "None", moving_nation, "Ocean", "Lakes"]
 
     if target_owner not in allowed_owners:
-        if not (target_owner in enemies or target_owner in allies):
+        if not (are_at_war(moving_nation, target_owner, nation_data) or are_allied(moving_nation, target_owner, nation_data)):
             return False
 
     return True
+
+
+# ==========================================
+# PROVINCE & TECH QUERIES
+# ==========================================
+
+def has_industry(province):
+    """Returns True if the province contains a Workshop or Factory."""
+    return any("Workshop" in b or "Factory" in b for b in province.get("buildings", []))
+
+def get_highest_infantry(nation_data_block, tech_tree, unit_library):
+    """Finds the highest level infantry unit the nation has researched."""
+    res_lvl = nation_data_block.get("research", {}).get("infantry_type", 1)
+    inf_years = tech_tree.get("infantry_type", {}).get("years", [1850])
+    year_val = inf_years[min(res_lvl - 1, len(inf_years)-1)]
+    u_name = f"Infantry Type {year_val}"
+    
+    if u_name in unit_library:
+        return u_name
+    return "Infantry Type 1850"
+
+
+# ==========================================
+# ECONOMY QUERIES
+# ==========================================
+
+def calculate_all_economies(map_data, nation_data):
+    """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
+    YIELD_MANPOWER = BASE_YIELDS["manpower"]
+    YIELD_MATERIALS = BASE_YIELDS["materials"]
+    YIELD_FUEL = BASE_YIELDS["fuel"]
+
+    unit_lib = _get_unit_library()
+    bldg_lib = _get_building_library()
+
+    # Initialize data structure for all active nations
+    econ_data = {}
+    for name in nation_data.keys():
+        econ_data[name] = {
+            "breakdown": {
+                "manpower": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
+                "materials": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
+                "fuel": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0}
+            },
+            "upkeep": {"manpower": 0, "materials": 0, "fuel": 0},
+            "total_inc": {"manpower": 0, "materials": 0, "fuel": 0}
+        }
+
+    # Single efficient pass over the map
+    for province in map_data.values():
+        owner = province.get("owner")
+        
+        # --- INCOME LOGIC ---
+        if owner and owner in econ_data and owner not in UNPLAYABLE_NATIONS:
+            is_core = owner in province.get("cores", [])
+
+            mat_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["materials"]
+            fuel_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["fuel"]
+            man_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["manpower"]
+
+            cat = "core" if is_core else "non_core"
+            bd = econ_data[owner]["breakdown"]
+
+            bd["manpower"][cat] += man_mult * YIELD_MANPOWER
+            bd["materials"][cat] += mat_mult * YIELD_MATERIALS
+            bd["fuel"][cat] += fuel_mult * YIELD_FUEL
+
+            # Natural Resources
+            res = province.get("resources", {})
+            if isinstance(res, dict):
+                bd["materials"]["resources"] += int(res.get("Iron", 0)) * mat_mult
+                bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * fuel_mult
+
+            # Buildings
+            for b_name in province.get("buildings", []):
+                stats = bldg_lib.get(b_name, {})
+                bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) 
+                bd["materials"]["buildings"] += stats.get("prod_materials", 0) 
+                bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) 
+
+        # --- UPKEEP LOGIC ---
+        for unit in province.get("units", []):
+            u_owner = unit.get("owner")
+            if u_owner in econ_data:
+                # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
+                u_type = unit.get("original_type", unit.get("type"))
+                stats = unit_lib.get(u_type, {})
+                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
+
+    # Finalize totals
+    for data in econ_data.values():
+        data["total_inc"]["manpower"] = sum(data["breakdown"]["manpower"].values())
+        data["total_inc"]["materials"] = sum(data["breakdown"]["materials"].values())
+        data["total_inc"]["fuel"] = sum(data["breakdown"]["fuel"].values())
+
+    return econ_data
+
+def get_economy_projections(target_nation, map_data, nation_data):
+    """Pulls a specific nation's UI data from the unified calculator."""
+    all_econ = calculate_all_economies(map_data, nation_data)
+    p_econ = all_econ.get(target_nation, {})
+    
+    if not p_econ:
+        return (
+            {"manpower": 0, "materials": 0, "fuel": 0},
+            {"manpower": 0, "materials": 0, "fuel": 0},
+            {"manpower": {}, "materials": {}, "fuel": {}}
+        )
+        
+    return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")

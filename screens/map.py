@@ -14,8 +14,18 @@ from map_functions.logic import (
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT,BASE_YIELDS, UPKEEP_MODIFIER, UI_LEFT_OFFSET, NON_CORE_MULTIPLIERS, WATER_TERRAINS, UNPLAYABLE_NATIONS
+from data.constants import (
+    SCREEN_WIDTH,
+    SCREEN_HEIGHT,
+    BASE_YIELDS,
+    UPKEEP_MODIFIER,
+    UI_LEFT_OFFSET,
+    NON_CORE_MULTIPLIERS,
+    WATER_TERRAINS,
+    UNPLAYABLE_NATIONS
+)
 from map_functions.rendering.font_manager import fonts
+from map_functions.logic import state_queries
 
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, num_players=1):
@@ -514,8 +524,7 @@ class Map(GameState):
             self.show_feedback("Request Rejected!")
             return
 
-        player_data = self.nation_data[self.player_country]
-        at_war = target in player_data.get("at_war_with", [])
+        at_war = state_queries.are_at_war(self.player_country, target, self.nation_data)
         
         action = "CEASEFIRE" if at_war else "WAR_DECLARATION"
         msg = diplomacy_logic.toggle_diplomacy_action(self.nation_data, self.player_country, target, action)
@@ -543,8 +552,7 @@ class Map(GameState):
                 self.show_feedback("Ceasefire Accepted!")
                 return
 
-        player_data = self.nation_data[self.player_country]
-        allied = target in player_data.get("allied_with", [])
+        allied = state_queries.are_allied(self.player_country, target, self.nation_data)
         
         action = "BREAK_ALLIANCE" if allied else "ALLIANCE_REQUEST"
         msg = diplomacy_logic.toggle_diplomacy_action(self.nation_data, self.player_country, target, action)
@@ -566,21 +574,6 @@ class Map(GameState):
 
     def additional_draw(self, surface): 
         map_renderer.draw_map_screen(self, surface)
-
-    def get_player_economy_projections(self):
-        # Pulls the player's UI data from the unified calculator.
-        all_econ = self.calculate_all_economies()
-        p_econ = all_econ.get(self.player_country, {})
-        
-        # Safely return defaults if player data isn't set up yet
-        if not p_econ:
-            return (
-                {"manpower": 0, "materials": 0, "fuel": 0},
-                {"manpower": 0, "materials": 0, "fuel": 0},
-                {"manpower": {}, "materials": {}, "fuel": {}}
-            )
-            
-        return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")
     
     def refresh_nation_data(self):
         from data.io import country_io
@@ -666,84 +659,6 @@ class Map(GameState):
     def open_edit_country(self):
         if self.player_country and self.player_country != "None":
             self.next_state, self.done = "EDIT_COUNTRY", True
-
-    def calculate_all_economies(self):
-        """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
-        YIELD_MANPOWER = BASE_YIELDS["manpower"]
-        YIELD_MATERIALS = BASE_YIELDS["materials"]
-        YIELD_FUEL = BASE_YIELDS["fuel"]
-
-        if not hasattr(self, 'cached_unit_library'):
-            import json, os
-            self.cached_unit_library = json.load(open('data/json/unit_data.json')) if os.path.exists('data/json/unit_data.json') else {}
-            self.cached_building_library = json.load(open('data/json/building_data.json')) if os.path.exists('data/json/building_data.json') else {}
-
-        # Initialize data structure for all active nations
-        econ_data = {}
-        for name in self.nation_data.keys():
-            econ_data[name] = {
-                "breakdown": {
-                    "manpower": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
-                    "materials": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0},
-                    "fuel": {"core": 0, "non_core": 0, "buildings": 0, "resources": 0}
-                },
-                "upkeep": {"manpower": 0, "materials": 0, "fuel": 0},
-                "total_inc": {"manpower": 0, "materials": 0, "fuel": 0}
-            }
-
-        # Single efficient pass over the map
-        for province in self.map_data.values():
-            owner = province.get("owner")
-            
-            # --- INCOME LOGIC ---
-            if owner and owner in econ_data and owner not in UNPLAYABLE_NATIONS:
-                is_core = owner in province.get("cores", [])
-
-                mat_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["materials"]
-                fuel_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["fuel"]
-                man_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["manpower"]
-
-                cat = "core" if is_core else "non_core"
-                bd = econ_data[owner]["breakdown"]
-
-                bd["manpower"][cat] += man_mult * YIELD_MANPOWER
-                bd["materials"][cat] += mat_mult * YIELD_MATERIALS
-                bd["fuel"][cat] += fuel_mult * YIELD_FUEL
-
-                # Natural Resources
-                res = province.get("resources", {})
-                if isinstance(res, dict):
-                    bd["materials"]["resources"] += int(res.get("Iron", 0)) * mat_mult
-                    bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * fuel_mult
-
-                # Buildings
-                for b_name in province.get("buildings", []):
-                    stats = self.cached_building_library.get(b_name, {})
-                    # Notice we don't apply the non-core multiplier to buildings here, 
-                    # assuming factories produce 100% output regardless of core status. 
-                    # You can change this by multiplying by man_mult/mat_mult/fuel_mult if desired!
-                    bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) 
-                    bd["materials"]["buildings"] += stats.get("prod_materials", 0) 
-                    bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) 
-
-            # --- UPKEEP LOGIC ---
-            for unit in province.get("units", []):
-                u_owner = unit.get("owner")
-                if u_owner in econ_data:
-                    # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
-                    u_type = unit.get("original_type", unit.get("type"))
-                    stats = self.cached_unit_library.get(u_type, {})
-                    econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
-                    econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
-                    econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
-
-        # Finalize totals
-        for data in econ_data.values():
-            data["total_inc"]["manpower"] = sum(data["breakdown"]["manpower"].values())
-            data["total_inc"]["materials"] = sum(data["breakdown"]["materials"].values())
-            data["total_inc"]["fuel"] = sum(data["breakdown"]["fuel"].values())
-
-        return econ_data
     
     def update_country_centers(self):
         # Calculates the visual center, rotation, and physical spread for every country landmass.

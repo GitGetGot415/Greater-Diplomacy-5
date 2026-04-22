@@ -3,6 +3,7 @@ from gameState import GameState
 from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
+from map_functions.logic import state_queries
 
 class Economy_Screen(GameState):
     def __init__(self):
@@ -52,7 +53,7 @@ class Economy_Screen(GameState):
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
         # Grab the projections and data
-        econ_tuple = self.map_screen.get_player_economy_projections()
+        econ_tuple = state_queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
         if len(econ_tuple) == 3:
             total_inc, upkeep, breakdown = econ_tuple
         else:
