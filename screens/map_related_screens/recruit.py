@@ -109,7 +109,14 @@ class Recruit_Screen(GameState):
                 if highest_unlocked:
                     lookup_name = highest_unlocked
                     
-                    btn = Button(x_pos, y_offset, "medium", btn_color, 
+                    # --- NEW: Gray out button if no industry is present ---
+                    buildings = self.target_province.get("buildings", [])
+                    has_industry = any("Workshop" in b or "Factory" in b for b in buildings)
+                    
+                    final_btn_color = btn_color if has_industry else "grey"
+                    # ------------------------------------------------------
+                    
+                    btn = Button(x_pos, y_offset, "medium", final_btn_color, 
                                  highest_unlocked, lambda n=lookup_name: self.buy_unit(n))
                     self.elements.append(btn)
                     
@@ -156,6 +163,15 @@ class Recruit_Screen(GameState):
     def buy_unit(self, unit_name):
         stats = self.unit_library.get(unit_name)
         if not stats or not self.map_screen: return
+
+        # --- NEW: Check if the province has a Workshop or Factory ---
+        buildings = self.target_province.get("buildings", [])
+        has_industry = any("Workshop" in b or "Factory" in b for b in buildings)
+        
+        if not has_industry:
+            self.map_screen.show_feedback("Requires a Workshop or Factory to recruit!")
+            return
+        # ------------------------------------------------------------
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         costs = {

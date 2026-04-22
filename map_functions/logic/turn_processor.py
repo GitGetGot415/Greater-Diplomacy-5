@@ -62,7 +62,10 @@ def process_national_research(self):
     with open(RESEARCH_TEMPLATE_PATH, "r") as f:
         template = json.load(f)
     
-    points_per_turn = 10 * DAYS_PER_TURN # Standardized 10/day * 10 days
+    base_points_per_turn = 10 * DAYS_PER_TURN # Standardized 10/day * 10 days
+
+    # Calculate exact fractional year based on the game's 360-day calendar (12 months * 30 days)
+    current_exact_year = self.time_manager.year + (self.time_manager.month_index / 12.0) + (self.time_manager.day / 360.0)
 
     for country_name, country_data in self.nation_data.items():
         queue = country_data.get("research_queue", [])
@@ -73,12 +76,34 @@ def process_national_research(self):
             project = queue[i]
             tech_key = project["tech_name"]
             
+            # --- AHEAD OF TIME PENALTY LOGIC ---
+            # Figure out what level is currently being researched
+            current_level = country_data.get("research", {}).get(tech_key, 0)
+            tech_data = template.get(tech_key, {})
+            years_array = tech_data.get("years", [1850])
+            
+            # Cap the index to prevent out-of-bounds if a nation somehow researches past max_lvl
+            target_index = min(current_level, len(years_array) - 1)
+            target_year = years_array[target_index]
+            
+            years_ahead = target_year - current_exact_year
+            
+            if years_ahead > 0:
+                # Exponential decay: 50% at 1 year, 25% at 2 years, etc.
+                multiplier = 0.5 ** years_ahead
+            else:
+                # No penalty if researching on time or behind time
+                multiplier = 1.0
+                
+            effective_points = base_points_per_turn * multiplier
+            # -----------------------------------
+            
             # Use 'points_remaining' instead of 'days_remaining'
             # (First time initialization if coming from an old save)
             if "points_remaining" not in project:
                 project["points_remaining"] = project.get("days_remaining", 30) * 10
             
-            project["points_remaining"] -= points_per_turn
+            project["points_remaining"] -= effective_points
 
             if project["points_remaining"] <= 0:
                 country_data["research"][tech_key] = country_data["research"].get(tech_key, 0) + 1

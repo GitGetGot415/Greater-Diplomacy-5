@@ -229,7 +229,8 @@ class Research_Screen(GameState):
                 "display_name": display_name,
                 "cost": self.tech_tree[tech_key].get("cost", 300),
                 "status": status,
-                "icon": icon
+                "icon": icon,
+                "target_year": year
             }
             
             btn = Button(base_x + self.scroll_x, base_y, "tech_square", btn_color, display_name, 
@@ -429,11 +430,35 @@ class Research_Screen(GameState):
             surface.blit(big_icon, (panel_rect.x + 30, panel_rect.y + 100))
 
         cost = self.active_modal["cost"]
-        time = max(1, cost // 100) # Standardized division assuming 100 pts per turn
-        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({time} turns)", True, (255, 215, 0))
+        base_time = max(1, cost // 100) # Standardized division assuming 100 pts per turn
+        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({base_time} turns)", True, (255, 215, 0))
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
-        y_off = panel_rect.y + 160
+        # --- AHEAD OF TIME SIMULATION ---
+        tm = self.map_screen.time_manager
+        current_exact_year = tm.year + (tm.month_index / 12.0) + (tm.day / 360.0)
+        target_year = self.active_modal.get("target_year", 1900)
+        
+        actual_turns = 0
+        sim_year = current_exact_year
+        pts_accumulated = 0
+        base_pts_per_turn = 100
+        year_inc = DAYS_PER_TURN / 360.0
+        
+        # Simulate the research progress turn-by-turn
+        while pts_accumulated < cost and actual_turns < 5000: # 5000 is a safety breaker
+            years_ahead = target_year - sim_year
+            mult = (0.5 ** years_ahead) if years_ahead > 0 else 1.0
+            pts_accumulated += (base_pts_per_turn * mult)
+            sim_year += year_inc
+            actual_turns += 1
+            
+        if actual_turns > base_time:
+            warn_txt = font_small.render(f"⚠️ Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns", True, (255, 100, 100))
+            surface.blit(warn_txt, (panel_rect.x + 200, panel_rect.y + 130))
+        # --------------------------------
+
+        y_off = panel_rect.y + 170 # Shifted down slightly to make room for the warning text
         display_name = self.active_modal["display_name"]
         
         if display_name in self.unit_library:
