@@ -13,8 +13,9 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     while queue:
         path = queue.pop(0)
 
-        # If we already found targets at a shallower depth, stop exploring deeper
-        if found_depth != -1 and len(path) > found_depth:
+        # Allow BFS to search a few tiles deeper than the first found target 
+        # so it can accurately discover empty borders further down the line.
+        if found_depth != -1 and len(path) > found_depth + 3:
             break
 
         curr = path[-1]
@@ -24,15 +25,16 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
         for n_id in prov.get("neighbors", []):
             if n_id in target_ids:
                 valid_paths.append(path[1:] + [n_id])
-                found_depth = len(path)
+                if found_depth == -1:
+                    found_depth = len(path)
 
             if n_id not in visited and n_id in allowed_prov_ids:
                 visited.add(n_id)
                 queue.append(path + [n_id])
 
-    # If we found paths at this depth level, pick the one pointing to the least-assigned target
+    # Pick the path pointing to the target with the LEAST assignments, tie-breaking by distance.
     if valid_paths:
-        best_path = min(valid_paths, key=lambda p: target_assignments[p[-1]])
+        best_path = min(valid_paths, key=lambda p: (target_assignments[p[-1]], len(p)))
         return best_path
 
     return []

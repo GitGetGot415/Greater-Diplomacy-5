@@ -2,12 +2,14 @@ import json
 import os
 from map_functions.logic import diplomacy_logic
 from map_functions.logic import edit_province_ownership
-from map_functions.ai import ai_movement
+from map_functions.ai import ai_movement, ai_research, ai_construction
 from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
 
 def prepare_turn(self):
     """Phase 1: Calculate diplomacy and generate AI movement paths."""
     diplomacy_logic.process_diplomacy_turn(self)
+    ai_research.process_ai_research(self)
+    ai_construction.process_ai_economy_decisions(self)
     ai_movement.process_ai_unit_orders(self)
 
 def resolve_turn(self):
