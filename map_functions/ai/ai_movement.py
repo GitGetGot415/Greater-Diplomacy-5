@@ -131,6 +131,15 @@ def process_ai_unit_orders(map_screen):
 
             # --- ANTI-SHUFFLE INTERCEPTS ---
             
+            # --- NEW: Combat Lock (AI Check) ---
+            in_combat = any(u.get("owner") in enemies for u in prov.get("units", []))
+            
+            # If the AI is currently engaged in active combat on its tile,
+            # force it to hold the line. It cannot retreat or push forward blindly.
+            if in_combat:
+                continue
+            # -----------------------------------
+
             # 1. Peacetime Anti-Shuffle
             # If we are holding a border and we are the ONLY unit here, hold the line.
             if not at_war and curr_id in target_assignments:

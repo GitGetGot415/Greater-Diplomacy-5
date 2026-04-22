@@ -254,6 +254,19 @@ def process_movement(self):
             player_data = self.nation_data.get(unit["owner"], {})
             dest_owner = target_prov.get("owner", "Unclaimed")
             
+            enemies = player_data.get("at_war_with", [])
+            
+            # --- NEW: Combat Lock (Execution Check) ---
+            # If the unit gets intercepted in a province during its move, 
+            # it loses all remaining speed and cannot advance into an enemy tile
+            curr_prov = self.id_to_province.get(unit["_current_province_id"])
+            if curr_prov:
+                in_combat = any(u.get("owner") in enemies for u in curr_prov.get("units", []))
+                if in_combat and dest_owner in enemies:
+                    order["path"] = []
+                    continue
+            # ------------------------------------------
+
             # --- NEW SHIP RULES EVALUATION ---
             dest_is_water = target_prov.get("terrain") in WATER_TERRAINS
             u_type = unit.get("type", "")
