@@ -2,20 +2,22 @@ from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, WATER_NATIONS
 
 def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments):
     """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
-    if start_id in target_ids:
-        return []
-
     queue = [[start_id]]
     visited = set([start_id])
     valid_paths = []
     found_depth = -1
+
+    # If already on a target, staying is evaluated as a valid option
+    if start_id in target_ids:
+        valid_paths.append([start_id])
+        found_depth = 0
 
     while queue:
         path = queue.pop(0)
 
         # Allow BFS to search a few tiles deeper than the first found target 
         # so it can accurately discover empty borders further down the line.
-        if found_depth != -1 and len(path) > found_depth + 3:
+        if found_depth != -1 and (len(path) - 1) > found_depth + 3:
             break
 
         curr = path[-1]
@@ -24,7 +26,7 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
 
         for n_id in prov.get("neighbors", []):
             if n_id in target_ids:
-                valid_paths.append(path[1:] + [n_id])
+                valid_paths.append(path + [n_id])
                 if found_depth == -1:
                     found_depth = len(path)
 
@@ -35,7 +37,12 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by distance.
     if valid_paths:
         best_path = min(valid_paths, key=lambda p: (target_assignments[p[-1]], len(p)))
-        return best_path
+        
+        # If the best path is just staying where we are, return an empty array so we don't move
+        if best_path[-1] == start_id:
+            return []
+            
+        return best_path[1:]
 
     return []
 
@@ -109,11 +116,10 @@ def process_ai_unit_orders(map_screen):
         # Keep track of how many units are assigned to each target so we can spread them evenly
         target_assignments = {t_id: 0 for t_id in target_destinations}
 
-        # Pre-count units already AT the targets (for peace borders) so we don't over-assign
-        if not at_war:
-            for unit, prov in units_info:
-                if prov["id"] in target_assignments:
-                    target_assignments[prov["id"]] += 1
+        # Pre-count units already AT the targets so we don't over-assign
+        for unit, prov in units_info:
+            if prov["id"] in target_assignments:
+                target_assignments[prov["id"]] += 1
 
         for unit, prov in units_info:
             u_type = unit.get("type", "")
@@ -123,15 +129,41 @@ def process_ai_unit_orders(map_screen):
 
             curr_id = prov["id"]
 
-            # If at peace and already on a peace border, just stay to prevent infinite shuffling
+            # --- ANTI-SHUFFLE INTERCEPTS ---
+            
+            # 1. Peacetime Anti-Shuffle
+            # If we are holding a border and we are the ONLY unit here, hold the line.
             if not at_war and curr_id in target_assignments:
-                continue
+                if target_assignments[curr_id] <= 1:
+                    continue # Skip BFS entirely, stay put
+            
+            # 2. Wartime Anti-Shuffle
+            # If we are adjacent to the enemy, prioritize attacking them directly
+            # instead of walking sideways down the border to balance numbers.
+            if at_war:
+                adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations]
+                if adjacent_targets:
+                    # Pick the adjacent enemy with the least attackers currently assigned
+                    best_adj = min(adjacent_targets, key=lambda t: target_assignments[t])
+                    
+                    speed = unit.get("speed", 1)
+                    unit["order"]["path"] = [best_adj] # Move directly into enemy territory
+                    
+                    target_assignments[best_adj] += 1
+                    if curr_id in target_assignments:
+                        target_assignments[curr_id] -= 1
+                    continue # Skip BFS, we have our orders
+
+            # --- END ANTI-SHUFFLE ---
 
             # Route to the nearest border/enemy that needs reinforcements
             path = _bfs_nearest_target(curr_id, set(target_destinations), my_prov_ids, map_screen.id_to_province, target_assignments)
             if path:
-                # --- THE BUG FIX ---
                 # Truncate the AI's path to match its actual movement speed
                 speed = unit.get("speed", 1)
                 unit["order"]["path"] = path[:speed]
+                
+                # Tell the system this unit is taking this target, reducing its priority for the next unit
+                if curr_id in target_assignments:
+                    target_assignments[curr_id] -= 1
                 target_assignments[path[-1]] += 1
