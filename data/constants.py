@@ -95,9 +95,6 @@ BASE_MAPS_DIR = "base_maps"
 # Default Map Assets
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
-DEFAULT_TERRAIN_MAP_PATH = "map_tools/terrain_map.png"
-DEFAULT_ID_MAP_PATH = "map_tools/provinces_id_map.png"
-DEFAULT_MAP_DATA_PATH = "map_tools/map_data.json"
 
 # Fonts & Sounds
 FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"
