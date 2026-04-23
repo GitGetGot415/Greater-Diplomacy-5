@@ -1,13 +1,13 @@
 import pygame
 from map_functions.rendering.font_manager import fonts
-from data.constants import SCREEN_WIDTH
+from data.constants import SCREEN_WIDTH, PROVINCE_UI  # <-- Import the new dictionary
 from map_functions.logic import state_queries
 
-# --- Define the 4 split boxes ---
-units_rect = pygame.Rect(860, 70, 210, 350)
-bldgs_rect = pygame.Rect(860, 440, 210, 350)
-rel_rect = pygame.Rect(SCREEN_WIDTH - 200, 200, 210, 200)
-mail_rect = pygame.Rect(SCREEN_WIDTH - 200, 420, 210, 300)
+# --- Define the 4 split boxes using the centralized constants ---
+units_rect = pygame.Rect(*PROVINCE_UI["units_box"])
+bldgs_rect = pygame.Rect(*PROVINCE_UI["buildings_box"])
+rel_rect = pygame.Rect(*PROVINCE_UI["relations_box"])
+mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
 
 def draw_unit_info(self, surface):
     if not self.selected_province:

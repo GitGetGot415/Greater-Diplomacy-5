@@ -25,6 +25,14 @@ UNPLAYABLE_NATIONS = ["None", "Unclaimed", "Ocean", "Lakes", "Spectator"]
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
+# --- Province Menu UI Layout (X, Y, Width, Height) ---
+PROVINCE_UI = {
+    "units_box": (860, 70, 210, 350),
+    "buildings_box": (860, 440, 210, 350),
+    "relations_box": (SCREEN_WIDTH - 200, 200, 210, 200),
+    "mail_box": (SCREEN_WIDTH - 200, 420, 210, 300)
+}
+
 UI_LEFT_OFFSET = 160
 
 # This probably needs to be implemented in more places than just orders.py / buttons.py

@@ -22,7 +22,8 @@ from data.constants import (
     UI_LEFT_OFFSET,
     NON_CORE_MULTIPLIERS,
     WATER_TERRAINS,
-    UNPLAYABLE_NATIONS
+    UNPLAYABLE_NATIONS,
+    PROVINCE_UI
 )
 from map_functions.rendering.font_manager import fonts
 from map_functions.logic import state_queries
@@ -456,7 +457,7 @@ class Map(GameState):
             is_foreign = owner != self.player_country and owner in self.nation_data and self.nation_data[owner].get("is_playable")
             if is_foreign:
                 # MAIL BOX! MAIL BOX! MAIL BOX!
-                mail_rect = pygame.Rect(SCREEN_WIDTH - 200, 420, 210, 300)
+                mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
                 
                 # 1. Handle clicking the box to activate/deactivate it
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
