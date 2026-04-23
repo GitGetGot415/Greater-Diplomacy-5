@@ -513,14 +513,13 @@ class Map(GameState):
     def handle_declare_war(self):
         target = self.selected_province.get("owner")
         
-        incoming = diplomacy_logic.get_pending_action(self.nation_data, target, self.player_country)
-        p_info = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(self.player_country, {})
-        incoming_turns = p_info.get("turns", 0) if isinstance(p_info, dict) else 0
+        # --- NEW: Use clean queries ---
+        action, incoming_turns = state_queries.get_diplomatic_status(target, self.player_country, self.nation_data)
 
         # ONLY intercept if the request has actually been delivered (turns > 0)
-        if incoming in ["ALLIANCE_REQUEST", "CEASEFIRE"] and incoming_turns > 0:
+        if action in ["ALLIANCE_REQUEST", "CEASEFIRE"] and incoming_turns > 0:
             del self.nation_data[target]["pending_diplomacy"][self.player_country]
-            diplomacy_logic.send_message(self.nation_data, self.player_country, target, f"We rejected your {incoming.replace('_', ' ').lower()}.", "DIPLOMACY")
+            diplomacy_logic.send_message(self.nation_data, self.player_country, target, f"We rejected your {action.replace('_', ' ').lower()}.", "DIPLOMACY")
             self.show_feedback("Request Rejected!")
             return
 
@@ -533,19 +532,18 @@ class Map(GameState):
     def handle_form_alliance(self):
         target = self.selected_province.get("owner")
         
-        incoming = diplomacy_logic.get_pending_action(self.nation_data, target, self.player_country)
-        p_info = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(self.player_country, {})
-        incoming_turns = p_info.get("turns", 0) if isinstance(p_info, dict) else 0
+        # --- NEW: Use clean queries ---
+        action, incoming_turns = state_queries.get_diplomatic_status(target, self.player_country, self.nation_data)
 
         # ONLY intercept if the request has actually been delivered (turns > 0)
         if incoming_turns > 0:
-            if incoming == "ALLIANCE_REQUEST":
+            if action == "ALLIANCE_REQUEST":
                 diplomacy_logic.finalize_alliance(self.nation_data, self.player_country, target)
                 del self.nation_data[target]["pending_diplomacy"][self.player_country]
                 diplomacy_logic.send_message(self.nation_data, self.player_country, target, "We accepted your alliance proposal.", "DIPLOMACY")
                 self.show_feedback("Alliance Accepted!")
                 return
-            elif incoming == "CEASEFIRE":
+            elif action == "CEASEFIRE":
                 diplomacy_logic.finalize_neutral(self.nation_data, self.player_country, target)
                 del self.nation_data[target]["pending_diplomacy"][self.player_country]
                 diplomacy_logic.send_message(self.nation_data, self.player_country, target, "We accepted your ceasefire terms.", "DIPLOMACY")
@@ -875,9 +873,8 @@ class Map(GameState):
             owner = self.selected_province.get("owner", "Unclaimed")
             player_data = self.nation_data.get(self.player_country, {})
             
-            # ---> NEW SPECTATOR LOGIC <---
             if self.player_country == "Spectator":
-                if owner not in UNPLAYABLE_NATIONS:
+                if state_queries.is_playable(owner, self.nation_data):
                     self.btn_force_war.visible = True
                     self.btn_force_peace.visible = True
                     self.btn_force_alliance.visible = True
@@ -893,13 +890,9 @@ class Map(GameState):
                         self.btn_go_build.visible = True
                         self.btn_go_recruit.visible = is_land
 
-                if owner != self.player_country and owner in self.nation_data and self.nation_data[owner].get("is_playable"):
+                if owner != self.player_country and state_queries.is_playable(owner, self.nation_data):
                     
-                    incoming_action = diplomacy_logic.get_pending_action(self.nation_data, owner, self.player_country)
-                    incoming_turns = 0
-                    if incoming_action:
-                        p_info = self.nation_data.get(owner, {}).get("pending_diplomacy", {}).get(self.player_country, {})
-                        incoming_turns = p_info.get("turns", 0) if isinstance(p_info, dict) else 0
+                    incoming_action, incoming_turns = state_queries.get_diplomatic_status(owner, self.player_country, self.nation_data)
 
                     if incoming_action == "ALLIANCE_REQUEST" and incoming_turns > 0:
                         self.btn_declare_war.visible = True
@@ -914,15 +907,11 @@ class Map(GameState):
                         self.btn_form_alliance.text = "ACCEPT CEASEFIRE"
 
                     else:
-                        at_war = owner in player_data.get("at_war_with", [])
-                        allied = owner in player_data.get("allied_with", [])
+                        at_war = state_queries.are_at_war(self.player_country, owner, self.nation_data)
+                        allied = state_queries.are_allied(self.player_country, owner, self.nation_data)
 
-                        pending_action = diplomacy_logic.get_pending_action(self.nation_data, self.player_country, owner)
-                        
-                        pending = player_data.get("pending_diplomacy", {})
-                        pending_info = pending.get(owner, {})
-                        turns_elapsed = pending_info.get("turns", 0) if isinstance(pending_info, dict) else 0
-                        is_sending = (turns_elapsed == 0)
+                        pending_action, pending_turns = state_queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
+                        is_sending = (pending_turns == 0)
 
                         def get_status_text():
                             return "SENDING (UNDO)" if is_sending else "WAITING..."
@@ -968,12 +957,6 @@ class Map(GameState):
                 owner = self.selected_province.get("owner")
                 self.mail_input_active = False
                 if owner and owner != self.player_country:
-                    pending = self.nation_data.get(self.player_country, {}).get("pending_diplomacy", {}).get(owner, {})
-                    action = pending.get("action", "") if isinstance(pending, dict) else pending
-                    turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
-                    if isinstance(action, str) and action.startswith("MSG:") and turns == 0:
-                        self.mail_draft_text = action[4:]
-                    else:
-                        self.mail_draft_text = ""
+                    self.mail_draft_text = state_queries.get_message_draft(self.player_country, owner, self.nation_data)
         else:
             self.last_selected_id = None

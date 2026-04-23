@@ -31,17 +31,8 @@ class Messages_Screen(GameState):
     def select_recipient(self, target):
         self.selected_recipient = target
         
-        # Load existing draft if present
-        player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-        pending = player_data.get("pending_diplomacy", {}).get(target, {})
-        action = pending.get("action", "") if isinstance(pending, dict) else pending
-        turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
-        
-        if isinstance(action, str) and action.startswith("MSG:") and turns == 0:
-            self.compose_text = action[4:]
-        else:
-            self.compose_text = ""
-            
+        # --- NEW: Use clean draft check ---
+        self.compose_text = state_queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
         self.refresh_ui()
 
     def send_message(self):
@@ -61,14 +52,8 @@ class Messages_Screen(GameState):
 
     def additional_events(self, event):
         if self.active_tab == "COMPOSE" and self.selected_recipient:
-            # Check lock state
-            player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-            pending = player_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
-            action = pending.get("action", "") if isinstance(pending, dict) else pending
-            turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
-            
-            # Lock input if in transit or another non-text action is pending
-            locked = turns > 0 or (isinstance(action, str) and action and not action.startswith("MSG:"))
+            # --- NEW: Use clean lock check ---
+            locked = state_queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             
             if not locked and event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
@@ -148,10 +133,8 @@ class Messages_Screen(GameState):
             surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 20))
 
             if self.selected_recipient:
-                player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-                pending = player_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
-                action = pending.get("action", "") if isinstance(pending, dict) else pending
-                turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+                # --- NEW: Use clean status check ---
+                action, turns = state_queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
                 # Dynamic Status Logic
                 status_text = "Drafting new message to:"
@@ -185,25 +168,33 @@ class Messages_Screen(GameState):
         if self.active_tab == "COMPOSE":
             y_off = 100
             
-            # Scan map for living nations using the unified query
+            # --- NEW: Clean filtering of playable, living nations ---
             active_nations = state_queries.get_living_nations(self.map_screen.map_data)
             
-            playable = [c for c, d in self.map_screen.nation_data.items() 
-                        if d.get("is_playable") and c != self.map_screen.player_country and c in active_nations]
+            playable = [c for c in active_nations 
+                        if state_queries.is_playable(c, self.map_screen.nation_data) and c != self.map_screen.player_country]
             
             playable.sort()
+            
             for i, c in enumerate(playable):
                 x_off = 50 + (i % 5) * 220
                 row_y = y_off + (i // 5) * 60
-                color = "green" if self.selected_recipient == c else "grey"
+                
+                # Check for pending messages to this country
+                draft = state_queries.get_message_draft(self.map_screen.player_country, c, self.map_screen.nation_data)
+                
+                if self.selected_recipient == c:
+                    color = "green"
+                elif draft:
+                    color = "green"
+                else:
+                    color = "grey"
+                    
                 self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
 
             # DYNAMIC DRAFT BUTTONS
             if self.selected_recipient:
-                player_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-                pending = player_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
-                action = pending.get("action", "") if isinstance(pending, dict) else pending
-                turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+                action, turns = state_queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
                 if turns > 0:
                     self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))

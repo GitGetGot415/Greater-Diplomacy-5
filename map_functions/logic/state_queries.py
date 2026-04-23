@@ -234,3 +234,51 @@ def get_research_multiplier(current_exact_year, target_year):
     if years_ahead > 0:
         return 0.5 ** years_ahead
     return 1.0
+
+
+# ==========================================
+# DIPLOMATIC STATUS & UI QUERIES
+# ==========================================
+
+def is_playable(nation, nation_data):
+    """Safely checks if a nation exists and is a playable entity."""
+    from data.constants import UNPLAYABLE_NATIONS
+    if nation in UNPLAYABLE_NATIONS:
+        return False
+    return nation_data.get(nation, {}).get("is_playable", False)
+
+def get_enemies(nation, nation_data):
+    return nation_data.get(nation, {}).get("at_war_with", [])
+
+def get_allies(nation, nation_data):
+    return nation_data.get(nation, {}).get("allied_with", [])
+
+def get_diplomatic_status(sender, target, nation_data):
+    """Safely unpacks the pending diplomacy dictionary. Returns (action_string, turns_int)."""
+    pending = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(target, {})
+    
+    # Handle legacy saves where it might just be a string
+    action = pending.get("action", "") if isinstance(pending, dict) else pending
+    turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+    
+    # Failsafe
+    if isinstance(action, dict): 
+        action = ""
+        
+    return action, turns
+
+def get_message_draft(sender, target, nation_data):
+    """Returns the draft text if one exists and hasn't been sent."""
+    action, turns = get_diplomatic_status(sender, target, nation_data)
+    if isinstance(action, str) and action.startswith("MSG:") and turns == 0:
+        return action[4:]
+    return ""
+
+def is_diplomat_busy(sender, target, nation_data):
+    """Returns True if the diplomat is currently traveling or performing a non-message action."""
+    action, turns = get_diplomatic_status(sender, target, nation_data)
+    if turns > 0: 
+        return True
+    if action and not action.startswith("MSG:"): 
+        return True
+    return False

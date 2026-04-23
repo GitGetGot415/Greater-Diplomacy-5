@@ -1,7 +1,7 @@
 import pygame
 from map_functions.rendering.font_manager import fonts
 from data.constants import SCREEN_WIDTH
-
+from map_functions.logic import state_queries
 
 # --- Define the 4 split boxes ---
 units_rect = pygame.Rect(860, 70, 210, 350)
@@ -66,9 +66,10 @@ def draw_unit_info(self, surface):
         rel_title = self.font.render("Relations", True, (255, 255, 255))
         surface.blit(rel_title, (rel_rect.x + 10, rel_rect.y + 10))
         
-        target_data = self.nation_data.get(owner, {})
-        wars = target_data.get("at_war_with", [])
-        allies = target_data.get("allied_with", [])
+        # --- NEW: Cleaned up queries ---
+        wars = state_queries.get_enemies(owner, self.nation_data)
+        allies = state_queries.get_allies(owner, self.nation_data)
+        # -------------------------------
         
         y_offset = rel_rect.y + 40
         surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (rel_rect.x + 10, y_offset))
@@ -99,19 +100,16 @@ def draw_unit_info(self, surface):
         mail_title = self.font.render("Direct Message", True, (255, 255, 255))
         surface.blit(mail_title, (mail_rect.x + 10, mail_rect.y + 10))
         
-        # Check status
-        pending = self.nation_data.get(self.player_country, {}).get("pending_diplomacy", {}).get(owner, {})
-        action = pending.get("action", "") if isinstance(pending, dict) else pending
-        turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+        # --- NEW: Check status cleanly ---
+        action, turns = state_queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
+        locked = state_queries.is_diplomat_busy(self.player_country, owner, self.nation_data)
 
         status_text = "Drafting..."
-        locked = False
         if turns > 0:
             status_text = "In Transit / Awaiting"
-            locked = True
-        elif isinstance(action, str) and action and not action.startswith("MSG:"):
+        elif locked:
             status_text = "Diplomat Busy"
-            locked = True
+        # ---------------------------------
 
         status_surf = self.small_font.render(status_text, True, (200, 255, 200) if not locked else (255, 200, 100))
         surface.blit(status_surf, (mail_rect.x + 10, mail_rect.y + 40))
