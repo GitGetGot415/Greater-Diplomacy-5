@@ -10,10 +10,12 @@ from map_functions.logic import (
     random_map_generator,
     diplomacy_logic,
     refresh_map,
-    turn_processor
+    turn_processor,
+    player_diplomacy_actions
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
+from map_functions.ui import spectator_menus
 from data.constants import (
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
@@ -213,75 +215,10 @@ class Map(GameState):
             buttons.render_buttons(self)
             self.refresh_relations_map()
 
-    def force_war_menu(self): self.open_spectator_action_menu("WAR")
-    def force_peace_menu(self): self.open_spectator_action_menu("PEACE")
-    def force_alliance_menu(self): self.open_spectator_action_menu("ALLIANCE")
-    def force_break_alliance_menu(self): self.open_spectator_action_menu("BREAK")
-
-    def open_spectator_action_menu(self, action_type):
-        if not self.selected_province: return
-        source_nation = self.selected_province.get("owner")
-        if source_nation in UNPLAYABLE_NATIONS: return
-        
-        import tkinter as tk
-        root = tk.Tk()
-        root.title(f"{action_type} for {source_nation}")
-        root.geometry("300x450")
-        root.attributes("-topmost", True)
-        self.menu_active = True
-
-        def on_select(event=None):
-            selection = lb.curselection()
-            if selection:
-                target_nation = lb.get(selection[0])
-                from map_functions.logic import diplomacy_logic
-                
-                if action_type == "WAR":
-                    diplomacy_logic.finalize_war(self.nation_data, source_nation, target_nation)
-                    self.show_feedback(f"Forced War: {source_nation} vs {target_nation}")
-                elif action_type == "PEACE":
-                    diplomacy_logic.finalize_neutral(self.nation_data, source_nation, target_nation)
-                    self.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
-                elif action_type == "ALLIANCE":
-                    diplomacy_logic.finalize_alliance(self.nation_data, source_nation, target_nation)
-                    self.show_feedback(f"Forced Alliance: {source_nation} & {target_nation}")
-                elif action_type == "BREAK":
-                    diplomacy_logic.finalize_neutral(self.nation_data, source_nation, target_nation)
-                    self.show_feedback(f"Broke Alliance: {source_nation} & {target_nation}")
-                    
-                self.refresh_relations_map()
-            close_menu()
-
-        def close_menu():
-            self.menu_active = False
-            root.destroy()
-
-        root.protocol("WM_DELETE_WINDOW", close_menu)
-        tk.Label(root, text=f"Select Target for {action_type}:", font=("Arial", 12)).pack(pady=10)
-        
-        frame = tk.Frame(root)
-        frame.pack(fill="both", expand=True, padx=10)
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Only show other living/playable nations
-        nations = sorted([n for n, d in self.nation_data.items() if d.get("is_playable") and n != source_nation])
-        lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-        for n in nations:
-            lb.insert(tk.END, n)
-        lb.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=lb.yview)
-        
-        tk.Button(root, text="Confirm", command=on_select, bg="#4CAF50", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
-        lb.bind('<Double-1>', on_select)
-
-        while self.menu_active:
-            try:
-                root.update()
-                pygame.event.pump()
-            except:
-                break
-    # -------------------------
+    def force_war_menu(self): spectator_menus.force_war_menu(self)
+    def force_peace_menu(self): spectator_menus.force_peace_menu(self)
+    def force_alliance_menu(self): spectator_menus.force_alliance_menu(self)
+    def force_break_alliance_menu(self): spectator_menus.force_break_alliance_menu(self)
             
     def cancel_selection(self):
         self.pending_selection = None
@@ -451,37 +388,6 @@ class Map(GameState):
 
     def additional_events(self, event): 
         event_handler.handle_map_events(self, event)
-        
-        # --- NEW: Direct Map Message Editing ---
-        if self.selected_province:
-            owner = self.selected_province.get("owner")
-            is_foreign = state_queries.is_foreign_playable(owner, self.player_country, self.nation_data)
-            if is_foreign:
-                # MAIL BOX! MAIL BOX! MAIL BOX!
-                mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
-                
-                # 1. Handle clicking the box to activate/deactivate it
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if mail_rect.collidepoint(event.pos):
-                        self.mail_input_active = True
-                    else:
-                        self.mail_input_active = False
-                
-                # 2. Handle typing and sending if the box is active
-                elif getattr(self, "mail_input_active", False):
-                    self.mail_draft_text, status = process_text_input(
-                        event, getattr(self, "mail_draft_text", ""), max_length=120
-                    )
-                    
-                    if status == "SUBMIT":
-                        draft = self.mail_draft_text.strip()
-                        if draft:
-                            msg = diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
-                            self.show_feedback(msg)
-                        else:
-                            diplomacy_logic.cancel_text_message(self.nation_data, self.player_country, owner)
-                            self.show_feedback("Draft cleared.")
-                        self.mail_input_active = False
 
     def sync_units_to_data(self):
         # Forces all units currently on the map to adopt the stats from unit_data.json.
@@ -513,50 +419,10 @@ class Map(GameState):
         self.show_feedback(f"Synced {updated_count} units on map!")
 
     def handle_declare_war(self):
-        target = self.selected_province.get("owner")
-        
-        # --- NEW: Use clean queries ---
-        action, incoming_turns = state_queries.get_diplomatic_status(target, self.player_country, self.nation_data)
-
-        # ONLY intercept if the request has actually been delivered (turns > 0)
-        if action in ["ALLIANCE_REQUEST", "CEASEFIRE"] and incoming_turns > 0:
-            del self.nation_data[target]["pending_diplomacy"][self.player_country]
-            diplomacy_logic.send_message(self.nation_data, self.player_country, target, f"We rejected your {action.replace('_', ' ').lower()}.", "DIPLOMACY")
-            self.show_feedback("Request Rejected!")
-            return
-
-        at_war = state_queries.are_at_war(self.player_country, target, self.nation_data)
-        
-        action = "CEASEFIRE" if at_war else "WAR_DECLARATION"
-        msg = diplomacy_logic.toggle_diplomacy_action(self.nation_data, self.player_country, target, action)
-        self.show_feedback(msg)
+        player_diplomacy_actions.handle_declare_war(self)
 
     def handle_form_alliance(self):
-        target = self.selected_province.get("owner")
-        
-        # --- NEW: Use clean queries ---
-        action, incoming_turns = state_queries.get_diplomatic_status(target, self.player_country, self.nation_data)
-
-        # ONLY intercept if the request has actually been delivered (turns > 0)
-        if incoming_turns > 0:
-            if action == "ALLIANCE_REQUEST":
-                diplomacy_logic.finalize_alliance(self.nation_data, self.player_country, target)
-                del self.nation_data[target]["pending_diplomacy"][self.player_country]
-                diplomacy_logic.send_message(self.nation_data, self.player_country, target, "We accepted your alliance proposal.", "DIPLOMACY")
-                self.show_feedback("Alliance Accepted!")
-                return
-            elif action == "CEASEFIRE":
-                diplomacy_logic.finalize_neutral(self.nation_data, self.player_country, target)
-                del self.nation_data[target]["pending_diplomacy"][self.player_country]
-                diplomacy_logic.send_message(self.nation_data, self.player_country, target, "We accepted your ceasefire terms.", "DIPLOMACY")
-                self.show_feedback("Ceasefire Accepted!")
-                return
-
-        allied = state_queries.are_allied(self.player_country, target, self.nation_data)
-        
-        action = "BREAK_ALLIANCE" if allied else "ALLIANCE_REQUEST"
-        msg = diplomacy_logic.toggle_diplomacy_action(self.nation_data, self.player_country, target, action)
-        self.show_feedback(msg)
+        player_diplomacy_actions.handle_form_alliance(self)
 
     def handle_back_key(self):
         if self.selected_province:

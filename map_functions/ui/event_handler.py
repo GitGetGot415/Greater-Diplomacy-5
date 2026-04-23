@@ -208,6 +208,42 @@ def handle_map_events(self, event):
             self.selected_province = self.hovered_province
             center_camera_on_province(self)
 
+    # --- NEW: Direct Map Message Editing ---
+    if self.selected_province:
+        owner = self.selected_province.get("owner")
+        from map_functions.logic import state_queries # Add if not imported
+        is_foreign = state_queries.is_foreign_playable(owner, self.player_country, self.nation_data)
+        if is_foreign:
+            # MAIL BOX! MAIL BOX! MAIL BOX!
+            from data.constants import PROVINCE_UI
+            mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
+            
+            # 1. Handle clicking the box to activate/deactivate it
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if mail_rect.collidepoint(event.pos):
+                    self.mail_input_active = True
+                else:
+                    self.mail_input_active = False
+            
+            # 2. Handle typing and sending if the box is active
+            elif getattr(self, "mail_input_active", False):
+                from ui_elements import process_text_input
+                from map_functions.logic import diplomacy_logic
+                
+                self.mail_draft_text, status = process_text_input(
+                    event, getattr(self, "mail_draft_text", ""), max_length=120
+                )
+                
+                if status == "SUBMIT":
+                    draft = self.mail_draft_text.strip()
+                    if draft:
+                        msg = diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
+                        self.show_feedback(msg)
+                    else:
+                        diplomacy_logic.cancel_text_message(self.nation_data, self.player_country, owner)
+                        self.show_feedback("Draft cleared.")
+                    self.mail_input_active = False
+
 def center_camera_on_province(self):
     """Calculates and snaps the camera to the selected province based on current zoom."""
     cx, cy = self.selected_province["center"]
