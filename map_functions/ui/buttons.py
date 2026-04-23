@@ -19,9 +19,9 @@ def render_buttons(self):
 
         # Refresh Buttons
         self.elements = [
-            Button(920, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
-            Button(1020, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
-            Button(1120, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
+            Button(SCREEN_WIDTH - 420, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
+            Button(SCREEN_WIDTH - 320, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(SCREEN_WIDTH - 220, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
         ]
 
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen
@@ -78,18 +78,18 @@ def render_buttons(self):
                 ])
         
     # Standard Action Buttons
-    self.btn_go_recruit = Button(1180, 70, "medium", "green", "Recruit Menu", self.open_recruit)
-    self.btn_go_orders = Button(1180, 130, "medium", "blue", "Give Orders", self.open_orders)
-    self.btn_go_build = Button(1180, 190, "medium", "grey", "Construction", self.open_construction)
+    self.btn_go_recruit = Button(SCREEN_WIDTH - 200, 70, "medium", "green", "Recruit Menu", self.open_recruit)
+    self.btn_go_orders = Button(SCREEN_WIDTH - 200, 130, "medium", "blue", "Give Orders", self.open_orders)
+    self.btn_go_build = Button(SCREEN_WIDTH - 200, 190, "medium", "grey", "Construction", self.open_construction)
 
-    self.btn_declare_war = Button(1180, 70, "medium", "red", "Declare War", self.handle_declare_war)
-    self.btn_form_alliance = Button(1180, 130, "medium", "green", "Form Alliance", self.handle_form_alliance)
+    self.btn_declare_war = Button(SCREEN_WIDTH - 200, 70, "medium", "red", "Declare War", self.handle_declare_war)
+    self.btn_form_alliance = Button(SCREEN_WIDTH - 200, 130, "medium", "green", "Form Alliance", self.handle_form_alliance)
 
     # NEW: Spectator God Power Buttons
-    self.btn_force_war = Button(1180, 70, "medium", "red", "Force War", self.force_war_menu)
-    self.btn_force_peace = Button(1180, 130, "medium", "green", "Force Ceasefire", self.force_peace_menu)
-    self.btn_force_alliance = Button(1180, 190, "medium", "blue", "Force Alliance", self.force_alliance_menu)
-    self.btn_break_alliance = Button(1180, 250, "medium", "orange", "Break Alliance", self.force_break_alliance_menu)
+    self.btn_force_war = Button(SCREEN_WIDTH - 200, 70, "medium", "red", "Force War", self.force_war_menu)
+    self.btn_force_peace = Button(SCREEN_WIDTH - 200, 130, "medium", "green", "Force Ceasefire", self.force_peace_menu)
+    self.btn_force_alliance = Button(SCREEN_WIDTH - 200, 190, "medium", "blue", "Force Alliance", self.force_alliance_menu)
+    self.btn_break_alliance = Button(SCREEN_WIDTH - 200, 250, "medium", "orange", "Break Alliance", self.force_break_alliance_menu)
 
     # NEW: Spectator Mode Toggle Button
     self.btn_spectator = Button(20, SCREEN_HEIGHT - 100, "medium", "grey", "Spectator Mode", self.start_spectator)

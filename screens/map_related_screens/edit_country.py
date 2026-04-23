@@ -8,6 +8,7 @@ from tkinter import colorchooser
 from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
+from data.constants import SCREEN_WIDTH
 
 right_ui_x = 850
 input_box_x = 50
@@ -41,7 +42,7 @@ class Edit_Country_Screen(GameState):
         self.flag_scale = 6
         self.portrait_scale = 6
         
-        self.flag_rect = pygame.Rect(50, 150, self.flag_size[0] * self.flag_scale, self.flag_size[1] * self.flag_scale)
+        self.flag_rect = pygame.Rect(input_box_x, 150, self.flag_size[0] * self.flag_scale, self.flag_size[1] * self.flag_scale)
         self.portrait_rect = pygame.Rect(second_right_ui_x, 150, self.portrait_size[0] * self.portrait_scale, self.portrait_size[1] * self.portrait_scale)
         
         self.flag_surf = pygame.Surface(self.flag_size)
@@ -189,7 +190,7 @@ class Edit_Country_Screen(GameState):
         ]
         
         # Export Buttons
-        self.elements.append(Button(50, 420, "medium", "blue", "Export Flag", self.export_flag))
+        self.elements.append(Button(input_box_x, 420, "medium", "blue", "Export Flag", self.export_flag))
         self.elements.append(Button(second_right_ui_x, 520, "medium", "blue", "Export Portrait", self.export_portrait))
         
         # Build Palette Buttons
@@ -338,23 +339,23 @@ class Edit_Country_Screen(GameState):
         pygame.draw.rect(surface, (200, 200, 200), self.portrait_rect, 2)
 
         # Labels
-        surface.blit(heading_font.render("Flag (60x40)", True, (200, 200, 200)), (50, 110))
+        surface.blit(heading_font.render("Flag (60x40)", True, (200, 200, 200)), (input_box_x, 110))
         surface.blit(heading_font.render("Leader Portrait (60x60)", True, (200, 200, 200)), (second_right_ui_x, 110))
         
         # Render Palette & Tool Header
         surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
         
         # Render Active Color Indicator ("selected")
-        color_x = 1450
-        color_y = 500
+        color_x = SCREEN_WIDTH - 200
+        color_y = 450
         pygame.draw.rect(surface, self.active_color, (color_x, color_y, 60, 60))
         pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
         surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x - 5, color_y + 70))
 
         # --- NEW: Map Color Preview ---
         # Shifted slightly right to fit cleanly next to the side-by-side buttons
-        map_color_x = 1430
-        map_color_y = 700
+        map_color_x = SCREEN_WIDTH - 200
+        map_color_y = 600
         surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (map_color_x, map_color_y - 30))
         pygame.draw.rect(surface, self.new_map_color, (map_color_x, map_color_y, 60, 40))
         pygame.draw.rect(surface, (255, 255, 255), (map_color_x, map_color_y, 60, 40), 2)
