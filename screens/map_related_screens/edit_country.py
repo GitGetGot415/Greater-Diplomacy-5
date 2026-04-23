@@ -9,8 +9,9 @@ from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 
-right_ui_x = 1150
-input_box_x = 100
+right_ui_x = 850
+input_box_x = 50
+second_right_ui_x = 450
 
 # Helper functions for encoding/decoding surfaces to JSON strings
 def encode_surf(surf):
@@ -37,11 +38,11 @@ class Edit_Country_Screen(GameState):
         self.portrait_size = (60, 60)
         
         # Scaled drawing constraints
-        self.flag_scale = 8
-        self.portrait_scale = 8
+        self.flag_scale = 6
+        self.portrait_scale = 6
         
         self.flag_rect = pygame.Rect(50, 150, self.flag_size[0] * self.flag_scale, self.flag_size[1] * self.flag_scale)
-        self.portrait_rect = pygame.Rect(600, 150, self.portrait_size[0] * self.portrait_scale, self.portrait_size[1] * self.portrait_scale)
+        self.portrait_rect = pygame.Rect(second_right_ui_x, 150, self.portrait_size[0] * self.portrait_scale, self.portrait_size[1] * self.portrait_scale)
         
         self.flag_surf = pygame.Surface(self.flag_size)
         self.portrait_surf = pygame.Surface(self.portrait_size)
@@ -188,8 +189,8 @@ class Edit_Country_Screen(GameState):
         ]
         
         # Export Buttons
-        self.elements.append(Button(50, 490, "medium", "blue", "Export Flag", self.export_flag))
-        self.elements.append(Button(600, 670, "medium", "blue", "Export Portrait", self.export_portrait))
+        self.elements.append(Button(50, 420, "medium", "blue", "Export Flag", self.export_flag))
+        self.elements.append(Button(second_right_ui_x, 520, "medium", "blue", "Export Portrait", self.export_portrait))
         
         # Build Palette Buttons
         for i, color in enumerate(self.palette):
@@ -286,11 +287,11 @@ class Edit_Country_Screen(GameState):
         # 1. Text Input Selection Logic
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            if pygame.Rect(input_box_x, 600, 300, 40).collidepoint(mx, my):
+            if pygame.Rect(input_box_x, 450, 300, 40).collidepoint(mx, my):
                 self.active_input = "COUNTRY_NAME"
-            elif pygame.Rect(input_box_x, 700, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 550, 300, 40).collidepoint(mx, my):
                 self.active_input = "NAME"
-            elif pygame.Rect(input_box_x, 800, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 650, 300, 40).collidepoint(mx, my):
                 self.active_input = "TITLE"
             else:
                 self.active_input = None
@@ -338,7 +339,7 @@ class Edit_Country_Screen(GameState):
 
         # Labels
         surface.blit(heading_font.render("Flag (60x40)", True, (200, 200, 200)), (50, 110))
-        surface.blit(heading_font.render("Leader Portrait (60x60)", True, (200, 200, 200)), (600, 110))
+        surface.blit(heading_font.render("Leader Portrait (60x60)", True, (200, 200, 200)), (second_right_ui_x, 110))
         
         # Render Palette & Tool Header
         surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
@@ -367,9 +368,9 @@ class Edit_Country_Screen(GameState):
             pygame.draw.rect(surface, color, rect, 2)
             surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (input_box_x + 10, y_pos + 10))
 
-        draw_input_box(600, "Country Name:", "COUNTRY_NAME", self.country_name)
-        draw_input_box(700, "Leader Name:", "NAME", self.leader_name)
-        draw_input_box(800, "Leader Title:", "TITLE", self.leader_title)
+        draw_input_box(450, "Country Name:", "COUNTRY_NAME", self.country_name)
+        draw_input_box(550, "Leader Name:", "NAME", self.leader_name)
+        draw_input_box(650, "Leader Title:", "TITLE", self.leader_title)
 
     def handle_back_key(self):
         self.exit_to_map()

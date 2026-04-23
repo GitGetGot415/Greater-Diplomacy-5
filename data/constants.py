@@ -22,8 +22,8 @@ WATER_NATIONS = ["Ocean", "Lakes"]
 UNPLAYABLE_NATIONS = ["None", "Unclaimed", "Ocean", "Lakes", "Spectator"]
 
 # Width and Height
-SCREEN_WIDTH = 1600
-SCREEN_HEIGHT = 900
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
 
 UI_LEFT_OFFSET = 160
 

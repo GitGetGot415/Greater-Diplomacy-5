@@ -49,12 +49,12 @@ class Random_Setup(GameState):
             Button(50, 50, "small", "red", "Back", self.go_back),
             
             # Sliders 
-            Slider((SCREEN_WIDTH/2) - 100, 500, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
-            Slider((SCREEN_WIDTH/2) - 100, 600, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
+            Slider((SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
+            Slider((SCREEN_WIDTH/2) - 100, 400, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
             
             # Controls
-            Button("centered", 700, "medium", "grey", "Reset Defaults", self.do_reset),
-            Button("centered", 800, "large", "green", "START GAME", self.start_game),
+            Button("centered", 500, "medium", "grey", "Reset Defaults", self.do_reset),
+            Button("centered", 600, "large", "green", "START GAME", self.start_game),
             
             # --- NEW: The Procedural Generation Button ---
             Button(100, 100, "large", "orange" if self.procedural_world else "grey", 

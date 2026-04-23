@@ -2,10 +2,10 @@ import pygame
 from map_functions.rendering.font_manager import fonts
 
 # --- Define the 4 split boxes ---
-units_rect = pygame.Rect(1160, 70, 210, 350)
-bldgs_rect = pygame.Rect(1160, 440, 210, 350)
-rel_rect = pygame.Rect(1380, 200, 210, 200)
-mail_rect = pygame.Rect(1380, 420, 210, 300)
+units_rect = pygame.Rect(860, 70, 210, 350)
+bldgs_rect = pygame.Rect(860, 440, 210, 350)
+rel_rect = pygame.Rect(1180, 200, 210, 200)
+mail_rect = pygame.Rect(1180, 420, 210, 300)
 
 def draw_unit_info(self, surface):
     if not self.selected_province:
