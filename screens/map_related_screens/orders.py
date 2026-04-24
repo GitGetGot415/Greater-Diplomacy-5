@@ -177,7 +177,7 @@ class Orders_Screen(GameState):
                 if self.map_screen.hovered_province:
                     curr_id = self.map_screen.hovered_province["id"]
                     if curr_id != self.map_screen.last_hovered_id:
-                        from map_functions.logic import map_utils
+                        from map_functions import map_utils
                         self.map_screen.hover_glow_surf, self.map_screen.hover_glow_rect = map_utils.create_glow_surface(
                             self.map_screen.id_map, self.map_screen.hovered_province["map_color"]
                         )

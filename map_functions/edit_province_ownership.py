@@ -1,6 +1,6 @@
 import pygame
 from data.io import country_io
-from map_functions.logic import map_utils
+from map_functions import map_utils
 
 def conquer_province(self, province, new_owner):
     """Annexes a specific province to a specific country and updates visuals."""

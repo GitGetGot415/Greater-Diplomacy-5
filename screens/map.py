@@ -3,13 +3,13 @@ import random
 import math
 from data.map import load_map
 from gameState import GameState
-from map_functions.logic.diplomacy import diplomacy_logic, player_diplomacy_actions
-from map_functions.logic.random_map import random_map_generator
+from map_functions.diplomacy import diplomacy_logic
+from map_functions.diplomacy import player_diplomacy_actions
+from map_functions import edit_province_ownership, refresh_map
+from map_functions.random_map import random_map_generator
 from map_functions.ui import buttons, event_handler, editor_menus
 from data.map import save_map
-from map_functions.logic import (
-    edit_province_ownership,
-    refresh_map,
+from map_functions import (
     turn_processor
 )
 from map_functions.camera.camera_handler import MapCamera

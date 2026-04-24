@@ -1,7 +1,7 @@
 import json
 import os
-from map_functions.logic.diplomacy import diplomacy_logic
-from map_functions.logic import edit_province_ownership
+from map_functions.diplomacy import diplomacy_logic
+from map_functions import edit_province_ownership
 from map_functions.ai import ai_movement, ai_research, ai_construction
 from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
 from data import queries
@@ -149,7 +149,7 @@ def process_combat(self):
 
 def check_for_post_combat_captures(self):
     """Assigns province ownership to units standing in an undefended enemy province."""
-    from map_functions.logic import edit_province_ownership
+    from map_functions import edit_province_ownership
     
     for province in self.map_data.values():
         units = province.get("units", [])

@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 import base64
-from map_functions.logic.time_handler import TimeHandler
+from map_functions.time_handler import TimeHandler
 from data.io import country_io
 from data.constants import WATER_MAPPING, FLAGS_DIR, PORTRAITS_DIR, DEFAULT_FLAG_PATH, DEFAULT_PORTRAIT_PATH
 
@@ -50,7 +50,7 @@ def load_map_assets(self, load_path):
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
-        from map_functions.logic.random_map import procedural_map_generator
+        from map_functions.random_map import procedural_map_generator
         procedural_map_generator.generate_new_world(self)
         
         # After generating the base geography, setup standard variables

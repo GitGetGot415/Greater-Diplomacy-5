@@ -1,5 +1,5 @@
 from data import queries
-from map_functions.logic.diplomacy import diplomacy_logic
+from map_functions.diplomacy import diplomacy_logic
 
 def handle_declare_war(map_screen):
     target = map_screen.selected_province.get("owner")

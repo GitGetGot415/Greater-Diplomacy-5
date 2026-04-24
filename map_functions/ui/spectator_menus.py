@@ -28,7 +28,7 @@ def open_spectator_action_menu(map_screen, action_type):
         selection = lb.curselection()
         if selection:
             target_nation = lb.get(selection[0])
-            from map_functions.logic.diplomacy import diplomacy_logic
+            from map_functions.diplomacy import diplomacy_logic
             
             if action_type == "WAR":
                 diplomacy_logic.finalize_war(map_screen.nation_data, source_nation, target_nation)

@@ -1,6 +1,6 @@
 import pygame
-from map_functions.logic import map_utils
-from map_functions.logic import edit_province_ownership
+from map_functions import map_utils
+from map_functions import edit_province_ownership
 from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_NATIONS, UNPLAYABLE_NATIONS
 from map_functions.camera import camera_handler
 
@@ -225,7 +225,7 @@ def handle_map_events(self, event):
             # 2. Handle typing and sending if the box is active
             elif getattr(self, "mail_input_active", False):
                 from ui_elements import process_text_input
-                from map_functions.logic.diplomacy import diplomacy_logic
+                from map_functions.diplomacy import diplomacy_logic
                 
                 self.mail_draft_text, status = process_text_input(
                     event, getattr(self, "mail_draft_text", ""), max_length=120
