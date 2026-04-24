@@ -1,10 +1,10 @@
 import json
 import os
-from map_functions.logic import diplomacy_logic
+from map_functions.logic.diplomacy import diplomacy_logic
 from map_functions.logic import edit_province_ownership
 from map_functions.ai import ai_movement, ai_research, ai_construction
 from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
-from map_functions.logic import state_queries
+from data import queries
 
 def prepare_turn(self):
     """Phase 1: Calculate diplomacy and generate AI movement paths."""
@@ -67,7 +67,7 @@ def process_national_research(self):
     
     base_points_per_turn = 10 * DAYS_PER_TURN # Standardized 10/day * 10 days
 
-    current_exact_year = state_queries.get_exact_year(self.time_manager)
+    current_exact_year = queries.get_exact_year(self.time_manager)
 
     for country_name, country_data in self.nation_data.items():
         queue = country_data.get("research_queue", [])
@@ -88,7 +88,7 @@ def process_national_research(self):
             target_index = min(current_level, len(years_array) - 1)
             target_year = years_array[target_index]
             
-            multiplier = state_queries.get_research_multiplier(current_exact_year, target_year)
+            multiplier = queries.get_research_multiplier(current_exact_year, target_year)
             effective_points = base_points_per_turn * multiplier
             # -----------------------------------
             
@@ -136,7 +136,7 @@ def process_combat(self):
                 nation_b = owners[j]
                 
                 # Check if they are actually at war
-                at_war = state_queries.are_at_war(nation_a, nation_b, self.nation_data)
+                at_war = queries.are_at_war(nation_a, nation_b, self.nation_data)
                 
                 if at_war:
                     # Side A attacks Side B
@@ -169,7 +169,7 @@ def check_for_post_combat_captures(self):
         hp_totals = {}
         for u in units:
             o = u["owner"]
-            at_war = state_queries.is_hostile_territory(o, current_owner, self.nation_data)
+            at_war = queries.is_hostile_territory(o, current_owner, self.nation_data)
             is_unclaimed = current_owner in ["Unclaimed", "None", ""]
             
             # Flip ownership if the tile is unclaimed or if they are at war with the owner
@@ -250,8 +250,8 @@ def process_movement(self):
             # it loses all remaining speed and cannot advance into an enemy tile
             curr_prov = self.id_to_province.get(unit["_current_province_id"])
             if curr_prov:
-                in_combat = state_queries.is_nation_in_combat_here(unit["owner"], curr_prov, self.nation_data)
-                if in_combat and state_queries.is_hostile_territory(unit["owner"], dest_owner, self.nation_data):
+                in_combat = queries.is_nation_in_combat_here(unit["owner"], curr_prov, self.nation_data)
+                if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.nation_data):
                     order["path"] = []
                     continue
             # ------------------------------------------
@@ -267,7 +267,7 @@ def process_movement(self):
                 stats = self.cached_unit_library.get(u_type, {})
                 is_naval = stats.get("naval_unit", False)
                 
-            if is_naval and not is_convoy and not state_queries.can_ships_enter(unit["owner"], target_prov, self.nation_data):
+            if is_naval and not is_convoy and not queries.can_ships_enter(unit["owner"], target_prov, self.nation_data):
                 # Ships cannot enter hostile/unclaimed land
                 order["path"] = []
                 continue
@@ -281,14 +281,14 @@ def process_movement(self):
             if is_naval or is_convoy:
                 can_enter = True # Naval and convoy rules already handled above
             else:
-                can_enter = state_queries.can_land_units_enter(unit["owner"], target_prov, self.nation_data)
+                can_enter = queries.can_land_units_enter(unit["owner"], target_prov, self.nation_data)
 
             if can_enter:
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
                 # --- INSTANT CONVERT FOR CONVOYS ON ENEMY/UNCLAIMED COAST ---
-                if is_convoy and not dest_is_water and not state_queries.can_ships_enter(unit["owner"], target_prov, self.nation_data):
+                if is_convoy and not dest_is_water and not queries.can_ships_enter(unit["owner"], target_prov, self.nation_data):
                     unit["type"] = unit.get("original_type", "Infantry")
                     unit["speed"] = unit.get("original_speed", 1)
                     unit["naval_unit"] = False
@@ -323,7 +323,7 @@ def process_movement(self):
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
-    all_econ = state_queries.calculate_all_economies(self.map_data, self.nation_data)
+    all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
     for name, stats in self.nation_data.items():
         if name in UNPLAYABLE_NATIONS or name not in all_econ:

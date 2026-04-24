@@ -208,8 +208,8 @@ def handle_map_events(self, event):
     # --- NEW: Direct Map Message Editing ---
     if self.selected_province:
         owner = self.selected_province.get("owner")
-        from map_functions.logic import state_queries # Add if not imported
-        is_foreign = state_queries.is_foreign_playable(owner, self.player_country, self.nation_data)
+        from data import queries # Add if not imported
+        is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
         if is_foreign:
             # MAIL BOX! MAIL BOX! MAIL BOX!
             from data.constants import PROVINCE_UI
@@ -225,7 +225,7 @@ def handle_map_events(self, event):
             # 2. Handle typing and sending if the box is active
             elif getattr(self, "mail_input_active", False):
                 from ui_elements import process_text_input
-                from map_functions.logic import diplomacy_logic
+                from map_functions.logic.diplomacy import diplomacy_logic
                 
                 self.mail_draft_text, status = process_text_input(
                     event, getattr(self, "mail_draft_text", ""), max_length=120

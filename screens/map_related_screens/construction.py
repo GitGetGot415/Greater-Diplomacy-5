@@ -7,7 +7,7 @@ from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
-from map_functions.logic import state_queries
+from data import queries
 
 class Construction_Screen(GameState):
     def __init__(self):
@@ -68,7 +68,7 @@ class Construction_Screen(GameState):
                 if target:
                     data = self.building_library[target]
                     is_building = any(q.get("group") == data["group"] for q in queue)
-                    req_tech, req_lvl = state_queries.get_building_required_tech(target)
+                    req_tech, req_lvl = queries.get_building_required_tech(target)
 
                     # --- CHANGED LOGIC HERE ---
                     # If we don't have the tech, skip this group entirely

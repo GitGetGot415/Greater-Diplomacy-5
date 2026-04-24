@@ -50,7 +50,7 @@ def load_map_assets(self, load_path):
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
-        from map_functions.logic import procedural_map_generator
+        from map_functions.logic.random_map import procedural_map_generator
         procedural_map_generator.generate_new_world(self)
         
         # After generating the base geography, setup standard variables

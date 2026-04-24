@@ -1,7 +1,7 @@
 import pygame
 from map_functions.rendering.font_manager import fonts
 from data.constants import SCREEN_WIDTH, PROVINCE_UI  # <-- Import the new dictionary
-from map_functions.logic import state_queries
+from data import queries
 
 # --- Define the 4 split boxes using the centralized constants ---
 units_rect = pygame.Rect(*PROVINCE_UI["units_box"])
@@ -14,7 +14,7 @@ def draw_unit_info(self, surface):
         return
 
     owner = self.selected_province.get("owner", "Unclaimed")
-    is_foreign = state_queries.is_foreign_playable(owner, self.player_country, self.nation_data)
+    is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
 
     # --- 1. Units Box ---
     pygame.draw.rect(surface, (30, 30, 50), units_rect)
@@ -67,8 +67,8 @@ def draw_unit_info(self, surface):
         surface.blit(rel_title, (rel_rect.x + 10, rel_rect.y + 10))
         
         # --- NEW: Cleaned up queries ---
-        wars = state_queries.get_enemies(owner, self.nation_data)
-        allies = state_queries.get_allies(owner, self.nation_data)
+        wars = queries.get_enemies(owner, self.nation_data)
+        allies = queries.get_allies(owner, self.nation_data)
         # -------------------------------
         
         y_offset = rel_rect.y + 40
@@ -101,8 +101,8 @@ def draw_unit_info(self, surface):
         surface.blit(mail_title, (mail_rect.x + 10, mail_rect.y + 10))
         
         # --- NEW: Check status cleanly ---
-        action, turns = state_queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
-        locked = state_queries.is_diplomat_busy(self.player_country, owner, self.nation_data)
+        action, turns = queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
+        locked = queries.is_diplomat_busy(self.player_country, owner, self.nation_data)
 
         status_text = "Drafting..."
         if turns > 0:

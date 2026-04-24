@@ -3,15 +3,14 @@ import random
 import math
 from data.map import load_map
 from gameState import GameState
+from map_functions.logic.diplomacy import diplomacy_logic, player_diplomacy_actions
+from map_functions.logic.random_map import random_map_generator
 from map_functions.ui import buttons, event_handler, editor_menus
 from data.map import save_map
 from map_functions.logic import (
     edit_province_ownership,
-    random_map_generator,
-    diplomacy_logic,
     refresh_map,
-    turn_processor,
-    player_diplomacy_actions
+    turn_processor
 )
 from map_functions.camera.camera_handler import MapCamera
 from map_functions.rendering import map_renderer
@@ -28,7 +27,7 @@ from data.constants import (
     PROVINCE_UI
 )
 from map_functions.rendering.font_manager import fonts
-from map_functions.logic import state_queries
+from data import queries
 from ui_elements import Button, process_text_input
 
 class Map(GameState):
@@ -228,7 +227,7 @@ class Map(GameState):
         # --- Auto-save or clear direct message draft on exit ---
         if self.selected_province:
             owner = self.selected_province.get("owner")
-            is_foreign = state_queries.is_foreign_playable(owner, self.player_country, self.nation_data)
+            is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
             if is_foreign:
                 draft = getattr(self, "mail_draft_text", "").strip()
                 if draft:
@@ -432,7 +431,7 @@ class Map(GameState):
     def handle_orders_key(self):
         if self.selected_province and not self.selection_mode:
             owner = self.selected_province.get("owner", "Unclaimed")
-            has_player_units = state_queries.has_units_in_province(self.player_country, self.selected_province)
+            has_player_units = queries.has_units_in_province(self.player_country, self.selected_province)
             
             # Replicate the button visibility condition
             if owner == self.player_country or has_player_units:

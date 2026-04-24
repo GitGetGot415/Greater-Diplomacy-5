@@ -3,8 +3,8 @@ from gameState import GameState
 from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, UNPLAYABLE_NATIONS
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
-from map_functions.logic import diplomacy_logic
-from map_functions.logic import state_queries
+from map_functions.logic.diplomacy import diplomacy_logic
+from data import queries
 from ui_elements import Button, process_text_input
 
 class Messages_Screen(GameState):
@@ -33,7 +33,7 @@ class Messages_Screen(GameState):
         self.selected_recipient = target
         
         # --- NEW: Use clean draft check ---
-        self.compose_text = state_queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
+        self.compose_text = queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
         self.refresh_ui()
 
     def send_message(self):
@@ -53,7 +53,7 @@ class Messages_Screen(GameState):
 
     def additional_events(self, event):
         if self.active_tab == "COMPOSE" and self.selected_recipient:
-            locked = state_queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+            locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             
             if not locked:
                 self.compose_text, status = process_text_input(event, self.compose_text, max_length=70)
@@ -130,7 +130,7 @@ class Messages_Screen(GameState):
 
             if self.selected_recipient:
                 # --- NEW: Use clean status check ---
-                action, turns = state_queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+                action, turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
                 # Dynamic Status Logic
                 status_text = "Drafting new message to:"
@@ -165,10 +165,10 @@ class Messages_Screen(GameState):
             y_off = 100
             
             # --- NEW: Clean filtering of playable, living nations ---
-            active_nations = state_queries.get_living_nations(self.map_screen.map_data)
+            active_nations = queries.get_living_nations(self.map_screen.map_data)
             
             playable = [c for c in active_nations 
-                        if state_queries.is_playable(c, self.map_screen.nation_data) and c != self.map_screen.player_country]
+                        if queries.is_playable(c, self.map_screen.nation_data) and c != self.map_screen.player_country]
             
             playable.sort()
             
@@ -177,7 +177,7 @@ class Messages_Screen(GameState):
                 row_y = y_off + (i // 5) * 60
                 
                 # Check for pending messages to this country
-                draft = state_queries.get_message_draft(self.map_screen.player_country, c, self.map_screen.nation_data)
+                draft = queries.get_message_draft(self.map_screen.player_country, c, self.map_screen.nation_data)
                 
                 if self.selected_recipient == c:
                     color = "green"
@@ -190,7 +190,7 @@ class Messages_Screen(GameState):
 
             # DYNAMIC DRAFT BUTTONS
             if self.selected_recipient:
-                action, turns = state_queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+                action, turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
                 if turns > 0:
                     self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))

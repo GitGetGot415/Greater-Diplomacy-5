@@ -6,7 +6,7 @@ from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, RESEARCH_
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
-from map_functions.logic import state_queries
+from data import queries
 
 minimum_year = 1850
 maximum_year = 2000
@@ -436,7 +436,7 @@ class Research_Screen(GameState):
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
         # --- AHEAD OF TIME SIMULATION ---
-        current_exact_year = state_queries.get_exact_year(self.map_screen.time_manager)
+        current_exact_year = queries.get_exact_year(self.map_screen.time_manager)
         target_year = self.active_modal.get("target_year", 1900)
         
         actual_turns = 0
@@ -447,7 +447,7 @@ class Research_Screen(GameState):
         
         # Simulate the research progress turn-by-turn using the central math query
         while pts_accumulated < cost and actual_turns < 5000: # 5000 is a safety breaker
-            mult = state_queries.get_research_multiplier(sim_year, target_year)
+            mult = queries.get_research_multiplier(sim_year, target_year)
             pts_accumulated += (base_pts_per_turn * mult)
             sim_year += year_inc
             actual_turns += 1

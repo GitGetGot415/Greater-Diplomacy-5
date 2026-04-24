@@ -1,5 +1,5 @@
 from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, WATER_NATIONS
-from map_functions.logic import state_queries
+from data import queries
 
 def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments):
     """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
@@ -125,7 +125,7 @@ def process_ai_unit_orders(map_screen):
         for unit, prov in units_info:
             u_type = unit.get("type", "")
             # Skip naval units for this basic land logic utilizing the cleaner query
-            if state_queries.is_naval_unit(u_type):
+            if queries.is_naval_unit(u_type):
                 continue
 
             curr_id = prov["id"]
@@ -133,7 +133,7 @@ def process_ai_unit_orders(map_screen):
            # --- ANTI-SHUFFLE INTERCEPTS ---
             
             # --- NEW: Combat Lock (AI Check) ---
-            in_combat = state_queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+            in_combat = queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
             
             # If the AI is currently engaged in active combat on its tile,
             # force it to hold the line. It cannot retreat or push forward blindly.

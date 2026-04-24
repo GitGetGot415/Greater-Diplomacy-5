@@ -8,7 +8,7 @@ from data.constants import (
     BTN_SPECTATOR_Y, EDITOR_BOT_BTN_START_X, EDITOR_BOT_BTN_STEP_X
 )
 from map_functions.rendering import symbol_loader
-from map_functions.logic import state_queries
+from data import queries
 
 def render_buttons(self):
     if not self.selection_mode:
@@ -212,13 +212,13 @@ def update_button_states(map_screen):
         player_data = map_screen.nation_data.get(map_screen.player_country, {})
         
         if map_screen.player_country == "Spectator":
-            if state_queries.is_playable(owner, map_screen.nation_data):
+            if queries.is_playable(owner, map_screen.nation_data):
                 map_screen.btn_force_war.visible = True
                 map_screen.btn_force_peace.visible = True
                 map_screen.btn_force_alliance.visible = True
                 map_screen.btn_break_alliance.visible = True
         else:
-            has_player_units = state_queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
+            has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
             
             if owner == map_screen.player_country or has_player_units:
                 map_screen.btn_go_orders.visible = True
@@ -229,8 +229,8 @@ def update_button_states(map_screen):
                     map_screen.btn_go_build.visible = True
                     map_screen.btn_go_recruit.visible = is_land
 
-            if owner != map_screen.player_country and state_queries.is_playable(owner, map_screen.nation_data):
-                incoming_action, incoming_turns = state_queries.get_diplomatic_status(owner, map_screen.player_country, map_screen.nation_data)
+            if owner != map_screen.player_country and queries.is_playable(owner, map_screen.nation_data):
+                incoming_action, incoming_turns = queries.get_diplomatic_status(owner, map_screen.player_country, map_screen.nation_data)
 
                 if incoming_action == "ALLIANCE_REQUEST" and incoming_turns > 0:
                     map_screen.btn_declare_war.visible = True
@@ -245,10 +245,10 @@ def update_button_states(map_screen):
                     map_screen.btn_form_alliance.text = "ACCEPT CEASEFIRE"
 
                 else:
-                    at_war = state_queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
-                    allied = state_queries.are_allied(map_screen.player_country, owner, map_screen.nation_data)
+                    at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
+                    allied = queries.are_allied(map_screen.player_country, owner, map_screen.nation_data)
 
-                    pending_action, pending_turns = state_queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
+                    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
                     is_sending = (pending_turns == 0)
 
                     def get_status_text():

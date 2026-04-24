@@ -1,10 +1,11 @@
-from map_functions.logic import diplomacy_logic, state_queries
+from data import queries
+from map_functions.logic.diplomacy import diplomacy_logic
 
 def handle_declare_war(map_screen):
     target = map_screen.selected_province.get("owner")
     
     # --- NEW: Use clean queries ---
-    action, incoming_turns = state_queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
+    action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
     # ONLY intercept if the request has actually been delivered (turns > 0)
     if action in ["ALLIANCE_REQUEST", "CEASEFIRE"] and incoming_turns > 0:
@@ -13,7 +14,7 @@ def handle_declare_war(map_screen):
         map_screen.show_feedback("Request Rejected!")
         return
 
-    at_war = state_queries.are_at_war(map_screen.player_country, target, map_screen.nation_data)
+    at_war = queries.are_at_war(map_screen.player_country, target, map_screen.nation_data)
     
     action = "CEASEFIRE" if at_war else "WAR_DECLARATION"
     msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, action)
@@ -23,7 +24,7 @@ def handle_form_alliance(map_screen):
     target = map_screen.selected_province.get("owner")
     
     # --- NEW: Use clean queries ---
-    action, incoming_turns = state_queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
+    action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
     # ONLY intercept if the request has actually been delivered (turns > 0)
     if incoming_turns > 0:
@@ -40,7 +41,7 @@ def handle_form_alliance(map_screen):
             map_screen.show_feedback("Ceasefire Accepted!")
             return
 
-    allied = state_queries.are_allied(map_screen.player_country, target, map_screen.nation_data)
+    allied = queries.are_allied(map_screen.player_country, target, map_screen.nation_data)
     
     action = "BREAK_ALLIANCE" if allied else "ALLIANCE_REQUEST"
     msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, action)

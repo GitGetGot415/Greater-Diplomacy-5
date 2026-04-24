@@ -4,7 +4,7 @@ import pygame
 from map_functions.ai import ai_handler
 from map_functions.rendering.font_manager import fonts
 from data.constants import UNPLAYABLE_NATIONS
-from map_functions.logic import state_queries
+from data import queries
 
 def get_pending_action(nation_data, player_name, target_name):
     pending = nation_data.get(player_name, {}).get("pending_diplomacy", {})
@@ -80,7 +80,7 @@ def send_message(nation_data, sender, receiver, content, msg_type="TEXT"):
 
 def process_diplomacy_turn(self):
     # --- 0. FIND ALIVE NATIONS ---
-    active_nations = state_queries.get_living_nations(self.map_data)
+    active_nations = queries.get_living_nations(self.map_data)
     active_nations_list = sorted(list(active_nations))
 
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---

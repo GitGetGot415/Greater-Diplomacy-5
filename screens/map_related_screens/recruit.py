@@ -9,7 +9,7 @@ from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
-from map_functions.logic import state_queries
+from data import queries
 
 class Recruit_Screen(GameState):
     def __init__(self):
@@ -43,7 +43,7 @@ class Recruit_Screen(GameState):
 
     def get_group_name(self, name):
         # We strip the year off the infantry so they all group properly!
-        return state_queries.get_base_unit_name(name)
+        return queries.get_base_unit_name(name)
 
     def get_ordered_groups(self):
         infantry_groups, tank_groups, navy_groups = [], [], []
@@ -110,7 +110,7 @@ class Recruit_Screen(GameState):
                     lookup_name = highest_unlocked
                     
                     # --- NEW: Gray out button if no industry is present ---
-                    has_industry = state_queries.has_industry(self.target_province)
+                    has_industry = queries.has_industry(self.target_province)
                     
                     final_btn_color = btn_color if has_industry else "grey"
                     # ------------------------------------------------------
@@ -147,14 +147,14 @@ class Recruit_Screen(GameState):
             self.navy_start_y = self.navy_end_y = y_offset
 
     def roman_to_int(self, s):
-        return state_queries.roman_to_int(s)
+        return queries.roman_to_int(s)
 
     def buy_unit(self, unit_name):
         stats = self.unit_library.get(unit_name)
         if not stats or not self.map_screen: return
 
         # --- NEW: Check if the province has a Workshop or Factory ---
-        if not state_queries.has_industry(self.target_province):
+        if not queries.has_industry(self.target_province):
             self.map_screen.show_feedback("Requires a Workshop or Factory to recruit!")
             return
         # ------------------------------------------------------------

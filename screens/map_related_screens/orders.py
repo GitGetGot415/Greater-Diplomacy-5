@@ -6,7 +6,7 @@ from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS, UNIT_DAT
 from gameState import GameState
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
-from map_functions.logic import state_queries
+from data import queries
 
 class Orders_Screen(GameState):
     def __init__(self):
@@ -58,7 +58,7 @@ class Orders_Screen(GameState):
 
             # --- NEW: Combat Check ---
             player_country = self.map_screen.player_country
-            in_combat = state_queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
+            in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
             # -------------------------
 
             # Convoy Conversion Logic (Enforce coastal/port rules)
@@ -67,7 +67,7 @@ class Orders_Screen(GameState):
             
             # Using our updated query logic instead of isolated stat lookups
             is_convoy = u_type.startswith("Convoy")
-            is_naval = state_queries.is_naval_unit(u_type)
+            is_naval = queries.is_naval_unit(u_type)
 
             if order_type == "CONVERT":
                 txt = f"Cancel Convert ({active_unit['order'].get('turns_left', 0)} turns)"
@@ -113,7 +113,7 @@ class Orders_Screen(GameState):
     def convert_unit(self):
         # --- Prevent conversion during combat just in case ---
         player_country = self.map_screen.player_country
-        in_combat = state_queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
+        in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot convert during combat!")
             return
@@ -231,7 +231,7 @@ class Orders_Screen(GameState):
         # Look up the actual unit stats using its type name
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
-        is_naval = state_queries.is_naval_unit(u_type)
+        is_naval = queries.is_naval_unit(u_type)
 
         # Enforce Land Unit Rules
         if not is_naval and dest_is_water:
@@ -245,7 +245,7 @@ class Orders_Screen(GameState):
                 return False
 
             # --- NEW: Ships can only dock at friendly coasts ---
-            if not is_convoy and not state_queries.can_ships_enter(unit["owner"], dest, self.map_screen.nation_data):
+            if not is_convoy and not queries.can_ships_enter(unit["owner"], dest, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Ships can only enter friendly/owned coastal tiles!")
                 return False
             # ---------------------------------------------------
@@ -256,13 +256,13 @@ class Orders_Screen(GameState):
         # --- NEW: Combat Lock (Player UI Check) ---
         current_path = unit.get("order", {}).get("path", [])
         if not current_path: # First step of the move order
-            in_combat = state_queries.is_nation_in_combat_here(unit["owner"], self.target_province, self.map_screen.nation_data)
-            if in_combat and state_queries.is_hostile_territory(unit["owner"], dest_owner, self.map_screen.nation_data):
+            in_combat = queries.is_nation_in_combat_here(unit["owner"], self.target_province, self.map_screen.nation_data)
+            if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Cannot advance into enemy territory while in combat! (Retreat only)")
                 return False
         # ------------------------------------------
 
-        if not is_naval and not state_queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
+        if not is_naval and not queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
             self.map_screen.show_feedback(f"Neutral {dest_owner} territory!")
             return False
             

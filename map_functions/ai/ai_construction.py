@@ -1,19 +1,19 @@
 import json
 import os
 from data.constants import UNIT_DATA_PATH, BUILDING_DATA_PATH, RESEARCH_TEMPLATE_PATH, UNPLAYABLE_NATIONS, DAYS_PER_TURN
-from map_functions.logic import state_queries
+from data import queries
 
 def process_ai_economy_decisions(map_screen):
     """Handles AI unit recruitment and building construction based on economy."""
-    unit_library = state_queries._get_unit_library() # Use cached version
+    unit_library = queries._get_unit_library() # Use cached version
         
-    building_library = state_queries._get_building_library() # Use cached version
+    building_library = queries._get_building_library() # Use cached version
 
     tech_tree = {}
     if os.path.exists(RESEARCH_TEMPLATE_PATH):
         with open(RESEARCH_TEMPLATE_PATH, 'r') as f: tech_tree = json.load(f)
 
-    all_econ = state_queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
 
     # Pre-group provinces by owner for efficiency
     nation_provs = {}
@@ -43,14 +43,14 @@ def process_ai_economy_decisions(map_screen):
         
         # If current upkeep is below the desired percentage of income, build units!
         if upk_mat < (inc_mat * desired_ratio) and upk_man < (inc_man * desired_ratio):
-            inf_name = state_queries.get_highest_infantry(data, tech_tree, unit_library)
+            inf_name = queries.get_highest_infantry(data, tech_tree, unit_library)
             inf_stats = unit_library.get(inf_name, {})
             cost_mat = inf_stats.get("cost_materials", 0)
             cost_man = inf_stats.get("cost_manpower", 0)
             cost_fuel = inf_stats.get("cost_fuel", 0)
             
             # Find a province capable of recruiting
-            factory_provs = [p for p in my_provs if state_queries.has_industry(p)]
+            factory_provs = [p for p in my_provs if queries.has_industry(p)]
             
             # Can we afford the upfront cost?
             if factory_provs and data.get("materials", 0) >= cost_mat and data.get("manpower", 0) >= cost_man and data.get("fuel", 0) >= cost_fuel:
