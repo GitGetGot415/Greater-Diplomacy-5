@@ -3,7 +3,9 @@ from ui_elements import Button
 from data.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TOP_BAR_UI_CENTER_Y, BOTTOM_BAR_UI_CENTER_Y,
     VIEW_BTN_START_X, VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, VIEW_BTN_ROW2_Y,
-    ACTION_BTN_X, ACTION_BTN_START_Y, ACTION_BTN_STEP_Y
+    ACTION_BTN_X, ACTION_BTN_START_Y, ACTION_BTN_STEP_Y,
+    LEFT_UI_BAR_X, BTN_RESEARCH_Y, BTN_SAVE_Y, BTN_ECONOMY_Y, BTN_MESSAGES_Y,
+    BTN_SPECTATOR_Y, EDITOR_BOT_BTN_START_X, EDITOR_BOT_BTN_STEP_X
 )
 from map_functions.rendering import symbol_loader
 from map_functions.logic import state_queries
@@ -46,21 +48,21 @@ def render_buttons(self):
 
         if self.is_editor:
             self.elements.extend([
-                Button(SCREEN_WIDTH - 120, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
-                Button(SCREEN_WIDTH - 230, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
-                Button(SCREEN_WIDTH - 340, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
-                Button(SCREEN_WIDTH - 450, BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush),
-                Button(SCREEN_WIDTH - 450, SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores),
+                Button(EDITOR_BOT_BTN_START_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores),
                 
-                Button(SCREEN_WIDTH - 560, SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush),
-                Button(SCREEN_WIDTH - 560, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush),
                 
-                Button(SCREEN_WIDTH - 670, SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
-                Button(SCREEN_WIDTH - 670, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
                 
-                Button(SCREEN_WIDTH - 780, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Map Tech", self.open_map_research_editor),
-                Button(SCREEN_WIDTH - 890, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
-                Button(SCREEN_WIDTH - 1000, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Map Tech", self.open_map_research_editor),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
             ])
         else:
             # --- Dynamic Next Turn Button ---
@@ -70,17 +72,17 @@ def render_buttons(self):
             
             # We ALWAYS want the next/resolve button to appear
             self.elements.append(
-                Button(SCREEN_WIDTH - 120, BOTTOM_BAR_UI_CENTER_Y, "small", next_btn_color, next_btn_text, self.advance_time)
+                Button(EDITOR_BOT_BTN_START_X, BOTTOM_BAR_UI_CENTER_Y, "small", next_btn_color, next_btn_text, self.advance_time)
             )
             
             # Hide the management tools while the AI is moving
             if not viewing_ai:
                 self.elements.extend([
-                    Button(20, 420, "left_ui_bar", "orange", "Economy", econ_callback),
-                    Button(20, 120, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
-                    Button(20, 320, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
+                    Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
+                    Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
+                    Button(LEFT_UI_BAR_X, BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
                     Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
-                    Button(20, 520, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
+                    Button(LEFT_UI_BAR_X, BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
                 ])
         
     # Standard Action Buttons utilizing constants
@@ -98,7 +100,7 @@ def render_buttons(self):
     self.btn_break_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "orange", "Break Alliance", self.force_break_alliance_menu)
 
     # NEW: Spectator Mode Toggle Button
-    self.btn_spectator = Button(20, SCREEN_HEIGHT - 100, "medium", "grey", "Spectator Mode", self.start_spectator)
+    self.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
 
     self.btn_close_info = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
     self.btn_exit_to_menu = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)

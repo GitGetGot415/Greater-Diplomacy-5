@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, ECON_CONVERT_BTN_X1, ECON_CONVERT_BTN_X2, ECON_CONVERT_BTN_Y
 from ui_elements import Button
 from map_functions.rendering.font_manager import fonts
 from map_functions.logic import state_queries
@@ -19,8 +19,8 @@ class Economy_Screen(GameState):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
         # New Conversion Buttons positioned below the resource rows
-        self.elements.append(Button(SCREEN_WIDTH // 2 - 250, 600, "medium", "orange", "10 Fuel -> 1 Mat", self.convert_fuel_to_materials))
-        self.elements.append(Button(SCREEN_WIDTH // 2 + 50, 600, "medium", "orange", "10 Mat -> 1 Fuel", self.convert_materials_to_fuel))
+        self.elements.append(Button(ECON_CONVERT_BTN_X1, ECON_CONVERT_BTN_Y, "medium", "orange", "10 Fuel -> 1 Mat", self.convert_fuel_to_materials))
+        self.elements.append(Button(ECON_CONVERT_BTN_X2, ECON_CONVERT_BTN_Y, "medium", "orange", "10 Mat -> 1 Fuel", self.convert_materials_to_fuel))
 
     def convert_fuel_to_materials(self):
         if not self.map_screen: return

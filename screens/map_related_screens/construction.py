@@ -7,6 +7,7 @@ from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_functions.rendering.font_manager import fonts
 from map_functions.rendering import symbol_loader
+from map_functions.logic import state_queries
 
 class Construction_Screen(GameState):
     def __init__(self):
@@ -26,20 +27,6 @@ class Construction_Screen(GameState):
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}
-
-    def get_required_tech(self, b_name):
-        """Maps building names to their respective research tree requirements."""
-        if "Workshop" in b_name:
-            return "workshop", int(b_name.split()[-1])
-        if "Basic Factory" in b_name:
-            return "basic_factory", 1
-        if "Factory Lvl" in b_name:
-            return "factory", int(b_name.split()[-1])
-        if "Experimental Refinery" in b_name:
-            return "synthetic_fuel_experiments", 1
-        if "Synthetic Refinery" in b_name:
-            return "fuel_refining", int(b_name.split()[-1])
-        return None, 0
 
     def start_with_province(self, province, map_ref):
         self.target_province = province
@@ -81,7 +68,7 @@ class Construction_Screen(GameState):
                 if target:
                     data = self.building_library[target]
                     is_building = any(q.get("group") == data["group"] for q in queue)
-                    req_tech, req_lvl = self.get_required_tech(target)
+                    req_tech, req_lvl = state_queries.get_building_required_tech(target)
 
                     # --- CHANGED LOGIC HERE ---
                     # If we don't have the tech, skip this group entirely

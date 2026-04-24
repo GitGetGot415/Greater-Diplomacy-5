@@ -98,10 +98,40 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 # PROVINCE & TECH QUERIES
 # ==========================================
 
-# maybe this could be a get_industry instead and get the level
+def get_industry(province):
+    """Returns the highest level of industry in the province."""
+    # 1-5 workshop
+    # 6 basic factory
+    # 7-11 factory
+    level = 0
+    for b in province.get("buildings", []):
+        if "Workshop Lvl" in b:
+            lvl = int(b.split()[-1])
+            level = max(level, lvl)
+        elif b == "Basic Factory":
+            level = max(level, 6)
+        elif "Factory Lvl" in b:
+            lvl = int(b.split()[-1])
+            level = max(level, 6 + lvl)
+    return level
+
 def has_industry(province):
     """Returns True if the province contains a Workshop or Factory."""
-    return any("Workshop" in b or "Factory" in b for b in province.get("buildings", []))
+    return get_industry(province) > 0
+
+def get_building_required_tech(b_name):
+    """Maps building names to their respective research tree requirements."""
+    if "Workshop" in b_name:
+        return "workshop", int(b_name.split()[-1])
+    if "Basic Factory" in b_name:
+        return "basic_factory", 1
+    if "Factory Lvl" in b_name:
+        return "factory", int(b_name.split()[-1])
+    if "Experimental Refinery" in b_name:
+        return "synthetic_fuel_experiments", 1
+    if "Synthetic Refinery" in b_name:
+        return "fuel_refining", int(b_name.split()[-1])
+    return None, 0
 
 def get_highest_infantry(nation_data_block, tech_tree, unit_library):
     """Finds the highest level infantry unit the nation has researched."""
@@ -320,7 +350,10 @@ def is_naval_unit(unit_type):
     stats = _get_unit_library().get(unit_type, {})
     return stats.get("naval_unit", False)
 
-# maybe this could return a number instead of just a boolean check
+def get_units_in_province(nation, province):
+    """Returns a list of units the given nation has in the target province."""
+    return [u for u in province.get("units", []) if u.get("owner") == nation]
+
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""
-    return any(u.get("owner") == nation for u in province.get("units", []))
+    return len(get_units_in_province(nation, province)) > 0
