@@ -1,7 +1,12 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
-from data.constants import WATER_TERRAINS
+import sys
 import os
+
+# Add the parent directory (project root) to the Python path so it can find the 'data' module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from data.constants import WATER_TERRAINS
 from PIL import Image
 import json
 
