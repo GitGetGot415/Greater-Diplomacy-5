@@ -237,8 +237,8 @@ def open_editor_date(self):
         except:
             break
 
-def open_editor_economy(self):
-    """Opens a Tkinter window listing the detailed income of every active country."""
+"""def open_editor_economy(self):
+    #Opens a Tkinter window listing the detailed income of every active country.
     active_countries = queries.get_living_nations(self.map_data)
 
     if not active_countries:
@@ -334,8 +334,7 @@ def open_editor_economy(self):
         tree.column(col, width=widths[col], anchor="center")
     
     # Helper formatters
-    """def fmt(net): 
-        return f"+{int(net)}" if net >= 0 else str(int(net))"""
+    # def fmt(net): return f"+{int(net)}" if net >= 0 else str(int(net))
 
     def fmt_cell(bld, core, non, res, upk):
         # Merge all non-building income sources
@@ -385,8 +384,164 @@ def open_editor_economy(self):
             pygame.event.pump()
         except:
             break
+"""
 
+def open_editor_economy(self):
+    """Opens a Tkinter window listing the detailed income of every active country."""
+    active_countries = queries.get_living_nations(self.map_data)
 
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    root = tk.Tk()
+    root.title("Global Economy Overview")
+    root.geometry("1200x500") # Made wider to fit the new detailed strings
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+        
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+
+    # --- Styling for Table Look ---
+    style = ttk.Style(root)
+    try:
+        style.theme_use("clam") 
+    except:
+        pass 
+        
+    style.configure("Treeview.Heading", 
+                    background="#d9e1f2", 
+                    font=('Arial', 10, 'bold'),
+                    relief="flat")
+                    
+    style.configure("Treeview", 
+                    background="#ffffff",
+                    fieldbackground="#ffffff",
+                    rowheight=28,
+                    font=('Arial', 10))
+                    
+    # Economy logic
+    # We delete all the JSON loading and manual province looping here!
+    # Instead, we just grab the unified dictionary from the queries file:
+    all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
+
+    # --- Treeview UI Setup ---
+    columns = (
+        "Country", 
+        "|1", "P_Inc", "P_Bld", "P_Upk", "P_Net", 
+        "|2", "M_Inc", "M_Bld", "M_Upk", "M_Net", 
+        "|3", "F_Inc", "F_Bld", "F_Upk", "F_Net", 
+        "|4"
+    )
+    
+    tree = ttk.Treeview(root, columns=columns, show="headings")
+    
+    # Zebra striping tags
+    tree.tag_configure('evenrow', background='#ffffff')
+    tree.tag_configure('oddrow', background='#f2f2f2') 
+    
+    # State dictionary to track ascending/descending sort for each column
+    sort_dirs = {col: True for col in columns}
+
+    # Sorting Logic
+    def sort_data(col):
+        reverse = sort_dirs[col]
+        sort_dirs[col] = not reverse 
+        
+        def get_val(c):
+            if c not in all_econ: return 0
+            d = all_econ[c]
+            if col == "Country": return c
+            
+            # Don't sort the dividers
+            if col.startswith("|"): return 0
+            
+            # Map the column ID to the specific resource and stat
+            res_key = "manpower" if col.startswith("P_") else ("materials" if col.startswith("M_") else "fuel")
+            stat_type = col.split("_")[1]
+            bd = d["breakdown"][res_key]
+            
+            if stat_type == "Inc": return bd["core"] + bd["non_core"] + bd["resources"]
+            if stat_type == "Bld": return bd["buildings"]
+            if stat_type == "Upk": return d["upkeep"][res_key]
+            if stat_type == "Net": return d["total_inc"][res_key] - d["upkeep"][res_key]
+            
+            return 0
+
+        # Sort the countries using the dynamic value generator
+        sorted_countries = sorted(active_countries, key=get_val, reverse=reverse)
+        
+        # Clear existing rows
+        for item in tree.get_children():
+            tree.delete(item)
+            
+        # Re-populate using the sorted list
+        populate_tree(sorted_countries)
+
+    # Column Formatting
+    widths = {
+        "Country": 140,
+        "|1": 25, "P_Inc": 60, "P_Bld": 60, "P_Upk": 60, "P_Net": 60,
+        "|2": 25, "M_Inc": 60, "M_Bld": 60, "M_Upk": 60, "M_Net": 60,
+        "|3": 25, "F_Inc": 60, "F_Bld": 60, "F_Upk": 60, "F_Net": 60,
+        "|4": 25
+    }
+
+    for col in columns:
+        # Render the display text as "|" for any divider column
+        heading_text = "|" if col.startswith("|") else col
+        # Passing col to lambda safely captures its state for the button click
+        tree.heading(col, text=heading_text, command=lambda c=col: sort_data(c))
+        tree.column(col, width=widths[col], anchor="center")
+        
+    def populate_tree(country_list):
+        for i, c in enumerate(country_list):
+            if c not in all_econ: continue
+            d = all_econ[c]
+            
+            def get_stats(res_key):
+                bd = d["breakdown"][res_key]
+                inc = int(bd["core"] + bd["non_core"] + bd["resources"])
+                bld = int(bd["buildings"])
+                upk = int(d["upkeep"][res_key])
+                net = int(d["total_inc"][res_key] - d["upkeep"][res_key])
+                return inc, bld, upk, net
+
+            p_inc, p_bld, p_upk, p_net = get_stats("manpower")
+            m_inc, m_bld, m_upk, m_net = get_stats("materials")
+            f_inc, f_bld, f_upk, f_net = get_stats("fuel")
+                        
+            # Apply zebra stripe tags
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            
+            tree.insert("", tk.END, values=(
+                c, 
+                "|", p_inc, p_bld, p_upk, p_net, 
+                "|", m_inc, m_bld, m_upk, m_net, 
+                "|", f_inc, f_bld, f_upk, f_net,
+                "|"
+            ), tags=(tag,))
+
+    # Initial population (Defaults to alphabetical)
+    populate_tree(sorted(active_countries))
+
+    # Cleaned up the duplicate scrollbar and update loops here!
+    scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
+    tree.configure(yscroll=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    tree.pack(fill="both", expand=True)
+
+    while self.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+        except:
+            break
+        
 def open_map_research_editor(self):
     """Opens a UI to edit research for countries currently existing on the map."""
     active_countries = queries.get_living_nations(self.map_data)
