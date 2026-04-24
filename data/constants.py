@@ -84,7 +84,7 @@ BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
 # Economy Data
 BASE_YIELDS = {
     "manpower": 50,
-    "materials": 50,
+    "materials": 20,
     "fuel": 0
 }
 

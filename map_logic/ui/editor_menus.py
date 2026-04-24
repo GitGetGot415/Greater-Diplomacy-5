@@ -277,8 +277,8 @@ def open_editor_economy(self):
                     
     # Economy logic
     # We delete all the JSON loading and manual province looping here!
-    # Instead, we just grab the unified dictionary from the Map class:
-    all_econ = self.calculate_all_economies()
+    # Instead, we just grab the unified dictionary from the queries file:
+    all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
     col_man = "Manpower [Inc + Bld - Upk = Net]"
     col_mat = "Materials [Inc + Bld - Upk = Net]"

@@ -32,6 +32,7 @@ def render_buttons(self):
         ]
 
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen
+        research_callback = self.open_map_research_editor if getattr(self, 'is_editor', False) else self.open_research
         
         # View Type Buttons utilizing new constants
         self.elements.extend([
@@ -48,6 +49,10 @@ def render_buttons(self):
 
         if self.is_editor:
             self.elements.extend([
+                # Unified Left Bar Buttons
+                Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
+                Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
+
                 Button(EDITOR_BOT_BTN_START_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
@@ -60,9 +65,8 @@ def render_buttons(self):
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
                 
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Map Tech", self.open_map_research_editor),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
             ])
         else:
             # --- Dynamic Next Turn Button ---
@@ -79,7 +83,7 @@ def render_buttons(self):
             if not viewing_ai:
                 self.elements.extend([
                     Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                    Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", self.open_research, image=research_icon),
+                    Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
                     Button(LEFT_UI_BAR_X, BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
                     Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
                     Button(LEFT_UI_BAR_X, BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
@@ -136,7 +140,7 @@ def update_button_states(map_screen):
 
     if map_screen.is_editor:
         for el in map_screen.elements:
-            if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "Map Tech", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units"]:
+            if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units"]:
                 el.visible = True
             
             if el.text == "Resource":
