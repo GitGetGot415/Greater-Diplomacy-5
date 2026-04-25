@@ -3,7 +3,7 @@ from ui_elements import Button
 from data.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TOP_BAR_UI_CENTER_Y, BOTTOM_BAR_UI_CENTER_Y,
     VIEW_BTN_START_X, VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, VIEW_BTN_ROW2_Y,
-    ACTION_BTN_X, ACTION_BTN_START_Y, ACTION_BTN_STEP_Y,
+    ACTION_BTN_X, ACTION_BTN_START_Y, ACTION_BTN_STEP_Y, BTN_EDIT_NATION_Y,
     LEFT_UI_BAR_X, BTN_RESEARCH_Y, BTN_SAVE_Y, BTN_ECONOMY_Y, BTN_MESSAGES_Y,
     BTN_SPECTATOR_Y, EDITOR_BOT_BTN_START_X, EDITOR_BOT_BTN_STEP_X
 )
@@ -87,7 +87,7 @@ def render_buttons(self):
                     Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
                     Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
                     Button(LEFT_UI_BAR_X, BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
-                    Button(180, 10, "small", "orange", "Edit Nation", self.open_edit_country),
+                    Button(LEFT_UI_BAR_X, BTN_EDIT_NATION_Y, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
                     Button(LEFT_UI_BAR_X, BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
                 ])
         
