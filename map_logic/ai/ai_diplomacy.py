@@ -101,16 +101,9 @@ def process_ai_grand_strategy(map_screen):
         
         pending = map_screen.nation_data[ai_nation].setdefault("pending_diplomacy", {})
         
-        # --- FEATURE 1: FALLBACK MESSAGES ---
+        # --- FEATURE 1: FALLBACK MESSAGES (Message removed, keeping console log) ---
         if not actions:
             print(f"[AI EVENT] {ai_nation} maintains its course.")
-            if is_at_war:
-                # Send a taunt/status update to their primary enemy so the player sees activity
-                enemies = [e for e in map_screen.nation_data[ai_nation].get("at_war_with", []) if e in active_nations]
-                if enemies:
-                    target = enemies[0]
-                    if target not in pending or pending[target].get("turns", 0) == 0:
-                        pending[target] = {"action": "MSG:The war continues. We will not yield our ground.", "turns": 0}
         
         # Process normal actions
         for act in actions:
@@ -143,6 +136,7 @@ def process_ai_grand_strategy(map_screen):
                 content = act.get("content", "Greetings.")
                 pending[target] = {"action": f"MSG:{content}", "turns": 0}
             else:
+                custom_msg = act.get("message", "") # <--- Extract message
                 # Don't overwrite existing diplomacy in transit
                 if target not in pending or pending[target].get("turns", 0) == 0:
-                    pending[target] = {"action": action_type, "turns": 0}
+                    pending[target] = {"action": action_type, "turns": 0, "message": custom_msg} # <--- Attach

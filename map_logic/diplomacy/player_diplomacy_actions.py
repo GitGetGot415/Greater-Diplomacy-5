@@ -13,12 +13,18 @@ def handle_declare_war(map_screen):
 
     at_war = queries.are_at_war(map_screen.player_country, target, map_screen.nation_data)
     action = "CEASEFIRE" if at_war else "WAR_DECLARATION"
-    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, action)
+    
+    custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, action, custom_msg)
+    map_screen.mail_draft_text = ""
+    map_screen.mail_input_active = False
     map_screen.show_feedback(msg)
 
 def handle_faction_action(map_screen):
     target = map_screen.selected_province.get("owner")
     
+    custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+
     if target == map_screen.player_country:
         action, turns = queries.get_diplomatic_status(target, target, map_screen.nation_data)
         if turns > 0:
@@ -35,7 +41,9 @@ def handle_faction_action(map_screen):
         else:
             req_action = "LEAVE_FACTION"
             
-        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, req_action)
+        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, req_action, custom_msg)
+        map_screen.mail_draft_text = ""
+        map_screen.mail_input_active = False
         map_screen.show_feedback(msg)
         return
 
@@ -55,7 +63,12 @@ def handle_faction_action(map_screen):
                 return
             diplomacy_logic.finalize_faction_join(map_screen.nation_data, target, map_screen.player_country)
             del map_screen.nation_data[target]["pending_diplomacy"][map_screen.player_country]
-            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, "We accepted your faction invitation.", "DIPLOMACY")
+            
+            msg_text = custom_msg if custom_msg else "We accepted your faction invitation."
+            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, msg_text, "DIPLOMACY")
+            map_screen.mail_draft_text = ""
+            map_screen.mail_input_active = False
+            
             map_screen.show_feedback("Joined Faction!")
             map_screen.refresh_relations_map()
             map_screen.refresh_factions_map()
@@ -66,7 +79,12 @@ def handle_faction_action(map_screen):
                 return
             diplomacy_logic.finalize_faction_join(map_screen.nation_data, map_screen.player_country, target)
             del map_screen.nation_data[target]["pending_diplomacy"][map_screen.player_country]
-            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, "We accepted your request to join.", "DIPLOMACY")
+            
+            msg_text = custom_msg if custom_msg else "We accepted your request to join."
+            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, msg_text, "DIPLOMACY")
+            map_screen.mail_draft_text = ""
+            map_screen.mail_input_active = False
+            
             map_screen.show_feedback("Faction Expanded!")
             map_screen.refresh_relations_map()
             map_screen.refresh_factions_map()
@@ -74,7 +92,12 @@ def handle_faction_action(map_screen):
         elif action == "CEASEFIRE":
             diplomacy_logic.finalize_neutral(map_screen.nation_data, map_screen.player_country, target)
             del map_screen.nation_data[target]["pending_diplomacy"][map_screen.player_country]
-            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, "We accepted your ceasefire terms.", "DIPLOMACY")
+            
+            msg_text = custom_msg if custom_msg else "We accepted your ceasefire terms."
+            diplomacy_logic.send_message(map_screen.nation_data, map_screen.player_country, target, msg_text, "DIPLOMACY")
+            map_screen.mail_draft_text = ""
+            map_screen.mail_input_active = False
+            
             map_screen.show_feedback("Ceasefire Accepted!")
             return
 
@@ -90,7 +113,9 @@ def handle_faction_action(map_screen):
         if target_faction:
             map_screen.show_feedback(f"{target} must leave their faction first!")
             return
-        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "FACTION_INVITE")
+        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "FACTION_INVITE", custom_msg)
+        map_screen.mail_draft_text = ""
+        map_screen.mail_input_active = False
         map_screen.show_feedback(msg)
     else:
         if not target_faction:
@@ -103,7 +128,9 @@ def handle_faction_action(map_screen):
             else:
                 map_screen.show_feedback("That faction has no leader!")
                 return
-        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_FACTION_REQ")
+        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_FACTION_REQ", custom_msg)
+        map_screen.mail_draft_text = ""
+        map_screen.mail_input_active = False
         map_screen.show_feedback(msg)
 
 def handle_join_wars(map_screen):
@@ -116,6 +143,9 @@ def handle_join_wars(map_screen):
         map_screen.show_feedback("You must be in the same faction to assist them!")
         return
         
+    custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
     # --- MODIFIED: Queue the action instead of instant execution ---
-    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_WARS")
+    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_WARS", custom_msg)
+    map_screen.mail_draft_text = ""
+    map_screen.mail_input_active = False
     map_screen.show_feedback(msg)

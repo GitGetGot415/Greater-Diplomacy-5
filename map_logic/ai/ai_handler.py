@@ -204,8 +204,9 @@ def decide_grand_strategy(nation_data, active_nations, ai_nation, current_date):
         "Decide if you want to take any diplomatic actions this turn. You may take multiple actions or none. "
         "Valid actions are: WAR_DECLARATION, CEASEFIRE, JOIN_FACTION_REQ, FACTION_INVITE, CREATE_FACTION, LEAVE_FACTION, CUSTOM_MSG, MODIFY_RELATION, JOIN_WARS. "
         "To artificially shift relations based on recent events/messages, you can output an action like {'action': 'MODIFY_RELATION', 'target': 'France', 'amount': -20}. "
+        "You may optionally include a 'message' key to send a custom diplomatic message along with your action. "
         "Reply ONLY with a valid JSON array matching this schema: "
-        '[{"action": "WAR_DECLARATION", "target": "France"}, {"action": "MODIFY_RELATION", "target": "Germany", "amount": 10}]'
+        '[{"action": "WAR_DECLARATION", "target": "France", "message": "Prepare for destruction!"}, {"action": "MODIFY_RELATION", "target": "Germany", "amount": 10}]'
     )
     user_prompt = f"{context}\nWhat are your orders for this turn? (Return empty array [] if you wish to do nothing)"
 

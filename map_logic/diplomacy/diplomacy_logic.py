@@ -29,7 +29,7 @@ def get_pending_action(nation_data, player_name, target_name):
         return info.get("action")
     return info
 
-def toggle_diplomacy_action(nation_data, player_name, target_name, action_type):
+def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg=""):
     pending = nation_data[player_name].setdefault("pending_diplomacy", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
     
@@ -45,7 +45,7 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type):
         # Prevents declaring war while an alliance request is pending, etc.
         return "A diplomatic action is already pending with this nation!"
     else:
-        pending[target_name] = {"action": action_type, "turns": 0}
+        pending[target_name] = {"action": action_type, "turns": 0, "message": custom_msg}
         return "Message drafted. Will send at end of turn."
 
 def queue_text_message(nation_data, player_name, target_name, content):
@@ -114,7 +114,7 @@ def process_diplomacy_turn(self):
             
             if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
                isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
-               
+                
                 a_action = a_info.get("action")
                 b_action = b_info.get("action")
                 
@@ -212,37 +212,47 @@ def process_diplomacy_turn(self):
         for target, info in pending.items():
             action = info.get("action", "")
             turns = info.get("turns", 0)
+            custom_msg = info.get("message", "")
 
             if turns == 0:
                 if action == "WAR_DECLARATION":
                     finalize_war(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!") # NEW
-                    send_message(self.nation_data, country_name, target, "We have declared WAR upon you!", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We have declared WAR upon you!"
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 
                 # --- NEW: Process queued Join Wars ---
                 elif action == "JOIN_WARS":
                     join_faction_wars(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"ESCALATION: {country_name} has joined the wars of {target}!")
-                    send_message(self.nation_data, country_name, target, "We have mobilized our forces to join your wars!", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We have mobilized our forces to join your wars!"
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 
                 elif action == "BREAK_ALLIANCE":
                     finalize_neutral(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"{country_name} has broken their alliance with {target}.") # NEW
-                    send_message(self.nation_data, country_name, target, "We have broken our alliance.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We have broken our alliance."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action.startswith("MSG:"):
                     send_message(self.nation_data, country_name, target, action[4:], "TEXT")
                 elif action == "FACTION_INVITE":
-                    send_message(self.nation_data, country_name, target, "We invite your nation to join our faction.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We invite your nation to join our faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action == "CEASEFIRE":
-                    send_message(self.nation_data, country_name, target, "We offer terms for a ceasefire.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We offer terms for a ceasefire."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action == "CREATE_FACTION":
-                    send_message(self.nation_data, country_name, target, "We are establishing a new faction.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We are establishing a new faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action == "DISBAND_FACTION":
-                    send_message(self.nation_data, country_name, target, "We are dissolving our faction.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We are dissolving our faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action == "LEAVE_FACTION":
-                    send_message(self.nation_data, country_name, target, "We are withdrawing from the faction.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We are withdrawing from the faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 elif action == "JOIN_FACTION_REQ":
-                    send_message(self.nation_data, country_name, target, "We formally request to join your faction.", "DIPLOMACY")
+                    msg_text = custom_msg if custom_msg else "We formally request to join your faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
                 info["turns"] = 1
                 
             elif turns == 1:
@@ -351,4 +361,3 @@ def join_faction_wars(nation_data, joiner, faction_member):
             nation_data[joiner]["at_war_with"].append(enemy)
         if joiner not in nation_data[enemy]["at_war_with"]:
             nation_data[enemy]["at_war_with"].append(joiner)
-
