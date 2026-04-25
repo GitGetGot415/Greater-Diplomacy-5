@@ -107,7 +107,7 @@ def render_buttons(self):
     self.btn_force_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Force Alliance", self.force_alliance_menu)
     self.btn_break_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "orange", "Break Alliance", self.force_break_alliance_menu)
 
-    # NEW: Spectator Mode Toggle Button
+    # Spectator Mode Toggle Button
     self.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
 
     self.btn_close_info = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)

@@ -15,7 +15,7 @@ class New_Game(GameState):
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.exit_to_menu),
             # Added the Random button here
-            Button("centered", "centered", "large", "orange", "RANDOM SCENARIO", self.start_random_scenario),
+            Button("centered", "centered + 200", "large", "orange", "RANDOM SCENARIO", self.start_random_scenario),
             # Button("centered", "centered", "big", "red", "Check map tools", self.map_selected),
         ]
         
@@ -26,7 +26,7 @@ class New_Game(GameState):
             
         scenarios = os.listdir(scenario_dir)
         for i, name in enumerate(scenarios):
-            btn_y = 200 + (i * 70)
+            btn_y = 200 + (i * 100)
             # Create a button for each scenario
             self.elements.append(
                 Button("centered", btn_y, "large", "blue", name, 
