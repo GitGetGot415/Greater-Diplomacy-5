@@ -27,9 +27,10 @@ def render_buttons(self):
 
         # Refresh Buttons
         self.elements = [
-            Button(SCREEN_WIDTH - 420, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
-            Button(SCREEN_WIDTH - 320, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
-            Button(SCREEN_WIDTH - 220, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
+            Button(SCREEN_WIDTH - 520, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
+            Button(SCREEN_WIDTH - 420, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(SCREEN_WIDTH - 320, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
+            Button(SCREEN_WIDTH - 220, TOP_BAR_UI_CENTER_Y, "small", "grey", "Fac Refresh", self.refresh_factions_map),
         ]
 
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen

@@ -2,6 +2,9 @@ import pygame
 from data.constants import UNPLAYABLE_NATIONS
 from map_logic.rendering.font_manager import fonts
 
+# Toggle this to False if you want to strictly hide names on areas <= 3 provinces
+SHOW_SMALL_TERRITORY_NAMES = False
+
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
@@ -38,8 +41,14 @@ def draw_country_names(map_screen, surface):
             drawn_countries = set()
             drawn_factions = set() # Keep track of which factions have already been drawn!
             
+            # Pick which blobs to use based on map mode
+            if map_screen.base_layer == "CORES" and hasattr(map_screen, 'core_text_blobs'):
+                active_blobs = map_screen.core_text_blobs
+            else:
+                active_blobs = map_screen.country_text_blobs
+            
             # Sort largest spatial spread to smallest so mainlands are always processed first!
-            sorted_blobs = sorted(map_screen.country_text_blobs, key=lambda b: b["spread"], reverse=True)
+            sorted_blobs = sorted(active_blobs, key=lambda b: b["spread"], reverse=True)
             
             for blob in sorted_blobs:
                 country = blob["owner"]
@@ -57,9 +66,11 @@ def draw_country_names(map_screen, surface):
                         
                     surf, shadow = map_screen.faction_name_surfs.get(country, (None, None))
                 else:
-                    # Skip small island groups ONLY IF the country already has a name on the map
-                    if blob["count"] <= 3 and country in drawn_countries:
-                        continue
+                    # Skip small island groups based on the toggle and if the country already has a name
+                    if blob["count"] <= 3:
+                        if not SHOW_SMALL_TERRITORY_NAMES or country in drawn_countries:
+                            continue
+                    
                     surf, shadow = map_screen.country_name_surfs.get(country, (None, None))
                     
                 if not surf: continue
