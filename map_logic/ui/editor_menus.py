@@ -783,6 +783,142 @@ def select_resource_brush(self):
 
     root.protocol("WM_DELETE_WINDOW", close_menu)
 
+def open_diplomacy_editor(self):
+    """Opens a Tkinter window to edit global relations and factions."""
+    active_countries = queries.get_living_nations(self.map_data)
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    root = tk.Tk()
+    root.title("Global Diplomacy & Factions Editor")
+    root.geometry("550x550")
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+
+    # UI Layout
+    left_frame = tk.Frame(root, width=200)
+    left_frame.pack(side="left", fill="y", padx=10, pady=10)
+    right_frame = tk.Frame(root)
+    right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+
+    tk.Label(left_frame, text="Nations:", font=("Arial", 12, "bold")).pack()
+    scrollbar = tk.Scrollbar(left_frame)
+    scrollbar.pack(side="right", fill="y")
+    nation_list = tk.Listbox(left_frame, yscrollcommand=scrollbar.set, exportselection=False)
+    nation_list.pack(fill="both", expand=True)
+    scrollbar.config(command=nation_list.yview)
+
+    for c in sorted(active_countries):
+        nation_list.insert(tk.END, c)
+
+    title_lbl = tk.Label(right_frame, text="Select a nation...", font=("Arial", 14, "bold"))
+    title_lbl.pack(pady=5)
+
+    war_frame = tk.LabelFrame(right_frame, text="At War With:")
+    war_frame.pack(fill="x", pady=5)
+    
+    war_scroll = tk.Scrollbar(war_frame)
+    war_scroll.pack(side="right", fill="y")
+    war_list = tk.Listbox(war_frame, selectmode=tk.MULTIPLE, height=5, exportselection=False, yscrollcommand=war_scroll.set)
+    war_list.pack(fill="x", padx=5, pady=5)
+    war_scroll.config(command=war_list.yview)
+
+    fac_frame = tk.LabelFrame(right_frame, text="Faction Info:")
+    fac_frame.pack(fill="both", expand=True, pady=5)
+
+    tk.Label(fac_frame, text="Faction Name:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+    fac_name_var = tk.StringVar()
+    fac_entry = tk.Entry(fac_frame, textvariable=fac_name_var)
+    fac_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+
+    is_leader_var = tk.BooleanVar()
+    leader_cb = tk.Checkbutton(fac_frame, text="Is Faction Leader?", variable=is_leader_var)
+    leader_cb.grid(row=1, column=0, columnspan=2, sticky="w", padx=5)
+
+    tk.Label(fac_frame, text="Faction Members (Select to Add/Remove):").grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+    
+    mem_scroll = tk.Scrollbar(fac_frame)
+    mem_scroll.grid(row=3, column=2, sticky="ns")
+    member_list = tk.Listbox(fac_frame, selectmode=tk.MULTIPLE, height=5, exportselection=False, yscrollcommand=mem_scroll.set)
+    member_list.grid(row=3, column=0, columnspan=2, sticky="ew", padx=5)
+    mem_scroll.config(command=member_list.yview)
+
+    current_target = [None]
+
+    def load_nation_data(event):
+        sel = nation_list.curselection()
+        if not sel: return
+        target = nation_list.get(sel[0])
+        current_target[0] = target
+        title_lbl.config(text=f"Editing: {target}")
+
+        data = self.nation_data.get(target, {})
+
+        war_list.delete(0, tk.END)
+        enemies = data.get("at_war_with", [])
+        for i, c in enumerate(sorted(active_countries)):
+            if c == target: continue
+            war_list.insert(tk.END, c)
+            if c in enemies:
+                war_list.selection_set(tk.END)
+
+        fac_name_var.set(data.get("faction", ""))
+        is_leader_var.set(data.get("is_faction_leader", False))
+
+        member_list.delete(0, tk.END)
+        for i, c in enumerate(sorted(active_countries)):
+            if c == target: continue
+            member_list.insert(tk.END, c)
+            if data.get("faction", "") and self.nation_data.get(c, {}).get("faction", "") == data.get("faction", ""):
+                member_list.selection_set(tk.END)
+
+    nation_list.bind("<<ListboxSelect>>", load_nation_data)
+
+    def save_changes():
+        target = current_target[0]
+        if not target: return
+
+        data = self.nation_data.get(target, {})
+
+        # 1. Update Wars (Bidirectional)
+        for c in active_countries:
+            if target in self.nation_data[c].get("at_war_with", []):
+                self.nation_data[c]["at_war_with"].remove(target)
+
+        selected_wars = [war_list.get(i) for i in war_list.curselection()]
+        data["at_war_with"] = selected_wars
+        for enemy in selected_wars:
+            if target not in self.nation_data[enemy].get("at_war_with", []):
+                self.nation_data[enemy].setdefault("at_war_with", []).append(target)
+
+        # 2. Update Factions
+        new_faction = fac_name_var.get().strip()
+        data["faction"] = new_faction
+        data["is_faction_leader"] = is_leader_var.get()
+
+        selected_members = [member_list.get(i) for i in member_list.curselection()]
+        for c in active_countries:
+            if c == target: continue
+            if c in selected_members:
+                self.nation_data[c]["faction"] = new_faction
+                if new_faction:
+                    self.nation_data[c]["is_faction_leader"] = False
+            elif self.nation_data[c].get("faction", "") == new_faction and new_faction != "":
+                self.nation_data[c]["faction"] = ""
+                self.nation_data[c]["is_faction_leader"] = False
+
+        self.refresh_relations_map()
+        self.refresh_factions_map()
+        self.show_feedback(f"Diplomacy saved for {target}")
+
+    tk.Button(right_frame, text="Save Changes", command=save_changes, bg="#4CAF50", fg="white", font=("Arial", 12, "bold")).pack(pady=10, fill="x")
+
     while self.menu_active:
         try:
             root.update()

@@ -69,7 +69,8 @@ def render_buttons(self):
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
                 
                 Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date)
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date),
+                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, BOTTOM_BAR_UI_CENTER_Y, "small", "red", "Diplomacy", self.open_diplomacy_editor)
             ])
         else:
             # --- Dynamic Next Turn Button ---
@@ -150,7 +151,7 @@ def update_button_states(map_screen):
 
     if map_screen.is_editor:
         for el in map_screen.elements:
-            if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units"]:
+            if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Fac Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units", "Diplomacy"]:
                 el.visible = True
             
             if el.text == "Resource":

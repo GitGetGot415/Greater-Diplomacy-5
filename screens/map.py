@@ -541,6 +541,9 @@ class Map(GameState):
     def open_editor_date(self):
         editor_menus.open_editor_date(self)
     
+    def open_diplomacy_editor(self):
+        editor_menus.open_diplomacy_editor(self)
+    
     def open_edit_country(self):
         if self.player_country and self.player_country != "None":
             self.next_state, self.done = "EDIT_COUNTRY", True
