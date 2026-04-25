@@ -401,6 +401,7 @@ class Map(GameState):
 
     def show_feedback(self, text): 
         self.feedback_text, self.feedback_timer = text, pygame.time.get_ticks()
+        print(f"[UI EVENT] {text}")
 
     def additional_events(self, event): 
         event_handler.handle_map_events(self, event)

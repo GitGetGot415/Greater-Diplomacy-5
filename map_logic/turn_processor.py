@@ -2,32 +2,53 @@ import json
 import os
 from map_logic.diplomacy import diplomacy_logic
 from map_logic import edit_province_ownership
-from map_logic.ai import ai_movement, ai_research, ai_construction
+from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy
 from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
 from data import queries
 
 def prepare_turn(self):
     """Phase 1: Calculate diplomacy and generate AI movement paths."""
+    print("\n" + "="*40)
+    print("--- [PHASE 1] AI PREPARATION START ---")
+    
+    print("[SYSTEM] Running AI Grand Strategy...")
+    # Run the LLM grand strategy first so they can queue diplomacy
+    ai_diplomacy.process_ai_grand_strategy(self)
+    
+    print("[SYSTEM] Processing Pending Diplomacy...")
     diplomacy_logic.process_diplomacy_turn(self)
+    
+    print("[SYSTEM] Running AI Research...")
     ai_research.process_ai_research(self)
+    
+    print("[SYSTEM] Running AI Economy & Construction...")
     ai_construction.process_ai_economy_decisions(self)
+    
+    print("[SYSTEM] Generating AI Movement Orders...")
     ai_movement.process_ai_unit_orders(self)
+    print("--- [PHASE 1] COMPLETE ---")
 
 def resolve_turn(self):
     """Phase 2: Execute all moves, combat, and advance the clock."""
+    print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     days_to_advance = DAYS_PER_TURN
     self.time_manager.process_time(days_to_advance)
     
+    print("[SYSTEM] Executing Unit Orders & Combat...")
     process_conversions(self)
     process_movement(self)
     process_combat(self)
     check_for_post_combat_captures(self)
+    
+    print("[SYSTEM] Calculating Economy & Processing Queues...")
     process_economy(self)
     
     # 5. Process Unified Queue (Sequential)
     process_queues(self)
     
     process_national_research(self)
+    print("--- [PHASE 2] COMPLETE ---")
+    print("="*40 + "\n")
 
 def process_next_turn(self):
     """Legacy compatibility just in case it's called elsewhere."""
@@ -326,14 +347,16 @@ def process_economy(self):
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
     for name, stats in self.nation_data.items():
-        if name in UNPLAYABLE_NATIONS or name not in all_econ:
+        # FIX: Explicitly skip the global events log 
+        if name == "GLOBAL_EVENTS" or name in UNPLAYABLE_NATIONS or name not in all_econ:
             continue
 
         econ = all_econ[name]
 
-        stats["manpower"] += econ["total_inc"]["manpower"] - econ["upkeep"]["manpower"]
-        stats["materials"] += econ["total_inc"]["materials"] - econ["upkeep"]["materials"]
-        stats["fuel"] += econ["total_inc"]["fuel"] - econ["upkeep"]["fuel"]
+        # FIX: Safely .get() the resource so it initializes to 0 if missing
+        stats["manpower"] = stats.get("manpower", 0) + econ["total_inc"]["manpower"] - econ["upkeep"]["manpower"]
+        stats["materials"] = stats.get("materials", 0) + econ["total_inc"]["materials"] - econ["upkeep"]["materials"]
+        stats["fuel"] = stats.get("fuel", 0) + econ["total_inc"]["fuel"] - econ["upkeep"]["fuel"]
 
         # Prevent negative resources
         for res in ["manpower", "materials", "fuel"]:

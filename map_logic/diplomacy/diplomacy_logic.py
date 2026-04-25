@@ -6,6 +6,22 @@ from map_logic.rendering.font_manager import fonts
 from data.constants import UNPLAYABLE_NATIONS
 from data import queries
 
+def log_global_event(nation_data, event_message):
+    """Stores world events so the AI can react to them on the next turn."""
+    if "GLOBAL_EVENTS" not in nation_data:
+        nation_data["GLOBAL_EVENTS"] = {"is_playable": False, "log": [], "news_flash": []}
+        
+    log = nation_data["GLOBAL_EVENTS"].setdefault("log", [])
+    log.insert(0, event_message)
+    
+    # NEW: Add to news flash for instant AI reactions
+    news = nation_data["GLOBAL_EVENTS"].setdefault("news_flash", [])
+    news.append(event_message)
+    
+    # Keep only the last 15 events to prevent the context window from exploding
+    if len(log) > 15:
+        log.pop()
+
 def get_pending_action(nation_data, player_name, target_name):
     pending = nation_data.get(player_name, {}).get("pending_diplomacy", {})
     info = pending.get(target_name)
@@ -104,6 +120,7 @@ def process_diplomacy_turn(self):
                 
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
                     finalize_faction_join(self.nation_data, nation_b, nation_a)
+                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!") # NEW
                     send_message(self.nation_data, nation_a, nation_b, "Our requests crossed paths. We are now united!", "DIPLOMACY")
                     send_message(self.nation_data, nation_b, nation_a, "Our requests crossed paths. We are now united!", "DIPLOMACY")
                     del a_data[nation_b]
@@ -122,6 +139,7 @@ def process_diplomacy_turn(self):
                     del a_data[nation_b]
                 elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                     finalize_neutral(self.nation_data, nation_a, nation_b)
+                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.") # NEW
                     send_message(self.nation_data, nation_a, nation_b, "Mutual ceasefire agreements signed.", "DIPLOMACY")
                     send_message(self.nation_data, nation_b, nation_a, "Mutual ceasefire agreements signed.", "DIPLOMACY")
                     del a_data[nation_b]
@@ -129,7 +147,12 @@ def process_diplomacy_turn(self):
 
     # --- 2. GATHER AI TASKS ---
     ai_tasks = []
-    for country_name, data in self.nation_data.items():
+    # FIX: Cast .items() to a list() to prevent size change errors
+    for country_name, data in list(self.nation_data.items()):
+        # Safety catch: Skip anything that isn't a dictionary
+        if not isinstance(data, dict): 
+            continue
+            
         pending = data.get("pending_diplomacy", {})
         for target, info in pending.items():
             if isinstance(info, str):
@@ -177,7 +200,12 @@ def process_diplomacy_turn(self):
                 except Exception as e: print(f"Thread error: {e}")
 
     # --- 4. STANDARD RESOLUTION (APPLY AI RESULTS) ---
-    for country_name, data in self.nation_data.items():
+    # FIX: Cast .items() to a list() to prevent size change errors
+    for country_name, data in list(self.nation_data.items()):
+        # Safety catch: Skip anything that isn't a dictionary
+        if not isinstance(data, dict): 
+            continue
+            
         pending = data.get("pending_diplomacy", {})
         actions_to_clear = []
 
@@ -188,9 +216,11 @@ def process_diplomacy_turn(self):
             if turns == 0:
                 if action == "WAR_DECLARATION":
                     finalize_war(self.nation_data, country_name, target)
+                    log_global_event(self.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!") # NEW
                     send_message(self.nation_data, country_name, target, "We have declared WAR upon you!", "DIPLOMACY")
                 elif action == "BREAK_ALLIANCE":
                     finalize_neutral(self.nation_data, country_name, target)
+                    log_global_event(self.nation_data, f"{country_name} has broken their alliance with {target}.") # NEW
                     send_message(self.nation_data, country_name, target, "We have broken our alliance.", "DIPLOMACY")
                 elif action.startswith("MSG:"):
                     send_message(self.nation_data, country_name, target, action[4:], "TEXT")
@@ -212,12 +242,15 @@ def process_diplomacy_turn(self):
                 if target == country_name:
                     if action == "CREATE_FACTION":
                         finalize_create_faction(self.nation_data, country_name)
+                        log_global_event(self.nation_data, f"{country_name} has formed a new global faction!") # NEW
                         send_message(self.nation_data, country_name, country_name, "Our new faction has been established.", "DIPLOMACY")
                     elif action == "DISBAND_FACTION":
                         finalize_disband_faction(self.nation_data, country_name)
+                        log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.") # NEW
                         send_message(self.nation_data, country_name, country_name, "Our faction has been disbanded.", "DIPLOMACY")
                     elif action == "LEAVE_FACTION":
                         finalize_faction_leave(self.nation_data, country_name)
+                        log_global_event(self.nation_data, f"{country_name} has abandoned their faction.") # NEW
                         send_message(self.nation_data, country_name, country_name, "We have left our faction.", "DIPLOMACY")
                     actions_to_clear.append(target)
                     continue

@@ -53,11 +53,11 @@ def combine_files(output_filename="context_generator/combined_scripts.txt", sear
 
 # maybe remove some unessecary json files to recude the context window by a few thousand lines
 specific_jsons = [
-                # UNIT_DATA_PATH,
-                # COUNTRIES_DATA_PATH,
-                # RESEARCH_TEMPLATE_PATH,
-                # BUILDING_DATA_PATH,
-                # SETTINGS_CONFIG_PATH
+                UNIT_DATA_PATH,
+                COUNTRIES_DATA_PATH,
+                RESEARCH_TEMPLATE_PATH,
+                BUILDING_DATA_PATH,
+                SETTINGS_CONFIG_PATH
                 ]
 
 combine_files(json_files_to_include=specific_jsons)

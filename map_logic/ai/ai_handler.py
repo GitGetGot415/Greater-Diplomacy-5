@@ -26,35 +26,44 @@ def get_ai_mode():
         except: pass
     return "GEMINI"
 
-def get_world_context(nation_data, active_nations, ai_nation, target_nation=None):
+def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
     ai_stats = nation_data.get(ai_nation, {})
     manpower = ai_stats.get("manpower", 0)
     materials = ai_stats.get("materials", 0)
     
     # 1. Establish Reality
-    context = f"You are the leader of {ai_nation}.\n"
+    context = f"Current Date: {current_date}\n"
+    context += f"You are the leader of {ai_nation}.\n"
     context += f"CRITICAL RULE: The ONLY nations that currently exist in this world are: {', '.join(active_nations)}.\n"
     context += "Do NOT mention, reference, or interact with any country, empire, or nation not explicitly on this list.\n\n"
     
     context += f"Your economy: {manpower} Manpower, {materials} Materials.\n\n"
     
-    # probably going to have to add some more stuff if this is a historical game, so the ai knows the context
-    # also give them context about where countries are on the map (one time it assumed mongolia and xinjiang were next to each other, which while true irl was not true in the game)
-
-    # 2. Establish Global Politics
+    # 2. Establish Global Politics (Now includes Factions!)
     context += "--- GLOBAL POLITICS ---\n"
     for nation in active_nations:
         n_data = nation_data.get(nation, {})
         wars = [w for w in n_data.get("at_war_with", []) if w in active_nations]
-        allies = [a for a in n_data.get("allied_with", []) if a in active_nations]
+        fac = n_data.get("faction", "")
         
-        if wars or allies:
-            rels = []
-            if wars: rels.append(f"at war with {', '.join(wars)}")
-            if allies: rels.append(f"allied with {', '.join(allies)}")
+        rels = []
+        if wars: rels.append(f"at war with {', '.join(wars)}")
+        if fac: rels.append(f"in the faction '{fac}'")
+        
+        if rels:
             context += f"- {nation} is {' and '.join(rels)}.\n"
             
-    # 3. Establish Target Context & Message History
+    # 3. Add Recent World Events
+    global_event_data = nation_data.get("GLOBAL_EVENTS", {})
+    # Safely unpack the new dict format
+    events = global_event_data.get("log", []) if isinstance(global_event_data, dict) else global_event_data
+    
+    if events:
+        context += "\n--- RECENT WORLD EVENTS ---\n"
+        for ev in events[:8]: # Show the 8 most recent events
+            context += f"- {ev}\n"
+            
+    # 4. Establish Target Context & Message History
     if target_nation:
         context += f"\n--- CURRENT TARGET ---\nYou are currently communicating with {target_nation}.\n"
         
@@ -105,6 +114,9 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     if mode == "OFF":
         return False, "Our diplomats are currently unavailable (AI is OFF)."
 
+    # --- ADD THIS PRINT ---
+    print(f"[LLM CALL] {ai_nation} evaluating {action_type} from {sender_nation}... (Mode: {mode})")
+
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     system_prompt = (
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
@@ -139,6 +151,9 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     if mode == "OFF":
         return "Message received (AI is OFF)."
 
+    # --- ADD THIS PRINT ---
+    print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
+
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     system_prompt = (
         "You are an AI leader in a grand strategy game. Respond to the incoming diplomatic message in character. "
@@ -166,3 +181,40 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     except Exception as e:
         print(f"Gemini Error: {e}")
         return "Message received."
+
+def decide_grand_strategy(nation_data, active_nations, ai_nation, current_date):
+    """Asks the LLM what diplomatic actions it wants to take this turn based on global context."""
+    mode = get_ai_mode()
+    if mode == "OFF":
+        return []
+
+    # --- ADD THIS PRINT ---
+    print(f"[LLM CALL] Generating turn strategy for {ai_nation}... (Mode: {mode})")
+
+    context = get_world_context(nation_data, active_nations, ai_nation, current_date=current_date)
+    
+    system_prompt = (
+        "You are an AI playing a grand strategy map game. Review the world events and your politics. "
+        "Decide if you want to take any diplomatic actions this turn. You may take multiple actions or none. "
+        "Valid actions are: WAR_DECLARATION, CEASEFIRE, JOIN_FACTION_REQ, FACTION_INVITE, CREATE_FACTION, LEAVE_FACTION, CUSTOM_MSG. "
+        "Reply ONLY with a valid JSON array matching this schema: "
+        '[{"action": "WAR_DECLARATION", "target": "France"}, {"action": "CUSTOM_MSG", "target": "Germany", "content": "Watch your back."}]'
+    )
+    user_prompt = f"{context}\nWhat are your orders for this turn? (Return empty array [] if you wish to do nothing)"
+
+    if mode == "OLLAMA":
+        result = call_ollama(system_prompt, user_prompt)
+        return result if isinstance(result, list) else []
+
+    try:
+        client = genai.Client(api_key=get_api_key())
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=f"{system_prompt}\n\n{user_prompt}",
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        actions = json.loads(response.text)
+        return actions if isinstance(actions, list) else []
+    except Exception as e:
+        print(f"Gemini Strategy Error for {ai_nation}: {e}")
+        return []
