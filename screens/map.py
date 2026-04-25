@@ -82,7 +82,7 @@ class Map(GameState):
         self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
         self.raised_rect = pygame.Rect(0, 0, UI_LEFT_OFFSET, SCREEN_HEIGHT)
-        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 220, SCREEN_HEIGHT)
+        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 220, 120)
         
         # Now these grab the dimensions of the CORRECT map
         self.map_w, self.map_h = self.id_map.get_size()
