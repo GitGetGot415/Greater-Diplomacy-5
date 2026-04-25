@@ -221,8 +221,11 @@ class Map(GameState):
 
     def force_war_menu(self): spectator_menus.force_war_menu(self)
     def force_peace_menu(self): spectator_menus.force_peace_menu(self)
-    def force_alliance_menu(self): spectator_menus.force_alliance_menu(self)
-    def force_break_alliance_menu(self): spectator_menus.force_break_alliance_menu(self)
+    def spec_create_faction(self): spectator_menus.spec_create_faction(self)
+    def spec_join_faction(self): spectator_menus.spec_join_faction(self)
+    def spec_invite_faction(self): spectator_menus.spec_invite_faction(self)
+    def spec_leave_faction(self): spectator_menus.spec_leave_faction(self)
+    def spec_disband_faction(self): spectator_menus.spec_disband_faction(self)
             
     def cancel_selection(self):
         self.pending_selection = None

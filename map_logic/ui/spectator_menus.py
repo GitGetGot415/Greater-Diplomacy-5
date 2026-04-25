@@ -6,11 +6,38 @@ def force_war_menu(map_screen):
 def force_peace_menu(map_screen): 
     open_spectator_action_menu(map_screen, "PEACE")
 
-def force_alliance_menu(map_screen): 
-    open_spectator_action_menu(map_screen, "FACTION")
+def spec_create_faction(map_screen):
+    if not map_screen.selected_province: return
+    source_nation = map_screen.selected_province.get("owner")
+    from map_logic.diplomacy import diplomacy_logic
+    diplomacy_logic.finalize_create_faction(map_screen.nation_data, source_nation)
+    map_screen.show_feedback(f"Created Faction: {source_nation}")
+    map_screen.refresh_relations_map()
+    map_screen.refresh_factions_map()
 
-def force_break_alliance_menu(map_screen): 
-    open_spectator_action_menu(map_screen, "BREAK")
+def spec_leave_faction(map_screen):
+    if not map_screen.selected_province: return
+    source_nation = map_screen.selected_province.get("owner")
+    from map_logic.diplomacy import diplomacy_logic
+    diplomacy_logic.finalize_faction_leave(map_screen.nation_data, source_nation)
+    map_screen.show_feedback(f"Left Faction: {source_nation}")
+    map_screen.refresh_relations_map()
+    map_screen.refresh_factions_map()
+
+def spec_disband_faction(map_screen):
+    if not map_screen.selected_province: return
+    source_nation = map_screen.selected_province.get("owner")
+    from map_logic.diplomacy import diplomacy_logic
+    diplomacy_logic.finalize_disband_faction(map_screen.nation_data, source_nation)
+    map_screen.show_feedback(f"Disbanded Faction: {source_nation}")
+    map_screen.refresh_relations_map()
+    map_screen.refresh_factions_map()
+
+def spec_join_faction(map_screen):
+    open_spectator_action_menu(map_screen, "JOIN_FACTION")
+
+def spec_invite_faction(map_screen):
+    open_spectator_action_menu(map_screen, "INVITE_FACTION")
 
 def open_spectator_action_menu(map_screen, action_type):
     if not map_screen.selected_province: return
@@ -37,24 +64,13 @@ def open_spectator_action_menu(map_screen, action_type):
             elif action_type == "PEACE":
                 diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
                 map_screen.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
-            elif action_type == "FACTION":
-                if not queries.is_faction_leader(source_nation, map_screen.nation_data):
-                    diplomacy_logic.finalize_create_faction(map_screen.nation_data, source_nation)
-                if queries.is_faction_leader(target_nation, map_screen.nation_data):
-                    diplomacy_logic.finalize_disband_faction(map_screen.nation_data, target_nation)
-                elif map_screen.nation_data[target_nation].get("faction"):
-                    diplomacy_logic.finalize_faction_leave(map_screen.nation_data, target_nation)
-                    
+            elif action_type == "JOIN_FACTION":
+                diplomacy_logic.finalize_faction_join(map_screen.nation_data, target_nation, source_nation)
+                map_screen.show_feedback(f"Forced Join: {source_nation} joined {target_nation}")
+            elif action_type == "INVITE_FACTION":
                 diplomacy_logic.finalize_faction_join(map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Forced Faction: {source_nation} & {target_nation}")
-            elif action_type == "BREAK":
-                if queries.is_faction_leader(target_nation, map_screen.nation_data):
-                    diplomacy_logic.finalize_disband_faction(map_screen.nation_data, target_nation)
-                    map_screen.show_feedback(f"Disbanded Faction: {target_nation}")
-                else:
-                    diplomacy_logic.finalize_faction_leave(map_screen.nation_data, target_nation)
-                    map_screen.show_feedback(f"Removed from Faction: {target_nation}")
-                    
+                map_screen.show_feedback(f"Forced Invite: {target_nation} joined {source_nation}")
+                
             map_screen.refresh_relations_map()
             map_screen.refresh_factions_map()
         close_menu()
@@ -71,8 +87,14 @@ def open_spectator_action_menu(map_screen, action_type):
     scrollbar = tk.Scrollbar(frame)
     scrollbar.pack(side="right", fill="y")
     
-    # Only show other living/playable nations
-    nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation])
+    # Dynamic filtering based on action type
+    if action_type == "JOIN_FACTION":
+        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_faction_leader") and n != source_nation])
+    elif action_type == "INVITE_FACTION":
+        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and not d.get("faction") and n != source_nation])
+    else:
+        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation])
+
     lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
     for n in nations:
         lb.insert(tk.END, n)

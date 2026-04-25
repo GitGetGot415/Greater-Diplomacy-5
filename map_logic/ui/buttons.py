@@ -104,8 +104,12 @@ def render_buttons(self):
     # Spectator God Power Buttons
     self.btn_force_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
     self.btn_force_peace = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", self.force_peace_menu)
-    self.btn_force_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Force Alliance", self.force_alliance_menu)
-    self.btn_break_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "orange", "Break Alliance", self.force_break_alliance_menu)
+    
+    self.btn_spec_create_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", self.spec_create_faction)
+    self.btn_spec_join_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", self.spec_join_faction)
+    self.btn_spec_invite_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", self.spec_invite_faction)
+    self.btn_spec_leave_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", self.spec_leave_faction)
+    self.btn_spec_disband_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", self.spec_disband_faction)
 
     # Spectator Mode Toggle Button
     self.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
@@ -117,7 +121,8 @@ def render_buttons(self):
     for btn in [
         self.btn_go_build, self.btn_close_info, self.btn_exit_to_menu, self.btn_go_recruit, 
         self.btn_go_orders, self.btn_declare_war, self.btn_faction_action, self.btn_join_wars, self.btn_force_war, 
-        self.btn_force_peace, self.btn_force_alliance, self.btn_break_alliance, self.btn_spectator
+        self.btn_force_peace, self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, 
+        self.btn_spec_leave_fac, self.btn_spec_disband_fac, self.btn_spectator
     ]:
         btn.visible = False
         self.elements.append(btn)
@@ -197,8 +202,9 @@ def update_button_states(map_screen):
         getattr(map_screen, 'btn_go_orders', None), getattr(map_screen, 'btn_declare_war', None), 
         getattr(map_screen, 'btn_faction_action', None), getattr(map_screen, 'btn_join_wars', None), 
         getattr(map_screen, 'btn_force_war', None), getattr(map_screen, 'btn_force_peace', None), 
-        getattr(map_screen, 'btn_force_alliance', None), getattr(map_screen, 'btn_break_alliance', None), 
-        getattr(map_screen, 'btn_spectator', None)
+        getattr(map_screen, 'btn_spec_create_fac', None), getattr(map_screen, 'btn_spec_join_fac', None), 
+        getattr(map_screen, 'btn_spec_invite_fac', None), getattr(map_screen, 'btn_spec_leave_fac', None), 
+        getattr(map_screen, 'btn_spec_disband_fac', None), getattr(map_screen, 'btn_spectator', None)
     }
     
     for el in map_screen.elements:
@@ -225,8 +231,19 @@ def update_button_states(map_screen):
             if queries.is_playable(owner, map_screen.nation_data):
                 map_screen.btn_force_war.visible = True
                 map_screen.btn_force_peace.visible = True
-                map_screen.btn_force_alliance.visible = True
-                map_screen.btn_break_alliance.visible = True
+
+                in_faction = map_screen.nation_data[owner].get("faction", "")
+                is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
+
+                if not in_faction:
+                    map_screen.btn_spec_create_fac.visible = True
+                    map_screen.btn_spec_join_fac.visible = True
+                else:
+                    map_screen.btn_spec_invite_fac.visible = True
+                    if is_leader:
+                        map_screen.btn_spec_disband_fac.visible = True
+                    else:
+                        map_screen.btn_spec_leave_fac.visible = True
         else:
             has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
             
