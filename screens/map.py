@@ -420,8 +420,11 @@ class Map(GameState):
     def handle_declare_war(self):
         player_diplomacy_actions.handle_declare_war(self)
 
-    def handle_form_alliance(self):
-        player_diplomacy_actions.handle_form_alliance(self)
+    def handle_faction_action(self):
+        player_diplomacy_actions.handle_faction_action(self)
+        
+    def handle_join_wars(self):
+        player_diplomacy_actions.handle_join_wars(self)
 
     def handle_back_key(self):
         if self.selected_province:

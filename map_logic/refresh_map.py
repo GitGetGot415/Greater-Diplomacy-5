@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 from data.constants import VISUAL_WATER_MAPPING
+from data import queries
 
 def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
     """
@@ -130,7 +131,11 @@ def refresh_relations_map(self):
     
     player_data = self.nation_data.get(self.player_country, {})
     at_war = player_data.get("at_war_with", [])
-    allies = player_data.get("allied_with", [])
+    
+    # --- NEW: Faction Tracking ---
+    player_fac = player_data.get("faction", "")
+    faction_members = queries.get_faction_members(player_fac, self.nation_data) if player_fac else []
+    # -----------------------------
     
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
@@ -149,13 +154,10 @@ def refresh_relations_map(self):
                 color = (0, 0, 255)
             elif owner in at_war:
                 color = (255, 0, 0)
-            elif owner in allies:
+            elif owner in faction_members: # Check if they are in our faction
                 color = (0, 255, 0)
             else:
                 color = (255, 255, 255)
-                
-            if tuple(color) == (255, 0, 255):
-                color = (254, 0, 255)
                 
         if owner not in owner_to_int:
             owner_to_int[owner] = next_owner_id

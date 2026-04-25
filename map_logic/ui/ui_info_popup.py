@@ -6,7 +6,7 @@ from data import queries
 # --- Define the 4 split boxes using the centralized constants ---
 units_rect = pygame.Rect(*PROVINCE_UI["units_box"])
 bldgs_rect = pygame.Rect(*PROVINCE_UI["buildings_box"])
-rel_rect = pygame.Rect(*PROVINCE_UI["relations_box"])
+fac_rect = pygame.Rect(*PROVINCE_UI["faction_box"])
 mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
 
 def draw_unit_info(self, surface):
@@ -57,41 +57,44 @@ def draw_unit_info(self, surface):
             surface.blit(txt, (bldgs_rect.x + 15, y_offset))
             y_offset += 25
 
-    # --- 3. Foreign Info (Relations & Mail) ---
+    # --- 3. Foreign Info (Faction & Mail) ---
     if is_foreign:
-        # Relations Box
-        pygame.draw.rect(surface, (40, 30, 30), rel_rect)
-        pygame.draw.rect(surface, (250, 100, 100), rel_rect, 2)
+        # Faction Box (Replaced Relations Box)
+        pygame.draw.rect(surface, (40, 30, 40), fac_rect)
+        pygame.draw.rect(surface, (150, 100, 250), fac_rect, 2)
 
-        rel_title = self.font.render("Relations", True, (255, 255, 255))
-        surface.blit(rel_title, (rel_rect.x + 10, rel_rect.y + 10))
+        fac_title = self.font.render("Faction Info", True, (255, 255, 255))
+        surface.blit(fac_title, (fac_rect.x + 10, fac_rect.y + 10))
         
-        # --- NEW: Cleaned up queries ---
-        wars = queries.get_enemies(owner, self.nation_data)
-        allies = queries.get_allies(owner, self.nation_data)
-        # -------------------------------
+        faction_name = self.nation_data.get(owner, {}).get("faction", "")
+        y_offset = fac_rect.y + 40
         
-        y_offset = rel_rect.y + 40
-        surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (rel_rect.x + 10, y_offset))
-        y_offset += 20
-        if not wars:
-            surface.blit(self.small_font.render(" None", True, (150, 150, 150)), (rel_rect.x + 10, y_offset))
-            y_offset += 20
+        if not faction_name:
+            surface.blit(self.small_font.render("No Faction", True, (150, 150, 150)), (fac_rect.x + 10, y_offset))
+            y_offset += 30
         else:
-            for w in wars[:3]:
-                display_name = self.nation_data.get(w, {}).get("name", w)
-                surface.blit(self.small_font.render(f" - {display_name}", True, (200, 200, 200)), (rel_rect.x + 10, y_offset))
+            surface.blit(self.small_font.render(faction_name, True, (100, 255, 100)), (fac_rect.x + 10, y_offset))
+            y_offset += 20
+            
+            members = queries.get_faction_members(faction_name, self.nation_data)
+            for m in members[:4]:
+                m_display = self.nation_data.get(m, {}).get("name", m)
+                surface.blit(self.small_font.render(f" - {m_display}", True, (200, 200, 200)), (fac_rect.x + 10, y_offset))
+                y_offset += 20
+                
+            if len(members) > 4:
+                surface.blit(self.small_font.render(f" + {len(members)-4} more", True, (150, 150, 150)), (fac_rect.x + 10, y_offset))
                 y_offset += 20
 
-        y_offset += 10
-        surface.blit(self.small_font.render("Allied With:", True, (100, 255, 100)), (rel_rect.x + 10, y_offset))
-        y_offset += 20
-        if not allies:
-            surface.blit(self.small_font.render(" None", True, (150, 150, 150)), (rel_rect.x + 10, y_offset))
-        else:
-            for a in allies[:3]:
-                display_name = self.nation_data.get(a, {}).get("name", a)
-                surface.blit(self.small_font.render(f" - {display_name}", True, (200, 200, 200)), (rel_rect.x + 10, y_offset))
+        # Keep war info so players know who this nation is fighting
+        wars = queries.get_enemies(owner, self.nation_data)
+        if wars:
+            surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (fac_rect.x + 10, y_offset))
+            y_offset += 20
+            for w in wars[:2]:
+                w_disp = self.nation_data.get(w, {}).get("name", w)
+                surface.blit(self.small_font.render(f" - {w_disp}", True, (200, 200, 200)), (fac_rect.x + 10, y_offset))
+                y_offset += 20
 
         # Mail Box
         pygame.draw.rect(surface, (30, 40, 50), mail_rect)

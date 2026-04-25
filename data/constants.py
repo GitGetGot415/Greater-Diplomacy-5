@@ -29,7 +29,7 @@ SCREEN_HEIGHT = 720
 PROVINCE_UI = {
     "units_box": (860, 70, 210, 350),
     "buildings_box": (860, 440, 210, 350),
-    "relations_box": (SCREEN_WIDTH - 200, 200, 210, 200),
+    "faction_box": (SCREEN_WIDTH - 200, 200, 210, 200),
     "mail_box": (SCREEN_WIDTH - 200, 420, 210, 300)
 }
 

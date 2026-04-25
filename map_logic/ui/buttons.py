@@ -95,7 +95,8 @@ def render_buttons(self):
     self.btn_go_build = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "grey", "Construction", self.open_construction)
 
     self.btn_declare_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "red", "Declare War", self.handle_declare_war)
-    self.btn_form_alliance = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "medium", "green", "Form Alliance", self.handle_form_alliance)
+    self.btn_faction_action = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "medium", "green", "Invite to Faction", self.handle_faction_action)
+    self.btn_join_wars = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "orange", "Join Wars", self.handle_join_wars)
 
     # Spectator God Power Buttons
     self.btn_force_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
@@ -112,7 +113,7 @@ def render_buttons(self):
     # Hide context-dependent buttons by default
     for btn in [
         self.btn_go_build, self.btn_close_info, self.btn_exit_to_menu, self.btn_go_recruit, 
-        self.btn_go_orders, self.btn_declare_war, self.btn_form_alliance, self.btn_force_war, 
+        self.btn_go_orders, self.btn_declare_war, self.btn_faction_action, self.btn_join_wars, self.btn_force_war, 
         self.btn_force_peace, self.btn_force_alliance, self.btn_break_alliance, self.btn_spectator
     ]:
         btn.visible = False
@@ -190,9 +191,10 @@ def update_button_states(map_screen):
         getattr(map_screen, 'btn_go_build', None), getattr(map_screen, 'btn_close_info', None), 
         getattr(map_screen, 'btn_exit_to_menu', None), getattr(map_screen, 'btn_go_recruit', None), 
         getattr(map_screen, 'btn_go_orders', None), getattr(map_screen, 'btn_declare_war', None), 
-        getattr(map_screen, 'btn_form_alliance', None), getattr(map_screen, 'btn_force_war', None), 
-        getattr(map_screen, 'btn_force_peace', None), getattr(map_screen, 'btn_force_alliance', None), 
-        getattr(map_screen, 'btn_break_alliance', None), getattr(map_screen, 'btn_spectator', None)
+        getattr(map_screen, 'btn_faction_action', None), getattr(map_screen, 'btn_join_wars', None), 
+        getattr(map_screen, 'btn_force_war', None), getattr(map_screen, 'btn_force_peace', None), 
+        getattr(map_screen, 'btn_force_alliance', None), getattr(map_screen, 'btn_break_alliance', None), 
+        getattr(map_screen, 'btn_spectator', None)
     }
     
     for el in map_screen.elements:
@@ -236,21 +238,21 @@ def update_button_states(map_screen):
             if owner != map_screen.player_country and queries.is_playable(owner, map_screen.nation_data):
                 incoming_action, incoming_turns = queries.get_diplomatic_status(owner, map_screen.player_country, map_screen.nation_data)
 
-                if incoming_action == "ALLIANCE_REQUEST" and incoming_turns > 0:
+                if incoming_action == "FACTION_INVITE" and incoming_turns > 0:
                     map_screen.btn_declare_war.visible = True
-                    map_screen.btn_declare_war.text = "REJECT ALLIANCE"
-                    map_screen.btn_form_alliance.visible = True
-                    map_screen.btn_form_alliance.text = "ACCEPT ALLIANCE"
+                    map_screen.btn_declare_war.text = "REJECT INVITE"
+                    map_screen.btn_faction_action.visible = True
+                    map_screen.btn_faction_action.text = "ACCEPT INVITE"
 
                 elif incoming_action == "CEASEFIRE" and incoming_turns > 0:
                     map_screen.btn_declare_war.visible = True
                     map_screen.btn_declare_war.text = "REJECT CEASEFIRE"
-                    map_screen.btn_form_alliance.visible = True
-                    map_screen.btn_form_alliance.text = "ACCEPT CEASEFIRE"
+                    map_screen.btn_faction_action.visible = True
+                    map_screen.btn_faction_action.text = "ACCEPT CEASEFIRE"
 
                 else:
                     at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
-                    allied = queries.are_allied(map_screen.player_country, owner, map_screen.nation_data)
+                    in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
 
                     pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
                     is_sending = (pending_turns == 0)
@@ -259,30 +261,37 @@ def update_button_states(map_screen):
                         return "SENDING (UNDO)" if is_sending else "WAITING..."
 
                     if at_war:
-                        map_screen.btn_form_alliance.visible = False
+                        map_screen.btn_faction_action.visible = False
                         map_screen.btn_declare_war.visible = True
                         if pending_action == "CEASEFIRE": map_screen.btn_declare_war.text = get_status_text()
                         else: map_screen.btn_declare_war.text = "CEASEFIRE"
                             
-                    elif allied:
+                    elif in_same_faction:
                         map_screen.btn_declare_war.visible = False
-                        map_screen.btn_form_alliance.visible = True
-                        if pending_action == "BREAK_ALLIANCE": map_screen.btn_form_alliance.text = get_status_text()
-                        else: map_screen.btn_form_alliance.text = "BREAK ALLIANCE"
+                        map_screen.btn_faction_action.visible = True
+                        map_screen.btn_faction_action.text = "LEAVE FACTION"
+                        
+                        # --- Check if we can join their wars ---
+                        target_wars = queries.get_enemies(owner, map_screen.nation_data)
+                        player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
+                        can_join_wars = any(w for w in target_wars if w not in player_wars)
+                        
+                        if can_join_wars:
+                            map_screen.btn_join_wars.visible = True
                             
                     else:
                         if pending_action == "WAR_DECLARATION":
                             map_screen.btn_declare_war.visible = True
                             map_screen.btn_declare_war.text = get_status_text()
-                            map_screen.btn_form_alliance.visible = False
+                            map_screen.btn_faction_action.visible = False
                             
-                        elif pending_action == "ALLIANCE_REQUEST":
-                            map_screen.btn_form_alliance.visible = True
-                            map_screen.btn_form_alliance.text = get_status_text()
+                        elif pending_action == "FACTION_INVITE":
+                            map_screen.btn_faction_action.visible = True
+                            map_screen.btn_faction_action.text = get_status_text()
                             map_screen.btn_declare_war.visible = False
                             
                         else:
                             map_screen.btn_declare_war.visible = True
                             map_screen.btn_declare_war.text = "DECLARE WAR"
-                            map_screen.btn_form_alliance.visible = True
-                            map_screen.btn_form_alliance.text = "FORM ALLIANCE"
+                            map_screen.btn_faction_action.visible = True
+                            map_screen.btn_faction_action.text = "INVITE TO FACTION"

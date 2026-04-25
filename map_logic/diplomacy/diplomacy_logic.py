@@ -103,20 +103,20 @@ def process_diplomacy_turn(self):
                 a_action = a_info.get("action")
                 b_action = b_info.get("action")
                 
-                if a_action == "ALLIANCE_REQUEST" and b_action == "ALLIANCE_REQUEST":
-                    finalize_alliance(self.nation_data, nation_a, nation_b)
-                    send_message(self.nation_data, nation_a, nation_b, "Our mutual alliance proposals crossed paths. We are now allied!", "DIPLOMACY")
-                    send_message(self.nation_data, nation_b, nation_a, "Our mutual alliance proposals crossed paths. We are now allied!", "DIPLOMACY")
+                if a_action == "FACTION_INVITE" and b_action == "FACTION_INVITE":
+                    finalize_faction_join(self.nation_data, nation_a, nation_b)
+                    send_message(self.nation_data, nation_a, nation_b, "Our mutual faction invitations crossed paths. We are now united!", "DIPLOMACY")
+                    send_message(self.nation_data, nation_b, nation_a, "Our mutual faction invitations crossed paths. We are now united!", "DIPLOMACY")
                     del a_data[nation_b]
                     del b_data[nation_a]
                     
-                elif a_action == "WAR_DECLARATION" and b_action in ["ALLIANCE_REQUEST", "CEASEFIRE"]:
+                elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE"]:
                     send_message(self.nation_data, nation_a, nation_b, f"Your diplomat proposing a {b_action.split('_')[0].lower()} was executed. We are at WAR!", "DIPLOMACY")
                     del b_data[nation_a] 
                     
-                elif b_action == "WAR_DECLARATION" and a_action in ["ALLIANCE_REQUEST", "CEASEFIRE"]:
+                elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE"]:
                     send_message(self.nation_data, nation_b, nation_a, f"Your diplomat proposing a {a_action.split('_')[0].lower()} was executed. We are at WAR!", "DIPLOMACY")
-                    del a_data[nation_b] 
+                    del a_data[nation_b]
                     
                 elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                     finalize_neutral(self.nation_data, nation_a, nation_b)
@@ -142,7 +142,7 @@ def process_diplomacy_turn(self):
             if turns == 1:
                 is_human_target = target in getattr(self, 'active_players', [])
                 if not is_human_target:
-                    if action in ["ALLIANCE_REQUEST", "CEASEFIRE"]:
+                    if action in ["FACTION_INVITE", "CEASEFIRE"]:
                         ai_tasks.append({"sender": country_name, "target": target, "action": action})
                     elif action.startswith("MSG:"):
                         ai_tasks.append({"sender": country_name, "target": target, "action": "CUSTOM_MSG", "content": action[4:]})
@@ -175,7 +175,7 @@ def process_diplomacy_turn(self):
                 target_ai = task["target"]
                 sender = task["sender"]
                 
-                if task["action"] in ["ALLIANCE_REQUEST", "CEASEFIRE"]:
+                if task["action"] in ["FACTION_INVITE", "CEASEFIRE"]:
                     future = executor.submit(ai_handler.evaluate_diplomatic_proposal, self.nation_data, active_nations_list, target_ai, sender, task["action"])
                     futures[future] = task
                 elif task["action"] == "CUSTOM_MSG":
@@ -211,8 +211,8 @@ def process_diplomacy_turn(self):
                 elif action.startswith("MSG:"):
                     content = action[4:]
                     send_message(self.nation_data, country_name, target, content, "TEXT")
-                elif action == "ALLIANCE_REQUEST":
-                    send_message(self.nation_data, country_name, target, "We propose an alliance between our nations.", "DIPLOMACY")
+                elif action == "FACTION_INVITE":
+                    send_message(self.nation_data, country_name, target, "We invite your nation to join our faction.", "DIPLOMACY")
                 elif action == "CEASEFIRE":
                     send_message(self.nation_data, country_name, target, "We offer terms for a ceasefire.", "DIPLOMACY")
 
@@ -226,7 +226,7 @@ def process_diplomacy_turn(self):
                 if action == "WAR_DECLARATION":
                     if not is_human_target:
                         send_message(self.nation_data, target, country_name, "You will regret this betrayal.", "TEXT")
-                elif action == "BREAK_ALLIANCE":
+                elif action == "BREAK_ALLIANCE": # Keep this string if you still want to force break relations, or swap to LEAVE_FACTION
                     if not is_human_target:
                         send_message(self.nation_data, target, country_name, "We won't forget this.", "TEXT")
                 
@@ -235,14 +235,14 @@ def process_diplomacy_turn(self):
                         reply = ai_results.get((country_name, target, "CUSTOM_MSG"), "Message received.")
                         send_message(self.nation_data, target, country_name, reply, "TEXT")
                     
-                elif action == "ALLIANCE_REQUEST":
+                elif action == "FACTION_INVITE":
                     if is_human_target:
                         # If it survived to this phase, the human player ignored it during their turn!
-                        send_message(self.nation_data, target, country_name, "Your alliance proposal was ignored and has expired.", "DIPLOMACY")
+                        send_message(self.nation_data, target, country_name, "Your faction invitation was ignored and has expired.", "DIPLOMACY")
                     else:
                         accepted, message = ai_results.get((country_name, target, action), (False, "Timeout."))
                         if accepted:
-                            finalize_alliance(self.nation_data, country_name, target)
+                            finalize_faction_join(self.nation_data, country_name, target)
                             send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
                         else:
                             send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
@@ -266,19 +266,11 @@ def process_diplomacy_turn(self):
         for t in actions_to_clear:
             del pending[t]
 
+# You'll also need to update finalize_war to not remove alliances, since they're factions now
 def finalize_war(nation_data, a, b):
     for country, other in [(a, b), (b, a)]:
         if other not in nation_data[country]["at_war_with"]:
             nation_data[country]["at_war_with"].append(other)
-        if other in nation_data[country]["allied_with"]:
-            nation_data[country]["allied_with"].remove(other)
-
-def finalize_alliance(nation_data, a, b):
-    for country, other in [(a, b), (b, a)]:
-        if other not in nation_data[country]["allied_with"]:
-            nation_data[country]["allied_with"].append(other)
-        if other in nation_data[country]["at_war_with"]:
-            nation_data[country]["at_war_with"].remove(other)
 
 def finalize_neutral(nation_data, a, b):
     for country, other in [(a, b), (b, a)]:
@@ -286,3 +278,27 @@ def finalize_neutral(nation_data, a, b):
             nation_data[country]["at_war_with"].remove(other)
         if other in nation_data[country]["allied_with"]:
             nation_data[country]["allied_with"].remove(other)
+
+def finalize_faction_join(nation_data, host, joiner):
+    """Handles creating or joining a faction."""
+    fac = nation_data[host].get("faction", "")
+    # If the host isn't in a faction yet, create a new one based on their name
+    if not fac:
+        fac = f"The {nation_data[host].get('name', host)} Pact"
+        nation_data[host]["faction"] = fac
+        
+    nation_data[joiner]["faction"] = fac
+
+def finalize_faction_leave(nation_data, leaver):
+    """Removes a nation from their current faction."""
+    nation_data[leaver]["faction"] = ""
+
+def join_faction_wars(nation_data, joiner, faction_member):
+    """Pulls the joining nation into all active wars of the target faction member."""
+    wars = nation_data[faction_member].get("at_war_with", [])
+    for enemy in wars:
+        if enemy not in nation_data[joiner]["at_war_with"]:
+            nation_data[joiner]["at_war_with"].append(enemy)
+        if joiner not in nation_data[enemy]["at_war_with"]:
+            nation_data[enemy]["at_war_with"].append(joiner)
+

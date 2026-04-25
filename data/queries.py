@@ -28,10 +28,6 @@ def are_at_war(nation_a, nation_b, nation_data):
     """Returns True if nation_b is in nation_a's war list."""
     return nation_b in nation_data.get(nation_a, {}).get("at_war_with", [])
 
-def are_allied(nation_a, nation_b, nation_data):
-    """Returns True if nation_b is in nation_a's ally list."""
-    return nation_b in nation_data.get(nation_a, {}).get("allied_with", [])
-
 def is_province_in_active_combat(province, nation_data):
     """Returns True if ANY units from mutually hostile nations occupy this province."""
     units = province.get("units", [])
@@ -58,6 +54,16 @@ def is_hostile_territory(moving_nation, target_owner, nation_data):
         return False
     return are_at_war(moving_nation, target_owner, nation_data)
 
+def are_in_same_faction(nation_a, nation_b, nation_data):
+    """Returns True if both nations share a faction string."""
+    fac_a = nation_data.get(nation_a, {}).get("faction", "")
+    fac_b = nation_data.get(nation_b, {}).get("faction", "")
+    return fac_a != "" and fac_a == fac_b
+
+def get_faction_members(faction_name, nation_data):
+    """Returns a list of all nations currently in the specified faction."""
+    if not faction_name: return []
+    return [n for n, d in nation_data.items() if d.get("faction") == faction_name]
 
 # ==========================================
 # MOVEMENT QUERIES
@@ -75,7 +81,7 @@ def can_ships_enter(moving_nation, target_province, nation_data):
     target_owner = target_province.get("owner", "Unclaimed")
     
     # Ships can only enter friendly or unowned ports
-    return target_owner == moving_nation or are_allied(moving_nation, target_owner, nation_data) or target_owner == "Unclaimed"
+    return target_owner == moving_nation or are_in_same_faction(moving_nation, target_owner, nation_data) or target_owner == "Unclaimed"
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
     """Centralized rules for land movement."""
@@ -88,7 +94,7 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
     allowed_owners = ["Unclaimed", "None", moving_nation, "Ocean", "Lakes"]
 
     if target_owner not in allowed_owners:
-        if not (are_at_war(moving_nation, target_owner, nation_data) or are_allied(moving_nation, target_owner, nation_data)):
+        if not (are_at_war(moving_nation, target_owner, nation_data) or are_in_same_faction(moving_nation, target_owner, nation_data)):
             return False
 
     return True

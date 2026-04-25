@@ -7,7 +7,7 @@ def force_peace_menu(map_screen):
     open_spectator_action_menu(map_screen, "PEACE")
 
 def force_alliance_menu(map_screen): 
-    open_spectator_action_menu(map_screen, "ALLIANCE")
+    open_spectator_action_menu(map_screen, "FACTION")
 
 def force_break_alliance_menu(map_screen): 
     open_spectator_action_menu(map_screen, "BREAK")
@@ -36,12 +36,12 @@ def open_spectator_action_menu(map_screen, action_type):
             elif action_type == "PEACE":
                 diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
                 map_screen.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
-            elif action_type == "ALLIANCE":
-                diplomacy_logic.finalize_alliance(map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Forced Alliance: {source_nation} & {target_nation}")
+            elif action_type == "FACTION":
+                diplomacy_logic.finalize_faction_join(map_screen.nation_data, source_nation, target_nation)
+                map_screen.show_feedback(f"Forced Faction: {source_nation} & {target_nation}")
             elif action_type == "BREAK":
-                diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Broke Alliance: {source_nation} & {target_nation}")
+                diplomacy_logic.finalize_faction_leave(map_screen.nation_data, target_nation) # Kick them out
+                map_screen.show_feedback(f"Kicked from Faction: {target_nation}")
                 
             map_screen.refresh_relations_map()
         close_menu()
