@@ -63,7 +63,8 @@ def load_map_assets(self, load_path):
         # Load the base nation templates so they are ready for the randomizer
         self.nation_data = country_io.load_all_country_data()
         _load_default_images(self) 
-        self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
+        # --- THE FIX: Use .get() with a fallback color ---
+        self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
         return
         
     # --- DEFAULT FALLBACK LOGIC ---
@@ -111,6 +112,11 @@ def load_map_assets(self, load_path):
             if country not in self.nation_data:
                 self.nation_data[country] = base_data
             else:
+                # --- RELATIONS INIT ---
+                if "relations" not in self.nation_data[country]:
+                    self.nation_data[country]["relations"] = {}
+                # ----------------------
+
                 if "research" in base_data:
                     current_res = self.nation_data[country].setdefault("research", {})
                     for tech_key, tech_val in base_data["research"].items():
@@ -121,7 +127,8 @@ def load_map_assets(self, load_path):
         self.nation_data = base_nation_data
 
     _load_default_images(self)
-    self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
+    # --- THE FIX: Use .get() with a fallback color ---
+    self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
 
     # --- 4. Set Player/Map Properties ---
     if save_meta:

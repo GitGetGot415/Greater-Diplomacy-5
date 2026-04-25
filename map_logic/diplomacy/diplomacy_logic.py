@@ -299,6 +299,9 @@ def finalize_war(nation_data, a, b):
     for country, other in [(a, b), (b, a)]:
         if other not in nation_data[country]["at_war_with"]:
             nation_data[country]["at_war_with"].append(other)
+            
+        # Snap relations to rock bottom
+        nation_data[country].setdefault("relations", {})[other] = -100
 
 def finalize_neutral(nation_data, a, b):
     for country, other in [(a, b), (b, a)]:
@@ -306,6 +309,9 @@ def finalize_neutral(nation_data, a, b):
             nation_data[country]["at_war_with"].remove(other)
         if other in nation_data[country]["allied_with"]:
             nation_data[country]["allied_with"].remove(other)
+            
+        # Reset relations to 0 upon ceasefire
+        nation_data[country].setdefault("relations", {})[other] = 0
 
 def finalize_create_faction(nation_data, creator):
     fac = f"The {nation_data[creator].get('name', creator)} Pact"

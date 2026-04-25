@@ -14,6 +14,10 @@ def draw_tooltip(self, surface):
     if getattr(self, 'base_layer', '') == "TERRAIN":
         terrain_display = prov.get('terrain', 'Unknown').replace('_', ' ').title()
         lines = [f"ID: {prov['id']} | {terrain_display}"]
+    elif getattr(self, 'base_layer', '') == "RELATIONS":
+        # Show exactly how much they like us
+        rel_score = self.nation_data.get(self.player_country, {}).get("relations", {}).get(owner_id, 0)
+        lines = [f"ID: {prov['id']} | {owner_display}", f"Opinion: {rel_score}"]
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
 

@@ -50,8 +50,13 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
         if wars: rels.append(f"at war with {', '.join(wars)}")
         if fac: rels.append(f"in the faction '{fac}'")
         
+        # --- Inject Relation Score ---
+        if nation != ai_nation:
+            rel_score = ai_stats.get("relations", {}).get(nation, 0)
+            rels.append(f"Relations: {rel_score} (Scale: -100 to 100)")
+        
         if rels:
-            context += f"- {nation} is {' and '.join(rels)}.\n"
+            context += f"- {nation}: {' | '.join(rels)}.\n"
             
     # 3. Add Recent World Events
     global_event_data = nation_data.get("GLOBAL_EVENTS", {})
@@ -194,11 +199,13 @@ def decide_grand_strategy(nation_data, active_nations, ai_nation, current_date):
     context = get_world_context(nation_data, active_nations, ai_nation, current_date=current_date)
     
     system_prompt = (
-        "You are an AI playing a grand strategy map game. Review the world events and your politics. "
+        "You are an AI playing a grand strategy map game. Review the world events, your politics, and your RELATIONS with other countries (-100 to +100). "
+        "Use your relations to decide if you declare war (usually if relations are very low, e.g., below -50) or how you talk to them. "
         "Decide if you want to take any diplomatic actions this turn. You may take multiple actions or none. "
-        "Valid actions are: WAR_DECLARATION, CEASEFIRE, JOIN_FACTION_REQ, FACTION_INVITE, CREATE_FACTION, LEAVE_FACTION, CUSTOM_MSG. "
+        "Valid actions are: WAR_DECLARATION, CEASEFIRE, JOIN_FACTION_REQ, FACTION_INVITE, CREATE_FACTION, LEAVE_FACTION, CUSTOM_MSG, MODIFY_RELATION. "
+        "To artificially shift relations based on recent events/messages, you can output an action like {'action': 'MODIFY_RELATION', 'target': 'France', 'amount': -20}. "
         "Reply ONLY with a valid JSON array matching this schema: "
-        '[{"action": "WAR_DECLARATION", "target": "France"}, {"action": "CUSTOM_MSG", "target": "Germany", "content": "Watch your back."}]'
+        '[{"action": "WAR_DECLARATION", "target": "France"}, {"action": "MODIFY_RELATION", "target": "Germany", "amount": 10}]'
     )
     user_prompt = f"{context}\nWhat are your orders for this turn? (Return empty array [] if you wish to do nothing)"
 

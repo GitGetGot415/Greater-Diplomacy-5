@@ -119,6 +119,19 @@ def process_ai_grand_strategy(map_screen):
             
             if not action_type or not target: continue
             
+            # --- NEW: Process silent relation shifts ---
+            if action_type == "MODIFY_RELATION":
+                amt = act.get("amount", 0)
+                rels = map_screen.nation_data[ai_nation].setdefault("relations", {})
+                current_val = rels.get(target, 0)
+                rels[target] = max(-100, min(100, current_val + amt))
+                
+                # Make it reciprocal (they hate you back)
+                target_rels = map_screen.nation_data.get(target, {}).setdefault("relations", {})
+                target_rels[ai_nation] = max(-100, min(100, target_rels.get(ai_nation, 0) + amt))
+                continue
+            # -----------------------------------------
+            
             # Special handling for self-targeting actions
             if action_type in ["CREATE_FACTION", "LEAVE_FACTION", "DISBAND_FACTION"]:
                 target = ai_nation 
