@@ -23,6 +23,7 @@ def render_buttons(self):
         save_icon = symbol_loader.get_symbol("Save", 2)
         core_icon = symbol_loader.get_symbol("Star", 1.5)
         resource_icon = symbol_loader.get_symbol("Iron", 2)
+        faction_icon = symbol_loader.get_symbol("Star", 1.5)
 
         # Refresh Buttons
         self.elements = [
@@ -40,7 +41,8 @@ def render_buttons(self):
             Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
             Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
             Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
-            
+            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=faction_icon, show_text=False),
+
             Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=resource_icon, show_text=False),
             Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
             Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
@@ -131,6 +133,7 @@ def update_button_states(map_screen):
             elif el.text == "Political": el.is_selected = (map_screen.base_layer == "POLITICAL")
             elif el.text == "Relations": el.is_selected = (map_screen.base_layer == "RELATIONS")
             elif el.text == "Cores": el.is_selected = (map_screen.base_layer == "CORES")
+            elif el.text == "Factions": el.is_selected = (map_screen.base_layer == "FACTIONS")
             elif el.text == "Units": el.is_selected = (map_screen.secondary_mode == "UNITS")
             elif el.text == "Blank": el.is_selected = (map_screen.secondary_mode == "BLANK")
             elif el.text == "Economy":
@@ -141,7 +144,7 @@ def update_button_states(map_screen):
 
     if map_screen.is_editor:
         for el in map_screen.elements:
-            if el.text in ["Terrain", "Political", "Relations", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units"]:
+            if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units"]:
                 el.visible = True
             
             if el.text == "Resource":

@@ -260,3 +260,71 @@ def refresh_cores_map(self):
         self.active_map = self.cores_map
         
     print(f"Cores map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+def refresh_factions_map(self):
+    """Rebuilds the factions map surface instantly using a NumPy LUT."""
+    timer = pygame.time.get_ticks()
+    
+    id_array = pygame.surfarray.pixels3d(self.id_map)
+    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
+            (id_array[:, :, 1].astype(np.uint32) << 8) | \
+             id_array[:, :, 2].astype(np.uint32)
+             
+    lut = np.zeros(16777216, dtype=np.uint32)
+    owner_lut = np.zeros(16777216, dtype=np.uint32)
+    
+    owner_to_int = {}
+    next_owner_id = 1
+    
+    faction_colors = {}
+    
+    def get_faction_color(fac_name):
+        # Deterministic pseudo-random color based on faction name string
+        h = sum(ord(c) * (i+1) for i, c in enumerate(fac_name))
+        return ((h * 123) % 200 + 55, (h * 321) % 200 + 55, (h * 213) % 200 + 55)
+    
+    for color_key, data in self.map_data.items():
+        terrain_type = data.get("terrain", "plains")
+        
+        if terrain_type in VISUAL_WATER_MAPPING:
+            owner = VISUAL_WATER_MAPPING[terrain_type]
+            color = (255, 0, 255) 
+        else:
+            owner = data.get("owner", "Unclaimed")
+            fac = self.nation_data.get(owner, {}).get("faction", "")
+            
+            if owner in ["Unclaimed", "None", ""]:
+                color = (255, 255, 255)
+            elif not fac:
+                color = (150, 150, 150) # Neutral grey for non-faction countries
+            else:
+                if fac not in faction_colors:
+                    faction_colors[fac] = get_faction_color(fac)
+                color = faction_colors[fac]
+                
+        if owner not in owner_to_int:
+            owner_to_int[owner] = next_owner_id
+            next_owner_id += 1
+            
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
+        
+        lut[packed_key] = packed_color
+        owner_lut[packed_key] = owner_to_int[owner]
+        
+    out_2d = lut[id_2d]
+    owner_2d = owner_lut[id_2d]
+    
+    # Process Shading
+    water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
+    out_3d = apply_border_shading(out_2d, owner_2d, id_array, water_ids)
+    
+    new_fac_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    pygame.surfarray.blit_array(new_fac_surf, out_3d)
+    new_fac_surf.set_colorkey((255, 0, 255)) 
+    
+    self.factions_map = new_fac_surf
+    if self.map_mode == "FACTIONS":
+        self.active_map = self.factions_map
+        
+    print(f"Factions map refreshed in {pygame.time.get_ticks() - timer} ms")

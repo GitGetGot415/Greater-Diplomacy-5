@@ -79,10 +79,13 @@ class Map(GameState):
         
         self.top_ui_height = self.bot_ui_height = 60
         self.total_ui_h = 120
+        
         self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
         self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
         self.raised_rect = pygame.Rect(0, 0, UI_LEFT_OFFSET, SCREEN_HEIGHT)
-        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 220, 120)
+        
+        # WIDENED to 270 to accommodate the 5th button
+        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 270, 120)
         
         # Now these grab the dimensions of the CORRECT map
         self.map_w, self.map_h = self.id_map.get_size()
@@ -101,6 +104,7 @@ class Map(GameState):
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200) 
 
         self.relations_map = self.id_map.copy()
+        self.factions_map = self.id_map.copy() # NEW: Factions map layer
 
         # --- 3. RUN THE RANDOMIZER ---
         # Now that the map data and nation data actually exist, we can randomize them
@@ -110,6 +114,7 @@ class Map(GameState):
         # --- 4. REFRESH MAPS ---
         self.refresh_political_map()
         self.refresh_relations_map()
+        self.refresh_factions_map() # NEW: Initial faction refresh
         self.refresh_cores_map()
         
         buttons.render_buttons(self)
@@ -259,10 +264,15 @@ class Map(GameState):
         # self.refresh_relations_map()
         self.show_feedback("Mode: Relations")
 
+    # NEW: Factions toggle
+    def set_factions(self): 
+        self.base_layer = "FACTIONS"
+        self.active_map = self.factions_map
+        self.show_feedback("Mode: Factions")
+
     def set_cores(self): 
         self.base_layer = "CORES"
         self.active_map = self.cores_map
-        # self.refresh_cores_map()
         self.show_feedback("Mode: Cores")
 
     def save_map_data(self): 
@@ -273,6 +283,9 @@ class Map(GameState):
         
     def refresh_relations_map(self): 
         refresh_map.refresh_relations_map(self)
+
+    def refresh_factions_map(self): 
+        refresh_map.refresh_factions_map(self)
     
     def select_core_brush(self): 
         editor_menus.select_core_brush(self)

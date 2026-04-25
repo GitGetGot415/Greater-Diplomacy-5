@@ -33,7 +33,7 @@ def draw_bottom_text(map_screen, surface):
         (f"Fuel: {int(map_screen.player_fuel)} ({fmt_net(total_inc['fuel'], total_upkeep['fuel'])})", (200, 100, 255))
     ]
     
-    start_x = 250
+    start_x = 300
     spacing = 200
     
     # Draw Background Box

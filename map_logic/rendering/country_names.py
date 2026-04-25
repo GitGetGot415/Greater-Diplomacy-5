@@ -7,39 +7,61 @@ def draw_country_names(map_screen, surface):
     # Only show names on the Political map to avoid cluttering other modes
     # if map_screen.base_layer == "POLITICAL":
     # if map_screen.secondary_mode == "BLANK":
-    if False: # ignore this for now
+    if True: # ignore this for now
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(map_screen, 'country_name_surfs'):
             map_screen.country_name_surfs = {}
+            map_screen.faction_name_surfs = {} # Cache faction text globally
+            
             # Use your biggest font preset for maximum resolution before scaling down
             name_font = fonts.get("country_name_display") 
             for c_id, data in map_screen.nation_data.items():
                 if c_id not in UNPLAYABLE_NATIONS:
+                    # Cache normal country name
                     disp = data.get("name", c_id).upper()
                     surf = name_font.render(disp, True, (255, 255, 255)).convert_alpha()
                     shadow = name_font.render(disp, True, (20, 20, 20)).convert_alpha()
                     map_screen.country_name_surfs[c_id] = (surf, shadow)
+
+                    # Cache faction name
+                    fac = data.get("faction", "").upper()
+                    if fac:
+                        f_surf = name_font.render(fac, True, (255, 255, 255)).convert_alpha()
+                        f_shadow = name_font.render(fac, True, (20, 20, 20)).convert_alpha()
+                        map_screen.faction_name_surfs[c_id] = (f_surf, f_shadow)
 
         # 2 & 3. Draw the names with DYNAMIC alpha
         if hasattr(map_screen, 'country_text_blobs'):
             import math
             
             drawn_countries = set()
+            drawn_factions = set() # Keep track of which factions have already been drawn!
+            
             # Sort largest spatial spread to smallest so mainlands are always processed first!
             sorted_blobs = sorted(map_screen.country_text_blobs, key=lambda b: b["spread"], reverse=True)
             
             for blob in sorted_blobs:
                 country = blob["owner"]
                 
-                # Skip small island groups ONLY IF the country already has a name on the map
-                if blob["count"] <= 1 and country in drawn_countries:
-                    continue
-
-                # if blob["count"] <= 3:
-                #     continue
-
-                surf, shadow = map_screen.country_name_surfs.get(country, (None, None))
+                # Check which mode we are in to swap the lookup table
+                if map_screen.base_layer == "FACTIONS":
+                    # If we are in Faction mode, skip countries without factions
+                    fac_name = map_screen.nation_data.get(country, {}).get("faction", "").upper()
+                    if not fac_name:
+                        continue
+                        
+                    # Skip drawing the faction name again if we already drew it on a bigger blob
+                    if fac_name in drawn_factions:
+                        continue
+                        
+                    surf, shadow = map_screen.faction_name_surfs.get(country, (None, None))
+                else:
+                    # Skip small island groups ONLY IF the country already has a name on the map
+                    if blob["count"] <= 3 and country in drawn_countries:
+                        continue
+                    surf, shadow = map_screen.country_name_surfs.get(country, (None, None))
+                    
                 if not surf: continue
 
                 cx, cy = blob["cx"], blob["cy"]
@@ -61,10 +83,8 @@ def draw_country_names(map_screen, surface):
                         land_scale = min(max(land_scale, 0.05), 1.0)
                         
                         # --- UNIVERSAL LINEAR FADE LOGIC ---
-                        # Every country now fades at the exact same zoom levels.
-                        # Tweak these two variables to your liking:
-                        fade_start = 9.0   # Zoom level where text begins to fade out (was originally 2.0)
-                        fade_window = 1.5  # Additional zoom required to become fully invisible
+                        fade_start = 4.0   
+                        fade_window = 1.5  
                         
                         if map_screen.camera.zoom > fade_start:
                             alpha_ratio = 1.0 - min(1.0, (map_screen.camera.zoom - fade_start) / fade_window)
@@ -74,8 +94,7 @@ def draw_country_names(map_screen, surface):
                         alpha = int(255 * alpha_ratio)
 
                         if alpha <= 0:
-                            continue # Skip rendering entirely if fully transparent
-                        # ---------------------------------------------
+                            continue 
                         
                         scaled_w = int(surf.get_width() * map_screen.camera.zoom * land_scale)
                         scaled_h = int(surf.get_height() * map_screen.camera.zoom * land_scale)
@@ -98,5 +117,8 @@ def draw_country_names(map_screen, surface):
                             surface.blit(scaled_shadow, (txt_rect.x + 2, txt_rect.y + 2))
                             surface.blit(scaled_text, txt_rect)
                             
-                            # Record that this country has successfully been drawn
+                            # Record that this text block has successfully been drawn
                             drawn_countries.add(country)
+                            if map_screen.base_layer == "FACTIONS":
+                                fac_name = map_screen.nation_data.get(country, {}).get("faction", "").upper()
+                                drawn_factions.add(fac_name)
