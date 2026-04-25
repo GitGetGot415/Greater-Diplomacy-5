@@ -115,6 +115,7 @@ def handle_join_wars(map_screen):
     if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback("You must be in the same faction to assist them!")
         return
-    diplomacy_logic.join_faction_wars(map_screen.nation_data, map_screen.player_country, target)
-    map_screen.show_feedback(f"Joined {target}'s wars!")
-    map_screen.refresh_relations_map()
+        
+    # --- MODIFIED: Queue the action instead of instant execution ---
+    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_WARS")
+    map_screen.show_feedback(msg)

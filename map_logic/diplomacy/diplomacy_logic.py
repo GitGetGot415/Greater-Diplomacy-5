@@ -218,6 +218,13 @@ def process_diplomacy_turn(self):
                     finalize_war(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!") # NEW
                     send_message(self.nation_data, country_name, target, "We have declared WAR upon you!", "DIPLOMACY")
+                
+                # --- NEW: Process queued Join Wars ---
+                elif action == "JOIN_WARS":
+                    join_faction_wars(self.nation_data, country_name, target)
+                    log_global_event(self.nation_data, f"ESCALATION: {country_name} has joined the wars of {target}!")
+                    send_message(self.nation_data, country_name, target, "We have mobilized our forces to join your wars!", "DIPLOMACY")
+                
                 elif action == "BREAK_ALLIANCE":
                     finalize_neutral(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"{country_name} has broken their alliance with {target}.") # NEW
