@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, BUILDING_DATA_PATH
+import data.constants as c
 from ui_elements import Button, draw_resource_string
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
@@ -23,7 +23,7 @@ class Construction_Screen(GameState):
         self.fuel_start_y = self.fuel_end_y = 0
 
     def load_building_data(self):
-        path = BUILDING_DATA_PATH
+        path = c.BUILDING_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}
@@ -121,7 +121,7 @@ class Construction_Screen(GameState):
             order = {
                 "order_type": "BUILDING",
                 "item_name": b_name,
-                "turns_remaining": max(1, data.get("time", DAYS_PER_TURN) // DAYS_PER_TURN),
+                "turns_remaining": max(1, data.get("time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
                 "group": data["group"],
                 "refund": costs
             }
@@ -199,7 +199,7 @@ class Construction_Screen(GameState):
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
-            t = max(1, stats.get('time', DAYS_PER_TURN) // DAYS_PER_TURN)
+            t = max(1, stats.get('time', c.DAYS_PER_TURN) // c.DAYS_PER_TURN)
             
             # --- THE FIX: Call the global function instead of self ---
             draw_resource_string(
@@ -214,9 +214,9 @@ class Construction_Screen(GameState):
             )
 
         # --- Draw HUD ---
-        hud_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
+        hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
-        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (SCREEN_WIDTH, hud_rect.y), 2)
+        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_font = fonts.get("heading2")

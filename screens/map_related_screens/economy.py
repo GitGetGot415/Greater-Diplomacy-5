@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, ECON_CONVERT_BTN_X1, ECON_CONVERT_BTN_X2, ECON_CONVERT_BTN_Y
+import data.constants as c
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from data import queries
@@ -19,8 +19,8 @@ class Economy_Screen(GameState):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
         # New Conversion Buttons positioned below the resource rows
-        self.elements.append(Button(ECON_CONVERT_BTN_X1, ECON_CONVERT_BTN_Y, "medium", "orange", "10 Fuel -> 1 Mat", self.convert_fuel_to_materials))
-        self.elements.append(Button(ECON_CONVERT_BTN_X2, ECON_CONVERT_BTN_Y, "medium", "orange", "10 Mat -> 1 Fuel", self.convert_materials_to_fuel))
+        self.elements.append(Button(c.ECON_CONVERT_BTN_X1, c.ECON_CONVERT_BTN_Y, "medium", "orange", "10 Fuel -> 1 Mat", self.convert_fuel_to_materials))
+        self.elements.append(Button(c.ECON_CONVERT_BTN_X2, c.ECON_CONVERT_BTN_Y, "medium", "orange", "10 Mat -> 1 Fuel", self.convert_materials_to_fuel))
 
     def convert_fuel_to_materials(self):
         if not self.map_screen: return
@@ -50,7 +50,7 @@ class Economy_Screen(GameState):
         # Title
         font_title = fonts.get("title")
         title = font_title.render("National Economy", True, (255, 255, 255))
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
+        surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
         # Grab the projections and data
         econ_tuple = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
@@ -81,7 +81,7 @@ class Economy_Screen(GameState):
             net_str = f"+{int(net)}" if net >= 0 else str(int(net))
             
             # Row Background (Made taller to fit details)
-            row_rect = pygame.Rect(SCREEN_WIDTH // 2 - 600, y_offset, 1200, 100)
+            row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 600, y_offset, 1200, 100)
             pygame.draw.rect(surface, (40, 40, 50), row_rect)
             pygame.draw.rect(surface, (100, 100, 100), row_rect, 1)
             

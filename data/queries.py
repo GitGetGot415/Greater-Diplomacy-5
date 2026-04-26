@@ -1,6 +1,6 @@
 import json
 import os
-from data.constants import WATER_TERRAINS, NON_CORE_MULTIPLIERS, BASE_YIELDS, UPKEEP_MODIFIER, UNPLAYABLE_NATIONS, UNIT_DATA_PATH, BUILDING_DATA_PATH
+import data.constants as c
 import re
 
 # --- CACHE LIBRARIES ---
@@ -10,13 +10,13 @@ _cached_building_library = None
 def _get_unit_library():
     global _cached_unit_library
     if _cached_unit_library is None:
-        _cached_unit_library = json.load(open(UNIT_DATA_PATH)) if os.path.exists(UNIT_DATA_PATH) else {}
+        _cached_unit_library = json.load(open(c.UNIT_DATA_PATH)) if os.path.exists(c.UNIT_DATA_PATH) else {}
     return _cached_unit_library
 
 def _get_building_library():
     global _cached_building_library
     if _cached_building_library is None:
-        _cached_building_library = json.load(open(BUILDING_DATA_PATH)) if os.path.exists(BUILDING_DATA_PATH) else {}
+        _cached_building_library = json.load(open(c.BUILDING_DATA_PATH)) if os.path.exists(c.BUILDING_DATA_PATH) else {}
     return _cached_building_library
 
 
@@ -82,7 +82,7 @@ def is_faction_leader(nation, nation_data):
 
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
-    is_water = target_province.get("terrain") in WATER_TERRAINS
+    is_water = target_province.get("terrain") in c.WATER_TERRAINS
     if is_water:
         return True
         
@@ -96,7 +96,7 @@ def can_ships_enter(moving_nation, target_province, nation_data):
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
     """Centralized rules for land movement."""
-    if target_province.get("terrain") in WATER_TERRAINS:
+    if target_province.get("terrain") in c.WATER_TERRAINS:
         return False
 
     target_owner = target_province.get("owner", "Unclaimed")
@@ -168,9 +168,9 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library):
 
 def calculate_all_economies(map_data, nation_data):
     """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
-    YIELD_MANPOWER = BASE_YIELDS["manpower"]
-    YIELD_MATERIALS = BASE_YIELDS["materials"]
-    YIELD_FUEL = BASE_YIELDS["fuel"]
+    YIELD_MANPOWER = c.BASE_YIELDS["manpower"]
+    YIELD_MATERIALS = c.BASE_YIELDS["materials"]
+    YIELD_FUEL = c.BASE_YIELDS["fuel"]
 
     unit_lib = _get_unit_library()
     bldg_lib = _get_building_library()
@@ -193,12 +193,12 @@ def calculate_all_economies(map_data, nation_data):
         owner = province.get("owner")
         
         # --- INCOME LOGIC ---
-        if owner and owner in econ_data and owner not in UNPLAYABLE_NATIONS:
+        if owner and owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
             is_core = owner in province.get("cores", [])
 
-            mat_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["materials"]
-            fuel_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["fuel"]
-            man_mult = 1.0 if is_core else NON_CORE_MULTIPLIERS["manpower"]
+            mat_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]
+            fuel_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]
+            man_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]
 
             cat = "core" if is_core else "non_core"
             bd = econ_data[owner]["breakdown"]
@@ -227,9 +227,9 @@ def calculate_all_economies(map_data, nation_data):
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
                 u_type = unit.get("original_type", unit.get("type"))
                 stats = unit_lib.get(u_type, {})
-                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * UPKEEP_MODIFIER
-                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * UPKEEP_MODIFIER
-                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * c.UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIER
 
     # Finalize totals
     for data in econ_data.values():
@@ -260,11 +260,11 @@ def get_economy_projections(target_nation, map_data, nation_data):
 
 def get_living_nations(map_data):
     """Scans the map and returns a set of all nations that currently own at least one province."""
-    from data.constants import UNPLAYABLE_NATIONS
+    
     active_nations = set()
     for prov in map_data.values():
         owner = prov.get("owner")
-        if owner and owner not in UNPLAYABLE_NATIONS:
+        if owner and owner not in c.UNPLAYABLE_NATIONS:
             active_nations.add(owner)
     return active_nations
 
@@ -291,8 +291,8 @@ def get_research_multiplier(current_exact_year, target_year):
 
 def is_playable(nation, nation_data):
     """Safely checks if a nation exists and is a playable entity."""
-    from data.constants import UNPLAYABLE_NATIONS
-    if nation in UNPLAYABLE_NATIONS:
+    
+    if nation in c.UNPLAYABLE_NATIONS:
         return False
     return nation_data.get(nation, {}).get("is_playable", False)
 
@@ -380,14 +380,14 @@ def has_units_in_province(nation, province):
 
 def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
-    from data.constants import UNPLAYABLE_NATIONS
+    
     
     ai_nations = []
     # Account for potential hotseat active_players lists or standard player_country setups
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     
     for name, data in map_screen.nation_data.items():
-        if name not in human_players and name not in UNPLAYABLE_NATIONS and data.get("is_playable"):
+        if name not in human_players and name not in c.UNPLAYABLE_NATIONS and data.get("is_playable"):
             ai_nations.append(name)
             
     return ai_nations

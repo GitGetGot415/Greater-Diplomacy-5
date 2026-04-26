@@ -1,11 +1,11 @@
 import pygame
 import base64
-from data.constants import UI_LEFT_OFFSET, UNPLAYABLE_NATIONS, SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT
+import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
 
 # Define the area for the sidebar info panel utilizing constants
-info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
+info_rect = pygame.Rect(c.SIDEBAR_INFO_X, c.SIDEBAR_INFO_Y, c.SIDEBAR_INFO_WIDTH, c.SIDEBAR_INFO_HEIGHT)
 
 def draw_sidebar_info(self, surface):
     """
@@ -40,7 +40,7 @@ def draw_sidebar_info(self, surface):
     
     for i, line in enumerate(info_lines):
         tsurf = self.small_font.render(line, True, (255, 255, 255))
-        text_x = SIDEBAR_INFO_X + 10
+        text_x = c.SIDEBAR_INFO_X + 10
         surface.blit(tsurf, (text_x, 80 + i * 25))
 
     # 5. Combat Detection
@@ -51,7 +51,7 @@ def draw_sidebar_info(self, surface):
     # 6. Draw the Combat Zone Section
     if is_combat:
         y_offset = 180
-        x_offset = SIDEBAR_INFO_X + 10
+        x_offset = c.SIDEBAR_INFO_X + 10
         header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
         surface.blit(header, (x_offset, y_offset))
         
@@ -90,7 +90,7 @@ def draw_owner_portrait(self, surface):
     if not province: return
 
     owner_id = province.get("owner", "Unclaimed")
-    if owner_id in UNPLAYABLE_NATIONS: return
+    if owner_id in c.UNPLAYABLE_NATIONS: return
 
     owner_data = self.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")
@@ -98,7 +98,7 @@ def draw_owner_portrait(self, surface):
     portrait_str = owner_data.get("portrait_data", "")
 
     # Position safely beside the Left UI Bar and below the Top UI Bar
-    start_x = UI_LEFT_OFFSET + 20
+    start_x = c.UI_LEFT_OFFSET + 20
     start_y = 80
 
     # Draw Portrait

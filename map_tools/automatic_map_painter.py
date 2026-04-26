@@ -6,7 +6,7 @@ import os
 # Add the parent directory (project root) to the Python path so it can find the 'data' module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.constants import WATER_TERRAINS
+import data.constants as c
 from PIL import Image
 import json
 
@@ -113,7 +113,7 @@ def run_generator(progress_var, root):
     total_provinces = len(temp_registry)
     
     # Define what counts as water for coastal detection
-    WATER_TYPES = WATER_TERRAINS
+    WATER_TYPES = c.WATER_TERRAINS
     
     for i, (id_color, data) in enumerate(temp_registry.items()):
         if i % 50 == 0:

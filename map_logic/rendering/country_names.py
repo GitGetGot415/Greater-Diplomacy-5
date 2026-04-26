@@ -1,5 +1,5 @@
 import pygame
-from data.constants import UNPLAYABLE_NATIONS
+import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
@@ -20,7 +20,7 @@ def draw_country_names(map_screen, surface):
             # Use your biggest font preset for maximum resolution before scaling down
             name_font = fonts.get("country_name_display") 
             for c_id, data in map_screen.nation_data.items():
-                if c_id not in UNPLAYABLE_NATIONS:
+                if c_id not in c.UNPLAYABLE_NATIONS:
                     # Cache normal country name
                     disp = data.get("name", c_id).upper()
                     surf = name_font.render(disp, True, (255, 255, 255)).convert_alpha()

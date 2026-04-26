@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
-from data.constants import UNIT_DATA_PATH
+import data.constants as c
 import json
 import os
 
-PATH = UNIT_DATA_PATH
+PATH = c.UNIT_DATA_PATH
 
 class UnitEditor:
     def __init__(self, root):

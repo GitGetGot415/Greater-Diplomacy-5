@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
+import data.constants as c
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
@@ -19,9 +19,9 @@ class Research_Screen(GameState):
         self.current_category = "INFANTRY" 
         self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY", "COMPLETED"]
 
-        self.tech_tree = self.load_json(RESEARCH_TEMPLATE_PATH)
-        self.unit_library = self.load_json(UNIT_DATA_PATH)
-        self.building_library = self.load_json(BUILDING_DATA_PATH)
+        self.tech_tree = self.load_json(c.RESEARCH_TEMPLATE_PATH)
+        self.unit_library = self.load_json(c.UNIT_DATA_PATH)
+        self.building_library = self.load_json(c.BUILDING_DATA_PATH)
         
         self.active_modal = None
 
@@ -200,7 +200,7 @@ class Research_Screen(GameState):
             year = node["year"]
             base_y = node["base_y"]
             
-            base_x = (year - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) - 40
+            base_x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) - 40
             
             cur_lvl = res_levels.get(tech_key, 0)
             is_researching = any(q["tech_name"] == tech_key for q in queue)
@@ -293,11 +293,11 @@ class Research_Screen(GameState):
         current_year = self.map_screen.time_manager.year
         axis_y = 180
 
-        pygame.draw.line(surface, (150, 150, 150), (0, axis_y), (SCREEN_WIDTH, axis_y), 3)
+        pygame.draw.line(surface, (150, 150, 150), (0, axis_y), (c.SCREEN_WIDTH, axis_y), 3)
         year_font = fonts.get("heading2")
 
-        start_year = int((-self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - 5
-        end_year = int((SCREEN_WIDTH - self.scroll_x - (SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
+        start_year = int((-self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - 5
+        end_year = int((c.SCREEN_WIDTH - self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
 
         # --- NEW: Clamp the visual tick marks ---
         start_year = max(1850, start_year)
@@ -305,7 +305,7 @@ class Research_Screen(GameState):
         # ----------------------------------------
 
         for year in range(start_year, end_year):
-            x = (year - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) + self.scroll_x
+            x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
             if year % 5 == 0:
                 pygame.draw.line(surface, (200, 200, 200), (x, axis_y - 10), (x, axis_y + 10), 2)
                 txt = year_font.render(str(year), True, (200, 200, 200))
@@ -323,14 +323,14 @@ class Research_Screen(GameState):
             k = node["key"]
             l = node["lvl"]
             
-            x1 = (node["year"] - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) + self.scroll_x
+            x1 = (node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
             y1 = node["base_y"] + 40
             p1 = (x1, y1)
             
             def draw_line_to_prev(req_k, req_lvl):
                 prev_node = lookup.get((req_k, req_lvl))
                 if prev_node:
-                    x2 = (prev_node["year"] - current_year) * self.pixels_per_year + (SCREEN_WIDTH // 2) + self.scroll_x
+                    x2 = (prev_node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
                     y2 = prev_node["base_y"] + 40
                     p2 = (x2, y2)
                     color = (0, 255, 0) if res_levels.get(req_k, 0) >= req_lvl else (100, 100, 100)
@@ -349,15 +349,15 @@ class Research_Screen(GameState):
                         draw_line_to_prev(req_k, req_lvl)
 
     def draw_hud_slots(self, surface):
-        hud_rect = pygame.Rect(20, SCREEN_HEIGHT - 120, 400, 100)
+        hud_rect = pygame.Rect(20, c.SCREEN_HEIGHT - 120, 400, 100)
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
         hud_font = fonts.get("button")
-        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, SCREEN_HEIGHT - 110))
+        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, c.SCREEN_HEIGHT - 110))
         
         queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
         for i in range(2):
-            y_off = SCREEN_HEIGHT - 80 + (i * 25)
+            y_off = c.SCREEN_HEIGHT - 80 + (i * 25)
             if i < len(queue):
                 p = queue[i]
                 tech_name = p['tech_name'].replace('_',' ').title()
@@ -411,7 +411,7 @@ class Research_Screen(GameState):
             surface.blit(val_surf, (curr_x, y))
 
     def draw_subscreen_modal(self, surface):
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
         surface.blit(overlay, (0, 0))
 
@@ -443,7 +443,7 @@ class Research_Screen(GameState):
         sim_year = current_exact_year
         pts_accumulated = 0
         base_pts_per_turn = 100
-        year_inc = DAYS_PER_TURN / 360.0
+        year_inc = c.DAYS_PER_TURN / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query
         while pts_accumulated < cost and actual_turns < 5000: # 5000 is a safety breaker
@@ -478,7 +478,7 @@ class Research_Screen(GameState):
             s = self.building_library[display_name]
             
             # Using the standardized math here as well for read-only menus!
-            txt1 = f"Construction Time: {max(1, s.get('time',0) // DAYS_PER_TURN)} turns"
+            txt1 = f"Construction Time: {max(1, s.get('time',0) // c.DAYS_PER_TURN)} turns"
             surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
             y_off += 30
             
@@ -558,15 +558,15 @@ class Research_Screen(GameState):
         self.draw_timeline_axis(surface)
         
         # --- Standard Header ---
-        pygame.draw.rect(surface, (40, 40, 50), (0, 0, SCREEN_WIDTH, 70))
-        pygame.draw.line(surface, (200, 200, 200), (0, 70), (SCREEN_WIDTH, 70), 2)
+        pygame.draw.rect(surface, (40, 40, 50), (0, 0, c.SCREEN_WIDTH, 70))
+        pygame.draw.line(surface, (200, 200, 200), (0, 70), (c.SCREEN_WIDTH, 70), 2)
 
         font = fonts.get("heading1")
         ts = font.render(f"VIEWING: {self.current_category}", True, (255, 255, 255))
-        surface.blit(ts, (SCREEN_WIDTH//2 - ts.get_width()//2, 75))
+        surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, 75))
 
         output_text = font.render("RESEARCH OUTPUT: 100 pts/turn", True, (0, 255, 255))
-        surface.blit(output_text, (SCREEN_WIDTH - output_text.get_width() - 30, 85))
+        surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - 30, 85))
 
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)

@@ -3,7 +3,7 @@ import os
 from map_logic.diplomacy import diplomacy_logic
 from map_logic.rendering import edit_province_ownership
 from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, DAYS_PER_TURN, WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH, BUILDING_DATA_PATH
+import data.constants as c
 from data import queries
 
 def prepare_turn(self):
@@ -31,7 +31,7 @@ def prepare_turn(self):
 def resolve_turn(self):
     """Phase 2: Execute all moves, combat, and advance the clock."""
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
-    days_to_advance = DAYS_PER_TURN
+    days_to_advance = c.DAYS_PER_TURN
     self.time_manager.process_time(days_to_advance)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
@@ -83,10 +83,10 @@ def process_conversions(self):
 
 def process_national_research(self):
     # Load template to know costs
-    with open(RESEARCH_TEMPLATE_PATH, "r") as f:
+    with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
         template = json.load(f)
     
-    base_points_per_turn = 10 * DAYS_PER_TURN # Standardized 10/day * 10 days
+    base_points_per_turn = 10 * c.DAYS_PER_TURN # Standardized 10/day * 10 days
 
     current_exact_year = queries.get_exact_year(self.time_manager)
 
@@ -247,7 +247,7 @@ def process_movement(self):
     # Pre-cache unit library for naval checks
     if not hasattr(self, 'cached_unit_library'):
         import json, os
-        self.cached_unit_library = json.load(open(UNIT_DATA_PATH)) if os.path.exists(UNIT_DATA_PATH) else {}
+        self.cached_unit_library = json.load(open(c.UNIT_DATA_PATH)) if os.path.exists(c.UNIT_DATA_PATH) else {}
 
     for step in range(max_speed):
         for unit in moving_units:
@@ -278,7 +278,7 @@ def process_movement(self):
             # ------------------------------------------
 
             # --- NEW SHIP RULES EVALUATION ---
-            dest_is_water = target_prov.get("terrain") in WATER_TERRAINS
+            dest_is_water = target_prov.get("terrain") in c.WATER_TERRAINS
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
             
@@ -348,7 +348,7 @@ def process_economy(self):
 
     for name, stats in self.nation_data.items():
         # FIX: Explicitly skip the global events log 
-        if name == "GLOBAL_EVENTS" or name in UNPLAYABLE_NATIONS or name not in all_econ:
+        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in all_econ:
             continue
 
         econ = all_econ[name]
@@ -366,8 +366,8 @@ def process_economy(self):
 
 def process_queues(self):
     """Processes only the VERY FIRST item in the deployment queue sequentially."""
-    unit_stats_path = UNIT_DATA_PATH
-    building_stats_path = BUILDING_DATA_PATH
+    unit_stats_path = c.UNIT_DATA_PATH
+    building_stats_path = c.BUILDING_DATA_PATH
     
     unit_library = {}
     building_library = {}
@@ -386,7 +386,7 @@ def process_queues(self):
         
         # Backwards compatibility check and dynamic day-to-turn scaling
         if "days_remaining" in item:
-            item["turns_remaining"] = max(1, item.pop("days_remaining") // DAYS_PER_TURN)
+            item["turns_remaining"] = max(1, item.pop("days_remaining") // c.DAYS_PER_TURN)
             
         item["turns_remaining"] -= 1
         

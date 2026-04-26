@@ -3,7 +3,7 @@ import concurrent.futures
 import pygame
 from map_logic.ai import ai_handler
 from map_logic.rendering.font_manager import fonts
-from data.constants import UNPLAYABLE_NATIONS
+import data.constants as c
 from data import queries
 
 def log_global_event(nation_data, event_message):

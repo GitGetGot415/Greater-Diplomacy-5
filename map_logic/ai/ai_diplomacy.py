@@ -1,6 +1,6 @@
 from map_logic.ai import ai_handler
 from data import queries
-from data.constants import UNPLAYABLE_NATIONS
+import data.constants as c
 
 THINKING_COOLDOWN = 0
 

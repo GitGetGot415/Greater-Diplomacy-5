@@ -1,4 +1,4 @@
-from data.constants import UNPLAYABLE_NATIONS
+import data.constants as c
 
 def force_war_menu(map_screen): 
     open_spectator_action_menu(map_screen, "WAR")
@@ -42,7 +42,7 @@ def spec_invite_faction(map_screen):
 def open_spectator_action_menu(map_screen, action_type):
     if not map_screen.selected_province: return
     source_nation = map_screen.selected_province.get("owner")
-    if source_nation in UNPLAYABLE_NATIONS: return
+    if source_nation in c.UNPLAYABLE_NATIONS: return
     
     import tkinter as tk
     root = tk.Tk()

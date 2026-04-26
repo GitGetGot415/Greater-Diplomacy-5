@@ -1,7 +1,7 @@
 import random
 import os
 import json
-from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, RESEARCH_TEMPLATE_PATH, UNIT_DATA_PATH
+import data.constants as c
 
 def randomize_all_provinces(map_screen, settings):
     target_country_count = settings["countries"]
@@ -9,10 +9,10 @@ def randomize_all_provinces(map_screen, settings):
 
     playable_nations = [
         name for name, stats in map_screen.nation_data.items()
-        if stats.get("is_playable") and name not in UNPLAYABLE_NATIONS
+        if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS
     ]
     
-    land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in WATER_TERRAINS]
+    land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in c.WATER_TERRAINS]
     
     if not land_provinces or not playable_nations: return
 
@@ -110,7 +110,7 @@ def randomize_all_provinces(map_screen, settings):
                 
                 if n_prov:
                     # Ignore water tiles
-                    if n_prov.get("terrain", "") in WATER_TERRAINS:
+                    if n_prov.get("terrain", "") in c.WATER_TERRAINS:
                         continue
                     
                     # If this neighbor belongs to someone else (or is unclaimed)
@@ -122,7 +122,7 @@ def randomize_all_provinces(map_screen, settings):
     # --- Step C: Tech & Building Assignment ---
     
     # 1. Load the full baseline template so nobody is missing keys
-    template_path = RESEARCH_TEMPLATE_PATH
+    template_path = c.RESEARCH_TEMPLATE_PATH
     res_template = {}
     struct = {} # Store the struct to read the years later
     if os.path.exists(template_path):
@@ -174,7 +174,7 @@ def randomize_all_provinces(map_screen, settings):
 
     # --- Step D: Guarantee Minimums & Garrison Units ---
     unit_library = {}
-    unit_stats_path = UNIT_DATA_PATH
+    unit_stats_path = c.UNIT_DATA_PATH
     if os.path.exists(unit_stats_path):
         with open(unit_stats_path, 'r') as f:
             unit_library = json.load(f)

@@ -6,12 +6,12 @@ from tkinter import filedialog
 
 sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
 from map_logic.rendering.font_manager import fonts
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, BASE_MAPS_DIR
+import data.constants as c
 
 # --- NEW: Ask which map to test BEFORE starting Pygame ---
 root = tk.Tk()
 root.withdraw()
-target_dir = filedialog.askdirectory(initialdir=BASE_MAPS_DIR, title="Select Map to Test")
+target_dir = filedialog.askdirectory(initialdir=c.BASE_MAPS_DIR, title="Select Map to Test")
 root.destroy()
 
 if not target_dir:
@@ -19,7 +19,7 @@ if not target_dir:
     sys.exit()
 
 pygame.init()
-WIDTH, HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
+WIDTH, HEIGHT = c.SCREEN_WIDTH, c.SCREEN_HEIGHT
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 

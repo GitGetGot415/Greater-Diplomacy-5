@@ -1,12 +1,12 @@
 import pygame
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN
+import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
 def draw_recruitment_overlay(surface, target_province):
     """Draws the combined deployment and construction queue."""
     cancel_buttons = []
     
-    panel_rect = pygame.Rect(SCREEN_WIDTH - 400, 100, 350, SCREEN_HEIGHT - 200)
+    panel_rect = pygame.Rect(c.SCREEN_WIDTH - 400, 100, 350, c.SCREEN_HEIGHT - 200)
     pygame.draw.rect(surface, (30, 30, 50), panel_rect)
     pygame.draw.rect(surface, (100, 100, 250), panel_rect, 2)
 
@@ -29,7 +29,7 @@ def draw_recruitment_overlay(surface, target_province):
         display_name = raw_name.replace("Chadian ", "").replace("Synthetic ", "Syn. ")
         
         # Safely determine the turns, fallback to converting legacy days format
-        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', DAYS_PER_TURN) // DAYS_PER_TURN))
+        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', c.DAYS_PER_TURN) // c.DAYS_PER_TURN))
         
         # Draw the info text
         txt = small_font.render(f"{display_name} ({turns_val} turns)", True, (255, 200, 50))
@@ -84,7 +84,7 @@ def draw_map_queue_overlay(surface, target_province):
         if len(display_name) > 16:
             display_name = display_name[:14] + ".."
             
-        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', DAYS_PER_TURN) // DAYS_PER_TURN))
+        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', c.DAYS_PER_TURN) // c.DAYS_PER_TURN))
             
         txt = small_font.render(f"{display_name} ({turns_val} turns)", True, (255, 200, 50))
         surface.blit(txt, (panel_rect.x + 10, y_pos))

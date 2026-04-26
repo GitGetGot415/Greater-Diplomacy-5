@@ -1,7 +1,7 @@
 import pygame
 from map_logic.rendering import map_utils
 from map_logic.rendering import edit_province_ownership
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_NATIONS, UNPLAYABLE_NATIONS
+import data.constants as c
 from map_logic.camera import camera_handler
 
 def handle_map_events(self, event):
@@ -25,7 +25,7 @@ def handle_map_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # We calculate these positions relative to the screen center
             # which we'll define in the renderer
-            center_x, center_y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
+            center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
             
             yes_rect = pygame.Rect(center_x - 130, center_y + 20, 100, 40)
             no_rect = pygame.Rect(center_x + 30, center_y + 20, 100, 40)
@@ -52,7 +52,7 @@ def handle_map_events(self, event):
     if event.type == pygame.MOUSEWHEEL:
         self.camera.handle_input(event, self, False)
         if self.selected_province and not self.selection_mode:
-            camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], SCREEN_WIDTH, SCREEN_HEIGHT, self.total_ui_h)
+            camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, self.total_ui_h)
         return
 
     self.camera.handle_input(event, self, on_ui)
@@ -89,12 +89,12 @@ def handle_map_events(self, event):
                 # --- NATION MODE ---
                 if self.editor_mode == "NATION":
                     if self.hovered_province.get("owner") != self.brush_nation:
-                        if self.hovered_province.get("owner") not in WATER_NATIONS:
+                        if self.hovered_province.get("owner") not in c.WATER_NATIONS:
                             edit_province_ownership.conquer_province(self, self.hovered_province, self.brush_nation)
                 
                 # --- CORE MODE ---
                 elif self.editor_mode == "CORE":
-                    if self.hovered_province.get("owner") not in WATER_NATIONS:
+                    if self.hovered_province.get("owner") not in c.WATER_NATIONS:
                         # If painting with Unclaimed, wipe the tile
                         if self.brush_nation in ["Unclaimed", "None", ""]:
                             edit_province_ownership.clear_cores(self, self.hovered_province)
@@ -139,7 +139,7 @@ def handle_map_events(self, event):
         # ADD THIS: Right Click (or Middle Click)
         if pygame.mouse.get_pressed()[2]: # Right Click
             if self.hovered_province:
-                if self.hovered_province.get("owner") not in WATER_NATIONS:
+                if self.hovered_province.get("owner") not in c.WATER_NATIONS:
                     
                     if self.editor_mode == "CORE":
                         edit_province_ownership.remove_core(self, self.hovered_province, self.brush_nation)
@@ -155,7 +155,7 @@ def handle_map_events(self, event):
                     self.show_feedback("Units cleared from province")
                 else:
                     owner = self.hovered_province.get("owner", "Unclaimed")
-                    if owner in UNPLAYABLE_NATIONS:
+                    if owner in c.UNPLAYABLE_NATIONS:
                         self.show_feedback("Cannot place units in unowned territory!")
                     else:
                         import json, os
@@ -203,8 +203,8 @@ def handle_map_events(self, event):
         is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
         if is_foreign:
             # MAIL BOX! MAIL BOX! MAIL BOX!
-            from data.constants import PROVINCE_UI
-            mail_rect = pygame.Rect(*PROVINCE_UI["mail_box"])
+            
+            mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
             
             # 1. Handle clicking the box to activate/deactivate it
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -240,7 +240,7 @@ def handle_map_events(self, event):
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         if self.hovered_province:
             self.selected_province = self.hovered_province
-            camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], SCREEN_WIDTH, SCREEN_HEIGHT, self.total_ui_h)
+            camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, self.total_ui_h)
             
             # NEW: Load draft if one exists so the box isn't empty if you return
             owner = self.selected_province.get("owner")

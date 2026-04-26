@@ -15,17 +15,7 @@ from map_logic import (
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.rendering import map_renderer, refresh_map
 from ui import spectator_menus
-from data.constants import (
-    SCREEN_WIDTH,
-    SCREEN_HEIGHT,
-    BASE_YIELDS,
-    UPKEEP_MODIFIER,
-    UI_LEFT_OFFSET,
-    NON_CORE_MULTIPLIERS,
-    WATER_TERRAINS,
-    UNPLAYABLE_NATIONS,
-    PROVINCE_UI
-)
+import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui import buttons, editor_menus
@@ -84,16 +74,16 @@ class Map(GameState):
         self.top_ui_height = self.bot_ui_height = 60
         self.total_ui_h = 120
         
-        self.top_bar_rect = pygame.Rect(0, 0, SCREEN_WIDTH, 60)
-        self.bot_bar_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
-        self.raised_rect = pygame.Rect(0, 0, UI_LEFT_OFFSET, SCREEN_HEIGHT)
+        self.top_bar_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, 60)
+        self.bot_bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
+        self.raised_rect = pygame.Rect(0, 0, c.UI_LEFT_OFFSET, c.SCREEN_HEIGHT)
         
         # WIDENED to 270 to accommodate the 5th button
-        self.ui_background_rect = pygame.Rect(0, SCREEN_HEIGHT - 120, 270, 120)
+        self.ui_background_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 120, 270, 120)
         
         # Now these grab the dimensions of the CORRECT map
         self.map_w, self.map_h = self.id_map.get_size()
-        self.min_zoom = (SCREEN_HEIGHT - self.total_ui_h) / self.map_h
+        self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.map_h
         self.camera = MapCamera(self.min_zoom)
         
         self.active_map = self.political_map if self.base_layer == "POLITICAL" else self.terrain_map
@@ -476,7 +466,6 @@ class Map(GameState):
         if self.selected_province:
             self.deselect_province()
 
-    # Changed handle_orders_key to correctly utilize state queries instead of duplicate list comprehensions
     def handle_orders_key(self):
         if self.selected_province and not self.selection_mode:
             owner = self.selected_province.get("owner", "Unclaimed")
@@ -587,7 +576,7 @@ class Map(GameState):
             # Iterate through every province by ID
             for prov_id, prov in self.id_to_province.items():
                 group_val = grouping_key_func(prov)
-                if not group_val or group_val in UNPLAYABLE_NATIONS:
+                if not group_val or group_val in c.UNPLAYABLE_NATIONS:
                     continue
                 
                 # If we haven't checked this province yet, it's a new landmass
@@ -611,13 +600,13 @@ class Map(GameState):
                     if count == 0: continue
                     
                     # 1. Average center (Mean)
-                    avg_x = sum(c["center"][0] for c in comp) / count
-                    avg_y = sum(c["center"][1] for c in comp) / count
+                    avg_x = sum(ch["center"][0] for ch in comp) / count
+                    avg_y = sum(ch["center"][1] for ch in comp) / count
                     
                     # 2. Covariance Matrix calculations (for rotation and scale)
-                    c_xx = sum((c["center"][0] - avg_x)**2 for c in comp) / count
-                    c_yy = sum((c["center"][1] - avg_y)**2 for c in comp) / count
-                    c_xy = sum((c["center"][0] - avg_x) * (c["center"][1] - avg_y) for c in comp) / count
+                    c_xx = sum((ch["center"][0] - avg_x)**2 for ch in comp) / count
+                    c_yy = sum((ch["center"][1] - avg_y)**2 for ch in comp) / count
+                    c_xy = sum((ch["center"][0] - avg_x) * (ch["center"][1] - avg_y) for ch in comp) / count
                     
                     # Calculate angle (math.atan2 handles division by zero safely)
                     # atan2 returns radians, we need degrees. Pygame rotates counter-clockwise.
@@ -637,7 +626,7 @@ class Map(GameState):
                     country_thickness = math.sqrt(minor_variance) * 3.0
                     
                     # Snap to the closest actual province in this component
-                    closest_prov = min(comp, key=lambda c: (c["center"][0] - avg_x)**2 + (c["center"][1] - avg_y)**2)
+                    closest_prov = min(comp, key=lambda ch: (ch["center"][0] - avg_x)**2 + (ch["center"][1] - avg_y)**2)
                     
                     blobs.append({
                         "owner": group_val, # Reusing "owner" key so the renderer accepts it generically
@@ -657,7 +646,7 @@ class Map(GameState):
 
     # --- Pygame Core Loop Updates ---
     def update(self):
-        self.camera.update(self, SCREEN_HEIGHT)
+        self.camera.update(self, c.SCREEN_HEIGHT)
 
         if getattr(self, 'show_player_ready_screen', False):
             for el in self.elements:

@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, UNPLAYABLE_NATIONS
+import data.constants as c
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic
@@ -71,7 +71,7 @@ class Messages_Screen(GameState):
 
         if self.active_tab == "INBOX":
             title = font_title.render("INBOX", True, (255, 255, 255))
-            surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 20))
+            surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 20))
 
             p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
             inbox = p_data.get("inbox", [])
@@ -86,7 +86,7 @@ class Messages_Screen(GameState):
                     words = msg['content'].split(" ")
                     lines = []
                     current_line = ""
-                    max_width = (SCREEN_WIDTH - 100) - 40 # 40 for text padding
+                    max_width = (c.SCREEN_WIDTH - 100) - 40 # 40 for text padding
                     
                     for word in words:
                         test_line = current_line + word + " "
@@ -103,8 +103,8 @@ class Messages_Screen(GameState):
                     box_height = max(80, box_height) # Ensure it's at least 80px tall
 
                     # 3. Draw if it's on screen
-                    if y_pos + box_height > 80 and y_pos < SCREEN_HEIGHT:
-                        rect = pygame.Rect(50, y_pos, SCREEN_WIDTH - 100, box_height)
+                    if y_pos + box_height > 80 and y_pos < c.SCREEN_HEIGHT:
+                        rect = pygame.Rect(50, y_pos, c.SCREEN_WIDTH - 100, box_height)
                         pygame.draw.rect(surface, (40, 40, 50), rect)
                         pygame.draw.rect(surface, (100, 100, 200), rect, 2)
 
@@ -126,7 +126,7 @@ class Messages_Screen(GameState):
 
         elif self.active_tab == "COMPOSE":
             title = font_title.render("COMPOSE MESSAGE", True, (255, 255, 255))
-            surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 20))
+            surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 20))
 
             if self.selected_recipient:
                 # --- NEW: Use clean status check ---
@@ -142,11 +142,11 @@ class Messages_Screen(GameState):
                     status_text = "Diplomat already deployed to:"
 
                 prompt = font_med.render(f"{status_text} {self.selected_recipient}", True, (200, 255, 200))
-                surface.blit(prompt, (50, SCREEN_HEIGHT - 180))
+                surface.blit(prompt, (50, c.SCREEN_HEIGHT - 180))
 
                 # Hide text input if locked
                 if turns == 0 and not (isinstance(action, str) and action and not action.startswith("MSG:")):
-                    input_rect = pygame.Rect(50, SCREEN_HEIGHT - 140, SCREEN_WIDTH - 480, 60)
+                    input_rect = pygame.Rect(50, c.SCREEN_HEIGHT - 140, c.SCREEN_WIDTH - 480, 60)
                     pygame.draw.rect(surface, (20, 20, 20), input_rect)
                     pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
 
@@ -193,14 +193,14 @@ class Messages_Screen(GameState):
                 action, turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
                 if turns > 0:
-                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 300, c.SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))
                 elif isinstance(action, str) and action.startswith("MSG:"):
-                    self.elements.append(Button(SCREEN_WIDTH - 420, SCREEN_HEIGHT - 80, "medium", "orange", "Update Draft", self.send_message))
-                    self.elements.append(Button(SCREEN_WIDTH - 200, SCREEN_HEIGHT - 80, "medium", "red", "Clear Draft", self.clear_draft))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 420, c.SCREEN_HEIGHT - 80, "medium", "orange", "Update Draft", self.send_message))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 200, c.SCREEN_HEIGHT - 80, "medium", "red", "Clear Draft", self.clear_draft))
                 elif isinstance(action, str) and action:
-                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Diplomat Busy", lambda: None))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 300, c.SCREEN_HEIGHT - 80, "large", "grey", "Diplomat Busy", lambda: None))
                 else:
-                    self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Queue Message", self.send_message))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 80, "medium", "orange", "Queue Message", self.send_message))
 
     """def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
@@ -216,7 +216,7 @@ class Messages_Screen(GameState):
             active_nations = set()
             for prov in self.map_screen.map_data.values():
                 owner = prov.get("owner")
-                if owner and owner not in UNPLAYABLE_NATIONS:
+                if owner and owner not in c.UNPLAYABLE_NATIONS:
                     active_nations.add(owner)
             
             # 2. Filter the playable list to only include living nations
@@ -232,7 +232,7 @@ class Messages_Screen(GameState):
                 self.elements.append(Button(x_off, row_y, "medium", color, c, lambda c_name=c: self.select_recipient(c_name)))
 
             if self.selected_recipient:
-                self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Send Message", self.send_message))"""
+                self.elements.append(Button(c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 80, "medium", "orange", "Send Message", self.send_message))"""
 
     # --- UI Elements Refresh Update ---
     # Put this at the end of the file to override the default refresh_ui rendering
@@ -249,7 +249,7 @@ class Messages_Screen(GameState):
             active_nations = set()
             for prov in self.map_screen.map_data.values():
                 owner = prov.get("owner")
-                if owner and owner not in UNPLAYABLE_NATIONS:
+                if owner and owner not in c.UNPLAYABLE_NATIONS:
                     active_nations.add(owner)
             
             playable = [c for c, d in self.map_screen.nation_data.items() 
@@ -285,14 +285,14 @@ class Messages_Screen(GameState):
                 turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
 
                 if turns > 0:
-                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 300, c.SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))
                 elif isinstance(action, str) and action.startswith("MSG:"):
-                    self.elements.append(Button(SCREEN_WIDTH - 420, SCREEN_HEIGHT - 80, "medium", "orange", "Update Draft", self.send_message))
-                    self.elements.append(Button(SCREEN_WIDTH - 200, SCREEN_HEIGHT - 80, "medium", "red", "Clear Draft", self.clear_draft))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 420, c.SCREEN_HEIGHT - 80, "medium", "orange", "Update Draft", self.send_message))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 200, c.SCREEN_HEIGHT - 80, "medium", "red", "Clear Draft", self.clear_draft))
                 elif isinstance(action, str) and action:
-                    self.elements.append(Button(SCREEN_WIDTH - 300, SCREEN_HEIGHT - 80, "large", "grey", "Diplomat Busy", lambda: None))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 300, c.SCREEN_HEIGHT - 80, "large", "grey", "Diplomat Busy", lambda: None))
                 else:
-                    self.elements.append(Button(SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, "medium", "orange", "Queue Message", self.send_message))
+                    self.elements.append(Button(c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 80, "medium", "orange", "Queue Message", self.send_message))
 
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True

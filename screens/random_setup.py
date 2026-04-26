@@ -1,6 +1,6 @@
 import os
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, BASE_MAPS_DIR, COUNTRIES_DATA_PATH
+import data.constants as c
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 import json
@@ -15,7 +15,7 @@ class Random_Setup(GameState):
         self.bg_color = (20, 50, 20)
         
         # Load maps and calculate max countries
-        self.available_maps = os.listdir(BASE_MAPS_DIR) if os.path.exists(BASE_MAPS_DIR) else []
+        self.available_maps = os.listdir(c.BASE_MAPS_DIR) if os.path.exists(c.BASE_MAPS_DIR) else []
         self.map_index = 0
         
         self.max_countries = self.calculate_max_countries()
@@ -25,7 +25,7 @@ class Random_Setup(GameState):
 
     def calculate_max_countries(self):
         # Count playable nations
-        countries_path = COUNTRIES_DATA_PATH
+        countries_path = c.COUNTRIES_DATA_PATH
         playable = 0
         if os.path.exists(countries_path):
             with open(countries_path, "r") as f:
@@ -49,8 +49,8 @@ class Random_Setup(GameState):
             Button(50, 50, "small", "red", "Back", self.go_back),
             
             # Sliders 
-            Slider((SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
-            Slider((SCREEN_WIDTH/2) - 100, 400, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
+            Slider((c.SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
+            Slider((c.SCREEN_WIDTH/2) - 100, 400, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
             
             # Controls
             Button("centered", 500, "medium", "grey", "Reset Defaults", self.do_reset),
@@ -68,7 +68,7 @@ class Random_Setup(GameState):
             else:
                 cols = min(5, len(self.available_maps))
                 grid_width = cols * 220
-                start_x = (SCREEN_WIDTH - grid_width) // 2 + 10 
+                start_x = (c.SCREEN_WIDTH - grid_width) // 2 + 10 
                 start_y = 180
                 
                 for i, map_name in enumerate(self.available_maps):
@@ -101,10 +101,10 @@ class Random_Setup(GameState):
         
     def additional_draw(self, surface):
         title = fonts.get("heading1").render("RANDOM SCENARIO SETUP", True, (255, 255, 255))
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
+        surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
         map_title = fonts.get("heading2").render("Select Base Map", True, (200, 200, 200))
-        surface.blit(map_title, (SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
+        surface.blit(map_title, (c.SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
 
     def toggle_procedural(self):
         self.procedural_world = not self.procedural_world
@@ -114,7 +114,7 @@ class Random_Setup(GameState):
     def start_game(self):
         if not self.procedural_world and not self.available_maps: return
         
-        selected_path = "PROCEDURAL" if self.procedural_world else os.path.join(BASE_MAPS_DIR, self.available_maps[self.map_index])
+        selected_path = "PROCEDURAL" if self.procedural_world else os.path.join(c.BASE_MAPS_DIR, self.available_maps[self.map_index])
         
         self.random_settings = {
             "map_path": selected_path,

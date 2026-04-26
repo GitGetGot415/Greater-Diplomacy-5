@@ -1,5 +1,5 @@
 import pygame
-from data.constants import SCREEN_HEIGHT, RESOURCE_HUD_START_X, RESOURCE_HUD_SPACING, RESOURCE_HUD_HEIGHT_OFFSET, RESOURCE_HUD_BG_ALPHA
+import data.constants as c
 from data import queries
 
 def draw_bottom_text(map_screen, surface):
@@ -9,7 +9,7 @@ def draw_bottom_text(map_screen, surface):
     if hide_hud:
         return
 
-    hud_y = SCREEN_HEIGHT - RESOURCE_HUD_HEIGHT_OFFSET
+    hud_y = c.SCREEN_HEIGHT - c.RESOURCE_HUD_HEIGHT_OFFSET
     
     # Cache logic to prevent calculating economy 60 times a second
     if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - getattr(map_screen, 'econ_cache_time', 0) > 1000:
@@ -34,14 +34,14 @@ def draw_bottom_text(map_screen, surface):
     ]
     
     # Draw Background Box
-    bg_width = (len(resources) * RESOURCE_HUD_SPACING) - 40
+    bg_width = (len(resources) * c.RESOURCE_HUD_SPACING) - 40
     bg_surf = pygame.Surface((bg_width, 30), pygame.SRCALPHA)
-    bg_surf.fill((0, 0, 0, RESOURCE_HUD_BG_ALPHA))
+    bg_surf.fill((0, 0, 0, c.RESOURCE_HUD_BG_ALPHA))
     
-    bg_rect = pygame.Rect(RESOURCE_HUD_START_X - 15, hud_y - 5, bg_width, 30)
+    bg_rect = pygame.Rect(c.RESOURCE_HUD_START_X - 15, hud_y - 5, bg_width, 30)
     surface.blit(bg_surf, bg_rect.topleft)
     pygame.draw.rect(surface, (100, 100, 100), bg_rect, 1) 
 
     # Draw Text
     for i, (text, color) in enumerate(resources):
-        surface.blit(map_screen.font.render(text, True, color), (RESOURCE_HUD_START_X + (i * RESOURCE_HUD_SPACING), hud_y))
+        surface.blit(map_screen.font.render(text, True, color), (c.RESOURCE_HUD_START_X + (i * c.RESOURCE_HUD_SPACING), hud_y))

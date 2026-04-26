@@ -2,7 +2,7 @@ import pygame
 from map_logic.rendering import hover_renderer, province_select, overlay_renderer, country_names
 from ui import minimap
 from ui.information import feedback_text
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, UNPLAYABLE_NATIONS, FEEDBACK_TEXT_OFFSET_X, FEEDBACK_TEXT_Y
+import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from ui.bars import flag_renderer
 from ui.information import tooltip, ui_info_popup as unit_info_popup

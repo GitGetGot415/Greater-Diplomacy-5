@@ -2,7 +2,7 @@
 import os
 from gameState import GameState
 from ui_elements import Button
-from data.constants import SCENARIOS_DIR
+import data.constants as c
 
 class New_Game(GameState):
     def __init__(self):
@@ -19,7 +19,7 @@ class New_Game(GameState):
         ]
         
         # Look for scenarios in the scenarios folder
-        scenario_dir = SCENARIOS_DIR
+        scenario_dir = c.SCENARIOS_DIR
         if not os.path.exists(scenario_dir):
             os.makedirs(scenario_dir)
             
@@ -40,7 +40,7 @@ class New_Game(GameState):
         # We pass the path to the scenario folder
 
         # selected save path not scenario path because scenario path doesn't seem to be working
-        self.selected_save_path = os.path.join(SCENARIOS_DIR, scenario_name)
+        self.selected_save_path = os.path.join(c.SCENARIOS_DIR, scenario_name)
         self.next_state = "MAP"
         self.done = True
 

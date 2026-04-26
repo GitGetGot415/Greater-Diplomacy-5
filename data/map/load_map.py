@@ -4,12 +4,12 @@ import os
 import base64
 from map_logic.time_handler import TimeHandler
 from data.io import country_io
-from data.constants import WATER_MAPPING, FLAGS_DIR, PORTRAITS_DIR, DEFAULT_FLAG_PATH, DEFAULT_PORTRAIT_PATH
+import data.constants as c
 
 def _load_default_images(map_obj):
     """Helper to auto-load flags and portraits from the local assets folder."""
-    os.makedirs(FLAGS_DIR, exist_ok=True)
-    os.makedirs(PORTRAITS_DIR, exist_ok=True)
+    os.makedirs(c.FLAGS_DIR, exist_ok=True)
+    os.makedirs(c.PORTRAITS_DIR, exist_ok=True)
     
     def encode_surf_to_b64(surf):
         img_str = pygame.image.tostring(surf, "RGB")
@@ -17,8 +17,8 @@ def _load_default_images(map_obj):
         
     for country_name, n_data in map_obj.nation_data.items():
         # --- FLAG LOGIC ---
-        f_path = f"{FLAGS_DIR}/{country_name}.png"
-        d_path = DEFAULT_FLAG_PATH
+        f_path = f"{c.FLAGS_DIR}/{country_name}.png"
+        d_path = c.DEFAULT_FLAG_PATH
         
         # 1. Prioritize local file if it exists (overwrites old baked data)
         if os.path.exists(f_path):
@@ -39,8 +39,8 @@ def _load_default_images(map_obj):
             except: pass
             
         # --- PORTRAIT LOGIC ---
-        p_path = f"{PORTRAITS_DIR}/{country_name}.png"
-        d_path = DEFAULT_PORTRAIT_PATH
+        p_path = f"{c.PORTRAITS_DIR}/{country_name}.png"
+        d_path = c.DEFAULT_PORTRAIT_PATH
         
         # 1. Prioritize local file if it exists
         if os.path.exists(p_path):
@@ -64,7 +64,7 @@ def _load_default_images(map_obj):
             except: pass
 
 def load_map_assets(self, load_path):
-    from data.constants import BASE_MAPS_DIR
+    
     import os
 
     # --- PROCEDURAL INTERCEPT ---
@@ -89,13 +89,13 @@ def load_map_assets(self, load_path):
     # --- DEFAULT FALLBACK LOGIC ---
     # If no path is provided (e.g., on main menu boot), default to the first available base map
     if not load_path:
-        if os.path.exists(BASE_MAPS_DIR):
-            available_maps = [d for d in os.listdir(BASE_MAPS_DIR) if os.path.isdir(os.path.join(BASE_MAPS_DIR, d))]
+        if os.path.exists(c.BASE_MAPS_DIR):
+            available_maps = [d for d in os.listdir(c.BASE_MAPS_DIR) if os.path.isdir(os.path.join(c.BASE_MAPS_DIR, d))]
             if available_maps:
-                load_path = os.path.join(BASE_MAPS_DIR, available_maps[0])
+                load_path = os.path.join(c.BASE_MAPS_DIR, available_maps[0])
                 
     if not load_path or not os.path.exists(load_path):
-        raise FileNotFoundError(f"CRITICAL: No valid map found. Make sure {BASE_MAPS_DIR} contains at least one map folder.")
+        raise FileNotFoundError(f"CRITICAL: No valid map found. Make sure {c.BASE_MAPS_DIR} contains at least one map folder.")
 
     # --- 1. Image Assets ---
     # We no longer need the 'if load_path:' check because we guaranteed a path above
@@ -211,8 +211,8 @@ def load_map_assets(self, load_path):
         
         # --- THE WATER FIX ---
         terrain = v.get("terrain", "plains")
-        if terrain in WATER_MAPPING:
-            v["owner"] = WATER_MAPPING[terrain]
+        if terrain in c.WATER_MAPPING:
+            v["owner"] = c.WATER_MAPPING[terrain]
         else:
             v["owner"] = v.get("owner", "None")
         # ---------------------

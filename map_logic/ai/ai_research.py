@@ -1,14 +1,14 @@
 import json
 import os
-from data.constants import RESEARCH_TEMPLATE_PATH
+import data.constants as c
 from data import queries
 
 def process_ai_research(map_screen):
     """Automates research queueing for AI nations."""
-    if not os.path.exists(RESEARCH_TEMPLATE_PATH): 
+    if not os.path.exists(c.RESEARCH_TEMPLATE_PATH): 
         return
         
-    with open(RESEARCH_TEMPLATE_PATH, "r") as f:
+    with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
         tech_tree = json.load(f)
 
     ai_nations = queries.get_active_ai_nations(map_screen)

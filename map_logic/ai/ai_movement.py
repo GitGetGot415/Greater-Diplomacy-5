@@ -1,4 +1,4 @@
-from data.constants import WATER_TERRAINS, UNPLAYABLE_NATIONS, WATER_NATIONS
+import data.constants as c
 from data import queries
 
 def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments):
@@ -86,13 +86,13 @@ def process_ai_unit_orders(map_screen):
             for n_id in prov.get("neighbors", []):
                 n_prov = map_screen.id_to_province.get(n_id)
                 if not n_prov: continue
-                if n_prov.get("terrain") in WATER_TERRAINS: continue # Ignore water for basic land movement
+                if n_prov.get("terrain") in c.WATER_TERRAINS: continue # Ignore water for basic land movement
 
                 n_owner = n_prov.get("owner")
                 if n_owner in enemies:
                     is_war_border = True
                     enemy_targets.add(n_id)
-                elif n_owner != ai_name and n_owner not in WATER_NATIONS:
+                elif n_owner != ai_name and n_owner not in c.WATER_NATIONS:
                     is_peace_border = True
 
             if is_war_border:

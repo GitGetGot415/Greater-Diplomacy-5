@@ -4,13 +4,13 @@ import requests
 import random
 from google import genai
 from google.genai import types
-from data.constants import SETTINGS_CONFIG_PATH
+import data.constants as c
 
 def get_api_key():
     """Helper to dynamically fetch the saved key."""
-    if os.path.exists(SETTINGS_CONFIG_PATH):
+    if os.path.exists(c.SETTINGS_CONFIG_PATH):
         try:
-            with open(SETTINGS_CONFIG_PATH, "r") as f:
+            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
                 data = json.load(f)
                 key = data.get("api_key", "")
                 if key: return key
@@ -19,9 +19,9 @@ def get_api_key():
 
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
-    if os.path.exists(SETTINGS_CONFIG_PATH):
+    if os.path.exists(c.SETTINGS_CONFIG_PATH):
         try:
-            with open(SETTINGS_CONFIG_PATH, "r") as f:
+            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
                 data = json.load(f)
                 return data.get("ai_mode", "GEMINI")
         except: pass

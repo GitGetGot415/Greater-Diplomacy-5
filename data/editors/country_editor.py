@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import messagebox, colorchooser
-from data.constants import COUNTRIES_DATA_PATH, RESEARCH_TEMPLATE_PATH
+import data.constants as c
 import json
 import os
 import colorsys
 
-PATH = COUNTRIES_DATA_PATH
+PATH = c.COUNTRIES_DATA_PATH
 
 class CountryEditor:
     def __init__(self, root):
@@ -80,7 +80,7 @@ class CountryEditor:
 
     def get_default_research_dict(self):
         """Helper to build a starting research dict from the structural template."""
-        template_path = RESEARCH_TEMPLATE_PATH
+        template_path = c.RESEARCH_TEMPLATE_PATH
         if os.path.exists(template_path):
             with open(template_path, "r") as f:
                 struct = json.load(f)

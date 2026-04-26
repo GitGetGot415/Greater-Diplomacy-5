@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
 import os
-from data.constants import BASE_YIELDS, UPKEEP_MODIFIER, WATER_NATIONS, UNPLAYABLE_NATIONS, BASE_MAPS_DIR, UNIT_DATA_PATH, RESEARCH_TEMPLATE_PATH, SCENARIOS_DIR
+import data.constants as c
 from data.map import load_map
 from data import queries
 
@@ -13,7 +13,7 @@ def editor_load_map(self):
     root.withdraw()
     # Point it to your new base_maps folder instead of scenarios
     # path = filedialog.askdirectory(initialdir="base_maps", title="Select Map Folder to Edit")
-    path = filedialog.askdirectory(initialdir=SCENARIOS_DIR, title="Select Map Folder to Edit")
+    path = filedialog.askdirectory(initialdir=c.SCENARIOS_DIR, title="Select Map Folder to Edit")
     root.destroy()
 
     if path:
@@ -103,7 +103,7 @@ def select_core_brush(self):
     nations = sorted(list(self.nation_data.keys()))
     lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
     for n in nations:
-        if n not in WATER_NATIONS:
+        if n not in c.WATER_NATIONS:
             lb.insert(tk.END, n)
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
@@ -552,7 +552,7 @@ def open_map_research_editor(self):
 
     def get_default_research():
         # 1. ALWAYS generate a fresh template from the JSON first
-        template_path = RESEARCH_TEMPLATE_PATH
+        template_path = c.RESEARCH_TEMPLATE_PATH
         fresh_template = {}
         if os.path.exists(template_path):
             with open(template_path, "r") as f:
@@ -703,7 +703,7 @@ def select_unit_brush(self):
     root.attributes("-topmost", True)
     self.menu_active = True
 
-    unit_path = UNIT_DATA_PATH
+    unit_path = c.UNIT_DATA_PATH
     units = list(json.load(open(unit_path, 'r')).keys()) if os.path.exists(unit_path) else []
 
     def on_select(event=None):

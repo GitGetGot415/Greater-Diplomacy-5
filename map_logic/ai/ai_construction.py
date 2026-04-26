@@ -1,6 +1,6 @@
 import json
 import os
-from data.constants import UNIT_DATA_PATH, BUILDING_DATA_PATH, RESEARCH_TEMPLATE_PATH, DAYS_PER_TURN
+import data.constants as c
 from data import queries
 
 def process_ai_economy_decisions(map_screen):
@@ -9,8 +9,8 @@ def process_ai_economy_decisions(map_screen):
     building_library = queries._get_building_library()
 
     tech_tree = {}
-    if os.path.exists(RESEARCH_TEMPLATE_PATH):
-        with open(RESEARCH_TEMPLATE_PATH, 'r') as f: tech_tree = json.load(f)
+    if os.path.exists(c.RESEARCH_TEMPLATE_PATH):
+        with open(c.RESEARCH_TEMPLATE_PATH, 'r') as f: tech_tree = json.load(f)
 
     all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
 
@@ -61,7 +61,7 @@ def process_ai_economy_decisions(map_screen):
                 
                 order = {
                     "unit_type": inf_name,
-                    "turns_remaining": max(1, inf_stats.get("production_time", DAYS_PER_TURN) // DAYS_PER_TURN),
+                    "turns_remaining": max(1, inf_stats.get("production_time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
                     "refund": {"materials": cost_mat, "manpower": cost_man, "fuel": cost_fuel}
                 }
                 target_prov.setdefault("deployment_queue", []).append(order)
@@ -99,7 +99,7 @@ def process_ai_economy_decisions(map_screen):
                         order = {
                             "order_type": "BUILDING",
                             "item_name": best_bldg,
-                            "turns_remaining": max(1, b_stats.get("time", DAYS_PER_TURN) // DAYS_PER_TURN),
+                            "turns_remaining": max(1, b_stats.get("time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
                             "group": b_stats["group"],
                             "refund": {"materials": c_mat, "manpower": 0, "fuel": c_fuel}
                         }

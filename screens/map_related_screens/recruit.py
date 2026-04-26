@@ -4,7 +4,7 @@ import os
 import re
 import math
 from gameState import GameState
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, DAYS_PER_TURN, UNIT_DATA_PATH, RESEARCH_TEMPLATE_PATH, BUILDING_DATA_PATH
+import data.constants as c
 from ui_elements import Button
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
@@ -20,8 +20,8 @@ class Recruit_Screen(GameState):
         self.cancel_hitboxes = []
         
         # Load both libraries generically
-        self.unit_library = self.load_json(UNIT_DATA_PATH)
-        self.tech_tree = self.load_json(RESEARCH_TEMPLATE_PATH)
+        self.unit_library = self.load_json(c.UNIT_DATA_PATH)
+        self.tech_tree = self.load_json(c.RESEARCH_TEMPLATE_PATH)
         
         self.infantry_groups, self.tank_groups, self.navy_groups = self.get_ordered_groups()
         self.active_bars = []
@@ -36,7 +36,7 @@ class Recruit_Screen(GameState):
         return {}
 
     def load_unit_data(self):
-        path = UNIT_DATA_PATH
+        path = c.UNIT_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}
@@ -170,7 +170,7 @@ class Recruit_Screen(GameState):
             for res, amount in costs.items(): p_data[res] -= amount
             order = {
                 "unit_type": unit_name,
-                "turns_remaining": max(1, stats.get("production_time", DAYS_PER_TURN) // DAYS_PER_TURN),
+                "turns_remaining": max(1, stats.get("production_time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
                 "refund": costs
             }
             self.target_province.setdefault("deployment_queue", []).append(order)
@@ -247,7 +247,7 @@ class Recruit_Screen(GameState):
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
-            t = max(1, stats.get('production_time', DAYS_PER_TURN) // DAYS_PER_TURN)
+            t = max(1, stats.get('production_time', c.DAYS_PER_TURN) // c.DAYS_PER_TURN)
             
             self.draw_resource_string(
                 surface, bar_font, f"Deploy: {t} turns   |   Cost: ",
@@ -259,9 +259,9 @@ class Recruit_Screen(GameState):
             surface.blit(bar_font.render(txt2, True, (200, 200, 200)), (bar_rect.x + 15, bar_rect.y + 26))
 
         # --- Draw HUD ---
-        hud_rect = pygame.Rect(0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60)
+        hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
-        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (SCREEN_WIDTH, hud_rect.y), 2)
+        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_font = fonts.get("heading2")
@@ -304,8 +304,8 @@ class Recruit_Screen(GameState):
                     stats = self.unit_library.get(item["unit_type"], {})
                 elif item.get("order_type") == "BUILDING":
                     import json, os
-                    if os.path.exists(BUILDING_DATA_PATH):
-                        with open(BUILDING_DATA_PATH, 'r') as f:
+                    if os.path.exists(c.BUILDING_DATA_PATH):
+                        with open(c.BUILDING_DATA_PATH, 'r') as f:
                             stats = json.load(f).get(item.get("item_name"), {})
                             
                 p_data["materials"] = p_data.get("materials", 0) + stats.get("cost_materials", 0)

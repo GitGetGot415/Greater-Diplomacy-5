@@ -5,7 +5,7 @@ import sys
 # Add the parent directory (project root) to the Python path so it can find the 'data' module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.constants import UNIT_DATA_PATH, COUNTRIES_DATA_PATH, RESEARCH_TEMPLATE_PATH, BUILDING_DATA_PATH, SETTINGS_CONFIG_PATH
+import data.constants as c
 
 def combine_files(output_filename="context_generator/combined_scripts.txt", search_directory=".", json_files_to_include=None):
     """
@@ -53,11 +53,11 @@ def combine_files(output_filename="context_generator/combined_scripts.txt", sear
 
 # maybe remove some unessecary json files to recude the context window by a few thousand lines
 specific_jsons = [
-                UNIT_DATA_PATH,
-                COUNTRIES_DATA_PATH,
-                RESEARCH_TEMPLATE_PATH,
-                BUILDING_DATA_PATH,
-                SETTINGS_CONFIG_PATH
+                c.UNIT_DATA_PATH,
+                c.COUNTRIES_DATA_PATH,
+                c.RESEARCH_TEMPLATE_PATH,
+                c.BUILDING_DATA_PATH,
+                c.SETTINGS_CONFIG_PATH
                 ]
 
 combine_files(json_files_to_include=specific_jsons)

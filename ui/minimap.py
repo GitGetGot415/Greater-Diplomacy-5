@@ -1,5 +1,5 @@
 import pygame
-from data.constants import UI_LEFT_OFFSET
+import data.constants as c
 
 def draw_minimap(self, surface, screen_width, screen_height):
     map_aspect = self.map_h / self.map_w
@@ -14,10 +14,10 @@ def draw_minimap(self, surface, screen_width, screen_height):
     pygame.draw.rect(surface, (100, 100, 100), (mx, my, mini_w, mini_h), 1)
     
     # --- UI Offset Logic ---
-    visible_map_width = screen_width - UI_LEFT_OFFSET
+    visible_map_width = screen_width - c.UI_LEFT_OFFSET
 
     # 1. Calculate how many 'world pixels' the red bar covers
-    world_ui_offset = UI_LEFT_OFFSET / self.camera.zoom
+    world_ui_offset = c.UI_LEFT_OFFSET / self.camera.zoom
     
     # 2. Wrap the shifted X coordinate so it seamlessly loops around the globe
     wrapped_x = (self.camera.pos.x + world_ui_offset) % self.map_w

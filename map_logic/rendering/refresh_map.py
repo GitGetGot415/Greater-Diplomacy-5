@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-from data.constants import VISUAL_WATER_MAPPING
+import data.constants as c
 from data import queries
 
 def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
@@ -75,8 +75,8 @@ def refresh_political_map(self):
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in VISUAL_WATER_MAPPING:
-            owner = VISUAL_WATER_MAPPING[terrain_type]
+        if terrain_type in c.VISUAL_WATER_MAPPING:
+            owner = c.VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) # Magic pink
         else:
             owner = data.get("owner", "Unclaimed")
@@ -140,8 +140,8 @@ def refresh_relations_map(self):
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in VISUAL_WATER_MAPPING:
-            owner = VISUAL_WATER_MAPPING[terrain_type]
+        if terrain_type in c.VISUAL_WATER_MAPPING:
+            owner = c.VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) 
         else:
             # We track the owner for the borders...
@@ -210,8 +210,8 @@ def refresh_cores_map(self):
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in VISUAL_WATER_MAPPING:
-            owner = VISUAL_WATER_MAPPING[terrain_type]
+        if terrain_type in c.VISUAL_WATER_MAPPING:
+            owner = c.VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) 
         else:
             cores = data.get("cores", [])
@@ -226,8 +226,8 @@ def refresh_cores_map(self):
                 owner = ",".join(sorted(cores)) 
                 
                 r = g = b = valid = 0
-                for c in cores:
-                    c_color = self.nation_colors.get(c)
+                for core_name in cores:
+                    c_color = self.nation_colors.get(core_name)
                     if c_color:
                         r += c_color[0]
                         g += c_color[1]
@@ -291,8 +291,8 @@ def refresh_factions_map(self):
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
         
-        if terrain_type in VISUAL_WATER_MAPPING:
-            owner = VISUAL_WATER_MAPPING[terrain_type]
+        if terrain_type in c.VISUAL_WATER_MAPPING:
+            owner = c.VISUAL_WATER_MAPPING[terrain_type]
             color = (255, 0, 255) 
         else:
             owner = data.get("owner", "Unclaimed")

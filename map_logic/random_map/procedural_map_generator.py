@@ -1,6 +1,6 @@
 import pygame
 import random
-from data.constants import VISUAL_WATER_MAPPING
+import data.constants as c
 
 def generate_new_world(map_screen):
     """Generates the geometric map surfaces and data structures from scratch."""

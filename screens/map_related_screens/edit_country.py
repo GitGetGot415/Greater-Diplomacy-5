@@ -8,11 +8,11 @@ from tkinter import colorchooser
 from gameState import GameState
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
-from data.constants import SCREEN_WIDTH, EDIT_COUNTRY_UI_X1, EDIT_COUNTRY_UI_X2, EDIT_COUNTRY_UI_X3
+import data.constants as c
 
-input_box_x = EDIT_COUNTRY_UI_X1
-second_right_ui_x = EDIT_COUNTRY_UI_X2
-right_ui_x = EDIT_COUNTRY_UI_X3
+input_box_x = c.EDIT_COUNTRY_UI_X1
+second_right_ui_x = c.EDIT_COUNTRY_UI_X2
+right_ui_x = c.EDIT_COUNTRY_UI_X3
 
 # Helper functions for encoding/decoding surfaces to JSON strings
 def encode_surf(surf):
@@ -340,7 +340,7 @@ class Edit_Country_Screen(GameState):
         surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
         
         # Render Active Color Indicator ("selected")
-        color_x = SCREEN_WIDTH - 200
+        color_x = c.SCREEN_WIDTH - 200
         color_y = 450
         pygame.draw.rect(surface, self.active_color, (color_x, color_y, 60, 60))
         pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
@@ -348,7 +348,7 @@ class Edit_Country_Screen(GameState):
 
         # --- NEW: Map Color Preview ---
         # Shifted slightly right to fit cleanly next to the side-by-side buttons
-        map_color_x = SCREEN_WIDTH - 200
+        map_color_x = c.SCREEN_WIDTH - 200
         map_color_y = 600
         surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (map_color_x, map_color_y - 30))
         pygame.draw.rect(surface, self.new_map_color, (map_color_x, map_color_y, 60, 40))

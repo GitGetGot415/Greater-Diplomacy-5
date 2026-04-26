@@ -1,5 +1,5 @@
 import pygame
-from data.constants import BASE_YIELDS
+import data.constants as c
 
 def draw_tooltip(self, surface):
     if not self.hovered_province:
@@ -66,7 +66,7 @@ def draw_tooltip(self, surface):
         buildings = prov.get("buildings", [])
         if not buildings:
             # Base production from the tile itself dynamically pulled from config
-            lines.append(f"Base Yield: +{BASE_YIELDS['manpower']}Man, +{BASE_YIELDS['materials']}Mat, +{BASE_YIELDS['fuel']}Fuel")
+            lines.append(f"Base Yield: +{c.BASE_YIELDS['manpower']}Man, +{c.BASE_YIELDS['materials']}Mat, +{c.BASE_YIELDS['fuel']}Fuel")
         else:
             lines.append("--- Buildings ---")
             for b in buildings:

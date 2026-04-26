@@ -2,7 +2,7 @@ import pygame
 import json
 import os
 import gameState as g
-from data.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WATER_TERRAINS, UNIT_DATA_PATH, TOP_BAR_UI_CENTER_Y, ACTION_BTN_X
+import data.constants as c
 from gameState import GameState
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
@@ -21,7 +21,7 @@ class Orders_Screen(GameState):
         self.unit_library = self.load_unit_data()
 
     def load_unit_data(self):
-        path = UNIT_DATA_PATH
+        path = c.UNIT_DATA_PATH
         if os.path.exists(path):
             with open(path, 'r') as f: return json.load(f)
         return {}
@@ -33,7 +33,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
         
         units = self.target_province.get("units", [])
         for i, unit in enumerate(units):
@@ -53,7 +53,7 @@ class Orders_Screen(GameState):
             order_type = active_unit.get("order", {}).get("type", "")
 
             # Disband Button using standard action button position
-            btn_disband = Button(ACTION_BTN_X, 150, "medium", "red", "Disband", self.disband_unit)
+            btn_disband = Button(c.ACTION_BTN_X, 150, "medium", "red", "Disband", self.disband_unit)
             self.elements.append(btn_disband)
 
             # --- NEW: Combat Check ---
@@ -62,7 +62,7 @@ class Orders_Screen(GameState):
             # -------------------------
 
             # Convoy Conversion Logic (Enforce coastal/port rules)
-            is_water = self.target_province.get("terrain") in WATER_TERRAINS
+            is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
             is_coastal = self.target_province.get("is_coastal", False)
             
             # Using our updated query logic instead of isolated stat lookups
@@ -72,24 +72,24 @@ class Orders_Screen(GameState):
             if order_type == "CONVERT":
                 txt = f"Cancel Convert ({active_unit['order'].get('turns_left', 0)} turns)"
                 # Changed to a clickable red button pointing to our new cancel method
-                btn_conv = Button(ACTION_BTN_X, 220, "medium", "red", txt, self.cancel_conversion)
+                btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "red", txt, self.cancel_conversion)
                 self.elements.append(btn_conv)
             elif is_convoy: # Check if it starts with Convoy
                 if in_combat:
-                    btn_conv = Button(ACTION_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
+                    btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
                 elif not is_water:
-                    btn_conv = Button(ACTION_BTN_X, 220, "medium", "blue", "To Land Unit", self.convert_unit)
+                    btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "blue", "To Land Unit", self.convert_unit)
                 else:
-                    btn_conv = Button(ACTION_BTN_X, 220, "medium", "grey", "Must be on Land", lambda: None)
+                    btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "grey", "Must be on Land", lambda: None)
                 self.elements.append(btn_conv)
             else:
                 if not is_naval:
                     if in_combat:
-                        btn_conv = Button(ACTION_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
+                        btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
                     elif is_coastal or is_water:
-                        btn_conv = Button(ACTION_BTN_X, 220, "medium", "blue", "To Convoy", self.convert_unit)
+                        btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "blue", "To Convoy", self.convert_unit)
                     else:
-                        btn_conv = Button(ACTION_BTN_X, 220, "medium", "grey", "Must be Coastal", lambda: None)
+                        btn_conv = Button(c.ACTION_BTN_X, 220, "medium", "grey", "Must be Coastal", lambda: None)
                     self.elements.append(btn_conv)
 
     def disband_unit(self):
@@ -226,7 +226,7 @@ class Orders_Screen(GameState):
 
     def can_unit_enter(self, unit, dest):
         # Use the constant imported from data.constants
-        dest_is_water = dest.get("terrain") in WATER_TERRAINS
+        dest_is_water = dest.get("terrain") in c.WATER_TERRAINS
         
         # Look up the actual unit stats using its type name
         u_type = unit.get("type", "")
@@ -312,7 +312,7 @@ class Orders_Screen(GameState):
         small_font = fonts.get("normal")
         
         title = font.render(f"Orders: Province {self.target_province['id']}", True, (255, 255, 255))
-        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, TOP_BAR_UI_CENTER_Y))
+        surface.blit(title, (c.SCREEN_WIDTH//2 - title.get_width()//2, c.TOP_BAR_UI_CENTER_Y))
         
         # --- Draw Background Panel for Units ---
         units = self.target_province.get("units", [])
@@ -373,7 +373,7 @@ class Orders_Screen(GameState):
                         sx = (cx - cam.pos.x) * cam.zoom
                         sy = (cy - cam.pos.y) * cam.zoom + self.map_screen.top_ui_height
                         
-                        if 0 <= sx <= SCREEN_WIDTH and 0 <= sy <= SCREEN_HEIGHT:
+                        if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
                             pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
 
             mouse_pos = pygame.mouse.get_pos()

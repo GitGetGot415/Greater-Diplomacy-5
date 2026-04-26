@@ -1,12 +1,6 @@
 import pygame
 from ui_elements import Button
-from data.constants import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, TOP_BAR_UI_CENTER_Y, BOTTOM_BAR_UI_CENTER_Y,
-    VIEW_BTN_START_X, VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, VIEW_BTN_ROW2_Y,
-    ACTION_BTN_X, ACTION_BTN_START_Y, ACTION_BTN_STEP_Y, BTN_EDIT_NATION_Y,
-    LEFT_UI_BAR_X, BTN_RESEARCH_Y, BTN_SAVE_Y, BTN_ECONOMY_Y, BTN_MESSAGES_Y,
-    BTN_SPECTATOR_Y, EDITOR_BOT_BTN_START_X, EDITOR_BOT_BTN_STEP_X
-)
+import data.constants as c
 from map_logic.rendering import symbol_loader
 from data import queries
 
@@ -30,10 +24,10 @@ def render_buttons(self):
 
         # Refresh Buttons
         self.elements = [
-            Button(SCREEN_WIDTH - 520, TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
-            Button(SCREEN_WIDTH - 420, TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
-            Button(SCREEN_WIDTH - 320, TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
-            Button(SCREEN_WIDTH - 220, TOP_BAR_UI_CENTER_Y, "small", "grey", "Fac Refresh", self.refresh_factions_map),
+            Button(c.SCREEN_WIDTH - 520, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
+            Button(c.SCREEN_WIDTH - 420, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Rel Refresh", self.refresh_relations_map),
+            Button(c.SCREEN_WIDTH - 320, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Core Refresh", self.refresh_cores_map),
+            Button(c.SCREEN_WIDTH - 220, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Fac Refresh", self.refresh_factions_map),
         ]
 
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen
@@ -41,41 +35,41 @@ def render_buttons(self):
         
         # View Type Buttons utilizing new constants
         self.elements.extend([
-            Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=faction_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=faction_icon, show_text=False),
 
-            Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=resource_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=resource_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
             
-            Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=names_icon, show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=names_icon, show_text=False),
         ])
 
         if self.is_editor:
             self.elements.extend([
                 # Unified Left Bar Buttons
-                Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
+                Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
+                Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
 
-                Button(EDITOR_BOT_BTN_START_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores),
+                Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*3, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*3, c.SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores),
                 
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush),
                 
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*5, c.SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush),
                 
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date),
-                Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, BOTTOM_BAR_UI_CENTER_Y, "small", "red", "Diplomacy", self.open_diplomacy_editor)
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*6, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date),
+                Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "red", "Diplomacy", self.open_diplomacy_editor)
             ])
         else:
             # --- Dynamic Next Turn Button ---
@@ -85,44 +79,44 @@ def render_buttons(self):
             
             # We ALWAYS want the next/resolve button to appear
             self.elements.append(
-                Button(EDITOR_BOT_BTN_START_X, BOTTOM_BAR_UI_CENTER_Y, "small", next_btn_color, next_btn_text, self.advance_time)
+                Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", next_btn_color, next_btn_text, self.advance_time)
             )
             
             # Hide the management tools while the AI is moving
             if not viewing_ai:
                 self.elements.extend([
-                    Button(LEFT_UI_BAR_X, BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                    Button(LEFT_UI_BAR_X, BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
-                    Button(LEFT_UI_BAR_X, BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
-                    Button(LEFT_UI_BAR_X, BTN_EDIT_NATION_Y, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
-                    Button(LEFT_UI_BAR_X, BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
+                    Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_EDIT_NATION_Y, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
                 ])
         
     # Standard Action Buttons utilizing constants
-    self.btn_go_recruit = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "green", "Recruit Menu", self.open_recruit)
-    self.btn_go_orders = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "medium", "blue", "Give Orders", self.open_orders)
-    self.btn_go_build = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "grey", "Construction", self.open_construction)
+    self.btn_go_recruit = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "green", "Recruit Menu", self.open_recruit)
+    self.btn_go_orders = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "blue", "Give Orders", self.open_orders)
+    self.btn_go_build = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "grey", "Construction", self.open_construction)
 
-    self.btn_declare_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "red", "Declare War", self.handle_declare_war)
-    self.btn_faction_action = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "green", "Invite to Faction", self.handle_faction_action)
-    self.btn_join_wars = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "orange", "Join Wars", self.handle_join_wars)
-    self.btn_call_to_arms = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 4, "medium", "red", "Call to Arms", self.handle_call_to_arms)
+    self.btn_declare_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Declare War", self.handle_declare_war)
+    self.btn_faction_action = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Invite to Faction", self.handle_faction_action)
+    self.btn_join_wars = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "orange", "Join Wars", self.handle_join_wars)
+    self.btn_call_to_arms = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "medium", "red", "Call to Arms", self.handle_call_to_arms)
     
     # Spectator God Power Buttons
-    self.btn_force_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
-    self.btn_force_peace = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", self.force_peace_menu)
+    self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
+    self.btn_force_peace = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", self.force_peace_menu)
     
-    self.btn_spec_create_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", self.spec_create_faction)
-    self.btn_spec_join_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", self.spec_join_faction)
-    self.btn_spec_invite_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", self.spec_invite_faction)
-    self.btn_spec_leave_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", self.spec_leave_faction)
-    self.btn_spec_disband_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", self.spec_disband_faction)
+    self.btn_spec_create_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", self.spec_create_faction)
+    self.btn_spec_join_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", self.spec_join_faction)
+    self.btn_spec_invite_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", self.spec_invite_faction)
+    self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", self.spec_leave_faction)
+    self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", self.spec_disband_faction)
 
     # Spectator Mode Toggle Button
-    self.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
+    self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
 
-    self.btn_close_info = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
-    self.btn_exit_to_menu = Button(SCREEN_WIDTH - 120, TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
+    self.btn_close_info = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
+    self.btn_exit_to_menu = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
 
     # Hide context-dependent buttons by default
     for btn in [
@@ -259,9 +253,9 @@ def update_button_states(map_screen):
             if owner == map_screen.player_country or has_player_units:
                 map_screen.btn_go_orders.visible = True
                 if owner == map_screen.player_country:
-                    from data.constants import WATER_TERRAINS
+                    
                     terrain = map_screen.selected_province.get("terrain", "")
-                    is_land = terrain not in WATER_TERRAINS
+                    is_land = terrain not in c.WATER_TERRAINS
                     map_screen.btn_go_build.visible = True
                     map_screen.btn_go_recruit.visible = is_land
 
