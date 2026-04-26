@@ -21,12 +21,12 @@ def render_buttons(self):
         research_icon = symbol_loader.get_symbol("Research", 2)
         mail_icon = symbol_loader.get_symbol("Mail", 2)
         save_icon = symbol_loader.get_symbol("Save", 2)
-        core_icon = symbol_loader.get_symbol("Star", 1.5)
+        core_icon = symbol_loader.get_symbol("Star", 2)
         resource_icon = symbol_loader.get_symbol("Iron", 2)
-        faction_icon = symbol_loader.get_symbol("Star", 1.5)
+        faction_icon = symbol_loader.get_symbol("Star", 2)
+        settings_icon = symbol_loader.get_symbol("Gear", 1.5)
         
-        # Reusing the Star icon for the Names toggle so it matches your aesthetic
-        names_icon = symbol_loader.get_symbol("Star", 1.5) 
+        names_icon = symbol_loader.get_symbol("Text", 0.5) 
 
         # Refresh Buttons
         self.elements = [

@@ -1,17 +1,18 @@
 from gameState import GameState
 from ui_elements import Button
+from map_logic.rendering import symbol_loader
 
 class Menu(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40) # Midnight Blue
-        
+        settings_icon = symbol_loader.get_symbol("Gear", 1.5)
         # Just fill the list; the Parent handles the rest
         self.elements = [
             Button("centered", "centered - 80", "medium", "green", "New Game", self.new_game),
             Button("centered", "centered", "medium", "green", "Load Game", self.load_game),
             Button("centered", "centered + 80", "medium", "green", "Map Editor", self.map_editor),
-            Button("centered", "centered + 160", "medium", "grey", "Settings", self.settings)
+            Button("centered", "centered + 160", "medium", "grey", "Settings", self.settings, image=settings_icon)
         ]
 
     def new_game(self):
