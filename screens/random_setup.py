@@ -42,7 +42,7 @@ class Random_Setup(GameState):
         self.current_countries = min(20, self.max_countries)
         self.country_slider_val = self.current_countries / self.max_countries
         
-        self.map_index = 1
+        self.map_index = 0
 
     def refresh_ui(self):
         self.elements = [
