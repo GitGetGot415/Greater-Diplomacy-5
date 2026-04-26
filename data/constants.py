@@ -70,6 +70,7 @@ RESOURCE_HUD_HEIGHT_OFFSET = 40
 RESOURCE_HUD_BG_ALPHA = 200
 
 # This probably needs to be implemented in more places than just orders.py / buttons.py (does it? what is this for again?)
+# I think this is implemented in everywhere it needs to be... right?
 TOP_BAR_UI_CENTER_Y = 10
 BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
 

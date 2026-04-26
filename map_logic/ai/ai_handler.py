@@ -131,6 +131,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     system_prompt = (
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
         f"You have already decided to strongly {'ACCEPT' if accepted else 'REJECT'} the diplomatic proposal. "
+        "The details are already finalized, don't ask for further clarification. "
         "Reply ONLY with a valid JSON object matching this schema: "
         '{"message": "In-character dialogue responding to the proposal in english"}'
     )
