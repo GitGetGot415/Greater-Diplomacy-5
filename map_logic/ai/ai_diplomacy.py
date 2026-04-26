@@ -2,8 +2,6 @@ from map_logic.ai import ai_handler
 from data import queries
 import data.constants as c
 
-THINKING_COOLDOWN = 0
-
 def process_ai_grand_strategy(map_screen):
     """
     Scores all AI nations to determine who 'cares' enough about the current state of the world
@@ -12,14 +10,7 @@ def process_ai_grand_strategy(map_screen):
     active_nations = list(queries.get_living_nations(map_screen.map_data))
     
     # Map out neighbors for quick checking
-    nation_neighbors = {n: set() for n in active_nations}
-    for prov in map_screen.map_data.values():
-        owner = prov.get("owner")
-        if owner in active_nations:
-            for n_id in prov.get("neighbors", []):
-                n_prov = map_screen.id_to_province.get(n_id)
-                if n_prov and n_prov.get("owner") in active_nations and n_prov.get("owner") != owner:
-                    nation_neighbors[owner].add(n_prov.get("owner"))
+    nation_neighbors = {n: queries.get_neighboring_nations(n, map_screen.map_data, map_screen.id_to_province) for n in active_nations}
 
     ai_scores = {}
     
@@ -69,7 +60,7 @@ def process_ai_grand_strategy(map_screen):
             
         # 5. Cooldown Penalty
         last_thought = data.get("last_thought_turn", -10)
-        if current_absolute_turn - last_thought < THINKING_COOLDOWN:
+        if current_absolute_turn - last_thought < c.AI_THINKING_COOLDOWN:
             score -= 100
 
         ai_scores[ai_name] = score

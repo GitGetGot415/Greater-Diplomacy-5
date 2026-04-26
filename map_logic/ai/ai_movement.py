@@ -53,19 +53,18 @@ def process_ai_unit_orders(map_screen):
     ai_nations = queries.get_active_ai_nations(map_screen)
 
     # Build a list of which units are where
-    nation_units = {n: [] for n in ai_nations}
-    nation_provs = {n: [] for n in ai_nations}
+    nation_units = {}
+    nation_provs = {}
 
-    for prov in map_screen.map_data.values():
-        owner = prov.get("owner")
-        if owner in ai_nations:
-            nation_provs[owner].append(prov)
-        for unit in prov.get("units", []):
-            u_owner = unit.get("owner")
-            if u_owner in ai_nations:
-                # Clear old path so the AI can rethink its strategy every turn
-                unit["order"] = {"type": "MOVE", "path": []}
-                nation_units[u_owner].append((unit, prov))
+    for ai_name in ai_nations:
+        provs, units = queries.get_nation_provinces_and_units(ai_name, map_screen.map_data)
+        nation_provs[ai_name] = provs
+        nation_units[ai_name] = []
+        
+        for unit, prov in units:
+            # Clear old path so the AI can rethink its strategy every turn
+            unit["order"] = {"type": "MOVE", "path": []}
+            nation_units[ai_name].append((unit, prov))
 
     for ai_name in ai_nations:
         units_info = nation_units[ai_name]

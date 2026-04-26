@@ -258,6 +258,29 @@ def get_economy_projections(target_nation, map_data, nation_data):
 # MAP & ENTITY QUERIES
 # ==========================================
 
+def get_neighboring_nations(nation, map_data, id_to_province):
+    """Scans the map and returns a set of all nations bordering the specified nation."""
+    neighbors = set()
+    for prov in map_data.values():
+        if prov.get("owner") == nation:
+            for n_id in prov.get("neighbors", []):
+                n_prov = id_to_province.get(n_id)
+                if n_prov and n_prov.get("owner") not in c.UNPLAYABLE_NATIONS and n_prov.get("owner") != nation:
+                    neighbors.add(n_prov.get("owner"))
+    return neighbors
+
+def get_nation_provinces_and_units(nation, map_data):
+    """Returns a tuple of (list_of_provinces, list_of_units) owned by the nation."""
+    owned_provs = []
+    owned_units = []
+    for prov in map_data.values():
+        if prov.get("owner") == nation:
+            owned_provs.append(prov)
+        for unit in prov.get("units", []):
+            if unit.get("owner") == nation:
+                owned_units.append((unit, prov))
+    return owned_provs, owned_units
+
 def get_living_nations(map_data):
     """Scans the map and returns a set of all nations that currently own at least one province."""
     

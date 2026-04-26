@@ -3,28 +3,6 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 
-# --- Presets ---
-COLORS = {
-    "red": ((200, 0, 0), (255, 50, 50)),
-    "orange": ((200, 100, 0), (255, 150, 50)),
-    "yellow": ((200, 200, 0), (255, 255, 50)),
-    "purple": ((200, 0, 200), (255, 50, 255)),
-    "pink": ((200, 100, 100), (255, 150, 150)),
-    "green": ((0, 150, 0), (0, 200, 0)),
-    "light_blue": ((100, 100, 200), (150, 150, 255)),
-    "blue": ((0, 0, 200), (50, 50, 255)),
-    "grey": ((100, 100, 100), (150, 150, 150))
-}
-
-SIZES = {
-    "small_square": (40, 40),
-    "tech_square": (80, 80),
-    "small": (100, 40),
-    "left_ui_bar": (120, 50),
-    "medium": (200, 50),
-    "large": (300, 80)
-}
-
 # Global sound variables to be loaded in main.py
 click_sound = None
 slider_sound = None
@@ -47,12 +25,12 @@ def parse_pos(val, limit, size):
 
 class Button:
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True):
-        self.width, self.height = SIZES.get(size_preset, (200, 50))
+        self.width, self.height = c.SIZES.get(size_preset, (200, 50))
         final_x = parse_pos(x, c.SCREEN_WIDTH, self.width)
         final_y = parse_pos(y, c.SCREEN_HEIGHT, self.height)
         self.rect = pygame.Rect(final_x, final_y, self.width, self.height)
         
-        self.color, self.hover_color = COLORS.get(color_preset, COLORS["grey"])
+        self.color, self.hover_color = c.UI_COLORS.get(color_preset, c.UI_COLORS["grey"])
         self.pressed_color = (max(0, self.color[0]-40), max(0, self.color[1]-40), max(0, self.color[2]-40))
         
         self.text = text

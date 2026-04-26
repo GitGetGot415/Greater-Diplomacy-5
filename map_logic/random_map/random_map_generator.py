@@ -2,6 +2,7 @@ import random
 import os
 import json
 import data.constants as c
+from data import queries
 
 def randomize_all_provinces(map_screen, settings):
     target_country_count = settings["countries"]
@@ -9,7 +10,7 @@ def randomize_all_provinces(map_screen, settings):
 
     playable_nations = [
         name for name, stats in map_screen.nation_data.items()
-        if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS
+        if queries.is_playable(name, map_screen.nation_data)
     ]
     
     land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in c.WATER_TERRAINS]
