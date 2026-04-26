@@ -1,25 +1,25 @@
+# Standard Library & Third Party
 import pygame
 import random
 import math
-from data.map import load_map
-from gameState import GameState
-from map_logic.diplomacy import diplomacy_logic
-from map_logic.diplomacy import player_diplomacy_actions
-from map_logic.rendering import edit_province_ownership
-from map_logic.random_map import random_map_generator
-from ui import event_handler
-from data.map import save_map
-from map_logic import (
-    turn_processor
-)
-from map_logic.camera.camera_handler import MapCamera
-from map_logic.rendering import map_renderer, refresh_map
-from ui import spectator_menus
+
+# Data & Constants
 import data.constants as c
-from map_logic.rendering.font_manager import fonts
 from data import queries
-from ui import buttons, editor_menus
+from data.map import load_map, save_map
+
+# Core Game State & Global UI Elements
+from gameState import GameState
 from ui_elements import Button, process_text_input
+from ui import event_handler, spectator_menus, buttons, editor_menus
+
+# Game Logic & Rendering Submodules
+from map_logic import turn_processor
+from map_logic.camera.camera_handler import MapCamera
+from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions
+from map_logic.random_map import random_map_generator
+from map_logic.rendering import edit_province_ownership, map_renderer, refresh_map
+from map_logic.rendering.font_manager import fonts
 
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, num_players=1):
@@ -34,7 +34,6 @@ class Map(GameState):
         self.brush_unit = "None"    
         self.editor_mode = "NATION" 
         
-        # Add our new state variable here!
         self.show_country_names = True 
 
         # --- 1. Basic State Variables ---

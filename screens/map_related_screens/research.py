@@ -3,7 +3,7 @@ import json
 import os
 from gameState import GameState
 import data.constants as c
-from ui_elements import Button
+from ui_elements import Button, draw_resource_string
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
@@ -370,46 +370,6 @@ class Research_Screen(GameState):
             else:
                 surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (40, y_off))
 
-    def draw_resource_string(self, surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
-        """Helper function to blit image icons directly into the string, hiding zero values."""
-        base_surf = font.render(base_text, True, color)
-        surface.blit(base_surf, (x, y))
-        curr_x = x + base_surf.get_width()
-        
-        icons = [("Iron", mat), ("Infantry", man), ("Oil", fuel)]
-        drawn_any = False
-
-        for icon_name, val in icons:
-            # Skip drawing if the cost/yield is zero
-            try:
-                if float(val) == 0:
-                    continue
-            except (ValueError, TypeError):
-                continue
-                
-            drawn_any = True
-            display_val = str(val)
-            
-            # Format positive yields with a '+'
-            if is_yield and float(val) > 0 and not display_val.startswith("+"):
-                display_val = f"+{display_val}"
-
-            icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-            if icon_surf:
-                icon_surf = pygame.transform.smoothscale(icon_surf, (16, 16))
-                surface.blit(icon_surf, (curr_x, y + 2))
-                curr_x += 20
-            
-            val_surf = font.render(f"{display_val}   ", True, color)
-            surface.blit(val_surf, (curr_x, y))
-            curr_x += val_surf.get_width()
-            
-        # Handle the edge case where everything costs 0 or yields 0
-        if not drawn_any:
-            fallback_text = "None" if is_yield else "Free"
-            val_surf = font.render(fallback_text, True, color)
-            surface.blit(val_surf, (curr_x, y))
-
     def draw_subscreen_modal(self, surface):
         overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
@@ -467,7 +427,7 @@ class Research_Screen(GameState):
             surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
             y_off += 30
             
-            self.draw_resource_string(
+            draw_resource_string(
                 surface, font_small, "Production Cost:   ",
                 s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
                 panel_rect.x + 200, y_off, (200, 200, 200)
@@ -482,14 +442,14 @@ class Research_Screen(GameState):
             surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
             y_off += 30
             
-            self.draw_resource_string(
+            draw_resource_string(
                 surface, font_small, "Yield (Per Turn):   ",
                 s.get('prod_materials', 0), s.get('prod_manpower', 0), s.get('prod_fuel', 0),
                 panel_rect.x + 200, y_off, (150, 255, 150), is_yield=True
             )
             y_off += 30
             
-            self.draw_resource_string(
+            draw_resource_string(
                 surface, font_small, "Construction Cost:   ",
                 s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
                 panel_rect.x + 200, y_off, (200, 200, 200)

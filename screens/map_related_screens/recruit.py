@@ -5,7 +5,7 @@ import re
 import math
 from gameState import GameState
 import data.constants as c
-from ui_elements import Button
+from ui_elements import Button, draw_resource_string
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
@@ -178,39 +178,6 @@ class Recruit_Screen(GameState):
         else:
             self.map_screen.show_feedback("Insufficient resources!")
 
-    def draw_resource_string(self, surface, font, base_text, mat, man, fuel, x, y, color):
-        """Helper function to blit image icons directly into the string, hiding zero values."""
-        base_surf = font.render(base_text, True, color)
-        surface.blit(base_surf, (x, y))
-        curr_x = x + base_surf.get_width()
-        
-        icons = [("Iron", mat), ("Infantry", man), ("Oil", fuel)]
-        drawn_any = False
-
-        for icon_name, val in icons:
-            # Skip drawing if the cost is zero
-            try:
-                if float(val) == 0:
-                    continue
-            except (ValueError, TypeError):
-                continue
-                
-            drawn_any = True
-            icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-            if icon_surf:
-                icon_surf = pygame.transform.smoothscale(icon_surf, (16, 16))
-                surface.blit(icon_surf, (curr_x, y + 2))
-                curr_x += 20
-            
-            val_surf = font.render(f"{val}   ", True, color)
-            surface.blit(val_surf, (curr_x, y))
-            curr_x += val_surf.get_width()
-
-        # Handle edge case where a unit literally costs nothing
-        if not drawn_any:
-            val_surf = font.render("Free", True, color)
-            surface.blit(val_surf, (curr_x, y))
-
     def additional_draw(self, surface):
         if not self.target_province: return
         
@@ -249,7 +216,7 @@ class Recruit_Screen(GameState):
             
             t = max(1, stats.get('production_time', c.DAYS_PER_TURN) // c.DAYS_PER_TURN)
             
-            self.draw_resource_string(
+            draw_resource_string(
                 surface, bar_font, f"Deploy: {t} turns   |   Cost: ",
                 stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0),
                 bar_rect.x + 15, bar_rect.y + 6, (255, 215, 0)

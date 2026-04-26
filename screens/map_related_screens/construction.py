@@ -131,46 +131,6 @@ class Construction_Screen(GameState):
         else:
             self.map_screen.show_feedback("Insufficient resources!")
 
-    def draw_resource_string(self, surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
-        """Helper function to blit image icons directly into the string, hiding zero values."""
-        base_surf = font.render(base_text, True, color)
-        surface.blit(base_surf, (x, y))
-        curr_x = x + base_surf.get_width()
-        
-        icons = [("Iron", mat), ("Infantry", man), ("Oil", fuel)]
-        drawn_any = False
-        
-        for icon_name, val in icons:
-            # Skip drawing if the cost/yield is zero
-            try:
-                if float(val) == 0:
-                    continue
-            except (ValueError, TypeError):
-                continue
-                
-            drawn_any = True
-            display_val = str(val)
-            
-            # Format positive yields with a '+'
-            if is_yield and float(val) > 0 and not display_val.startswith("+"):
-                display_val = f"+{display_val}"
-
-            icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-            if icon_surf:
-                icon_surf = pygame.transform.smoothscale(icon_surf, (16, 16))
-                surface.blit(icon_surf, (curr_x, y + 2))
-                curr_x += 20
-            
-            val_surf = font.render(f"{display_val}   ", True, color)
-            surface.blit(val_surf, (curr_x, y))
-            curr_x += val_surf.get_width()
-            
-        # Handle the edge case where everything costs 0 or yields 0
-        if not drawn_any:
-            fallback_text = "None" if is_yield else "Free"
-            val_surf = font.render(fallback_text, True, color)
-            surface.blit(val_surf, (curr_x, y))
-
     def additional_draw(self, surface):
         if not self.target_province: return
         
