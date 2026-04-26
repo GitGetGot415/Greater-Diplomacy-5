@@ -1,5 +1,6 @@
 import pygame
 import os
+from data.constants import ASSETS_DIR
 
 # Cache the images using a tuple (filename, scale) as the key
 _ui_images_cache = {}
@@ -11,7 +12,7 @@ def get_ui_image(filename, scale=1.0):
     if cache_key not in _ui_images_cache:
         try:
             # Load the original image
-            img = pygame.image.load(os.path.join("assets", filename)).convert()
+            img = pygame.image.load(os.path.join(ASSETS_DIR, filename)).convert()
             
             # Apply scaling if the scale multiplier is not exactly 1.0
             if scale != 1.0:

@@ -103,7 +103,7 @@ NON_CORE_MULTIPLIERS = {
 
 # --- File Paths ---
 # Directories
-ASSETS_DIR = "assets"
+ASSETS_DIR = "assets/images"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 SAVES_DIR = "saves"
