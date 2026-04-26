@@ -199,7 +199,7 @@ def handle_map_events(self, event):
     # Moved ABOVE the "STANDARD GAME SELECTION" return block!
     if self.selected_province:
         owner = self.selected_province.get("owner")
-        from data import queries # Add if not imported
+        from data import queries
         is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
         if is_foreign:
             # MAIL BOX! MAIL BOX! MAIL BOX!

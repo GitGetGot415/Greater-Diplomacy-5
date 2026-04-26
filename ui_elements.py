@@ -65,7 +65,6 @@ class Button:
         self.visible = True
         self.is_pressed = False
         
-        # Add the selected state property
         self.is_selected = False
 
     def draw(self, surface):

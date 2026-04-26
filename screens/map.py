@@ -105,7 +105,7 @@ class Map(GameState):
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200) 
 
         self.relations_map = self.id_map.copy()
-        self.factions_map = self.id_map.copy() # NEW: Factions map layer
+        self.factions_map = self.id_map.copy()
 
         # --- 3. RUN THE RANDOMIZER ---
         # Now that the map data and nation data actually exist, we can randomize them
@@ -115,7 +115,7 @@ class Map(GameState):
         # --- 4. REFRESH MAPS ---
         self.refresh_political_map()
         self.refresh_relations_map()
-        self.refresh_factions_map() # NEW: Initial faction refresh
+        self.refresh_factions_map()
         self.refresh_cores_map()
         
         buttons.render_buttons(self)

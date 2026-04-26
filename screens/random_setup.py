@@ -106,7 +106,6 @@ class Random_Setup(GameState):
         map_title = fonts.get("heading2").render("Select Base Map", True, (200, 200, 200))
         surface.blit(map_title, (SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
 
-    # Add the toggle function
     def toggle_procedural(self):
         self.procedural_world = not self.procedural_world
         self.refresh_ui()

@@ -129,7 +129,7 @@ def process_diplomacy_turn(self):
                 
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
                     finalize_faction_join(self.nation_data, nation_b, nation_a)
-                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!") # NEW
+                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                     send_message(self.nation_data, nation_a, nation_b, "Our requests crossed paths. We are now united!", "DIPLOMACY")
                     send_message(self.nation_data, nation_b, nation_a, "Our requests crossed paths. We are now united!", "DIPLOMACY")
                     del a_data[nation_b]
@@ -148,7 +148,7 @@ def process_diplomacy_turn(self):
                     del a_data[nation_b]
                 elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                     finalize_neutral(self.nation_data, nation_a, nation_b)
-                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.") # NEW
+                    log_global_event(self.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
                     send_message(self.nation_data, nation_a, nation_b, "Mutual ceasefire agreements signed.", "DIPLOMACY")
                     send_message(self.nation_data, nation_b, nation_a, "Mutual ceasefire agreements signed.", "DIPLOMACY")
                     del a_data[nation_b]

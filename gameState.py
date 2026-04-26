@@ -12,7 +12,6 @@ class GameState:
         self.done = False
         self.next_state = None
         self.elements = []
-        # Add this global reference
         self.master_volume = 0.5
 
     def handle_events(self, events):

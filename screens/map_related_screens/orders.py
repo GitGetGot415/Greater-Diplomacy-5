@@ -298,8 +298,8 @@ class Orders_Screen(GameState):
         self.map_screen.hide_raised_rect = False
         self.map_screen.hide_top_info = False
         self.map_screen.hide_tooltip = False
-        self.map_screen.hide_resource_hud = False # NEW
-        self.map_screen.hide_minimap = False      # NEW
+        self.map_screen.hide_resource_hud = False
+        self.map_screen.hide_minimap = False
         self.map_screen.selected_province = temp_province
 
         from map_logic.rendering import province_select
