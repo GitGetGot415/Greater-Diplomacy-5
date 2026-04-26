@@ -7,14 +7,14 @@ from map_logic.diplomacy import diplomacy_logic
 from map_logic.diplomacy import player_diplomacy_actions
 from map_logic.rendering import edit_province_ownership
 from map_logic.random_map import random_map_generator
-from map_logic.ui import buttons, event_handler, editor_menus
+from ui import event_handler
 from data.map import save_map
 from map_logic import (
     turn_processor
 )
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.rendering import map_renderer, refresh_map
-from map_logic.ui import spectator_menus
+from ui import spectator_menus
 from data.constants import (
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
@@ -28,6 +28,7 @@ from data.constants import (
 )
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from ui import buttons, editor_menus
 from ui_elements import Button, process_text_input
 
 class Map(GameState):
