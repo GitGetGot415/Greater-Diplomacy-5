@@ -124,18 +124,40 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     if mode == "OFF":
         return accepted, "Our diplomats are currently unavailable (AI is OFF)."
 
-    # --- ADD THIS PRINT ---
     print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
-    system_prompt = (
-        "You are an AI playing a grand strategy game. You act as the leader of your nation. "
-        f"You have already decided to strongly {'ACCEPT' if accepted else 'REJECT'} the diplomatic proposal. "
-        "The details are already finalized, don't ask for further clarification. "
-        "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "In-character dialogue responding to the proposal in english"}'
-    )
-    user_prompt = f"{context}\n{sender_nation} has proposed a {action_type}. Provide your response based on your decision."
+    
+    # --- NEW: Split logic between Proposals and Unilateral Declarations ---
+    unilateral_actions = ["WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION"]
+    
+    if action_type in unilateral_actions:
+        if action_type == "WAR_DECLARATION":
+            action_context = f"{sender_nation} has DECLARED WAR on us!"
+        elif action_type == "LEAVE_FACTION":
+            action_context = f"{sender_nation} has abandoned our faction!"
+        elif action_type == "DISBAND_FACTION":
+            action_context = f"{sender_nation} has disbanded our faction!"
+            
+        system_prompt = (
+            "You are an AI playing a grand strategy game. You act as the leader of your nation. "
+            f"You have just received the following unilateral declaration: {action_context} "
+            "There is no proposal to accept or reject. You must react to this news in character. "
+            "Reply ONLY with a valid JSON object matching this schema: "
+            '{"message": "In-character dialogue reacting to the event in english"}'
+        )
+        user_prompt = f"{context}\n{action_context} Provide your reaction."
+        
+    else:
+        action_context = f"{sender_nation} has proposed a {action_type}."
+        system_prompt = (
+            "You are an AI playing a grand strategy game. You act as the leader of your nation. "
+            f"You have already decided to strongly {'ACCEPT' if accepted else 'REJECT'} the diplomatic proposal. "
+            "The details are already finalized, don't ask for further clarification. "
+            "Reply ONLY with a valid JSON object matching this schema: "
+            '{"message": "In-character dialogue responding to the proposal in english"}'
+        )
+        user_prompt = f"{context}\n{action_context} Provide your response based on your decision."
 
     if mode == "OLLAMA":
         result = call_ollama(system_prompt, user_prompt)
