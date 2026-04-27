@@ -177,7 +177,7 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
         "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
         "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
-        "- Outputting 'JOIN_WARS' acts as an independent declaration of war against the action_target's enemies. If they have no enemies, it fails.\n"
+        "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
         "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
         "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
         "Reply ONLY with a valid JSON object matching this schema: "

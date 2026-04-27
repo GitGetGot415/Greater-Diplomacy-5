@@ -112,6 +112,11 @@ def process_diplomacy_turn(self):
             for q_action in data["queued_ai_actions"]:
                 target = q_action["target"]
                 action_type = q_action["action"]
+                
+                # --- FIX: Ensure self-targeting actions target the AI itself! ---
+                if action_type in ["CREATE_FACTION", "LEAVE_FACTION", "DISBAND_FACTION"]:
+                    target = country_name
+                
                 # Inject it as a fresh action for this turn, bypassing the LLM
                 if target not in pending or (isinstance(pending[target], dict) and pending[target].get("turns", 0) == 0):
                     pending[target] = {"action": action_type, "turns": 0, "message": "Following through on our previous declaration."}
@@ -318,12 +323,32 @@ def process_diplomacy_turn(self):
                         ai_action = reply.get("action", "NONE")
                         follow_up = reply.get("follow_up_action", "NONE")
                         
-                        # Extract the dynamic targets
-                        act_target = reply.get("action_target", country_name)
-                        f_up_target = reply.get("follow_up_target", country_name)
+                        raw_act_target = reply.get("action_target", "NONE")
+                        raw_f_up_target = reply.get("follow_up_target", "NONE")
                         
-                        if act_target not in active_nations_list: act_target = country_name
-                        if f_up_target not in active_nations_list: f_up_target = country_name
+                        # --- THE FIX: Smart Target Resolution ---
+                        def get_valid_target(raw_target):
+                            if not raw_target or raw_target == "NONE": return "NONE"
+                            clean_target = raw_target.strip().lower()
+                            for n in active_nations_list:
+                                # Check against the internal ID
+                                if n.lower() == clean_target: return n
+                                # Check against the display name
+                                if self.nation_data.get(n, {}).get("name", "").lower() == clean_target: return n
+                            return "NONE"
+                            
+                        act_target = get_valid_target(raw_act_target)
+                        f_up_target = get_valid_target(raw_f_up_target)
+                        
+                        # GUARDRAIL: If they chose an action but target is invalid, abort so they don't shoot the messenger!
+                        if ai_action != "NONE" and act_target == "NONE":
+                            print(f"[AI GUARDRAIL] Aborting {ai_action}: Target '{raw_act_target}' not found.")
+                            ai_action = "NONE"
+                            
+                        if follow_up != "NONE" and f_up_target == "NONE":
+                            print(f"[AI GUARDRAIL] Aborting follow-up {follow_up}: Target '{raw_f_up_target}' not found.")
+                            follow_up = "NONE"
+                        # -----------------------------------------
                         
                         send_message(self.nation_data, target, country_name, msg_text, "TEXT")
                         
@@ -362,8 +387,9 @@ def process_diplomacy_turn(self):
                         
                         # --- Queue Follow-Up Action for Next Turn ---
                         if follow_up and follow_up != "NONE":
+                            final_f_up_target = target if follow_up in ["CREATE_FACTION", "LEAVE_FACTION", "DISBAND_FACTION"] else f_up_target
                             ai_queue = self.nation_data[target].setdefault("queued_ai_actions", [])
-                            ai_queue.append({"target": f_up_target, "action": follow_up})
+                            ai_queue.append({"target": final_f_up_target, "action": follow_up})
                             log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {target} is preparing further diplomatic moves regarding {f_up_target}...")
                 
                 elif action == "FACTION_INVITE":
@@ -414,6 +440,10 @@ def process_diplomacy_turn(self):
 
 # You'll also need to update finalize_war to not remove alliances, since they're factions now
 def finalize_war(nation_data, a, b):
+    # GUARDRAIL: If they are in the same faction, the aggressor (a) leaves automatically
+    if queries.are_in_same_faction(a, b, nation_data):
+        finalize_faction_leave(nation_data, a)
+
     for country, other in [(a, b), (b, a)]:
         if other not in nation_data[country]["at_war_with"]:
             nation_data[country]["at_war_with"].append(other)
