@@ -104,6 +104,19 @@ def send_message(nation_data, sender, receiver, content, msg_type="TEXT"):
         })
 
 def process_diplomacy_turn(self):
+    # --- 0. PROCESS QUEUED AI MULTI-TURN ACTIONS ---
+    # We do this first so queued actions slide right into the normal resolution pipeline
+    for country_name, data in self.nation_data.items():
+        if isinstance(data, dict) and "queued_ai_actions" in data and data["queued_ai_actions"]:
+            pending = data.setdefault("pending_diplomacy", {})
+            for q_action in data["queued_ai_actions"]:
+                target = q_action["target"]
+                action_type = q_action["action"]
+                # Inject it as a fresh action for this turn, bypassing the LLM
+                if target not in pending or (isinstance(pending[target], dict) and pending[target].get("turns", 0) == 0):
+                    pending[target] = {"action": action_type, "turns": 0, "message": "Following through on our previous declaration."}
+            data["queued_ai_actions"] = []
+
     # --- 0. FIND ALIVE NATIONS ---
     active_nations = queries.get_living_nations(self.map_data)
     active_nations_list = sorted(list(active_nations))
@@ -295,8 +308,63 @@ def process_diplomacy_turn(self):
                 
                 elif action.startswith("MSG:"):
                     if not is_human_target:
-                        reply = ai_results.get((country_name, target, "CUSTOM_MSG"), "Message received.")
-                        send_message(self.nation_data, target, country_name, reply, "TEXT")
+                        reply = ai_results.get((country_name, target, "CUSTOM_MSG"), {})
+                        
+                        # Fallback format correction
+                        if isinstance(reply, str):
+                            reply = {"message": reply, "action": "NONE"}
+                            
+                        msg_text = reply.get("message", "Message received.")
+                        ai_action = reply.get("action", "NONE")
+                        follow_up = reply.get("follow_up_action", "NONE")
+                        
+                        # Extract the dynamic targets
+                        act_target = reply.get("action_target", country_name)
+                        f_up_target = reply.get("follow_up_target", country_name)
+                        
+                        if act_target not in active_nations_list: act_target = country_name
+                        if f_up_target not in active_nations_list: f_up_target = country_name
+                        
+                        send_message(self.nation_data, target, country_name, msg_text, "TEXT")
+                        
+                        # --- Execute dynamic AI action ---
+                        if ai_action == "WAR_DECLARATION":
+                            if queries.are_in_same_faction(target, act_target, self.nation_data):
+                                finalize_faction_leave(self.nation_data, target)
+                                log_global_event(self.nation_data, f"BETRAYAL: {target} has abandoned their faction to attack {act_target}!")
+                                
+                            finalize_war(self.nation_data, target, act_target)
+                            log_global_event(self.nation_data, f"WAR DECLARED: {target} has declared war on {act_target}!")
+                            
+                        elif ai_action == "JOIN_WARS":
+                            if queries.are_in_same_faction(target, act_target, self.nation_data):
+                                join_faction_wars(self.nation_data, target, act_target)
+                                log_global_event(self.nation_data, f"ESCALATION: {target} has joined the wars of their ally, {act_target}!")
+                            else:
+                                target_enemies = queries.get_enemies(act_target, self.nation_data)
+                                if target_enemies:
+                                    for enemy in target_enemies:
+                                        finalize_war(self.nation_data, target, enemy)
+                                        log_global_event(self.nation_data, f"INTERVENTION: {target} has independently declared war on {enemy} to aid {act_target}!")
+                                else:
+                                    send_message(self.nation_data, target, country_name, f"We would offer military aid to {act_target}, but they are not currently at war.", "TEXT")
+                            
+                        elif ai_action == "LEAVE_FACTION":
+                            finalize_faction_leave(self.nation_data, target)
+                            log_global_event(self.nation_data, f"{target} has abandoned their faction.")
+                            
+                        elif ai_action == "JOIN_FACTION_REQ":
+                            if self.nation_data[target].get("faction", ""):
+                                send_message(self.nation_data, target, country_name, "We cannot join a new faction while we are already bound to our own treaties.", "TEXT")
+                            else:
+                                finalize_faction_join(self.nation_data, act_target, target)
+                                log_global_event(self.nation_data, f"{target} has joined the faction of {act_target}.")
+                        
+                        # --- Queue Follow-Up Action for Next Turn ---
+                        if follow_up and follow_up != "NONE":
+                            ai_queue = self.nation_data[target].setdefault("queued_ai_actions", [])
+                            ai_queue.append({"target": f_up_target, "action": follow_up})
+                            log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {target} is preparing further diplomatic moves regarding {f_up_target}...")
                 
                 elif action == "FACTION_INVITE":
                     if is_human_target:

@@ -160,25 +160,42 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content):
     mode = get_ai_mode()
     if mode == "OFF":
-        return "Message received (AI is OFF)."
+        return {"message": "Message received (AI is OFF).", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
 
-    # --- ADD THIS PRINT ---
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     system_prompt = (
         "You are an AI leader in a grand strategy game. Respond to the incoming diplomatic message in character. "
-        "Keep your response under 2 sentences. "
+         # "Keep your response under 2 sentences. "
+        "For reasons unbenownst to the other country, your goals actually align exactly with what they think they have to convince you to do. "
+        "It's also in your best interest to make it seem like they had to convince you, so your actions don't seem too spontaneous. "
+        # "You may also take a diplomatic action if the sender's reasoning is convincing or offensive. " 
+        "You may also take a diplomatic action when responding to the country.\n"
+        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', or 'NONE'.\n"
+        "RULES FOR ACTIONS:\n"
+        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
+        "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
+        "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
+        "- Outputting 'JOIN_WARS' acts as an independent declaration of war against the action_target's enemies. If they have no enemies, it fails.\n"
+        "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
+        "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "Your in-character response here"}'
+        '{"message": "Your in-character response here", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}'
     )
     user_prompt = f"{context}\nMessage from {sender_nation}: '{message_content}'"
     
     if mode == "OLLAMA":
         result = call_ollama(system_prompt, user_prompt)
         if result:
-            return result.get("message", "Message received.")
-        return "Ollama server error."
+            return {
+                "message": result.get("message", "Message received."), 
+                "action": result.get("action", "NONE"),
+                "action_target": result.get("action_target", "NONE"),
+                "follow_up_action": result.get("follow_up_action", "NONE"),
+                "follow_up_target": result.get("follow_up_target", "NONE")
+            }
+        return {"message": "Ollama server error.", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
 
     try:
         client = genai.Client(api_key=get_api_key())
@@ -188,10 +205,16 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         reply_json = json.loads(response.text)
-        return reply_json.get("message", "Message received.")
+        return {
+            "message": reply_json.get("message", "Message received."), 
+            "action": reply_json.get("action", "NONE"),
+            "action_target": reply_json.get("action_target", "NONE"),
+            "follow_up_action": reply_json.get("follow_up_action", "NONE"),
+            "follow_up_target": reply_json.get("follow_up_target", "NONE")
+        }
     except Exception as e:
         print(f"Gemini Error: {e}")
-        return "Message received."
+        return {"message": "Message received.", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
 
 def decide_grand_strategy(nation_data, active_nations, ai_nation, current_date):
     """Asks the LLM what diplomatic actions it wants to take this turn based on global context."""
