@@ -191,8 +191,8 @@ def process_diplomacy_turn(self):
             if turns == 1:
                 is_human_target = target in getattr(self, 'active_players', [])
                 if not is_human_target:
-                    # Added JOIN_WARS and BREAK_ALLIANCE to the list of tasks the AI should process
-                    if action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE"]:
+                    # Added KICK_FACTION_MEMBER to the list of tasks the AI should process
+                    if action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER"]:
                         ai_tasks.append({"sender": country_name, "target": target, "action": action})
                     elif action.startswith("MSG:"):
                         ai_tasks.append({"sender": country_name, "target": target, "action": "CUSTOM_MSG", "content": action[4:]})
@@ -221,8 +221,8 @@ def process_diplomacy_turn(self):
             futures = {}
             for task in ai_tasks:
                 target_ai, sender = task["target"], task["sender"]
-                # Added JOIN_WARS and BREAK_ALLIANCE to the thread spawn list
-                if task["action"] in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE"]:
+                # Added KICK_FACTION_MEMBER to the thread spawn list
+                if task["action"] in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER"]:
                     future = executor.submit(ai_handler.evaluate_diplomatic_proposal, self.nation_data, active_nations_list, target_ai, sender, task["action"])
                     futures[future] = task
                 elif task["action"] == "CUSTOM_MSG":
@@ -303,7 +303,13 @@ def process_diplomacy_turn(self):
                     log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.")
                     msg_text = custom_msg if custom_msg else "We are dissolving our faction."
                     send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
-                    
+
+                elif action == "KICK_FACTION_MEMBER":
+                    finalize_faction_kick(self.nation_data, country_name, target)
+                    log_global_event(self.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
+                    msg_text = custom_msg if custom_msg else "You have been expelled from our faction."
+                    send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
+
                 elif action == "LEAVE_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
                     info["cached_members"] = queries.get_faction_members(fac, self.nation_data) if fac else []
@@ -354,6 +360,11 @@ def process_diplomacy_turn(self):
                         accepted, message = ai_results.get((country_name, target, action), (False, "We won't forget this."))
                         send_message(self.nation_data, target, country_name, message, "TEXT")
                 
+                elif action == "KICK_FACTION_MEMBER":
+                    if not is_human_target: 
+                        accepted, message = ai_results.get((country_name, target, action), (False, c.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION", "We won't forget this.")))
+                        send_message(self.nation_data, target, country_name, message, "TEXT")
+
                 elif action.startswith("MSG:"):
                     # ... (Leave CUSTOM_MSG block unchanged) ...
                     if not is_human_target:
@@ -547,3 +558,11 @@ def join_faction_wars(nation_data, joiner, faction_member):
         nation_data[joiner].setdefault("relations", {})[enemy] = -100
         nation_data[enemy].setdefault("relations", {})[joiner] = -100
         # ----------------------------------------------------------------
+
+def finalize_faction_kick(nation_data, leader, member):
+    nation_data[member]["faction"] = ""
+    nation_data[member]["is_faction_leader"] = False
+    
+    # Sour relations instantly upon being kicked
+    nation_data[leader].setdefault("relations", {})[member] = -50
+    nation_data[member].setdefault("relations", {})[leader] = -50

@@ -145,6 +145,8 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             fallback = c.AI_FALLBACK_RESPONSES.get("ACCEPTED_HELP", "We gratefully accept your assistance in our conflicts.")
         elif action_type == "BREAK_ALLIANCE":
             fallback = c.AI_FALLBACK_RESPONSES.get("ALLIANCE_BROKEN", "We won't forget this.")
+        elif action_type == "KICK_FACTION_MEMBER":
+            fallback = c.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION", "We won't forget being expelled.")
         else:
             fallback = c.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.") if accepted else c.AI_FALLBACK_RESPONSES.get("AI_OFF_REJECT", "We reject your proposal.")
         return accepted, fallback
@@ -154,7 +156,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     
     # --- Split logic between Proposals and Unilateral Declarations ---
-    unilateral_actions = ["WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE"]
+    unilateral_actions = ["WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER"] # Added KICK_FACTION_MEMBER
     
     if action_type in unilateral_actions:
         if action_type == "WAR_DECLARATION":
@@ -167,6 +169,8 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             action_context = f"{sender_nation} has mobilized their forces to join our ongoing wars!"
         elif action_type == "BREAK_ALLIANCE":
             action_context = f"{sender_nation} has broken their alliance with us!"
+        elif action_type == "KICK_FACTION_MEMBER":
+            action_context = f"{sender_nation} has expelled us from the faction!"
             
         system_prompt = (
             "You are an AI playing a grand strategy game. You act as the leader of your nation. "

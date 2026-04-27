@@ -320,7 +320,6 @@ def update_button_states(map_screen):
                         
                         if can_join_wars:
                             map_screen.btn_join_wars.visible = True
-                            # --- MODIFIED: Dynamic UI text for undo states ---
                             if pending_action == "JOIN_WARS":
                                 map_screen.btn_join_wars.text = get_status_text()
                             else:
@@ -332,6 +331,18 @@ def update_button_states(map_screen):
                                 map_screen.btn_call_to_arms.text = get_status_text()
                             else:
                                 map_screen.btn_call_to_arms.text = "CALL TO ARMS"
+                        
+                        # --- MOVED KICK UI LOGIC HERE ---
+                        i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
+                        if i_am_leader:
+                            map_screen.btn_faction_action.visible = True
+                            if pending_action == "KICK_FACTION_MEMBER":
+                                map_screen.btn_faction_action.text = get_status_text()
+                            else:
+                                map_screen.btn_faction_action.text = "KICK FROM FACTION"
+                        else:
+                            map_screen.btn_faction_action.visible = False
+                        # --------------------------------
                     else:
                         if pending_action == "WAR_DECLARATION":
                             map_screen.btn_declare_war.visible = True

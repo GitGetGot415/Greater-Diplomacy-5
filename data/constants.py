@@ -214,5 +214,6 @@ AI_FALLBACK_RESPONSES = {
     "CEASEFIRE_IGNORED": "Your ceasefire offer was ignored and has expired.",
     "CALL_TO_ARMS_IGNORED": "Your call to arms was ignored and has expired.",
     "CANT_JOIN_FACTION": "We cannot join a new faction while we are already bound to our own treaties.",
-    "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war."
+    "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war.",
+    "KICKED_FROM_FACTION": "We will not forget being expelled from the alliance."
 }

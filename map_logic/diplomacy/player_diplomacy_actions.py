@@ -148,11 +148,19 @@ def handle_faction_action(map_screen):
 
     if my_faction:
         if not i_am_leader:
-            map_screen.show_feedback("Only the faction leader can invite nations!")
+            map_screen.show_feedback("Only the faction leader can invite or kick nations!")
             return
         if target_faction:
-            map_screen.show_feedback(f"{target} must leave their faction first!")
-            return
+            # --- NEW KICK LOGIC ---
+            if target_faction == my_faction:
+                msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "KICK_FACTION_MEMBER", custom_msg)
+                map_screen.mail_input_active = False
+                map_screen.show_feedback(msg)
+                return
+            else:
+                map_screen.show_feedback(f"{target} must leave their faction first!")
+                return
+            # ----------------------
             
         # --- NEW: Check if currently disbanding ---
         self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
