@@ -57,8 +57,8 @@ class Controller:
             "ORDERS": pygame.K_q
         }
 
-        # 2. Load settings (Keybinds, Volume, Players, AI Mode, & API Key)
-        self.keybinds, self.volume, self.num_players, self.ai_mode, self.api_key = keybind_io.load_settings(default_keys, 0.5)
+        # 2. Load settings (Keybinds, Volume, Players, AI Mode, API Key, & Immersion Level)
+        self.keybinds, self.volume, self.num_players, self.ai_mode, self.api_key, self.ai_immersion_level = keybind_io.load_settings(default_keys, 0.5)
 
         # 3. Apply volume to global sounds on boot
         if ui_elements.click_sound:

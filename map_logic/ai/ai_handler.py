@@ -27,6 +27,16 @@ def get_ai_mode():
         except: pass
     return "GEMINI"
 
+def get_ai_immersion_level():
+    """Reads the settings config to see which immersion level is active."""
+    if os.path.exists(c.SETTINGS_CONFIG_PATH):
+        try:
+            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
+                data = json.load(f)
+                return data.get("ai_immersion_level", "FULL")
+        except: pass
+    return "FULL"
+
 def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
     ai_stats = nation_data.get(ai_nation, {})
     manpower = ai_stats.get("manpower", 0)
@@ -116,6 +126,7 @@ def call_ollama(system_prompt, user_prompt):
 
 def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_nation, action_type):
     mode = get_ai_mode()
+    immersion = get_ai_immersion_level()
     
     # Ensure 50/50 strict logic regardless of model behavior
     accepted = random.choice([True, False])
@@ -123,7 +134,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     accepted = True
     # hey so please don't remove the stuff above or this comment its useful for testing if the ai can accept things without breaking the game
 
-    if mode == "OFF":
+    if mode == "OFF" or immersion == "LITE":
         if action_type == "WAR_DECLARATION":
             fallback = c.AI_FALLBACK_RESPONSES.get("BETRAYAL", "You will regret this betrayal.")
         elif action_type == "LEAVE_FACTION":

@@ -6,5 +6,6 @@
     "volume": 0.205,
     "num_players": 1,
     "ai_mode": "OLLAMA",
-    "api_key": ""
+    "api_key": "",
+    "ai_immersion_level": "LITE"
 }

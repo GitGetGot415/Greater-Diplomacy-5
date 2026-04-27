@@ -5,7 +5,7 @@ import data.constants as c
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
-def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", api_key=""):
+def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", api_key="", ai_immersion_level="FULL"):
     """Converts key codes to strings and saves along with volume/players/AI/API to JSON."""
     readable_binds = {}
     for action, key_code in keybind_dict.items():
@@ -16,16 +16,17 @@ def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", api_key
         "volume": volume,
         "num_players": num_players,
         "ai_mode": ai_mode,
-        "api_key": api_key
+        "api_key": api_key,
+        "ai_immersion_level": ai_immersion_level
     }
     
     with open(CONFIG_PATH, "w") as f:
         json.dump(data_to_save, f, indent=4)
 
 def load_settings(default_binds, default_volume=0.5):
-    """Loads keybinds, volume, AI mode, and API key from JSON."""
+    """Loads keybinds, volume, AI mode, API key, and immersion level from JSON."""
     if not os.path.exists(CONFIG_PATH):
-        return default_binds, default_volume, 1, "GEMINI", ""
+        return default_binds, default_volume, 1, "GEMINI", "", "FULL"
     
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -53,8 +54,9 @@ def load_settings(default_binds, default_volume=0.5):
         saved_num_players = saved_data.get("num_players", 1) if isinstance(saved_data, dict) else 1
         saved_ai_mode = saved_data.get("ai_mode", "GEMINI") if isinstance(saved_data, dict) else "GEMINI"
         saved_api_key = saved_data.get("api_key", "") if isinstance(saved_data, dict) else ""
+        saved_ai_immersion = saved_data.get("ai_immersion_level", "FULL") if isinstance(saved_data, dict) else "FULL"
                 
-        return loaded_binds, saved_vol, saved_num_players, saved_ai_mode, saved_api_key
+        return loaded_binds, saved_vol, saved_num_players, saved_ai_mode, saved_api_key, saved_ai_immersion
     except Exception as e:
         print(f"Error loading settings: {e}")
-        return default_binds, default_volume, 1, "GEMINI", ""
+        return default_binds, default_volume, 1, "GEMINI", "", "FULL"

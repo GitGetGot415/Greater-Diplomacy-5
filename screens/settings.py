@@ -5,6 +5,7 @@ from ui_elements import Button, Slider
 from data.io import keybind_io
 import tkinter as tk
 from tkinter import simpledialog
+import data.constants as c
 
 class Settings(GameState):
     def __init__(self, controller):
@@ -15,13 +16,13 @@ class Settings(GameState):
         self.volume = self.controller.volume 
         self.num_players = getattr(self.controller, 'num_players', 1)
         self.ai_mode = getattr(self.controller, 'ai_mode', 'GEMINI')
+        self.ai_immersion_level = getattr(self.controller, 'ai_immersion_level', 'FULL')
         self.ai_modes = ["OFF", "GEMINI", "OLLAMA"]
         
         self.fullscreen = False
         self.listening_for = None
 
         self.refresh_ui()
-
 
     def set_ai_mode(self, mode):
         self.ai_mode = mode
@@ -38,6 +39,11 @@ class Settings(GameState):
             root.destroy()
             pygame.event.pump() # Clear ghost clicks
 
+        self.refresh_ui()
+
+    def set_ai_immersion_level(self, level):
+        self.ai_immersion_level = level
+        self.controller.ai_immersion_level = level
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -66,6 +72,13 @@ class Settings(GameState):
         c_oll = "green" if self.ai_mode == "OLLAMA" else "grey"
         self.elements.append(Button("centered", 300, "medium", c_oll, "AI: OLLAMA", lambda: self.set_ai_mode("OLLAMA")))
 
+        # --- AI IMMERSION BUTTONS ---
+        c_lite = "green" if self.ai_immersion_level == "LITE" else "grey"
+        self.elements.append(Button((c.SCREEN_WIDTH/2) + 150, 210, "medium", c_lite, "LITE AI", lambda: self.set_ai_immersion_level("LITE")))
+
+        c_full = "green" if self.ai_immersion_level == "FULL" else "grey"
+        self.elements.append(Button((c.SCREEN_WIDTH/2) + 150, 270, "medium", c_full, "FULL AI", lambda: self.set_ai_immersion_level("FULL")))
+
         # Adjust the Y positions of the remaining elements slightly lower
         self.elements.extend([
             Slider(200, 420, 200, "Volume", self.volume, self.set_volume),
@@ -88,27 +101,29 @@ class Settings(GameState):
     def reset_defaults(self):
         default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q}
         self.controller.keybinds = default_keys
-        # Safely fetch api_key to ensure we don't accidentally wipe it during a reset
+        # Safely fetch api_key and immersion to ensure we don't accidentally wipe them
         api_key = getattr(self.controller, 'api_key', '')
-        keybind_io.save_settings(default_keys, self.volume, self.num_players, self.ai_mode, api_key)
+        immersion = getattr(self.controller, 'ai_immersion_level', 'FULL')
+        keybind_io.save_settings(default_keys, self.volume, self.num_players, self.ai_mode, api_key, immersion)
         self.refresh_ui()
         
     def additional_events(self, event):
         if self.listening_for and event.type == pygame.KEYDOWN:
             self.controller.keybinds[self.listening_for] = event.key
-            keybind_io.save_settings(self.controller.keybinds, self.volume, self.num_players, self.ai_mode)
+            keybind_io.save_settings(self.controller.keybinds, self.volume, self.num_players, self.ai_mode, getattr(self.controller, 'api_key', ''), getattr(self.controller, 'ai_immersion_level', 'FULL'))
             self.listening_for = None
             self.refresh_ui()
 
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)
         self.controller.num_players = self.num_players
-        self.elements[4].text = f"Players: {self.num_players}"
+        self.elements[6].text = f"Players: {self.num_players}" # Adjusting index because of new buttons
 
     def save_and_go_back(self):
-        # Ensure we pass the api_key when saving
+        # Ensure we pass the api_key and immersion level when saving
         api_key_to_save = getattr(self.controller, 'api_key', '')
-        keybind_io.save_settings(self.controller.keybinds, self.volume, self.num_players, self.ai_mode, api_key_to_save)
+        immersion_to_save = getattr(self.controller, 'ai_immersion_level', 'FULL')
+        keybind_io.save_settings(self.controller.keybinds, self.volume, self.num_players, self.ai_mode, api_key_to_save, immersion_to_save)
         self.next_state = "MENU"
         self.done = True
 
