@@ -190,3 +190,29 @@ COUNTRIES_DATA_PATH = "data/json/countries_data.json"
 RESEARCH_TEMPLATE_PATH = "data/json/research_template.json"
 BUILDING_DATA_PATH = "data/json/building_data.json"
 SETTINGS_CONFIG_PATH = "data/json/settings_config.json"
+
+# ==========================================
+# FALLBACK / MANUAL AI RESPONSES
+# ==========================================
+
+AI_FALLBACK_RESPONSES = {
+    "AI_OFF_ACCEPT": "We accept your proposal.",
+    "AI_OFF_REJECT": "We reject your proposal.",
+    "AI_OFF_MESSAGE": "Message received (AI is OFF).",
+    "GENERIC_ACCEPT": "We have made our decision.",
+    "GENERIC_MESSAGE": "Message received.",
+    "OLLAMA_ERROR": "Ollama server error or timeout.",
+    "API_ERROR": "API Error.",
+    "TIMEOUT": "Timeout.",
+    "BETRAYAL": "You will regret this betrayal.",
+    "ALLIANCE_BROKEN": "We won't forget this.",
+    "FACTION_ABANDONED": "We will not forget your abandonment.",
+    "FACTION_DISBANDED": "It is a shame to see our alliance broken.",
+    "ACCEPTED_HELP": "We gratefully accept your assistance in our conflicts.",
+    "INVITE_IGNORED": "Your faction invitation was ignored and has expired.",
+    "JOIN_REQ_IGNORED": "Your request to join the faction was ignored and has expired.",
+    "CEASEFIRE_IGNORED": "Your ceasefire offer was ignored and has expired.",
+    "CALL_TO_ARMS_IGNORED": "Your call to arms was ignored and has expired.",
+    "CANT_JOIN_FACTION": "We cannot join a new faction while we are already bound to our own treaties.",
+    "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war."
+}

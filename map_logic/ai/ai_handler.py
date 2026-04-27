@@ -117,19 +117,33 @@ def call_ollama(system_prompt, user_prompt):
 def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_nation, action_type):
     mode = get_ai_mode()
     
-    # --- MODIFIED: Ensure 50/50 strict logic regardless of model behavior ---
+    # Ensure 50/50 strict logic regardless of model behavior
     accepted = random.choice([True, False])
     # actually true, always
     accepted = True
+    # hey so please don't remove the stuff above or this comment its useful for testing if the ai can accept things without breaking the game
+
     if mode == "OFF":
-        return accepted, "Our diplomats are currently unavailable (AI is OFF)."
+        if action_type == "WAR_DECLARATION":
+            fallback = c.AI_FALLBACK_RESPONSES.get("BETRAYAL", "You will regret this betrayal.")
+        elif action_type == "LEAVE_FACTION":
+            fallback = c.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment.")
+        elif action_type == "DISBAND_FACTION":
+            fallback = c.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")
+        elif action_type == "JOIN_WARS":
+            fallback = c.AI_FALLBACK_RESPONSES.get("ACCEPTED_HELP", "We gratefully accept your assistance in our conflicts.")
+        elif action_type == "BREAK_ALLIANCE":
+            fallback = c.AI_FALLBACK_RESPONSES.get("ALLIANCE_BROKEN", "We won't forget this.")
+        else:
+            fallback = c.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.") if accepted else c.AI_FALLBACK_RESPONSES.get("AI_OFF_REJECT", "We reject your proposal.")
+        return accepted, fallback
 
     print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     
-    # --- NEW: Split logic between Proposals and Unilateral Declarations ---
-    unilateral_actions = ["WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION"]
+    # --- Split logic between Proposals and Unilateral Declarations ---
+    unilateral_actions = ["WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE"]
     
     if action_type in unilateral_actions:
         if action_type == "WAR_DECLARATION":
@@ -138,6 +152,10 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             action_context = f"{sender_nation} has abandoned our faction!"
         elif action_type == "DISBAND_FACTION":
             action_context = f"{sender_nation} has disbanded our faction!"
+        elif action_type == "JOIN_WARS":
+            action_context = f"{sender_nation} has mobilized their forces to join our ongoing wars!"
+        elif action_type == "BREAK_ALLIANCE":
+            action_context = f"{sender_nation} has broken their alliance with us!"
             
         system_prompt = (
             "You are an AI playing a grand strategy game. You act as the leader of your nation. "
@@ -153,7 +171,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
         system_prompt = (
             "You are an AI playing a grand strategy game. You act as the leader of your nation. "
             f"You have already decided to strongly {'ACCEPT' if accepted else 'REJECT'} the diplomatic proposal. "
-            "The details are already finalized, don't ask for further clarification. "
+            "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
             "Reply ONLY with a valid JSON object matching this schema: "
             '{"message": "In-character dialogue responding to the proposal in english"}'
         )
@@ -162,8 +180,8 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     if mode == "OLLAMA":
         result = call_ollama(system_prompt, user_prompt)
         if result:
-            return accepted, result.get("message", "We have made our decision.")
-        return accepted, "Ollama server error or timeout."
+            return accepted, result.get("message", c.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"])
+        return accepted, c.AI_FALLBACK_RESPONSES["OLLAMA_ERROR"]
 
     # Fallback to Gemini
     try:
@@ -174,15 +192,19 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         reply_json = json.loads(response.text)
-        return accepted, reply_json.get("message", "We have made our decision.")
+        return accepted, reply_json.get("message", c.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"])
     except Exception as e:
         print(f"Gemini Error: {e}")
-        return accepted, "API Error."
+        return accepted, c.AI_FALLBACK_RESPONSES["API_ERROR"]
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content):
     mode = get_ai_mode()
     if mode == "OFF":
-        return {"message": "Message received (AI is OFF).", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
+        return {
+            "message": c.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
+            "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE"
+        }
 
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
 
@@ -211,13 +233,17 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         result = call_ollama(system_prompt, user_prompt)
         if result:
             return {
-                "message": result.get("message", "Message received."), 
+                "message": result.get("message", c.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"]), 
                 "action": result.get("action", "NONE"),
                 "action_target": result.get("action_target", "NONE"),
                 "follow_up_action": result.get("follow_up_action", "NONE"),
                 "follow_up_target": result.get("follow_up_target", "NONE")
             }
-        return {"message": "Ollama server error.", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
+        return {
+            "message": c.AI_FALLBACK_RESPONSES["OLLAMA_ERROR"], 
+            "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE"
+        }
 
     try:
         client = genai.Client(api_key=get_api_key())
@@ -228,7 +254,7 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         )
         reply_json = json.loads(response.text)
         return {
-            "message": reply_json.get("message", "Message received."), 
+            "message": reply_json.get("message", c.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"]), 
             "action": reply_json.get("action", "NONE"),
             "action_target": reply_json.get("action_target", "NONE"),
             "follow_up_action": reply_json.get("follow_up_action", "NONE"),
@@ -236,7 +262,11 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         }
     except Exception as e:
         print(f"Gemini Error: {e}")
-        return {"message": "Message received.", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE"}
+        return {
+            "message": c.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], 
+            "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE"
+        }
 
 def decide_grand_strategy(nation_data, active_nations, ai_nation, current_date):
     """Asks the LLM what diplomatic actions it wants to take this turn based on global context."""
