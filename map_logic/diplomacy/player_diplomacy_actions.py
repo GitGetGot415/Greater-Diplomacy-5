@@ -23,6 +23,7 @@ def handle_faction_action(map_screen):
     target = map_screen.selected_province.get("owner")
     
     custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+    player_pending = map_screen.nation_data.get(map_screen.player_country, {}).get("pending_diplomacy", {})
 
     if target == map_screen.player_country:
         action, turns = queries.get_diplomatic_status(target, target, map_screen.nation_data)
@@ -40,6 +41,35 @@ def handle_faction_action(map_screen):
         else:
             req_action = "LEAVE_FACTION"
             
+        # --- NEW: Check for pending invitations & military actions ---
+        if req_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+            has_blocking_action = False
+            invites_to_cancel = []
+            
+            # Scan through the pending diplomacy dict safely
+            for other_nation, info in list(player_pending.items()):
+                act = info.get("action", "") if isinstance(info, dict) else info
+                tns = info.get("turns", 0) if isinstance(info, dict) else 0
+                
+                if act == "FACTION_INVITE":
+                    if tns > 0:
+                        has_blocking_action = True
+                    else:
+                        invites_to_cancel.append(other_nation)
+                elif act in ["JOIN_WARS", "CALL_TO_ARMS"]:
+                    has_blocking_action = True
+            
+            # Block the action entirely if an invite is en route or military action is pending
+            if has_blocking_action:
+                map_screen.show_feedback("Cannot leave with pending invites or military actions!")
+                return
+            
+            # Silently cancel any unsent invites and proceed with the disband
+            if invites_to_cancel:
+                for n in invites_to_cancel:
+                    del player_pending[n]
+        # ------------------------------------------
+
         msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, req_action, custom_msg)
         map_screen.mail_input_active = False
         map_screen.show_feedback(msg)
@@ -123,6 +153,14 @@ def handle_faction_action(map_screen):
         if target_faction:
             map_screen.show_feedback(f"{target} must leave their faction first!")
             return
+            
+        # --- NEW: Check if currently disbanding ---
+        self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
+        if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+            map_screen.show_feedback("Cannot invite while your faction is being disbanded!")
+            return
+        # ------------------------------------------
+
         msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "FACTION_INVITE", custom_msg)
         map_screen.mail_input_active = False
         map_screen.show_feedback(msg)
@@ -142,7 +180,6 @@ def handle_faction_action(map_screen):
         map_screen.show_feedback(msg)
 
 def handle_join_wars(map_screen):
-    # Keep this as it is in your original code
     target = map_screen.selected_province.get("owner")
     if queries.are_at_war(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback("You cannot join the wars of an enemy!")
@@ -151,8 +188,14 @@ def handle_join_wars(map_screen):
         map_screen.show_feedback("You must be in the same faction to assist them!")
         return
         
+    # --- NEW: Check if currently disbanding ---
+    self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
+    if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+        map_screen.show_feedback("Cannot join wars while leaving the faction!")
+        return
+    # ------------------------------------------
+        
     custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
-    # --- MODIFIED: Queue the action instead of instant execution ---
     msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_WARS", custom_msg)
     map_screen.mail_input_active = False
     map_screen.show_feedback(msg)
@@ -165,6 +208,13 @@ def handle_call_to_arms(map_screen):
     if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback("You must be in the same faction to call them to arms!")
         return
+        
+    # --- NEW: Check if currently disbanding ---
+    self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
+    if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+        map_screen.show_feedback("Cannot call to arms while leaving the faction!")
+        return
+    # ------------------------------------------
         
     custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
     msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "CALL_TO_ARMS", custom_msg)
