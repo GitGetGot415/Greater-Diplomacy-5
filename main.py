@@ -64,7 +64,9 @@ class Controller:
             "resource": symbol_loader.get_symbol("Iron", 2),
             "faction": symbol_loader.get_symbol("Star", 2),
             "settings": symbol_loader.get_symbol("Gear", 1.5),
-            "names": symbol_loader.get_symbol("Text", 0.5)
+            "names": symbol_loader.get_symbol("Text", 0.5),
+            "paint": symbol_loader.get_symbol("Paint", 1.5),
+            "brush": symbol_loader.get_symbol("Brush", 1.5)
         }
 
         # 1. Define Hardcoded Defaults

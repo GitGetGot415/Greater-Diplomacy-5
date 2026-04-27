@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import colorchooser 
 from gameState import GameState
 from ui_elements import Button, process_text_input
+import ui_elements
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 
@@ -184,6 +185,9 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback("Failed to export")
 
     def refresh_ui(self):
+
+        icons = ui_elements.UI_ICONS
+
         self.elements = [
             Button(20, 20, "small", "red", "Cancel", self.exit_to_map),
             Button(140, 20, "medium", "green", "Save Changes", self.save_and_exit)
@@ -208,8 +212,8 @@ class Edit_Country_Screen(GameState):
         brush_color = "blue" if self.draw_mode == "BRUSH" else "grey"
         fill_color = "blue" if self.draw_mode == "FILL" else "grey"
         
-        self.elements.append(Button(right_ui_x, 375, "small_square", brush_color, "Brush", lambda: self.set_tool("BRUSH")))
-        self.elements.append(Button(right_ui_x + 120, 375, "small_square", fill_color, "Fill", lambda: self.set_tool("FILL")))
+        self.elements.append(Button(right_ui_x, 375, "small_square", brush_color, "Brush", lambda: self.set_tool("BRUSH"), image=icons.get("brush"), show_text=False))
+        self.elements.append(Button(right_ui_x + 120, 375, "small_square", fill_color, "Fill", lambda: self.set_tool("FILL"), image=icons.get("paint"), show_text=False))
         
         # Updated Buttons to have both Map Color and Custom Brush Color pickers side-by-side
         self.elements.append(Button(right_ui_x, 550, "small", "orange", "Map Color", self.pick_map_color))
