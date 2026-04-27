@@ -3,9 +3,10 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 
-# Global sound variables to be loaded in main.py
+# Global sound & icon variables to be loaded in main.py
 click_sound = None
 slider_sound = None
+UI_ICONS = {}
 
 def parse_pos(val, limit, size):
     """

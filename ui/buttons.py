@@ -1,28 +1,19 @@
-import pygame
+import ui_elements
 from ui_elements import Button
 import data.constants as c
-from map_logic.rendering import symbol_loader
 from data import queries
 from map_logic.diplomacy import player_diplomacy_actions
 
 def render_buttons(self):
     if not self.selection_mode:
-        unit_icon = symbol_loader.get_symbol("Infantry", 2)
-        economy_icon = symbol_loader.get_symbol("Factory", 2)
-        blank_icon = symbol_loader.get_symbol("Star", 2)
-        terrain_icon = symbol_loader.get_symbol("Mountains", 1.5)
-        political_icon = symbol_loader.get_symbol("Flag", 1.5)
-        relations_icon = symbol_loader.get_symbol("Heart", 2)
-        research_icon = symbol_loader.get_symbol("Research", 2)
-        mail_icon = symbol_loader.get_symbol("Mail", 2)
-        save_icon = symbol_loader.get_symbol("Save", 2)
-        core_icon = symbol_loader.get_symbol("Star", 2)
-        resource_icon = symbol_loader.get_symbol("Iron", 2)
-        faction_icon = symbol_loader.get_symbol("Star", 2)
-        settings_icon = symbol_loader.get_symbol("Gear", 1.5)
         
-        names_icon = symbol_loader.get_symbol("Text", 0.5) 
+        # Helper variable to keep the Button declarations clean
+        icons = ui_elements.UI_ICONS
 
+        # ==================================================================== #
+        #                         MAP VIEW TOGGLES                             #
+        # ==================================================================== #
+        
         # Refresh Buttons
         self.elements = [
             Button(c.SCREEN_WIDTH - 520, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Pol Refresh", self.refresh_political_map),
@@ -31,30 +22,36 @@ def render_buttons(self):
             Button(c.SCREEN_WIDTH - 220, c.TOP_BAR_UI_CENTER_Y, "small", "grey", "Fac Refresh", self.refresh_factions_map),
         ]
 
+        # View Type Buttons utilizing new constants
+        self.elements.extend([
+            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", self.set_terrain, image=icons.get("terrain"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=icons.get("political"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=icons.get("relations"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=icons.get("core"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=icons.get("faction"), show_text=False),
+
+            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=icons.get("economy"), show_text=False),
+            
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=icons.get("names"), show_text=False),
+        ])
+
+
+        # ==================================================================== #
+        #                        LEFT & BOTTOM UI BARS                         #
+        # ==================================================================== #
+        
         econ_callback = self.open_editor_economy if getattr(self, 'is_editor', False) else self.open_economy_screen
         research_callback = self.open_map_research_editor if getattr(self, 'is_editor', False) else self.open_research
         
-        # View Type Buttons utilizing new constants
-        self.elements.extend([
-            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", self.set_terrain, image=terrain_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=political_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=relations_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=core_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=faction_icon, show_text=False),
-
-            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=resource_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=blank_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=unit_icon, show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=economy_icon, show_text=False),
-            
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=names_icon, show_text=False),
-        ])
-
         if self.is_editor:
+            # --- EDITOR TOOLS ---
             self.elements.extend([
                 # Unified Left Bar Buttons
                 Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
+                Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research")),
 
                 Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
                 Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
@@ -72,7 +69,9 @@ def render_buttons(self):
                 Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Set Date", self.open_editor_date),
                 Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "red", "Diplomacy", self.open_diplomacy_editor)
             ])
+            
         else:
+            # --- GAMEPLAY TOOLS ---
             # --- Dynamic Next Turn Button ---
             viewing_ai = getattr(self, 'viewing_ai_moves', False)
             next_btn_text = "Resolve Turn" if viewing_ai else "Next Turn"
@@ -87,12 +86,17 @@ def render_buttons(self):
             if not viewing_ai:
                 self.elements.extend([
                     Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=research_icon),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=save_icon),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research")),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=icons.get("save")),
                     Button(c.LEFT_UI_BAR_X, c.BTN_EDIT_NATION_Y, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=mail_icon)
+                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=icons.get("mail"))
                 ])
-        
+
+
+    # ======================================================================== #
+    #                      CONTEXTUAL PROVINCE MENUS                           #
+    # ======================================================================== #
+    
     # --- PROVINCE MENU ACTION BUTTONS ---
     domestic_x = 100
     diplo_x = 340
@@ -128,9 +132,8 @@ def render_buttons(self):
     self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", self.spec_leave_faction)
     self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", self.spec_disband_faction)
 
-    # Spectator Mode Toggle Button
+    # General Controls
     self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)
-
     self.btn_close_info = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
     self.btn_exit_to_menu = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
 
@@ -150,13 +153,21 @@ def render_buttons(self):
         btn.visible = False
         self.elements.append(btn)
 
+
+# ============================================================================ #
+#                           DYNAMIC BUTTON UPDATES                             #
+# ============================================================================ #
+
 def update_button_states(map_screen):
     """Dynamically updates button visibility, colors, and text every frame."""
     
-    # reset all to invisible first
+    # Reset all to invisible first
     for el in map_screen.elements:
         el.visible = False
 
+        # ==================================================================== #
+        #                      VIEW TOGGLES SELECTION                          #
+        # ==================================================================== #
         if hasattr(el, 'text'):
             if el.text == "Terrain": el.is_selected = (map_screen.base_layer == "TERRAIN")
             elif el.text == "Political": el.is_selected = (map_screen.base_layer == "POLITICAL")
@@ -172,6 +183,10 @@ def update_button_states(map_screen):
             elif el.text == "Names": el.is_selected = getattr(map_screen, 'show_country_names', True)
             else: el.is_selected = False
 
+
+    # ======================================================================== #
+    #                        EDITOR BRUSH HIGHLIGHTS                           #
+    # ======================================================================== #
     if map_screen.is_editor:
         for el in map_screen.elements:
             if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Fac Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units", "Diplomacy", "Names"]:
@@ -213,6 +228,10 @@ def update_button_states(map_screen):
                     el.color, el.hover_color = (100, 100, 100), (150, 150, 150)
         return
 
+
+    # ======================================================================== #
+    #                         SELECTION MODE LOGIC                             #
+    # ======================================================================== #
     is_sel = bool(map_screen.selected_province)
     if map_screen.selection_mode:
         map_screen.btn_exit_to_menu.visible = True
@@ -220,6 +239,10 @@ def update_button_states(map_screen):
             map_screen.btn_spectator.visible = True
         return
     
+
+    # ======================================================================== #
+    #                     CONTEXTUAL / NON-CONTEXTUAL SORT                     #
+    # ======================================================================== #
     # Group our tracked elements to prevent logic collisions
     contextual_buttons = {
         getattr(map_screen, 'btn_go_orders', None), getattr(map_screen, 'btn_go_recruit', None), 
@@ -264,10 +287,17 @@ def update_button_states(map_screen):
             btn.color, btn.hover_color = c.UI_COLORS["grey"]
             btn.pressed_color = (max(0, btn.color[0]-40), max(0, btn.color[1]-40), max(0, btn.color[2]-40))
 
+
+    # ======================================================================== #
+    #                      PROVINCE INTERACTION LOGIC                          #
+    # ======================================================================== #
     if is_sel:
         owner = map_screen.selected_province.get("owner", "Unclaimed")
         player_data = map_screen.nation_data.get(map_screen.player_country, {})
         
+        # --------------------------------------------------------------------
+        # SPECTATOR PROVINCE LOGIC
+        # --------------------------------------------------------------------
         if map_screen.player_country == "Spectator":
             if queries.is_playable(owner, map_screen.nation_data):
                 set_btn(map_screen.btn_force_war, True, True, "Force War", "red")
@@ -292,13 +322,17 @@ def update_button_states(map_screen):
                     else:
                         set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
                         map_screen.btn_spec_disband_fac.visible = False
+
+        # --------------------------------------------------------------------
+        # PLAYER PROVINCE LOGIC
+        # --------------------------------------------------------------------
         else:
             has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
             terrain = map_screen.selected_province.get("terrain", "")
             is_land = terrain not in c.WATER_TERRAINS
 
             if owner == map_screen.player_country:
-                # DOMESTIC PROVINCE Logic
+                # --- DOMESTIC PROVINCE ---
                 # Use their original distinct colors
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
                 set_btn(map_screen.btn_go_recruit, True, is_land, "Recruit Menu", "green")
@@ -330,7 +364,7 @@ def update_button_states(map_screen):
                     btn.visible = False
 
             elif queries.is_playable(owner, map_screen.nation_data):
-                # FOREIGN PROVINCE Logic
+                # --- FOREIGN PROVINCE ---
                 
                 # Only "Give Orders" applies here dynamically from the domestic side
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
@@ -400,6 +434,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
 
             else:
+                # --- UNCLAIMED / WATER ---
                 # Unclaimed / Water tiles don't support these interactions
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
                 

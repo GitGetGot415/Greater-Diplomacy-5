@@ -50,6 +50,23 @@ class Controller:
         # 0. Load symbols
         symbol_loader.load_symbols()
 
+        ui_elements.UI_ICONS = {
+            "unit": symbol_loader.get_symbol("Infantry", 2),
+            "economy": symbol_loader.get_symbol("Factory", 2),
+            "blank": symbol_loader.get_symbol("Star", 2),
+            "terrain": symbol_loader.get_symbol("Mountains", 1.5),
+            "political": symbol_loader.get_symbol("Flag", 1.5),
+            "relations": symbol_loader.get_symbol("Heart", 2),
+            "research": symbol_loader.get_symbol("Research", 2),
+            "mail": symbol_loader.get_symbol("Mail", 2),
+            "save": symbol_loader.get_symbol("Save", 2),
+            "core": symbol_loader.get_symbol("Star", 2),
+            "resource": symbol_loader.get_symbol("Iron", 2),
+            "faction": symbol_loader.get_symbol("Star", 2),
+            "settings": symbol_loader.get_symbol("Gear", 1.5),
+            "names": symbol_loader.get_symbol("Text", 0.5)
+        }
+
         # 1. Define Hardcoded Defaults
         default_keys = {
             "BACK": pygame.K_ESCAPE,
