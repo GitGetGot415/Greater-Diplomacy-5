@@ -85,11 +85,11 @@ def render_buttons(self):
             # Hide the management tools while the AI is moving
             if not viewing_ai:
                 self.elements.extend([
-                    Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Economy", econ_callback),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research")),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "left_ui_bar", "green", "Save", self.save_map_data, image=icons.get("save")),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_EDIT_NATION_Y, "left_ui_bar", "orange", "Edit Nation", self.open_edit_country),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "left_ui_bar", "purple", "Messages", self.open_messages, image=icons.get("mail"))
+                    Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "medium_square", "orange", "Economy", econ_callback, image=icons.get("faction"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "medium_square", "blue", "R&D", research_callback, image=icons.get("research"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "medium_square", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_EDIT_NATION_Y, "medium_square", "orange", "Edit Nation", self.open_edit_country, image=icons.get("brush"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "medium_square", "purple", "Messages", self.open_messages, image=icons.get("mail"), show_text=False)
                 ])
 
 
@@ -102,25 +102,25 @@ def render_buttons(self):
     diplo_x = 340
 
     # Domestic Set
-    self.btn_go_orders = Button(domestic_x, c.ACTION_BTN_START_Y, "medium", "blue", "Give Orders", self.open_orders)
-    self.btn_go_recruit = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "green", "Recruit Menu", self.open_recruit)
-    self.btn_go_build = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "orange", "Construction", self.open_construction)
+    self.btn_go_orders = Button(domestic_x, c.ACTION_BTN_START_Y, "medium_square", "blue", "Give Orders", self.open_orders)
+    self.btn_go_recruit = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium_square", "green", "Recruit Menu", self.open_recruit)
+    self.btn_go_build = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium_square", "orange", "Construction", self.open_construction)
 
-    self.btn_fac_create = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "blue", "Create Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "CREATE_FACTION"))
-    self.btn_fac_leave = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "medium", "orange", "Leave Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "LEAVE_FACTION"))
-    self.btn_fac_disband = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 5, "medium", "red", "Disband Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "DISBAND_FACTION"))
+    self.btn_fac_create = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "diplomatic", "blue", "Create Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "CREATE_FACTION"))
+    self.btn_fac_leave = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "diplomatic", "orange", "Leave Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "LEAVE_FACTION"))
+    self.btn_fac_disband = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 5, "diplomatic", "red", "Disband Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "DISBAND_FACTION"))
 
     # Foreign Set
-    self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "medium", "red", "Declare War", self.handle_declare_war)
-    self.btn_join_wars = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 1, "medium", "orange", "Join Wars", self.handle_join_wars)
-    self.btn_call_to_arms = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "red", "Call to Arms", self.handle_call_to_arms)
+    self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", self.handle_declare_war)
+    self.btn_join_wars = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 1, "diplomatic", "orange", "Join Wars", self.handle_join_wars)
+    self.btn_call_to_arms = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "diplomatic", "red", "Call to Arms", self.handle_call_to_arms)
     
-    self.btn_fac_invite = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Invite to Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "FACTION_INVITE"))
-    self.btn_fac_join_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "medium", "green", "Req. Join Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "JOIN_FACTION_REQ"))
-    self.btn_fac_kick = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 5, "medium", "red", "Kick from Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "KICK_FACTION_MEMBER"))
+    self.btn_fac_invite = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "diplomatic", "green", "Invite to Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "FACTION_INVITE"))
+    self.btn_fac_join_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "diplomatic", "green", "Req. Join Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "JOIN_FACTION_REQ"))
+    self.btn_fac_kick = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 5, "diplomatic", "red", "Kick from Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "KICK_FACTION_MEMBER"))
 
-    self.btn_accept_req = Button(diplo_x, c.ACTION_BTN_START_Y, "medium", "green", "Accept Request", lambda: player_diplomacy_actions.handle_accept_req(self))
-    self.btn_reject_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
+    self.btn_accept_req = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "green", "Accept Request", lambda: player_diplomacy_actions.handle_accept_req(self))
+    self.btn_reject_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "diplomatic", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
 
     # Spectator God Power Buttons
     self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
@@ -189,7 +189,12 @@ def update_button_states(map_screen):
     # ======================================================================== #
     if map_screen.is_editor:
         for el in map_screen.elements:
-            if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh", "Rel Refresh", "Core Refresh", "Data Refresh", "Fac Refresh", "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit", "R&D", "Reset", "Save", "Load", "Nation", "Building", "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank", "Resource", "Resources", "Sync Units", "Diplomacy", "Names"]:
+            if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh",
+                           "Rel Refresh", "Core Refresh", "Data Refresh", "Fac Refresh",
+                           "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit",
+                           "R&D", "Reset", "Save", "Load", "Nation", "Building",
+                           "Refresh", "Exit", "View Mode", "Units", "Economy", "Blank",
+                           "Resource", "Resources", "Sync Units", "Diplomacy", "Names"]:
                 el.visible = True
             
             if el.text == "Resource":
