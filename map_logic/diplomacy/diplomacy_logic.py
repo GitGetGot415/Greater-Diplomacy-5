@@ -188,18 +188,22 @@ def process_diplomacy_turn(self):
             action = info.get("action", "")
             turns = info.get("turns", 0)
 
-            if turns == 1:
+            is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION", "CREATE_FACTION"]
+
+            # We want to process unilateral actions on turn 0, and proposals on turn 1
+            if (is_unilateral and turns == 0) or (not is_unilateral and turns == 1):
                 is_human_target = target in getattr(self, 'active_players', [])
                 if not is_human_target:
-                    # Added KICK_FACTION_MEMBER to the list of tasks the AI should process
                     if action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER"]:
                         ai_tasks.append({"sender": country_name, "target": target, "action": action})
-                    elif action.startswith("MSG:"):
+                    elif action.startswith("MSG:") and turns == 1:
                         ai_tasks.append({"sender": country_name, "target": target, "action": "CUSTOM_MSG", "content": action[4:]})
 
-                # --- FIX: Queue AI responses using the members cached from Turn 0 ---
-                if target == country_name and action in ["LEAVE_FACTION", "DISBAND_FACTION"]:
-                    members = info.get("cached_members", [])
+                # Cache members immediately and queue their AI reactions
+                if target == country_name and action in ["LEAVE_FACTION", "DISBAND_FACTION"] and turns == 0:
+                    fac = self.nation_data[country_name].get("faction", "")
+                    members = queries.get_faction_members(fac, self.nation_data) if fac else []
+                    info["cached_members"] = members
                     for m in members:
                         if m != country_name and m not in getattr(self, 'active_players', []):
                             ai_tasks.append({"sender": country_name, "target": m, "action": action})
@@ -221,7 +225,6 @@ def process_diplomacy_turn(self):
             futures = {}
             for task in ai_tasks:
                 target_ai, sender = task["target"], task["sender"]
-                # Added KICK_FACTION_MEMBER to the thread spawn list
                 if task["action"] in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "CALL_TO_ARMS", "WAR_DECLARATION", "LEAVE_FACTION", "DISBAND_FACTION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER"]:
                     future = executor.submit(ai_handler.evaluate_diplomatic_proposal, self.nation_data, active_nations_list, target_ai, sender, task["action"])
                     futures[future] = task
@@ -246,6 +249,8 @@ def process_diplomacy_turn(self):
             action = info.get("action", "")
             turns = info.get("turns", 0)
             custom_msg = info.get("message", "")
+
+            is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION", "CREATE_FACTION"]
 
             if turns == 0:
                 if action == "WAR_DECLARATION":
@@ -297,8 +302,7 @@ def process_diplomacy_turn(self):
                     
                 elif action == "DISBAND_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
-                    info["cached_members"] = queries.get_faction_members(fac, self.nation_data) if fac else []
-                    
+                    info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     finalize_disband_faction(self.nation_data, country_name)
                     log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.")
                     msg_text = custom_msg if custom_msg else "We are dissolving our faction."
@@ -312,8 +316,7 @@ def process_diplomacy_turn(self):
 
                 elif action == "LEAVE_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
-                    info["cached_members"] = queries.get_faction_members(fac, self.nation_data) if fac else []
-                    
+                    info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     finalize_faction_leave(self.nation_data, country_name)
                     log_global_event(self.nation_data, f"{country_name} has abandoned their faction.")
                     msg_text = custom_msg if custom_msg else "We are withdrawing from the faction."
@@ -322,50 +325,48 @@ def process_diplomacy_turn(self):
                 elif action == "JOIN_FACTION_REQ":
                     msg_text = custom_msg if custom_msg else "We formally request to join your faction."
                     send_message(self.nation_data, country_name, target, msg_text, "DIPLOMACY")
-                
-                info["turns"] = 1
+
+                if is_unilateral:
+                    is_human_target = target in getattr(self, 'active_players', [])
+
+                    if action == "WAR_DECLARATION":
+                        if not is_human_target:
+                            accepted, message = ai_results.get((country_name, target, action), (False, "You will regret this betrayal."))
+                            send_message(self.nation_data, target, country_name, message, "TEXT")
+                            
+                    elif action == "BREAK_ALLIANCE":
+                        if not is_human_target:
+                            accepted, message = ai_results.get((country_name, target, action), (False, "We won't forget this."))
+                            send_message(self.nation_data, target, country_name, message, "TEXT")
+                            
+                    elif action == "KICK_FACTION_MEMBER":
+                        if not is_human_target:
+                            accepted, message = ai_results.get((country_name, target, action), (False, c.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION", "We won't forget this.")))
+                            send_message(self.nation_data, target, country_name, message, "TEXT")
+                            
+                    elif action == "JOIN_WARS":
+                        if not is_human_target:
+                            accepted, message = ai_results.get((country_name, target, action), (True, "We gratefully accept your assistance in our conflicts."))
+                            send_message(self.nation_data, target, country_name, message, "TEXT")
+
+                    elif action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+                        members = info.get("cached_members", [])
+                        for m in members:
+                            if m != country_name and m not in getattr(self, 'active_players', []):
+                                if action == "DISBAND_FACTION":
+                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")))
+                                else:
+                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment.")))
+                                send_message(self.nation_data, m, country_name, msg_text, "TEXT")
+
+                    actions_to_clear.append(target)
+                else:
+                    info["turns"] = 1
 
             elif turns == 1:
-                if target == country_name:
-                    if action == "CREATE_FACTION":
-                        pass # Handled instantly on Turn 0
-                    elif action == "DISBAND_FACTION":
-                        # Fetch cached members to deliver the AI responses
-                        members = info.get("cached_members", [])
-                        for m in members:
-                            if m != country_name and m not in getattr(self, 'active_players', []):
-                                accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")))
-                                send_message(self.nation_data, m, country_name, msg_text, "TEXT")
-                                
-                    elif action == "LEAVE_FACTION":
-                        # Fetch cached members to deliver the AI responses
-                        members = info.get("cached_members", [])
-                        for m in members:
-                            if m != country_name and m not in getattr(self, 'active_players', []):
-                                accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment.")))
-                                send_message(self.nation_data, m, country_name, msg_text, "TEXT")
-                                
-                    actions_to_clear.append(target)
-                    continue
-
                 is_human_target = target in getattr(self, 'active_players', [])
 
-                if action == "WAR_DECLARATION":
-                    if not is_human_target:
-                        accepted, message = ai_results.get((country_name, target, action), (False, "You will regret this betrayal."))
-                        send_message(self.nation_data, target, country_name, message, "TEXT")
-                
-                elif action == "BREAK_ALLIANCE":
-                    if not is_human_target: 
-                        accepted, message = ai_results.get((country_name, target, action), (False, "We won't forget this."))
-                        send_message(self.nation_data, target, country_name, message, "TEXT")
-                
-                elif action == "KICK_FACTION_MEMBER":
-                    if not is_human_target: 
-                        accepted, message = ai_results.get((country_name, target, action), (False, c.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION", "We won't forget this.")))
-                        send_message(self.nation_data, target, country_name, message, "TEXT")
-
-                elif action.startswith("MSG:"):
+                if action.startswith("MSG:"):
                     # ... (Leave CUSTOM_MSG block unchanged) ...
                     if not is_human_target:
                         reply = ai_results.get((country_name, target, "CUSTOM_MSG"), {})
@@ -443,6 +444,8 @@ def process_diplomacy_turn(self):
                             ai_queue.append({"target": final_f_up_target, "action": follow_up})
                             log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {target} is preparing further diplomatic moves regarding {f_up_target}...")
                 
+                    actions_to_clear.append(target)
+
                 elif action == "FACTION_INVITE":
                     if is_human_target:
                         send_message(self.nation_data, target, country_name, "Your faction invitation was ignored and has expired.", "DIPLOMACY")
@@ -451,6 +454,7 @@ def process_diplomacy_turn(self):
                         if accepted:
                             finalize_faction_join(self.nation_data, country_name, target)
                         send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
+                    actions_to_clear.append(target)
                 
                 elif action == "JOIN_FACTION_REQ":
                     if is_human_target:
@@ -460,6 +464,7 @@ def process_diplomacy_turn(self):
                         if accepted:
                             finalize_faction_join(self.nation_data, target, country_name)
                         send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
+                    actions_to_clear.append(target)
                 
                 elif action == "CEASEFIRE":
                     if is_human_target:
@@ -469,6 +474,7 @@ def process_diplomacy_turn(self):
                         if accepted:
                             finalize_neutral(self.nation_data, country_name, target)
                         send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
+                    actions_to_clear.append(target)
                 
                 elif action == "CALL_TO_ARMS":
                     if is_human_target:
@@ -479,18 +485,11 @@ def process_diplomacy_turn(self):
                             join_faction_wars(self.nation_data, target, country_name)
                             log_global_event(self.nation_data, f"ESCALATION: {target} answered the call to arms of {country_name}!")
                         send_message(self.nation_data, target, country_name, message, "DIPLOMACY")
-                
-                elif action == "JOIN_WARS":
-                    if not is_human_target:
-                        accepted, message = ai_results.get((country_name, target, action), (True, "We gratefully accept your assistance in our conflicts."))
-                        send_message(self.nation_data, target, country_name, message, "TEXT")
-                
-                actions_to_clear.append(target)
+                    actions_to_clear.append(target)
 
         for t in actions_to_clear:
             del pending[t]
 
-# You'll also need to update finalize_war to not remove alliances, since they're factions now
 def finalize_war(nation_data, a, b):
     # GUARDRAIL: If they are in the same faction, the aggressor (a) leaves automatically
     if queries.are_in_same_faction(a, b, nation_data):
