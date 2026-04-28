@@ -178,7 +178,9 @@ DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
 
 # Fonts & Sounds
-FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"
+FONT_PATH_DEFAULT = "assets/fonts/W95F.otf"
+# FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"
+FONT_PATH_MAP = "assets/fonts/OpenSans-Regular.ttf"
 SOUND_CLICK_PATH = "assets/sounds/click.mp3"
 SOUND_SLIDER_PATH = "assets/sounds/slider.wav"
 

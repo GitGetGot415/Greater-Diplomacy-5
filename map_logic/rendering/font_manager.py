@@ -1,4 +1,5 @@
 import pygame
+import data.constants as c
 
 class FontManager:
     def __init__(self):
@@ -16,7 +17,8 @@ class FontManager:
             "heading2": {"size": 28, "bold": False},
             "heading1": {"size": 32, "bold": False},
             "title": {"size": 40, "bold": False},
-            "country_name_display": {"size": 100, "bold": False},
+            # Map names get a specific font path override here
+            "country_name_display": {"size": 100, "bold": False, "path": c.FONT_PATH_MAP},
             # fonts.get("title")
         }
 
@@ -39,10 +41,13 @@ class FontManager:
             size = settings["size"]
             bold = settings.get("bold", False)
             
-            if self.font_path:
+            # Check if the preset specifies a custom path, otherwise use the global font_path
+            preset_path = settings.get("path", self.font_path)
+            
+            if preset_path:
                 try:
                     # Load from a custom .ttf file
-                    font = pygame.font.Font(self.font_path, size)
+                    font = pygame.font.Font(preset_path, size)
                     if bold: font.set_bold(True)
                     self.cache[preset_name] = font
                 except Exception as e:
