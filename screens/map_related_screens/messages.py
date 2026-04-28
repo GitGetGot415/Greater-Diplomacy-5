@@ -132,6 +132,11 @@ class Messages_Screen(GameState):
                 # --- NEW: Use clean status check ---
                 action, turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
 
+                is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+                if is_unilateral and turns > 0:
+                    action = ""
+                    turns = 0
+
                 # Dynamic Status Logic
                 status_text = "Drafting new message to:"
                 if turns > 0:
@@ -202,6 +207,11 @@ class Messages_Screen(GameState):
                 pending = player_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
                 action = pending.get("action", "") if isinstance(pending, dict) else pending
                 turns = pending.get("turns", 0) if isinstance(pending, dict) else 0
+
+                is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+                if is_unilateral and turns > 0:
+                    action = ""
+                    turns = 0
 
                 if turns > 0:
                     self.elements.append(Button(c.SCREEN_WIDTH - 300, c.SCREEN_HEIGHT - 80, "large", "grey", "Message in Transit", lambda: None))

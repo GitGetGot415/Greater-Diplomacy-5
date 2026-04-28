@@ -107,6 +107,11 @@ def draw_unit_info(self, surface):
         action, turns = queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
         locked = queries.is_diplomat_busy(self.player_country, owner, self.nation_data)
 
+        is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+        if is_unilateral and turns > 0:
+            action = ""
+            turns = 0
+
         status_text = "Drafting..."
         if turns > 0:
             status_text = "In Transit / Awaiting"

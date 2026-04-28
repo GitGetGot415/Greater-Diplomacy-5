@@ -44,10 +44,14 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
     elif current_action is not None:
         # NEW: Allow upgrading a drafted text message into a formal diplomatic action
         info = pending.get(target_name, {})
+        is_unilateral = current_action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+        
         if isinstance(info, dict) and info.get("action", "").startswith("MSG:") and info.get("turns", 0) == 0:
             if not custom_msg:
                 # Inherit the text from the draft if the user didn't provide a new one
                 custom_msg = info.get("action")[4:]
+        elif is_unilateral and isinstance(info, dict) and info.get("turns", 0) > 0:
+            pass # Safe to overwrite an executed unilateral action
         else:
             # Prevents declaring war while an alliance request is pending, etc.
             return "A diplomatic action is already pending with this nation!"

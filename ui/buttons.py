@@ -368,6 +368,12 @@ def update_button_states(map_screen):
                 at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
                 in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
                 pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
+                
+                is_unilateral_pending = pending_action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+                if is_unilateral_pending and pending_turns > 0:
+                    pending_action = ""
+                    pending_turns = 0
+                
                 is_sending = (pending_turns == 0 and pending_action)
 
                 def get_status_text(base):
