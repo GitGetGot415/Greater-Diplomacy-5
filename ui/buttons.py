@@ -398,6 +398,11 @@ def update_button_states(map_screen):
                     if pending_action == "CEASEFIRE": dw_text = get_status_text("CEASEFIRE")
                     elif pending_action == "WAR_DECLARATION": dw_text = get_status_text("WAR")
                     else: dw_text = "Ceasefire" if at_war else "Declare War"
+
+                    # --- FIX: Disable war declarations against faction members ---
+                    if not at_war and in_same_faction:
+                        dw_enabled = False
+
                     set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
                     
                     # Join Wars

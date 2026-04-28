@@ -7,5 +7,5 @@
     "num_players": 1,
     "ai_mode": "OLLAMA",
     "api_key": "",
-    "ai_immersion_level": "FULL"
+    "ai_immersion_level": "LITE"
 }

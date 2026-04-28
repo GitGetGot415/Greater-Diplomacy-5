@@ -4,6 +4,12 @@ from map_logic.diplomacy import diplomacy_logic
 def handle_declare_war(map_screen):
     target = map_screen.selected_province.get("owner")
     at_war = queries.are_at_war(map_screen.player_country, target, map_screen.nation_data)
+    
+    # --- FIX: Prevent declaring war on your own faction ---
+    if not at_war and queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
+        map_screen.show_feedback("Cannot declare war on a faction member!")
+        return
+
     action = "CEASEFIRE" if at_war else "WAR_DECLARATION"
     
     custom_msg = getattr(map_screen, "mail_draft_text", "").strip()

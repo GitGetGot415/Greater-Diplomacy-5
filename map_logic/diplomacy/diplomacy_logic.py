@@ -386,8 +386,17 @@ def process_diplomacy_turn(self):
                         # Queue the formal action to delayed_responses so it triggers formally next turn
                         if ai_action == "WAR_DECLARATION":
                             if queries.are_in_same_faction(target, act_target, self.nation_data):
-                                delayed_responses.append((target, target, "LEAVE_FACTION", 0, ""))
-                            delayed_responses.append((target, act_target, "WAR_DECLARATION", 0, "We have declared WAR upon you!"))
+                                # AI is in the same faction, so it must leave or kick first
+                                if queries.is_faction_leader(target, self.nation_data):
+                                    delayed_responses.append((target, act_target, "KICK_FACTION_MEMBER", 0, "You are expelled from the faction."))
+                                else:
+                                    delayed_responses.append((target, target, "LEAVE_FACTION", 0, ""))
+                                
+                                # Cache the actual war declaration to trigger next turn automatically
+                                ai_queue = self.nation_data[target].setdefault("queued_ai_actions", [])
+                                ai_queue.append({"target": act_target, "action": "WAR_DECLARATION"})
+                            else:
+                                delayed_responses.append((target, act_target, "WAR_DECLARATION", 0, "We have declared WAR upon you!"))
                             
                         elif ai_action == "JOIN_WARS":
                             if queries.are_in_same_faction(target, act_target, self.nation_data):
