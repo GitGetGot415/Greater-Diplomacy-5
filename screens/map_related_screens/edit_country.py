@@ -18,16 +18,20 @@ right_ui_x = c.EDIT_COUNTRY_UI_X3
 
 # Helper functions for encoding/decoding surfaces to JSON strings
 def encode_surf(surf):
-    img_str = pygame.image.tostring(surf, "RGB")
+    img_str = pygame.image.tostring(surf, "RGBA") # Changed to RGBA
     return base64.b64encode(img_str).decode('utf-8')
 
 def decode_surf(b64_str, size):
     try:
         img_bytes = base64.b64decode(b64_str)
-        return pygame.image.fromstring(img_bytes, size, "RGB")
+        # Check if the save file is using the new RGBA format or the old RGB format
+        if len(img_bytes) == size[0] * size[1] * 4:
+            return pygame.image.fromstring(img_bytes, size, "RGBA")
+        else:
+            return pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
     except:
-        surf = pygame.Surface(size)
-        surf.fill((255, 255, 255))
+        surf = pygame.Surface(size, pygame.SRCALPHA)
+        surf.fill((255, 255, 255, 255))
         return surf
 
 class Edit_Country_Screen(GameState):
@@ -37,8 +41,8 @@ class Edit_Country_Screen(GameState):
         self.map_screen = None
         
         # Dimensions
-        self.flag_size = (60, 40)
-        self.portrait_size = (60, 60)
+        self.flag_size = c.FLAG_SIZE
+        self.portrait_size = c.PORTRAIT_SIZE
         
         # Scaled drawing constraints
         self.flag_scale = 6
@@ -47,10 +51,10 @@ class Edit_Country_Screen(GameState):
         self.flag_rect = pygame.Rect(input_box_x, 150, self.flag_size[0] * self.flag_scale, self.flag_size[1] * self.flag_scale)
         self.portrait_rect = pygame.Rect(second_right_ui_x, 150, self.portrait_size[0] * self.portrait_scale, self.portrait_size[1] * self.portrait_scale)
         
-        self.flag_surf = pygame.Surface(self.flag_size)
-        self.portrait_surf = pygame.Surface(self.portrait_size)
-        self.flag_surf.fill((255, 255, 255))
-        self.portrait_surf.fill((255, 255, 255))
+        self.flag_surf = pygame.Surface(self.flag_size, pygame.SRCALPHA)
+        self.portrait_surf = pygame.Surface(self.portrait_size, pygame.SRCALPHA)
+        self.flag_surf.fill((255, 255, 255, 255))
+        self.portrait_surf.fill((255, 255, 255, 255))
         
         # Editor State
         self.active_color = (0, 0, 0)
@@ -321,6 +325,12 @@ class Edit_Country_Screen(GameState):
                             if x < w - 1: stack.append((x + 1, y))
                             if y > 0: stack.append((x, y - 1))
                             if y < h - 1: stack.append((x, y + 1))
+                            
+                # --- ADD THIS: Color Picker Logic ---
+                elif self.draw_mode == "PICKER" and is_click:
+                    self.active_color = surf.get_at((rel_x, rel_y))
+                    self.draw_mode = "BRUSH" # Auto-revert back to the brush after picking
+                    self.refresh_ui()
 
         if self.flag_rect.collidepoint(mx, my):
             apply(self.flag_surf, self.flag_rect, self.flag_scale)
@@ -398,11 +408,11 @@ class Edit_Country_Screen(GameState):
         surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
         
         # Render Active Color Indicator ("selected")
-        color_x = c.SCREEN_WIDTH - 200
-        color_y = 450
+        color_x = c.SCREEN_WIDTH - 150
+        color_y = 70
         pygame.draw.rect(surface, self.active_color, (color_x, color_y, 60, 60))
         pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
-        surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x - 5, color_y + 70))
+        surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x, color_y - 20))
 
         # --- NEW: Map Color Preview ---
         # Shifted slightly right to fit cleanly next to the side-by-side buttons

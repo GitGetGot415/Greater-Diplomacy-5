@@ -487,13 +487,15 @@ def render_edit_country_buttons(edit_screen):
     brush_color = "blue" if edit_screen.draw_mode == "BRUSH" else "grey"
     fill_color = "blue" if edit_screen.draw_mode == "FILL" else "grey"
     
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3, 425, "small_square", "grey", "Undo", edit_screen.undo))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 50, 425, "small_square", "grey", "Redo", edit_screen.redo))
     edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3, 375, "small_square", brush_color, "Brush", lambda: edit_screen.set_tool("BRUSH"), image=icons.get("brush"), show_text=False))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 120, 375, "small_square", fill_color, "Fill", lambda: edit_screen.set_tool("FILL"), image=icons.get("paint"), show_text=False))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 50, 375, "small_square", fill_color, "Fill", lambda: edit_screen.set_tool("FILL"), image=icons.get("paint"), show_text=False))
+
+    picker_color = "blue" if edit_screen.draw_mode == "PICKER" else "purple"
     
     # Updated Buttons to have both Map Color and Custom Brush Color pickers side-by-side
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3, 550, "small", "orange", "Map Color", edit_screen.pick_map_color))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 300, 375, "small", "purple", "Brush Color", edit_screen.pick_custom_brush_color))
-
-    # --- ADDED UNDO/REDO BUTTONS ---
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3, 440, "small", "grey", "Undo", edit_screen.undo))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 120, 440, "small", "grey", "Redo", edit_screen.redo))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 100, 600, "small", "orange", "Map Color", edit_screen.pick_map_color))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 125, 80, "small_square", "purple", "Brush Color", edit_screen.pick_custom_brush_color))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 175, 80, "small_square", "purple", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0))))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 225, 80, "small_square", picker_color, "Color Picker", lambda: edit_screen.set_tool("PICKER")))

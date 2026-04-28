@@ -102,10 +102,17 @@ def draw_owner_portrait(self, surface):
     start_y = 80
 
     # Draw Portrait
+   # Draw Portrait
+    # Draw Portrait
     if portrait_str:
         try:
             img_bytes = base64.b64decode(portrait_str)
-            portrait_surf = pygame.image.fromstring(img_bytes, (60, 60), "RGB")
+            # Route based on byte-length for backwards compatibility
+            if len(img_bytes) == c.PORTRAIT_SIZE[0] * c.PORTRAIT_SIZE[1] * 4:
+                portrait_surf = pygame.image.fromstring(img_bytes, c.PORTRAIT_SIZE, "RGBA")
+            else:
+                portrait_surf = pygame.image.fromstring(img_bytes, c.PORTRAIT_SIZE, "RGB")
+                
             portrait_surf = pygame.transform.scale(portrait_surf, (120, 120)) # Scale like the flag
             surface.blit(portrait_surf, (start_x, start_y))
             pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, 120, 120), 2)

@@ -177,6 +177,9 @@ BASE_MAPS_DIR = "base_maps"
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
 
+FLAG_SIZE = (60, 40)
+PORTRAIT_SIZE = (60, 60)
+
 # Fonts & Sounds
 FONT_PATH_DEFAULT = "assets/fonts/W95F.otf"
 # FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"

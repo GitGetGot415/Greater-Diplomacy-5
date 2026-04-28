@@ -24,7 +24,7 @@ def _load_default_images(map_obj):
         if os.path.exists(f_path):
             try:
                 img = pygame.image.load(f_path).convert()
-                img = pygame.transform.scale(img, (60, 40))
+                img = pygame.transform.scale(img, c.FLAG_SIZE)
                 n_data["flag_data"] = encode_surf_to_b64(img)
             except: pass
         # 2. If no local file, but also no baked data, use default
@@ -32,9 +32,9 @@ def _load_default_images(map_obj):
             try:
                 if os.path.exists(d_path): img = pygame.image.load(d_path).convert()
                 else: 
-                    img = pygame.Surface((60, 40))
+                    img = pygame.Surface(c.FLAG_SIZE)
                     img.fill((200, 200, 200))
-                img = pygame.transform.scale(img, (60, 40))
+                img = pygame.transform.scale(img, c.FLAG_SIZE)
                 n_data["flag_data"] = encode_surf_to_b64(img)
             except: pass
             
@@ -46,8 +46,7 @@ def _load_default_images(map_obj):
         if os.path.exists(p_path):
             try:
                 img = pygame.image.load(p_path).convert()
-                # FIX: Match the 60x60 size used by sidebar_info.py
-                img = pygame.transform.scale(img, (60, 60))
+                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
                 n_data["portrait_data"] = encode_surf_to_b64(img)
             except: pass
         # 2. If no local file, but also no baked data, use default
@@ -55,11 +54,9 @@ def _load_default_images(map_obj):
             try:
                 if os.path.exists(d_path): img = pygame.image.load(d_path).convert()
                 else:
-                    # FIX: Match the 60x60 size used by sidebar_info.py
-                    img = pygame.Surface((60, 60))
+                    img = pygame.Surface(c.PORTRAIT_SIZE)
                     img.fill((200, 200, 200))
-                # FIX: Match the 60x60 size used by sidebar_info.py
-                img = pygame.transform.scale(img, (60, 60))
+                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
                 n_data["portrait_data"] = encode_surf_to_b64(img)
             except: pass
 

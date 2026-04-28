@@ -20,8 +20,11 @@ def draw_flag(map_screen, surface):
     if flag_str:
         try:
             img_bytes = base64.b64decode(flag_str)
-            # Must match the raw dimensions it was saved at
-            flag_surf = pygame.image.fromstring(img_bytes, (60, 40), "RGB")
+            # Route based on byte-length for backwards compatibility
+            if len(img_bytes) == c.FLAG_SIZE[0] * c.FLAG_SIZE[1] * 4:
+                flag_surf = pygame.image.fromstring(img_bytes, c.FLAG_SIZE, "RGBA")
+            else:
+                flag_surf = pygame.image.fromstring(img_bytes, c.FLAG_SIZE, "RGB")
             
             # Scale it up to fit the UI
             flag_surf = pygame.transform.scale(flag_surf, (120, 80))
