@@ -52,7 +52,7 @@ class Controller:
 
         ui_elements.UI_ICONS = {
             "unit": symbol_loader.get_symbol("Infantry", 2),
-            "economy": symbol_loader.get_symbol("Factory", 2),
+            "industry": symbol_loader.get_symbol("Factory", 2),
             "blank": symbol_loader.get_symbol("Star", 2),
             "terrain": symbol_loader.get_symbol("Mountains", 1.5),
             "political": symbol_loader.get_symbol("Flag", 1.5),
@@ -62,11 +62,12 @@ class Controller:
             "save": symbol_loader.get_symbol("Save", 2),
             "core": symbol_loader.get_symbol("Star", 2),
             "resource": symbol_loader.get_symbol("Iron", 2),
-            "faction": symbol_loader.get_symbol("Star", 2),
+            "faction": symbol_loader.get_symbol("Pawn", 2),
             "settings": symbol_loader.get_symbol("Gear", 1.5),
             "names": symbol_loader.get_symbol("Text", 0.5),
             "paint": symbol_loader.get_symbol("Paint", 1.5),
-            "brush": symbol_loader.get_symbol("Brush", 1.5)
+            "brush": symbol_loader.get_symbol("Brush", 1.5),
+            "economy(the_economy_of_a_country_to_be_unusually_specific)": symbol_loader.get_symbol("Money", 0.5)
         }
 
         # 1. Define Hardcoded Defaults

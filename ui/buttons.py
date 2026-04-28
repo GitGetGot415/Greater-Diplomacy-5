@@ -25,15 +25,15 @@ def render_buttons(self):
         # View Type Buttons utilizing new constants
         self.elements.extend([
             Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", self.set_terrain, image=icons.get("terrain"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "light_blue", "Political", self.set_political, image=icons.get("political"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW1_Y, "small_square", "purple", "Relations", self.set_relations, image=icons.get("relations"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW1_Y, "small_square", "pink", "Cores", self.set_cores, image=icons.get("core"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "yellow", "Factions", self.set_factions, image=icons.get("faction"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Political", self.set_political, image=icons.get("political"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Relations", self.set_relations, image=icons.get("relations"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Cores", self.set_cores, image=icons.get("core"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Factions", self.set_factions, image=icons.get("faction"), show_text=False),
 
-            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "purple", "Resources", lambda: self.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "yellow", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False),
+            Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Resources", lambda: self.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False),
             Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "orange", "Economy", lambda: self.set_view_mode("ECONOMY"), image=icons.get("economy"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Economy", lambda: self.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False),
             
             Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=icons.get("names"), show_text=False),
         ])
@@ -50,8 +50,8 @@ def render_buttons(self):
             # --- EDITOR TOOLS ---
             self.elements.extend([
                 # Unified Left Bar Buttons
-                Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "left_ui_bar", "orange", "Country Economy", econ_callback),
-                Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research")),
+                Button(c.LEFT_UI_BAR_X, 500, "left_ui_bar", "orange", "Country Economy", econ_callback),
+                Button(c.LEFT_UI_BAR_X, 200, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research")),
 
                 Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data),
                 Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map),
@@ -84,12 +84,15 @@ def render_buttons(self):
             
             # Hide the management tools while the AI is moving
             if not viewing_ai:
+
+                start_y_val = 40
                 self.elements.extend([
-                    Button(c.LEFT_UI_BAR_X, c.BTN_ECONOMY_Y, "medium_square", "orange", "Country Economy", econ_callback, image=icons.get("faction"), show_text=False),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_RESEARCH_Y, "medium_square", "blue", "R&D", research_callback, image=icons.get("research"), show_text=False),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_SAVE_Y, "medium_square", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_EDIT_NATION_Y, "medium_square", "orange", "Edit Nation", self.open_edit_country, image=icons.get("brush"), show_text=False),
-                    Button(c.LEFT_UI_BAR_X, c.BTN_MESSAGES_Y, "medium_square", "purple", "Messages", self.open_messages, image=icons.get("mail"), show_text=False)
+                    Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 1, "medium_square", "orange", "Edit Nation", self.open_edit_country, image=icons.get("brush"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 2, "medium_square", "orange", "Country Economy", econ_callback, image=icons.get("economy(the_economy_of_a_country_to_be_unusually_specific)"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 3, "medium_square", "blue", "R&D", research_callback, image=icons.get("research"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 4, "medium_square", "purple", "Messages", self.open_messages, image=icons.get("mail"), show_text=False),
+                    Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 5, "medium_square", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
+                    # SETTINGS BUTTON SHOULD GO HERE IN BUTTONS.PY RIGHT HERE
                 ])
 
 
@@ -192,7 +195,7 @@ def update_button_states(map_screen):
             if el.text in ["Terrain", "Political", "Relations", "Factions", "Pol Refresh",
                            "Rel Refresh", "Core Refresh", "Data Refresh", "Fac Refresh",
                            "Set Date", "Core Brush", "Cores", "Auto-Core", "Unit",
-                           "R&D", "Reset", "Save", "Load", "Nation", "Building",
+                           "R&D", "Reset", "Save", "Load", "Nation", "Building", "Economy",
                            "Refresh", "Exit", "View Mode", "Units", "Country Economy", "Blank",
                            "Resource", "Resources", "Sync Units", "Diplomacy", "Names"]:
                 el.visible = True
