@@ -25,6 +25,12 @@ class Settings(GameState):
 
         self.refresh_ui()
 
+    def update(self):
+        super().update()
+        # Hide the player slider if we accessed settings mid-game
+        if hasattr(self, 'player_slider'):
+            self.player_slider.visible = (self.return_state != "MAP")
+
     def set_ai_mode(self, mode):
         self.ai_mode = mode
         self.controller.ai_mode = mode
@@ -80,10 +86,14 @@ class Settings(GameState):
         c_full = "green" if self.ai_immersion_level == "FULL" else "grey"
         self.elements.append(Button((c.SCREEN_WIDTH/2) + 150, 270, "medium", c_full, "FULL AI", lambda: self.set_ai_immersion_level("FULL")))
 
+        # Store explicit references to the sliders instead of trusting indices
+        self.volume_slider = Slider(200, 420, 200, "Volume", self.volume, self.set_volume)
+        self.player_slider = Slider(200, 500, 200, f"Players: {self.num_players}", (self.num_players - 1) / 7.0, self.set_players)
+
         # Adjust the Y positions of the remaining elements slightly lower
         self.elements.extend([
-            Slider(200, 420, 200, "Volume", self.volume, self.set_volume),
-            Slider(200, 500, 200, f"Players: {self.num_players}", (self.num_players - 1) / 7.0, self.set_players),
+            self.volume_slider,
+            self.player_slider,
             Button("centered", 430, "large", "grey", back_btn_text, lambda: self.start_listening("BACK")),
             Button("centered", 520, "large", "grey", orders_btn_text, lambda: self.start_listening("ORDERS")),
             Button("centered", 610, "medium", "blue", "Reset Keybinds", self.reset_defaults)
@@ -118,7 +128,9 @@ class Settings(GameState):
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)
         self.controller.num_players = self.num_players
-        self.elements[6].text = f"Players: {self.num_players}" # Adjusting index because of new buttons
+        # Update text via direct reference, not indexing
+        if hasattr(self, 'player_slider'):
+            self.player_slider.text = f"Players: {self.num_players}"
 
     def save_and_go_back(self):
         # Ensure we pass the api_key and immersion level when saving

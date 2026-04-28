@@ -151,12 +151,19 @@ class Slider:
         self.visible = True
 
     def draw(self, surface):
+        if not self.visible: return
+        
         pygame.draw.rect(surface, (100, 100, 100), self.rect) # Track
         pygame.draw.rect(surface, (200, 200, 200), self.handle_rect) # Handle
         
         slider_font = fonts.get("normal")
 
-        txt = slider_font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
+        # Strip the percentage display if we're rendering a discrete count like "Players"
+        if self.text.startswith("Players"):
+            txt = slider_font.render(self.text, True, (255, 255, 255))
+        else:
+            txt = slider_font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
+            
         surface.blit(txt, (self.rect.x, self.rect.y - 25))
 
     def handle_event(self, event):
