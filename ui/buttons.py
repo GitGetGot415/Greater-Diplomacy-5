@@ -31,7 +31,7 @@ def render_buttons(self):
             Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 4, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Factions", self.set_factions, image=icons.get("faction"), show_text=False),
 
             Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Resources", lambda: self.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False),
-            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False),
+            Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("star"), show_text=False),
             Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 2, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False),
             Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X * 3, c.VIEW_BTN_ROW2_Y, "small_square", "red", "Economy", lambda: self.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False),
             
@@ -496,6 +496,6 @@ def render_edit_country_buttons(edit_screen):
     
     # Updated Buttons to have both Map Color and Custom Brush Color pickers side-by-side
     edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 100, 600, "small", "orange", "Map Color", edit_screen.pick_map_color))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 125, 80, "small_square", "purple", "Brush Color", edit_screen.pick_custom_brush_color))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 175, 80, "small_square", "purple", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0))))
-    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 225, 80, "small_square", picker_color, "Color Picker", lambda: edit_screen.set_tool("PICKER")))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 125, 80, "small_square", "purple", "Brush Color", edit_screen.pick_custom_brush_color, image=icons.get("star"), show_text=False))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 175, 80, "small_square", "purple", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0)), image=icons.get("red_line"), show_text=False))
+    edit_screen.elements.append(Button(c.EDIT_COUNTRY_UI_X3 + 225, 80, "small_square", picker_color, "Color Picker", lambda: edit_screen.set_tool("PICKER"), image=icons.get("color_picker"), show_text=False))

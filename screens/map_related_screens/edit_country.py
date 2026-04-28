@@ -169,10 +169,12 @@ class Edit_Country_Screen(GameState):
         root.withdraw()
         root.attributes("-topmost", True) 
         
-        color_code = colorchooser.askcolor(title="Choose Brush Color", initialcolor=tuple(self.active_color))
+        # Slice to [:3] to ensure we only pass RGB to Tkinter, dropping the Alpha
+        color_code = colorchooser.askcolor(title="Choose Brush Color", initialcolor=tuple(self.active_color)[:3])
         
         if color_code[0]: 
-            self.active_color = tuple(int(c) for c in color_code[0])
+            # Re-append the full opacity alpha channel (255) to the returned RGB tuple
+            self.active_color = tuple(int(c) for c in color_code[0]) + (255,)
             
         root.destroy()
         pygame.event.pump()

@@ -53,7 +53,7 @@ class Controller:
         ui_elements.UI_ICONS = {
             "unit": symbol_loader.get_symbol("Infantry", 2),
             "industry": symbol_loader.get_symbol("Factory", 2),
-            "blank": symbol_loader.get_symbol("Star", 2),
+            "star": symbol_loader.get_symbol("Star", 2),
             "terrain": symbol_loader.get_symbol("Mountains", 1.5),
             "political": symbol_loader.get_symbol("Flag", 1.5),
             "relations": symbol_loader.get_symbol("Heart", 2),
@@ -67,6 +67,9 @@ class Controller:
             "names": symbol_loader.get_symbol("Text", 0.5),
             "paint": symbol_loader.get_symbol("Paint", 1.5),
             "brush": symbol_loader.get_symbol("Brush", 1.5),
+            "eraser": symbol_loader.get_symbol("Eraser", 1.5),
+            "red_line": symbol_loader.get_symbol("Red Line", 1.5),
+            "color_picker": symbol_loader.get_symbol("Color Picker", 1.5),
             "export": symbol_loader.get_symbol("Export", 1.5),
             "import": symbol_loader.get_symbol("Import", 1.5),
             "economy(the_economy_of_a_country_to_be_unusually_specific)": symbol_loader.get_symbol("Money", 0.5)
