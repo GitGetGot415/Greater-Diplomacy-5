@@ -3,39 +3,91 @@ import math
 
 from map_logic.rendering import symbol_loader
 
-def draw_movement_arrow(surface, map_screen, start_province, end_province, color=(255, 255, 0)):
-    """Draws a scaled arrow between two province centers based on camera zoom/pos."""
+def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0)):
+    """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
+    if not path_ids: return
+
     cam = map_screen.camera
     
-    # 1. Get World Centers
-    p1 = start_province["center"]
-    p2 = end_province["center"]
-    
-    # 2. Convert to Screen Coordinates
+    # 1. Convert to Screen Coordinates
     def world_to_screen(pos):
         sx = (pos[0] - cam.pos.x) * cam.zoom
         sy = (pos[1] - cam.pos.y) * cam.zoom + map_screen.top_ui_height
         return sx, sy
 
-    start_pos = world_to_screen(p1)
-    end_pos = world_to_screen(p2)
+    # Build an ordered list of all nodes in the path
+    nodes = [start_province]
+    for step_id in path_ids:
+        target_node = map_screen.id_to_province.get(step_id)
+        if target_node:
+            nodes.append(target_node)
 
-    # 3. Draw the Main Line
-    pygame.draw.line(surface, color, start_pos, end_pos, max(1, int(3 * cam.zoom)))
+    if len(nodes) < 2: return
 
-    # 4. Calculate and Draw the Arrow Head
-    angle = math.atan2(start_pos[1] - end_pos[1], start_pos[0] - end_pos[0])
-    
-    # Arrow head size scales with zoom
-    head_size = 15 * cam.zoom
-    
-    # Points for the triangle head
-    left_wing = (end_pos[0] + head_size * math.cos(angle + math.pi / 6),
-                 end_pos[1] + head_size * math.sin(angle + math.pi / 6))
-    right_wing = (end_pos[0] + head_size * math.cos(angle - math.pi / 6),
-                  end_pos[1] + head_size * math.sin(angle - math.pi / 6))
-    
-    pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
+    # Grab the UI symbols (Base scale is tweaked for zoom)
+    line_base = symbol_loader.get_symbol("Line", cam.zoom * 1, color)
+    circle_img = symbol_loader.get_symbol("Circle", cam.zoom * 1, color)
+    triangle_img = symbol_loader.get_symbol("Triangle", cam.zoom * 1, color)
+
+    # PASS 1: Draw all lines FIRST so they render underneath the shapes
+    for i in range(len(nodes) - 1):
+        p1 = nodes[i]["center"]
+        p2 = nodes[i+1]["center"]
+        start_pos = world_to_screen(p1)
+        end_pos = world_to_screen(p2)
+
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        dist = math.hypot(dx, dy)
+        angle = math.degrees(math.atan2(-dy, dx))
+
+        if line_base and int(dist) > 0:
+            # Stretch the line image to fit the exact distance between the nodes
+            thickness = max(2, int(4 * cam.zoom))
+            scaled_line = pygame.transform.scale(line_base, (int(dist), thickness))
+            rotated_line = pygame.transform.rotate(scaled_line, angle)
+            rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
+            surface.blit(rotated_line, rect)
+        else:
+            # Fallback
+            pygame.draw.line(surface, color, start_pos, end_pos, max(1, int(3 * cam.zoom)))
+
+    # PASS 2: Draw the node markers on top of the lines
+    for i in range(1, len(nodes)):
+        p1 = nodes[i-1]["center"]
+        p2 = nodes[i]["center"]
+        start_pos = world_to_screen(p1)
+        end_pos = world_to_screen(p2)
+
+        is_last = (i == len(nodes) - 1)
+
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        angle = math.degrees(math.atan2(-dy, dx))
+
+        if is_last:
+            if triangle_img:
+                # Rotate the triangle so it points along the trajectory of the line
+                rotated_tri = pygame.transform.rotate(triangle_img, angle)
+                rect = rotated_tri.get_rect(center=end_pos)
+                surface.blit(rotated_tri, rect)
+            else:
+                # Fallback Triangle
+                head_size = 15 * cam.zoom
+                angle_rad = math.atan2(dy, dx)
+                left_wing = (end_pos[0] - head_size * math.cos(angle_rad - math.pi / 6),
+                             end_pos[1] - head_size * math.sin(angle_rad - math.pi / 6))
+                right_wing = (end_pos[0] - head_size * math.cos(angle_rad + math.pi / 6),
+                              end_pos[1] - head_size * math.sin(angle_rad + math.pi / 6))
+                pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
+        else:
+            if circle_img:
+                # Plop the circle right on the intermediate coordinate
+                rect = circle_img.get_rect(center=end_pos)
+                surface.blit(circle_img, rect)
+            else:
+                # Fallback Circle
+                pygame.draw.circle(surface, color, (int(end_pos[0]), int(end_pos[1])), max(3, int(4 * cam.zoom)))
 
 def draw_overlay_content(self, surface):
     """Orchestrates what icons/symbols to draw over the map."""

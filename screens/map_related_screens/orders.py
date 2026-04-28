@@ -316,6 +316,9 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         
+        # Dynamically fetch the player's color
+        owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
+        
         if player_units:
             # Dynamically size the height based on how many units there are
             bg_rect = pygame.Rect(80, 130, 500, len(player_units) * 60 + 40)
@@ -346,12 +349,8 @@ class Orders_Screen(GameState):
                 surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
                 self.cancel_rects.append((cancel_rect, i))
                 
-                prev_node = self.target_province
-                for step_id in path:
-                    target_node = self.map_screen.id_to_province.get(step_id)
-                    if target_node:
-                        overlay_renderer.draw_movement_arrow(surface, self.map_screen, prev_node, target_node, color=(255, 255, 0))
-                        prev_node = target_node
+                # Use the owner's color to draw the path
+                overlay_renderer.draw_movement_path(surface, self.map_screen, self.target_province, path, color=owner_color)
 
         if self.selected_unit_index is not None:
             active_unit = units[self.selected_unit_index]
@@ -377,7 +376,8 @@ class Orders_Screen(GameState):
             mouse_pos = pygame.mouse.get_pos()
             hovered = self.get_clicked_province(mouse_pos)
             if hovered and hovered["id"] in last_node["neighbors"]:
-                overlay_renderer.draw_movement_arrow(surface, self.map_screen, last_node, hovered, color=(255, 255, 255))
+                # Use the owner's color to draw the cursor hover
+                overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=owner_color)
 
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True

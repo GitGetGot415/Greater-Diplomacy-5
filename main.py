@@ -72,6 +72,9 @@ class Controller:
             "color_picker": symbol_loader.get_symbol("Color Picker", 1.5),
             "export": symbol_loader.get_symbol("Export", 1.5),
             "import": symbol_loader.get_symbol("Import", 1.5),
+            "circle": symbol_loader.get_symbol("Circle", 1.5),
+            "triangle": symbol_loader.get_symbol("Triangle", 1.5),
+            "line": symbol_loader.get_symbol("Line", 1.5),
             "economy(the_economy_of_a_country_to_be_unusually_specific)": symbol_loader.get_symbol("Money", 0.5)
         }
 

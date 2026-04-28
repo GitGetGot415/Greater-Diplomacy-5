@@ -68,12 +68,9 @@ def draw_map_screen(self, surface):
             if order and order.get("type") == "MOVE":
                 path = order.get("path", [])
                 if path:
-                    prev_node = province
-                    for step_id in path:
-                        target_node = self.id_to_province.get(step_id)
-                        if target_node:
-                            overlay_renderer.draw_movement_arrow(surface, self, prev_node, target_node)
-                            prev_node = target_node
+                    # Dynamically pull the color of the unit's owner (fallback to yellow)
+                    owner_color = self.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
+                    overlay_renderer.draw_movement_path(surface, self, province, path, color=owner_color)
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     country_names.draw_country_names(self, surface)
