@@ -110,16 +110,15 @@ EDITOR_BOT_BTN_STEP_X = 110
 
 # --- Province Menu UI Layout (X, Y, Width, Height) ---
 PROVINCE_UI = {
-    "buildings_box": (860, 70, 210, 250),
-    "faction_box": (SCREEN_WIDTH - 200, 200, 210, 200),
-    "mail_box": (SCREEN_WIDTH - 200, 420, 210, 300)
+    "faction_box": (5, 300, 150, 300),
+    "mail_box": (900, 300, 150, 300)
 }
 
 # --- Sidebar Info Panel ---
 SIDEBAR_INFO_X = 500
 SIDEBAR_INFO_Y = 70
 SIDEBAR_INFO_WIDTH = 300
-SIDEBAR_INFO_HEIGHT = 450
+SIDEBAR_INFO_HEIGHT = 600 # Increased from 450 to accommodate the buildings list
 
 # --- Action Buttons UI Layout ---
 ACTION_BTN_X = 200
@@ -154,7 +153,7 @@ UI_COLORS = {
 
 SIZES = {
     "small_square": (40, 40),
-    "medium_square": (60, 60),
+    "medium_square": (50, 50),
     "tech_square": (80, 80),
     "small": (100, 40),
     "left_ui_bar": (120, 50),

@@ -48,6 +48,29 @@ def draw_sidebar_info(self, surface):
 
     current_y += 10 # Padding
 
+    # --- NEW: Buildings Section ---
+    header = self.font.render("--- BUILDINGS ---", True, (255, 255, 255))
+    surface.blit(header, (text_x, current_y))
+    current_y += 25
+
+    buildings = province.get("buildings", [])
+    if not buildings:
+        txt = self.small_font.render("(None)", True, (150, 150, 150))
+        surface.blit(txt, (text_x + 5, current_y))
+        current_y += 25
+    else:
+        for b in buildings[:5]:
+            txt = self.small_font.render(f"- {b}", True, (200, 200, 200))
+            surface.blit(txt, (text_x + 5, current_y))
+            current_y += 20
+            
+        if len(buildings) > 5:
+            txt = self.small_font.render(f" + {len(buildings) - 5} more", True, (150, 150, 150))
+            surface.blit(txt, (text_x + 5, current_y))
+            current_y += 20
+
+    current_y += 10 # Padding before next section
+
     # 5. Combat Detection
     owners_present = list(set(u.get("owner", "Unknown") for u in units))
     is_combat = queries.is_province_in_active_combat(province, self.nation_data)
@@ -133,8 +156,6 @@ def draw_owner_portrait(self, surface):
     start_x = c.UI_LEFT_OFFSET + 20
     start_y = 80
 
-    # Draw Portrait
-   # Draw Portrait
     # Draw Portrait
     if portrait_str:
         try:

@@ -65,13 +65,13 @@ def render_buttons(self):
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
     # ======================================================================== #
-    domestic_x = 400
+    domestic_x = c.LEFT_UI_BAR_X
     diplo_x = 180
 
     # Domestic Set (Paper Icon Added, Text Hidden!)
-    self.btn_go_orders = Button(280, 592, "medium_square", "blue", "Give Orders", self.open_orders, image=icons.get("paper"), show_text=False)
-    self.btn_go_recruit = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium_square", "green", "Recruit Menu", self.open_recruit)
-    self.btn_go_build = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "medium_square", "orange", "Construction", self.open_construction)
+    self.btn_go_orders = Button(domestic_x, start_y_val+ c.LEFT_UI_BAR_STEP_Y * 1, "medium_square", "blue", "Give Orders", self.open_orders, image=icons.get("paper"), show_text=False)
+    self.btn_go_recruit = Button(domestic_x,start_y_val + c.LEFT_UI_BAR_STEP_Y * 2, "medium_square", "green", "Recruit Menu", self.open_recruit)
+    self.btn_go_build = Button(domestic_x, start_y_val + c.LEFT_UI_BAR_STEP_Y * 3, "medium_square", "orange", "Construction", self.open_construction)
 
     # Foreign Set
     self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", self.handle_declare_war)

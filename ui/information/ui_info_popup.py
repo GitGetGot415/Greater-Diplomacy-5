@@ -3,8 +3,7 @@ from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
 
-# --- Define the 4 split boxes using the centralized constants ---
-bldgs_rect = pygame.Rect(*c.PROVINCE_UI["buildings_box"])
+# --- Define the split boxes using the centralized constants ---
 fac_rect = pygame.Rect(*c.PROVINCE_UI["faction_box"])
 mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
 
@@ -15,25 +14,7 @@ def draw_unit_info(self, surface):
     owner = self.selected_province.get("owner", "Unclaimed")
     is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
 
-    # --- 2. Buildings Box ---
-    pygame.draw.rect(surface, (30, 30, 50), bldgs_rect)
-    pygame.draw.rect(surface, (100, 100, 250), bldgs_rect, 2)
-    
-    b_title = self.font.render("Buildings", True, (255, 255, 255))
-    surface.blit(b_title, (bldgs_rect.x + 10, bldgs_rect.y + 10))
-    y_offset = bldgs_rect.y + 40
-    
-    buildings = self.selected_province.get("buildings", [])
-    if not buildings:
-        txt = self.small_font.render("(None)", True, (150, 150, 150))
-        surface.blit(txt, (bldgs_rect.x + 15, y_offset))
-    else:
-        for b in buildings[:12]:
-            txt = self.small_font.render(f"- {b}", True, (200, 200, 200))
-            surface.blit(txt, (bldgs_rect.x + 15, y_offset))
-            y_offset += 25
-
-    # --- 3. Foreign Info (Faction & Mail) ---
+    # --- Foreign Info (Faction & Mail) ---
     if is_foreign:
         # Faction Box (Replaced Relations Box)
         pygame.draw.rect(surface, (40, 30, 40), fac_rect)
@@ -79,7 +60,7 @@ def draw_unit_info(self, surface):
         mail_title = self.font.render("Direct Message", True, (255, 255, 255))
         surface.blit(mail_title, (mail_rect.x + 10, mail_rect.y + 10))
         
-        # --- NEW: Check status cleanly ---
+        # --- Check status cleanly ---
         action, turns = queries.get_diplomatic_status(self.player_country, owner, self.nation_data)
         locked = queries.is_diplomat_busy(self.player_country, owner, self.nation_data)
 
@@ -93,7 +74,6 @@ def draw_unit_info(self, surface):
             status_text = "In Transit / Awaiting"
         elif locked:
             status_text = "Diplomat Busy"
-        # ---------------------------------
 
         status_surf = self.small_font.render(status_text, True, (200, 255, 200) if not locked else (255, 200, 100))
         surface.blit(status_surf, (mail_rect.x + 10, mail_rect.y + 40))
