@@ -78,7 +78,8 @@ def draw_map_screen(self, surface):
             surface.blit(modal_overlay, (0, self.top_ui_height))
         else:
             # Use the custom transparent PNG for the actual province menu
-            province_bg = ui_bars.get_ui_image(c.PROVINCE_BG_FILE)
+            # Pass the backgrounds directory to the image loader!
+            province_bg = ui_bars.get_ui_image(c.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
             if province_bg.get_size() != surface.get_size():
                 province_bg = pygame.transform.scale(province_bg, surface.get_size())
             surface.blit(province_bg, (0, 0))

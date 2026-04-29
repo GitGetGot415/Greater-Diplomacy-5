@@ -157,6 +157,7 @@ SIZES = {
     "small_square": (40, 40),
     "medium_square": (50, 50),
     "tech_square": (80, 80),
+    "orders": (100, 50),
     "small": (100, 40),
     "left_ui_bar": (120, 50),
     "diplomatic": (200, 30),
@@ -170,6 +171,7 @@ SIZES = {
 
 # Directories
 ASSETS_DIR = "assets/images"
+BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 SAVES_DIR = "saves"
@@ -179,7 +181,8 @@ BASE_MAPS_DIR = "base_maps"
 # Default Map Assets
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
-PROVINCE_BG_FILE = "Province Background.png"
+PROVINCE_BG_FILE = "Province.png"
+SETTINGS_BG_FILE = "Settings.png"
 
 FLAG_SIZE = (60, 40)
 PORTRAIT_SIZE = (60, 60)

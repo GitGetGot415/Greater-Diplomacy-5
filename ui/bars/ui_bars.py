@@ -2,17 +2,17 @@ import pygame
 import os
 import data.constants as c
 
-# Cache the images using a tuple (filename, scale) as the key
+# Cache the images using a tuple (filename, scale, directory) as the key
 _ui_images_cache = {}
 
-def get_ui_image(filename, scale=1.0):
+def get_ui_image(filename, scale=1.0, directory=c.ASSETS_DIR):
     global _ui_images_cache
-    cache_key = (filename, scale)
+    cache_key = (filename, scale, directory)
     
     if cache_key not in _ui_images_cache:
         try:
             # Load the original image (Change .convert() to .convert_alpha())
-            img = pygame.image.load(os.path.join(c.ASSETS_DIR, filename)).convert_alpha()
+            img = pygame.image.load(os.path.join(directory, filename)).convert_alpha()
             
             # Apply scaling if the scale multiplier is not exactly 1.0
             if scale != 1.0:
@@ -23,7 +23,7 @@ def get_ui_image(filename, scale=1.0):
             _ui_images_cache[cache_key] = img
             
         except FileNotFoundError:
-            print(f"Warning: assets/{filename} not found. Using fallback.")
+            print(f"Warning: {directory}/{filename} not found. Using fallback.")
             fallback = pygame.Surface((64, 64))
             fallback.fill((40, 40, 40))
             _ui_images_cache[cache_key] = fallback

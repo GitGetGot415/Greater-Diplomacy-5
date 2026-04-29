@@ -13,6 +13,7 @@ class GameState:
         self.next_state = None
         self.elements = []
         self.master_volume = 0.5
+        self.bg_image_path = None # Added support for generic background images
 
     def handle_events(self, events):
         for event in events:
@@ -24,8 +25,16 @@ class GameState:
         pass
 
     def draw(self, surface):
-        # 1. Fill background
-        surface.fill(getattr(self, 'bg_color', (30, 30, 30)))
+        # 1. Fill background or draw background image
+        if getattr(self, 'bg_image_path', None):
+            import data.constants as c
+            from ui.bars import ui_bars
+            bg_img = ui_bars.get_ui_image(self.bg_image_path, directory=c.BACKGROUNDS_DIR)
+            if bg_img.get_size() != surface.get_size():
+                bg_img = pygame.transform.scale(bg_img, surface.get_size())
+            surface.blit(bg_img, (0, 0))
+        else:
+            surface.fill(getattr(self, 'bg_color', (30, 30, 30)))
         
         # 2. Draw the specific screen content (Map, UI Bars)
         # Moving this BEFORE elements fixes the layering

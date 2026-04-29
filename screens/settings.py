@@ -12,9 +12,10 @@ class Settings(GameState):
         super().__init__()
         self.controller = controller
         self.bg_color = (40, 40, 40)
+        self.bg_image_path = c.SETTINGS_BG_FILE # Hook up the new background here!
         self.return_state = "MENU"
         
-        self.volume = self.controller.volume 
+        self.volume = self.controller.volume
         self.num_players = getattr(self.controller, 'num_players', 1)
         self.ai_mode = getattr(self.controller, 'ai_mode', 'GEMINI')
         self.ai_immersion_level = getattr(self.controller, 'ai_immersion_level', 'FULL')
