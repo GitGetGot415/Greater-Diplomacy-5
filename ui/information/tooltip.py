@@ -1,5 +1,6 @@
 import pygame
 import data.constants as c
+from data import queries
 
 def draw_tooltip(self, surface):
     if not self.hovered_province:
@@ -44,7 +45,8 @@ def draw_tooltip(self, surface):
                 
                 if level > 0:
                     # refactor: Use 'Type' for Infantry, 'Lvl' for others
-                    label = "Type" if u_name.lower() == "infantry_type" else "Lvl"
+                    base_name = queries.get_base_unit_name(u_name)
+                    label = "Type" if base_name == "Infantry" else "Lvl"
                     lines.append(f"- {u_name} ({label} {level})")
                 else:
                     lines.append(f"- {u_name}")

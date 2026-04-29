@@ -198,7 +198,7 @@ def randomize_all_provinces(map_screen, settings):
             "speed": stats.get("speed", 1),
             "attack": stats.get("attack", 5),
             "defense": stats.get("defense", 0),
-            "level": 1,
+            "level": 0,
             "order": {"type": "MOVE", "path": []}
         }
 

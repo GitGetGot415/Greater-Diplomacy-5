@@ -172,7 +172,7 @@ def handle_map_events(self, event):
                             "speed": unit_stats.get("speed", 1),
                             "attack": unit_stats.get("attack", 5),
                             "defense": unit_stats.get("defense", 0),
-                            "level": 1 if self.brush_unit.lower() == "infantry_type" else 0,
+                            "level": 0,
                             "order": {"type": "MOVE", "path": []}
                         }
                         self.hovered_province.setdefault("units", []).append(new_unit)

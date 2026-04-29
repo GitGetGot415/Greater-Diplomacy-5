@@ -5,7 +5,7 @@
     },
     "volume": 0.205,
     "num_players": 1,
-    "ai_mode": "OLLAMA",
+    "ai_mode": "OFF",
     "api_key": "",
     "ai_immersion_level": "LITE"
 }
