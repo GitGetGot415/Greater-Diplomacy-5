@@ -25,7 +25,7 @@ class Research_Screen(GameState):
         # --- Timeline Variables ---
         self.scroll_x = 0
         self.target_scroll_x = 0
-        self.pixels_per_year = 35 
+        self.pixels_per_year = c.RESEARCH_TIMELINE_SPACING
 
         self.setup_nodes()
 
@@ -303,12 +303,11 @@ class Research_Screen(GameState):
 
         for year in range(start_year, end_year):
             x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-            if year % 5 == 0:
-                pygame.draw.line(surface, (200, 200, 200), (x, axis_y - 10), (x, axis_y + 10), 2)
-                txt = year_font.render(str(year), True, (200, 200, 200))
-                surface.blit(txt, (x - txt.get_width()//2, axis_y - 40))
-            elif year % 1 == 0:
-                pygame.draw.line(surface, (100, 100, 100), (x, axis_y - 5), (x, axis_y + 5), 1)
+            
+            # Removed the modulo 5 check; draws a major tick and text for every year
+            pygame.draw.line(surface, (200, 200, 200), (x, axis_y - 10), (x, axis_y + 10), 2)
+            txt = year_font.render(str(year), True, (200, 200, 200))
+            surface.blit(txt, (x - txt.get_width()//2, axis_y - 40))
 
     def draw_connections(self, surface, res_levels):
         nodes = self.nodes.get(self.current_category, [])
