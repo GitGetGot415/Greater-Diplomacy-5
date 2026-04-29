@@ -105,7 +105,7 @@ def render_buttons(self):
     diplo_x = 180
 
     # Domestic Set
-    self.btn_go_orders = Button(domestic_x, c.ACTION_BTN_START_Y, "medium_square", "blue", "Give Orders", self.open_orders)
+    self.btn_go_orders = Button(280, 592, "medium_square", "blue", "Give Orders", self.open_orders)
     self.btn_go_recruit = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium_square", "green", "Recruit Menu", self.open_recruit)
     self.btn_go_build = Button(domestic_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "medium_square", "orange", "Construction", self.open_construction)
 
