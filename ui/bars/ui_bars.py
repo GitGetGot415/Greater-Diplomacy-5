@@ -55,8 +55,8 @@ def draw_textured_rect(surface, rect, image, mode="tile"):
 def draw_ui_bars(map_screen, surface):
     # Pass the scale multiplier as the second argument (e.g., 2.0 is double size, 0.5 is half size)
     # Tiled bars benefit greatly from scaling, stretched bars will ignore it anyway
-    top_bg = get_ui_image("UI Square 1.png", 3.8)
-    bot_bg = get_ui_image("UI Square 1.png", 3.8)
+    top_bg = get_ui_image("UI Square Top.png", 3.8)
+    bot_bg = get_ui_image("UI Square Bottom.png", 3.8)
     side_bg = get_ui_image("UI Square 2.png", 5.0)
     corner_bg = get_ui_image("UI Square 3.png", 1.0) # Doubled in size before tiling
 

@@ -3,7 +3,7 @@
         "BACK": "escape",
         "ORDERS": "q"
     },
-    "volume": 0.205,
+    "volume": 0.2,
     "num_players": 1,
     "ai_mode": "GEMINI",
     "api_key": "",
