@@ -4,7 +4,6 @@ import data.constants as c
 from data import queries
 
 # --- Define the 4 split boxes using the centralized constants ---
-units_rect = pygame.Rect(*c.PROVINCE_UI["units_box"])
 bldgs_rect = pygame.Rect(*c.PROVINCE_UI["buildings_box"])
 fac_rect = pygame.Rect(*c.PROVINCE_UI["faction_box"])
 mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
@@ -15,29 +14,6 @@ def draw_unit_info(self, surface):
 
     owner = self.selected_province.get("owner", "Unclaimed")
     is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
-
-    # --- 1. Units Box ---
-    pygame.draw.rect(surface, (30, 30, 50), units_rect)
-    pygame.draw.rect(surface, (100, 100, 250), units_rect, 2)
-
-    title = self.font.render("Active Garrison", True, (255, 255, 255))
-    surface.blit(title, (units_rect.x + 10, units_rect.y + 10))
-
-    units = self.selected_province.get("units", [])
-    y_offset = units_rect.y + 40
-    
-    if not units:
-        txt = self.small_font.render("(Empty)", True, (150, 150, 150))
-        surface.blit(txt, (units_rect.x + 15, y_offset))
-    else:
-        for i, unit_data in enumerate(units[:12]):
-            u_name = unit_data["type"]
-            u_owner_id = unit_data["owner"]
-            u_owner_display = self.nation_data.get(u_owner_id, {}).get("name", u_owner_id)
-            display_text = f"- {u_name} ({u_owner_display})"
-            txt = self.small_font.render(display_text, True, (200, 200, 200))
-            surface.blit(txt, (units_rect.x + 15, y_offset))
-            y_offset += 25
 
     # --- 2. Buildings Box ---
     pygame.draw.rect(surface, (30, 30, 50), bldgs_rect)

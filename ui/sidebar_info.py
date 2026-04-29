@@ -38,24 +38,56 @@ def draw_sidebar_info(self, surface):
         f"Terrain: {terrain.upper()}"
     ]
     
+    current_y = 80
+    text_x = c.SIDEBAR_INFO_X + 10
+    
     for i, line in enumerate(info_lines):
         tsurf = self.small_font.render(line, True, (255, 255, 255))
-        text_x = c.SIDEBAR_INFO_X + 10
-        surface.blit(tsurf, (text_x, 80 + i * 25))
+        surface.blit(tsurf, (text_x, current_y))
+        current_y += 25
+
+    current_y += 10 # Padding
 
     # 5. Combat Detection
     owners_present = list(set(u.get("owner", "Unknown") for u in units))
-    
     is_combat = queries.is_province_in_active_combat(province, self.nation_data)
+
+    # --- NEW: Active Garrison ---
+    header = self.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
+    surface.blit(header, (text_x, current_y))
+    current_y += 25
+
+    if not units:
+        txt = self.small_font.render("(Empty)", True, (150, 150, 150))
+        surface.blit(txt, (text_x + 5, current_y))
+        current_y += 25
+    else:
+        # Scale back the list size if combat is happening to fit the UI height limit
+        display_limit = 4 if is_combat else 12 
+        for u in units[:display_limit]:
+            u_name = u.get("type", "Unit")
+            u_owner_id = u.get("owner", "Unknown")
+            u_owner_display = self.nation_data.get(u_owner_id, {}).get("name", u_owner_id)
+            display_text = f"- {u_name} ({u_owner_display})"
+            
+            txt = self.small_font.render(display_text, True, (200, 200, 200))
+            surface.blit(txt, (text_x + 5, current_y))
+            current_y += 20
+            
+        if len(units) > display_limit:
+            txt = self.small_font.render(f" + {len(units) - display_limit} more", True, (150, 150, 150))
+            surface.blit(txt, (text_x + 5, current_y))
+            current_y += 20
+
+    current_y += 10 # Padding before next section
 
     # 6. Draw the Combat Zone Section
     if is_combat:
-        y_offset = 180
         x_offset = c.SIDEBAR_INFO_X + 10
         header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
-        surface.blit(header, (x_offset, y_offset))
+        surface.blit(header, (x_offset, current_y))
         
-        current_y = y_offset + 35
+        current_y += 35
         
         for side_id in owners_present:
             side_data = self.nation_data.get(side_id, {})
