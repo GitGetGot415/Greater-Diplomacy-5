@@ -76,8 +76,8 @@ BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
 
 # --- Top Bar Text Placement ---
 TOP_BAR_DATE_Y = 20
-TOP_BAR_COUNTRY_X = 200
-TOP_BAR_COUNTRY_Y = 20
+TOP_BAR_COUNTRY_X = 180
+TOP_BAR_COUNTRY_Y = 15
 TOP_BAR_TEXT_BG_PADDING = 10
 TOP_BAR_TEXT_BG_ALPHA = 180
 
@@ -111,11 +111,11 @@ EDITOR_BOT_BTN_STEP_X = 110
 # --- Province Menu UI Layout (X, Y, Width, Height) ---
 PROVINCE_UI = {
     "faction_box": (5, 300, 150, 300),
-    "mail_box": (900, 300, 150, 300)
+    "mail_box": (400, 300, 150, 300)
 }
 
 # --- Sidebar Info Panel ---
-SIDEBAR_INFO_X = 500
+SIDEBAR_INFO_X = 900
 SIDEBAR_INFO_Y = 70
 SIDEBAR_INFO_WIDTH = 300
 SIDEBAR_INFO_HEIGHT = 600 # Increased from 450 to accommodate the buildings list
@@ -177,6 +177,7 @@ BASE_MAPS_DIR = "base_maps"
 # Default Map Assets
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
+PROVINCE_BG_FILE = "Province Background.png"
 
 FLAG_SIZE = (60, 40)
 PORTRAIT_SIZE = (60, 60)

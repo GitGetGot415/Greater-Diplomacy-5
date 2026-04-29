@@ -11,8 +11,8 @@ def get_ui_image(filename, scale=1.0):
     
     if cache_key not in _ui_images_cache:
         try:
-            # Load the original image
-            img = pygame.image.load(os.path.join(c.ASSETS_DIR, filename)).convert()
+            # Load the original image (Change .convert() to .convert_alpha())
+            img = pygame.image.load(os.path.join(c.ASSETS_DIR, filename)).convert_alpha()
             
             # Apply scaling if the scale multiplier is not exactly 1.0
             if scale != 1.0:

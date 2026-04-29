@@ -50,13 +50,7 @@ def draw_map_screen(self, surface):
             surface.blit(pygame.transform.scale(view, (int(clipped.width*self.camera.zoom), int(clipped.height*self.camera.zoom))), (0, self.top_ui_height))
 
     # --- LAYER 2: SELECTION & HOVER ---
-    if self.selected_province:
-        # Darken everything for the modal effect
-        modal_overlay = pygame.Surface((surface.get_width(), surface.get_height() - self.total_ui_h), pygame.SRCALPHA)
-        modal_overlay.fill((0, 0, 0, 160)) 
-        surface.blit(modal_overlay, (0, self.top_ui_height))
-        province_select.draw_province_select(self, surface)
-    else:
+    if not self.selected_province:
         hover_renderer.draw_hover_glow(self, surface)
 
     # --- LAYER 3: OVERLAYS (Units & Movement Arrows) ---
@@ -74,6 +68,22 @@ def draw_map_screen(self, surface):
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     country_names.draw_country_names(self, surface)
+    
+    # --- LAYER 3.8: PROVINCE MENU OVERLAYS ---
+    if self.selected_province:
+        if self.selection_mode:
+            # Use the transparent black for country selection confirmation
+            modal_overlay = pygame.Surface((surface.get_width(), surface.get_height() - self.total_ui_h), pygame.SRCALPHA)
+            modal_overlay.fill((0, 0, 0, 160)) 
+            surface.blit(modal_overlay, (0, self.top_ui_height))
+        else:
+            # Use the custom transparent PNG for the actual province menu
+            province_bg = ui_bars.get_ui_image(c.PROVINCE_BG_FILE)
+            if province_bg.get_size() != surface.get_size():
+                province_bg = pygame.transform.scale(province_bg, surface.get_size())
+            surface.blit(province_bg, (0, 0))
+            
+        province_select.draw_province_select(self, surface)
             
     # --- LAYER 4: UI BARS & HUD ---
     ui_bars.draw_ui_bars(self, surface)
