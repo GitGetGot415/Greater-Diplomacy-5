@@ -1,4 +1,3 @@
-# --- IN screens/map_related_screens/messages.py ---
 import pygame
 from gameState import GameState
 import data.constants as c
@@ -15,7 +14,12 @@ class Messages_Screen(GameState):
         self.selected_recipient = None
         self.compose_text = ""
         self.scroll_y = 0
+        
         self.contact_scroll_y = 0
+        self.max_contact_scroll = 0
+        self.is_dragging_contacts = False
+        
+        self.show_all_contacts = False
 
     def start_messages(self, map_ref):
         self.map_screen = map_ref
@@ -23,38 +27,88 @@ class Messages_Screen(GameState):
         self.compose_text = ""
         self.scroll_y = 0
         self.contact_scroll_y = 0
+        self.is_dragging_contacts = False
+        self.show_all_contacts = False
         self.refresh_ui()
 
+    def save_current_draft(self):
+        """Auto-saves whatever is currently typed in the box before switching menus/contacts."""
+        if self.selected_recipient and self.map_screen:
+            if self.compose_text.strip():
+                diplomacy_logic.queue_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, self.compose_text)
+            else:
+                diplomacy_logic.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+
     def select_recipient(self, target):
+        self.save_current_draft() # Auto-save current draft before switching
+        
+        # Toggle off if clicking the already selected contact
+        if self.selected_recipient == target:
+            self.selected_recipient = None
+            self.compose_text = ""
+            self.refresh_ui()
+            return
+        
         self.selected_recipient = target
         self.scroll_y = 0  # Reset scroll for new chat history
+        
         # Mark all messages from this target as read
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         for msg in p_data.get("inbox", []):
             if msg.get("sender") == target:
                 msg["read"] = True
                 
-        # Load any existing draft
+        # Load any existing draft for the new target
         self.compose_text = queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
         self.refresh_ui()
 
+    def toggle_add_contact(self):
+        self.show_all_contacts = not self.show_all_contacts
+        self.contact_scroll_y = 0
+        self.refresh_ui()
+
+    def select_new_contact(self, target):
+        self.show_all_contacts = False
+        self.contact_scroll_y = 0  # Snap scroll back to top to prevent buttons hiding off-screen
+        self.select_recipient(target)
+
     def send_message(self):
-        if self.selected_recipient and self.compose_text.strip():
-            msg = diplomacy_logic.queue_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, self.compose_text)
-            self.compose_text = "" # Clear box instantly on send
-            self.map_screen.show_feedback(msg)
+        if self.selected_recipient:
+            if self.compose_text.strip():
+                msg = diplomacy_logic.queue_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, self.compose_text)
+                self.map_screen.show_feedback(msg)
+            else:
+                msg = diplomacy_logic.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                self.map_screen.show_feedback(msg)
             self.refresh_ui()
 
     def additional_events(self, event):
-        # Determine which pane we are scrolling in based on mouse X
         mx, my = pygame.mouse.get_pos()
+        
+        # --- Scrolling Logic ---
         if event.type == pygame.MOUSEWHEEL:
             if mx < c.MSG_LEFT_PANE_W:
-                self.contact_scroll_y = min(0, self.contact_scroll_y + event.y * 30)
+                self.contact_scroll_y += event.y * 30
+                self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
+                self.refresh_ui() # CRITICAL: We have to refresh UI to physically move the buttons!
             else:
                 self.scroll_y = min(0, self.scroll_y + event.y * 30)
 
-        # Text Input Logic
+        # --- Drag to Scroll Logic ---
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if mx < c.MSG_LEFT_PANE_W:
+                self.is_dragging_contacts = True
+        
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.is_dragging_contacts = False
+            
+        elif event.type == pygame.MOUSEMOTION:
+            if getattr(self, 'is_dragging_contacts', False):
+                self.contact_scroll_y += event.rel[1]
+                self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
+                self.refresh_ui() # CRITICAL: Update button positions on drag
+                
+        # --- Text Input Logic ---
         if self.selected_recipient:
             locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             if not locked:
@@ -71,21 +125,66 @@ class Messages_Screen(GameState):
         playable = [country for country, d in self.map_screen.nation_data.items() if d.get("is_playable") and country != self.map_screen.player_country and country in active_nations]
         playable.sort()
 
-        y_off = 80 + self.contact_scroll_y
-        for country in playable:
-            color = "green" if self.selected_recipient == country else "grey"
-            
-            # Check for unread messages specifically from this contact
-            p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-            unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
-            
-            display_text = f"{country} ({unread})" if unread > 0 else country
-            if unread > 0 and self.selected_recipient != country:
-                color = "red" # Highlight contacts with unread messages
+        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        inbox = p_data.get("inbox", [])
 
-            btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name))
+        # Extract contacts we have a history with
+        history_contacts = set()
+        for msg in inbox:
+            sender = msg.get("sender", "")
+            if sender.startswith("To: "):
+                history_contacts.add(sender[4:])
+            else:
+                history_contacts.add(sender)
+
+        # Automatically include contacts if we have a message drafted for them
+        pending = p_data.get("pending_diplomacy", {})
+        for target in pending.keys():
+            if target in playable:
+                if queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
+                    history_contacts.add(target)
+
+        # Force the currently selected recipient to appear even if we haven't sent a message yet
+        if self.selected_recipient:
+            history_contacts.add(self.selected_recipient)
+
+        y_off = 80 + self.contact_scroll_y
+        
+        if self.show_all_contacts:
+            # Display directory to add a new contact
+            btn = Button(20, y_off, "medium", "red", "Cancel", self.toggle_add_contact)
             self.elements.append(btn)
             y_off += 60
+
+            display_list = [c for c in playable if c not in history_contacts]
+            for country in display_list:
+                btn = Button(20, y_off, "medium", "grey", country, lambda c_name=country: self.select_new_contact(c_name))
+                self.elements.append(btn)
+                y_off += 60
+        else:
+            # Display active history list
+            btn = Button(20, y_off, "medium", "blue", "+ Add Contact", self.toggle_add_contact)
+            self.elements.append(btn)
+            y_off += 60
+
+            display_list = [c for c in playable if c in history_contacts]
+            for country in display_list:
+                color = "green" if self.selected_recipient == country else "grey"
+                
+                # Check for unread messages specifically from this contact
+                unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
+                
+                display_text = f"{country} ({unread})" if unread > 0 else country
+                if unread > 0 and self.selected_recipient != country:
+                    color = "red" # Highlight contacts with unread messages
+
+                btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name))
+                self.elements.append(btn)
+                y_off += 60
+
+        # Calculate bounds to prevent scrolling into the void
+        absolute_height = y_off - self.contact_scroll_y 
+        self.max_contact_scroll = min(0, c.SCREEN_HEIGHT - absolute_height - 20)
 
         # Send Button in the Input Area
         if self.selected_recipient:
@@ -95,7 +194,7 @@ class Messages_Screen(GameState):
             if locked:
                 self.elements.append(Button(btn_x, btn_y, "small", "grey", "Diplomat Busy", lambda: None))
             else:
-                self.elements.append(Button(btn_x, btn_y, "small", "blue", "Send", self.send_message))
+                self.elements.append(Button(btn_x, btn_y, "small", "blue", "Draft", self.send_message))
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -177,6 +276,7 @@ class Messages_Screen(GameState):
             current_y -= 15 # Padding between messages
 
     def exit_to_map(self):
+        self.save_current_draft() # Auto-save before exiting
         self.next_state, self.done = "MAP", True
 
     def handle_back_key(self):
