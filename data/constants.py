@@ -132,7 +132,7 @@ ORDER_BTN_X = 600
 # GAME RULES & TIMING
 # ==========================================
 
-START_YEAR = 1850
+START_YEAR = 1900
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
 
 # ==========================================

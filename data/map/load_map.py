@@ -74,7 +74,7 @@ def load_map_assets(self, load_path):
         self.active_players = []
         self.current_player_index = 0
         self.loop_map = True
-        self.time_manager = TimeHandler(start_year=1850)
+        self.time_manager = TimeHandler(start_year=c.START_YEAR)
         
         # Load the base nation templates so they are ready for the randomizer
         self.nation_data = country_io.load_all_country_data()
@@ -184,7 +184,7 @@ def load_map_assets(self, load_path):
         self.current_player_index = 0
         self.loop_map = True
         self.default_research = None
-        self.time_manager = TimeHandler(start_year=1850)
+        self.time_manager = TimeHandler(start_year=c.START_YEAR)
 
     # --- 5. Province Processing ---
     json_path = os.path.join(load_path, "map_data.json")

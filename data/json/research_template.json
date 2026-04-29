@@ -1,5 +1,5 @@
 {
-    "infantry_type": { "category": "INFANTRY", "max_lvl": 23, "cost": 300, "req": {}, "years": [1850, 1855, 1860, 1865, 1870, 1875, 1880, 1885, 1890, 1895, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948] },
+    "infantry_type": { "category": "INFANTRY", "max_lvl": 13, "cost": 300, "req": {}, "years": [1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948] },
     "cavalry": { "category": "INFANTRY", "max_lvl": 1, "cost": 300, "req": {}, "years": [1900] },
     "civilian_car": { "category": "TANKS", "max_lvl": 1, "cost": 300, "req": {}, "years": [1905] },
     "ww1_armored_car": { "category": "TANKS", "max_lvl": 1, "cost": 300, "req": {"civilian_car": 1}, "years": [1910] },

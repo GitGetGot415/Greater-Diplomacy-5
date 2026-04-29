@@ -153,13 +153,13 @@ def get_building_required_tech(b_name):
 def get_highest_infantry(nation_data_block, tech_tree, unit_library):
     """Finds the highest level infantry unit the nation has researched."""
     res_lvl = nation_data_block.get("research", {}).get("infantry_type", 1)
-    inf_years = tech_tree.get("infantry_type", {}).get("years", [1850])
+    inf_years = tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
     year_val = inf_years[min(res_lvl - 1, len(inf_years)-1)]
     u_name = f"Infantry Type {year_val}"
     
     if u_name in unit_library:
         return u_name
-    return "Infantry Type 1850"
+    return f"Infantry Type {c.START_YEAR}"
 
 
 # ==========================================

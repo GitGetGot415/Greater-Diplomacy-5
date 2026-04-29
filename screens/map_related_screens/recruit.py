@@ -87,7 +87,7 @@ class Recruit_Screen(GameState):
                 # --- NEW: Infantry & Cavalry Processing ---
                 if tech_key == "infantry_type":
                     # Pull the array directly from the JSON template
-                    inf_years = self.tech_tree.get("infantry_type", {}).get("years", [1850])
+                    inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
                     if researched_lvl > 0:
                         year = inf_years[min(researched_lvl - 1, len(inf_years)-1)]
                         highest_unlocked = f"Infantry Type {year}"

@@ -183,7 +183,7 @@ def randomize_all_provinces(map_screen, settings):
     # Helper function to get the correct infantry name for a nation's tech level
     def get_infantry_type(nation):
         res_lvl = map_screen.nation_data[nation]["research"].get("infantry_type", 1)
-        inf_years = struct.get("infantry_type", {}).get("years", [1850])
+        inf_years = struct.get("infantry_type", {}).get("years", [c.START_YEAR])
         year_val = inf_years[min(res_lvl - 1, len(inf_years)-1)]
         return f"Infantry Type {year_val}"
 

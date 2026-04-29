@@ -1,7 +1,7 @@
 import data.constants as c
 
 class TimeHandler:
-    def __init__(self, start_year=1850):
+    def __init__(self, start_year=c.START_YEAR):
         self.day = c.DAYS_PER_TURN
         self.month_index = 0
         self.year = start_year

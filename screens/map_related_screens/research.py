@@ -8,7 +8,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
 
-minimum_year = 1850
+minimum_year = c.START_YEAR
 maximum_year = 2000
 
 class Research_Screen(GameState):
@@ -108,7 +108,7 @@ class Research_Screen(GameState):
 
     def get_display_name(self, tech_key, lvl):
         if tech_key == "infantry_type":
-            inf_years = self.tech_tree.get("infantry_type", {}).get("years", [1850])
+            inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
             year = inf_years[min(lvl - 1, len(inf_years)-1)]
             return f"Infantry Type {year}"
         
@@ -300,8 +300,8 @@ class Research_Screen(GameState):
         end_year = int((c.SCREEN_WIDTH - self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
 
         # --- NEW: Clamp the visual tick marks ---
-        start_year = max(1850, start_year)
-        end_year = min(2001, end_year) # 2001 so 2000 is included
+        start_year = max(minimum_year, start_year)
+        end_year = min(maximum_year + 1, end_year) # +1 so maximum_year is included
         # ----------------------------------------
 
         for year in range(start_year, end_year):
@@ -501,12 +501,12 @@ class Research_Screen(GameState):
                 curr_y += 28
 
     def enforce_scroll_bounds(self):
-        """Prevents the timeline from scrolling past 1850 or 2000."""
+        """Prevents the timeline from scrolling past minimum_year or maximum_year."""
         if self.map_screen:
             current_year = self.map_screen.time_manager.year
             # Negative scroll moves the camera to future years (right), positive to past years (left)
-            min_scroll_x = -((2000 - current_year) * self.pixels_per_year)
-            max_scroll_x = -((1850 - current_year) * self.pixels_per_year)
+            min_scroll_x = -((maximum_year - current_year) * self.pixels_per_year)
+            max_scroll_x = -((minimum_year - current_year) * self.pixels_per_year)
             
             self.target_scroll_x = max(min_scroll_x, min(self.target_scroll_x, max_scroll_x))
             self.scroll_x = max(min_scroll_x, min(self.scroll_x, max_scroll_x))

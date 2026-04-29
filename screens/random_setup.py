@@ -34,10 +34,10 @@ class Random_Setup(GameState):
         return max(1, playable) # Fallback to 1
 
     def reset_to_defaults(self):
-        """Sets default year to 1850 and countries to ~10% of the map."""
-        self.current_year = 1850
+        """Sets default year to 1900 and countries to ~10% of the map."""
+        self.current_year = c.START_YEAR
         # Default slider values (0.0 to 1.0)
-        self.year_slider_val = (self.current_year - 1850) / (1950 - 1850)
+        self.year_slider_val = (self.current_year - c.START_YEAR) / (2000 - c.START_YEAR)
         
         self.current_countries = min(20, self.max_countries)
         self.country_slider_val = self.current_countries / self.max_countries
@@ -91,7 +91,7 @@ class Random_Setup(GameState):
 
     def update_year(self, val):
         self.year_slider_val = val
-        self.current_year = int(1850 + (val * 100))
+        self.current_year = int(c.START_YEAR + (val * 100))
         # Directly update the text on the existing slider at Index 2
         self.elements[2].text = f"Start Year: {self.current_year}"
 
