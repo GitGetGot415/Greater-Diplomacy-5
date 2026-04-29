@@ -183,12 +183,13 @@ def draw_owner_portrait(self, surface):
     name_shadow = font.render(leader_name, True, (0, 0, 0))
     title_shadow = small_font.render(leader_title, True, (0, 0, 0))
 
-    text_x = start_x + 135
+    text_x = start_x # + 135
+    text_y = start_y + 135
     
     # Blit Name
-    surface.blit(name_shadow, (text_x + 1, start_y + 11))
-    surface.blit(name_surf, (text_x, start_y + 10))
+    surface.blit(name_shadow, (text_x + 1, text_y + 11))
+    surface.blit(name_surf, (text_x, text_y + 10))
 
     # Blit Title
-    surface.blit(title_shadow, (text_x + 1, start_y + 41))
-    surface.blit(title_surf, (text_x, start_y + 40))
+    surface.blit(title_shadow, (text_x + 1, text_y + 41))
+    surface.blit(title_surf, (text_x, text_y + 40))

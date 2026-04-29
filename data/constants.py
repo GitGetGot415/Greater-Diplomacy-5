@@ -122,8 +122,8 @@ SIDEBAR_INFO_HEIGHT = 600 # Increased from 450 to accommodate the buildings list
 
 # --- Action Buttons UI Layout ---
 ACTION_BTN_X = 200
-ACTION_BTN_START_Y = 225
-ACTION_BTN_STEP_Y = 40
+ACTION_BTN_START_Y = 300
+ACTION_BTN_STEP_Y = 33
 
 ORDER_BTN_X = 600
 
@@ -157,7 +157,7 @@ SIZES = {
     "tech_square": (80, 80),
     "small": (100, 40),
     "left_ui_bar": (120, 50),
-    "diplomatic": (200, 35),
+    "diplomatic": (200, 30),
     "medium": (200, 50),
     "large": (300, 80)
 }
