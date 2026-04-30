@@ -151,6 +151,8 @@ def process_combat(self):
             sides[owner]["total_atk"] += u.get("attack", 5)
 
         owners = list(sides.keys())
+        combat_occurred = False
+        
         for i in range(len(owners)):
             for j in range(i + 1, len(owners)):
                 nation_a = owners[i]
@@ -160,10 +162,17 @@ def process_combat(self):
                 at_war = queries.are_at_war(nation_a, nation_b, self.nation_data)
                 
                 if at_war:
+                    combat_occurred = True
                     # Side A attacks Side B
                     apply_group_damage(sides[nation_a]["total_atk"], sides[nation_b]["units"])
                     # Side B attacks Side A
                     apply_group_damage(sides[nation_b]["total_atk"], sides[nation_a]["units"])
+
+        # --- NEW: Wipe queues for units engaged in combat ---
+        if combat_occurred:
+            for u in units:
+                if "order" in u and "path" in u["order"]:
+                    u["order"]["path"] = []
 
         # Remove dead units (HP <= 0)
         province["units"] = [u for u in units if u.get("health", 0) > 0]
@@ -251,7 +260,6 @@ def process_movement(self):
 
     for step in range(max_speed):
         for unit in moving_units:
-            # --- THE BUG FIX ---
             # Explicitly check if this individual unit has run out of moves
             if step >= unit.get("speed", 1):
                 continue
@@ -268,13 +276,17 @@ def process_movement(self):
             
             # --- NEW: Combat Lock (Execution Check) ---
             # If the unit gets intercepted in a province during its move, 
-            # it loses all remaining speed and cannot advance into an enemy tile
+            # it loses all remaining speed and its queue is wiped.
             curr_prov = self.id_to_province.get(unit["_current_province_id"])
             if curr_prov:
                 in_combat = queries.is_nation_in_combat_here(unit["owner"], curr_prov, self.nation_data)
-                if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.nation_data):
-                    order["path"] = []
-                    continue
+                
+                if in_combat:
+                    # If it already moved this turn (step > 0) and entered combat, stop immediately.
+                    # Or, if it started in combat and is trying to advance deeper into enemy territory, stop.
+                    if step > 0 or queries.is_hostile_territory(unit["owner"], dest_owner, self.nation_data):
+                        order["path"] = []
+                        continue
             # ------------------------------------------
 
             # --- NEW SHIP RULES EVALUATION ---

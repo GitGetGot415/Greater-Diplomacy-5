@@ -65,7 +65,22 @@ def draw_map_screen(self, surface):
                 if path:
                     # Dynamically pull the color of the unit's owner (fallback to yellow)
                     owner_color = self.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
-                    overlay_renderer.draw_movement_path(surface, self, province, path, color=owner_color)
+                    
+                    # --- NEW: Split paths to render queued segments differently ---
+                    speed = unit.get("speed", 1)
+                    immediate_path = path[:speed]
+                    queued_path = path[speed:]
+                    
+                    if immediate_path:
+                        overlay_renderer.draw_movement_path(surface, self, province, immediate_path, color=owner_color)
+                        
+                    if queued_path:
+                        # Brighten the owner color heavily for the queue overlay
+                        bright_color = (min(255, owner_color[0] + 150), min(255, owner_color[1] + 150), min(255, owner_color[2] + 150))
+                        
+                        # Start the queued line from the end of the immediate path
+                        q_start = self.id_to_province.get(immediate_path[-1]) if immediate_path else province
+                        overlay_renderer.draw_movement_path(surface, self, q_start, queued_path, color=bright_color, alpha=120)
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     country_names.draw_country_names(self, surface)

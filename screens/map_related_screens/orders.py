@@ -29,13 +29,33 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
-        self.selected_unit_index = None
+        
+        # --- NEW: Auto-select logic ---
+        # Gather the exact list indices of the units you own on this tile
+        units = self.target_province.get("units", [])
+        player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.player_country]
+        
+        if len(player_unit_indices) > 1:
+            self.selected_unit_index = "ALL"
+        elif len(player_unit_indices) == 1:
+            self.selected_unit_index = player_unit_indices[0]
+        else:
+            self.selected_unit_index = None
+            
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
         
         units = self.target_province.get("units", [])
+        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+        
+        # --- NEW: Select All Button ---
+        if len(player_units) > 1:
+            all_color = "blue" if self.selected_unit_index == "ALL" else "grey"
+            btn_all = Button(100, 90, "medium", all_color, "Select All", lambda: self.select_unit("ALL"))
+            self.elements.append(btn_all)
+
         for i, unit in enumerate(units):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
@@ -47,43 +67,46 @@ class Orders_Screen(GameState):
             self.elements.append(btn)
 
         # --- THE NEW UI BUTTONS ---
-        if self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
-            active_unit = units[self.selected_unit_index]
-            u_type = active_unit.get("type", "")
-            order_type = active_unit.get("order", {}).get("type", "")
-
-            # Disband Button using standard action button position
-            btn_disband = Button(c.ORDER_BTN_X, 150, "medium", "red", "Disband", self.disband_unit)
-            self.elements.append(btn_disband)
-
-            # --- NEW: Combat Check ---
-            player_country = self.map_screen.player_country
-            in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
-            # -------------------------
-
-            # Convoy Conversion Logic (Enforce coastal/port rules)
-            is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
-            is_coastal = self.target_province.get("is_coastal", False)
-            
-            # Using our updated query logic instead of isolated stat lookups
-            is_convoy = u_type.startswith("Convoy")
-            is_naval = queries.is_naval_unit(u_type)
-
-            if order_type == "CONVERT":
-                txt = f"Cancel Convert ({active_unit['order'].get('turns_left', 0)} turns)"
-                # Changed to a clickable red button pointing to our new cancel method
-                btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "red", txt, self.cancel_conversion)
-                self.elements.append(btn_conv)
-            elif is_convoy: # Check if it starts with Convoy
-                if in_combat:
-                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
-                elif not is_water:
-                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "blue", "To Land Unit", self.convert_unit)
-                else:
-                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Must be on Land", lambda: None)
-                self.elements.append(btn_conv)
+        if self.selected_unit_index is not None:
+            if self.selected_unit_index == "ALL":
+                target_units = player_units
+            elif 0 <= self.selected_unit_index < len(units):
+                target_units = [units[self.selected_unit_index]]
             else:
-                if not is_naval:
+                target_units = []
+
+            if target_units:
+                order_type = target_units[0].get("order", {}).get("type", "")
+
+                # Disband Button using standard action button position
+                btn_disband = Button(c.ORDER_BTN_X, 150, "medium", "red", "Disband", self.disband_unit)
+                self.elements.append(btn_disband)
+
+                # --- Combat Check ---
+                player_country = self.map_screen.player_country
+                in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
+
+                # Convoy Conversion Logic (Enforce coastal/port rules)
+                is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
+                is_coastal = self.target_province.get("is_coastal", False)
+                
+                # Check if group is pure land or pure convoy to avoid mixed conversion states
+                all_convoy = all(u.get("type", "").startswith("Convoy") for u in target_units)
+                all_land = all(not u.get("type", "").startswith("Convoy") and not queries.is_naval_unit(u.get("type", "")) for u in target_units)
+
+                if order_type == "CONVERT":
+                    txt = f"Cancel Convert"
+                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "red", txt, self.cancel_conversion)
+                    self.elements.append(btn_conv)
+                elif all_convoy:
+                    if in_combat:
+                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
+                    elif not is_water:
+                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "blue", "To Land Unit", self.convert_unit)
+                    else:
+                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Must be on Land", lambda: None)
+                    self.elements.append(btn_conv)
+                elif all_land:
                     if in_combat:
                         btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
                     elif is_coastal or is_water:
@@ -91,16 +114,33 @@ class Orders_Screen(GameState):
                     else:
                         btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Must be Coastal", lambda: None)
                     self.elements.append(btn_conv)
+                else:
+                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Cannot Convert Mixed Group", lambda: None)
+                    self.elements.append(btn_conv)
 
     def disband_unit(self):
         units = self.target_province.get("units", [])
-        if self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+
+        if self.selected_unit_index == "ALL":
+            # Loop backwards to safely pop multiple elements
+            for i in reversed(range(len(units))):
+                if units[i].get("owner") == self.map_screen.player_country:
+                    unit = units.pop(i)
+                    u_type = unit.get("original_type", unit.get("type"))
+                    stats = self.unit_library.get(u_type, {})
+                    queries.refund_resources(p_data, stats)
+            
+            self.map_screen.show_feedback("Disbanded all units & Refunded")
+            self.selected_unit_index = None
+            self.refresh_ui()
+
+        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
             unit = units.pop(self.selected_unit_index)
             
             # Refund based on the original unit type
             u_type = unit.get("original_type", unit.get("type"))
             stats = self.unit_library.get(u_type, {})
-            p_data = self.map_screen.nation_data[self.map_screen.player_country]
             
             queries.refund_resources(p_data, stats)
 
@@ -118,7 +158,18 @@ class Orders_Screen(GameState):
         # -----------------------------------------------------
 
         units = self.target_province.get("units", [])
-        if self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
+        
+        if self.selected_unit_index == "ALL":
+            for unit in units:
+                if unit.get("owner") == player_country:
+                    u_type = unit.get("type", "")
+                    if not queries.is_naval_unit(u_type) or u_type.startswith("Convoy"):
+                        target_type = "Land Unit" if u_type.startswith("Convoy") else "Convoy"
+                        unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": target_type}
+            self.map_screen.show_feedback("Converting group (1 turn)")
+            self.refresh_ui()
+
+        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
             unit = units[self.selected_unit_index]
             u_type = unit.get("type", "")
 
@@ -130,7 +181,16 @@ class Orders_Screen(GameState):
 
     def cancel_conversion(self):
         units = self.target_province.get("units", [])
-        if self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
+        
+        if self.selected_unit_index == "ALL":
+            for unit in units:
+                if unit.get("owner") == self.map_screen.player_country:
+                    if "order" in unit and unit["order"].get("type") == "CONVERT":
+                        del unit["order"]
+            self.map_screen.show_feedback("Group Conversion Cancelled")
+            self.refresh_ui()
+
+        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
             unit = units[self.selected_unit_index]
             if "order" in unit and unit["order"].get("type") == "CONVERT":
                 del unit["order"]
@@ -161,7 +221,7 @@ class Orders_Screen(GameState):
             self.additional_events(event)
 
     def additional_events(self, event):
-        # --- NEW: Dynamic Map Hover Update ---
+        # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
             mx, my = event.pos
             cam = self.map_screen.camera
@@ -192,35 +252,53 @@ class Orders_Screen(GameState):
             dest = self.get_clicked_province(event.pos)
             if not dest: return
 
-            unit = self.target_province["units"][self.selected_unit_index]
-            
+            units = self.target_province.get("units", [])
+
+            if self.selected_unit_index == "ALL":
+                target_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+            elif 0 <= self.selected_unit_index < len(units):
+                target_units = [units[self.selected_unit_index]]
+            else:
+                target_units = []
+
+            if not target_units: return
+
             # --- THE FIX ---
-            if isinstance(unit.get("order"), dict) and unit["order"].get("type") == "CONVERT":
+            if any(isinstance(u.get("order"), dict) and u["order"].get("type") == "CONVERT" for u in target_units):
                 self.map_screen.show_feedback("Cannot move while converting!")
                 return
             
-            if "order" not in unit or not isinstance(unit["order"], dict):
-                unit["order"] = {"type": "MOVE", "path": []}
+            for unit in target_units:
+                if "order" not in unit or not isinstance(unit["order"], dict):
+                    unit["order"] = {"type": "MOVE", "path": []}
+                if "path" not in unit["order"]:
+                    unit["order"]["path"] = []
+
+            current_path = target_units[0]["order"]["path"]
             
-            if "path" not in unit["order"]:
-                unit["order"]["path"] = []
-            
-            current_path = unit["order"]["path"]
-            speed_limit = unit.get("speed", 1)
+            # Use the min() generator to find the slowest unit out of all selected
+            speed_limit = min(u.get("speed", 1) for u in target_units)
 
             if not current_path:
                 start_node = self.target_province
             else:
                 start_node = self.map_screen.id_to_province.get(current_path[-1])
 
-            if len(current_path) < speed_limit:
-                if dest["id"] in start_node["neighbors"]:
-                    if self.can_unit_enter(unit, dest):
-                        current_path.append(dest["id"])
-                        self.map_screen.show_feedback(f"Path: {len(current_path)}/{speed_limit}")
-                        self.refresh_ui()
-            else:
-                self.map_screen.show_feedback("Maximum speed reached!")
+            # --- NEW: Unlimited Queueing Logic ---
+            if dest["id"] in start_node["neighbors"]:
+                if all(self.can_unit_enter(u, dest) for u in target_units):
+                    
+                    # Generate a single new path baseline so Python doesn't cross-contaminate lists in memory
+                    new_path = current_path.copy()
+                    new_path.append(dest["id"])
+                    
+                    for unit in target_units:
+                        unit["order"]["path"] = new_path.copy()
+                        
+                    # Feedback update based on if it's immediate or queued
+                    status_str = "Queued" if len(new_path) > speed_limit else "Added"
+                    self.map_screen.show_feedback(f"Path {status_str}: {len(new_path)} steps (Speed: {speed_limit})")
+                    self.refresh_ui()
 
     def can_unit_enter(self, unit, dest):
         # Use the constant imported from data.constants
@@ -331,6 +409,21 @@ class Orders_Screen(GameState):
             # Draw border
             pygame.draw.rect(surface, (100, 100, 250), bg_rect, 2)
         
+        # --- Helper for Split Path Drawing ---
+        def draw_split_path(start_prov, path, speed, base_color):
+            if not path: return
+            
+            immediate_path = path[:speed]
+            queued_path = path[speed:]
+            
+            if immediate_path:
+                overlay_renderer.draw_movement_path(surface, self.map_screen, start_prov, immediate_path, color=base_color)
+                
+            if queued_path:
+                bright_color = (min(255, base_color[0] + 150), min(255, base_color[1] + 150), min(255, base_color[2] + 150))
+                q_start = self.map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
+                overlay_renderer.draw_movement_path(surface, self.map_screen, q_start, queued_path, color=bright_color, alpha=120)
+        
         for i, unit in enumerate(units):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
@@ -349,35 +442,55 @@ class Orders_Screen(GameState):
                 surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
                 self.cancel_rects.append((cancel_rect, i))
                 
-                # Use the owner's color to draw the path
-                overlay_renderer.draw_movement_path(surface, self.map_screen, self.target_province, path, color=owner_color)
+                # Split draw using the helper function
+                draw_split_path(self.target_province, path, unit.get("speed", 1), owner_color)
 
         if self.selected_unit_index is not None:
-            active_unit = units[self.selected_unit_index]
-            active_path = active_unit.get("order", {}).get("path", [])
-            
-            if not active_path:
-                last_node = self.target_province
+            if self.selected_unit_index == "ALL":
+                # Find the first player unit to act as the reference for drawing the path preview
+                active_unit = player_units[0] if player_units else None
             else:
-                last_node = self.map_screen.id_to_province.get(active_path[-1])
+                active_unit = units[self.selected_unit_index]
+                
+            if active_unit:
+                active_path = active_unit.get("order", {}).get("path", [])
+                
+                if not active_path:
+                    last_node = self.target_province
+                else:
+                    last_node = self.map_screen.id_to_province.get(active_path[-1])
 
-            if last_node:
-                for n_id in last_node["neighbors"]:
-                    neighbor = self.map_screen.id_to_province.get(n_id)
-                    if neighbor:
-                        cam = self.map_screen.camera
-                        cx, cy = neighbor["center"]
-                        sx = (cx - cam.pos.x) * cam.zoom
-                        sy = (cy - cam.pos.y) * cam.zoom + self.map_screen.top_ui_height
+                if last_node:
+                    for n_id in last_node["neighbors"]:
+                        neighbor = self.map_screen.id_to_province.get(n_id)
+                        if neighbor:
+                            cam = self.map_screen.camera
+                            cx, cy = neighbor["center"]
+                            sx = (cx - cam.pos.x) * cam.zoom
+                            sy = (cy - cam.pos.y) * cam.zoom + self.map_screen.top_ui_height
+                            
+                            if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
+                                pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
+
+                mouse_pos = pygame.mouse.get_pos()
+                hovered = self.get_clicked_province(mouse_pos)
+                if hovered and hovered["id"] in last_node["neighbors"]:
+                    
+                    # Calculate speed limit based on group or individual selection
+                    speed_limit = min(u.get("speed", 1) for u in player_units) if self.selected_unit_index == "ALL" else active_unit.get("speed", 1)
+                    
+                    # Determine styling based on if this specific hover step exceeds the speed
+                    is_queued = len(active_path) >= speed_limit
+                    
+                    preview_color = owner_color
+                    preview_alpha = 255
+                    
+                    if is_queued:
+                        preview_color = (min(255, owner_color[0] + 150), min(255, owner_color[1] + 150), min(255, owner_color[2] + 150))
+                        preview_alpha = 120
                         
-                        if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
-                            pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
-
-            mouse_pos = pygame.mouse.get_pos()
-            hovered = self.get_clicked_province(mouse_pos)
-            if hovered and hovered["id"] in last_node["neighbors"]:
-                # Use the owner's color to draw the cursor hover
-                overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=owner_color)
+                    # Use the owner's color to draw the cursor hover with correct alpha logic
+                    overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha)
 
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True

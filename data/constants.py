@@ -127,7 +127,7 @@ ACTION_BTN_X = 200
 ACTION_BTN_START_Y = 300
 ACTION_BTN_STEP_Y = 33
 
-ORDER_BTN_X = 600
+ORDER_BTN_X = SCREEN_WIDTH - 250
 
 # ==========================================
 # SETTINGS

@@ -3,7 +3,7 @@ import math
 
 from map_logic.rendering import symbol_loader
 
-def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0)):
+def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
     if not path_ids: return
 
@@ -46,6 +46,11 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
             thickness = max(2, int(4 * cam.zoom))
             scaled_line = pygame.transform.scale(line_base, (int(dist), thickness))
             rotated_line = pygame.transform.rotate(scaled_line, angle)
+            
+            # --- NEW: Alpha Transparency ---
+            if alpha < 255:
+                rotated_line.set_alpha(alpha)
+                
             rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
             surface.blit(rotated_line, rect)
         else:
@@ -69,6 +74,11 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
             if triangle_img:
                 # Rotate the triangle so it points along the trajectory of the line
                 rotated_tri = pygame.transform.rotate(triangle_img, angle)
+                
+                # --- NEW: Alpha Transparency ---
+                if alpha < 255:
+                    rotated_tri.set_alpha(alpha)
+                    
                 rect = rotated_tri.get_rect(center=end_pos)
                 surface.blit(rotated_tri, rect)
             else:
@@ -82,9 +92,14 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                 pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
         else:
             if circle_img:
+                # --- NEW: Alpha Transparency (Requires copying to not corrupt the cache) ---
+                draw_circle = circle_img.copy() if alpha < 255 else circle_img
+                if alpha < 255:
+                    draw_circle.set_alpha(alpha)
+                    
                 # Plop the circle right on the intermediate coordinate
-                rect = circle_img.get_rect(center=end_pos)
-                surface.blit(circle_img, rect)
+                rect = draw_circle.get_rect(center=end_pos)
+                surface.blit(draw_circle, rect)
             else:
                 # Fallback Circle
                 pygame.draw.circle(surface, color, (int(end_pos[0]), int(end_pos[1])), max(3, int(4 * cam.zoom)))
