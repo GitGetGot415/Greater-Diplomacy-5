@@ -119,7 +119,14 @@ def draw_sidebar_info(self, surface):
             u_name = u.get("type", "Unit")
             u_owner_id = u.get("owner", "Unknown")
             u_owner_display = self.nation_data.get(u_owner_id, {}).get("name", u_owner_id)
-            display_text = f"- {u_name} ({u_owner_display})"
+            
+            # --- FIX: Grab the combat stats ---
+            atk = u.get("attack", 0)
+            defense = u.get("defense", 0)
+            hp = int(u.get("health", 0))
+            
+            # --- FIX: Format the string to match the combat zone ---
+            display_text = f"- {u_name} ({u_owner_display}) (ATK: {atk}) (DEF: {defense}) (HP: {hp})"
             
             txt = self.small_font.render(display_text, True, (200, 200, 200))
             surface.blit(txt, (text_x + 5, current_y))
