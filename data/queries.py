@@ -7,13 +7,13 @@ import re
 _cached_unit_library = None
 _cached_building_library = None
 
-def get_unit_library(): # Removed the underscore here
+def get_unit_library(): 
     global _cached_unit_library
     if _cached_unit_library is None:
         _cached_unit_library = json.load(open(c.UNIT_DATA_PATH)) if os.path.exists(c.UNIT_DATA_PATH) else {}
     return _cached_unit_library
 
-def get_building_library(): # Removed the underscore here
+def get_building_library(): 
     global _cached_building_library
     if _cached_building_library is None:
         _cached_building_library = json.load(open(c.BUILDING_DATA_PATH)) if os.path.exists(c.BUILDING_DATA_PATH) else {}
@@ -76,6 +76,7 @@ def get_faction_leader(faction_name, nation_data):
 def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
     return nation_data.get(nation, {}).get("is_faction_leader", False)
+    
 # ==========================================
 # MOVEMENT QUERIES
 # ==========================================
@@ -300,8 +301,7 @@ def get_nation_provinces_and_units(nation, map_data):
     return owned_provs, owned_units
 
 def get_living_nations(map_data):
-    """Scans the map and returns a set of all nations that currently own at least one province."""
-    
+    """Scans the map and returns a set of all nations that currently own at least one province."""    
     active_nations = set()
     for prov in map_data.values():
         owner = prov.get("owner")
@@ -319,7 +319,7 @@ def get_exact_year(time_manager):
     return time_manager.year + (time_manager.month_index / 12.0) + (time_manager.day / 360.0)
 
 def get_research_multiplier(current_exact_year, target_year):
-    """Calculates the ahead-of-time penalty multiplier. 50% at 1 year ahead, 25% at 2 years, etc."""
+    """Calculates the ahead-of-time penalty multiplier."""
     years_ahead = target_year - current_exact_year
     if years_ahead > 0:
         return 0.5 ** years_ahead
@@ -332,7 +332,6 @@ def get_research_multiplier(current_exact_year, target_year):
 
 def is_playable(nation, nation_data):
     """Safely checks if a nation exists and is a playable entity."""
-    
     if nation in c.UNPLAYABLE_NATIONS:
         return False
     return nation_data.get(nation, {}).get("is_playable", False)

@@ -61,14 +61,14 @@ def draw_combat_bubbles(self_map, surface):
             sy = int((cy - cam.pos.y) * cam.zoom) + self_map.top_ui_height
             
             if -50 < sx < surface.get_width() + 50 and 0 < sy < surface.get_height():
-                radius = int(20 * cam.zoom)
+                radius = int(12 * cam.zoom) # Bubble size
                 
-                # Render Bubble
-                bubble = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-                pygame.draw.circle(bubble, color + (120,), (radius, radius), radius)
-                pygame.draw.circle(bubble, color, (radius, radius), max(1, int(3 * cam.zoom)))
-                
-                surface.blit(bubble, (sx - radius, sy - radius))
+                # Draw visual effect
+                pygame.draw.circle(surface, color, (int(sx), int(sy)), radius, max(1, int(3 * cam.zoom)))
+                # Draw semi-transparent inner fill
+                inner = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+                pygame.draw.circle(inner, color + (80,), (radius, radius), radius)
+                surface.blit(inner, (int(sx) - radius, int(sy) - radius))
 
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
@@ -242,11 +242,11 @@ def draw_overlay_content(self, surface):
                                     surface.blit(sym, (sx + offset_x, sy))
                                 else:
                                     # Fallback colored square
-                                    c = (200, 200, 200)
-                                    if res_type == "Iron": c = (180, 180, 180)
-                                    if res_type == "Coal": c = (50, 50, 50)
-                                    if res_type == "Oil": c = (30, 30, 30)
-                                    pygame.draw.rect(surface, c, (sx + offset_x, sy, int(15 * self.camera.zoom), int(15 * self.camera.zoom)))
+                                    c_col = (200, 200, 200)
+                                    if res_type == "Iron": c_col = (180, 180, 180)
+                                    if res_type == "Coal": c_col = (50, 50, 50)
+                                    if res_type == "Oil": c_col = (30, 30, 30)
+                                    pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), int(15 * self.camera.zoom)))
                                 
                                 # Shift right so multiple icons stack side-by-side
                                 offset_x += 20 * self.camera.zoom

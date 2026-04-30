@@ -71,7 +71,8 @@ def process_pinning(self):
                 dest_id = order["path"][0]
                 dest_prov = self.id_to_province.get(dest_id)
                 if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
-                    incoming_attacks.setdefault(dest_id, []).append(unit)
+                    # FIX: Track the origin province ID (province["id"]) along with the unit
+                    incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
     for province in self.map_data.values():
         for unit in province.get("units", []):
@@ -83,7 +84,12 @@ def process_pinning(self):
                 # If moving to hostile territory, check if we are pinned by an incoming attack
                 if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
                     attackers = incoming_attacks.get(province["id"], [])
-                    hostile_attackers = [a for a in attackers if queries.are_at_war(unit["owner"], a["owner"], self.nation_data)]
+                    
+                    # FIX: ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
+                    hostile_attackers = [
+                        a for a, origin_id in attackers 
+                        if queries.are_at_war(unit["owner"], a["owner"], self.nation_data) and origin_id != dest_id
+                    ]
                     
                     if hostile_attackers:
                         # Pinned! Cannot attack outwards. Must defend.
@@ -124,16 +130,10 @@ def process_meeting_engagements(self):
                     apply_group_damage(atk2, units1)
                     apply_group_damage(atk1, units2)
                     
-                    # Retreat Logic: The loser's path is cleared so they stay on their original tile (free movement)
-                    if atk1 > atk2:
-                        for u in units2: u["order"]["path"] = []
-                    elif atk2 > atk1:
-                        for u in units1: u["order"]["path"] = []
-                    else:
-                        # Draw: both bounce back
-                        for u in units1: u["order"]["path"] = []
-                        for u in units2: u["order"]["path"] = []
-                        
+                    # --- NEW: Lock them in combat so they don't slide past each other ---
+                    for u in units1 + units2:
+                        u["_combat_locked"] = True
+                    
                     prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
                     prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
 
@@ -324,6 +324,12 @@ def process_movement(self):
     for province in self.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
+            
+            # --- NEW: Check and clear the combat lock flag ---
+            if unit.pop("_combat_locked", False):
+                units_to_keep.append(unit)
+                continue
+                
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 unit["_current_province_id"] = province["id"]
