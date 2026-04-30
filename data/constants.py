@@ -161,8 +161,8 @@ SETTINGS_CLAUDE_BOX_H = 40
 # GAME RULES & TIMING
 # ==========================================
 
-START_YEAR = 1900
-END_YEAR = 2000
+START_YEAR = 1910
+END_YEAR = 1950
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
 RESEARCH_TIMELINE_SPACING = 80 # Width between years on the research timeline
 
