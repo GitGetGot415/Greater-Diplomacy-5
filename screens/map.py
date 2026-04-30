@@ -562,6 +562,9 @@ class Map(GameState):
 
     def open_map_research_editor(self):
         editor_menus.open_map_research_editor(self)
+        
+    def open_spectator_messages(self):
+        editor_menus.open_spectator_messages(self)
 
     def select_unit_brush(self):
         editor_menus.select_unit_brush(self)
@@ -573,7 +576,11 @@ class Map(GameState):
         editor_menus.open_diplomacy_editor(self)
     
     def open_edit_country(self):
-        if self.player_country and self.player_country != "None":
+        if self.player_country == "Spectator":
+            from ui import editor_menus
+            editor_menus.spec_select_edit_country(self)
+        elif self.player_country and self.player_country != "None":
+            self.editing_country = self.player_country
             self.next_state, self.done = "EDIT_COUNTRY", True
     
     def update_country_centers(self):

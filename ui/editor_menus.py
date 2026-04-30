@@ -174,6 +174,57 @@ def select_building_brush(self):
         except (tk.TclError, Exception):
             break
 
+def spec_select_edit_country(self):
+    """Opens a Tkinter window for a Spectator to select which nation to edit."""
+    active_countries = queries.get_living_nations(self.map_data)
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    root = tk.Tk()
+    root.title("Select Nation to Edit")
+    root.geometry("300x450")
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.editing_country = lb.get(selection[0])
+            self.next_state, self.done = "EDIT_COUNTRY", True
+        close_menu()
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+    tk.Label(root, text="Select Nation to Edit:", font=("Arial", 12)).pack(pady=10)
+    
+    frame = tk.Frame(root)
+    frame.pack(fill="both", expand=True, padx=10)
+    scrollbar = tk.Scrollbar(frame)
+    scrollbar.pack(side="right", fill="y")
+    
+    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+    for n in sorted(active_countries):
+        lb.insert(tk.END, n)
+    lb.pack(side="left", fill="both", expand=True)
+    scrollbar.config(command=lb.yview)
+    
+    tk.Button(root, text="Edit Country", command=on_select, 
+              bg="#FF9800", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+
+    lb.bind('<Double-1>', on_select)
+
+    import pygame
+    while self.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+        except:
+            break
+
 def open_editor_date(self):
     """Opens a Tkinter window to edit the game's starting date."""
     root = tk.Tk()
@@ -396,7 +447,7 @@ def open_editor_economy(self):
 
     root = tk.Tk()
     root.title("Global Economy Overview")
-    root.geometry("1200x500") # Made wider to fit the new detailed strings
+    root.geometry("1200x500") 
     root.attributes("-topmost", True)
     self.menu_active = True
 
@@ -429,12 +480,12 @@ def open_editor_economy(self):
     # Instead, we just grab the unified dictionary from the queries file:
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
-    # --- Treeview UI Setup ---
+    # --- Treeview UI Setup (Added Current Columns) ---
     columns = (
         "Country", 
-        "|1", "P_Inc", "P_Bld", "P_Upk", "P_Net", 
-        "|2", "M_Inc", "M_Bld", "M_Upk", "M_Net", 
-        "|3", "F_Inc", "F_Bld", "F_Upk", "F_Net", 
+        "|1", "P_Cur", "P_Inc", "P_Bld", "P_Upk", "P_Net", 
+        "|2", "M_Cur", "M_Inc", "M_Bld", "M_Upk", "M_Net", 
+        "|3", "F_Cur", "F_Inc", "F_Bld", "F_Upk", "F_Net", 
         "|4"
     )
     
@@ -465,6 +516,7 @@ def open_editor_economy(self):
             stat_type = col.split("_")[1]
             bd = d["breakdown"][res_key]
             
+            if stat_type == "Cur": return self.nation_data.get(c, {}).get(res_key, 0)
             if stat_type == "Inc": return bd["core"] + bd["non_core"] + bd["resources"]
             if stat_type == "Bld": return bd["buildings"]
             if stat_type == "Upk": return d["upkeep"][res_key]
@@ -484,11 +536,11 @@ def open_editor_economy(self):
 
     # Column Formatting
     widths = {
-        "Country": 140,
-        "|1": 25, "P_Inc": 60, "P_Bld": 60, "P_Upk": 60, "P_Net": 60,
-        "|2": 25, "M_Inc": 60, "M_Bld": 60, "M_Upk": 60, "M_Net": 60,
-        "|3": 25, "F_Inc": 60, "F_Bld": 60, "F_Upk": 60, "F_Net": 60,
-        "|4": 25
+        "Country": 130,
+        "|1": 20, "P_Cur": 55, "P_Inc": 55, "P_Bld": 55, "P_Upk": 55, "P_Net": 55,
+        "|2": 20, "M_Cur": 55, "M_Inc": 55, "M_Bld": 55, "M_Upk": 55, "M_Net": 55,
+        "|3": 20, "F_Cur": 55, "F_Inc": 55, "F_Bld": 55, "F_Upk": 55, "F_Net": 55,
+        "|4": 20
     }
 
     for col in columns:
@@ -502,34 +554,121 @@ def open_editor_economy(self):
         for i, c in enumerate(country_list):
             if c not in all_econ: continue
             d = all_econ[c]
+            n_data = self.nation_data.get(c, {})
             
             def get_stats(res_key):
                 bd = d["breakdown"][res_key]
+                cur = int(n_data.get(res_key, 0))
                 inc = int(bd["core"] + bd["non_core"] + bd["resources"])
                 bld = int(bd["buildings"])
                 upk = int(d["upkeep"][res_key])
                 net = int(d["total_inc"][res_key] - d["upkeep"][res_key])
-                return inc, bld, upk, net
+                return cur, inc, bld, upk, net
 
-            p_inc, p_bld, p_upk, p_net = get_stats("manpower")
-            m_inc, m_bld, m_upk, m_net = get_stats("materials")
-            f_inc, f_bld, f_upk, f_net = get_stats("fuel")
+            p_cur, p_inc, p_bld, p_upk, p_net = get_stats("manpower")
+            m_cur, m_inc, m_bld, m_upk, m_net = get_stats("materials")
+            f_cur, f_inc, f_bld, f_upk, f_net = get_stats("fuel")
                         
             # Apply zebra stripe tags
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
             
             tree.insert("", tk.END, values=(
                 c, 
-                "|", p_inc, p_bld, p_upk, p_net, 
-                "|", m_inc, m_bld, m_upk, m_net, 
-                "|", f_inc, f_bld, f_upk, f_net,
+                "|", p_cur, p_inc, p_bld, p_upk, p_net, 
+                "|", m_cur, m_inc, m_bld, m_upk, m_net, 
+                "|", f_cur, f_inc, f_bld, f_upk, f_net,
                 "|"
             ), tags=(tag,))
 
     # Initial population (Defaults to alphabetical)
     populate_tree(sorted(active_countries))
 
-    # Cleaned up the duplicate scrollbar and update loops here!
+    scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
+    tree.configure(yscroll=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    tree.pack(fill="both", expand=True)
+
+    import pygame
+    while self.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+        except:
+            break
+        
+def open_spectator_messages(self):
+    """Opens a Tkinter window listing all messages sent between active countries."""
+    active_countries = queries.get_living_nations(self.map_data)
+
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    root = tk.Tk()
+    root.title("Global Messages Overview")
+    root.geometry("1000x500")
+    root.attributes("-topmost", True)
+    self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+        
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+
+    # --- Styling for Table Look ---
+    style = ttk.Style(root)
+    try:
+        style.theme_use("clam") 
+    except:
+        pass 
+        
+    style.configure("Treeview.Heading", 
+                    background="#d9e1f2", 
+                    font=('Arial', 10, 'bold'),
+                    relief="flat")
+                    
+    style.configure("Treeview", 
+                    background="#ffffff",
+                    fieldbackground="#ffffff",
+                    rowheight=28,
+                    font=('Arial', 10))
+
+    columns = ("Sender", "Receiver", "Type", "Message")
+    tree = ttk.Treeview(root, columns=columns, show="headings")
+    
+    tree.heading("Sender", text="Sender")
+    tree.heading("Receiver", text="Receiver")
+    tree.heading("Type", text="Type")
+    tree.heading("Message", text="Message")
+    
+    tree.column("Sender", width=150, anchor="center")
+    tree.column("Receiver", width=150, anchor="center")
+    tree.column("Type", width=100, anchor="center")
+    tree.column("Message", width=550, anchor="w")
+    
+    # Zebra striping tags
+    tree.tag_configure('evenrow', background='#ffffff')
+    tree.tag_configure('oddrow', background='#f2f2f2') 
+
+    # Populate
+    row_idx = 0
+    for c_name, data in self.nation_data.items():
+        if data.get("is_playable"):
+            inbox = data.get("inbox", [])
+            for msg in inbox:
+                sender = msg.get("sender", "")
+                # Avoid duplicates (sent messages are stored as "To: Receiver" in sender's inbox)
+                if not sender.startswith("To: "):
+                    tag = 'evenrow' if row_idx % 2 == 0 else 'oddrow'
+                    tree.insert("", tk.END, values=(
+                        sender,
+                        c_name,
+                        msg.get("type", "TEXT"),
+                        msg.get("content", "")
+                    ), tags=(tag,))
+                    row_idx += 1
+
     scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
     tree.configure(yscroll=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
@@ -541,7 +680,7 @@ def open_editor_economy(self):
             pygame.event.pump()
         except:
             break
-        
+
 def open_map_research_editor(self):
     """Opens a UI to edit research for countries currently existing on the map."""
     active_countries = queries.get_living_nations(self.map_data)

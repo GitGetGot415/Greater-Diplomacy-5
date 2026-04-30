@@ -56,10 +56,17 @@ def render_buttons(self):
     self.btn_next_turn = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", self.advance_time)
     
     start_y_val = 40
+    
+    is_spec = getattr(self, 'player_country', '') == "Spectator"
+    is_ed = getattr(self, 'is_editor', False)
+    econ_callback = self.open_editor_economy if (is_ed or is_spec) else self.open_economy_screen
+    research_callback = self.open_map_research_editor if (is_ed or is_spec) else self.open_research
+    msgs_callback = self.open_spectator_messages if is_spec else self.open_messages
+    
     self.btn_gp_edit = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 1, "medium_square", "orange", "Edit Nation", self.open_edit_country, image=icons.get("brush"), show_text=False)
     self.btn_gp_econ = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 2, "medium_square", "green", "Country Economy", econ_callback, image=icons.get("economy(the_economy_of_a_country_to_be_unusually_specific)"), show_text=False)
     self.btn_gp_rd = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 3, "medium_square", "blue", "R&D", research_callback, image=icons.get("research"), show_text=False)
-    self.btn_gp_msgs = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 4, "medium_square", "purple", "Messages", self.open_messages, image=icons.get("mail"), show_text=False)
+    self.btn_gp_msgs = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 4, "medium_square", "purple", "Messages", msgs_callback, image=icons.get("mail"), show_text=False)
     self.btn_gp_save = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 5, "medium_square", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
     self.btn_gp_settings = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 6, "medium_square", "grey", "Settings", self.open_settings, image=icons.get("settings"), show_text=False)
 

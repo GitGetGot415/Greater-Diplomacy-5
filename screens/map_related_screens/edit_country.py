@@ -39,6 +39,7 @@ class Edit_Country_Screen(GameState):
         super().__init__()
         self.bg_color = (30, 30, 40)
         self.map_screen = None
+        self.editing_country = None
         
         # Dimensions
         self.flag_size = c.FLAG_SIZE
@@ -47,7 +48,7 @@ class Edit_Country_Screen(GameState):
         # Scaled drawing constraints
         self.flag_scale = 6
         self.portrait_scale = 6
-        
+
         self.flag_rect = pygame.Rect(input_box_x, 150, self.flag_size[0] * self.flag_scale, self.flag_size[1] * self.flag_scale)
         self.portrait_rect = pygame.Rect(second_right_ui_x, 150, self.portrait_size[0] * self.portrait_scale, self.portrait_size[1] * self.portrait_scale)
         
@@ -126,9 +127,12 @@ class Edit_Country_Screen(GameState):
     def start_editor(self, map_ref):
         self.map_screen = map_ref
         
+        # Uses the explicit editing_country flag set by the map screen
+        self.editing_country = getattr(self.map_screen, "editing_country", self.map_screen.player_country)
+        
         # Load existing data
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        self.country_name = p_data.get("name", self.map_screen.player_country)
+        p_data = self.map_screen.nation_data[self.editing_country]
+        self.country_name = p_data.get("name", self.editing_country)
         self.leader_name = p_data.get("leader_name", "")
         self.leader_title = p_data.get("leader_title", "")
         self.new_map_color = list(p_data.get("color", [150, 150, 150]))
@@ -136,12 +140,12 @@ class Edit_Country_Screen(GameState):
         if p_data.get("flag_data"):
             self.flag_surf = decode_surf(p_data["flag_data"], self.flag_size)
         else:
-            self.flag_surf.fill((255, 255, 255))
+            self.flag_surf.fill((255, 255, 255, 255))
             
         if p_data.get("portrait_data"):
             self.portrait_surf = decode_surf(p_data["portrait_data"], self.portrait_size)
         else:
-            self.portrait_surf.fill((255, 255, 255))
+            self.portrait_surf.fill((255, 255, 255, 255))
             
         # Initialize History
         self.history = [(self.flag_surf.copy(), self.portrait_surf.copy())]
@@ -280,7 +284,7 @@ class Edit_Country_Screen(GameState):
             self.portrait_surf = self.history[self.history_index][1].copy()
 
     def save_and_exit(self):
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data = self.map_screen.nation_data[self.editing_country]
         p_data["name"] = self.country_name
         p_data["leader_name"] = self.leader_name
         p_data["leader_title"] = self.leader_title
@@ -293,7 +297,7 @@ class Edit_Country_Screen(GameState):
             p_data["color"] = self.new_map_color
             
             # Update the quick-lookup dict in the map screen
-            self.map_screen.nation_colors[self.map_screen.player_country] = tuple(self.new_map_color)
+            self.map_screen.nation_colors[self.editing_country] = tuple(self.new_map_color)
             
             # Trigger full map re-renders so the new color shows up instantly!
             self.map_screen.refresh_political_map()
