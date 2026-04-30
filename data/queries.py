@@ -373,8 +373,14 @@ def is_diplomat_busy(sender, target, nation_data):
     """Returns True if the diplomat is currently traveling."""
     action, turns = get_diplomatic_status(sender, target, nation_data)
     is_unilateral = action in ["WAR_DECLARATION", "JOIN_WARS", "BREAK_ALLIANCE", "KICK_FACTION_MEMBER", "LEAVE_FACTION", "DISBAND_FACTION"]
+    
     if is_unilateral and turns > 0:
         return False
+        
+    # Allow queueing new messages/actions if the current action is just a message in transit
+    #if str(action).startswith("MSG:") and turns > 0:
+    #    return False
+        
     if turns > 0: 
         return True
     return False

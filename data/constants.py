@@ -211,7 +211,9 @@ MSG_INPUT_H = 80
 MSG_BG_DARK = (25, 25, 30)
 MSG_BG_LIGHT = (35, 35, 45)
 MSG_BUBBLE_PLAYER = (40, 100, 200)
+MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Added: Player diplomatic red
 MSG_BUBBLE_AI = (60, 60, 80)
+MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # Added: AI diplomatic orange
 MSG_NOTIFICATION_COLOR = (255, 50, 50)
 
 # ==========================================

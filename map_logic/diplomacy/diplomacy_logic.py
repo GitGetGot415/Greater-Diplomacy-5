@@ -436,8 +436,11 @@ def process_diplomacy_turn(self):
                             ai_queue.append({"target": final_f_up_target, "action": follow_up})
                             log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {target} is preparing further diplomatic moves regarding {f_up_target}...")
                         
+                        # FIX: Check if the AI decided to take a diplomatic action. If not, send as a regular grey TEXT message.
+                        msg_type = "TEXT" if ai_action == "NONE" else "DIPLOMACY"
+                        
                         # Instantly deliver the text response!
-                        send_message(self.nation_data, target, country_name, msg_text, "DIPLOMACY")
+                        send_message(self.nation_data, target, country_name, msg_text, msg_type)
                     
                     actions_to_clear.append(target)
 

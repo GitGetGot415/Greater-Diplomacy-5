@@ -384,7 +384,7 @@ class Messages_Screen(GameState):
 
             if is_player:
                 box_x = c.SCREEN_WIDTH - box_width - 30
-                color = (180, 60, 60) if is_diplo else c.MSG_BUBBLE_PLAYER
+                color = c.MSG_BUBBLE_PLAYER_DIPLO if is_diplo else c.MSG_BUBBLE_PLAYER
                 
                 if is_draft:
                     del_rect = pygame.Rect(box_x - 35, current_y + box_height//2 - 12, 25, 25)
@@ -394,13 +394,13 @@ class Messages_Screen(GameState):
                     surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
             else:
                 box_x = c.MSG_LEFT_PANE_W + 30
-                color = (180, 60, 60) if is_diplo else c.MSG_BUBBLE_AI
+                color = c.MSG_BUBBLE_AI_DIPLO if is_diplo else c.MSG_BUBBLE_AI
 
             bubble_rect = pygame.Rect(box_x, current_y, box_width, box_height)
             pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
             
             if is_draft:
-                pygame.draw.rect(surface, (255, 215, 0), bubble_rect, 2, border_radius=10) 
+                pygame.draw.rect(surface, (255, 215, 0), bubble_rect, 2, border_radius=10)
             
             ly = current_y + 10
             for l in lines:
