@@ -39,9 +39,9 @@ def get_ai_mode():
         try:
             with open(c.SETTINGS_CONFIG_PATH, "r") as f:
                 data = json.load(f)
-                return data.get("ai_mode", "GEMINI")
+                return data.get("ai_mode", c.DEFAULT_AI_MODE)
         except: pass
-    return "GEMINI"
+    return c.DEFAULT_AI_MODE
 
 def get_ai_immersion_level():
     """Reads the settings config to see which immersion level is active."""

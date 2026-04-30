@@ -5,7 +5,7 @@
     },
     "volume": 0.205,
     "num_players": 1,
-    "ai_mode": "OFF",
+    "ai_mode": "OLLAMA",
     "gemini_api_key": "AIzaSyAJlAkHmBTmSODDZSbrWOuKWDC_4le8Y9o",
     "chatgpt_api_key": "",
     "claude_api_key": "",

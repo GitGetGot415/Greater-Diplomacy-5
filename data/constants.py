@@ -133,6 +133,8 @@ ORDER_BTN_X = 600
 # SETTINGS
 # ==========================================
 
+DEFAULT_AI_MODE = "OLLAMA"
+
 # --- Settings UI Layout ---
 SETTINGS_GEMINI_BOX_X = 130
 SETTINGS_GEMINI_BOX_Y = SCREEN_HEIGHT - 50

@@ -29,7 +29,7 @@ def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", gemini_
 def load_settings(default_binds, default_volume=0.5):
     """Loads keybinds, volume, AI mode, API key, immersion level, and Ollama model from JSON."""
     if not os.path.exists(CONFIG_PATH):
-        return default_binds, default_volume, 1, "GEMINI", "", "", "", "FULL", "llama3"
+        return default_binds, default_volume, 1, c.DEFAULT_AI_MODE, "", "", "", "FULL", "llama3"
     
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -55,7 +55,7 @@ def load_settings(default_binds, default_volume=0.5):
                 
         # NEW: Safely get num_players (default to 1 if it's an old save)
         saved_num_players = saved_data.get("num_players", 1) if isinstance(saved_data, dict) else 1
-        saved_ai_mode = saved_data.get("ai_mode", "GEMINI") if isinstance(saved_data, dict) else "GEMINI"
+        saved_ai_mode = saved_data.get("ai_mode", c.DEFAULT_AI_MODE) if isinstance(saved_data, dict) else c.DEFAULT_AI_MODE
         # Fallback to old "api_key" if "gemini_api_key" doesn't exist
         saved_gemini_api_key = saved_data.get("gemini_api_key", saved_data.get("api_key", "")) if isinstance(saved_data, dict) else ""
         saved_chatgpt_api_key = saved_data.get("chatgpt_api_key", "") if isinstance(saved_data, dict) else ""

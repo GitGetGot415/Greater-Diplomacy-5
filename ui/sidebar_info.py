@@ -49,14 +49,15 @@ def draw_sidebar_info(self, surface):
     terrain_img = ui_bars.get_ui_image(terrain_filename, directory=c.TERRAINS_DIR)
     
     # Scale to fit the sidebar width with a small padding
-    img_size = c.SIDEBAR_INFO_WIDTH - 20
-    terrain_img = pygame.transform.scale(terrain_img, (img_size, img_size))
+    img_width = c.SIDEBAR_INFO_WIDTH - 20
+    img_height = img_width / 3
+    terrain_img = pygame.transform.scale(terrain_img, (img_width, img_height))
     
     img_x = info_rect.x + 10
     img_y = info_rect.y + 10
     
     surface.blit(terrain_img, (img_x, img_y))
-    pygame.draw.rect(surface, (100, 100, 100), (img_x, img_y, img_size, img_size), 2)
+    pygame.draw.rect(surface, (100, 100, 100), (img_x, img_y, img_width,  img_height), 2)
 
     # 4. Render Basic Information Lines
     info_lines = [
@@ -65,7 +66,7 @@ def draw_sidebar_info(self, surface):
         f"Terrain: {terrain.replace('_', ' ').upper()}"
     ]
     
-    current_y = img_y + img_size + 10
+    current_y = img_y + img_height + 10
     text_x = c.SIDEBAR_INFO_X + 10
     
     for i, line in enumerate(info_lines):
