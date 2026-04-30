@@ -63,7 +63,7 @@ class Orders_Screen(GameState):
             color = "blue" if self.selected_unit_index == i else "grey"
             unit_name = unit["type"]
             
-            btn = Button(100, 150 + (i * 60), "medium", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
+            btn = Button(100, 150 + (i * 50), "medium_square", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
             self.elements.append(btn)
 
         # --- THE NEW UI BUTTONS ---
@@ -514,7 +514,7 @@ class Orders_Screen(GameState):
         # even when the Orders screen is the active state
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-            
+
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True
     

@@ -91,7 +91,8 @@ def process_ai_unit_orders(map_screen):
                 if n_owner in enemies:
                     is_war_border = True
                     enemy_targets.add(n_id)
-                elif n_owner != ai_name and n_owner not in c.WATER_NATIONS:
+                # Ignore water and ignore faction members when deciding where to place peacetime border guards
+                elif n_owner != ai_name and n_owner not in c.WATER_NATIONS and not queries.are_in_same_faction(ai_name, n_owner, map_screen.nation_data):
                     is_peace_border = True
 
             if is_war_border:
