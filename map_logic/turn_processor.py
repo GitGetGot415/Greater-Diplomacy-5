@@ -292,7 +292,7 @@ def check_for_post_combat_captures(self):
         if not hp_totals:
             continue
 
-        # Find the nation(s) with the highest combined HP
+        ## Find the nation(s) with the highest combined HP
         max_hp = -1
         top_nations = []
         for o, hp in hp_totals.items():
@@ -304,7 +304,10 @@ def check_for_post_combat_captures(self):
                 
         # If one clear winner, they take it
         if len(top_nations) == 1:
-            edit_province_ownership.conquer_province(self, province, top_nations[0])
+            capturer = top_nations[0]
+            # faction core transfer stuff
+            true_owner = queries.get_faction_core_transfer_target(capturer, province, self.nation_data)
+            edit_province_ownership.conquer_province(self, province, true_owner)
         # If there's a tie, it becomes unclaimed
         elif len(top_nations) > 1:
             edit_province_ownership.conquer_province(self, province, "Unclaimed")
@@ -421,11 +424,14 @@ def process_movement(self):
                 # Only conquer if there are NO defenders from an enemy nation
                 if not defenders:
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
-                        edit_province_ownership.conquer_province(self, target_prov, unit["owner"])
+                        capturer = unit["owner"]
+                        # faction core transfer stuff
+                        true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, self.nation_data)
+                        edit_province_ownership.conquer_province(self, target_prov, true_owner)
 
                 # Stop if an enemy was present
                 if defenders:
-                    order["path"] = [] 
+                    order["path"] = []
             else:
                 order["path"] = []
 

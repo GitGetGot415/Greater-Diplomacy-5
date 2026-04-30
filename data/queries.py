@@ -76,7 +76,32 @@ def get_faction_leader(faction_name, nation_data):
 def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
     return nation_data.get(nation, {}).get("is_faction_leader", False)
-    
+
+def get_faction_core_transfer_target(capturer, province, nation_data):
+    """
+    Determines if a captured territory should be transferred to a faction member
+    who has a core on it. Returns the true owner to assign the province to.
+    """
+    if capturer in c.UNPLAYABLE_NATIONS:
+        return capturer
+
+    faction_name = nation_data.get(capturer, {}).get("faction", "")
+    if not faction_name:
+        return capturer
+
+    faction_members = get_faction_members(faction_name, nation_data)
+    tile_cores = province.get("cores", [])
+
+    # Find how many active faction members have a core on this specific tile
+    faction_cores_on_tile = [member for member in faction_members if member in tile_cores]
+
+    # Only transfer if EXACTLY ONE faction member has a core on this territory
+    if len(faction_cores_on_tile) == 1:
+        return faction_cores_on_tile[0]
+
+    # If multiple faction members have a core, or nobody does, the capturer keeps it
+    return capturer
+
 # ==========================================
 # MOVEMENT QUERIES
 # ==========================================
