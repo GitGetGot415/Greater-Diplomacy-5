@@ -165,11 +165,11 @@ def process_conversions(self):
                     unit["order"] = {"type": "MOVE", "path": []}
 
 def process_national_research(self):
-    # Load template to know costs
-    with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
-        template = json.load(f)
+    # Load template to know costs (REPLACED WITH CACHE)
+    template = queries.get_tech_tree()
     
-    base_points_per_turn = 10 * c.DAYS_PER_TURN # Standardized 10/day * 10 days
+    # Uses the new constant
+    base_points_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * c.DAYS_PER_TURN
 
     current_exact_year = queries.get_exact_year(self.time_manager)
 
@@ -476,8 +476,9 @@ def process_queues(self):
     unit_stats_path = c.UNIT_DATA_PATH
     building_stats_path = c.BUILDING_DATA_PATH
     
-    unit_library = {}
-    building_library = {}
+    # REPLACE DISK I/O WITH CACHED QUERIES
+    unit_library = queries.get_unit_library()
+    building_library = queries.get_building_library()
     
     if os.path.exists(unit_stats_path):
         with open(unit_stats_path, 'r') as f: unit_library = json.load(f)

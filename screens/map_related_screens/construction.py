@@ -16,7 +16,8 @@ class Construction_Screen(GameState):
         self.target_province = None
         self.map_screen = None
         self.cancel_hitboxes = []
-        self.building_library = self.load_building_data()
+        # REPLACE DISK I/O WITH CACHED QUERIES
+        self.building_library = queries.get_building_library()
         self.active_bars = []
         
         self.other_start_y = self.other_end_y = 0

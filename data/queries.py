@@ -6,6 +6,7 @@ import re
 # --- CACHE LIBRARIES ---
 _cached_unit_library = None
 _cached_building_library = None
+_cached_tech_tree = None # --- NEW ---
 
 def get_unit_library(): 
     global _cached_unit_library
@@ -19,6 +20,12 @@ def get_building_library():
         _cached_building_library = json.load(open(c.BUILDING_DATA_PATH)) if os.path.exists(c.BUILDING_DATA_PATH) else {}
     return _cached_building_library
 
+# --- NEW CACHE QUERY ---
+def get_tech_tree():
+    global _cached_tech_tree
+    if _cached_tech_tree is None:
+        _cached_tech_tree = json.load(open(c.RESEARCH_TEMPLATE_PATH)) if os.path.exists(c.RESEARCH_TEMPLATE_PATH) else {}
+    return _cached_tech_tree
 
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
@@ -106,6 +113,10 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
 # MOVEMENT QUERIES
 # ==========================================
 
+def is_water_province(province):
+    """Shorthand to check if a province is a water tile."""
+    return province.get("terrain") in c.WATER_TERRAINS
+
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
     is_water = target_province.get("terrain") in c.WATER_TERRAINS
@@ -180,7 +191,10 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library):
     """Finds the highest level infantry unit the nation has researched."""
     res_lvl = nation_data_block.get("research", {}).get("infantry_type", 1)
     inf_years = tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
-    year_val = inf_years[min(res_lvl - 1, len(inf_years)-1)]
+    
+    # --- UPDATED: Safer index bounds checking ---
+    target_index = max(0, min(res_lvl - 1, len(inf_years) - 1))
+    year_val = inf_years[target_index]
     u_name = f"Infantry Type {year_val}"
     
     if u_name in unit_library:

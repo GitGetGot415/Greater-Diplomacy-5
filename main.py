@@ -24,7 +24,7 @@ pygame.display.set_caption("Greater Diplomacy Pygame Edition")
 class Controller:
     def __init__(self):
         pygame.init() # Ensure pygame is init before accessing K_ constants
-        pygame.key.set_repeat(400, 40) # 400ms delay, repeats every 40ms when typing
+        pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
         pygame.mixer.init() # Initialize sound engine
 
         # Initialize fonts (Optionally pass a path here: fonts.init_fonts("assets/my_font.ttf"))

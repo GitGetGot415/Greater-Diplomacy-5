@@ -166,6 +166,15 @@ END_YEAR = 2000
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
 RESEARCH_TIMELINE_SPACING = 80 # Width between years on the research timeline
 
+BASE_RESEARCH_POINTS_PER_DAY = 10 
+
+# ==========================================
+# INPUT SETTINGS
+# ==========================================
+
+KEY_REPEAT_DELAY = 400
+KEY_REPEAT_INTERVAL = 40
+
 # ==========================================
 # UNIT OBSOLESCENCE
 # ==========================================

@@ -19,9 +19,9 @@ class Recruit_Screen(GameState):
         self.map_screen = None
         self.cancel_hitboxes = []
         
-        # Load both libraries generically
-        self.unit_library = self.load_json(c.UNIT_DATA_PATH)
-        self.tech_tree = self.load_json(c.RESEARCH_TEMPLATE_PATH)
+        # REPLACE DISK I/O WITH CACHED QUERIES
+        self.unit_library = queries.get_unit_library()
+        self.tech_tree = queries.get_tech_tree()
         
         self.infantry_groups, self.tank_groups, self.navy_groups = self.get_ordered_groups()
         self.active_bars = []

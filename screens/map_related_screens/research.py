@@ -16,9 +16,10 @@ class Research_Screen(GameState):
         self.current_category = "INFANTRY" 
         self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY", "COMPLETED"]
 
-        self.tech_tree = self.load_json(c.RESEARCH_TEMPLATE_PATH)
-        self.unit_library = self.load_json(c.UNIT_DATA_PATH)
-        self.building_library = self.load_json(c.BUILDING_DATA_PATH)
+        # REPLACED DISK I/O WITH CACHED QUERIES
+        self.tech_tree = queries.get_tech_tree()
+        self.unit_library = queries.get_unit_library()
+        self.building_library = queries.get_building_library()
         
         self.active_modal = None
 
