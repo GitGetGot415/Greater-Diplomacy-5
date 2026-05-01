@@ -56,6 +56,12 @@ def process_ai_unit_orders(map_screen):
     nation_units = {}
     nation_provs = {}
 
+    # --- NEW: Pre-calculate allowed pathing IDs to include water for convoys ---
+    allowed_prov_ids_cache = set()
+    for prov in map_screen.map_data.values():
+        if prov.get("terrain") in c.WATER_TERRAINS:
+            allowed_prov_ids_cache.add(prov["id"])
+
     for ai_name in ai_nations:
         provs, units = queries.get_nation_provinces_and_units(ai_name, map_screen.map_data)
         nation_provs[ai_name] = provs
@@ -73,15 +79,22 @@ def process_ai_unit_orders(map_screen):
 
         my_provs = nation_provs[ai_name]
         my_prov_ids = set(p["id"] for p in my_provs)
+        
+        # Combine land and water IDs so BFS can route overseas
+        allowed_prov_ids = my_prov_ids.union(allowed_prov_ids_cache)
+        
         enemies = map_screen.nation_data[ai_name].get("at_war_with", [])
 
         war_borders = set()
         peace_borders = set()
+        coastal_borders = set()
         enemy_targets = set()
 
         for prov in my_provs:
             is_war_border = False
             is_peace_border = False
+            is_coastal = prov.get("is_coastal", False)
+
             for n_id in prov.get("neighbors", []):
                 n_prov = map_screen.id_to_province.get(n_id)
                 if not n_prov: continue
@@ -99,6 +112,8 @@ def process_ai_unit_orders(map_screen):
                 war_borders.add(prov["id"])
             elif is_peace_border:
                 peace_borders.add(prov["id"])
+            elif is_coastal:
+                coastal_borders.add(prov["id"])
 
         at_war = len(enemies) > 0 and len(enemy_targets) > 0
 
@@ -106,7 +121,8 @@ def process_ai_unit_orders(map_screen):
         if at_war:
             target_destinations = list(enemy_targets)
         else:
-            target_destinations = list(peace_borders)
+            # Include coasts but peace borders still naturally pull units first if we prioritize them
+            target_destinations = list(peace_borders) + list(coastal_borders)
 
         # If no targets (e.g. island with no neighbors), skip
         if not target_destinations:
@@ -114,6 +130,12 @@ def process_ai_unit_orders(map_screen):
 
         # Keep track of how many units are assigned to each target so we can spread them evenly
         target_assignments = {t_id: 0 for t_id in target_destinations}
+        
+        # Artificially inflate the assignment count of coasts so borders get prioritized first
+        for c_id in coastal_borders:
+            # FIX: Check if c_id is actually in target_assignments before incrementing
+            if c_id in target_assignments and c_id not in peace_borders and c_id not in war_borders:
+                target_assignments[c_id] += 1
 
         # Pre-count units already AT the targets so we don't over-assign
         for unit, prov in units_info:
@@ -122,8 +144,9 @@ def process_ai_unit_orders(map_screen):
 
         for unit, prov in units_info:
             u_type = unit.get("type", "")
+            is_convoy = u_type.startswith("Convoy")
             # Skip naval units for this basic land logic utilizing the cleaner query
-            if queries.is_naval_unit(u_type):
+            if queries.is_naval_unit(u_type) and not is_convoy:
                 continue
 
             curr_id = prov["id"]
@@ -164,12 +187,20 @@ def process_ai_unit_orders(map_screen):
 
             # --- END ANTI-SHUFFLE ---
 
-            # Route to the nearest border/enemy that needs reinforcements
-            path = _bfs_nearest_target(curr_id, set(target_destinations), my_prov_ids, map_screen.id_to_province, target_assignments)
+            # Route to the nearest border/enemy/coast that needs reinforcements
+            path = _bfs_nearest_target(curr_id, set(target_destinations), allowed_prov_ids, map_screen.id_to_province, target_assignments)
             if path:
-                # Truncate the AI's path to match its actual movement speed
-                speed = unit.get("speed", 1)
-                unit["order"]["path"] = path[:speed]
+                # --- NEW: Convoy Conversion Check ---
+                next_prov = map_screen.id_to_province.get(path[0])
+                next_is_water = next_prov.get("terrain") in c.WATER_TERRAINS
+                
+                if next_is_water and not is_convoy:
+                    # Cannot step onto water, must explicitly convert first
+                    unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": "Convoy"}
+                else:
+                    # Truncate the AI's path to match its actual movement speed
+                    speed = unit.get("speed", 1)
+                    unit["order"]["path"] = path[:speed]
                 
                 # Tell the system this unit is taking this target, reducing its priority for the next unit
                 if curr_id in target_assignments:

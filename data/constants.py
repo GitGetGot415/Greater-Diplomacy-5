@@ -259,6 +259,20 @@ OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
 # ==========================================
+# AI RECRUITMENT PREFERENCES
+# ==========================================
+
+AI_OFFENSIVE_UNIT_PREFERENCE = [
+    "Cavalry"
+    # look the stuff below requires fuel, and rn the ai kinda sucks at managing that part of their economy
+    #"WW1 Armored Car",
+    #"WW1 Tank",
+    #"Light Tank",
+    #"Medium Tank",
+    #"Main Battle Tank"
+]
+
+# ==========================================
 # FILE PATHS
 # ==========================================
 
