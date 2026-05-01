@@ -8,7 +8,8 @@ import pygame
 # --- CACHE LIBRARIES ---
 _cached_unit_library = None
 _cached_building_library = None
-_cached_tech_tree = None # --- NEW ---
+_cached_tech_tree = None
+_cached_country_data = None
 
 def get_unit_library(): 
     global _cached_unit_library
@@ -22,13 +23,21 @@ def get_building_library():
         _cached_building_library = json.load(open(c.BUILDING_DATA_PATH)) if os.path.exists(c.BUILDING_DATA_PATH) else {}
     return _cached_building_library
 
-# --- NEW CACHE QUERY ---
 def get_tech_tree():
     global _cached_tech_tree
     if _cached_tech_tree is None:
         _cached_tech_tree = json.load(open(c.RESEARCH_TEMPLATE_PATH)) if os.path.exists(c.RESEARCH_TEMPLATE_PATH) else {}
     return _cached_tech_tree
 
+def get_country_data():
+    global _cached_country_data
+    if _cached_country_data is None:
+        if os.path.exists(c.COUNTRIES_DATA_PATH):
+            with open(c.COUNTRIES_DATA_PATH, "r") as f:
+                _cached_country_data = json.load(f)
+        else:
+            _cached_country_data = {}
+    return _cached_country_data
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
 # ==========================================

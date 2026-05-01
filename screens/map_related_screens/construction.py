@@ -134,21 +134,16 @@ class Construction_Screen(GameState):
             
             # --- REFUND LOGIC ---
             if "refund" in item:
-                # Use the stored costs (Backwards compatibility)
                 for res, amount in item["refund"].items():
                     p_data[res] = p_data.get(res, 0) + amount
             else:
-                # Fallback for old save files
+                # Use the already loaded library instead of opening the JSON!
                 stats = {}
                 if item.get("order_type") == "BUILDING":
                     stats = self.building_library.get(item.get("item_name"), {})
                 elif "unit_type" in item:
-                    import json, os
-                    if os.path.exists('data/json/unit_data.json'):
-                        with open('data/json/unit_data.json', 'r') as f:
-                            stats = json.load(f).get(item["unit_type"], {})
+                    stats = self.unit_library.get(item["unit_type"], {})
                             
-                # --- NEW HELPER FUNCTION ---
                 queries.refund_resources(p_data, stats)
 
             self.map_screen.show_feedback("Cancelled & Refunded")

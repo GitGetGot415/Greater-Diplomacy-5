@@ -393,7 +393,7 @@ class Research_Screen(GameState):
         actual_turns = 0
         sim_year = current_exact_year
         pts_accumulated = 0
-        base_pts_per_turn = 100
+        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * c.DAYS_PER_TURN
         year_inc = c.DAYS_PER_TURN / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query

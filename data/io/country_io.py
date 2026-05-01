@@ -1,13 +1,9 @@
-import json
-import os
 import data.constants as c
+from data import queries
 
 def load_all_country_data():
-    """Returns the full dictionary of country objects."""
-    if not os.path.exists(c.COUNTRIES_DATA_PATH):
-        return {}
-    with open(c.COUNTRIES_DATA_PATH, "r") as f:
-        return json.load(f)
+    """Returns the full dictionary of country objects from cache."""
+    return queries.get_country_data()
 
 def get_nation_colors():
     """Returns {Name: (R, G, B)} for Pygame rendering."""

@@ -333,7 +333,7 @@ class Messages_Screen(GameState):
         # --- PRE-CALCULATE SIZES TO ESTABLISH MAX SCROLL CEILING ---
         processed_messages = []
         total_h = 20
-        max_width = int((c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W) * 0.6)
+        max_width = int((c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W) * c.MSG_BUBBLE_MAX_WIDTH_RATIO)
 
         for msg in reversed(display_thread):
             words = msg['content'].split(" ")

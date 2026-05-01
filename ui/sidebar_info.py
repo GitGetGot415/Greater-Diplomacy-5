@@ -33,20 +33,13 @@ def draw_sidebar_info(self, surface):
     owner_data = self.nation_data.get(owner_id, {})
     owner_display = owner_data.get("name", owner_id).upper()
 
-    # --- NEW: Draw Terrain Image ---
-    terrain_filename = f"{terrain}.png"
-    terrain_path = os.path.join(c.TERRAINS_DIR, terrain_filename)
-    
-    # Fallback if image doesn't exist (e.g. try Title Case or use Unknown.png)
-    if not os.path.exists(terrain_path):
-        terrain_filename_title = f"{terrain.title()}.png"
-        terrain_path_title = os.path.join(c.TERRAINS_DIR, terrain_filename_title)
-        if os.path.exists(terrain_path_title):
-            terrain_filename = terrain_filename_title
-        else:
-            terrain_filename = "Unknown.png"
+    # --- Terrain Image Loading ---
+    terrain_filename = f"{terrain.title()}.png"
             
-    terrain_img = ui_bars.get_ui_image(terrain_filename, directory=c.TERRAINS_DIR)
+    try:
+        terrain_img = ui_bars.get_ui_image(terrain_filename, directory=c.TERRAINS_DIR)
+    except FileNotFoundError:
+        terrain_img = ui_bars.get_ui_image("Unknown.png", directory=c.TERRAINS_DIR)
     
     # Scale to fit the sidebar width with a small padding
     img_width = c.SIDEBAR_INFO_WIDTH - 20

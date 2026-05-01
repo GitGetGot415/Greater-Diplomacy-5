@@ -175,21 +175,16 @@ class Recruit_Screen(GameState):
             
             # --- REFUND LOGIC ---
             if "refund" in item:
-                # Use the stored costs (Backwards compatibility for existing save files)
                 for res, amount in item["refund"].items():
                     p_data[res] = p_data.get(res, 0) + amount
             else:
-                # Fallback for old save files that predate the refund dict
+                # Use the already loaded library instead of opening the JSON!
                 stats = {}
-                if "unit_type" in item:
+                if item.get("order_type") == "BUILDING":
+                    stats = self.building_library.get(item.get("item_name"), {})
+                elif "unit_type" in item:
                     stats = self.unit_library.get(item["unit_type"], {})
-                elif item.get("order_type") == "BUILDING":
-                    import json, os
-                    if os.path.exists(c.BUILDING_DATA_PATH):
-                        with open(c.BUILDING_DATA_PATH, 'r') as f:
-                            stats = json.load(f).get(item.get("item_name"), {})
                             
-                # --- NEW HELPER FUNCTION ---
                 queries.refund_resources(p_data, stats)
 
             self.map_screen.show_feedback("Cancelled & Refunded")

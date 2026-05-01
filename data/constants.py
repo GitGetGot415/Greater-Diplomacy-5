@@ -224,6 +224,7 @@ MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Added: Player diplomatic red
 MSG_BUBBLE_AI = (60, 60, 80)
 MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # Added: AI diplomatic orange
 MSG_NOTIFICATION_COLOR = (255, 50, 50)
+MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 
 # ==========================================
 # CAMERA & MAP RENDERING
