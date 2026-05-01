@@ -121,7 +121,7 @@ class Research_Screen(GameState):
         
         base_name = tech_key.replace('_', ' ').title()
         
-        if tech_key in ["workshop", "factory", "fuel_refining"]:
+        if tech_key in ["factory", "fuel_refining"]:
             if tech_key == "fuel_refining": base_name = "Synthetic Refinery" 
             return f"{base_name} Lvl {lvl}"
             

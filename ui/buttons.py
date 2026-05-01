@@ -54,6 +54,7 @@ def render_buttons(self):
 
     # Gameplay Buttons
     self.btn_next_turn = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", self.advance_time)
+    self.btn_skip_ai = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", self.toggle_skip_ai)
     
     start_y_val = 40
     
@@ -116,7 +117,7 @@ def render_buttons(self):
         self.btn_ed_econ, self.btn_ed_rd, self.btn_ed_save, self.btn_ed_load, self.btn_ed_nation,
         self.btn_ed_core, self.btn_ed_autocore, self.btn_ed_resource, self.btn_ed_building, self.btn_ed_sync,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_date, self.btn_ed_diplo,
-        self.btn_next_turn, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
+        self.btn_next_turn, self.btn_skip_ai, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
         self.btn_gp_save, self.btn_gp_settings, self.btn_go_orders, self.btn_go_recruit, self.btn_go_build,
         self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create, self.btn_fac_leave, self.btn_fac_disband,
@@ -213,9 +214,15 @@ def update_button_states(map_screen):
         map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
         map_screen.btn_next_turn.color, map_screen.btn_next_turn.hover_color = c.UI_COLORS["red" if viewing_ai else "purple"]
 
+        # ADD THIS: Visibility and active color swapping for the skip toggle
+        map_screen.btn_skip_ai.visible = not is_sel and not is_thinking
+        skip_on = getattr(map_screen, 'skip_ai_view', False)
+        map_screen.btn_skip_ai.text = "Skip AI: ON" if skip_on else "Skip AI: OFF"
+        map_screen.btn_skip_ai.color, map_screen.btn_skip_ai.hover_color = c.UI_COLORS["green" if skip_on else "red"]
+
         if not viewing_ai:
             gp_btns = [
-                map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, 
+                map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
                 map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings
             ]
             for btn in gp_btns:

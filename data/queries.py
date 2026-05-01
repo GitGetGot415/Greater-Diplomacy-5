@@ -186,8 +186,6 @@ def has_industry(province):
 
 def get_building_required_tech(b_name):
     """Maps building names to their respective research tree requirements."""
-    if "Workshop" in b_name:
-        return "workshop", int(b_name.split()[-1])
     if "Basic Factory" in b_name:
         return "basic_factory", 1
     if "Factory Lvl" in b_name:

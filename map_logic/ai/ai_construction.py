@@ -75,8 +75,9 @@ def process_ai_economy_decisions(map_screen):
                 best_bldg = f"Factory Lvl {res_levels['factory']}"
             elif res_levels.get("basic_factory", 0) > 0:
                 best_bldg = "Basic Factory"
-            elif res_levels.get("workshop", 0) > 0:
-                best_bldg = f"Workshop Lvl {res_levels['workshop']}"
+            else:
+                # If they haven't researched actual factories yet, build the best workshop
+                best_bldg = "Workshop Lvl 5"
 
             if best_bldg and best_bldg in building_library:
                 b_stats = building_library[best_bldg]

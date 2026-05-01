@@ -67,6 +67,7 @@ class Map(GameState):
         self.painting_active = False 
         self.brush_nation = "Unclaimed" 
         self.viewing_ai_moves = False
+        self.skip_ai_view = False
         
         # --- 2. Data Loading (FIXED ORDER) ---
         # Load the selected map BEFORE we do any camera math!
@@ -157,6 +158,12 @@ class Map(GameState):
     def toggle_country_names(self):
         self.show_country_names = not getattr(self, 'show_country_names', True)
         self.show_feedback(f"Country Names: {'ON' if self.show_country_names else 'OFF'}")
+
+    def toggle_skip_ai(self):
+        self.skip_ai_view = not getattr(self, 'skip_ai_view', False)
+        self.show_feedback(f"Skip AI View: {'ON' if self.skip_ai_view else 'OFF'}")
+        from ui import buttons
+        buttons.update_button_states(self)
         
     # --- Logic Methods ---
     def set_view_mode(self, mode):
@@ -718,15 +725,20 @@ class Map(GameState):
             self.ai_is_thinking = False
             
             # NOW it is safe to do the things that affect the screen
-            self.refresh_political_map()
-            self.refresh_relations_map()
-            self.viewing_ai_moves = True
-            
-            buttons.render_buttons(self)
-            
-            elapsed_seconds = (pygame.time.get_ticks() - self.turn_start_time) / 1000.0
-            self.show_feedback(f"AI Strategy generated in {elapsed_seconds:.2f}s")
-            print(f"[PERFORMANCE] Phase 1 completed in {elapsed_seconds:.2f} seconds.")
+            if getattr(self, 'skip_ai_view', False):
+                # IMMEDIATELY jump into Phase 2, skipping the visual wait
+                self.viewing_ai_moves = True
+                self.advance_time()
+            else:
+                self.refresh_political_map()
+                self.refresh_relations_map()
+                self.viewing_ai_moves = True
+                
+                buttons.render_buttons(self)
+                
+                elapsed_seconds = (pygame.time.get_ticks() - self.turn_start_time) / 1000.0
+                self.show_feedback(f"AI Strategy generated in {elapsed_seconds:.2f}s")
+                print(f"[PERFORMANCE] Phase 1 completed in {elapsed_seconds:.2f} seconds.")
 
         # 1. Update Ocean Color
         from map_logic.camera import camera_handler
