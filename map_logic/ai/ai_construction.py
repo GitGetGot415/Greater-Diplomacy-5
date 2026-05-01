@@ -31,15 +31,60 @@ def process_ai_economy_decisions(map_screen):
 
         # --- 1. EVALUATE RECRUITMENT RATIOS ---
         at_war = len(data.get("at_war_with", [])) > 0
-        desired_ratio = 0.8 if at_war else 0.2
+        war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
+
+        target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
+        target_mat = c.AI_UPKEEP_TARGETS["materials"] * war_mult
+        target_fuel = c.AI_UPKEEP_TARGETS["fuel"] * war_mult
 
         inc_mat = econ["total_inc"]["materials"]
         upk_mat = econ["upkeep"]["materials"]
         inc_man = econ["total_inc"]["manpower"]
         upk_man = econ["upkeep"]["manpower"]
+        inc_fuel = econ["total_inc"]["fuel"]
+        upk_fuel = econ["upkeep"]["fuel"]
         
+        ratio_man = upk_man / inc_man if inc_man > 0 else 1.0
+        ratio_mat = upk_mat / inc_mat if inc_mat > 0 else 1.0
+        ratio_fuel = upk_fuel / inc_fuel if inc_fuel > 0 else 1.0
+
+        deficits = []
+        if ratio_man > target_man: deficits.append("cost_manpower")
+        if ratio_mat > target_mat: deficits.append("cost_materials")
+        if ratio_fuel > target_fuel: deficits.append("cost_fuel")
+
+        if deficits:
+            # Find units to disband
+            owned_units = []
+            for prov in my_provs:
+                for u in prov.get("units", []):
+                    if u.get("owner") == ai_name and u.get("order", {}).get("type") != "DISBAND":
+                        owned_units.append(u)
+                        
+            candidates = []
+            for u in owned_units:
+                u_type = u.get("type", "")
+                stats = unit_library.get(u_type, {})
+                if any(stats.get(res, 0) > 0 for res in deficits):
+                    candidates.append((u, u_type, stats))
+                    
+            if candidates:
+                res_levels = data.get("research", {})
+                def sort_key(item):
+                    u, u_type, stats = item
+                    is_obs = queries.is_unit_obsolete(u_type, res_levels)
+                    # Outdated units (is_obs=True) have priority (0)
+                    # Tie-breaker: lowest attack
+                    return (0 if is_obs else 1, stats.get("attack", 0))
+                    
+                candidates.sort(key=sort_key)
+                
+                # Disband the worst unit
+                worst_unit = candidates[0][0]
+                worst_unit["order"] = {"type": "DISBAND", "turns_left": 1}
+                
         # If current upkeep is below the desired percentage of income, build units!
-        if upk_mat < (inc_mat * desired_ratio) and upk_man < (inc_man * desired_ratio):
+        elif ratio_mat < target_mat and ratio_man < target_man and ratio_fuel < target_fuel:
             
             # --- NEW: Guard Target Calculation ---
             infantry_count = 0

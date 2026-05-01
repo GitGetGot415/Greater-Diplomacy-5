@@ -272,6 +272,14 @@ AI_OFFENSIVE_UNIT_PREFERENCE = [
     #"Main Battle Tank"
 ]
 
+AI_UPKEEP_TARGETS = {
+    "manpower": 0.60,
+    "materials": 0.20,
+    "fuel": 0.40
+}
+
+AI_WAR_UPKEEP_MULTIPLIER = 1.5
+
 # ==========================================
 # FILE PATHS
 # ==========================================
