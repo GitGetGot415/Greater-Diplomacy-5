@@ -217,6 +217,14 @@ def check_tech_requirements(res_levels, reqs):
         return any(res_levels.get(k, 0) >= v for sub in reqs["OR"] for k, v in sub.items())
     return all(res_levels.get(k, 0) >= v for k, v in reqs.items())
 
+def is_training_troops(province):
+    """Returns True if the province has any troops in its deployment queue."""
+    return any("unit_type" in q for q in province.get("deployment_queue", []))
+
+def is_constructing_building(province):
+    """Returns True if the province has any buildings in its deployment queue."""
+    return any(q.get("order_type") == "BUILDING" for q in province.get("deployment_queue", []))
+
 # ==========================================
 # ECONOMY QUERIES
 # ==========================================

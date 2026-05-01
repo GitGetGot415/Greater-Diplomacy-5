@@ -50,99 +50,69 @@ class Orders_Screen(GameState):
             btn_all = Button(100, 90, "medium", all_color, "Select All", lambda: self.select_unit("ALL"))
             self.elements.append(btn_all)
 
+        display_index = 0
         for i, unit in enumerate(units):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
                 
-            color = "blue" if self.selected_unit_index == i else "grey"
+            # Expanded row height to 80px to fit everything comfortably
+            y_pos = 150 + (display_index * 80)
+            
+            # 1. Selection Button (Name)
+            color = "blue" if self.selected_unit_index == i or self.selected_unit_index == "ALL" else "grey"
             unit_name = unit["type"]
-            
-            btn = Button(100, 150 + (i * 50), "medium_square", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
-            self.elements.append(btn)
+            btn_sel = Button(100, y_pos, "medium", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
+            self.elements.append(btn_sel)
 
-        # --- THE NEW UI BUTTONS ---
-        if self.selected_unit_index is not None:
-            if self.selected_unit_index == "ALL":
-                target_units = player_units
-            elif 0 <= self.selected_unit_index < len(units):
-                target_units = [units[self.selected_unit_index]]
-            else:
-                target_units = []
+            order = unit.get("order", {})
+            order_type = order.get("type", "")
 
-            if target_units:
-                order_type = target_units[0].get("order", {}).get("type", "")
+            # Combat / Location checks
+            player_country = self.map_screen.player_country
+            in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
+            is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
+            is_coastal = self.target_province.get("is_coastal", False)
+            is_convoy = unit_name.startswith("Convoy")
+            is_naval = queries.is_naval_unit(unit_name)
 
-                # Disband Button using standard action button position
-                btn_disband = Button(c.ORDER_BTN_X, 150, "medium", "red", "Disband", self.disband_unit)
-                self.elements.append(btn_disband)
-
-                # --- Combat Check ---
-                player_country = self.map_screen.player_country
-                in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
-
-                # Convoy Conversion Logic (Enforce coastal/port rules)
-                is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
-                is_coastal = self.target_province.get("is_coastal", False)
-                
-                # Check if group is pure land or pure convoy to avoid mixed conversion states
-                all_convoy = all(u.get("type", "").startswith("Convoy") for u in target_units)
-                all_land = all(not u.get("type", "").startswith("Convoy") and not queries.is_naval_unit(u.get("type", "")) for u in target_units)
-
-                if order_type == "CONVERT":
-                    txt = f"Cancel Convert"
-                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "red", txt, self.cancel_conversion)
-                    self.elements.append(btn_conv)
-                elif all_convoy:
-                    if in_combat:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
-                    elif not is_water:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "blue", "To Land Unit", self.convert_unit)
-                    else:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Must be on Land", lambda: None)
-                    self.elements.append(btn_conv)
-                elif all_land:
-                    if in_combat:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "In Combat!", lambda: None)
-                    elif is_coastal or is_water:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "blue", "To Convoy", self.convert_unit)
-                    else:
-                        btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Must be Coastal", lambda: None)
-                    self.elements.append(btn_conv)
+            # 2. Inline Convoy Conversion Button
+            if order_type == "CONVERT":
+                btn_conv = Button(600, y_pos, "small", "red", "Cancel", lambda idx=i: self.cancel_unit_order(idx))
+            elif in_combat:
+                btn_conv = Button(600, y_pos, "small", "grey", "In Combat", lambda: None)
+            elif is_convoy:
+                if not is_water:
+                    btn_conv = Button(600, y_pos, "small", "blue", "To Land", lambda idx=i: self.convert_unit(idx))
                 else:
-                    btn_conv = Button(c.ORDER_BTN_X, 220, "medium", "grey", "Cannot Convert Mixed Group", lambda: None)
-                    self.elements.append(btn_conv)
+                    btn_conv = Button(600, y_pos, "small", "grey", "Need Land", lambda: None)
+            elif not is_naval:
+                if is_coastal or is_water:
+                    btn_conv = Button(600, y_pos, "small", "blue", "To Convoy", lambda idx=i: self.convert_unit(idx))
+                else:
+                    btn_conv = Button(600, y_pos, "small", "grey", "Need Coast", lambda: None)
+            else:
+                btn_conv = Button(600, y_pos, "small", "grey", "Ship", lambda: None)
+            
+            self.elements.append(btn_conv)
 
-    def disband_unit(self):
+            # 3. Inline Disband Button
+            if order_type == "DISBAND":
+                btn_disband = Button(720, y_pos, "small", "red", "Cancel", lambda idx=i: self.cancel_unit_order(idx))
+            else:
+                btn_disband = Button(720, y_pos, "small", "red", "Disband", lambda idx=i: self.disband_unit(idx))
+            
+            self.elements.append(btn_disband)
+            display_index += 1
+
+    def disband_unit(self, index):
         units = self.target_province.get("units", [])
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-
-        if self.selected_unit_index == "ALL":
-            # Loop backwards to safely pop multiple elements
-            for i in reversed(range(len(units))):
-                if units[i].get("owner") == self.map_screen.player_country:
-                    unit = units.pop(i)
-                    u_type = unit.get("original_type", unit.get("type"))
-                    stats = self.unit_library.get(u_type, {})
-                    queries.refund_resources(p_data, stats)
-            
-            self.map_screen.show_feedback("Disbanded all units & Refunded")
-            self.selected_unit_index = None
+        if 0 <= index < len(units):
+            unit = units[index]
+            unit["order"] = {"type": "DISBAND", "turns_left": 1}
+            self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
             self.refresh_ui()
 
-        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
-            unit = units.pop(self.selected_unit_index)
-            
-            # Refund based on the original unit type
-            u_type = unit.get("original_type", unit.get("type"))
-            stats = self.unit_library.get(u_type, {})
-            
-            queries.refund_resources(p_data, stats)
-
-            self.map_screen.show_feedback(f"Disbanded {u_type} & Refunded")
-            self.selected_unit_index = None
-            self.refresh_ui()
-
-    def convert_unit(self):
+    def convert_unit(self, index):
         # --- Prevent conversion during combat just in case ---
         player_country = self.map_screen.player_country
         in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
@@ -152,44 +122,14 @@ class Orders_Screen(GameState):
         # -----------------------------------------------------
 
         units = self.target_province.get("units", [])
-        
-        if self.selected_unit_index == "ALL":
-            for unit in units:
-                if unit.get("owner") == player_country:
-                    u_type = unit.get("type", "")
-                    if not queries.is_naval_unit(u_type) or u_type.startswith("Convoy"):
-                        target_type = "Land Unit" if u_type.startswith("Convoy") else "Convoy"
-                        unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": target_type}
-            self.map_screen.show_feedback("Converting group (1 turn)")
-            self.refresh_ui()
-
-        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
-            unit = units[self.selected_unit_index]
+        if 0 <= index < len(units):
+            unit = units[index]
             u_type = unit.get("type", "")
-
             target_type = "Land Unit" if u_type.startswith("Convoy") else "Convoy"
             unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": target_type}
             
             self.map_screen.show_feedback(f"Converting to {target_type} (1 turn)")
             self.refresh_ui()
-
-    def cancel_conversion(self):
-        units = self.target_province.get("units", [])
-        
-        if self.selected_unit_index == "ALL":
-            for unit in units:
-                if unit.get("owner") == self.map_screen.player_country:
-                    if "order" in unit and unit["order"].get("type") == "CONVERT":
-                        del unit["order"]
-            self.map_screen.show_feedback("Group Conversion Cancelled")
-            self.refresh_ui()
-
-        elif self.selected_unit_index is not None and 0 <= self.selected_unit_index < len(units):
-            unit = units[self.selected_unit_index]
-            if "order" in unit and unit["order"].get("type") == "CONVERT":
-                del unit["order"]
-                self.map_screen.show_feedback("Conversion Cancelled")
-                self.refresh_ui()
 
     def select_unit(self, index):
         self.selected_unit_index = index
@@ -223,8 +163,8 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         if player_units:
-            # Use the same background rect math from additional_draw to mask the UI
-            bg_rect = pygame.Rect(80, 130, 500, len(player_units) * 60 + 40)
+            # Mask updated to match new widened background size
+            bg_rect = pygame.Rect(80, 130, 760, len(player_units) * 80 + 40)
             if bg_rect.collidepoint(mx, my):
                 on_ui = True
                 
@@ -275,8 +215,8 @@ class Orders_Screen(GameState):
             if not target_units: return
 
             # --- THE FIX ---
-            if any(isinstance(u.get("order"), dict) and u["order"].get("type") == "CONVERT" for u in target_units):
-                self.map_screen.show_feedback("Cannot move while converting!")
+            if any(isinstance(u.get("order"), dict) and u["order"].get("type") in ["CONVERT", "DISBAND"] for u in target_units):
+                self.map_screen.show_feedback("Cannot move while converting or disbanding!")
                 return
             
             for unit in target_units:
@@ -409,8 +349,8 @@ class Orders_Screen(GameState):
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
         
         if player_units:
-            # Dynamically size the height based on how many units there are
-            bg_rect = pygame.Rect(80, 130, 500, len(player_units) * 60 + 40)
+            # Widened to 760 and multiplied height step by 80
+            bg_rect = pygame.Rect(80, 130, 760, len(player_units) * 80 + 40)
             
             # Draw semi-transparent panel
             panel_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
@@ -435,19 +375,31 @@ class Orders_Screen(GameState):
                 q_start = self.map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
                 overlay_renderer.draw_movement_path(surface, self.map_screen, q_start, queued_path, color=bright_color, alpha=120)
         
+        display_index = 0
         for i, unit in enumerate(units):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
 
-            y_pos = 150 + (i * 60)
+            y_pos = 150 + (display_index * 80)
+            
+            # --- Inline Stats Rendering ---
+            hp = int(unit.get("health", 0))
+            m_hp = int(unit.get("max_health", 0))
+            atk = unit.get("attack", 0)
+            dff = unit.get("defense", 0)
+            spd = unit.get("speed", 0)
+            stats_txt = f"HP:{hp}/{m_hp} | ATK:{atk} | DEF:{dff} | SPD:{spd}"
+            txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
+            surface.blit(txt_surf, (315, y_pos + 15))
+
             order = unit.get("order", {})
             path = order.get("path", [])
 
             if path:
                 txt = small_font.render(f"PATH: {' -> '.join(map(str, path))}", True, (255, 255, 0))
-                surface.blit(txt, (310, y_pos + 15))
+                surface.blit(txt, (140, y_pos + 55))
                 
-                cancel_rect = pygame.Rect(100 + 205, y_pos + 10, 30, 30)
+                cancel_rect = pygame.Rect(100, y_pos + 50, 25, 25)
                 pygame.draw.rect(surface, (150, 0, 0), cancel_rect)
                 x_label = small_font.render("X", True, (255, 255, 255))
                 surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
@@ -455,6 +407,8 @@ class Orders_Screen(GameState):
                 
                 # Split draw using the helper function
                 draw_split_path(self.target_province, path, unit.get("speed", 1), owner_color)
+
+            display_index += 1
 
         if self.selected_unit_index is not None:
             if self.selected_unit_index == "ALL":

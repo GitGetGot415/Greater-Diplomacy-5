@@ -1,5 +1,6 @@
 import pygame
 import math
+import data.constants as c
 from data import queries
 from map_logic.rendering import symbol_loader
 
@@ -195,8 +196,25 @@ def draw_overlay_content(self, surface):
             if -50 < sx < surface.get_width() + 50:
                 
                 # --- UNIT VIEW ---
-                if self.secondary_mode == "UNITS" and province["units"]:
-                    draw_unit_icon(self, surface, sx, sy, province)
+                if self.secondary_mode == "UNITS":
+                    if province["units"]:
+                        draw_unit_icon(self, surface, sx, sy, province)
+                        
+                    if queries.is_training_troops(province):
+                        training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        if training_sym:
+                            training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                            rect = training_sym.get_rect(center=(sx, sy))
+                            surface.blit(training_sym, rect)
+
+                    # --- ADDED: Disband Indicator ---
+                    if any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
+                        disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        if disband_sym:
+                            disband_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                            # Shifted slightly right to avoid overlapping completely with training
+                            rect = disband_sym.get_rect(center=(sx, sy))
+                            surface.blit(disband_sym, rect)
 
                 # --- ECONOMY VIEW ---
                 elif self.secondary_mode == "ECONOMY":
@@ -228,6 +246,14 @@ def draw_overlay_content(self, surface):
                             rect = pygame.Rect(sx + offset_x, sy + offset_y, 12 * self.camera.zoom, 12 * self.camera.zoom)
                             pygame.draw.rect(surface, color, rect)
                             pygame.draw.rect(surface, (255, 255, 255), rect, 1) # Border
+                    
+                    # Draw Construction Hammer
+                    if queries.is_constructing_building(province):
+                        hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        if hammer_sym:
+                            hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                            rect = hammer_sym.get_rect(center=(sx, sy))
+                            surface.blit(hammer_sym, rect)
                 
                 # --- RESOURCES VIEW ---
                 elif self.secondary_mode == "RESOURCES":

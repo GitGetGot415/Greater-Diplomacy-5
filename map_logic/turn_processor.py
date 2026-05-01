@@ -40,6 +40,7 @@ def resolve_turn(self):
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
     process_conversions(self)
+    process_disbands(self) # Added disband resolution
     
     # --- NEW: Pre-Movement Combat Mechanics ---
     process_pinning(self)
@@ -59,6 +60,32 @@ def resolve_turn(self):
     process_national_research(self)
     print("--- [PHASE 2] COMPLETE ---")
     print("="*40 + "\n")
+
+def process_disbands(self):
+    """Processes the 1-turn timer for disbanding units and refunds their cost."""
+    unit_library = queries.get_unit_library()
+
+    for province in self.map_data.values():
+        units_to_keep = []
+        for unit in province.get("units", []):
+            order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") == "DISBAND":
+                order["turns_left"] -= 1
+                
+                if order["turns_left"] <= 0:
+                    # Time's up, process the refund and let the unit fade into the void
+                    p_data = self.nation_data.get(unit.get("owner"))
+                    if p_data:
+                        u_type = unit.get("original_type", unit.get("type"))
+                        stats = unit_library.get(u_type, {})
+                        queries.refund_resources(p_data, stats)
+                else:
+                    units_to_keep.append(unit)
+            else:
+                units_to_keep.append(unit)
+                
+        # Overwrite with the surviving units
+        province["units"] = units_to_keep
 
 def process_next_turn(self):
     """Legacy compatibility just in case it's called elsewhere."""

@@ -79,8 +79,8 @@ def render_buttons(self):
 
     # Domestic Set (Paper Icon Added, Text Hidden!)
     self.btn_go_orders = Button(280, 603, "orders", "blue", "Give Orders", self.open_orders, image=icons.get("paper"), show_text=False)
-    self.btn_go_recruit = Button(400, 603, "medium_square", "green", "Recruit Menu", self.open_recruit, image=icons.get("unit"), show_text=False)
-    self.btn_go_build = Button(500, 603, "medium_square", "orange", "Construction", self.open_construction, image=icons.get("industry"), show_text=False)
+    self.btn_go_recruit = Button(600, 603, "medium_square", "green", "Recruit Menu", self.open_recruit, image=icons.get("unit"), show_text=False)
+    self.btn_go_build = Button(700, 603, "medium_square", "orange", "Construction", self.open_construction, image=icons.get("industry"), show_text=False)
 
     # Foreign Set
     self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", self.handle_declare_war)

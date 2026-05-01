@@ -229,6 +229,7 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 # ==========================================
 # CAMERA & MAP RENDERING
 # ==========================================
+
 MAX_CAMERA_ZOOM = 10.0
 OCEAN_DARK_BLUE = (10, 20, 40)
 OCEAN_LIGHT_BLUE = (40, 100, 180)
@@ -246,6 +247,16 @@ DEFAULT_UNIT_HP = 100
 DEFAULT_UNIT_ATK = 5
 DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
+
+# ==========================================
+# OVERLAY ICONS & SCALES
+# ==========================================
+
+ICON_TRAINING = "Training"
+ICON_CONSTRUCTION = "Hammer"
+ICON_DISBANDING = "Disbanding"
+OVERLAY_STATUS_ICON_SCALE = 0.6
+OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
 # ==========================================
 # FILE PATHS
