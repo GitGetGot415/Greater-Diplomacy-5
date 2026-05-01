@@ -13,7 +13,7 @@
     "destroyer": { "category": "NAVY", "max_lvl": 8, "cost": 1800, "req": {}, "years": [1910, 1914, 1918, 1922, 1926, 1930, 1934, 1938] },
     "aircraft_carrier": { "category": "NAVY", "max_lvl": 4, "cost": 1800, "req": {"destroyer": 1}, "years": [1920, 1930, 1940, 1950] },
     "workshop": { "category": "INDUSTRY", "max_lvl": 5, "cost": 1800, "req": {}, "years": [1900, 1902, 1904, 1906, 1908] },
-    "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {"workshop": 5}, "years": [1910] },
+    "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
     "factory": { "category": "INDUSTRY", "max_lvl": 5, "cost": 1800, "req": {"basic_factory": 1}, "years": [1915, 1920, 1925, 1930, 1935] },
     "bergius_process": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
     "synthetic_fuel_experiments": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {"bergius_process": 1}, "years": [1920] },

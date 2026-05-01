@@ -26,7 +26,7 @@ class Construction_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
-        self.building_library = self.load_building_data()
+        self.building_library = queries.get_building_library()
         self.refresh_ui()
 
     def refresh_ui(self):
