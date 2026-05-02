@@ -353,9 +353,9 @@ def calculate_all_economies(map_data, nation_data):
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
                 u_type = unit.get("original_type", unit.get("type"))
                 stats = unit_lib.get(u_type, {})
-                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIER
-                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * c.UPKEEP_MODIFIER
-                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIER
+                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
 
     # Finalize totals
     for data in econ_data.values():

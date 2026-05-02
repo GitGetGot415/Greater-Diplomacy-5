@@ -37,7 +37,11 @@ BASE_YIELDS = {
     "fuel": 0
 }
 
-UPKEEP_MODIFIER = 0.05
+UPKEEP_MODIFIERS = {
+    "manpower": 0.10,
+    "materials": 0.05,
+    "fuel": 0.50
+}
 
 DAYS_PER_TURN = 10
 
