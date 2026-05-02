@@ -53,6 +53,13 @@ NON_CORE_MULTIPLIERS = {
 }
 
 # ==========================================
+# STARTING BUILDINGS
+# ==========================================
+
+DEFAULT_STARTING_FACTORY = "Basic Factory"
+DEFAULT_STARTING_REFINERY = "Experimental Refinery"
+
+# ==========================================
 # ECONOMY SCREEN
 # ==========================================
 

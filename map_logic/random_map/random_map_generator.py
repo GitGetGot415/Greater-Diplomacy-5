@@ -155,12 +155,22 @@ def randomize_all_provinces(map_screen, settings):
         # Then, overwrite with the calculated timeline tech levels
         map_screen.nation_data[nation]["research"].update(baseline_tech)
 
-    # Determine which buildings are legally allowed to spawn
-    allowed_buildings = []
-    if baseline_tech.get("workshop", 0) > 0: allowed_buildings.append("Workshop Lvl 1")
-    if baseline_tech.get("basic_factory", 0) > 0: allowed_buildings.append("Basic Factory")
-    if baseline_tech.get("factory", 0) > 0: allowed_buildings.append("Factory Lvl 1")
-    if baseline_tech.get("fuel_refining", 0) > 0: allowed_buildings.append("Synthetic Refinery Lvl 1")
+    # Determine which buildings are legally allowed to spawn based on tech
+    allowed_factories = []
+    if baseline_tech.get("basic_factory", 0) > 0:
+        allowed_factories.append(c.DEFAULT_STARTING_FACTORY)
+        
+    fac_lvl = baseline_tech.get("factory", 0)
+    for lvl in range(1, fac_lvl + 1):
+        allowed_factories.append(f"Factory Lvl {lvl}")
+
+    allowed_refineries = []
+    if baseline_tech.get("synthetic_fuel_experiments", 0) > 0:
+        allowed_refineries.append(c.DEFAULT_STARTING_REFINERY)
+        
+    ref_lvl = baseline_tech.get("fuel_refining", 0)
+    for lvl in range(1, ref_lvl + 1):
+        allowed_refineries.append(f"Synthetic Refinery Lvl {lvl}")
 
     # Give out random resources and buildings
     for prov in valid_land_provinces:
@@ -169,8 +179,13 @@ def randomize_all_provinces(map_screen, settings):
             prov["resources"] = {res_type: random.randint(20, 80)}
             
         # Only spawn buildings if the era permits it
-        if allowed_buildings and random.random() < 0.10:
-            prov["buildings"] = [random.choice(allowed_buildings)]
+        # Appending allows them to safely co-exist on the same tile
+        prov.setdefault("buildings", [])
+        if allowed_factories and random.random() < 0.10:
+            prov["buildings"].append(random.choice(allowed_factories))
+            
+        if allowed_refineries and random.random() < 0.05:
+            prov["buildings"].append(random.choice(allowed_refineries))
 
     # --- Step D: Guarantee Minimums & Garrison Units ---
     unit_library = {}
@@ -207,26 +222,30 @@ def randomize_all_provinces(map_screen, settings):
 
         infantry_name = get_infantry_type(nation)
         has_factory = False
+        refinery_provs = []
 
         for prov in owned_provs:
             bldgs = prov.get("buildings", [])
+            
             # Check if province contains an industrial building
-            if any("Workshop" in b or "Factory" in b or "Refinery" in b for b in bldgs):
+            if any("Factory" in b for b in bldgs):
                 has_factory = True
-                prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
+                
+            if any("Refinery" in b for b in bldgs):
+                refinery_provs.append(prov)
 
-                # other test summons (do not actually implement)
-                # cavalry also exists (check if ai knows it can move them at 2x speed)
-                # prov.setdefault("units", []).append(generate_unit(nation, "Cavalry"))
-                # carrack (only summon if coastal)
-                # if prov.get("is_coastal", False):
-                #     prov.setdefault("units", []).append(generate_unit(nation, "Carrack"))
+            if any("Factory" in b or "Refinery" in b for b in bldgs):
+                prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
         
         # If the nation randomly got zero factories, guarantee them one + a garrison unit
         if not has_factory:
-            target_prov = random.choice(owned_provs)
-            bldg_to_add = allowed_buildings[-1] if allowed_buildings else "Workshop Lvl 1"
+            # Safely prioritize merging it with an existing refinery to save map space
+            target_prov = random.choice(refinery_provs) if refinery_provs else random.choice(owned_provs)
+            bldg_to_add = random.choice(allowed_factories) if allowed_factories else c.DEFAULT_STARTING_FACTORY
             target_prov.setdefault("buildings", []).append(bldg_to_add)
-            target_prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
+            
+            # Grant a garrison if the tile didn't already get one from the refinery checks above
+            if target_prov not in refinery_provs:
+                target_prov.setdefault("units", []).append(generate_unit(nation, infantry_name))
 
     map_screen.show_feedback(f"Randomized {target_country_count} evenly sized nations for {start_year}!")
