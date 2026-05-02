@@ -88,17 +88,25 @@ def process_ai_economy_decisions(map_screen):
             
             # --- NEW: Guard Target Calculation ---
             infantry_count = 0
+            naval_count = 0
             guard_targets = 0
             coastal_targets = 0
             
             for prov in my_provs:
-                # Count existing and queued infantry
+                # Count existing and queued units
                 for u in prov.get("units", []):
-                    if u.get("owner") == ai_name and "Infantry" in u.get("type", ""):
-                        infantry_count += 1
+                    if u.get("owner") == ai_name:
+                        u_type = u.get("type", "")
+                        if "Infantry" in u_type:
+                            infantry_count += 1
+                        elif queries.is_naval_unit(u_type) and not u_type.startswith("Convoy"):
+                            naval_count += 1
                 for q in prov.get("deployment_queue", []):
-                    if "Infantry" in q.get("unit_type", ""):
+                    q_type = q.get("unit_type", "")
+                    if "Infantry" in q_type:
                         infantry_count += 1
+                    elif queries.is_naval_unit(q_type) and not q_type.startswith("Convoy"):
+                        naval_count += 1
                 
                 # Check neighbors for foreign borders
                 is_border = False
@@ -118,10 +126,16 @@ def process_ai_economy_decisions(map_screen):
             unit_name_to_build = None
             if infantry_count < total_guard_needed:
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library)
+            elif coastal_targets > 0 and naval_count < coastal_targets * 1.5:
+                # Prioritize naval deployment if coasts are undefended and ratio is low
+                unit_name_to_build = queries.get_best_naval_unit(data.get("research", {}), unit_library)
+                if not unit_name_to_build: # Fallback to offensive land units if no naval tech
+                    unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
             else:
                 unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
-                if not unit_name_to_build: # Fallback if no offensive tech is researched
-                    unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library)
+
+            if not unit_name_to_build: # Fallback if no offensive tech is researched
+                unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library)
 
             unit_stats = unit_library.get(unit_name_to_build, {})
             cost_mat = unit_stats.get("cost_materials", 0)

@@ -263,13 +263,19 @@ OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 # ==========================================
 
 AI_OFFENSIVE_UNIT_PREFERENCE = [
-    "Cavalry"
-    # look the stuff below requires fuel, and rn the ai kinda sucks at managing that part of their economy
-    #"WW1 Armored Car",
-    #"WW1 Tank",
-    #"Light Tank",
-    #"Medium Tank",
-    #"Main Battle Tank"
+    "Cavalry",
+    # the stuff below requires fuel, make sure the ai can handle it
+    "WW1 Armored Car",
+    "WW1 Tank",
+    "Light Tank",
+    "Medium Tank",
+    "Main Battle Tank"
+]
+
+AI_NAVAL_UNIT_PREFERENCE = [
+    "Dreadnought",
+    "Destroyer",
+    # "Aircraft Carrier"
 ]
 
 AI_UPKEEP_TARGETS = {

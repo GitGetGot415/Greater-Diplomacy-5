@@ -238,6 +238,23 @@ def get_best_offensive_unit(player_research, unit_library):
                     return test_name
     return None
 
+def get_best_naval_unit(player_research, unit_library):
+    """Finds the highest preference naval unit the nation has unlocked."""
+    for base_pref in reversed(c.AI_NAVAL_UNIT_PREFERENCE):
+        tech_key = base_pref.lower().replace(" ", "_")
+        res_lvl = player_research.get(tech_key, 0)
+
+        if res_lvl > 0:
+            if base_pref == "Dreadnought": return "Dreadnought"
+
+            # For numbered tiers, find the highest roman numeral available
+            romans = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII"}
+            for check_lvl in range(res_lvl, 0, -1):
+                test_name = f"{base_pref} {romans.get(check_lvl, str(check_lvl))}"
+                if test_name in unit_library:
+                    return test_name
+    return None
+
 def check_tech_requirements(res_levels, reqs):
     """Centralized tech requirement checker."""
     if not reqs: return True

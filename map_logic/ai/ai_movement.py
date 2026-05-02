@@ -1,7 +1,7 @@
 import data.constants as c
 from data import queries
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None):
     """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
     queue = [[start_id]]
     visited = set([start_id])
@@ -26,13 +26,21 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
         if not prov: continue
 
         for n_id in prov.get("neighbors", []):
-            # --- NEW CONVOY BFS RULE ---
-            if is_convoy:
+            n_prov = id_to_province.get(n_id)
+            if not n_prov: continue
+            
+            # --- NEW CONVOY AND NAVAL BFS RULE ---
+            if is_convoy or is_ship:
                 curr_is_water = prov.get("terrain") in c.WATER_TERRAINS
-                n_prov = id_to_province.get(n_id)
-                dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS if n_prov else False
+                dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS
+                
                 if not curr_is_water and not dest_is_water:
-                    continue # Convoys on land cannot move to another land tile
+                    continue # Convoys and Ships on land cannot move to another land tile
+                    
+                if is_ship and not dest_is_water:
+                    # Ships can only enter friendly coastal tiles
+                    if not queries.can_ships_enter(moving_nation, n_prov, nation_data):
+                        continue
             # ---------------------------
 
             if n_id in target_ids:
@@ -46,7 +54,7 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by distance.
     if valid_paths:
-        best_path = min(valid_paths, key=lambda p: (target_assignments[p[-1]], len(p)))
+        best_path = min(valid_paths, key=lambda p: (target_assignments.get(p[-1], 0), len(p)))
         
         # If the best path is just staying where we are, return an empty array so we don't move
         if best_path[-1] == start_id:
@@ -57,7 +65,7 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     return []
 
 def process_ai_unit_orders(map_screen):
-    """Generates movement orders for AI-controlled units to balance borders or attack."""
+    """Generates movement orders for AI-controlled units to balance borders, attack, or escort."""
     
     ai_nations = queries.get_active_ai_nations(map_screen)
 
@@ -98,6 +106,20 @@ def process_ai_unit_orders(map_screen):
         peace_borders = set()
         coastal_borders = set()
         enemy_targets = set()
+        all_enemy_coasts = set()
+        enemy_coastal_waters = set()
+
+        # Locate all enemy coastal provinces globally for naval targeting and invasions
+        if enemies:
+            for prov in map_screen.map_data.values():
+                if prov.get("owner") in enemies and prov.get("is_coastal", False):
+                    all_enemy_coasts.add(prov["id"])
+                    
+                    # Find adjacent water tiles for ships to blockade from
+                    for n_id in prov.get("neighbors", []):
+                        n_prov = map_screen.id_to_province.get(n_id)
+                        if n_prov and n_prov.get("terrain") in c.WATER_TERRAINS:
+                            enemy_coastal_waters.add(n_id)
 
         for prov in my_provs:
             is_war_border = False
@@ -124,39 +146,48 @@ def process_ai_unit_orders(map_screen):
             elif is_coastal:
                 coastal_borders.add(prov["id"])
 
-        at_war = len(enemies) > 0 and len(enemy_targets) > 0
+        at_war = len(enemies) > 0 and (len(enemy_targets) > 0 or len(all_enemy_coasts) > 0)
 
         # Determine where units should be
         if at_war:
-            target_destinations = list(enemy_targets)
+            target_destinations = list(enemy_targets) + list(all_enemy_coasts)
         else:
             # Include coasts but peace borders still naturally pull units first if we prioritize them
             target_destinations = list(peace_borders) + list(coastal_borders)
 
         # If no targets (e.g. island with no neighbors), skip
         if not target_destinations:
-            continue
+            target_destinations = list(coastal_borders)
+            if not target_destinations: continue
 
         # Keep track of how many units are assigned to each target so we can spread them evenly
         target_assignments = {t_id: 0 for t_id in target_destinations}
         
         # Artificially inflate the assignment count of coasts so borders get prioritized first
         for c_id in coastal_borders:
-            # FIX: Check if c_id is actually in target_assignments before incrementing
             if c_id in target_assignments and c_id not in peace_borders and c_id not in war_borders:
                 target_assignments[c_id] += 1
+
+        # Identify naval destinations (Naval escorts and blockades)
+        friendly_convoys = set()
+        for unit, prov in units_info:
+            if unit.get("type", "").startswith("Convoy"):
+                friendly_convoys.add(prov["id"])
+                
+        naval_destinations = list(enemy_coastal_waters) + list(friendly_convoys)
+        naval_assignments = {t_id: 0 for t_id in naval_destinations}
 
         # Pre-count units already AT the targets so we don't over-assign
         for unit, prov in units_info:
             if prov["id"] in target_assignments:
                 target_assignments[prov["id"]] += 1
+            if prov["id"] in naval_assignments:
+                naval_assignments[prov["id"]] += 1
 
         for unit, prov in units_info:
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
-            # Skip naval units for this basic land logic utilizing the cleaner query
-            if queries.is_naval_unit(u_type) and not is_convoy:
-                continue
+            is_naval_combatant = queries.is_naval_unit(u_type) and not is_convoy
 
             curr_id = prov["id"]
 
@@ -173,37 +204,59 @@ def process_ai_unit_orders(map_screen):
             
             # 1. Peacetime Anti-Shuffle
             # If we are holding a border and we are the ONLY unit here, hold the line.
-            if not at_war and curr_id in target_assignments:
+            if not at_war and not is_naval_combatant and curr_id in target_assignments:
                 if target_assignments[curr_id] <= 1:
                     continue # Skip BFS entirely, stay put
             
             # 2. Wartime Anti-Shuffle
             # If we are adjacent to the enemy, prioritize attacking them directly
             # instead of walking sideways down the border to balance numbers.
-            if at_war:
-                adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations]
+            if at_war and not is_naval_combatant:
+                adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations and n in enemy_targets]
                 if adjacent_targets:
                     # Pick the adjacent enemy with the least attackers currently assigned
-                    best_adj = min(adjacent_targets, key=lambda t: target_assignments[t])
+                    best_adj = min(adjacent_targets, key=lambda t: target_assignments.get(t, 0))
                     
                     speed = unit.get("speed", 1)
                     unit["order"]["path"] = [best_adj] # Move directly into enemy territory
                     
-                    target_assignments[best_adj] += 1
+                    target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
                     if curr_id in target_assignments:
                         target_assignments[curr_id] -= 1
                     continue # Skip BFS, we have our orders
 
             # --- END ANTI-SHUFFLE ---
 
-            # Route to the nearest border/enemy/coast that needs reinforcements
-            path = _bfs_nearest_target(curr_id, set(target_destinations), allowed_prov_ids, map_screen.id_to_province, target_assignments, is_convoy=is_convoy)
+            # Branch routing logic between ground forces and naval forces
+            if is_naval_combatant:
+                targets = naval_destinations
+                assignments = naval_assignments
+            else:
+                targets = target_destinations
+                assignments = target_assignments
+
+            if not targets:
+                continue
+
+            # Route to the nearest border/enemy/coast/convoy that needs reinforcements
+            path = _bfs_nearest_target(
+                curr_id, 
+                set(targets), 
+                allowed_prov_ids, 
+                map_screen.id_to_province, 
+                assignments, 
+                is_convoy=is_convoy, 
+                is_ship=is_naval_combatant, 
+                moving_nation=ai_name, 
+                nation_data=map_screen.nation_data
+            )
+
             if path:
                 # --- NEW: Convoy Conversion Check ---
                 next_prov = map_screen.id_to_province.get(path[0])
                 next_is_water = next_prov.get("terrain") in c.WATER_TERRAINS
                 
-                if next_is_water and not is_convoy:
+                if next_is_water and not is_convoy and not is_naval_combatant:
                     # Cannot step onto water, must explicitly convert first
                     unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": "Convoy"}
                 else:
@@ -212,6 +265,7 @@ def process_ai_unit_orders(map_screen):
                     unit["order"]["path"] = path[:speed]
                 
                 # Tell the system this unit is taking this target, reducing its priority for the next unit
-                if curr_id in target_assignments:
-                    target_assignments[curr_id] -= 1
-                target_assignments[path[-1]] += 1
+                if curr_id in assignments:
+                    assignments[curr_id] -= 1
+                if path[-1] in assignments:
+                    assignments[path[-1]] += 1
