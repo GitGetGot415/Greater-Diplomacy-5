@@ -72,7 +72,9 @@ class Orders_Screen(GameState):
             in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
             is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
             is_coastal = self.target_province.get("is_coastal", False)
+            
             is_convoy = unit_name.startswith("Convoy")
+            is_truck = unit_name.startswith("Truck")
             is_naval = queries.is_naval_unit(unit_name)
 
             # 2. Inline Convoy Conversion Button
@@ -85,13 +87,21 @@ class Orders_Screen(GameState):
                     btn_conv = Button(600, y_pos, "small", "blue", "To Land", lambda idx=i: self.convert_unit(idx))
                 else:
                     btn_conv = Button(600, y_pos, "small", "grey", "Need Land", lambda: None)
+            elif is_truck:
+                if is_coastal or is_water:
+                    btn_conv = Button(600, y_pos, "small", "blue", "To Ship", lambda idx=i: self.convert_unit(idx))
+                else:
+                    btn_conv = Button(600, y_pos, "small", "grey", "Need Coast", lambda: None)
             elif not is_naval:
                 if is_coastal or is_water:
                     btn_conv = Button(600, y_pos, "small", "blue", "To Convoy", lambda idx=i: self.convert_unit(idx))
                 else:
                     btn_conv = Button(600, y_pos, "small", "grey", "Need Coast", lambda: None)
-            else:
-                btn_conv = Button(600, y_pos, "small", "grey", "Ship", lambda: None)
+            else: # is_naval
+                if is_coastal or not is_water:
+                    btn_conv = Button(600, y_pos, "small", "blue", "To Truck", lambda idx=i: self.convert_unit(idx))
+                else:
+                    btn_conv = Button(600, y_pos, "small", "grey", "Need Coast", lambda: None)
             
             self.elements.append(btn_conv)
 
@@ -125,10 +135,23 @@ class Orders_Screen(GameState):
         if 0 <= index < len(units):
             unit = units[index]
             u_type = unit.get("type", "")
-            target_type = "Land Unit" if u_type.startswith("Convoy") else "Convoy"
-            unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": target_type}
             
-            self.map_screen.show_feedback(f"Converting to {target_type} (1 turn)")
+            if u_type.startswith("Convoy"): 
+                target_type = "Land Unit"
+                turns = 1
+            elif u_type.startswith("Truck"):
+                target_type = "Ship"
+                turns = c.TRUCK_CONVERT_TURNS
+            elif queries.is_naval_unit(u_type):
+                target_type = "Truck"
+                turns = c.TRUCK_CONVERT_TURNS
+            else:
+                target_type = "Convoy"
+                turns = 1
+                
+            unit["order"] = {"type": "CONVERT", "turns_left": turns, "to": target_type}
+            
+            self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
             self.refresh_ui()
 
     def select_unit(self, index):
@@ -258,6 +281,7 @@ class Orders_Screen(GameState):
         # Look up the actual unit stats using its type name
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
+        is_truck = u_type.startswith("Truck")
         is_naval = queries.is_naval_unit(u_type)
 
         # Enforce Land Unit Rules

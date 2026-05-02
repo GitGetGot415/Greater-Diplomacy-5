@@ -253,6 +253,16 @@ DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
 # ==========================================
+# CONVOY & TRUCK LOGIC
+# ==========================================
+
+CONVOY_MAX_HP = 1000
+TRUCK_MAX_HP = 1000
+CONVOY_ATK = 0
+TRUCK_ATK = 0
+TRUCK_CONVERT_TURNS = 3
+
+# ==========================================
 # OVERLAY ICONS & SCALES
 # ==========================================
 

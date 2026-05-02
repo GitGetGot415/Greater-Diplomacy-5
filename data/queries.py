@@ -532,6 +532,8 @@ def is_naval_unit(unit_type):
     """Checks if a unit is a naval unit based on its type name or unit library stats."""
     if unit_type.startswith("Convoy"):
         return True
+    if unit_type.startswith("Truck"):
+        return False
     stats = get_unit_library().get(unit_type, {})
     return stats.get("naval_unit", False)
 

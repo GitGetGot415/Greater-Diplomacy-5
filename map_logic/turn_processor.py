@@ -178,7 +178,7 @@ def process_meeting_engagements(self):
                     prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
 
 def process_conversions(self):
-    """Processes the 1-turn timer for transferring units into Convoys and back."""
+    """Processes the timer for transferring units into Convoys/Trucks and back."""
     for province in self.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
@@ -186,20 +186,45 @@ def process_conversions(self):
                 order["turns_left"] -= 1
                 
                 if order["turns_left"] <= 0:
-                    if order.get("to") == "Convoy":
+                    target = order.get("to")
+                    
+                    if target in ["Convoy", "Truck"]:
                         unit["original_type"] = unit["type"]
                         unit["original_speed"] = unit.get("speed", 1)
-                        # Embed the name here!
-                        unit["type"] = f"Convoy ({unit['type']})"
+                        unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
+                        unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
+                        
+                        pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
+                        
+                        unit["type"] = f"{target} ({unit['type']})"
                         unit["speed"] = 1
-                        unit["naval_unit"] = True
+                        
+                        if target == "Convoy":
+                            unit["naval_unit"] = True
+                            unit["max_health"] = c.CONVOY_MAX_HP
+                            unit["attack"] = c.CONVOY_ATK
+                        else:
+                            unit["naval_unit"] = False
+                            unit["max_health"] = c.TRUCK_MAX_HP
+                            unit["attack"] = c.TRUCK_ATK
+                            
+                        unit["health"] = unit["max_health"] * pct
                     else:
+                        pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
+                        
                         unit["type"] = unit.get("original_type", "Infantry")
                         unit["speed"] = unit.get("original_speed", 1)
-                        unit["naval_unit"] = False
-                        if "original_type" in unit: del unit["original_type"]
-                        if "original_speed" in unit: del unit["original_speed"]
+                        unit["max_health"] = unit.get("original_max_health", c.DEFAULT_UNIT_HP)
+                        unit["attack"] = unit.get("original_attack", c.DEFAULT_UNIT_ATK)
                         
+                        unit["health"] = unit["max_health"] * pct
+                        
+                        from data import queries
+                        unit["naval_unit"] = queries.is_naval_unit(unit["type"])
+                        
+                        for key in ["original_type", "original_speed", "original_max_health", "original_attack"]:
+                            if key in unit: del unit[key]
+                            
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
@@ -476,11 +501,17 @@ def process_movement(self):
 
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
+                    pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
                     unit["type"] = unit.get("original_type", "Infantry")
                     unit["speed"] = unit.get("original_speed", 1)
+                    unit["max_health"] = unit.get("original_max_health", c.DEFAULT_UNIT_HP)
+                    unit["attack"] = unit.get("original_attack", c.DEFAULT_UNIT_ATK)
+                    
+                    unit["health"] = unit["max_health"] * pct
                     unit["naval_unit"] = False
-                    if "original_type" in unit: del unit["original_type"]
-                    if "original_speed" in unit: del unit["original_speed"]
+                    
+                    for key in ["original_type", "original_speed", "original_max_health", "original_attack"]:
+                        if key in unit: del unit[key]
                 # ------------------------------------------------------------
 
                 # Only conquer if there are NO defenders from an enemy nation

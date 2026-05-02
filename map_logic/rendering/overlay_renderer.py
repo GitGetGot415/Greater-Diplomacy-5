@@ -286,8 +286,14 @@ def draw_unit_icon(self, surface, sx, sy, province):
     # Fetch the owner's color
     owner_color = self.nation_colors.get(unit_owner, (200, 200, 200))
     
-    # Check if it's a dynamic convoy, otherwise use the standard type
-    symbol_name = "Convoy" if unit_type.startswith("Convoy") else unit_type
+    # Check if it's a dynamic convoy or truck, otherwise use the standard type
+    if unit_type.startswith("Convoy"):
+        symbol_name = "Convoy"
+    elif unit_type.startswith("Truck"):
+        symbol_name = "Truck"
+    else:
+        symbol_name = unit_type
+        
     symbol = symbol_loader.get_symbol(symbol_name, self.camera.zoom * 0.5, color=owner_color)
     
     if symbol:
