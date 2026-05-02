@@ -197,6 +197,7 @@ KEY_REPEAT_INTERVAL = 40
 # ==========================================
 # UNIT OBSOLESCENCE
 # ==========================================
+
 OBSOLESCENCE_RULES = {
     "WW1 Armored Car": ["armored_car"],
     "WW1 Tank": ["medium_tank", "heavy_tank"],
@@ -318,9 +319,11 @@ AI_NAVAL_UNIT_PREFERENCE = [
 
 AI_UPKEEP_TARGETS = {
     "manpower": 0.60,
-    "materials": 0.20,
-    "fuel": 0.40
+    "materials": 0.40,
+    "fuel": 0.50
 }
+
+AI_INFANTRY_TO_TANK_RATIO = 4
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 

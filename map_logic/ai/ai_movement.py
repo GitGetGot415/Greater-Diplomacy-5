@@ -248,10 +248,28 @@ def process_ai_unit_orders(map_screen):
                     speed = unit.get("speed", 1)
                     unit["order"]["path"] = [best_adj] # Move directly into enemy territory
                     
+                    # --- THE FIX: Let fast units pathfind deeper from the border! ---
+                    if speed > 1:
+                        deep_path = _bfs_nearest_target(
+                            best_adj, 
+                            set(enemy_targets), 
+                            allowed_prov_ids, 
+                            map_screen.id_to_province, 
+                            target_assignments,
+                            is_convoy=is_convoy, 
+                            is_ship=is_naval_combatant, 
+                            moving_nation=ai_name, 
+                            nation_data=map_screen.nation_data
+                        )
+                        # Extend the path, capped at the unit's remaining speed capacity
+                        if deep_path:
+                            unit["order"]["path"].extend(deep_path[:speed - 1])
+                    # ----------------------------------------------------------------
+                    
                     target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
                     if curr_id in target_assignments:
                         target_assignments[curr_id] -= 1
-                    continue # Skip BFS, we have our orders
+                    continue # Skip normal BFS, we have our extended orders
 
             # --- END ANTI-SHUFFLE ---
 

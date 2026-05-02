@@ -44,6 +44,18 @@ def process_ai_economy_decisions(map_screen):
         inc_fuel = econ["total_inc"]["fuel"]
         upk_fuel = econ["upkeep"]["fuel"]
         
+        # --- THE FIX: Include Pending Queue in Upkeep Projections ---
+        # Prevents the AI from bankupting itself on units that haven't spawned yet
+        for prov in my_provs:
+            for q in prov.get("deployment_queue", []):
+                q_type = q.get("unit_type")
+                if q_type:
+                    q_stats = unit_library.get(q_type, {})
+                    upk_man += q_stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+                    upk_mat += q_stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+                    upk_fuel += q_stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+        # ------------------------------------------------------------
+        
         ratio_man = upk_man / inc_man if inc_man > 0 else 1.0
         ratio_mat = upk_mat / inc_mat if inc_mat > 0 else 1.0
         ratio_fuel = upk_fuel / inc_fuel if inc_fuel > 0 else 1.0
@@ -89,6 +101,7 @@ def process_ai_economy_decisions(map_screen):
             # --- NEW: Guard Target Calculation ---
             infantry_count = 0
             naval_count = 0
+            tank_count = 0
             guard_targets = 0
             coastal_targets = 0
             
@@ -99,12 +112,16 @@ def process_ai_economy_decisions(map_screen):
                         u_type = u.get("type", "")
                         if "Infantry" in u_type:
                             infantry_count += 1
+                        elif "Tank" in u_type or "Armored" in u_type:  
+                            tank_count += 1
                         elif queries.is_naval_unit(u_type) and not u_type.startswith("Convoy"):
                             naval_count += 1
                 for q in prov.get("deployment_queue", []):
                     q_type = q.get("unit_type", "")
                     if "Infantry" in q_type:
                         infantry_count += 1
+                    elif "Tank" in q_type or "Armored" in q_type:  
+                        tank_count += 1
                     elif queries.is_naval_unit(q_type) and not q_type.startswith("Convoy"):
                         naval_count += 1
                 
@@ -123,8 +140,16 @@ def process_ai_economy_decisions(map_screen):
             
             total_guard_needed = guard_targets + coastal_targets
             
+            # --- THE FIX: Dynamic Army Composition Ratio ---
+            # If materials are plentiful compared to manpower, the ratio shrinks (build more tanks).
+            # If manpower is massive compared to materials, the ratio grows (build more infantry).
+            # The * 2.0 is a baseline multiplier so balanced economies build 2 inf per 1 tank.
+            mat_to_man_ratio = inc_man / max(1.0, inc_mat)
+            dynamic_ratio = max(1, int(mat_to_man_ratio * 2.0))
+            
             unit_name_to_build = None
-            if infantry_count < total_guard_needed:
+
+            if infantry_count < total_guard_needed and (tank_count == 0 or (infantry_count / tank_count) <= dynamic_ratio):
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library)
             elif coastal_targets > 0 and naval_count < coastal_targets * 1.5:
                 # Prioritize naval deployment if coasts are undefended and ratio is low
