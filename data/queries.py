@@ -124,6 +124,16 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
 # MOVEMENT QUERIES
 # ==========================================
 
+def can_convoy_enter(current_province, target_province):
+    """Convoys on a land tile can only move into water tiles."""
+    curr_is_water = is_water_province(current_province)
+    dest_is_water = is_water_province(target_province)
+
+    # If they're on a land tile they can only move onto an ocean one
+    if not curr_is_water and not dest_is_water:
+        return False
+    return True
+
 def is_water_province(province):
     """Shorthand to check if a province is a water tile."""
     return province.get("terrain") in c.WATER_TERRAINS

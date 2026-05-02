@@ -417,6 +417,14 @@ def process_movement(self):
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
             
+            # --- NEW: Convoy Land Movement Check ---
+            curr_prov = self.id_to_province.get(unit["_current_province_id"])
+            if is_convoy and curr_prov:
+                if not queries.can_convoy_enter(curr_prov, target_prov):
+                    order["path"] = []
+                    continue
+            # ---------------------------------------
+            
             if is_convoy:
                 is_naval = True
             else:
@@ -443,8 +451,8 @@ def process_movement(self):
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
-                # --- INSTANT CONVERT FOR CONVOYS ON ENEMY/UNCLAIMED COAST ---
-                if is_convoy and not dest_is_water and not queries.can_ships_enter(unit["owner"], target_prov, self.nation_data):
+                # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
+                if is_convoy and not dest_is_water:
                     unit["type"] = unit.get("original_type", "Infantry")
                     unit["speed"] = unit.get("original_speed", 1)
                     unit["naval_unit"] = False

@@ -1,7 +1,7 @@
 import data.constants as c
 from data import queries
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False):
     """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
     queue = [[start_id]]
     visited = set([start_id])
@@ -26,6 +26,15 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
         if not prov: continue
 
         for n_id in prov.get("neighbors", []):
+            # --- NEW CONVOY BFS RULE ---
+            if is_convoy:
+                curr_is_water = prov.get("terrain") in c.WATER_TERRAINS
+                n_prov = id_to_province.get(n_id)
+                dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS if n_prov else False
+                if not curr_is_water and not dest_is_water:
+                    continue # Convoys on land cannot move to another land tile
+            # ---------------------------
+
             if n_id in target_ids:
                 valid_paths.append(path + [n_id])
                 if found_depth == -1:
@@ -188,7 +197,7 @@ def process_ai_unit_orders(map_screen):
             # --- END ANTI-SHUFFLE ---
 
             # Route to the nearest border/enemy/coast that needs reinforcements
-            path = _bfs_nearest_target(curr_id, set(target_destinations), allowed_prov_ids, map_screen.id_to_province, target_assignments)
+            path = _bfs_nearest_target(curr_id, set(target_destinations), allowed_prov_ids, map_screen.id_to_province, target_assignments, is_convoy=is_convoy)
             if path:
                 # --- NEW: Convoy Conversion Check ---
                 next_prov = map_screen.id_to_province.get(path[0])

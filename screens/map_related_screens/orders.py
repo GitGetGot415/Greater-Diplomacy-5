@@ -277,6 +277,19 @@ class Orders_Screen(GameState):
                 return False
             # ---------------------------------------------------
 
+        # --- NEW: Convoy Movement Rules ---
+        if is_convoy:
+            current_path = unit.get("order", {}).get("path", [])
+            if not current_path:
+                start_node = self.target_province
+            else:
+                start_node = self.map_screen.id_to_province.get(current_path[-1])
+
+            if start_node and not queries.can_convoy_enter(start_node, dest):
+                self.map_screen.show_feedback("Convoys on land can only move to ocean!")
+                return False
+        # ----------------------------------
+
         # Enforce Diplomacy/Border Rules
         dest_owner = dest.get("owner", "Unclaimed")
         
