@@ -143,19 +143,28 @@ def process_ai_economy_decisions(map_screen):
             # --- THE FIX: Dynamic Army Composition Ratio ---
             # If materials are plentiful compared to manpower, the ratio shrinks (build more tanks).
             # If manpower is massive compared to materials, the ratio grows (build more infantry).
-            # The * 2.0 is a baseline multiplier so balanced economies build 2 inf per 1 tank.
+            # Uses c.AI_INFANTRY_TO_TANK_RATIO so balanced economies respect your constants file.
             mat_to_man_ratio = inc_man / max(1.0, inc_mat)
-            dynamic_ratio = max(1, int(mat_to_man_ratio * 2.0))
+            dynamic_ratio = max(1, int(mat_to_man_ratio * c.AI_INFANTRY_TO_TANK_RATIO))
             
             unit_name_to_build = None
 
-            if infantry_count < total_guard_needed and (tank_count == 0 or (infantry_count / tank_count) <= dynamic_ratio):
+            # 1. Force a tank if our infantry ratio is too high (safely prevents ZeroDivisionError)
+            if (infantry_count / max(1, tank_count)) > dynamic_ratio:
+                unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
+                
+            # 2. Otherwise, fulfill guard needs
+            elif infantry_count < total_guard_needed:
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library)
+                
+            # 3. Naval checks
             elif coastal_targets > 0 and naval_count < coastal_targets * 1.5:
                 # Prioritize naval deployment if coasts are undefended and ratio is low
                 unit_name_to_build = queries.get_best_naval_unit(data.get("research", {}), unit_library)
                 if not unit_name_to_build: # Fallback to offensive land units if no naval tech
                     unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
+                    
+            # 4. Default to offensive
             else:
                 unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
 
