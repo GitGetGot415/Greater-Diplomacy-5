@@ -76,32 +76,32 @@
     },
     "Basic Recruitment Center": {
         "time": 100, "group": "recruitment", "req": null,
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 10, "prod_fuel": 0
+        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 50, "prod_fuel": 0
     },
     "Recruitment Building Lvl 1": {
         "time": 100, "group": "recruitment", "req": "Basic Recruitment Center",
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 20, "prod_fuel": 0
+        "cost_materials": 100000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 100, "prod_fuel": 0
     },
     "Recruitment Building Lvl 2": {
         "time": 100, "group": "recruitment", "req": "Recruitment Building Lvl 1",
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 40, "prod_fuel": 0
+        "cost_materials": 100000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 200, "prod_fuel": 0
     },
     "Recruitment Building Lvl 3": {
         "time": 100, "group": "recruitment", "req": "Recruitment Building Lvl 2",
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 60, "prod_fuel": 0
+        "cost_materials": 100000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 300, "prod_fuel": 0
     },
     "Recruitment Building Lvl 4": {
         "time": 100, "group": "recruitment", "req": "Recruitment Building Lvl 3",
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 80, "prod_fuel": 0
+        "cost_materials": 100000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 400, "prod_fuel": 0
     },
     "Recruitment Building Lvl 5": {
         "time": 100, "group": "recruitment", "req": "Recruitment Building Lvl 4",
-        "cost_materials": 5000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 100, "prod_fuel": 0
+        "cost_materials": 100000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 500, "prod_fuel": 0
     }
 }

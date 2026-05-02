@@ -20,7 +20,7 @@
     "factory": { "category": "INDUSTRY", "max_lvl": 5, "cost": 1800, "req": {"basic_factory": 1}, "years": [1915, 1920, 1925, 1930, 1935] },
     "bergius_process": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
     "synthetic_fuel_experiments": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {"bergius_process": 1}, "years": [1920] },
-    "fuel_refining": { "category": "INDUSTRY", "max_lvl": 3, "cost": 1800, "req": {"synthetic_fuel_experiments": 1}, "years": [1930, 1940, 1950] },
+    "fuel_refining": { "category": "INDUSTRY", "max_lvl": 3, "cost": 1800, "req": {"synthetic_fuel_experiments": 1}, "years": [1925, 1930, 1935] },
     "basic_recruitment": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
-    "recruitment_buildings": { "category": "INDUSTRY", "max_lvl": 5, "cost": 1800, "req": {"basic_recruitment": 1}, "years": [1912, 1914, 1916, 1918, 1920] }
+    "recruitment_buildings": { "category": "INDUSTRY", "max_lvl": 5, "cost": 1800, "req": {"basic_recruitment": 1}, "years": [1915, 1920, 1925, 1930, 1935] }
 }
