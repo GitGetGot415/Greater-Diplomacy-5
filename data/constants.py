@@ -34,13 +34,13 @@ FEEDBACK_TEXT_Y = 220
 BASE_YIELDS = {
     "manpower": 50,
     "materials": 10,
-    "fuel": 0
+    "fuel": 1
 }
 
 UPKEEP_MODIFIERS = {
     "manpower": 0.10,
     "materials": 0.05,
-    "fuel": 0.50
+    "fuel": 0.20
 }
 
 DAYS_PER_TURN = 10
@@ -240,7 +240,7 @@ OCEAN_LIGHT_BLUE = (40, 100, 180)
 
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
-NAME_FADE_START = 4.0
+NAME_FADE_START = 2.0
 NAME_FADE_WINDOW = 1.5
 
 # ==========================================

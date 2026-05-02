@@ -41,6 +41,19 @@
     "Infantry Type 1949": {"health": 2950, "attack": 490, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 30, "naval_unit": false, "order": {}},
     "Infantry Type 1950": {"health": 3000, "attack": 500, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 30, "naval_unit": false, "order": {}},
 
+    "Mechanized Infantry Type 1940": {"health": 2500, "attack": 400, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1941": {"health": 2550, "attack": 410, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1942": {"health": 2600, "attack": 420, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1943": {"health": 2650, "attack": 430, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1944": {"health": 2700, "attack": 440, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1945": {"health": 2750, "attack": 450, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1946": {"health": 2800, "attack": 460, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1947": {"health": 2850, "attack": 470, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1948": {"health": 2900, "attack": 480, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1949": {"health": 2950, "attack": 490, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+    "Mechanized Infantry Type 1950": {"health": 3000, "attack": 500, "defense": 100, "speed": 2, "cost_materials": 1500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 30, "naval_unit": false, "order": {}},
+
+
     "Cavalry": {"health": 500, "attack": 500, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
     
     "WW1 Tank": {"health": 10000, "attack": 1500, "defense": 200, "speed": 1, "cost_materials": 5000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 90, "naval_unit": false, "order": {}},
