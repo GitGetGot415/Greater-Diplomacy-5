@@ -145,9 +145,13 @@ def process_ai_economy_decisions(map_screen):
             # Find a province capable of recruiting
             factory_provs = [p for p in my_provs if queries.has_industry(p)]
             
-            # Can we afford the upfront cost?
-            if factory_provs and data.get("materials", 0) >= cost_mat and data.get("manpower", 0) >= cost_man and data.get("fuel", 0) >= cost_fuel:
-                target_prov = factory_provs[0] # Pick the first available industrial sector
+            # --- NEW: Filter to coastal factories only if building a naval unit ---
+            is_naval_recruit = queries.is_naval_unit(unit_name_to_build)
+            valid_recruit_provs = [p for p in factory_provs if p.get("is_coastal", False)] if is_naval_recruit else factory_provs
+            
+            # Can we afford the upfront cost AND have a valid province?
+            if valid_recruit_provs and data.get("materials", 0) >= cost_mat and data.get("manpower", 0) >= cost_man and data.get("fuel", 0) >= cost_fuel:
+                target_prov = valid_recruit_provs[0] # Pick the first available industrial sector
                 
                 data["materials"] -= cost_mat
                 data["manpower"] -= cost_man

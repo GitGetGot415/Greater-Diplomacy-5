@@ -87,11 +87,22 @@ def open_spectator_action_menu(map_screen, action_type):
     scrollbar = tk.Scrollbar(frame)
     scrollbar.pack(side="right", fill="y")
     
-    # Dynamic filtering based on action type
+    # --- NEW: Dynamic filtering based on action type ---
+    from data import queries
+    living_nations = queries.get_living_nations(map_screen.map_data)
+    
     if action_type == "JOIN_FACTION":
         nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_faction_leader") and n != source_nation])
     elif action_type == "INVITE_FACTION":
         nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and not d.get("faction") and n != source_nation])
+    elif action_type == "WAR":
+        # Only show alive nations not currently at war with the source
+        source_enemies = map_screen.nation_data[source_nation].get("at_war_with", [])
+        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation and n in living_nations and n not in source_enemies])
+    elif action_type == "PEACE":
+        # Only show alive nations that are currently at war with the source
+        source_enemies = map_screen.nation_data[source_nation].get("at_war_with", [])
+        nations = sorted([n for n in source_enemies if n in living_nations])
     else:
         nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation])
 

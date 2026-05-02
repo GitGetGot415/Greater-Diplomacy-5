@@ -35,6 +35,14 @@ def prepare_turn(self):
 def resolve_turn(self):
     """Phase 2: Execute all moves, combat, and advance the clock."""
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
+    
+    # --- NEW: Ghost War Cleanup ---
+    living_nations = queries.get_living_nations(self.map_data)
+    for nation, data in self.nation_data.items():
+        if "at_war_with" in data:
+            data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in living_nations]
+    # ------------------------------
+
     days_to_advance = c.DAYS_PER_TURN
     self.time_manager.process_time(days_to_advance)
     
@@ -282,11 +290,16 @@ def process_combat(self):
                     # Side B attacks Side A
                     apply_group_damage(sides[nation_b]["total_atk"], sides[nation_a]["units"])
 
-        # --- NEW: Wipe queues for units engaged in combat ---
+        # --- NEW: Wipe queues and destroy misplaced naval units for units engaged in combat ---
         if combat_occurred:
+            is_land = province.get("terrain") not in c.WATER_TERRAINS
             for u in units:
                 if "order" in u and "path" in u["order"]:
                     u["order"]["path"] = []
+                
+                # Immediately destroy warships caught in land combat
+                if is_land and queries.is_naval_unit(u.get("type", "")) and not u.get("type", "").startswith("Convoy"):
+                    u["health"] = 0
 
         # Remove dead units (HP <= 0)
         province["units"] = [u for u in units if u.get("health", 0) > 0]
@@ -339,6 +352,16 @@ def check_for_post_combat_captures(self):
             # faction core transfer stuff
             true_owner = queries.get_faction_core_transfer_target(capturer, province, self.nation_data)
             edit_province_ownership.conquer_province(self, province, true_owner)
+            
+            # --- NEW: Scuttle ships if an enemy takes the tile they are on ---
+            is_land = province.get("terrain") not in c.WATER_TERRAINS
+            if is_land:
+                for u in units:
+                    if queries.is_naval_unit(u.get("type", "")) and not u.get("type", "").startswith("Convoy"):
+                        if queries.is_hostile_territory(true_owner, u["owner"], self.nation_data):
+                            u["health"] = 0
+                province["units"] = [u for u in units if u.get("health", 0) > 0]
+                
         # If there's a tie, it becomes unclaimed
         elif len(top_nations) > 1:
             edit_province_ownership.conquer_province(self, province, "Unclaimed")
