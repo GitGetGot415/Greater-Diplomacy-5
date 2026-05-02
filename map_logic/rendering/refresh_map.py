@@ -77,13 +77,13 @@ def refresh_political_map(self):
         
         if terrain_type in c.VISUAL_WATER_MAPPING:
             owner = c.VISUAL_WATER_MAPPING[terrain_type]
-            color = (255, 0, 255) # Magic pink
+            color = c.COLOR_CHROMA_PINK # Magic pink
         else:
             owner = data.get("owner", "Unclaimed")
             color = self.nation_colors.get(owner, (255, 255, 255))
             
             # Prevent colorkey collision
-            if tuple(color) == (255, 0, 255):
+            if tuple(color) == c.COLOR_CHROMA_PINK:
                 color = (254, 0, 255) 
         
         if owner not in owner_to_int:
@@ -105,7 +105,7 @@ def refresh_political_map(self):
     
     new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_pol_surf, out_3d)
-    new_pol_surf.set_colorkey((255, 0, 255)) 
+    new_pol_surf.set_colorkey(c.COLOR_CHROMA_PINK) 
     
     self.political_map = new_pol_surf
     if self.map_mode == "POLITICAL":
@@ -142,7 +142,7 @@ def refresh_relations_map(self):
         
         if terrain_type in c.VISUAL_WATER_MAPPING:
             owner = c.VISUAL_WATER_MAPPING[terrain_type]
-            color = (255, 0, 255) 
+            color = c.COLOR_CHROMA_PINK 
         else:
             # We track the owner for the borders...
             owner = data.get("owner", "Unclaimed")

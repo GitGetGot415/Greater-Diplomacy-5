@@ -68,11 +68,11 @@ class Button:
         
         # Apply the highlight color and thickness if the button is selected
         if getattr(self, 'is_selected', False):
-            border_color = (255, 215, 0) # Gold Highlight
+            border_color = c.COLOR_GOLD_HIGHLIGHT # Gold Highlight
             border_thickness = 3
         else:
             if getattr(self, 'disabled', False):
-                border_color = (100, 100, 100) # Dimmer border
+                border_color = c.COLOR_DIM_BORDER # Dimmer border
             else:
                 border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
             border_thickness = 2
@@ -154,8 +154,8 @@ class Slider:
     def draw(self, surface):
         if not self.visible: return
         
-        pygame.draw.rect(surface, (100, 100, 100), self.rect) # Track
-        pygame.draw.rect(surface, (200, 200, 200), self.handle_rect) # Handle
+        pygame.draw.rect(surface, c.COLOR_SLIDER_TRACK, self.rect) # Track
+        pygame.draw.rect(surface, c.COLOR_SLIDER_HANDLE, self.handle_rect) # Handle
         
         slider_font = fonts.get("normal")
 

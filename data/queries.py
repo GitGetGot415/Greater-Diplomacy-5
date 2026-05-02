@@ -10,23 +10,46 @@ _cached_unit_library = None
 _cached_building_library = None
 _cached_tech_tree = None
 _cached_country_data = None
+_cached_settings = None
+
+def get_settings():
+    global _cached_settings
+    if _cached_settings is None:
+        if os.path.exists(c.SETTINGS_CONFIG_PATH):
+            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
+                _cached_settings = json.load(f)
+        else:
+            _cached_settings = {}
+    return _cached_settings
 
 def get_unit_library(): 
     global _cached_unit_library
     if _cached_unit_library is None:
-        _cached_unit_library = json.load(open(c.UNIT_DATA_PATH)) if os.path.exists(c.UNIT_DATA_PATH) else {}
+        if os.path.exists(c.UNIT_DATA_PATH):
+            with open(c.UNIT_DATA_PATH, "r") as f:
+                _cached_unit_library = json.load(f)
+        else:
+            _cached_unit_library = {}
     return _cached_unit_library
 
 def get_building_library(): 
     global _cached_building_library
     if _cached_building_library is None:
-        _cached_building_library = json.load(open(c.BUILDING_DATA_PATH)) if os.path.exists(c.BUILDING_DATA_PATH) else {}
+        if os.path.exists(c.BUILDING_DATA_PATH):
+            with open(c.BUILDING_DATA_PATH, "r") as f:
+                _cached_building_library = json.load(f)
+        else:
+            _cached_building_library = {}
     return _cached_building_library
 
 def get_tech_tree():
     global _cached_tech_tree
     if _cached_tech_tree is None:
-        _cached_tech_tree = json.load(open(c.RESEARCH_TEMPLATE_PATH)) if os.path.exists(c.RESEARCH_TEMPLATE_PATH) else {}
+        if os.path.exists(c.RESEARCH_TEMPLATE_PATH):
+            with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
+                _cached_tech_tree = json.load(f)
+        else:
+            _cached_tech_tree = {}
     return _cached_tech_tree
 
 def get_country_data():
@@ -38,6 +61,7 @@ def get_country_data():
         else:
             _cached_country_data = {}
     return _cached_country_data
+
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
 # ==========================================

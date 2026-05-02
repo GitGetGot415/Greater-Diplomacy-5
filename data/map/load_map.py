@@ -5,15 +5,12 @@ import base64
 from map_logic.time_handler import TimeHandler
 from data.io import country_io
 import data.constants as c
+from data import queries
 
 def _load_default_images(map_obj):
     """Helper to auto-load flags and portraits from the local assets folder."""
     os.makedirs(c.FLAGS_DIR, exist_ok=True)
     os.makedirs(c.PORTRAITS_DIR, exist_ok=True)
-    
-    def encode_surf_to_b64(surf):
-        img_str = pygame.image.tostring(surf, "RGB")
-        return base64.b64encode(img_str).decode('utf-8')
         
     for country_name, n_data in map_obj.nation_data.items():
         # --- FLAG LOGIC ---
@@ -25,7 +22,7 @@ def _load_default_images(map_obj):
             try:
                 img = pygame.image.load(f_path).convert()
                 img = pygame.transform.scale(img, c.FLAG_SIZE)
-                n_data["flag_data"] = encode_surf_to_b64(img)
+                n_data["flag_data"] = queries.encode_surf_to_b64(img)
             except: pass
         # 2. If no local file, but also no baked data, use default
         elif not n_data.get("flag_data"):
@@ -35,7 +32,7 @@ def _load_default_images(map_obj):
                     img = pygame.Surface(c.FLAG_SIZE)
                     img.fill((200, 200, 200))
                 img = pygame.transform.scale(img, c.FLAG_SIZE)
-                n_data["flag_data"] = encode_surf_to_b64(img)
+                n_data["flag_data"] = queries.encode_surf_to_b64(img)
             except: pass
             
         # --- PORTRAIT LOGIC ---
@@ -47,7 +44,7 @@ def _load_default_images(map_obj):
             try:
                 img = pygame.image.load(p_path).convert()
                 img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                n_data["portrait_data"] = encode_surf_to_b64(img)
+                n_data["portrait_data"] = queries.encode_surf_to_b64(img)
             except: pass
         # 2. If no local file, but also no baked data, use default
         elif not n_data.get("portrait_data"):
@@ -57,7 +54,7 @@ def _load_default_images(map_obj):
                     img = pygame.Surface(c.PORTRAIT_SIZE)
                     img.fill((200, 200, 200))
                 img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                n_data["portrait_data"] = encode_surf_to_b64(img)
+                n_data["portrait_data"] = queries.encode_surf_to_b64(img)
             except: pass
 
 def load_map_assets(self, load_path):

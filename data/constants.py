@@ -231,6 +231,13 @@ SIZES = {
     "large": (300, 80)
 }
 
+COLOR_GOLD_HIGHLIGHT = (255, 215, 0)
+COLOR_DIM_BORDER = (100, 100, 100)
+COLOR_SLIDER_TRACK = (100, 100, 100)
+COLOR_SLIDER_HANDLE = (200, 200, 200)
+
+COLOR_CHROMA_PINK = (255, 0, 255)
+
 # ==========================================
 # MESSAGING APP UI
 # ==========================================
@@ -291,6 +298,7 @@ OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 # ==========================================
 # STAT ICONS
 # ==========================================
+
 ICON_ATTACK = "Attack"
 ICON_DEFENSE = "Shield"
 ICON_HEALTH = "Heart"

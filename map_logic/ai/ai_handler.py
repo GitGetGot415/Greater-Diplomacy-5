@@ -5,53 +5,30 @@ import random
 from google import genai
 from google.genai import types
 import data.constants as c
+from data import queries
 
 def get_gemini_api_key():
-    """Helper to dynamically fetch the saved key."""
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                data = json.load(f)
-                key = data.get("gemini_api_key", data.get("api_key", ""))
-                if key: return key
-        except: pass
-    return ""
+    """Helper to dynamically fetch the saved key from cache."""
+    settings = queries.get_settings()
+    return settings.get("gemini_api_key", settings.get("api_key", ""))
 
 def get_chatgpt_api_key():
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                return json.load(f).get("chatgpt_api_key", "")
-        except: pass
-    return ""
+    return queries.get_settings().get("chatgpt_api_key", "")
 
 def get_claude_api_key():
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                return json.load(f).get("claude_api_key", "")
-        except: pass
-    return ""
+    return queries.get_settings().get("claude_api_key", "")
 
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                data = json.load(f)
-                return data.get("ai_mode", c.DEFAULT_AI_MODE)
-        except: pass
-    return c.DEFAULT_AI_MODE
+    return queries.get_settings().get("ai_mode", c.DEFAULT_AI_MODE)
 
 def get_ai_immersion_level():
     """Reads the settings config to see which immersion level is active."""
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                data = json.load(f)
-                return data.get("ai_immersion_level", "FULL")
-        except: pass
-    return "FULL"
+    return queries.get_settings().get("ai_immersion_level", "FULL")
+
+def get_ollama_model():
+    """Reads the settings config to see which Ollama model is requested."""
+    return queries.get_settings().get("ollama_model", "llama3")
 
 def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
     ai_stats = nation_data.get(ai_nation, {})
@@ -116,16 +93,6 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
             context += "Recent message history:\n" + "\n".join(recent_thread) + "\n"
         
     return context
-
-def get_ollama_model():
-    """Reads the settings config to see which Ollama model is requested."""
-    if os.path.exists(c.SETTINGS_CONFIG_PATH):
-        try:
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                data = json.load(f)
-                return data.get("ollama_model", "llama3")
-        except: pass
-    return "llama3"
 
 def call_ollama(system_prompt, user_prompt):
     """Helper to hit local Ollama instance."""

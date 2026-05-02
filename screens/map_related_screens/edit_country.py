@@ -11,28 +11,11 @@ import ui_elements
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from ui import buttons
+from data import queries
 
 input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
 right_ui_x = c.EDIT_COUNTRY_UI_X3
-
-# Helper functions for encoding/decoding surfaces to JSON strings
-def encode_surf(surf):
-    img_str = pygame.image.tostring(surf, "RGBA") # Changed to RGBA
-    return base64.b64encode(img_str).decode('utf-8')
-
-def decode_surf(b64_str, size):
-    try:
-        img_bytes = base64.b64decode(b64_str)
-        # Check if the save file is using the new RGBA format or the old RGB format
-        if len(img_bytes) == size[0] * size[1] * 4:
-            return pygame.image.fromstring(img_bytes, size, "RGBA")
-        else:
-            return pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
-    except:
-        surf = pygame.Surface(size, pygame.SRCALPHA)
-        surf.fill((255, 255, 255, 255))
-        return surf
 
 class Edit_Country_Screen(GameState):
     def __init__(self):
@@ -138,12 +121,12 @@ class Edit_Country_Screen(GameState):
         self.new_map_color = list(p_data.get("color", [150, 150, 150]))
 
         if p_data.get("flag_data"):
-            self.flag_surf = decode_surf(p_data["flag_data"], self.flag_size)
+            self.flag_surf = queries.decode_b64_to_surf(p_data["flag_data"], self.flag_size)
         else:
             self.flag_surf.fill((255, 255, 255, 255))
             
         if p_data.get("portrait_data"):
-            self.portrait_surf = decode_surf(p_data["portrait_data"], self.portrait_size)
+            self.portrait_surf = queries.decode_b64_to_surf(p_data["portrait_data"], self.portrait_size)
         else:
             self.portrait_surf.fill((255, 255, 255, 255))
             
@@ -288,8 +271,8 @@ class Edit_Country_Screen(GameState):
         p_data["name"] = self.country_name
         p_data["leader_name"] = self.leader_name
         p_data["leader_title"] = self.leader_title
-        p_data["flag_data"] = encode_surf(self.flag_surf)
-        p_data["portrait_data"] = encode_surf(self.portrait_surf)
+        p_data["flag_data"] = queries.encode_surf_to_b64(self.flag_surf)
+        p_data["portrait_data"] = queries.encode_surf_to_b64(self.portrait_surf)
         
         # --- NEW COLOR SAVE LOGIC ---
         old_color = p_data.get("color")
