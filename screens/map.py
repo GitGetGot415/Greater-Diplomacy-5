@@ -574,17 +574,13 @@ class Map(GameState):
             self.show_feedback("Editor: Nation Painting")
 
     # --- Screen Transitions ---
-    def open_recruit(self):
-        if self.selected_province:
-            self.next_state, self.done = "RECRUIT", True
+    def open_production(self):
+        if self.selected_province and self.selected_province.get("owner") == self.player_country:
+            self.next_state, self.done = "PRODUCTION", True
 
     def open_orders(self):
         if self.selected_province:
             self.next_state, self.done = "ORDERS", True
-
-    def open_construction(self):
-        if self.selected_province and self.selected_province.get("owner") == self.player_country:
-            self.next_state, self.done = "CONSTRUCTION", True
 
     def open_research(self):
         self.next_state, self.done = "RESEARCH", True

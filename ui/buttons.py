@@ -79,8 +79,7 @@ def render_buttons(self):
 
     # Domestic Set (Paper Icon Added, Text Hidden!)
     self.btn_go_orders = Button(280, 603, "orders", "blue", "Give Orders", self.open_orders, image=icons.get("paper"), show_text=False)
-    self.btn_go_recruit = Button(600, 603, "medium_square", "green", "Recruit Menu", self.open_recruit, image=icons.get("unit"), show_text=False)
-    self.btn_go_build = Button(700, 603, "medium_square", "orange", "Construction", self.open_construction, image=icons.get("industry"), show_text=False)
+    self.btn_go_production = Button(600, 603, "medium_square", "orange", "Production", self.open_production, image=icons.get("industry"), show_text=False)
 
     # Foreign Set
     self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", self.handle_declare_war)
@@ -118,7 +117,7 @@ def render_buttons(self):
         self.btn_ed_core, self.btn_ed_autocore, self.btn_ed_resource, self.btn_ed_building, self.btn_ed_sync,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_date, self.btn_ed_diplo,
         self.btn_next_turn, self.btn_skip_ai, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
-        self.btn_gp_save, self.btn_gp_settings, self.btn_go_orders, self.btn_go_recruit, self.btn_go_build,
+        self.btn_gp_save, self.btn_gp_settings, self.btn_go_orders, self.btn_go_production,
         self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create, self.btn_fac_leave, self.btn_fac_disband,
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
@@ -264,8 +263,7 @@ def update_button_states(map_screen):
 
             if owner == map_screen.player_country:
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
-                set_btn(map_screen.btn_go_recruit, True, is_land, "Recruit Menu", "green")
-                set_btn(map_screen.btn_go_build, True, is_land, "Construction", "orange")
+                set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
 
             elif queries.is_playable(owner, map_screen.nation_data):
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")

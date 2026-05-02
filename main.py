@@ -8,14 +8,13 @@ from screens.map import Map
 from screens.menu import Menu
 from screens.new_game import New_Game
 from screens.settings import Settings
-from screens.map_related_screens.recruit import Recruit_Screen
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
 from screens.map_related_screens.research import Research_Screen
-from screens.map_related_screens.construction import Construction_Screen
 from screens.map_related_screens.economy import Economy_Screen
 from screens.map_related_screens.edit_country import Edit_Country_Screen
+from screens.map_related_screens.production import Production_Screen
 from screens.select_base_map import Select_Base_Map
 from screens.random_setup import Random_Setup
 
@@ -102,14 +101,13 @@ class Controller:
             "SETTINGS": Settings(self), 
             "SELECT_BASE_MAP": Select_Base_Map(),
             "MAP": Map(),
-            "RECRUIT": Recruit_Screen(),
+            "PRODUCTION": Production_Screen(),
             "ORDERS": Orders_Screen(),
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),
             "MESSAGES": Messages_Screen()
         }
-        self.states["CONSTRUCTION"] = Construction_Screen()
         self.active_state = self.states["MENU"]
 
     def flip_state(self):
@@ -118,7 +116,7 @@ class Controller:
         next_state_name = self.active_state.next_state
         
         # 1. Data Handoff
-        if next_state_name in ["RECRUIT", "ORDERS", "NAVY", "CONSTRUCTION", "EDIT_COUNTRY"]:
+        if next_state_name in ["PRODUCTION", "ORDERS", "NAVY", "EDIT_COUNTRY"]:
             map_ref = self.states["MAP"]
             if next_state_name == "EDIT_COUNTRY":
                 self.states["EDIT_COUNTRY"].start_editor(map_ref)
