@@ -6,6 +6,9 @@ def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""
     active_nations = list(queries.get_living_nations(map_screen.map_data))
     ai_nations = queries.get_active_ai_nations(map_screen)
+    
+    # Grab the active players to pass down for our FULL/ABSOLUTE optimization check
+    human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
@@ -39,8 +42,10 @@ def process_basic_proactive_ai(map_screen):
                         turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
                         
                         if member not in pending or turns == 0:
-                            # INSTANT: Use fallback text, no LLM call
-                            msg = c.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "Brothers, let us join your fight.")
+                            # Try to generate flavor text first
+                            action_context = f"mobilizing our forces to join your war against {target_enemy}"
+                            llm_msg = ai_handler.generate_proactive_text(ai_name, member, action_context, human_players)
+                            msg = llm_msg if llm_msg else c.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "Brothers, let us join your fight.")
                             
                             pending[member] = {
                                 "action": "JOIN_WARS",
@@ -74,8 +79,10 @@ def process_basic_proactive_ai(map_screen):
                     turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
                     
                     if target not in pending or turns == 0:
-                        # INSTANT: Use fallback text, no LLM call
-                        msg = c.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "Your occupation of our rightful territory ends now!")
+                        # Try to generate flavor text first
+                        action_context = f"declaring war on {target} to reclaim our rightful core territory"
+                        llm_msg = ai_handler.generate_proactive_text(ai_name, target, action_context, human_players)
+                        msg = llm_msg if llm_msg else c.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "Your occupation of our rightful territory ends now!")
 
                         pending[target] = {
                             "action": "WAR_DECLARATION",
