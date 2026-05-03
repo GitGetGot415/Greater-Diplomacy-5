@@ -454,23 +454,24 @@ class Map(GameState):
                 # Background
                 pygame.draw.rect(surface, (40, 40, 60), (bar_x, y_pos, bar_w, bar_h), border_radius=5)
 
-                if total > 0:
-                    progress_ratio = completed / float(total)
-                    fill_w = int(bar_w * progress_ratio)
-                    if fill_w > 0:
-                        pygame.draw.rect(surface, (100, 200, 100), (bar_x, y_pos, fill_w, bar_h), border_radius=5)
+                # Safely calculate fill width even if total is currently 0
+                progress_ratio = (completed / float(total)) if total > 0 else 0.0
+                fill_w = int(bar_w * progress_ratio)
+                
+                if fill_w > 0:
+                    pygame.draw.rect(surface, (100, 200, 100), (bar_x, y_pos, fill_w, bar_h), border_radius=5)
 
-                    pct_txt = fonts.get("normal").render(f"{int(progress_ratio * 100)}%", True, (255, 255, 255))
-                    surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + 15)))
+                # Show exact numerical progress (e.g., 0/26) instead of percentage
+                pct_txt = fonts.get("normal").render(f"{completed}/{total}", True, (255, 255, 255))
+                surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + 15)))
 
                 # Outline
                 pygame.draw.rect(surface, (200, 200, 200), (bar_x, y_pos, bar_w, bar_h), 2, border_radius=5)
 
-            if self.proactive_tasks_total > 0:
-                draw_bar(center_y - 40, "Generating Grand Strategy:", self.proactive_tasks_completed, self.proactive_tasks_total)
-
-            if self.responsive_tasks_total > 0:
-                draw_bar(center_y + 40, "Generating Responses:", self.responsive_tasks_completed, self.responsive_tasks_total)
+            # Always draw both bars side-by-side regardless of whether they have started yet
+            draw_bar(center_y - 40, "Generating Grand Strategy:", self.proactive_tasks_completed, self.proactive_tasks_total)
+            draw_bar(center_y + 40, "Generating Responses:", self.responsive_tasks_completed, self.responsive_tasks_total)
+            
         else:
             # 3. Draw a spinning loading wheel if we are just doing general processing
             import math
