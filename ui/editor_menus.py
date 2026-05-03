@@ -637,23 +637,11 @@ def open_spectator_messages(self):
     columns = ("Date", "Sender", "Receiver", "Type", "Message")
     tree = ttk.Treeview(root, columns=columns, show="headings")
     
-    tree.heading("Date", text="Date")
-    tree.heading("Sender", text="Sender")
-    tree.heading("Receiver", text="Receiver")
-    tree.heading("Type", text="Type")
-    tree.heading("Message", text="Message")
-    
-    tree.column("Date", width=130, anchor="center")
-    tree.column("Sender", width=120, anchor="center")
-    tree.column("Receiver", width=120, anchor="center")
-    tree.column("Type", width=100, anchor="center")
-    tree.column("Message", width=550, anchor="w")
-    
     # Zebra striping tags
     tree.tag_configure('evenrow', background='#ffffff')
     tree.tag_configure('oddrow', background='#f2f2f2') 
 
-    # --- Gather & Sort Messages Chronologically ---
+    # --- Gather Messages ---
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     
@@ -688,22 +676,56 @@ def open_spectator_messages(self):
                         "content": msg.get("content", ""),
                         "sort_val": sort_val
                     })
-                    
-    # Sort by the calculated time value (Oldest at the top, newest at the bottom)
-    all_msgs.sort(key=lambda x: x["sort_val"])
 
-    # Populate the UI
-    row_idx = 0
-    for m in all_msgs:
-        tag = 'evenrow' if row_idx % 2 == 0 else 'oddrow'
-        tree.insert("", tk.END, values=(
-            m["date"],
-            m["sender"],
-            m["receiver"],
-            m["type"],
-            m["content"]
-        ), tags=(tag,))
-        row_idx += 1
+    # --- Sorting Logic (Matches Economy Tab) ---
+    sort_dirs = {col: True for col in columns}
+
+    def sort_data(col):
+        reverse = sort_dirs[col]
+        sort_dirs[col] = not reverse 
+        
+        def get_val(m):
+            if col == "Date": return m["sort_val"]
+            if col == "Sender": return m["sender"]
+            if col == "Receiver": return m["receiver"]
+            if col == "Type": return m["type"]
+            if col == "Message": return m["content"]
+            return 0
+
+        # Sort the messages using the dynamic value generator
+        sorted_msgs = sorted(all_msgs, key=get_val, reverse=reverse)
+        
+        # Clear existing rows
+        for item in tree.get_children():
+            tree.delete(item)
+            
+        # Re-populate
+        populate_tree(sorted_msgs)
+
+    # Map headings to sort command
+    for col in columns:
+        tree.heading(col, text=col, command=lambda c=col: sort_data(c))
+
+    # Keep original column formatting
+    tree.column("Date", width=130, anchor="center")
+    tree.column("Sender", width=120, anchor="center")
+    tree.column("Receiver", width=120, anchor="center")
+    tree.column("Type", width=100, anchor="center")
+    tree.column("Message", width=550, anchor="w")
+
+    def populate_tree(msg_list):
+        for row_idx, m in enumerate(msg_list):
+            tag = 'evenrow' if row_idx % 2 == 0 else 'oddrow'
+            tree.insert("", tk.END, values=(
+                m["date"],
+                m["sender"],
+                m["receiver"],
+                m["type"],
+                m["content"]
+            ), tags=(tag,))
+
+    # Initial sort: Newest at the top (reverse=True) so most recent dates show up first!
+    populate_tree(sorted(all_msgs, key=lambda x: x["sort_val"], reverse=True))
 
     scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
     tree.configure(yscroll=scrollbar.set)
