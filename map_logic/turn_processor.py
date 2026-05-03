@@ -1,5 +1,3 @@
-import json
-import os
 from map_logic.diplomacy import diplomacy_logic
 from map_logic.rendering import edit_province_ownership
 from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy
@@ -15,9 +13,12 @@ def prepare_turn(self):
     self.ai_total_tasks = 0 
     
     # --- NEW: Basic Proactive AI & Grand Strategy ---
-    self.loading_status_text = "Running Proactive AI..."
     print("[SYSTEM] Running Proactive AI...")
     ai_diplomacy.process_basic_proactive_ai(self)
+    
+    # Reset the task bar to 0 so the UI swaps back to the loading spinner 
+    # for the non-LLM intensive background steps
+    self.ai_total_tasks = 0 
     
     self.loading_status_text = "Running AI Research..."
     print("[SYSTEM] Running AI Research...")

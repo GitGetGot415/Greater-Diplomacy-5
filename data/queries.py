@@ -678,8 +678,11 @@ def get_active_ai_nations(map_screen):
     # Account for potential hotseat active_players lists or standard player_country setups
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     
+    # --- THE FIX: Cross-reference with nations that actually own territory ---
+    living_nations = get_living_nations(map_screen.map_data)
+    
     for name, data in map_screen.nation_data.items():
-        if name not in human_players and name not in c.UNPLAYABLE_NATIONS and data.get("is_playable"):
+        if name in living_nations and name not in human_players and name not in c.UNPLAYABLE_NATIONS and data.get("is_playable"):
             ai_nations.append(name)
             
     return ai_nations
