@@ -19,7 +19,7 @@ from map_logic import turn_processor
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions
 from map_logic.random_map import random_map_generator
-from map_logic.rendering import edit_province_ownership, map_renderer, refresh_map
+from map_logic.rendering import edit_province_ownership, map_renderer, refresh_map, loading_screen
 from map_logic.rendering.font_manager import fonts
 
 class Map(GameState):
@@ -364,7 +364,7 @@ class Map(GameState):
         if getattr(self, 'viewing_ai_moves', False):
             # THE FIX: Set the text, pass the actual surface, and force a frame flip
             self.loading_status_text = "Resolving Orders..."
-            self.draw_turn_loading_screen(pygame.display.get_surface())
+            loading_screen.draw_turn_loading_screen(self, pygame.display.get_surface())
             pygame.display.flip()
             
             turn_processor.resolve_turn(self)
@@ -425,65 +425,6 @@ class Map(GameState):
             print(f"BACKGROUND CRASH CAUGHT:\n{self.thread_error}")
         finally:
             self.ai_processing_complete = True # Always signal the main thread we are done
-
-    def draw_turn_loading_screen(self, surface):
-        """Draws a dynamic overlay informing the player the turn is processing."""
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 200))
-        surface.blit(overlay, (0, 0))
-
-        center_x = surface.get_width() // 2
-        center_y = surface.get_height() // 2
-
-        # 1. Draw Title Text
-        font = fonts.get("title")
-        txt = font.render(self.loading_status_text, True, (255, 255, 255))
-        surface.blit(txt, txt.get_rect(center=(center_x, center_y - 120)))
-
-        # 2. Draw Progress Bars (Only if we have tasks to track)
-        if self.proactive_tasks_total > 0 or self.responsive_tasks_total > 0:
-            bar_w = 400
-            bar_h = 30
-            bar_x = center_x - (bar_w // 2)
-            
-            def draw_bar(y_pos, label, completed, total):
-                # Label
-                lbl_txt = fonts.get("normal").render(label, True, (200, 200, 200))
-                surface.blit(lbl_txt, (bar_x, y_pos - 25))
-
-                # Background
-                pygame.draw.rect(surface, (40, 40, 60), (bar_x, y_pos, bar_w, bar_h), border_radius=5)
-
-                # Safely calculate fill width even if total is currently 0
-                progress_ratio = (completed / float(total)) if total > 0 else 0.0
-                fill_w = int(bar_w * progress_ratio)
-                
-                if fill_w > 0:
-                    pygame.draw.rect(surface, (100, 200, 100), (bar_x, y_pos, fill_w, bar_h), border_radius=5)
-
-                # Show exact numerical progress (e.g., 0/26) instead of percentage
-                pct_txt = fonts.get("normal").render(f"{completed}/{total}", True, (255, 255, 255))
-                surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + 15)))
-
-                # Outline
-                pygame.draw.rect(surface, (200, 200, 200), (bar_x, y_pos, bar_w, bar_h), 2, border_radius=5)
-
-            # Always draw both bars side-by-side regardless of whether they have started yet
-            draw_bar(center_y - 40, "Generating Grand Strategy:", self.proactive_tasks_completed, self.proactive_tasks_total)
-            draw_bar(center_y + 40, "Generating Responses:", self.responsive_tasks_completed, self.responsive_tasks_total)
-            
-        else:
-            # 3. Draw a spinning loading wheel if we are just doing general processing
-            import math
-            self.loading_spinner_angle = (self.loading_spinner_angle + 5) % 360
-            radius = 20
-            
-            # Calculate a pulsing arc
-            start_rad = math.radians(self.loading_spinner_angle)
-            end_rad = math.radians(self.loading_spinner_angle + 270) # 3/4 circle
-            
-            arc_rect = pygame.Rect(center_x - radius, center_y - radius, radius * 2, radius * 2)
-            pygame.draw.arc(surface, (100, 200, 255), arc_rect, start_rad, end_rad, 5)
 
     def show_feedback(self, text): 
         self.feedback_text, self.feedback_timer = text, pygame.time.get_ticks()
@@ -568,7 +509,7 @@ class Map(GameState):
         
         # THE FIX: Inject the loading screen into the main rendering pipeline
         if getattr(self, 'ai_is_thinking', False):
-            self.draw_turn_loading_screen(surface)
+            loading_screen.draw_turn_loading_screen(self, surface)
 
     def refresh_nation_data(self):
         from data.io import country_io
