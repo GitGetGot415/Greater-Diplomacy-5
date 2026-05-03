@@ -99,4 +99,5 @@ def process_basic_proactive_ai(map_screen):
                         
         # --- Update Progress Bar ---
         map_screen.proactive_tasks_completed += 1
+        # map_screen.this_will_cause_an_error += 1
         map_screen.loading_status_text = f"Evaluating AI Grand Strategy ({map_screen.proactive_tasks_completed}/{map_screen.proactive_tasks_total})..."

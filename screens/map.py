@@ -551,6 +551,20 @@ class Map(GameState):
         # Draw badges
         map_renderer.draw_badges(self, surface)
         
+        # --- NEW: RED SCREEN OF DEATH ---
+        if getattr(self, 'thread_error', None):
+            surface.fill((150, 0, 0)) # Red background
+            error_font = fonts.get("small")
+            title = fonts.get("heading1").render("FATAL THREAD ERROR", True, (255, 255, 255))
+            surface.blit(title, (20, 20))
+            
+            y_offset = 80
+            for line in self.thread_error.split('\n'):
+                txt = error_font.render(line, True, (255, 200, 200))
+                surface.blit(txt, (20, y_offset))
+                y_offset += 25
+            return # Stop drawing anything else
+        
         # THE FIX: Inject the loading screen into the main rendering pipeline
         if getattr(self, 'ai_is_thinking', False):
             self.draw_turn_loading_screen(surface)
