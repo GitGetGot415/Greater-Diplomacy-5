@@ -4,6 +4,7 @@ from ui_elements import Button, Slider
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import player_diplomacy_actions
+from ui import event_handler, spectator_menus, buttons, editor_menus
 
 def render_buttons(self):
     """Initializes and registers all map screen buttons uniformly."""
@@ -40,12 +41,12 @@ def render_buttons(self):
     self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 500, "left_ui_bar", "green", "Country Economy", econ_callback)
     self.btn_ed_rd = Button(c.LEFT_UI_BAR_X, 200, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research"))
     self.btn_ed_save = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data)
-    self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", self.editor_load_map)
+    self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", editor_menus.editor_load_map)
     self.btn_ed_nation = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation", self.select_brush_nation)
     self.btn_ed_core = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*3, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", self.select_core_brush)
     self.btn_ed_autocore = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*3, c.SCREEN_HEIGHT - 110, "small", "pink", "Auto-Core", self.auto_assign_cores)
-    self.btn_ed_resource = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.SCREEN_HEIGHT - 110, "small", "purple", "Resource", self.select_resource_brush)
-    self.btn_ed_building = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", self.select_building_brush)
+    self.btn_ed_resource = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.SCREEN_HEIGHT - 110, "small", "purple", "Resource", editor_menus.select_resource_brush)
+    self.btn_ed_building = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Building", editor_menus.select_building_brush)
     self.btn_ed_sync = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*5, c.SCREEN_HEIGHT - 110, "small", "red", "Sync Units", self.sync_units_to_data)
     self.btn_ed_unit = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Unit", self.select_unit_brush)
     self.btn_ed_refresh = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*6, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data)
@@ -95,13 +96,13 @@ def render_buttons(self):
     self.btn_reject_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "diplomatic", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
 
     # Spectator God Power Buttons
-    self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Force War", self.force_war_menu)
-    self.btn_force_peace = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", self.force_peace_menu)
-    self.btn_spec_create_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", self.spec_create_faction)
-    self.btn_spec_join_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", self.spec_join_faction)
-    self.btn_spec_invite_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", self.spec_invite_faction)
-    self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", self.spec_leave_faction)
-    self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", self.spec_disband_faction)
+    self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Force War", spectator_menus.force_war_menu)
+    self.btn_force_peace = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", spectator_menus.force_peace_menu)
+    self.btn_spec_create_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", spectator_menus.spec_create_faction)
+    self.btn_spec_join_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", spectator_menus.spec_join_faction)
+    self.btn_spec_invite_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", spectator_menus.spec_invite_faction)
+    self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", spectator_menus.spec_leave_faction)
+    self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", spectator_menus.spec_disband_faction)
 
     # General Controls
     self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", self.start_spectator)

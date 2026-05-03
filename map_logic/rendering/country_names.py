@@ -1,4 +1,5 @@
 import pygame
+import math
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
@@ -133,3 +134,81 @@ def draw_country_names(map_screen, surface):
                             if map_screen.base_layer == "FACTIONS":
                                 fac_name = map_screen.nation_data.get(country, {}).get("faction", "").upper()
                                 drawn_factions.add(fac_name)
+
+def update_country_centers(map_screen):
+    # Calculates the visual center, rotation, and physical spread for every country landmass.
+    
+    def get_blobs(grouping_key_func):
+        blobs = []
+        visited = set()
+        
+        # Iterate through every province by ID
+        for prov_id, prov in map_screen.id_to_province.items():
+            group_val = grouping_key_func(prov)
+            if not group_val or group_val in c.UNPLAYABLE_NATIONS:
+                continue
+            
+            # If we haven't checked this province yet, it's a new landmass
+            if prov_id not in visited:
+                comp = []
+                queue = [prov]
+                visited.add(prov_id)
+                
+                # Flood-fill to find all connected provinces with the SAME grouping key
+                while queue:
+                    curr = queue.pop(0)
+                    comp.append(curr)
+                    for n_id in curr.get("neighbors", []):
+                        if n_id not in visited:
+                            n_prov = map_screen.id_to_province.get(n_id)
+                            if n_prov and grouping_key_func(n_prov) == group_val:
+                                visited.add(n_id)
+                                queue.append(n_prov)
+                
+                count = len(comp)
+                if count == 0: continue
+                
+                # 1. Average center (Mean)
+                avg_x = sum(ch["center"][0] for ch in comp) / count
+                avg_y = sum(ch["center"][1] for ch in comp) / count
+                
+                # 2. Covariance Matrix calculations (for rotation and scale)
+                c_xx = sum((ch["center"][0] - avg_x)**2 for ch in comp) / count
+                c_yy = sum((ch["center"][1] - avg_y)**2 for ch in comp) / count
+                c_xy = sum((ch["center"][0] - avg_x) * (ch["center"][1] - avg_y) for ch in comp) / count
+                
+                # Calculate angle (math.atan2 handles division by zero safely)
+                # atan2 returns radians, we need degrees. Pygame rotates counter-clockwise.
+                angle_rad = 0.5 * math.atan2(2 * c_xy, c_xx - c_yy)
+                display_angle = -math.degrees(angle_rad) 
+                
+                # 3. Calculate Principal Axes (Length and Thickness) via Eigenvalues
+                W = (c_xx + c_yy) / 2.0
+                D = math.sqrt(((c_xx - c_yy) / 2.0)**2 + c_xy**2)
+                
+                major_variance = W + D
+                minor_variance = max(W - D, 1.0)
+                
+                # Convert variance to spatial distance. 
+                # 3.0 is a tuning constant (adjust if all text is globally too big/small)
+                country_length = math.sqrt(major_variance) * 3.0
+                country_thickness = math.sqrt(minor_variance) * 3.0
+                
+                # Snap to the closest actual province in this component
+                closest_prov = min(comp, key=lambda ch: (ch["center"][0] - avg_x)**2 + (ch["center"][1] - avg_y)**2)
+                
+                blobs.append({
+                    "owner": group_val, # Reusing "owner" key so the renderer accepts it generically
+                    "cx": closest_prov["center"][0],
+                    "cy": closest_prov["center"][1],
+                    "length": country_length,
+                    "thickness": country_thickness,
+                    "spread": math.sqrt(c_xx + c_yy),
+                    "count": count, 
+                    "angle": display_angle
+                })
+        return blobs
+
+    # Generate separate blobs for political owners and primary cores
+    map_screen.country_text_blobs = get_blobs(lambda p: p.get("owner"))
+    map_screen.core_text_blobs = get_blobs(lambda p: p.get("cores")[0] if p.get("cores") else None)

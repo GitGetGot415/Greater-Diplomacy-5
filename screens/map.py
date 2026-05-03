@@ -21,6 +21,7 @@ from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import edit_province_ownership, map_renderer, refresh_map, loading_screen
 from map_logic.rendering.font_manager import fonts
+from map_logic.rendering.country_names import update_country_centers
 
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, num_players=1):
@@ -132,7 +133,7 @@ class Map(GameState):
             data.setdefault("allied_with", [])
             data.setdefault("pending_diplomacy", {})
 
-        self.update_country_centers()
+        update_country_centers(self)
 
     # --- Properties ---
     @property
@@ -236,14 +237,6 @@ class Map(GameState):
             
             buttons.render_buttons(self)
             self.refresh_relations_map()
-
-    def force_war_menu(self): spectator_menus.force_war_menu(self)
-    def force_peace_menu(self): spectator_menus.force_peace_menu(self)
-    def spec_create_faction(self): spectator_menus.spec_create_faction(self)
-    def spec_join_faction(self): spectator_menus.spec_join_faction(self)
-    def spec_invite_faction(self): spectator_menus.spec_invite_faction(self)
-    def spec_leave_faction(self): spectator_menus.spec_leave_faction(self)
-    def spec_disband_faction(self): spectator_menus.spec_disband_faction(self)
             
     def cancel_selection(self):
         self.pending_selection = None
@@ -313,9 +306,6 @@ class Map(GameState):
 
     def refresh_cores_map(self): 
         refresh_map.refresh_cores_map(self)
-
-    def select_resource_brush(self):
-        editor_menus.select_resource_brush(self)
 
     def open_messages(self):
         self.next_state, self.done = "MESSAGES", True
@@ -570,14 +560,9 @@ class Map(GameState):
         self.next_state, self.done = "SETTINGS", True
 
     # --- Tkinter Wrappers (Imported from editor_menus.py) ---
-    def editor_load_map(self):
-        editor_menus.editor_load_map(self)
 
     def select_brush_nation(self):
         editor_menus.select_brush_nation(self)
-
-    def select_building_brush(self):
-        editor_menus.select_building_brush(self)
 
     def open_editor_economy(self):
         editor_menus.open_editor_economy(self)
@@ -605,84 +590,6 @@ class Map(GameState):
             self.editing_country = self.player_country
             self.next_state, self.done = "EDIT_COUNTRY", True
     
-    def update_country_centers(self):
-        # Calculates the visual center, rotation, and physical spread for every country landmass.
-        
-        def get_blobs(grouping_key_func):
-            blobs = []
-            visited = set()
-            
-            # Iterate through every province by ID
-            for prov_id, prov in self.id_to_province.items():
-                group_val = grouping_key_func(prov)
-                if not group_val or group_val in c.UNPLAYABLE_NATIONS:
-                    continue
-                
-                # If we haven't checked this province yet, it's a new landmass
-                if prov_id not in visited:
-                    comp = []
-                    queue = [prov]
-                    visited.add(prov_id)
-                    
-                    # Flood-fill to find all connected provinces with the SAME grouping key
-                    while queue:
-                        curr = queue.pop(0)
-                        comp.append(curr)
-                        for n_id in curr.get("neighbors", []):
-                            if n_id not in visited:
-                                n_prov = self.id_to_province.get(n_id)
-                                if n_prov and grouping_key_func(n_prov) == group_val:
-                                    visited.add(n_id)
-                                    queue.append(n_prov)
-                    
-                    count = len(comp)
-                    if count == 0: continue
-                    
-                    # 1. Average center (Mean)
-                    avg_x = sum(ch["center"][0] for ch in comp) / count
-                    avg_y = sum(ch["center"][1] for ch in comp) / count
-                    
-                    # 2. Covariance Matrix calculations (for rotation and scale)
-                    c_xx = sum((ch["center"][0] - avg_x)**2 for ch in comp) / count
-                    c_yy = sum((ch["center"][1] - avg_y)**2 for ch in comp) / count
-                    c_xy = sum((ch["center"][0] - avg_x) * (ch["center"][1] - avg_y) for ch in comp) / count
-                    
-                    # Calculate angle (math.atan2 handles division by zero safely)
-                    # atan2 returns radians, we need degrees. Pygame rotates counter-clockwise.
-                    angle_rad = 0.5 * math.atan2(2 * c_xy, c_xx - c_yy)
-                    display_angle = -math.degrees(angle_rad) 
-                    
-                    # 3. Calculate Principal Axes (Length and Thickness) via Eigenvalues
-                    W = (c_xx + c_yy) / 2.0
-                    D = math.sqrt(((c_xx - c_yy) / 2.0)**2 + c_xy**2)
-                    
-                    major_variance = W + D
-                    minor_variance = max(W - D, 1.0)
-                    
-                    # Convert variance to spatial distance. 
-                    # 3.0 is a tuning constant (adjust if all text is globally too big/small)
-                    country_length = math.sqrt(major_variance) * 3.0
-                    country_thickness = math.sqrt(minor_variance) * 3.0
-                    
-                    # Snap to the closest actual province in this component
-                    closest_prov = min(comp, key=lambda ch: (ch["center"][0] - avg_x)**2 + (ch["center"][1] - avg_y)**2)
-                    
-                    blobs.append({
-                        "owner": group_val, # Reusing "owner" key so the renderer accepts it generically
-                        "cx": closest_prov["center"][0],
-                        "cy": closest_prov["center"][1],
-                        "length": country_length,
-                        "thickness": country_thickness,
-                        "spread": math.sqrt(c_xx + c_yy),
-                        "count": count, 
-                        "angle": display_angle
-                    })
-            return blobs
-
-        # Generate separate blobs for political owners and primary cores
-        self.country_text_blobs = get_blobs(lambda p: p.get("owner"))
-        self.core_text_blobs = get_blobs(lambda p: p.get("cores")[0] if p.get("cores") else None)
-
     # --- Pygame Core Loop Updates ---
     def update(self):
         super().update()
