@@ -9,8 +9,19 @@ def draw_combat_bubbles(self_map, surface):
     predictions = queries.get_combat_predictions(self_map.map_data, self_map.nation_data, self_map.id_to_province)
     cam = self_map.camera
     
+    # 1. Compile a list of friendly nations to track involvement
+    player_country = self_map.player_country
+    friendly_nations = {player_country}
+    
+    player_allies = self_map.nation_data.get(player_country, {}).get("allied_with", [])
+    friendly_nations.update(player_allies)
+    
+    player_faction = self_map.nation_data.get(player_country, {}).get("faction", "")
+    if player_faction:
+        friendly_nations.update(queries.get_faction_members(player_faction, self_map.nation_data))
+    
     for pred in predictions:
-        player_atk = 0
+        friendly_atk = 0
         enemy_atk = 0
         involved = False
         
@@ -23,10 +34,10 @@ def draw_combat_bubbles(self_map, surface):
             s1_owner = side1[0]["owner"] if side1 else ""
             s2_owner = side2[0]["owner"] if side2 else ""
             
-            if s1_owner == self_map.player_country:
-                player_atk, enemy_atk, involved = atk1, atk2, True
-            elif s2_owner == self_map.player_country:
-                player_atk, enemy_atk, involved = atk2, atk1, True
+            if s1_owner in friendly_nations:
+                friendly_atk, enemy_atk, involved = atk1, atk2, True
+            elif s2_owner in friendly_nations:
+                friendly_atk, enemy_atk, involved = atk2, atk1, True
                 
             p1 = self_map.id_to_province[pred["loc"][0]]["center"]
             p2 = self_map.id_to_province[pred["loc"][1]]["center"]
@@ -35,23 +46,28 @@ def draw_combat_bubbles(self_map, surface):
             
         else:
             forces = pred["forces"]
-            for owner, units in forces.items():
-                atk = sum(u.get("attack", 5) for u in units)
-                if owner == self_map.player_country:
-                    player_atk += atk
-                    involved = True
-                elif queries.are_at_war(self_map.player_country, owner, self_map.nation_data):
-                    enemy_atk += atk
-                    
+            
+            friendly_present = [o for o in forces.keys() if o in friendly_nations]
+            if friendly_present:
+                involved = True
+                for owner, units in forces.items():
+                    atk = sum(u.get("attack", 5) for u in units)
+                    if owner in friendly_present:
+                        friendly_atk += atk
+                    else:
+                        # Only add to enemy_atk if they are actively hostile to the friendly forces here
+                        if any(queries.are_at_war(owner, f, self_map.nation_data) for f in friendly_present):
+                            enemy_atk += atk
+                            
             prov = self_map.id_to_province[pred["loc"]]
             cx, cy = prov["center"]
             
         # Determine Color Based on Simulation
         if not involved:
-            color = (255, 255, 0) # Yellow (Spectating)
-        elif player_atk > enemy_atk:
+            color = (150, 150, 150) # Grey (Unrelated Battle / Spectating)
+        elif friendly_atk > enemy_atk:
             color = (0, 255, 0) # Green (Winning)
-        elif enemy_atk > player_atk:
+        elif enemy_atk > friendly_atk:
             color = (255, 0, 0) # Red (Losing)
         else:
             color = (255, 255, 0) # Yellow (Draw)
