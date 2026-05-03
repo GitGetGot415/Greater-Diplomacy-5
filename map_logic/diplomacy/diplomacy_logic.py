@@ -265,7 +265,6 @@ def process_diplomacy_turn(self):
             if turns == 0:
                 # EXECUTE unilateral actions instantly on Turn 0
                 if action == "WAR_DECLARATION":
-                    finalize_war(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!")
                     msg_text = custom_msg if custom_msg else "We have declared WAR upon you!"
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -277,7 +276,6 @@ def process_diplomacy_turn(self):
                         # TODO: if the ai tries to do this can it be reinterpreted as a regular declaration of war on someone else maybe
                         # actually wait does join wars join multiple wars?
                     else:
-                        join_faction_wars(self.nation_data, country_name, target)
                         log_global_event(self.nation_data, f"ESCALATION: {country_name} has joined the wars of {target}!")
                         msg_text = custom_msg if custom_msg else "We stand with you. Our forces are joining your wars."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -287,7 +285,6 @@ def process_diplomacy_turn(self):
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
                 
                 elif action == "BREAK_ALLIANCE":
-                    finalize_neutral(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"{country_name} has broken their alliance with {target}.")
                     msg_text = custom_msg if custom_msg else "We have broken our alliance."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -311,13 +308,11 @@ def process_diplomacy_turn(self):
                 elif action == "DISBAND_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
-                    finalize_disband_faction(self.nation_data, country_name)
                     log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.")
                     msg_text = custom_msg if custom_msg else "We are dissolving our faction."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
 
                 elif action == "KICK_FACTION_MEMBER":
-                    finalize_faction_kick(self.nation_data, country_name, target)
                     log_global_event(self.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
                     msg_text = custom_msg if custom_msg else "You have been expelled from our faction."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -325,7 +320,6 @@ def process_diplomacy_turn(self):
                 elif action == "LEAVE_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
-                    finalize_faction_leave(self.nation_data, country_name)
                     log_global_event(self.nation_data, f"{country_name} has abandoned their faction.")
                     msg_text = custom_msg if custom_msg else "We are withdrawing from the faction."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -345,8 +339,24 @@ def process_diplomacy_turn(self):
                 is_human_target = target in getattr(self, 'active_players', [])
 
                 if is_unilateral:
+                    # --- EXECUTE THE MECHANICAL CHANGES HERE ON TURN 1 ---
+                    if action == "WAR_DECLARATION":
+                        finalize_war(self.nation_data, country_name, target)
+                    elif action == "JOIN_WARS":
+                        if queries.are_in_same_faction(country_name, target, self.nation_data):
+                            join_faction_wars(self.nation_data, country_name, target)
+                    elif action == "BREAK_ALLIANCE":
+                        finalize_neutral(self.nation_data, country_name, target)
+                    elif action == "DISBAND_FACTION":
+                        finalize_disband_faction(self.nation_data, country_name)
+                    elif action == "KICK_FACTION_MEMBER":
+                        finalize_faction_kick(self.nation_data, country_name, target)
+                    elif action == "LEAVE_FACTION":
+                        finalize_faction_leave(self.nation_data, country_name)
+                    # -----------------------------------------------------
+
                     # AI reacts to unilateral actions on Turn 1 (so it happens AFTER the war starts)
-                    if action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
+                    if action == "DISBAND_FACTION" or action == "LEAVE_FACTION":
                         members = info.get("cached_members", [])
                         for m in members:
                             if m != country_name and m not in getattr(self, 'active_players', []):
