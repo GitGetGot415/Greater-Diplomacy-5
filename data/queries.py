@@ -1,66 +1,61 @@
 import json
 import os
-import data.constants as c
 import re
 import base64
 import pygame
+import data.constants as c
 
-# --- CACHE LIBRARIES ---
-_cached_unit_library = None
-_cached_building_library = None
-_cached_tech_tree = None
-_cached_country_data = None
-_cached_settings = None
+# ==========================================
+# UNIFIED CACHE MANAGER
+# ==========================================
+# Replaces individual global variables with a clean dictionary
+_JSON_CACHE = {
+    "settings": None,
+    "unit_library": None,
+    "building_library": None,
+    "tech_tree": None,
+    "country_data": None
+}
 
-def get_settings():
-    global _cached_settings
-    if _cached_settings is None:
-        if os.path.exists(c.SETTINGS_CONFIG_PATH):
-            with open(c.SETTINGS_CONFIG_PATH, "r") as f:
-                _cached_settings = json.load(f)
+def clear_json_caches():
+    """
+    CRITICAL: Call this from settings.py or your editors after 
+    saving to disk. It forces the game to fetch the updated files!
+    """
+    for key in _JSON_CACHE:
+        _JSON_CACHE[key] = None
+    print("[SYSTEM] JSON Memory Caches Cleared.")
+
+def _load_cached_json(cache_key, file_path):
+    """Helper function to handle file reading and caching dynamically."""
+    if _JSON_CACHE[cache_key] is None:
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    _JSON_CACHE[cache_key] = json.load(f)
+            except Exception as e:
+                print(f"Error loading {file_path}: {e}")
+                _JSON_CACHE[cache_key] = {}
         else:
-            _cached_settings = {}
-    return _cached_settings
+            _JSON_CACHE[cache_key] = {}
+            
+    return _JSON_CACHE[cache_key]
+
+# --- REFACTORED GETTERS ---
+def get_settings():
+    return _load_cached_json("settings", c.SETTINGS_CONFIG_PATH)
 
 def get_unit_library(): 
-    global _cached_unit_library
-    if _cached_unit_library is None:
-        if os.path.exists(c.UNIT_DATA_PATH):
-            with open(c.UNIT_DATA_PATH, "r") as f:
-                _cached_unit_library = json.load(f)
-        else:
-            _cached_unit_library = {}
-    return _cached_unit_library
+    return _load_cached_json("unit_library", c.UNIT_DATA_PATH)
 
 def get_building_library(): 
-    global _cached_building_library
-    if _cached_building_library is None:
-        if os.path.exists(c.BUILDING_DATA_PATH):
-            with open(c.BUILDING_DATA_PATH, "r") as f:
-                _cached_building_library = json.load(f)
-        else:
-            _cached_building_library = {}
-    return _cached_building_library
+    return _load_cached_json("building_library", c.BUILDING_DATA_PATH)
 
 def get_tech_tree():
-    global _cached_tech_tree
-    if _cached_tech_tree is None:
-        if os.path.exists(c.RESEARCH_TEMPLATE_PATH):
-            with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
-                _cached_tech_tree = json.load(f)
-        else:
-            _cached_tech_tree = {}
-    return _cached_tech_tree
+    return _load_cached_json("tech_tree", c.RESEARCH_TEMPLATE_PATH)
 
 def get_country_data():
-    global _cached_country_data
-    if _cached_country_data is None:
-        if os.path.exists(c.COUNTRIES_DATA_PATH):
-            with open(c.COUNTRIES_DATA_PATH, "r") as f:
-                _cached_country_data = json.load(f)
-        else:
-            _cached_country_data = {}
-    return _cached_country_data
+    return _load_cached_json("country_data", c.COUNTRIES_DATA_PATH)
 
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
