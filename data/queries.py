@@ -305,8 +305,26 @@ def get_tech_unlocks(tech_key, level):
     return unlocks
 
 def get_highest_infantry(nation_data_block, tech_tree, unit_library):
-    """Finds the highest level infantry unit the nation has researched."""
-    res_lvl = nation_data_block.get("research", {}).get("infantry_type", 1)
+    """Finds the highest level infantry unit the nation has researched, prioritizing mechanized/motorized upgrades."""
+    res_levels = nation_data_block.get("research", {})
+    
+    mech_lvl = res_levels.get("mechanized_infantry", 0)
+    if mech_lvl > 0:
+        mech_years = tech_tree.get("mechanized_infantry", {}).get("years", [c.START_YEAR])
+        target_index = max(0, min(mech_lvl - 1, len(mech_years) - 1))
+        year_val = mech_years[target_index]
+        u_name = f"Mechanized Infantry Type {year_val}"
+        if u_name in unit_library: return u_name
+
+    mot_lvl = res_levels.get("motorized_infantry", 0)
+    if mot_lvl > 0:
+        mot_years = tech_tree.get("motorized_infantry", {}).get("years", [c.START_YEAR])
+        target_index = max(0, min(mot_lvl - 1, len(mot_years) - 1))
+        year_val = mot_years[target_index]
+        u_name = f"Motorized Infantry Type {year_val}"
+        if u_name in unit_library: return u_name
+
+    res_lvl = res_levels.get("infantry_type", 1)
     inf_years = tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
     
     # --- UPDATED: Safer index bounds checking ---
@@ -347,9 +365,18 @@ def get_best_naval_unit(player_research, unit_library):
 def check_tech_requirements(res_levels, reqs, target_lvl=1):
     """Centralized tech requirement checker."""
     if not reqs: return True
+    
+    def get_req_val(v):
+        if isinstance(v, str) and v.startswith("MATCH_LEVEL"):
+            val = target_lvl
+            if "+" in v: val += int(v.split("+")[1])
+            elif "-" in v: val -= int(v.split("-")[1])
+            return val
+        return v
+        
     if "OR" in reqs:
-        return any(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for sub in reqs["OR"] for k, v in sub.items())
-    return all(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for k, v in reqs.items())
+        return any(res_levels.get(k, 0) >= get_req_val(v) for sub in reqs["OR"] for k, v in sub.items())
+    return all(res_levels.get(k, 0) >= get_req_val(v) for k, v in reqs.items())
 
 def is_training_troops(province):
     """Returns True if the province has any troops in its deployment queue."""

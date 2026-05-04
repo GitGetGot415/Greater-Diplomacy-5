@@ -112,14 +112,17 @@ def get_symbol(name, zoom, color=None):
     else:
         target_img = base_img
 
-    # 3. Scale the final image dynamically based on camera zoom
-    return _scale_img(target_img, zoom)
+    # 3. Scale the final image dynamically based on camera zoom and custom base scales
+    # Check constants for a specific scale override, default to 1.0
+    custom_scale = getattr(c, 'SYMBOL_BASE_SCALES', {}).get(base_name, 1.0)
+    return _scale_img(target_img, zoom, custom_scale)
 
-def _scale_img(img, zoom):
+def _scale_img(img, zoom, custom_scale=1.0):
     # Get original proportions
     orig_w, orig_h = img.get_size()
     
-    scale_factor = zoom * 0.5 
+    # Multiply the global 0.5 scale by our custom scale multiplier
+    scale_factor = zoom * 0.5 * custom_scale
     
     target_w = max(4, int(orig_w * scale_factor))
     target_h = max(4, int(orig_h * scale_factor))

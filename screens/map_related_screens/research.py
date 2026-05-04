@@ -39,15 +39,18 @@ class Research_Screen(GameState):
 
         # Stagger the Y positions to prevent branches overlapping (Keep this hardcoded since it's visual layout, not logic)
         self.tech_rows = {
-            "infantry_type": 350,
-            "cavalry": 450,
+            "infantry_type": 250,
+            "motorized_infantry": 350,
+            "mechanized_infantry": 450,
+            "cavalry": 350,
             "ww1_armored_car": 250, "armored_car": 250, "civilian_car": 250,
             "ww1_tank": 350, "light_tank": 350,
             "medium_tank": 450, "main_battle_tank": 450,
             "heavy_tank": 550,
             "destroyer": 250,
             "carrack": 350, "ironclad": 350, "pre-dreadnought": 350, "dreadnought": 350,
-            "aircraft_carrier": 350,
+            "battleship": 350,
+            "aircraft_carrier": 450,
             "workshop": 250, "basic_factory": 250, "factory": 250,
             "bergius_process": 350, "synthetic_fuel_experiments": 350, "fuel_refining": 350,
             "basic_recruitment": 450, "recruitment_buildings": 450,
@@ -103,6 +106,16 @@ class Research_Screen(GameState):
             inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
             year = inf_years[min(lvl - 1, len(inf_years)-1)]
             return f"Infantry Type {year}"
+            
+        if tech_key == "motorized_infantry":
+            mot_years = self.tech_tree.get("motorized_infantry", {}).get("years", [c.START_YEAR])
+            year = mot_years[min(lvl - 1, len(mot_years)-1)]
+            return f"Motorized Infantry Type {year}"
+
+        if tech_key == "mechanized_infantry":
+            mech_years = self.tech_tree.get("mechanized_infantry", {}).get("years", [c.START_YEAR])
+            year = mech_years[min(lvl - 1, len(mech_years)-1)]
+            return f"Mechanized Infantry Type {year}"
         
         if tech_key == "cavalry": return "Cavalry"
         
@@ -115,6 +128,7 @@ class Research_Screen(GameState):
         if tech_key == "ironclad": return "Ironclad"
         if tech_key == "pre-dreadnought": return "Pre-Dreadnought"
         if tech_key == "dreadnought": return "Dreadnought"
+        if tech_key == "battleship": return "Battleship"
         if tech_key == "bergius_process": return "Bergius Process"
         if tech_key == "synthetic_fuel_experiments": return "Synthetic Fuel Experiments"
         if tech_key == "basic_factory": return "Basic Factory"
@@ -238,9 +252,18 @@ class Research_Screen(GameState):
 
     def check_requirements(self, res_levels, reqs, target_lvl=1):
         if not reqs: return True
+        
+        def get_req_val(v):
+            if isinstance(v, str) and v.startswith("MATCH_LEVEL"):
+                val = target_lvl
+                if "+" in v: val += int(v.split("+")[1])
+                elif "-" in v: val -= int(v.split("-")[1])
+                return val
+            return v
+            
         if "OR" in reqs:
-            return any(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for sub in reqs["OR"] for k, v in sub.items())
-        return all(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for k, v in reqs.items())
+            return any(res_levels.get(k, 0) >= get_req_val(v) for sub in reqs["OR"] for k, v in sub.items())
+        return all(res_levels.get(k, 0) >= get_req_val(v) for k, v in reqs.items())
 
     def open_modal(self, node_info):
         self.active_modal = node_info
@@ -307,6 +330,7 @@ class Research_Screen(GameState):
             surface.blit(txt, (x - txt.get_width()//2, axis_y - 40))
 
     def draw_connections(self, surface, res_levels):
+        import math
         nodes = self.nodes.get(self.current_category, [])
         lookup = {(n["key"], n["lvl"]): n for n in nodes}
         
@@ -327,19 +351,48 @@ class Research_Screen(GameState):
                     y2 = prev_node["base_y"] + 40
                     p2 = (x2, y2)
                     color = (0, 255, 0) if res_levels.get(req_k, 0) >= req_lvl else (100, 100, 100)
+                    
                     pygame.draw.line(surface, color, p2, p1, 3)
+                    
+                    # Draw Arrow in the middle pointing from p2 -> p1
+                    mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
+                    dx = p1[0] - p2[0]
+                    dy = p1[1] - p2[1]
+                    
+                    # Only draw arrows if the line is long enough to avoid extreme clutter
+                    if math.hypot(dx, dy) > 20:
+                        angle_rad = math.atan2(dy, dx)
+                        head_size = 10
+                        left_wing = (mx - head_size * math.cos(angle_rad - math.pi / 6),
+                                     my - head_size * math.sin(angle_rad - math.pi / 6))
+                        right_wing = (mx - head_size * math.cos(angle_rad + math.pi / 6),
+                                      my - head_size * math.sin(angle_rad + math.pi / 6))
+                        pygame.draw.polygon(surface, color, [(mx, my), left_wing, right_wing])
 
+            # Draw standard linear connection to previous level
             if l > 1:
                 draw_line_to_prev(k, l - 1)
-            elif l == 1:
-                reqs = self.tech_tree[k].get("req", {})
-                if "OR" in reqs:
-                    for sub_req in reqs["OR"]:
-                        for req_k, req_lvl in sub_req.items():
-                            draw_line_to_prev(req_k, req_lvl if req_lvl != "MATCH_LEVEL" else 1)
-                else:
-                    for req_k, req_lvl in reqs.items():
-                        draw_line_to_prev(req_k, req_lvl if req_lvl != "MATCH_LEVEL" else 1)
+                
+            reqs = self.tech_tree[k].get("req", {})
+            
+            def process_req(req_k, req_v):
+                # If the requirement is dynamic, draw it for EVERY level
+                if isinstance(req_v, str) and req_v.startswith("MATCH_LEVEL"):
+                    req_val = l
+                    if "+" in req_v: req_val += int(req_v.split("+")[1])
+                    elif "-" in req_v: req_val -= int(req_v.split("-")[1])
+                    draw_line_to_prev(req_k, req_val)
+                # If the requirement is static (e.g. basic_factory 1), ONLY draw it from level 1
+                elif l == 1:
+                    draw_line_to_prev(req_k, req_v)
+
+            if "OR" in reqs:
+                for sub_req in reqs["OR"]:
+                    for req_k, req_v in sub_req.items():
+                        process_req(req_k, req_v)
+            else:
+                for req_k, req_v in reqs.items():
+                    process_req(req_k, req_v)
 
     def draw_hud_slots(self, surface):
         hud_rect = pygame.Rect(20, c.SCREEN_HEIGHT - 120, 400, 100)

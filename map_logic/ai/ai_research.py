@@ -23,13 +23,6 @@ def process_ai_research(map_screen):
 
         res_levels = data.setdefault("research", {})
 
-        # Helper to check if a tech's prerequisites are met
-        def check_requirements(reqs, target_lvl=1):
-            if not reqs: return True
-            if "OR" in reqs:
-                return any(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for sub in reqs["OR"] for k, v in sub.items())
-            return all(res_levels.get(k, 0) >= (target_lvl if v == "MATCH_LEVEL" else v) for k, v in reqs.items())
-
         available_techs = []
         for tech_key, t_data in tech_tree.items():
             cur_lvl = res_levels.get(tech_key, 0)
@@ -46,9 +39,9 @@ def process_ai_research(map_screen):
 
             lvl_to_research = cur_lvl + 1
             
-            # Check requirements for the current level
+            # --- THE FIX: Use the centralized query that knows how to do math ---
             reqs = t_data.get("req", {})
-            if not check_requirements(reqs, lvl_to_research):
+            if not queries.check_tech_requirements(res_levels, reqs, lvl_to_research):
                 continue
 
             # Fetch the historical year to avoid massive ahead-of-time penalties

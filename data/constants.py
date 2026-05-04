@@ -299,6 +299,12 @@ ICON_DISBANDING = "Disbanding"
 OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
+# Handle disproportionate raw assets
+SYMBOL_BASE_SCALES = {
+    "Motorized Infantry": 0.4,
+    "Mechanized Infantry": 0.4
+}
+
 # ==========================================
 # STAT ICONS
 # ==========================================
@@ -339,6 +345,7 @@ AI_OFFENSIVE_UNIT_PREFERENCE = [
 
 AI_NAVAL_UNIT_PREFERENCE = [
     "Dreadnought",
+    "Battleship",
     "Destroyer",
     # "Aircraft Carrier"
 ]

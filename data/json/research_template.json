@@ -1,6 +1,8 @@
 {
     "infantry_type": { "category": "INFANTRY", "max_lvl": 41, "cost": 1800, "req": {}, "years": [1910, 1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
-    "cavalry": { "category": "INFANTRY", "max_lvl": 1, "cost": 1800, "req": {"infantry_type": 1}, "years": [1910] },
+    "cavalry": { "category": "INFANTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
+    "motorized_infantry": { "category": "INFANTRY", "max_lvl": 21, "cost": 1800, "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 1}, "years": [1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
+    "mechanized_infantry": { "category": "INFANTRY", "max_lvl": 11, "cost": 1800, "req": {"motorized_infantry": "MATCH_LEVEL_+10"}, "years": [1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
     
     "civilian_car": { "category": "TANKS", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
     "ww1_armored_car": { "category": "TANKS", "max_lvl": 1, "cost": 1800, "req": {"civilian_car": 1}, "years": [1912] },
@@ -13,8 +15,9 @@
     "main_battle_tank": { "category": "TANKS", "max_lvl": 3, "cost": 1800, "req": {"OR": [{"medium_tank": 3}, {"heavy_tank": 3}]}, "years": [1945, 1950, 1955] },
     
     "dreadnought": { "category": "NAVY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
+    "battleship": { "category": "NAVY", "max_lvl": 1, "cost": 1800, "req": {"dreadnought": 1}, "years": [1920] },
     "destroyer": { "category": "NAVY", "max_lvl": 8, "cost": 1800, "req": {}, "years": [1910, 1914, 1918, 1922, 1926, 1930, 1934, 1938] },
-    "aircraft_carrier": { "category": "NAVY", "max_lvl": 4, "cost": 1800, "req": {"dreadnought": 1}, "years": [1930, 1935, 1940, 1945] },
+    "aircraft_carrier": { "category": "NAVY", "max_lvl": 4, "cost": 1800, "req": {"battleship": 1}, "years": [1930, 1935, 1940, 1945] },
 
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1910] },
     "factory": { "category": "INDUSTRY", "max_lvl": 15, "cost": 1800, "req": {"basic_factory": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940] },
