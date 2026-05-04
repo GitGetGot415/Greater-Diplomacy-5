@@ -39,7 +39,7 @@ BASE_YIELDS = {
 }
 
 COUNTRY_BASE_YIELDS = {
-    "manpower": 100,
+    "manpower": 500,
     "materials": 100,
     "fuel": 0
 }

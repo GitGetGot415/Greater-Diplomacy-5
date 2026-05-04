@@ -47,10 +47,10 @@ class Research_Screen(GameState):
             "heavy_tank": 550,
             "destroyer": 250,
             "carrack": 350, "ironclad": 350, "pre-dreadnought": 350, "dreadnought": 350,
-            "aircraft_carrier": 450,
+            "aircraft_carrier": 350,
             "workshop": 250, "basic_factory": 250, "factory": 250,
-            "bergius_process": 400, "synthetic_fuel_experiments": 400, "fuel_refining": 400,
-            "basic_recruitment": 550, "recruitment_buildings": 550
+            "bergius_process": 350, "synthetic_fuel_experiments": 350, "fuel_refining": 350,
+            "basic_recruitment": 450, "recruitment_buildings": 450
         }
 
         self.nodes = {"INFANTRY": [], "TANKS": [], "NAVY": [], "INDUSTRY": []}
