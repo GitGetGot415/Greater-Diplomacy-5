@@ -347,7 +347,7 @@ AI_UPKEEP_TARGETS = {
     "fuel": 0.50
 }
 
-AI_INFANTRY_TO_TANK_RATIO = 4
+AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long deployment time so spamming them is pretty good tbh
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 

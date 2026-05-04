@@ -266,20 +266,42 @@ def process_ai_unit_orders(map_screen):
                     
                     # --- THE FIX: Let fast units pathfind deeper from the border! ---
                     if speed > 1:
-                        deep_path = _bfs_nearest_target(
-                            best_adj, 
-                            set(enemy_targets), 
-                            allowed_prov_ids, 
-                            map_screen.id_to_province, 
-                            target_assignments,
-                            is_convoy=is_convoy, 
-                            is_ship=is_naval_combatant, 
-                            moving_nation=ai_name, 
-                            nation_data=map_screen.nation_data
-                        )
-                        # Extend the path, capped at the unit's remaining speed capacity
-                        if deep_path:
-                            unit["order"]["path"].extend(deep_path[:speed - 1])
+                        curr_node = best_adj
+                        for _ in range(speed - 1):
+                            curr_prov_data = map_screen.id_to_province.get(curr_node)
+                            if not curr_prov_data: break
+                            
+                            next_options = []
+                            for n_id in curr_prov_data.get("neighbors", []):
+                                n_prov = map_screen.id_to_province.get(n_id)
+                                if not n_prov: continue
+                                
+                                # Prevent backtracking
+                                if n_id in unit["order"]["path"] or n_id == curr_id:
+                                    continue
+                                
+                                # Obey movement rules using your constants/queries
+                                if is_convoy:
+                                    if not queries.can_convoy_enter(curr_prov_data, n_prov):
+                                        continue
+                                else:
+                                    if n_prov.get("terrain") in c.WATER_TERRAINS:
+                                        continue
+                                
+                                # Check if it's a valid tile to push into
+                                n_owner = n_prov.get("owner", "Unclaimed")
+                                if queries.is_hostile_territory(ai_name, n_owner, map_screen.nation_data) or n_owner in ["Unclaimed", "None", ""]:
+                                    next_options.append(n_id)
+                            
+                            if next_options:
+                                # Pick the adjacent hostile tile with the least attackers to spread the invasion
+                                next_step = min(next_options, key=lambda t: target_assignments.get(t, 0))
+                                unit["order"]["path"].append(next_step)
+                                target_assignments[next_step] = target_assignments.get(next_step, 0) + 1
+                                curr_node = next_step
+                            else:
+                                # Reached a dead end (e.g. hit an ocean or friendly border)
+                                break
                     # ----------------------------------------------------------------
                     
                     target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
