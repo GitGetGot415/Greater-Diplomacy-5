@@ -276,7 +276,8 @@ def randomize_all_provinces(map_screen, settings):
         border_provs = []
         coastal_provs = []
         for prov in owned_provs:
-            if prov.get("is_coastal", False):
+            # Filter out lake-only coasts using your query
+            if prov.get("is_coastal", False) and queries.borders_ocean(prov, map_screen.id_to_province):
                 coastal_provs.append(prov)
 
             # Check if it touches anything not owned by this nation
@@ -373,14 +374,16 @@ def randomize_all_provinces(map_screen, settings):
             stats = unit_library.get(u_name, {})
             is_naval = stats.get("naval_unit", False)
 
-            # Route naval units strictly to coasts, otherwise put them on land borders
-            if is_naval and coastal_provs:
-                target_prov = coastal_provs[coast_idx % len(coastal_provs)]
-                coast_idx += 1
+            # Route naval units strictly to ocean coasts, otherwise put land units on borders
+            if is_naval:
+                if coastal_provs:
+                    target_prov = coastal_provs[coast_idx % len(coastal_provs)]
+                    coast_idx += 1
+                    target_prov.setdefault("units", []).append(generate_unit(nation, u_name))
+                # If they have no valid ocean coast, the ship just doesn't spawn.
             else:
                 target_prov = border_provs[border_idx % len(border_provs)]
                 border_idx += 1
-
-            target_prov.setdefault("units", []).append(generate_unit(nation, u_name))
+                target_prov.setdefault("units", []).append(generate_unit(nation, u_name))
 
     map_screen.show_feedback(f"Randomized {target_country_count} evenly sized nations for {start_year}!")
