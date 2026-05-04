@@ -4,6 +4,7 @@ import data.constants as c
 import json
 import os
 import colorsys
+from data import queries
 
 PATH = c.COUNTRIES_DATA_PATH
 
@@ -133,6 +134,8 @@ class CountryEditor:
 
         with open(PATH, "w") as f:
             json.dump(self.data, f, indent=4)
+            
+        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
         
         messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
         self.refresh_list()
@@ -162,6 +165,8 @@ class CountryEditor:
         
         with open(PATH, "w") as f:
             json.dump(self.data, f, indent=4)
+            
+        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
         
         self.refresh_list()
         self.id_ent.delete(0, tk.END)
@@ -198,6 +203,9 @@ class CountryEditor:
             del self.data[int_id]
             with open(PATH, "w") as f:
                 json.dump(self.data, f, indent=4)
+                
+            queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+            
             self.refresh_list()
 
     def load_into_editor(self, int_id):

@@ -2,6 +2,7 @@ import json
 import os
 import re
 import base64
+import itertools
 import pygame
 import data.constants as c
 
@@ -83,9 +84,6 @@ def get_nations_holding_our_cores(nation, map_data):
 
 def get_border_strength(nation_a, nation_b, map_data, id_to_province):
     """Calculates the military strength of both nations localized to their shared border."""
-    strength_a = 0
-    strength_b = 0
-    
     border_provs_a = set()
     border_provs_b = set()
     
@@ -98,21 +96,17 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province):
                     border_provs_a.add(prov["id"])
                     border_provs_b.add(n_id)
                     
-    for prov_id in border_provs_a:
-        prov = id_to_province.get(prov_id)
-        if prov:
-            for u in prov.get("units", []):
-                if u.get("owner") == nation_a:
-                    strength_a += u.get("attack", 0) + u.get("defense", 0) + (u.get("health", 0) / 10)
-                    
-    for prov_id in border_provs_b:
-        prov = id_to_province.get(prov_id)
-        if prov:
-            for u in prov.get("units", []):
-                if u.get("owner") == nation_b:
-                    strength_b += u.get("attack", 0) + u.get("defense", 0) + (u.get("health", 0) / 10)
-                    
-    return strength_a, strength_b
+    def calc_strength(prov_ids, target_nation):
+        strength = 0
+        for prov_id in prov_ids:
+            prov = id_to_province.get(prov_id)
+            if prov:
+                for u in prov.get("units", []):
+                    if u.get("owner") == target_nation:
+                        strength += u.get("attack", 0) + u.get("defense", 0) + (u.get("health", 0) / 10)
+        return strength
+
+    return calc_strength(border_provs_a, nation_a), calc_strength(border_provs_b, nation_b)
 
 def are_at_war(nation_a, nation_b, nation_data):
     """Returns True if nation_b is in nation_a's war list."""
@@ -126,11 +120,8 @@ def is_province_in_active_combat(province, nation_data):
         
     owners_present = list(set(u.get("owner") for u in units if u.get("owner")))
     
-    for i in range(len(owners_present)):
-        for j in range(i + 1, len(owners_present)):
-            if are_at_war(owners_present[i], owners_present[j], nation_data):
-                return True
-    return False
+    # Optimized check using itertools
+    return any(are_at_war(o1, o2, nation_data) for o1, o2 in itertools.combinations(owners_present, 2))
 
 def is_nation_in_combat_here(nation, province, nation_data):
     """Returns True if the specified nation has units in the province that are actively engaged with enemy units."""
@@ -323,15 +314,15 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library):
         return u_name
     return f"Infantry Type {c.START_YEAR}"
 
-def get_best_offensive_unit(player_research, unit_library):
-    """Finds the highest preference offensive unit the nation has unlocked."""
-    for base_pref in reversed(c.AI_OFFENSIVE_UNIT_PREFERENCE):
+def get_best_preferred_unit(player_research, unit_library, preference_list):
+    """Generic helper to find the highest preference unit unlocked."""
+    for base_pref in reversed(preference_list):
         tech_key = base_pref.lower().replace(" ", "_")
         res_lvl = player_research.get(tech_key, 0)
 
         if res_lvl > 0:
-            if base_pref == "Cavalry": return "Cavalry"
-            if base_pref in ["WW1 Armored Car", "WW1 Tank"]: return base_pref
+            if base_pref in ["Cavalry", "WW1 Armored Car", "WW1 Tank", "Dreadnought"]:
+                return base_pref
 
             # For numbered tiers, find the highest roman numeral available
             romans = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII"}
@@ -340,23 +331,14 @@ def get_best_offensive_unit(player_research, unit_library):
                 if test_name in unit_library:
                     return test_name
     return None
+
+def get_best_offensive_unit(player_research, unit_library):
+    """Finds the highest preference offensive unit the nation has unlocked."""
+    return get_best_preferred_unit(player_research, unit_library, c.AI_OFFENSIVE_UNIT_PREFERENCE)
 
 def get_best_naval_unit(player_research, unit_library):
     """Finds the highest preference naval unit the nation has unlocked."""
-    for base_pref in reversed(c.AI_NAVAL_UNIT_PREFERENCE):
-        tech_key = base_pref.lower().replace(" ", "_")
-        res_lvl = player_research.get(tech_key, 0)
-
-        if res_lvl > 0:
-            if base_pref == "Dreadnought": return "Dreadnought"
-
-            # For numbered tiers, find the highest roman numeral available
-            romans = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII"}
-            for check_lvl in range(res_lvl, 0, -1):
-                test_name = f"{base_pref} {romans.get(check_lvl, str(check_lvl))}"
-                if test_name in unit_library:
-                    return test_name
-    return None
+    return get_best_preferred_unit(player_research, unit_library, c.AI_NAVAL_UNIT_PREFERENCE)
 
 def check_tech_requirements(res_levels, reqs):
     """Centralized tech requirement checker."""
@@ -682,7 +664,7 @@ def get_active_ai_nations(map_screen):
     # Account for potential hotseat active_players lists or standard player_country setups
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     
-    # --- THE FIX: Cross-reference with nations that actually own territory ---
+    # Cross-reference with nations that actually own territory
     living_nations = get_living_nations(map_screen.map_data)
     
     for name, data in map_screen.nation_data.items():

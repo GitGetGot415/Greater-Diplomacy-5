@@ -3,6 +3,7 @@ from tkinter import messagebox
 import data.constants as c
 import json
 import os
+from data import queries
 
 PATH = c.UNIT_DATA_PATH
 
@@ -60,6 +61,8 @@ class UnitEditor:
         
         with open(filepath, "w") as f:
             f.write("\n".join(lines))
+            
+        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
 
     def format_json(self):
         """Forces the current data dictionary to rewrite using the custom one-line format."""
