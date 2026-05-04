@@ -9,6 +9,6 @@
     "gemini_api_key": "AIzaSyAJlAkHmBTmSODDZSbrWOuKWDC_4le8Y9o",
     "chatgpt_api_key": "",
     "claude_api_key": "",
-    "ai_immersion_level": "FULL",
+    "ai_immersion_level": "LITE",
     "ollama_model": "llama3"
 }

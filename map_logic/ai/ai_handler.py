@@ -124,9 +124,6 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     mode = get_ai_mode()
     immersion = get_ai_immersion_level()
     
-    # Check if this is an AI talking to an AI
-    is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
-    
     # Ensure 50/50 strict logic regardless of model behavior
     accepted = random.choice([True, False])
     # actually true, always
@@ -134,8 +131,21 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     # hey so please don't remove the stuff above or this comment its useful for testing if the ai can accept things without breaking the game
     # (i swear to god if you remove these comments...)
 
-    # Apply LITE / FULL AI rules
-    use_lite_logic = (mode == "OFF") or (immersion == "LITE") or (immersion == "FULL" and is_ai_to_ai)
+    # Check if this is an AI talking to an AI
+    is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
+    has_custom_msg = bool(custom_msg.strip())
+
+    # Apply LITE / FULL / ABSOLUTE AI rules cleanly
+    if immersion == "LITE":
+        # AI is off UNLESS a human sent a custom message
+        use_lite_logic = not (has_custom_msg and not is_ai_to_ai)
+    elif immersion == "FULL":
+        use_lite_logic = is_ai_to_ai
+    else: # ABSOLUTE
+        use_lite_logic = False
+        
+    if mode == "OFF":
+        use_lite_logic = True
 
     if use_lite_logic:
         if action_type == "WAR_DECLARATION":
@@ -191,6 +201,11 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
         
     else:
         action_context = f"{sender_nation} has proposed a {action_type}."
+        
+        # ---> ADD THIS: Ensure the AI actually reads the proposal message!
+        if custom_msg:
+            action_context += f" They included this official message: '{custom_msg}'"
+            
         system_prompt = (
             "You are an AI playing a grand strategy game. You act as the leader of your nation. "
             f"You have already decided to strongly {'ACCEPT' if accepted else 'REJECT'} the diplomatic proposal. "
@@ -234,7 +249,17 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     immersion = get_ai_immersion_level()
     
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
-    use_lite_logic = (mode == "OFF") or (immersion == "LITE") or (immersion == "FULL" and is_ai_to_ai)
+    
+    # Apply LITE / FULL / ABSOLUTE AI rules cleanly
+    if immersion == "LITE":
+        use_lite_logic = is_ai_to_ai # Allow if sender is human
+    elif immersion == "FULL":
+        use_lite_logic = is_ai_to_ai
+    else: # ABSOLUTE
+        use_lite_logic = False
+        
+    if mode == "OFF":
+        use_lite_logic = True
 
     if use_lite_logic:
         return {
