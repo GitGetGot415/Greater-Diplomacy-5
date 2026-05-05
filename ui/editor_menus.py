@@ -128,13 +128,10 @@ def select_building_brush(self):
     root.attributes("-topmost", True)
     self.menu_active = True
 
-    buildings = [
-        "None",
-        "Workshop Lvl 1", "Workshop Lvl 2", "Workshop Lvl 3", "Workshop Lvl 4", "Workshop Lvl 5",
-        "Basic Factory",
-        "Factory Lvl 1", "Factory Lvl 2", "Factory Lvl 3", "Factory Lvl 4", "Factory Lvl 5",
-        "Synthetic Refinery Lvl 1", "Synthetic Refinery Lvl 2", "Synthetic Refinery Lvl 3"
-    ]
+    # --- DYNAMIC FETCH ---
+    from data import queries
+    bldg_lib = queries.get_building_library()
+    buildings = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
 
     def on_select(event=None):
         selection = lb.curselection()
@@ -769,6 +766,12 @@ def open_map_research_editor(self):
             for k, v in fresh_template.items():
                 if k not in self.default_research:
                     self.default_research[k] = v
+            
+            # --- NEW: Scrub out obsolete keys here too! ---
+            obsolete_keys = [k for k in self.default_research.keys() if k not in fresh_template]
+            for k in obsolete_keys:
+                del self.default_research[k]
+                
             return self.default_research
 
         # 3. Otherwise, use the fresh template entirely

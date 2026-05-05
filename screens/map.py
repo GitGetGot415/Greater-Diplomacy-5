@@ -245,26 +245,70 @@ class Map(GameState):
 
     def sync_units_to_data(self):
         unit_library = queries.get_unit_library()
+        building_library = queries.get_building_library()
         if not unit_library:
             self.show_feedback("Error: unit library not found!")
             return
             
         updated_count = 0
+        removed_count = 0
+        
         for province in self.map_data.values():
+            # 1. Clean Units
+            units_to_keep = []
             for unit in province.get("units", []):
-                u_type = unit.get("type")
-                if u_type in unit_library:
-                    stats = unit_library[u_type]
-                    unit.update({
-                        "max_health": stats.get("health", c.DEFAULT_UNIT_HP),
-                        "health": stats.get("health", c.DEFAULT_UNIT_HP),
-                        "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
-                        "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
-                        "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)
-                    })
-                    updated_count += 1
+                u_type = unit.get("type", "")
+                base_type = unit.get("original_type", u_type)
+                
+                # Handle dynamic transport names
+                if base_type.startswith("Convoy (") or base_type.startswith("Truck ("):
+                    import re
+                    match = re.search(r'\((.*?)\)', base_type)
+                    if match:
+                        base_type = match.group(1).strip()
+                        
+                # Check if the unit is still valid
+                if base_type in unit_library or base_type in ["Convoy", "Truck"]:
+                    if u_type in unit_library:
+                        stats = unit_library[u_type]
+                        unit.update({
+                            "max_health": stats.get("health", c.DEFAULT_UNIT_HP),
+                            "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
+                            "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
+                            "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)
+                        })
+                        # Cap health to new max
+                        unit["health"] = min(unit.get("health", stats.get("health", c.DEFAULT_UNIT_HP)), unit["max_health"])
+                        updated_count += 1
+                    units_to_keep.append(unit)
+                else:
+                    removed_count += 1 # It's obsolete, drop it!
                     
-        self.show_feedback(f"Synced {updated_count} units on map!")
+            province["units"] = units_to_keep
+            
+            # 2. Clean Buildings
+            if "buildings" in province:
+                original_b_count = len(province["buildings"])
+                province["buildings"] = [b for b in province["buildings"] if b in building_library]
+                removed_count += (original_b_count - len(province["buildings"]))
+                
+            # 3. Clean Queues
+            if "deployment_queue" in province:
+                valid_queue = []
+                for q in province["deployment_queue"]:
+                    is_valid = True
+                    if q.get("order_type") == "BUILDING" and q.get("item_name") not in building_library:
+                        is_valid = False
+                    elif "unit_type" in q and q.get("unit_type") not in unit_library:
+                        is_valid = False
+                        
+                    if is_valid:
+                        valid_queue.append(q)
+                    else:
+                        removed_count += 1
+                province["deployment_queue"] = valid_queue
+                
+        print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")
 
     def handle_back_key(self):
         if self.selected_province:
@@ -319,11 +363,31 @@ class Map(GameState):
                         if tech_key not in current_res:
                             current_res[tech_key] = start_val
                             updated_count += 1
+
+        # Clean up obsolete research for EVERY nation currently on the map
+        tech_tree = queries.get_tech_tree()
+        for country, data in self.nation_data.items():
+            if "research" in data:
+                obsolete_keys = [k for k in data["research"].keys() if k not in tech_tree]
+                for k in obsolete_keys:
+                    del data["research"][k]
+                    updated_count += 1
+                    
+        # --- NEW: Scrub the map's default template too! ---
+        if getattr(self, "default_research", None) is not None:
+            obsolete_defaults = [k for k in self.default_research.keys() if k not in tech_tree]
+            for k in obsolete_defaults:
+                del self.default_research[k]
+                updated_count += 1
                 
         self.nation_colors = {name: tuple(stats["color"]) for name, stats in self.nation_data.items()}
         self.refresh_political_map()
         self.refresh_relations_map()
-        self.show_feedback(f"Data Resynced! Added {added_count}, Updated {updated_count}.")
+        
+        # Merge the unit sync into this function
+        self.sync_units_to_data()
+        
+        self.show_feedback(f"Data Resynced! Added {added_count}, Updated {updated_count}. Objects Synced.")
         
     def toggle_editor_brush_type(self):
         if self.editor_mode == "NATION":
