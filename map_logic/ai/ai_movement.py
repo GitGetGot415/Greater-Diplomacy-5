@@ -362,3 +362,47 @@ def process_ai_unit_orders(map_screen):
                     assignments[curr_id] -= 1
                 if path[-1] in assignments:
                     assignments[path[-1]] += 1
+    # --- NEW: Anti-Swap Cleanup ---
+    # Cancel redundant moves where two identical AI units just swap places with each other.
+    for ai_name in ai_nations:
+        units_info = nation_units[ai_name]
+        
+        # Track where every unit is trying to go for this specific nation
+        transitions = {}
+        for unit, prov in units_info:
+            path = unit.get("order", {}).get("path", [])
+            if path:
+                src_id = prov["id"]
+                dest_id = path[0]
+                transitions.setdefault((src_id, dest_id), []).append(unit)
+        
+        # Check for opposing traffic
+        processed = set()
+        for (src, dest), fwd_units in transitions.items():
+            if (src, dest) in processed: continue
+            
+            bwd_units = transitions.get((dest, src), [])
+            if bwd_units:
+                # Match up identical unit types AND health
+                fwd_types = {}
+                for u in fwd_units:
+                    # Using int() on health prevents floating point mismatch errors
+                    key = (u.get("type", ""), int(u.get("health", 0)))
+                    fwd_types.setdefault(key, []).append(u)
+                    
+                bwd_types = {}
+                for u in bwd_units:
+                    key = (u.get("type", ""), int(u.get("health", 0)))
+                    bwd_types.setdefault(key, []).append(u)
+                    
+                # Cancel pairs of identical units
+                for u_key, f_list in fwd_types.items():
+                    b_list = bwd_types.get(u_key, [])
+                    cancel_count = min(len(f_list), len(b_list))
+                    
+                    for i in range(cancel_count):
+                        f_list[i]["order"]["path"] = []
+                        b_list[i]["order"]["path"] = []
+                        
+            processed.add((src, dest))
+            processed.add((dest, src))
