@@ -19,7 +19,13 @@ ITS CALLED Tkinter
 
 ===
 
+- llama3 (fast)
+- gemma4 (thinking)
+- qwen3.6 (pro)
+
 - for now, only 1914 scenario
+- also add in the world map!
+- balance germany?
 
 - do api keys work for different models? does the model have to be specified? is hardcoding in gemini 2.5 bad
 

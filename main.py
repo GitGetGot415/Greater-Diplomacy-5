@@ -18,7 +18,7 @@ from screens.map_related_screens.production import Production_Screen
 from screens.select_base_map import Select_Base_Map
 from screens.random_setup import Random_Setup
 
-pygame.display.set_caption("Greater Diplomacy Pygame Edition")
+pygame.display.set_caption("Greater Diplomacy 5")
 
 class Controller:
     def __init__(self):
@@ -47,6 +47,12 @@ class Controller:
         self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         
         # 0. Load symbols
+        try:
+            icon = pygame.image.load('assets/icon/icon.png')
+            pygame.display.set_icon(icon)
+        except FileNotFoundError:
+            print("Icon not found")
+
         symbol_loader.load_symbols()
 
         ui_elements.UI_ICONS = {
