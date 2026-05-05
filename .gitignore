@@ -13,3 +13,5 @@ __pycache__/
 !unit_data.json
 !research_template.json
 !building_data.json
+
+context/combined_scripts.txt

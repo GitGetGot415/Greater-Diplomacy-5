@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import data.constants as c
 
-def combine_files(output_filename="context_generator/combined_scripts.txt", search_directory=".", json_files_to_include=None):
+def combine_files(output_filename="context/combined_scripts.txt", search_directory=".", json_files_to_include=None):
     """
     Finds all .py files and specific JSON files, writing their content to one text file.
     """
