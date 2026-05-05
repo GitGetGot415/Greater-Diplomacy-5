@@ -7,6 +7,8 @@ __pycache__/
 !map_tools/*
 !base_maps/**
 !context/**
+context/combined_scripts.txt
+
 *.pyc
 !countries_data.json
 !settings_config.json
@@ -14,4 +16,3 @@ __pycache__/
 !research_template.json
 !building_data.json
 
-context/combined_scripts.txt
