@@ -378,6 +378,10 @@ AI_WAR_UPKEEP_MULTIPLIER = 1.5
 
 AI_MAX_NAVY_RATIO = 0.2 # Maximum percentage of an AI's army that can be navy
 AI_CONVOY_ESCORT_WEIGHT = 5 # Negative weight to pull pathing warships towards convoys
+AI_CONVOY_COMBAT_WEIGHT = 50 # MASSIVE priority to escort convoys actively being attacked
+AI_CONVOY_DANGER_WEIGHT = 15 # Priority for convoys near enemy borders/coasts
+
+AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 

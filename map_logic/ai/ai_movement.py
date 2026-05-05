@@ -110,6 +110,7 @@ def process_ai_unit_orders(map_screen):
         enemy_coastal_waters = set()
         unclaimed_targets = set()
         all_unclaimed_coasts = set()
+        active_battles = set() # NEW: track active combat zones
 
         # Locate coastal provinces globally for naval targeting and island hopping
         for prov in map_screen.map_data.values():
@@ -157,12 +158,32 @@ def process_ai_unit_orders(map_screen):
 
         at_war = len(enemies) > 0 and (len(enemy_targets) > 0 or len(all_enemy_coasts) > 0)
 
+        # --- FIND ACTIVE BATTLES & CONVOY STATUS ---
+        friendly_convoys = set()
+        convoy_in_combat = set()
+        convoy_in_danger = set()
+
+        for unit, prov in units_info:
+            if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
+                active_battles.add(prov["id"])
+                
+            if unit.get("type", "").startswith("Convoy"):
+                friendly_convoys.add(prov["id"])
+                # Escort AI: Determine how much danger the convoy is in
+                if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
+                    convoy_in_combat.add(prov["id"])
+                else:
+                    for n_id in prov.get("neighbors", []):
+                        if n_id in all_enemy_coasts or n_id in enemy_coastal_waters:
+                            convoy_in_danger.add(prov["id"])
+                            break
+
         # --- FIX: UNIVERSAL TARGETS ---
         # ALWAYS include peace and coastal borders to prevent abandonment
-        target_destinations = list(unclaimed_targets) + list(all_unclaimed_coasts) + list(peace_borders) + list(coastal_borders)
+        target_destinations = list(set(list(unclaimed_targets) + list(all_unclaimed_coasts) + list(peace_borders) + list(coastal_borders) + list(active_battles)))
 
         if at_war:
-            target_destinations += list(enemy_targets) + list(all_enemy_coasts)
+            target_destinations = list(set(target_destinations + list(enemy_targets) + list(all_enemy_coasts)))
 
         # If no targets (e.g. island with no neighbors), skip
         if not target_destinations:
@@ -172,19 +193,23 @@ def process_ai_unit_orders(map_screen):
         # Keep track of how many units are assigned to each target so we can spread them evenly
         target_assignments = {t_id: 0 for t_id in target_destinations}
         
-        friendly_convoys = set()
-        for unit, prov in units_info:
-            if unit.get("type", "").startswith("Convoy"):
-                friendly_convoys.add(prov["id"])
-                
-        naval_destinations = list(enemy_coastal_waters) + list(friendly_convoys)
+        naval_destinations = list(set(list(enemy_coastal_waters) + list(friendly_convoys)))
         naval_assignments = {t_id: 0 for t_id in naval_destinations}
         
         # Convoy Escort Priority
-        # Apply a massive negative weight so warships heavily prioritize covering active convoys
+        # Apply massive negative weights so warships heavily prioritize covering active convoys
         for c_id in friendly_convoys:
             if c_id in naval_assignments:
-                naval_assignments[c_id] -= c.AI_CONVOY_ESCORT_WEIGHT
+                naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_ESCORT_WEIGHT', 5)
+                if c_id in convoy_in_combat:
+                    naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_COMBAT_WEIGHT', 50)
+                elif c_id in convoy_in_danger:
+                    naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_DANGER_WEIGHT', 15)
+
+        # Active Battle Reinforcement Priority
+        for b_id in active_battles:
+            if b_id in target_assignments:
+                target_assignments[b_id] -= getattr(c, 'AI_REINFORCE_COMBAT_WEIGHT', 20)
 
         # Pre-count units already AT the targets
         for unit, prov in units_info:
@@ -228,6 +253,12 @@ def process_ai_unit_orders(map_screen):
             # If we are holding a defensive border (peace or coastal) and we are the ONLY unit here, HOLD THE LINE.
             # Do not apply this to war_borders because we WANT to push forward into enemy_targets.
             is_defensive_hold = (curr_id in peace_borders or curr_id in coastal_borders) and curr_id not in war_borders
+            
+            # FIX: Break the hold if there's an active battle literally 1 tile away!
+            is_near_battle = any(n in active_battles for n in prov.get("neighbors", []))
+            if is_near_battle:
+                is_defensive_hold = False
+
             if not is_naval_combatant and is_defensive_hold:
                 if target_assignments.get(curr_id, 0) <= 1:
                     continue # Skip Unclaimed Grab, skip Wartime Anti-Shuffle, skip BFS entirely. Stay put!
@@ -362,6 +393,7 @@ def process_ai_unit_orders(map_screen):
                     assignments[curr_id] -= 1
                 if path[-1] in assignments:
                     assignments[path[-1]] += 1
+                    
     # --- NEW: Anti-Swap Cleanup ---
     # Cancel redundant moves where two identical AI units just swap places with each other.
     for ai_name in ai_nations:
