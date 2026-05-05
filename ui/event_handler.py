@@ -4,6 +4,7 @@ from map_logic.rendering import edit_province_ownership
 import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic import player_setup
+from data import queries
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
@@ -108,26 +109,34 @@ def handle_map_events(self, event):
                     
                     if self.brush_building == "None":
                         self.hovered_province["buildings"] = []
-                    else:
-                        # Logic: Workshops/Factories are in the same "industrial" category
-                        is_industrial = "Workshop" in self.brush_building or "Factory" in self.brush_building
-                        
-                        new_list = []
-                        for b in current_buildings:
-                            # Keep existing building IF it's not the same type we are placing 
-                            # AND (if placing industrial) it's not also industrial
-                            keep = True
-                            if is_industrial and ("Workshop" in b or "Factory" in b):
-                                keep = False
-                            if "Refinery" in self.brush_building and "Refinery" in b:
-                                keep = False
-                            
-                            if keep: new_list.append(b)
-                        
-                        if self.brush_building not in new_list:
-                            new_list.append(self.brush_building)
-                        
-                        self.hovered_province["buildings"] = new_list
+                    else:                        
+                        # Stop Advanced Buildings on empty tiles
+                        is_advanced = "Refinery" in self.brush_building or "Recruitment" in self.brush_building
+                        if is_advanced and not queries.has_basic_factory(self.hovered_province):
+                            self.show_feedback("Requires a Basic Factory first!")
+                        else:
+                            # Logic: Workshops/Factories are in the same "industrial" category
+                            is_industrial = "Workshop" in self.brush_building or "Factory" in self.brush_building
+                            is_recruitment = "Recruitment" in self.brush_building
+    
+                            new_list = []
+                            for b in current_buildings:
+                                # Keep existing building IF it's not the same type we are placing
+                                # AND (if placing industrial) it's not also industrial
+                                keep = True
+                                if is_industrial and ("Workshop" in b or "Factory" in b):
+                                    keep = False
+                                if "Refinery" in self.brush_building and "Refinery" in b:
+                                    keep = False
+                                if is_recruitment and "Recruitment" in b:
+                                    keep = False
+    
+                                if keep: new_list.append(b)
+    
+                            if self.brush_building not in new_list:
+                                new_list.append(self.brush_building)
+    
+                            self.hovered_province["buildings"] = new_list
 
                 # --- RESOURCE MODE ---
                 elif self.editor_mode == "RESOURCE":
