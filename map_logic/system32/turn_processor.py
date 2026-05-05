@@ -39,6 +39,10 @@ def resolve_turn(self):
     """Phase 2: Execute all moves, combat, and advance the clock."""
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     
+    # --- NEW: Snapshot original owners for capture logic ---
+    for prov in self.map_data.values():
+        prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
+        
     # --- NEW: Ghost War Cleanup ---
     living_nations = queries.get_living_nations(self.map_data)
     for nation, data in self.nation_data.items():
@@ -368,29 +372,29 @@ def check_for_post_combat_captures(self):
             continue
             
         current_owner = province.get("owner", "Unclaimed")
+        turn_start_owner = province.get("_turn_start_owner", current_owner)
         
         # Get a list of unique owners of units currently in the tile
         unit_owners = list(set(u["owner"] for u in units))
         
-        # If the current owner still has units here, they successfully defended it.
-        if current_owner in unit_owners:
+        # If the original owner of the tile (from the start of the turn) is STILL HERE,
+        # they automatically retain (or regain) ownership, regardless of HP.
+        if turn_start_owner in unit_owners:
+            if current_owner != turn_start_owner:
+                edit_province_ownership.conquer_province(self, province, turn_start_owner)
             continue
             
-        # Tally HP for all foreign units on the tile that are eligible to capture it
+        # If the original owner is gone, we evaluate based on who has the most HP.
+        # Tally HP for all units on the tile to see who claims it
         hp_totals = {}
         for u in units:
             o = u["owner"]
-            at_war = queries.is_hostile_territory(o, current_owner, self.nation_data)
-            is_unclaimed = current_owner in ["Unclaimed", "None", ""]
-            
-            # Flip ownership if the tile is unclaimed or if they are at war with the owner
-            if is_unclaimed or at_war:
-                hp_totals[o] = hp_totals.get(o, 0) + u.get("health", 0)
-        
+            hp_totals[o] = hp_totals.get(o, 0) + u.get("health", 0)
+    
         if not hp_totals:
             continue
 
-        ## Find the nation(s) with the highest combined HP
+        # Find the nation(s) with the highest combined HP
         max_hp = -1
         top_nations = []
         for o, hp in hp_totals.items():
@@ -399,26 +403,29 @@ def check_for_post_combat_captures(self):
                 top_nations = [o]
             elif hp == max_hp:
                 top_nations.append(o)
-                
+            
         # If one clear winner, they take it
         if len(top_nations) == 1:
             capturer = top_nations[0]
-            # faction core transfer stuff
-            true_owner = queries.get_faction_core_transfer_target(capturer, province, self.nation_data)
-            edit_province_ownership.conquer_province(self, province, true_owner)
+            if capturer != current_owner:
+                # faction core transfer stuff
+                true_owner = queries.get_faction_core_transfer_target(capturer, province, self.nation_data)
+                edit_province_ownership.conquer_province(self, province, true_owner)
             
-            # --- NEW: Scuttle ships if an enemy takes the tile they are on ---
+            # Scuttle ships if an enemy takes the tile they are on
             is_land = province.get("terrain") not in c.WATER_TERRAINS
             if is_land:
                 for u in units:
                     if queries.is_naval_unit(u.get("type", "")) and not u.get("type", "").startswith("Convoy"):
-                        if queries.is_hostile_territory(true_owner, u["owner"], self.nation_data):
+                        # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
+                        if queries.is_hostile_territory(capturer, u["owner"], self.nation_data):
                             u["health"] = 0
                 province["units"] = [u for u in units if u.get("health", 0) > 0]
-                
+            
         # If there's a tie, it becomes unclaimed
         elif len(top_nations) > 1:
-            edit_province_ownership.conquer_province(self, province, "Unclaimed")
+            if current_owner != "Unclaimed":
+                edit_province_ownership.conquer_province(self, province, "Unclaimed")
                 
 def apply_group_damage(total_atk, target_units):
     """Distributes total attack among target units, reduced by their individual defense."""
@@ -437,7 +444,7 @@ def process_movement(self):
         units_to_keep = []
         for unit in province.get("units", []):
             
-            # --- NEW: Check and clear the combat lock flag ---
+            # --- Check and clear the combat lock flag ---
             if unit.pop("_combat_locked", False):
                 units_to_keep.append(unit)
                 continue
@@ -474,7 +481,7 @@ def process_movement(self):
             player_data = self.nation_data.get(unit["owner"], {})
             dest_owner = target_prov.get("owner", "Unclaimed")
             
-            # --- NEW: Combat Lock (Execution Check) ---
+            # --- Combat Lock (Execution Check) ---
             # If the unit gets intercepted in a province during its move, 
             # it loses all remaining speed and its queue is wiped.
             curr_prov = self.id_to_province.get(unit["_current_province_id"])
@@ -489,12 +496,12 @@ def process_movement(self):
                         continue
             # ------------------------------------------
 
-            # --- NEW SHIP RULES EVALUATION ---
+            # --- SHIP RULES EVALUATION ---
             dest_is_water = target_prov.get("terrain") in c.WATER_TERRAINS
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
             
-            # --- NEW: Convoy Land Movement Check ---
+            # --- Convoy Land Movement Check ---
             curr_prov = self.id_to_province.get(unit["_current_province_id"])
             if is_convoy and curr_prov:
                 if not queries.can_convoy_enter(curr_prov, target_prov):
@@ -576,13 +583,13 @@ def process_economy(self):
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
     for name, stats in self.nation_data.items():
-        # FIX: Explicitly skip the global events log 
+        # Explicitly skip the global events log 
         if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in all_econ:
             continue
 
         econ = all_econ[name]
 
-        # FIX: Safely .get() the resource so it initializes to 0 if missing
+        # Safely .get() the resource so it initializes to 0 if missing
         stats["manpower"] = stats.get("manpower", 0) + econ["total_inc"]["manpower"] - econ["upkeep"]["manpower"]
         stats["materials"] = stats.get("materials", 0) + econ["total_inc"]["materials"] - econ["upkeep"]["materials"]
         stats["fuel"] = stats.get("fuel", 0) + econ["total_inc"]["fuel"] - econ["upkeep"]["fuel"]
@@ -606,7 +613,7 @@ def process_queues(self):
         queue = province.get("deployment_queue", [])
         if not queue: continue
             
-        # --- NEW: Combat Pause Mechanic ---
+        # --- Combat Pause Mechanic ---
         if queries.is_province_in_active_combat(province, self.nation_data):
             continue
         # ----------------------------------

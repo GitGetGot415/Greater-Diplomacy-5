@@ -28,7 +28,9 @@ ITS CALLED Tkinter
 - balance germany?
 
 - add in an option to remove resources in the map editor (there exists a way to add them yes but no way to erase)
-- make factories nessecary to produce things, not just workshops
+
+- is ai even capturable
+- movement arrows for ai countries seem to appear even when you're not viewing ai moves
 
 - caching problem leads to settings maybe not being detected correctly???
 - set from lite to full ai, the ai seemed to just... not know that
