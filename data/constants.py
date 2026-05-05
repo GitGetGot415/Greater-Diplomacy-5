@@ -328,11 +328,13 @@ ICON_SPEED = "Lightning"
 ICON_WARNING = "Warning"
 
 # ==========================================
-# AI & LLM CONFIGURATION
+# AI & SPECTATOR CONFIGURATION
 # ==========================================
 
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
+
+SPECTATOR_CAN_EDIT_PRODUCTION = True
 
 # ==========================================
 # AI PROACTIVE DIPLOMACY THRESHOLDS

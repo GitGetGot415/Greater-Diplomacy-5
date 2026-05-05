@@ -118,8 +118,8 @@ def draw_map_screen(self, surface):
             sidebar_info.draw_owner_portrait(self, surface)
             unit_info_popup.draw_unit_info(self, surface)
             
-            # --- NEW: Draw the queue if it's the player's province ---
-            if self.selected_province.get("owner") == self.player_country:
+            # --- MODIFIED: Draw the queue if it's the player's province OR spectator ---
+            if self.selected_province.get("owner") == self.player_country or self.player_country == "Spectator":
                 from screens.map_related_screens import recruit_ui
                 recruit_ui.draw_map_queue_overlay(surface, self.selected_province)
 

@@ -130,6 +130,12 @@ class Map(GameState):
 
         self.update_country_centers()
 
+        # --- 5. INITIALIZE INCOME ---
+        # Provide 1 turn of simulated income so nations don't spawn with 0 resources
+        if self.time_manager.total_turns == 0:
+            from map_logic.system32 import turn_processor
+            turn_processor.process_economy(self)
+
     # --- Properties ---
     @property
     def player_manpower(self): return self.nation_data.get(self.player_country, {}).get("manpower", 0)
@@ -189,10 +195,13 @@ class Map(GameState):
         
     def change_state_if_owned(self, next_state, requires_land=False):
         """Only transitions if the player owns the selected province (and optionally if it's land)."""
-        if self.selected_province and self.selected_province.get("owner") == self.player_country:
-            if requires_land and self.selected_province.get("terrain") in c.WATER_TERRAINS:
-                return
-            self.change_state(next_state)
+        if self.selected_province:
+            owner = self.selected_province.get("owner")
+            # Allow the spectator to bypass ownership checks
+            if owner == self.player_country or self.player_country == "Spectator":
+                if requires_land and self.selected_province.get("terrain") in c.WATER_TERRAINS:
+                    return
+                self.change_state(next_state)
 
     def deselect_province(self):
         if self.selected_province:

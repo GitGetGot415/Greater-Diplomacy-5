@@ -1,3 +1,5 @@
+# screens/map_related_screens/production.py
+
 import pygame
 import data.constants as c
 from gameState import GameState
@@ -71,7 +73,12 @@ class Production_Screen(GameState):
         
         current_buildings = self.target_province.get("buildings", [])
         queue = self.target_province.get("deployment_queue", [])
-        player_research = self.map_screen.nation_data[self.map_screen.player_country].get("research", {})
+        
+        owner_nation = self.target_province.get("owner")
+        player_research = self.map_screen.nation_data.get(owner_nation, {}).get("research", {})
+        
+        is_spectator = self.map_screen.player_country == "Spectator"
+        can_spectator_edit = getattr(c, 'SPECTATOR_CAN_EDIT_PRODUCTION', True)
 
         self.active_bars = []
         y_offset = 120
@@ -110,6 +117,10 @@ class Production_Screen(GameState):
 
                     if is_building:
                         btn_txt = "Building..."
+                        cb = lambda: None
+                        btn_color = "grey"
+                    elif is_spectator and not can_spectator_edit:
+                        btn_txt = target
                         cb = lambda: None
                         btn_color = "grey"
                     else:
@@ -176,9 +187,15 @@ class Production_Screen(GameState):
                 if highest_unlocked:
                     lookup_name = highest_unlocked
                     has_industry = queries.has_industry(self.target_province)
-                    final_btn_color = btn_color if has_industry else "grey"
                     
-                    btn = Button(x_pos, y_offset, "medium", final_btn_color, highest_unlocked, lambda n=lookup_name: self.buy_unit(n))
+                    if is_spectator and not can_spectator_edit:
+                        final_btn_color = "grey"
+                        cb = lambda: None
+                    else:
+                        final_btn_color = btn_color if has_industry else "grey"
+                        cb = lambda n=lookup_name: self.buy_unit(n)
+                    
+                    btn = Button(x_pos, y_offset, "medium", final_btn_color, highest_unlocked, cb)
                     btn.base_y = y_offset
                     btn.is_scrollable = True
                     self.elements.append(btn)
@@ -210,7 +227,8 @@ class Production_Screen(GameState):
 
     def start_construction(self, b_name):
         data = self.building_library[b_name]
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        owner = self.target_province.get("owner")
+        p_data = self.map_screen.nation_data.get(owner, {})
 
         if queries.can_afford(p_data, data):
             queries.deduct_resources(p_data, data)
@@ -239,7 +257,8 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Requires a Workshop or Factory to recruit!")
             return
 
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        owner = self.target_province.get("owner")
+        p_data = self.map_screen.nation_data.get(owner, {})
 
         if queries.can_afford(p_data, stats):
             queries.deduct_resources(p_data, stats)
@@ -262,7 +281,9 @@ class Production_Screen(GameState):
         queue = self.target_province.get("deployment_queue", [])
         if 0 <= index < len(queue):
             item = queue.pop(index)
-            p_data = self.map_screen.nation_data[self.map_screen.player_country]
+            
+            owner = self.target_province.get("owner", "Unclaimed")
+            p_data = self.map_screen.nation_data.get(owner, {})
             
             if "refund" in item:
                 for res, amount in item["refund"].items():
@@ -284,6 +305,9 @@ class Production_Screen(GameState):
             self.enforce_scroll_bounds()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.map_screen.player_country == "Spectator" and not getattr(c, 'SPECTATOR_CAN_EDIT_PRODUCTION', True):
+                return
+                
             for rect, index in self.cancel_hitboxes:
                 if rect.collidepoint(event.pos):
                     self.cancel_order(index)
@@ -370,14 +394,18 @@ class Production_Screen(GameState):
         # Draw header overlay block to hide scrolling units that go too high
         pygame.draw.rect(surface, self.bg_color, (0, 0, c.SCREEN_WIDTH, 80))
         title_font = fonts.get("heading1")
-        surface.blit(title_font.render("PRODUCTION & DEPLOYMENT", True, (255, 255, 255)), (150, 25))
+        
+        # Determine the name to display at the top of the production queue!
+        owner_nation = self.target_province.get("owner", "Unclaimed")
+        owner_name = self.map_screen.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
+        surface.blit(title_font.render(f"{owner_name} PRODUCTION", True, (255, 255, 255)), (150, 25))
 
         # Draw HUD
         hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data = self.map_screen.nation_data.get(owner_nation, {})
         res_font = fonts.get("heading2")
         resources = [
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
