@@ -1,0 +1,13 @@
+diplomacy requirements
+
+unilateral declarations:
+turn 0: msg is written
+turn 0.5: msg is sent
+turn 1: msg is received
+
+declarations requiring response:
+turn 0: msg1 is written
+turn 0.5: msg1 is sent
+turn 1: msg1 is received, receiver writes msg2 back
+turn 1.5: msg2 is sent
+turn 2: msg2 is received by original sender

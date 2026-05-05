@@ -1,0 +1,47 @@
+INTRO.TXT:
+
+so i have this pygame project that's essentially a turn based map game (DO NOT HARD CODE THINGS, TRY TO USE CONSTANTS.PY / QUERIES.PY WHERE APPLICABLE) (DO NOT REMOVE COMMENTS WHEN TRYING TO EDIT FILES)
+
+==================================================
+
+- fix combat zone idk??? (IT LOOKS AWFUL)
+
+- UI adjustments nessecary for:
+    - settings
+    - country editor
+
+
+- once finished maybe get rid of any and all legacy handling stuff
+
+- determine ai rules (as in how does it move / build things)
+
+ITS CALLED Tkinter
+
+===
+
+- do api keys work for different models? does the model have to be specified? is hardcoding in gemini 2.5 bad
+
+- when ai is determine if its a good idea to declare war or not make it think of the long term effects
+- maybe declaring war on the uk to take gibraltar because its poorly defended isn't the best idea when france is allied to them
+
+- caching problem leads to settings maybe not being detected correctly???
+- set from lite to full ai, the ai seemed to just... not know that
+
+- sends ai war declaration
+- ai gets war declaration and then on the same turn sends a message saying "fuck you" "actually wait we can't fight each other"
+
+- ceasefire gets accepted immediately instead of having to wait a turn for it to process
+
+- when a country sends you a diplomatic thingy make sure you can actually accept it!!!!!
+- also make war declarations and the like more visible (shown in yo face)
+
+- why doesn't the ai in absolute mode keep spam responding to each other when they get things like war declarations how do they know to stop after the first message
+
+ai should be able to sign non-agression pacts that prevent wars
+
+evaluating grand strategy (19/26)
+
+
+
+could you make it such so that if a country is at war it will try to send a call to arms request to all the other countries in its faction
+(if full ai is on make the ai write a message first before declaring war)

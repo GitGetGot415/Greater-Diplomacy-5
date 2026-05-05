@@ -1,0 +1,5 @@
+could you check constants.py and queries.py and also search through the entire code to see if everything looks good / if there's something that might be better off added into either one of those two files? (this is basically just me asking for you to check the code to see if anything can be optimized, for example any repeated functions that would be good in queries.py, unnecessary functions that can just be removed, unorganized imports, etc)
+
+anything relating to replacing disk i/o with caching would be useful (if it can be improved, that is)
+
+an example of how to implement these changes (like an example of what the entire file would look like) would be extremely useful

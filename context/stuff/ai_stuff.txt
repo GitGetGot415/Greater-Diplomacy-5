@@ -1,0 +1,8 @@
+OFF: ai is COMPLETELY off, always use fallbacks
+
+LITE: ai is off, unless someone sends a custom message to them, in which case an ai reply can be generated
+
+FULL: ai is on, so it should always send an ai generated message (this message should be written with knowledge about the current situation and what the message is supposed to say)
+the only exception to this is if the ai is sending a message to another ai, which the player will most likely not read
+
+ABSOLUTE: like full ai but the ai will send an ai message to other ai even though the player won't read it

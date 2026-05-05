@@ -1,0 +1,31 @@
+assets
+    - contains images + audio
+
+base_maps
+    - contains the maps that will be used in game
+
+context_generator
+    - makes a copy of every single file and then outputs it in a text format (used for giving ai context)
+
+data
+    - stores data about the game, as well as the various editors for the data
+    - includes constants.py (gets constant information)
+    - includes queries.py (gets dynamic information)
+
+map_logic
+    - handles how the map processes turns, how the ai for every country works, etc
+
+map_tools
+    - tools for making and testing new maps in base_maps
+
+saves
+    - contains saved games
+
+scenarios
+    - various scenarios
+
+screens
+    - handles the screens the user can go to (menu screen, settings screen, map screen, etc)
+
+ui
+    - handles the ui (top ui bar, bottom ui bar, side ui bar, corner ui bar, etc)

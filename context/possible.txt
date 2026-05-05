@@ -1,0 +1,8 @@
+- in map editor add a way to change the name of a country / leader of a country / title of leader of a country / color of a country
+- this should be specific for that map in particular
+
+- how to refresh country title text on map?
+- clicking request to join faction on someone whos not the leader should show "you cant do this they aren't the faction leader"
+- add in a maximum amount of resources a country can store (say 100k manpower and materials and fuel)
+
+SYNTHETIC FUEL EXPERIMENTS DOES NOT LOOK THE SAME AS THE OTHER RESEARCH OPTIONS
