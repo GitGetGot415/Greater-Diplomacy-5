@@ -293,6 +293,7 @@ def draw_overlay_content(self, surface):
                                     if res_type == "Oil": c_col = (30, 30, 30)
                                     pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), int(15 * self.camera.zoom)))
                                 
+                                # Shift right so multiple icons stack side-by-side
                                 offset_x += 20 * self.camera.zoom
 
 
@@ -324,8 +325,11 @@ def draw_unit_icon(self, surface, sx, sy, province):
     # Start drawing from the top of the stack and move down
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
-    # Sort owners by army size descending, so the biggest army is rendered on top
-    sorted_owners = sorted(units_by_owner.keys(), key=lambda o: (-len(units_by_owner[o]), o))
+    # --- NEW: Sort owners by Total HP descending ---
+    sorted_owners = sorted(
+        units_by_owner.keys(), 
+        key=lambda o: (-sum(u.get("health", 0) for u in units_by_owner[o]), o)
+    )
 
     for owner in sorted_owners:
         owner_units = units_by_owner[owner]
@@ -355,8 +359,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
         symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=owner_color)
         text_x = 10
         if symbol:
-            # --- NEW FIX: Constrain the symbol itself if it's too wide ---
-            # A wide ship/tank might be 150px, completely overflowing the 120px box!
+            # Constrain the symbol itself if it's too wide
             max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
             if symbol.get_width() > max_sym_w:
                 ratio = max_sym_w / symbol.get_width()

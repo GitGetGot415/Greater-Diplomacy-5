@@ -752,10 +752,11 @@ def is_unit_obsolete(group_name, player_research):
     return any(player_research.get(tech, 0) >= 1 for tech in obsoleting_techs)
 
 def get_best_unit_by_defense(units):
-    """Finds the unit with the highest defense stat in a list of units."""
+    """Finds the unit with the highest defense stat in a list of units, tiebreaking with attack."""
     if not units:
         return None
-    return max(units, key=lambda u: u.get("defense", 0))
+    # Tuple sorting: (Primary Sort, Secondary Sort)
+    return max(units, key=lambda u: (u.get("defense", 0), u.get("attack", 0)))
 
 # ==========================================
 # PREDICTION QUERIES (UI & RENDERING)
