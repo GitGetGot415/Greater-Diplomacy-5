@@ -28,11 +28,17 @@ TERRAIN_LOOKUP = {
     (128, 255, 255): "lakes"        # #80FFFF
 }
 
+# while 2 is pretty good, 3 is what's needed to fully get those real annoying corner borders
+dist = 3
+
 def get_neighbors(x, y, width, height):
     adj = []
-    for dx, dy in [(0, 2), (0, -2), (2, 0), (-2, 0)]:
+    for dx, dy in [(0, dist), (0, -dist), (dist, 0), (-dist, 0)]:
         nx, ny = x + dx, y + dy
-        if 0 <= nx < width and 0 <= ny < height:
+        # Only check bounds for the Y axis (no looping top-to-bottom)
+        if 0 <= ny < height:
+            # Wrap the X axis! If nx is -3, it becomes width-3. If nx is width+2, it becomes 2.
+            nx = nx % width
             adj.append((nx, ny))
     return adj
 
@@ -40,7 +46,7 @@ def run_generator(progress_var, root):
     path = filedialog.askopenfilename(title="Select Terrain Map")
     if not path: return
 
-    # --- NEW: Ask for a Map Name and Create a Folder ---
+    # --- Ask for a Map Name and Create a Folder ---
     map_name = simpledialog.askstring("Map Name", "Enter a name for this new map base:", parent=root)
     if not map_name: return # Cancel if they close the prompt
     
@@ -92,6 +98,7 @@ def run_generator(progress_var, root):
                     
                     for dx, dy in [(0,1), (0,-1), (1,0), (-1,0)]:
                         nx, ny = cx + dx, cy + dy
+                        # Keep standard bounds for province painting so we don't mess up the visual centroid calculation
                         if 0 <= nx < width and 0 <= ny < height:
                             if pixels[nx, ny] == color and (nx, ny) not in visited:
                                 visited.add((nx, ny))
