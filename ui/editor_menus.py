@@ -964,7 +964,7 @@ def select_resource_brush(self):
     tk.Label(root, text="Select Resource Type:", font=("Arial", 12)).pack(pady=10)
     
     # FIX: Remove the StringVar and just use the Combobox directly
-    dropdown = ttk.Combobox(root, values=["Iron", "Coal", "Oil"], state="readonly", font=("Arial", 11))
+    dropdown = ttk.Combobox(root, values=["Iron", "Coal", "Oil", "None"], state="readonly", font=("Arial", 11))
     dropdown.set("Iron") # Set the default visual value
     dropdown.pack(pady=5)
 
@@ -976,11 +976,16 @@ def select_resource_brush(self):
     def on_confirm():
         try:
             amt = int(amt_ent.get())
-            # FIX: Grab the value directly from the dropdown widget
+            # Grab the value directly from the dropdown widget
             self.brush_resource_type = dropdown.get() 
             self.brush_resource_amount = amt
             self.editor_mode = "RESOURCE"
-            self.show_feedback(f"Brush: {self.brush_resource_type} ({amt})")
+            
+            if self.brush_resource_type == "None":
+                self.show_feedback("Brush: Erase Resources")
+            else:
+                self.show_feedback(f"Brush: {self.brush_resource_type} ({amt})")
+                
             close_menu()
         except ValueError:
             messagebox.showerror("Error", "Amount must be a whole number.")
@@ -994,7 +999,6 @@ def select_resource_brush(self):
 
     root.protocol("WM_DELETE_WINDOW", close_menu)
 
-    # --- THE FIX: ADD THIS MISSING LOOP ---
     while self.menu_active:
         try:
             root.update()

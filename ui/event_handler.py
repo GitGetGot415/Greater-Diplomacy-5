@@ -140,11 +140,15 @@ def handle_map_events(self, event):
 
                 # --- RESOURCE MODE ---
                 elif self.editor_mode == "RESOURCE":
-                    # Ensure resources is a dictionary
-                    if not isinstance(self.hovered_province.get("resources"), dict):
+                    if getattr(self, "brush_resource_type", "None") == "None":
+                        # Wipe all resources if the "None" brush is used
                         self.hovered_province["resources"] = {}
-                    
-                    self.hovered_province["resources"][self.brush_resource_type] = self.brush_resource_amount
+                    else:
+                        # Ensure resources is a dictionary
+                        if not isinstance(self.hovered_province.get("resources"), dict):
+                            self.hovered_province["resources"] = {}
+                        
+                        self.hovered_province["resources"][self.brush_resource_type] = self.brush_resource_amount
         
         # ADD THIS: Right Click (or Middle Click)
         if pygame.mouse.get_pressed()[2]: # Right Click
