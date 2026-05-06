@@ -657,7 +657,7 @@ def is_diplomat_busy(sender, target, nation_data):
         
     # Allow queueing new messages/actions if the current action is just a message in transit
     #if str(action).startswith("MSG:") and turns > 0:
-    #    return False
+    #   return False
         
     if turns > 0: 
         return True
@@ -750,6 +750,12 @@ def is_unit_obsolete(group_name, player_research):
     """Checks if a unit group is obsolete based on researched techs."""
     obsoleting_techs = c.OBSOLESCENCE_RULES.get(group_name, [])
     return any(player_research.get(tech, 0) >= 1 for tech in obsoleting_techs)
+
+def get_best_unit_by_defense(units):
+    """Finds the unit with the highest defense stat in a list of units."""
+    if not units:
+        return None
+    return max(units, key=lambda u: u.get("defense", 0))
 
 # ==========================================
 # PREDICTION QUERIES (UI & RENDERING)

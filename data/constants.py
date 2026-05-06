@@ -314,6 +314,15 @@ ICON_SPEED = "Lightning"
 ICON_WARNING = "Warning"
 
 # ==========================================
+# MAP UNIT DISPLAY (HOI4 STYLE)
+# ==========================================
+
+UNIT_BOX_WIDTH = 80
+UNIT_BOX_HEIGHT = 40
+UNIT_BOX_BG_COLOR = (80, 80, 80, 200)
+UNIT_BOX_TEXT_COLOR = (255, 255, 255)
+
+# ==========================================
 # AI & SPECTATOR CONFIGURATION
 # ==========================================
 

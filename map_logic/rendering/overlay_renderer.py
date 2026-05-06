@@ -3,6 +3,7 @@ import math
 import data.constants as c
 from data import queries
 from map_logic.rendering import symbol_loader
+from map_logic.rendering.font_manager import fonts
 
 def draw_combat_bubbles(self_map, surface):
     """Draws combat indicators on the map to visualize predicted battles."""
@@ -172,7 +173,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                 left_wing = (end_pos[0] - head_size * math.cos(angle_rad - math.pi / 6),
                              end_pos[1] - head_size * math.sin(angle_rad - math.pi / 6))
                 right_wing = (end_pos[0] - head_size * math.cos(angle_rad + math.pi / 6),
-                              end_pos[1] - head_size * math.sin(angle_rad + math.pi / 6))
+                               end_pos[1] - head_size * math.sin(angle_rad + math.pi / 6))
                 pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
         else:
             if circle_img:
@@ -193,7 +194,7 @@ def draw_overlay_content(self, surface):
     if self.secondary_mode == "BLANK":
         return
 
-    # --- NEW: Render Combat Prediction Bubbles ---
+    # --- Render Combat Prediction Bubbles ---
     if self.secondary_mode == "UNITS" or self.map_mode == "POLITICAL":
         draw_combat_bubbles(self, surface)
     # ---------------------------------------------
@@ -223,7 +224,7 @@ def draw_overlay_content(self, surface):
                             rect = training_sym.get_rect(center=(sx, sy))
                             surface.blit(training_sym, rect)
 
-                    # --- ADDED: Disband Indicator ---
+                    # --- Disband Indicator ---
                     if any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
                         disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if disband_sym:
@@ -238,6 +239,8 @@ def draw_overlay_content(self, surface):
                     # hahaha NO don't do that we have a dedicated tab for that now
                     """if province.get("resources"):
                         pygame.draw.rect(surface, (255, 215, 0), (sx-15, sy-15, 10, 10))"""
+                    # ne touche pas cette chose!
+                    # passe, sil te plait
                     
                     # Draw Buildings
                     buildings = province.get("buildings", [])
@@ -290,32 +293,109 @@ def draw_overlay_content(self, surface):
                                     if res_type == "Oil": c_col = (30, 30, 30)
                                     pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), int(15 * self.camera.zoom)))
                                 
-                                # Shift right so multiple icons stack side-by-side
                                 offset_x += 20 * self.camera.zoom
 
+
 def draw_unit_icon(self, surface, sx, sy, province):
-    # Units are now dictionaries: {"type": "...", "owner": "..."}
-    primary_unit_data = province["units"][0]
-    unit_type = primary_unit_data["type"]
-    unit_owner = primary_unit_data["owner"]
+    units = province.get("units", [])
+    if not units:
+        return
+
+    # 1. Group units by owner so we can draw stacked boxes for each nation
+    units_by_owner = {}
+    for u in units:
+        owner = u.get("owner", "Unclaimed")
+        units_by_owner.setdefault(owner, []).append(u)
+
+    # Base high-res rendering dimensions
+    internal_w = getattr(c, 'UNIT_BOX_WIDTH', 120)
+    internal_h = getattr(c, 'UNIT_BOX_HEIGHT', 48)
     
-    # Fetch the owner's color
-    owner_color = self.nation_colors.get(unit_owner, (200, 200, 200))
+    # Dampened Scaling rules
+    display_scale = 0.25 + (self.camera.zoom * 0.12)
+    scaled_w = max(20, int(internal_w * display_scale))
+    scaled_h = max(8, int(internal_h * display_scale))
+    gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
+
+    # 2. Calculate the vertical offset to perfectly center the entire stack over the province
+    total_boxes = len(units_by_owner)
+    total_stack_height = (scaled_h * total_boxes) + (gap * (total_boxes - 1))
     
-    # Check if it's a dynamic convoy or truck, otherwise use the standard type
-    if unit_type.startswith("Convoy"):
-        symbol_name = "Convoy"
-    elif unit_type.startswith("Truck"):
-        symbol_name = "Truck"
-    else:
-        symbol_name = unit_type
+    # Start drawing from the top of the stack and move down
+    current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
+
+    # Sort owners by army size descending, so the biggest army is rendered on top
+    sorted_owners = sorted(units_by_owner.keys(), key=lambda o: (-len(units_by_owner[o]), o))
+
+    for owner in sorted_owners:
+        owner_units = units_by_owner[owner]
+        best_unit = queries.get_best_unit_by_defense(owner_units)
         
-    symbol = symbol_loader.get_symbol(symbol_name, self.camera.zoom * 0.5, color=owner_color)
-    
-    if symbol:
-        # Center the image on the sx, sy coordinates
-        rect = symbol.get_rect(center=(sx, sy))
-        surface.blit(symbol, rect)
-    else:
-        # Fallback circle colored by owner nation
-        pygame.draw.circle(surface, owner_color, (sx, sy), int(7 * self.camera.zoom))
+        if not best_unit:
+            continue
+
+        unit_count = len(owner_units)
+        unit_type = best_unit.get("type", "")
+        owner_color = self.nation_colors.get(owner, (200, 200, 200))
+        
+        # Check if it's a dynamic convoy or truck
+        if unit_type.startswith("Convoy"):
+            symbol_name = "Convoy"
+        elif unit_type.startswith("Truck"):
+            symbol_name = "Truck"
+        else:
+            symbol_name = unit_type
+            
+        # Create unscaled, high-res subsurface to preserve crispness
+        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
+        box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40, 200)))
+        pygame.draw.rect(box_surf, owner_color, box_surf.get_rect(), 4)
+        
+        # Grab symbol
+        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=owner_color)
+        text_x = 10
+        if symbol:
+            # --- NEW FIX: Constrain the symbol itself if it's too wide ---
+            # A wide ship/tank might be 150px, completely overflowing the 120px box!
+            max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
+            if symbol.get_width() > max_sym_w:
+                ratio = max_sym_w / symbol.get_width()
+                new_h = max(1, int(symbol.get_height() * ratio))
+                symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
+            # -------------------------------------------------------------
+                
+            sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
+            box_surf.blit(symbol, sym_rect)
+            text_x = sym_rect.right + 8
+            
+        # Draw Unit Count Text
+        font = fonts.get("button")
+        count_str = str(unit_count)
+        count_txt = font.render(count_str, True, getattr(c, 'UNIT_BOX_TEXT_COLOR', (255, 255, 255)))
+        shadow_txt = font.render(count_str, True, (0, 0, 0))
+
+        # --- TEXT COMPRESSION FIX (UNIFORM SCALE) ---
+        # Ensure we never pass a 0 or negative width to smoothscale
+        max_text_w = max(1, internal_w - text_x - 6) 
+        
+        # If the text is wider than the space we have, scale it down uniformly to fit
+        if count_txt.get_width() > max_text_w:
+            scale_ratio = max_text_w / count_txt.get_width()
+            new_w = int(max_text_w)
+            new_h = max(1, int(count_txt.get_height() * scale_ratio))
+            count_txt = pygame.transform.smoothscale(count_txt, (new_w, new_h))
+            shadow_txt = pygame.transform.smoothscale(shadow_txt, (new_w, new_h))
+        
+        txt_y = (internal_h // 2) - (count_txt.get_height() // 2)
+        box_surf.blit(shadow_txt, (text_x + 2, txt_y + 2))
+        box_surf.blit(count_txt, (text_x, txt_y))
+        
+        # Supersampling/Anti-aliasing final stretch down
+        final_surf = pygame.transform.smoothscale(box_surf, (scaled_w, scaled_h))
+        
+        # Blit using the stacked Y coordinate
+        rect = final_surf.get_rect(center=(sx, int(current_sy)))
+        surface.blit(final_surf, rect)
+
+        # Move the offset down for the next owner's box in the stack
+        current_sy += scaled_h + gap
