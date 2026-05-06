@@ -23,9 +23,9 @@ def conquer_province(self, province, new_owner):
         if self.map_mode == "POLITICAL":
             self.active_map = self.political_map
             
-        # 4. UPDATE COUNTRY CENTER FOR TEXT RENDERING <-- NEW
-        if hasattr(self, 'update_country_centers'):
-            self.update_country_centers()
+        # 4. UPDATE COUNTRY CENTER FOR TEXT RENDERING
+        # Flag this for an update later rather than doing the heavy math instantly
+        self.centers_need_update = True
 
 def get_mixed_core_color(cores):
     """Helper function to average the colors of all cores on a tile."""

@@ -109,7 +109,8 @@ class Controller:
             "LOAD_GAME": Load_Game(),
             "SETTINGS": Settings(self), 
             "SELECT_BASE_MAP": Select_Base_Map(),
-            "MAP": Map(),
+            # Don't pre-load the heavy map on boot. flip_state() generates a new one regardless
+            "MAP": None,
             "PRODUCTION": Production_Screen(),
             "ORDERS": Orders_Screen(),
             "RESEARCH": Research_Screen(),

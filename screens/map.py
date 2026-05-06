@@ -410,6 +410,11 @@ class Map(GameState):
         super().update()
         self.camera.update(self, c.SCREEN_HEIGHT)
 
+        # Defer editor map label updates until the user finishes their brush stroke
+        if getattr(self, "centers_need_update", False) and not pygame.mouse.get_pressed()[0]:
+            self.update_country_centers()
+            self.centers_need_update = False
+
         if getattr(self, 'show_player_ready_screen', False):
             for el in self.elements: el.visible = False
             return

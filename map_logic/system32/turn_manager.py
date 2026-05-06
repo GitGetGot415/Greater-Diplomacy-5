@@ -18,6 +18,12 @@ def advance_time(map_screen):
         map_screen.refresh_political_map()
         map_screen.refresh_relations_map()
         map_screen.refresh_factions_map()
+        
+        # Only refresh country centers ONCE after the turn finishes
+        if getattr(map_screen, 'centers_need_update', False):
+            map_screen.update_country_centers()
+            map_screen.centers_need_update = False
+            
         map_screen.viewing_ai_moves = False
 
         # If playing multiplayer, show the ready screen for Player 1 again
