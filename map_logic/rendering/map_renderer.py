@@ -63,6 +63,17 @@ def draw_map_screen(self, surface):
             if order and order.get("type") == "MOVE":
                 path = order.get("path", [])
                 if path:
+                    # --- NEW VISIBILITY CHECK ---
+                    owner = unit.get("owner")
+                    is_player_unit = owner in getattr(self, 'active_players', [self.player_country])
+                    is_spectator = self.player_country == "Spectator"
+                    
+                    # Hide the arrows if it's not the player's unit, the player isn't spectating,
+                    # and the game isn't actively resolving AI turns.
+                    if not is_player_unit and not is_spectator and not getattr(self, 'viewing_ai_moves', False):
+                        continue
+                    # ----------------------------
+
                     # Dynamically pull the color of the unit's owner (fallback to yellow)
                     owner_color = self.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
                     

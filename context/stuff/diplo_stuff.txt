@@ -11,3 +11,13 @@ turn 0.5: msg1 is sent
 turn 1: msg1 is received, receiver writes msg2 back
 turn 1.5: msg2 is sent
 turn 2: msg2 is received by original sender
+
+also could you write some testcases for each potential diplomatic action
+each test case should return how long it takes for each statement to send and what happens, one example could be of a faction join request, returning something simmilar to this:
+
+turn 0: [A] writes request to join faction of [B]
+turn 0.5: request message is sent
+turn 1: [B] receives request message from [A], accepts request and sends acceptance back to [A]
+turn 1.5: acceptance message is sent
+turn 2: [A] receives acceptance message, [A] is now officially accepted into the faction
+

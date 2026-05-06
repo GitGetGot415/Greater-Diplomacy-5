@@ -333,7 +333,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
 
     for owner in sorted_owners:
         owner_units = units_by_owner[owner]
-        best_unit = queries.get_best_unit_by_defense(owner_units)
+        best_unit = queries.get_best_unit_by_defense_then_attack(owner_units)
         
         if not best_unit:
             continue

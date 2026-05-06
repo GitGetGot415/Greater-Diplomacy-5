@@ -27,13 +27,8 @@ ITS CALLED Tkinter
 - also add in the world map!
 - balance germany?
 
-- is ai even capturable
-- movement arrows for ai countries seem to appear even when you're not viewing ai moves
-
 - sends ai war declaration
 - ai gets war declaration and then on the same turn sends two messages saying "how dare you" "actually wait we can't fight each other"
-
-- ceasefire gets accepted immediately instead of having to wait a turn for it to process
 
 - when a country sends you a diplomatic thingy make sure you can actually accept it!!!!!
 - also make war declarations and the like more visible (shown in yo face)
