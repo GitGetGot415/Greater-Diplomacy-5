@@ -94,9 +94,9 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
 
     cam = map_screen.camera
     
-    # 1. Convert to Screen Coordinates
-    def world_to_screen(pos):
-        sx = (pos[0] - cam.pos.x) * cam.zoom
+    # 1. Convert to Screen Coordinates (Added offset support for looped rendering)
+    def world_to_screen(pos, offset=0):
+        sx = (pos[0] + offset - cam.pos.x) * cam.zoom
         sy = (pos[1] - cam.pos.y) * cam.zoom + map_screen.top_ui_height
         return sx, sy
 
@@ -114,80 +114,100 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     circle_img = symbol_loader.get_symbol("Circle", cam.zoom * 1, color)
     triangle_img = symbol_loader.get_symbol("Triangle", cam.zoom * 1, color)
 
+    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+
     # PASS 1: Draw all lines FIRST so they render underneath the shapes
     for i in range(len(nodes) - 1):
-        p1 = nodes[i]["center"]
-        p2 = nodes[i+1]["center"]
-        start_pos = world_to_screen(p1)
-        end_pos = world_to_screen(p2)
+        p1 = list(nodes[i]["center"])
+        p2 = list(nodes[i+1]["center"])
 
-        dx = end_pos[0] - start_pos[0]
-        dy = end_pos[1] - start_pos[1]
-        dist = math.hypot(dx, dy)
-        angle = math.degrees(math.atan2(-dy, dx))
+        # Account for map wrap to get the shortest continuous distance
+        if map_screen.loop_map:
+            world_dx = p2[0] - p1[0]
+            if world_dx > map_screen.map_w / 2:
+                p2[0] -= map_screen.map_w
+            elif world_dx < -map_screen.map_w / 2:
+                p2[0] += map_screen.map_w
 
-        if line_base and int(dist) > 0:
-            # Stretch the line image to fit the exact distance between the nodes
-            thickness = max(2, int(4 * cam.zoom))
-            scaled_line = pygame.transform.scale(line_base, (int(dist), thickness))
-            rotated_line = pygame.transform.rotate(scaled_line, angle)
-            
-            # --- NEW: Alpha Transparency ---
-            if alpha < 255:
-                rotated_line.set_alpha(alpha)
+        for offset in offsets:
+            start_pos = world_to_screen(p1, offset)
+            end_pos = world_to_screen(p2, offset)
+
+            # Basic culling to avoid drawing off-screen lines
+            min_x = min(start_pos[0], end_pos[0])
+            max_x = max(start_pos[0], end_pos[0])
+            if max_x < 0 or min_x > surface.get_width():
+                continue
+
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            dist = math.hypot(dx, dy)
+            angle = math.degrees(math.atan2(-dy, dx))
+
+            if line_base and int(dist) > 0:
+                thickness = max(2, int(4 * cam.zoom))
+                scaled_line = pygame.transform.scale(line_base, (int(dist), thickness))
+                rotated_line = pygame.transform.rotate(scaled_line, angle)
                 
-            rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
-            surface.blit(rotated_line, rect)
-        else:
-            # Fallback
-            pygame.draw.line(surface, color, start_pos, end_pos, max(1, int(3 * cam.zoom)))
+                if alpha < 255:
+                    rotated_line.set_alpha(alpha)
+                    
+                rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
+                surface.blit(rotated_line, rect)
+            else:
+                pygame.draw.line(surface, color, start_pos, end_pos, max(1, int(3 * cam.zoom)))
 
     # PASS 2: Draw the node markers on top of the lines
     for i in range(1, len(nodes)):
-        p1 = nodes[i-1]["center"]
-        p2 = nodes[i]["center"]
-        start_pos = world_to_screen(p1)
-        end_pos = world_to_screen(p2)
+        p1 = list(nodes[i-1]["center"])
+        p2 = list(nodes[i]["center"])
 
         is_last = (i == len(nodes) - 1)
 
-        dx = end_pos[0] - start_pos[0]
-        dy = end_pos[1] - start_pos[1]
-        angle = math.degrees(math.atan2(-dy, dx))
+        # Apply the exact same map wrap logic to the endpoints
+        if map_screen.loop_map:
+            world_dx = p2[0] - p1[0]
+            if world_dx > map_screen.map_w / 2:
+                p2[0] -= map_screen.map_w
+            elif world_dx < -map_screen.map_w / 2:
+                p2[0] += map_screen.map_w
 
-        if is_last:
-            if triangle_img:
-                # Rotate the triangle so it points along the trajectory of the line
-                rotated_tri = pygame.transform.rotate(triangle_img, angle)
-                
-                # --- NEW: Alpha Transparency ---
-                if alpha < 255:
-                    rotated_tri.set_alpha(alpha)
-                    
-                rect = rotated_tri.get_rect(center=end_pos)
-                surface.blit(rotated_tri, rect)
+        for offset in offsets:
+            start_pos = world_to_screen(p1, offset)
+            end_pos = world_to_screen(p2, offset)
+
+            # Culling Check
+            if end_pos[0] < -50 or end_pos[0] > surface.get_width() + 50:
+                continue
+
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            angle = math.degrees(math.atan2(-dy, dx))
+
+            if is_last:
+                if triangle_img:
+                    rotated_tri = pygame.transform.rotate(triangle_img, angle)
+                    if alpha < 255:
+                        rotated_tri.set_alpha(alpha)
+                    rect = rotated_tri.get_rect(center=end_pos)
+                    surface.blit(rotated_tri, rect)
+                else:
+                    head_size = 15 * cam.zoom
+                    angle_rad = math.atan2(dy, dx)
+                    left_wing = (end_pos[0] - head_size * math.cos(angle_rad - math.pi / 6),
+                                 end_pos[1] - head_size * math.sin(angle_rad - math.pi / 6))
+                    right_wing = (end_pos[0] - head_size * math.cos(angle_rad + math.pi / 6),
+                                   end_pos[1] - head_size * math.sin(angle_rad + math.pi / 6))
+                    pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
             else:
-                # Fallback Triangle
-                head_size = 15 * cam.zoom
-                angle_rad = math.atan2(dy, dx)
-                left_wing = (end_pos[0] - head_size * math.cos(angle_rad - math.pi / 6),
-                             end_pos[1] - head_size * math.sin(angle_rad - math.pi / 6))
-                right_wing = (end_pos[0] - head_size * math.cos(angle_rad + math.pi / 6),
-                               end_pos[1] - head_size * math.sin(angle_rad + math.pi / 6))
-                pygame.draw.polygon(surface, color, [end_pos, left_wing, right_wing])
-        else:
-            if circle_img:
-                # --- NEW: Alpha Transparency (Requires copying to not corrupt the cache) ---
-                draw_circle = circle_img.copy() if alpha < 255 else circle_img
-                if alpha < 255:
-                    draw_circle.set_alpha(alpha)
-                    
-                # Plop the circle right on the intermediate coordinate
-                rect = draw_circle.get_rect(center=end_pos)
-                surface.blit(draw_circle, rect)
-            else:
-                # Fallback Circle
-                pygame.draw.circle(surface, color, (int(end_pos[0]), int(end_pos[1])), max(3, int(4 * cam.zoom)))
+                if circle_img:
+                    draw_circle = circle_img.copy() if alpha < 255 else circle_img
+                    if alpha < 255:
+                        draw_circle.set_alpha(alpha)
+                    rect = draw_circle.get_rect(center=end_pos)
+                    surface.blit(draw_circle, rect)
+                else:
+                    pygame.draw.circle(surface, color, (int(end_pos[0]), int(end_pos[1])), max(3, int(4 * cam.zoom)))
 
 def draw_overlay_content(self, surface):
     """Orchestrates what icons/symbols to draw over the map."""

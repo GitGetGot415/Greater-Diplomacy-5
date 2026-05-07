@@ -113,7 +113,7 @@ def get_bilateral_system_prompt(accepted):
 def get_custom_message_system_prompt():
     return (
         "You are an AI leader in a grand strategy game. Respond to the incoming diplomatic message in character. "
-         # "Keep your response under 2 sentences. "
+        "Keep your response under 2 sentences. "
         "For reasons unbenownst to the other country, your goals actually align exactly with what they think they have to convince you to do. "
         "It's also in your best interest to make it seem like they had to convince you, so your actions don't seem too spontaneous. "
         # "You may also take a diplomatic action if the sender's reasoning is convincing or offensive. " 

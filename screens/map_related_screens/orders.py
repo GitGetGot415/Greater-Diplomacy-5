@@ -467,12 +467,24 @@ class Orders_Screen(GameState):
                         neighbor = self.map_screen.id_to_province.get(n_id)
                         if neighbor:
                             cam = self.map_screen.camera
-                            cx, cy = neighbor["center"]
-                            sx = (cx - cam.pos.x) * cam.zoom
-                            sy = (cy - cam.pos.y) * cam.zoom + self.map_screen.top_ui_height
+                            cx, cy = list(neighbor["center"])
                             
-                            if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
-                                pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
+                            # Account for map wrap to get the shortest distance
+                            if self.map_screen.loop_map:
+                                world_dx = cx - last_node["center"][0]
+                                if world_dx > self.map_screen.map_w / 2:
+                                    cx -= self.map_screen.map_w
+                                elif world_dx < -self.map_screen.map_w / 2:
+                                    cx += self.map_screen.map_w
+
+                            # Loop the green pathmaking circles so they draw on the seam
+                            offsets = [0, -self.map_screen.map_w, self.map_screen.map_w] if self.map_screen.loop_map else [0]
+                            for offset in offsets:
+                                sx = (cx + offset - cam.pos.x) * cam.zoom
+                                sy = (cy - cam.pos.y) * cam.zoom + self.map_screen.top_ui_height
+                                
+                                if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
+                                    pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
 
                 mouse_pos = pygame.mouse.get_pos()
                 hovered = self.get_clicked_province(mouse_pos)

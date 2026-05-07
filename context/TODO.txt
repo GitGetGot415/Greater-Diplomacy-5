@@ -35,7 +35,6 @@ ITS CALLED Tkinter
 - god can the ai not suicide charge their convoys into ships please
 
 - 106 nations on world map seems to cause lag issues
-- also sending troops across the provinces with connections that loop around the map create a comically long arrow stretching across the entire world, this should not happen
 
 - sends ai war declaration
 - ai gets war declaration and then on the same turn sends two messages saying "how dare you" "actually wait we can't fight each other"

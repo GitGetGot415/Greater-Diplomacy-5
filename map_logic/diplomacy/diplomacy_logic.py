@@ -1,7 +1,7 @@
 import random
 import concurrent.futures
 import pygame
-from map_logic.ai import ai_handler
+from map_logic.ai import ai_handler, ai_prompts
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
@@ -408,13 +408,16 @@ def process_diplomacy_turn(self):
                         for m in members:
                             if m != country_name and m not in getattr(self, 'active_players', []):
                                 if action == "DISBAND_FACTION":
-                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")))
+                                    # --- FIX: Pointed to ai_prompts ---
+                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")))
                                 else:
-                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, c.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment.")))
+                                    # --- FIX: Pointed to ai_prompts ---
+                                    accepted, msg_text = ai_results.get((country_name, m, action), (False, ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment.")))
                                 send_message(self, m, country_name, msg_text, "DIPLOMACY")
                                 
                     elif not is_human_target:
-                        accepted, message = ai_results.get((country_name, target, action), (False, c.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "Message received.")))
+                        # --- FIX: Pointed to ai_prompts ---
+                        accepted, message = ai_results.get((country_name, target, action), (False, ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "Message received.")))
                         send_message(self, target, country_name, message, "DIPLOMACY")
                         
                     actions_to_clear.append(target)
