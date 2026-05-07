@@ -6,7 +6,7 @@ from data import queries
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
-def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI", 
+def save_settings(keybind_dict, volume, music_volume, num_players=1, ai_mode="GEMINI", 
                   gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
                   ai_immersion_level="FULL"):
@@ -18,6 +18,7 @@ def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI",
     data_to_save = {
         "keybinds": readable_binds,
         "volume": volume,
+        "music_volume": music_volume,
         "num_players": num_players,
         "ai_mode": ai_mode,
         "gemini_api_key": gemini_api_key,
@@ -34,12 +35,12 @@ def save_settings(keybind_dict, volume, num_players=1, ai_mode="GEMINI",
     with open(CONFIG_PATH, "w") as f:
         json.dump(data_to_save, f, indent=4)
         
-    queries.clear_json_caches() # Add this line so your game knows it updated!
+    queries.clear_json_caches()
 
-def load_settings(default_binds, default_volume=0.5):
+def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
     """Loads all settings variables, safely falling back to defaults if missing."""
     if not os.path.exists(CONFIG_PATH):
-        return default_binds, default_volume, 1, c.DEFAULT_AI_MODE, "", "", "", "", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-haiku-20240307", "llama3", "FULL"
+        return default_binds, default_volume, default_music_volume, 1, c.DEFAULT_AI_MODE, "", "", "", "", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-haiku-20240307", "llama3", "FULL"
     
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -49,9 +50,11 @@ def load_settings(default_binds, default_volume=0.5):
         if "keybinds" not in saved_data:
             saved_binds = saved_data
             saved_vol = default_volume
+            saved_music_vol = default_music_volume
         else:
             saved_binds = saved_data.get("keybinds", {})
             saved_vol = saved_data.get("volume", default_volume)
+            saved_music_vol = saved_data.get("music_volume", default_music_volume)
         
         # Convert strings back to pygame codes
         loaded_binds = {}
@@ -68,6 +71,7 @@ def load_settings(default_binds, default_volume=0.5):
         return (
             loaded_binds, 
             saved_vol, 
+            saved_music_vol, 
             s.get("num_players", 1), 
             s.get("ai_mode", c.DEFAULT_AI_MODE),
             s.get("gemini_api_key", s.get("api_key", "")),
@@ -82,4 +86,4 @@ def load_settings(default_binds, default_volume=0.5):
         )
     except Exception as e:
         print(f"Error loading settings: {e}")
-        return default_binds, default_volume, 1, "GEMINI", "", "", "", "", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-haiku-20240307", "llama3", "FULL"
+        return default_binds, default_volume, default_music_volume, 1, "GEMINI", "", "", "", "", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-haiku-20240307", "llama3", "FULL"

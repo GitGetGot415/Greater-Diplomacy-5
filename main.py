@@ -8,6 +8,7 @@ from screens.map import Map
 from screens.menu import Menu
 from screens.new_game import New_Game
 from screens.settings import Settings
+from screens.music_player import Music_Player
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
@@ -91,16 +92,18 @@ class Controller:
         }
 
         # 2. Load settings 
-        self.keybinds, self.volume, self.num_players, self.ai_mode, \
+        self.keybinds, self.volume, self.music_volume, self.num_players, self.ai_mode, \
         self.gemini_api_key, self.chatgpt_api_key, self.claude_api_key, self.ollama_api_key, \
         self.gemini_model, self.chatgpt_model, self.claude_model, self.ollama_model, \
-        self.ai_immersion_level = keybind_io.load_settings(default_keys, 0.5)
+        self.ai_immersion_level = keybind_io.load_settings(default_keys, 0.5, 0.5)
 
         # 3. Apply volume to global sounds on boot
         if ui_elements.click_sound:
             ui_elements.click_sound.set_volume(self.volume)
         if ui_elements.slider_sound:
             ui_elements.slider_sound.set_volume(self.volume)
+            
+        pygame.mixer.music.set_volume(self.music_volume)
 
         self.states = {
             "MENU": Menu(),
@@ -108,8 +111,8 @@ class Controller:
             "RANDOM_SETUP": Random_Setup(),
             "LOAD_GAME": Load_Game(),
             "SETTINGS": Settings(self), 
+            "MUSIC_PLAYER": Music_Player(self),
             "SELECT_BASE_MAP": Select_Base_Map(),
-            # Don't pre-load the heavy map on boot. flip_state() generates a new one regardless
             "MAP": None,
             "PRODUCTION": Production_Screen(),
             "ORDERS": Orders_Screen(),
@@ -144,12 +147,12 @@ class Controller:
             elif next_state_name == "MESSAGES":
                 self.states["MESSAGES"].start_messages(map_ref)
 
-        if next_state_name == "SETTINGS":
-            # If we entered settings from the map, tell it to return to the map
+        if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
+            # If we entered settings/music from the map, tell it to return to the map
             if previous_state == self.states["MAP"]:
-                self.states["SETTINGS"].return_state = "MAP"
+                self.states[next_state_name].return_state = "MAP"
             else:
-                self.states["SETTINGS"].return_state = "MENU"
+                self.states[next_state_name].return_state = "MENU"
 
         # 2. Map Persistence
         if next_state_name == "MAP":

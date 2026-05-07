@@ -426,15 +426,22 @@ BILATERAL_ACTIONS = [
 ]
 
 # ==========================================
+# MUSIC PLAYER UI
+# ==========================================
+
+MUSIC_LEFT_PANE_W = 350
+
+# ==========================================
 # FILE PATHS
 # ==========================================
 
 # Directories
 ASSETS_DIR = "assets/images"
-TERRAINS_DIR = "assets/terrains" # Added terrains directory
+TERRAINS_DIR = "assets/terrains" 
 BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
+MUSIC_DIR = "assets/music"
 SAVES_DIR = "saves"
 SCENARIOS_DIR = "scenarios"
 BASE_MAPS_DIR = "base_maps"
@@ -451,7 +458,6 @@ PORTRAIT_SIZE = (60, 60)
 
 # Fonts & Sounds
 FONT_PATH_DEFAULT = "assets/fonts/W95F.otf"
-# FONT_PATH_DEFAULT = "assets/fonts/idk.ttf"
 FONT_PATH_MAP = "assets/fonts/OpenSans-Regular.ttf"
 SOUND_CLICK_PATH = "assets/sounds/click.mp3"
 SOUND_SLIDER_PATH = "assets/sounds/slider.wav"
@@ -462,3 +468,4 @@ COUNTRIES_DATA_PATH = "data/json/countries_data.json"
 RESEARCH_TEMPLATE_PATH = "data/json/research_template.json"
 BUILDING_DATA_PATH = "data/json/building_data.json"
 SETTINGS_CONFIG_PATH = "data/json/settings_config.json"
+ALBUMS_DATA_PATH = "data/json/albums.json"

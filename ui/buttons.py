@@ -80,6 +80,7 @@ def render_buttons(self):
     self.btn_gp_msgs = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 4, "medium_square", "purple", "Messages", msgs_callback, image=icons.get("mail"), show_text=False)
     self.btn_gp_save = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 5, "medium_square", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
     self.btn_gp_settings = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 6, "medium_square", "grey", "Settings", lambda: self.change_state("SETTINGS"), image=icons.get("settings"), show_text=False)
+    self.btn_gp_music = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 7, "medium_square", "blue", "Music Player", lambda: self.change_state("MUSIC_PLAYER"), show_text=True)
 
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
@@ -127,7 +128,7 @@ def render_buttons(self):
         self.btn_ed_core, self.btn_ed_autocore, self.btn_ed_resource, self.btn_ed_building,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_date, self.btn_ed_diplo,
         self.btn_next_turn, self.btn_skip_ai, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
-        self.btn_gp_save, self.btn_gp_settings, self.btn_go_orders, self.btn_go_production,
+        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_go_orders, self.btn_go_production,
         self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create, self.btn_fac_leave, self.btn_fac_disband,
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
@@ -233,7 +234,8 @@ def update_button_states(map_screen):
         if not viewing_ai:
             gp_btns = [
                 map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
-                map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings
+                map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
+                map_screen.btn_gp_music
             ]
             for btn in gp_btns:
                 btn.visible = not is_sel
@@ -456,11 +458,11 @@ def render_settings_buttons(settings_screen):
         settings_screen.elements.append(Button(c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10, c.SETTINGS_MOD_BOX_Y, "small_square", "red", "X", lambda: settings_screen.clear_input("MOD")))
 
     # Sliders
-    settings_screen.volume_slider = Slider(keybind_x, 320, 200, "Volume", settings_screen.volume, settings_screen.set_volume)
+    # settings_screen.volume_slider = Slider(keybind_x, 320, 200, "Volume", settings_screen.volume, settings_screen.set_volume) # <--- REMOVE THIS LINE
     settings_screen.player_slider = Slider(keybind_x, 400, 200, f"Players: {settings_screen.num_players}", (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
 
     settings_screen.elements.extend([
-        settings_screen.volume_slider,
+        # settings_screen.volume_slider, # <--- REMOVE THIS LINE
         settings_screen.player_slider,
         Button(keybind_x, 530, "medium", "grey", back_btn_text, lambda: settings_screen.start_listening("BACK")),
         Button(keybind_x, 590, "medium", "grey", orders_btn_text, lambda: settings_screen.start_listening("ORDERS")),

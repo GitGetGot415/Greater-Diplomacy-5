@@ -101,7 +101,8 @@ class Settings(GameState):
 
         immersion = getattr(self.controller, 'ai_immersion_level', 'FULL')
         
-        keybind_io.save_settings(default_keys, self.volume, self.num_players, self.ai_mode, 
+        # FIX: Added self.controller.music_volume
+        keybind_io.save_settings(default_keys, self.volume, self.controller.music_volume, self.num_players, self.ai_mode, 
                                  gemini_api_key, chatgpt_key, claude_key, ollama_key,
                                  gemini_mod, chatgpt_mod, claude_mod, ollama_mod, immersion)
         self.refresh_ui()
@@ -193,9 +194,10 @@ class Settings(GameState):
     def save_and_go_back(self, execute_exit=True):
         keybind_io.save_settings(
             self.controller.keybinds, 
-            self.volume, 
+            self.controller.volume, 
+            self.controller.music_volume,
             self.num_players, 
-            self.ai_mode, 
+            self.ai_mode,
             getattr(self.controller, 'gemini_api_key', ''), 
             getattr(self.controller, 'chatgpt_api_key', ''), 
             getattr(self.controller, 'claude_api_key', ''), 

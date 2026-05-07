@@ -10,10 +10,11 @@ class Menu(GameState):
         self.bg_image_path = c.MENU_BG_FILE 
 
         self.elements = [
-            Button("centered", "centered - 80", "medium", "green", "New Game", self.new_game),
-            Button("centered", "centered", "medium", "green", "Load Game", self.load_game),
-            Button("centered", "centered + 80", "medium", "green", "Map Editor", self.map_editor),
-            Button("centered", "centered + 160", "medium", "grey", "Settings", self.settings, image=ui_elements.UI_ICONS.get("settings"))
+            Button("centered", "centered - 100", "medium", "green", "New Game", self.new_game),
+            Button("centered", "centered - 20", "medium", "green", "Load Game", self.load_game),
+            Button("centered", "centered + 60", "medium", "green", "Map Editor", self.map_editor),
+            Button("centered", "centered + 140", "medium", "blue", "Music Player", self.music_player), # <--- NEW
+            Button("centered", "centered + 220", "medium", "grey", "Settings", self.settings, image=ui_elements.UI_ICONS.get("settings"))
         ]
 
     def new_game(self):
@@ -22,6 +23,10 @@ class Menu(GameState):
 
     def load_game(self):
         self.next_state = "LOAD_GAME"
+        self.done = True
+
+    def music_player(self):
+        self.next_state = "MUSIC_PLAYER"
         self.done = True
 
     def settings(self):
