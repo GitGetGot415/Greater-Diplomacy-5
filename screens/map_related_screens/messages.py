@@ -40,6 +40,20 @@ class Messages_Screen(GameState):
         self.show_all_contacts = False
         self.refresh_ui()
 
+    def accept_proposal(self, target):
+        from map_logic.diplomacy import player_diplomacy_actions
+        custom_msg = self.compose_text.strip()
+        player_diplomacy_actions.handle_accept_req(self.map_screen, target, custom_msg)
+        self.compose_text = ""
+        self.refresh_ui()
+
+    def reject_proposal(self, target):
+        from map_logic.diplomacy import player_diplomacy_actions
+        custom_msg = self.compose_text.strip()
+        player_diplomacy_actions.handle_reject_req(self.map_screen, target, custom_msg)
+        self.compose_text = ""
+        self.refresh_ui()
+
     def save_current_draft(self):
         """Auto-saves whatever is currently typed or queued before switching menus/contacts."""
         if self.selected_recipient and self.map_screen:
@@ -272,6 +286,29 @@ class Messages_Screen(GameState):
             else:
                 self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
 
+            # --- NEW: Bilateral Accept/Reject Buttons ---
+            incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
+            pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+            
+            if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
+                action_name = incoming_action.replace("_", " ").title()
+                btn_y_diplo = c.SCREEN_HEIGHT - c.MSG_INPUT_H - 60
+                
+                if pending_action == f"ACCEPT_{incoming_action}":
+                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
+                elif pending_action == f"REJECT_{incoming_action}":
+                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
+                else:
+                    # Check if the player is busy doing something else (e.g., WAR_DECLARATION)
+                    is_busy = bool(pending_action and not pending_action.startswith("MSG:"))
+                    
+                    if is_busy:
+                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "grey", f"Accept {action_name}", lambda: None))
+                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "grey", f"Reject {action_name}", lambda: None))
+                    else:
+                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
+                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
+
     def additional_draw(self, surface):
         if not self.map_screen: return
         font_med = fonts.get("heading2")
@@ -367,10 +404,16 @@ class Messages_Screen(GameState):
                 "box_width": box_width
             })
 
-        self.max_msg_scroll = max(0, total_h - input_rect.y + 20)
+        # --- DYNAMIC PADDING ---
+        # Push the chat thread higher up if we need room for the Accept/Reject buttons
+        incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
+        has_bilateral = (incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS)
+        bottom_padding = 80 if has_bilateral else 20
+
+        self.max_msg_scroll = max(0, total_h - input_rect.y + bottom_padding)
         self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
 
-        current_y = input_rect.y - 20 + self.scroll_y
+        current_y = input_rect.y - bottom_padding + self.scroll_y
         self.draft_edit_rects = []
         
         # Render iterating backwards (Newest -> Oldest), drawing bottom -> up

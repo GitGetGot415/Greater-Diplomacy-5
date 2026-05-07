@@ -34,6 +34,15 @@ perhaps a relation button for each country might be best
 
 - music tab?
 
+could
+- mark messages as unread?
+also could it be made so that a request you haven't given an answer to is treated like an unread message
+
+- instead of replacing all the diplomacy options could it be made so that instead the option to accept or reject is in messages
+- also i realized its possible for a player to simply not respond to a bilateral diplomatic request and nothing happens (if they do nothing it should auto reject)
+
+if country a proposes creating a faction with country b and country b responds by declaring war, the option to accept or decline the faction creation doesn't stop existing, and so country b can then accept the request and then enter into a faction with someone while at war with them
+
 - land based retreating?
 
 - 106 nations on world map seems to cause lag issues

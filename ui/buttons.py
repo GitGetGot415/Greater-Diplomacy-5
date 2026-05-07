@@ -304,57 +304,47 @@ def update_button_states(map_screen):
                 i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
                 target_is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
 
-                if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
-                    action_name = incoming_action.replace("_", " ")
-                    if pending_action == f"ACCEPT_{incoming_action}":
-                        set_btn(map_screen.btn_accept_req, True, True, "Undo Accept", "green")
-                        set_btn(map_screen.btn_reject_req, False, False, "", "green")
-                    elif pending_action == f"REJECT_{incoming_action}":
-                        set_btn(map_screen.btn_accept_req, False, False, "", "red")
-                        set_btn(map_screen.btn_reject_req, True, True, "Undo Reject", "red")
-                    else:
-                        set_btn(map_screen.btn_accept_req, True, True, f"Accept {action_name}", "green")
-                        set_btn(map_screen.btn_reject_req, True, True, f"Reject {action_name}", "red")
-                else:
-                    dw_enabled = not (not at_war and in_same_faction)
-                    if pending_action == "CEASEFIRE": dw_text = get_status_text("CEASEFIRE")
-                    elif pending_action == "WAR_DECLARATION": dw_text = get_status_text("WAR")
-                    else: dw_text = "Ceasefire" if at_war else "Declare War"
-                    set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
-                    
-                    target_wars = queries.get_enemies(owner, map_screen.nation_data)
-                    player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
-                    can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
-                    jw_text = get_status_text("JOIN WARS") if pending_action == "JOIN_WARS" else "Join Wars"
-                    set_btn(map_screen.btn_join_wars, True, can_join_wars or pending_action == "JOIN_WARS", jw_text, "orange")
+                # Freed up the UI! The Accept/Reject override block has been removed from here.
+                
+                dw_enabled = not (not at_war and in_same_faction)
+                if pending_action == "CEASEFIRE": dw_text = get_status_text("CEASEFIRE")
+                elif pending_action == "WAR_DECLARATION": dw_text = get_status_text("WAR")
+                else: dw_text = "Ceasefire" if at_war else "Declare War"
+                set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
+                
+                target_wars = queries.get_enemies(owner, map_screen.nation_data)
+                player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
+                can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
+                jw_text = get_status_text("JOIN WARS") if pending_action == "JOIN_WARS" else "Join Wars"
+                set_btn(map_screen.btn_join_wars, True, can_join_wars or pending_action == "JOIN_WARS", jw_text, "orange")
 
-                    can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
-                    ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
-                    set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
+                can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
+                ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
+                set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
 
-                    can_invite = bool(my_faction and i_am_leader and not target_faction and not at_war)
-                    inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
-                    set_btn(map_screen.btn_fac_invite, True, can_invite or pending_action == "FACTION_INVITE", inv_text, "green")
+                can_invite = bool(my_faction and i_am_leader and not target_faction and not at_war)
+                inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
+                set_btn(map_screen.btn_fac_invite, True, can_invite or pending_action == "FACTION_INVITE", inv_text, "green")
 
-                    can_req_join = bool(not my_faction and target_faction and not at_war)
-                    req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
-                    set_btn(map_screen.btn_fac_join_req, True, can_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
+                can_req_join = bool(not my_faction and target_faction and not at_war)
+                req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
+                set_btn(map_screen.btn_fac_join_req, True, can_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
 
-                    can_kick = bool(in_same_faction and i_am_leader)
-                    kick_text = get_status_text("KICK") if pending_action == "KICK_FACTION_MEMBER" else "Kick from Faction"
-                    set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
+                can_kick = bool(in_same_faction and i_am_leader)
+                kick_text = get_status_text("KICK") if pending_action == "KICK_FACTION_MEMBER" else "Kick from Faction"
+                set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
 
-                    can_create_fac = bool(not my_faction and not target_faction and not at_war)
-                    create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
-                    set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
+                can_create_fac = bool(not my_faction and not target_faction and not at_war)
+                create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
+                set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
 
-                    can_leave_fac = bool(my_faction and in_same_faction and not i_am_leader and target_is_leader)
-                    leave_text = get_status_text("LEAVE") if pending_action == "LEAVE_FACTION" else "Leave Faction"
-                    set_btn(map_screen.btn_fac_leave, True, can_leave_fac or pending_action == "LEAVE_FACTION", leave_text, "orange")
+                can_leave_fac = bool(my_faction and in_same_faction and not i_am_leader and target_is_leader)
+                leave_text = get_status_text("LEAVE") if pending_action == "LEAVE_FACTION" else "Leave Faction"
+                set_btn(map_screen.btn_fac_leave, True, can_leave_fac or pending_action == "LEAVE_FACTION", leave_text, "orange")
 
-                    can_disband_fac = bool(my_faction and i_am_leader and in_same_faction)
-                    disband_text = get_status_text("DISBAND") if pending_action == "DISBAND_FACTION" else "Disband Faction"
-                    set_btn(map_screen.btn_fac_disband, True, can_disband_fac or pending_action == "DISBAND_FACTION", disband_text, "red")
+                can_disband_fac = bool(my_faction and i_am_leader and in_same_faction)
+                disband_text = get_status_text("DISBAND") if pending_action == "DISBAND_FACTION" else "Disband Faction"
+                set_btn(map_screen.btn_fac_disband, True, can_disband_fac or pending_action == "DISBAND_FACTION", disband_text, "red")
 
             else:
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")

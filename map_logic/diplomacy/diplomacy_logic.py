@@ -562,11 +562,11 @@ def process_diplomacy_turn(self):
                         actions_to_clear.append(target)
 
             elif turns > 1:
-                is_human_target = target in getattr(self, 'active_players', [])
-                if is_human_target and turns >= 5:
-                    if action in c.BILATERAL_ACTIONS:
-                        send_message(self, target, country_name, "Your proposal was ignored and has expired.", "DIPLOMACY")
-                        actions_to_clear.append(target)
+                # Auto-decline if ignored for 0 turns (applies to both AI and Human targets)
+                # (this used to be 5 WHY WAS IT 5)
+                if turns >= 0 and action in c.BILATERAL_ACTIONS:
+                    send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                    actions_to_clear.append(target)
                 else:
                     info["turns"] += 1
 

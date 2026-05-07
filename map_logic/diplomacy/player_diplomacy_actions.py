@@ -57,9 +57,11 @@ def handle_specific_action(map_screen, action_type):
     map_screen.mail_input_active = False
     map_screen.show_feedback(msg)
 
-def handle_accept_req(map_screen):
+def handle_accept_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of accepting an incoming proposal."""
-    target = map_screen.selected_province.get("owner")
+    if not target:
+        target = map_screen.selected_province.get("owner")
+        
     action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
     
     # If we are UNDOING the acceptance:
@@ -90,9 +92,9 @@ def handle_accept_req(map_screen):
                 map_screen.show_feedback("You must be in the same faction to do this!")
                 return
 
-        custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
-
-        custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+        if custom_msg is None:
+            custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+            
         msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"ACCEPT_{action}", custom_msg)
         
         map_screen.mail_draft_text = ""
@@ -101,9 +103,12 @@ def handle_accept_req(map_screen):
         map_screen.refresh_factions_map()
         map_screen.show_feedback(f"Acceptance queued: {action.replace('_', ' ').title()}")
 
-def handle_reject_req(map_screen):
+
+def handle_reject_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of rejecting an incoming proposal."""
-    target = map_screen.selected_province.get("owner")
+    if not target:
+        target = map_screen.selected_province.get("owner")
+        
     action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
     # If we are UNDOING the rejection:
@@ -114,8 +119,11 @@ def handle_reject_req(map_screen):
         return
 
     if incoming_turns > 0:
-        custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+        if custom_msg is None:
+            custom_msg = getattr(map_screen, "mail_draft_text", "").strip()
+            
         msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"REJECT_{action}", custom_msg)
+        
         map_screen.mail_draft_text = ""
         map_screen.mail_input_active = False
         map_screen.show_feedback(f"Rejection queued: {action.replace('_', ' ').title()}")
