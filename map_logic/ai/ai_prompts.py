@@ -7,6 +7,8 @@ AI_FALLBACK_RESPONSES = {
     "AI_OFF_REJECT": "We reject your proposal.",
     "AI_OFF_MESSAGE": "Message received (AI is OFF).",
     "GENERIC_ACCEPT": "We have made our decision.",
+    # WHY WOULD YOU JUST SAY "WE HAVE MADE OUR DESICION" THAT'S AWFUL AND HORRIBLY VAGUE
+    # WHO THOUGHT THAT WAS A GOOD IDEA???
     "GENERIC_MESSAGE": "Message received.",
     "OLLAMA_ERROR": "Ollama server error or timeout.",
     "API_ERROR": "API Error.",
@@ -24,7 +26,12 @@ AI_FALLBACK_RESPONSES = {
     "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war.",
     "KICKED_FROM_FACTION": "We will not forget being expelled from the alliance.",
     "PROACTIVE_JOIN_WAR": "May we join you in your war?",
-    "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!"
+    "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
+
+    "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
+    "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
+    "CROSS_CALL_TO_ARMS": "Our diplomats crossed paths. We stand together in all our wars!",
+    "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!"
 }
 
 # ==========================================
@@ -86,9 +93,23 @@ def get_unilateral_receive_context(action_type, sender_nation, custom_msg=""):
 
 def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
     """Returns the context for when an AI receives a bilateral proposal."""
-    context = f"{sender_nation} has proposed a {action_type}."
+    
+    # Translate the raw action constants into explicit directional actions for the LLM
+    if action_type == "JOIN_WARS":
+        context = f"{sender_nation} is offering to join YOUR ongoing wars."
+    elif action_type == "CALL_TO_ARMS":
+        context = f"{sender_nation} is calling YOU to arms to join THEIR ongoing wars."
+    elif action_type == "FACTION_INVITE":
+        context = f"{sender_nation} is inviting you to join THEIR faction."
+    elif action_type == "JOIN_FACTION_REQ":
+        context = f"{sender_nation} is requesting to join YOUR faction."
+    else:
+        # Fallback for things like CEASEFIRE or CREATE_FACTION
+        context = f"{sender_nation} has proposed a {action_type.replace('_', ' ').title()}."
+
     if custom_msg:
         context += f" They included this official message: '{custom_msg}'"
+        
     return context
 
 def get_unilateral_system_prompt(action_context):

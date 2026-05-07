@@ -24,6 +24,12 @@ ITS CALLED Tkinter
 - also add in the world map!
 - balance germany?
 
+- IS GRAND STRATEGY AND RESPONSES BEING MIXED UP?????
+- BECAUSE IT SURE SEEMS LIKE IT IS
+
+oh the generating responses thing seems to work but only when generating grand strategy is finished
+could generating grand strategy be replaced with generating messages instead because that's the real important part
+
 - music tab?
 - does the ai actually send a request for other countries to help them out? or do they wait until someone else asks to join in their war?
 - make ai try to join a faction when they get declared on

@@ -156,27 +156,60 @@ def process_diplomacy_turn(self):
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
                     finalize_faction_join(self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                    send_message(self, nation_a, nation_b, "Our requests crossed paths. We are now united!", "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, "Our requests crossed paths. We are now united!", "DIPLOMACY")
+                    
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
+                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
+                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
+                    
                     del a_data[nation_b]
                     del b_data[nation_a]
+                    
                 elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
                     finalize_faction_join(self.nation_data, nation_a, nation_b)
-                    send_message(self, nation_a, nation_b, "Our requests crossed paths. We are now united!", "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, "Our requests crossed paths. We are now united!", "DIPLOMACY")
+                    
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
+                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
+                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
+                    
                     del a_data[nation_b]
                     del b_data[nation_a]
+                    
                 elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ"]:
-                    send_message(self, nation_a, nation_b, f"Your diplomat proposing a {b_action.split('_')[0].lower()} was executed. We are at WAR!", "DIPLOMACY")
+                    action_name = b_action.split('_')[0].lower()
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
+                    
+                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
                     del b_data[nation_a] 
+                    
                 elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ"]:
-                    send_message(self, nation_b, nation_a, f"Your diplomat proposing a {a_action.split('_')[0].lower()} was executed. We are at WAR!", "DIPLOMACY")
+                    action_name = a_action.split('_')[0].lower()
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
+                    
+                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
                     del a_data[nation_b]
+                    
                 elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                     finalize_neutral(self.nation_data, nation_a, nation_b)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
-                    send_message(self, nation_a, nation_b, "Mutual ceasefire agreements signed.", "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, "Mutual ceasefire agreements signed.", "DIPLOMACY")
+                    
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_CEASEFIRE"]
+                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
+                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
+                    
+                    del a_data[nation_b]
+                    del b_data[nation_a]
+                    
+                elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
+                     (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
+                    
+                    join_faction_wars(self.nation_data, nation_a, nation_b)
+                    join_faction_wars(self.nation_data, nation_b, nation_a)
+                    log_global_event(self.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
+                    
+                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_CALL_TO_ARMS"]
+                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
+                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
+                    
                     del a_data[nation_b]
                     del b_data[nation_a]
 
