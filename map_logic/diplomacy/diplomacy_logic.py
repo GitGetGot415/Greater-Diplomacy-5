@@ -536,8 +536,17 @@ def process_diplomacy_turn(self):
 
                 elif action in c.BILATERAL_ACTIONS:
                     if is_human_target:
-                        # Allow human players time to respond; do not clear.
-                        info["turns"] += 1
+                        # Check if the target has queued an ACCEPT or REJECT for this specific action
+                        target_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
+                        target_action = target_pending.get("action", "") if isinstance(target_pending, dict) else ""
+                        
+                        if target_action in [f"ACCEPT_{action}", f"REJECT_{action}"]:
+                            # Target has responded, allow their Turn 0 processing to handle it
+                            info["turns"] += 1
+                        else:
+                            # Auto-decline since the human player did not respond immediately on their turn
+                            send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                            actions_to_clear.append(target)
                     else:
                         accepted, message = ai_results.get((country_name, target, action), (False, "Timeout."))
                         if accepted:
@@ -562,8 +571,8 @@ def process_diplomacy_turn(self):
                         actions_to_clear.append(target)
 
             elif turns > 1:
+                # It should never reach this point, but just in case it does...
                 # Auto-decline if ignored for 0 turns (applies to both AI and Human targets)
-                # (this used to be 5 WHY WAS IT 5)
                 if turns >= 0 and action in c.BILATERAL_ACTIONS:
                     send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
                     actions_to_clear.append(target)
