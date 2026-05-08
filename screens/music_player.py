@@ -133,11 +133,6 @@ class Music_Player(GameState):
     def set_sfx_speed(self, val):
         self.controller.sfx_speed = val
         ui_elements.global_sfx_speed = val
-        
-        if ui_elements.slider_sound and ui_elements.soloud_engine:
-            handle = ui_elements.soloud_engine.play(ui_elements.slider_sound)
-            ui_elements.soloud_engine.set_volume(handle, self.controller.volume)
-            ui_elements.soloud_engine.set_relative_play_speed(handle, 0.5 + (val * 1.5))
             
         self.save_audio_settings()
         

@@ -52,6 +52,7 @@ def combine_files(output_filename="context/combined_scripts.txt", search_directo
 # List the exact JSON files you want to include here
 
 # maybe remove some unessecary json files to recude the context window by a few thousand lines
+# or just general files
 specific_jsons = [
                 c.UNIT_DATA_PATH,
                 c.COUNTRIES_DATA_PATH,

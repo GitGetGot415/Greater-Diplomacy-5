@@ -136,6 +136,19 @@ class Slider:
         self.value = initial_val
         self.dragging = False
         self.visible = True
+        
+        # --- COMBINED TRACKERS ---
+        self.last_display_string = self.get_display_string()
+        self.last_sound_tick = 0  # Put the throttle tracker back
+
+    def get_display_string(self):
+        """
+        Determines the exact text to render. 
+        """
+        if ":" in self.text:
+            return self.text
+        else:
+            return f"{self.text}: {int(self.value * 100)}%"
 
     def draw(self, surface):
         if not self.visible: return
@@ -144,11 +157,9 @@ class Slider:
         pygame.draw.rect(surface, c.COLOR_SLIDER_HANDLE, self.handle_rect)
         
         slider_font = fonts.get("normal")
-
-        if self.text.startswith("Players"):
-            txt = slider_font.render(self.text, True, (255, 255, 255))
-        else:
-            txt = slider_font.render(f"{self.text}: {int(self.value * 100)}%", True, (255, 255, 255))
+        
+        display_text = self.get_display_string()
+        txt = slider_font.render(display_text, True, (255, 255, 255))
             
         surface.blit(txt, (self.rect.x, self.rect.y - 25))
 
@@ -157,18 +168,32 @@ class Slider:
         
         if event.type == pygame.MOUSEBUTTONDOWN and self.handle_rect.collidepoint(event.pos):
             self.dragging = True
+            self.last_display_string = self.get_display_string() 
+            
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False
+            
         elif event.type == pygame.MOUSEMOTION and self.dragging:
             self.handle_rect.centerx = max(self.rect.left, min(event.pos[0], self.rect.right))
             self.value = (self.handle_rect.centerx - self.rect.left) / self.rect.width
+            
             self.callback(self.value)
             
-            # --- NEW ENGINE HOOK ---
-            if slider_sound and soloud_engine:
-                handle = soloud_engine.play(slider_sound)
-                soloud_engine.set_volume(handle, global_sfx_volume)
-                soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_speed * 1.5))
+            current_display = self.get_display_string()
+            
+            # 1. Did the visual number actually change?
+            if current_display != self.last_display_string:
+                self.last_display_string = current_display 
+                
+                # 2. Has it been at least 100ms since the last click?
+                current_time = pygame.time.get_ticks()
+                if current_time - self.last_sound_tick > 50:
+                    if slider_sound and soloud_engine:
+                        handle = soloud_engine.play(slider_sound)
+                        soloud_engine.set_volume(handle, global_sfx_volume)
+                        soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_speed * 1.5))
+                        
+                    self.last_sound_tick = current_time # Reset the throttle
 
 def process_text_input(event, current_text, max_length=None, validation_func=None):
     if event.type != pygame.KEYDOWN:
