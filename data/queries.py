@@ -684,19 +684,39 @@ def is_diplomat_busy(sender, target, nation_data):
     return False
 
 def get_unread_message_count(nation, nation_data):
-    """Returns the total number of unread messages for a nation."""
+    """Returns the total number of unread messages and unanswered requests for a nation."""
     # If the user is the spectator, count unread messages across ALL playable nations
     if nation == "Spectator":
         total_unread = 0
-        for n_data in nation_data.values():
+        for n_name, n_data in nation_data.items():
             if n_data.get("is_playable", False):
                 inbox = n_data.get("inbox", [])
                 total_unread += sum(1 for msg in inbox if not msg.get("spectator_read", False))
+                
+                my_pending = n_data.get("pending_diplomacy", {})
+                for other_nation, other_data in nation_data.items():
+                    if other_nation == n_name: continue
+                    req = other_data.get("pending_diplomacy", {}).get(n_name)
+                    if isinstance(req, dict) and req.get("turns", 0) > 0 and req.get("action") in c.BILATERAL_ACTIONS:
+                        my_response = my_pending.get(other_nation)
+                        if not (isinstance(my_response, dict) and (my_response.get("action", "").startswith("ACCEPT_") or my_response.get("action", "").startswith("REJECT_"))):
+                            total_unread += 1
         return total_unread
         
     # Standard logic for normal players
     inbox = nation_data.get(nation, {}).get("inbox", [])
-    return sum(1 for msg in inbox if not msg.get("read", False))
+    unread_count = sum(1 for msg in inbox if not msg.get("read", False))
+    
+    my_pending = nation_data.get(nation, {}).get("pending_diplomacy", {})
+    for other_nation, other_data in nation_data.items():
+        if other_nation == nation: continue
+        req = other_data.get("pending_diplomacy", {}).get(nation)
+        if isinstance(req, dict) and req.get("turns", 0) > 0 and req.get("action") in c.BILATERAL_ACTIONS:
+            my_response = my_pending.get(other_nation)
+            if not (isinstance(my_response, dict) and (my_response.get("action", "").startswith("ACCEPT_") or my_response.get("action", "").startswith("REJECT_"))):
+                unread_count += 1
+                
+    return unread_count
 
 def has_free_research_slots(nation, nation_data):
     """Returns True if the nation is researching fewer than 2 techs."""

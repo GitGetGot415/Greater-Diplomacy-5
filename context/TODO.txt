@@ -31,13 +31,6 @@ make FPS able to be edited
 
 remove disband faction option from diplomacy and add a faction button to the left? maybe?
 
-there's a glitch where the re rendering world maps bar is set to completed before the other bars even start
-also when the bars are at 0/0 could it just be shown as filled
-
-could
-- mark messages as unread?
-also could it be made so that a request you haven't given an answer to is treated like an unread message
-
 - land based retreating?
 
 - 106 nations on world map seems to cause lag issues

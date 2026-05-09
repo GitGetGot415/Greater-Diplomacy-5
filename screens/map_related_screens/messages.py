@@ -156,6 +156,21 @@ class Messages_Screen(GameState):
             self.save_current_draft()
             self.refresh_ui()
 
+    def mark_thread_unread(self):
+        """Marks all messages from the selected contact as unread and returns to contact list."""
+        if not self.selected_recipient or not self.map_screen: return
+        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        for msg in p_data.get("inbox", []):
+            if msg.get("sender") == self.selected_recipient:
+                msg["read"] = False
+                
+        # Deselect recipient to return to contact list
+        self.save_current_draft()
+        self.selected_recipient = None
+        self.compose_text = ""
+        self.drafts = []
+        self.refresh_ui()
+
     def additional_events(self, event):
         mx, my = pygame.mouse.get_pos()
         
@@ -217,6 +232,9 @@ class Messages_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_to_map)]
+        if self.selected_recipient:
+            self.elements.append(Button(130, 20, "small", "orange", "Mark Unread", self.mark_thread_unread))
+
         if not self.map_screen: return
         
         active_nations = set([prov.get("owner") for prov in self.map_screen.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
@@ -266,6 +284,14 @@ class Messages_Screen(GameState):
                 
                 unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
                 
+                # Treat unanswered requests as an unread notification
+                incoming_action, incoming_turns = queries.get_diplomatic_status(country, self.map_screen.player_country, self.map_screen.nation_data)
+                pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, country, self.map_screen.nation_data)
+                
+                if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
+                    if not (pending_action.startswith("ACCEPT_") or pending_action.startswith("REJECT_")):
+                        unread += 1
+                
                 display_text = f"{country} ({unread})" if unread > 0 else country
                 if unread > 0 and self.selected_recipient != country:
                     color = "red" 
@@ -286,7 +312,7 @@ class Messages_Screen(GameState):
             else:
                 self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
 
-            # --- NEW: Bilateral Accept/Reject Buttons ---
+            # --- Bilateral Accept/Reject Buttons ---
             incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
             pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             
