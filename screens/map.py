@@ -140,8 +140,8 @@ class Map(GameState):
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
         if self.time_manager.total_turns == 0:
-            from map_logic.system32 import turn_processor
-            turn_processor.process_economy(self)
+            from map_logic.system32 import economy_processor
+            economy_processor.process_economy(self)
 
     # --- Properties ---
     @property
@@ -360,7 +360,7 @@ class Map(GameState):
     def refresh_nation_data(self):
         from data.io import country_io
         new_data = country_io.load_all_country_data()
-        added_count, updated_count = 0, 0
+        added_count, updated_count = 0
         
         for country, data in new_data.items():
             if country not in self.nation_data:

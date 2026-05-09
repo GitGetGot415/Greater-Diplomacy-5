@@ -1,0 +1,1 @@
+ do you think you could split NAME.py into multiple smaller files? It's handling a lot on its own right now 
