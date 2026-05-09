@@ -377,8 +377,13 @@ def process_diplomacy_turn(self):
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.")
                     msg_text = custom_msg if custom_msg else "We are dissolving our faction."
-                    send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    finalize_disband_faction(self.nation_data, country_name) 
+                    
+                    # --- FIX: Send the message to former members, not self ---
+                    for m in info["cached_members"]:
+                        if m != country_name:
+                            send_message(self, country_name, m, msg_text, "DIPLOMACY")
+                            
+                    finalize_disband_faction(self.nation_data, country_name)
 
                 elif action == "KICK_FACTION_MEMBER":
                     log_global_event(self.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
@@ -391,8 +396,13 @@ def process_diplomacy_turn(self):
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     log_global_event(self.nation_data, f"{country_name} has abandoned their faction.")
                     msg_text = custom_msg if custom_msg else "We are withdrawing from the faction."
-                    send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    finalize_faction_leave(self.nation_data, country_name) 
+                    
+                    # --- FIX: Send the message to former members, not self ---
+                    for m in info["cached_members"]:
+                        if m != country_name:
+                            send_message(self, country_name, m, msg_text, "DIPLOMACY")
+                            
+                    finalize_faction_leave(self.nation_data, country_name)
                     
                 elif action == "JOIN_FACTION_REQ":
                     msg_text = custom_msg if custom_msg else "We formally request to join your faction."

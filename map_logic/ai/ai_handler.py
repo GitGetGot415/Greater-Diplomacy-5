@@ -192,6 +192,8 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("ALLIANCE_BROKEN", "We won't forget this.")
         elif action_type == "KICK_FACTION_MEMBER":
             fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION", "We won't forget being expelled.")
+        elif action_type == "CALL_TO_ARMS":
+            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("ANSWERED_CALL", "We will answer your call to arms.")
         else:
             fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.") if accepted else ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_REJECT", "We reject your proposal.")
         return accepted, fallback

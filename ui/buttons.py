@@ -81,6 +81,7 @@ def render_buttons(self):
     self.btn_gp_save = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 5, "left_ui_button", "green", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
     self.btn_gp_settings = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 6, "left_ui_button", "grey", "Settings", lambda: self.change_state("SETTINGS"), image=icons.get("settings"), show_text=False)
     self.btn_gp_music = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 7, "left_ui_button", "blue", "Music Player", lambda: self.change_state("MUSIC_PLAYER"), show_text=True)
+    self.btn_gp_faction = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "blue", "Faction", lambda: self.change_state("FACTION"), image=icons.get("faction"), show_text=False)
 
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
@@ -100,8 +101,6 @@ def render_buttons(self):
     self.btn_fac_join_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 4, "diplomatic", "green", "Req. Join Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "JOIN_FACTION_REQ"))
     self.btn_fac_kick = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 5, "diplomatic", "red", "Kick from Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "KICK_FACTION_MEMBER"))
     self.btn_fac_create = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 6, "diplomatic", "blue", "Create Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "CREATE_FACTION"))
-    self.btn_fac_leave = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 7, "diplomatic", "orange", "Leave Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "LEAVE_FACTION"))
-    self.btn_fac_disband = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 8, "diplomatic", "red", "Disband Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "DISBAND_FACTION"))
     self.btn_accept_req = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "green", "Accept Request", lambda: player_diplomacy_actions.handle_accept_req(self))
     self.btn_reject_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "diplomatic", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
 
@@ -128,9 +127,9 @@ def render_buttons(self):
         self.btn_ed_core, self.btn_ed_autocore, self.btn_ed_resource, self.btn_ed_building,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_date, self.btn_ed_diplo,
         self.btn_next_turn, self.btn_skip_ai, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
-        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_go_orders, self.btn_go_production,
+        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_gp_faction, self.btn_go_orders, self.btn_go_production,
         self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
-        self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create, self.btn_fac_leave, self.btn_fac_disband,
+        self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create,
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
         self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, self.btn_spec_leave_fac,
         self.btn_spec_disband_fac, self.btn_spectator, self.btn_close_info, self.btn_exit_to_menu
@@ -232,13 +231,18 @@ def update_button_states(map_screen):
         map_screen.btn_skip_ai.color, map_screen.btn_skip_ai.hover_color = c.UI_COLORS["green" if skip_on else "red"]
 
         if not viewing_ai:
+            # Add btn_gp_faction to this list
             gp_btns = [
                 map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
                 map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
-                map_screen.btn_gp_music
+                map_screen.btn_gp_music, map_screen.btn_gp_faction
             ]
             for btn in gp_btns:
                 btn.visible = not is_sel
+
+            # --- ADD THIS LOGIC TO GREY OUT THE FACTION BUTTON ---
+            my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+            map_screen.btn_gp_faction.disabled = not bool(my_faction)
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
@@ -339,14 +343,6 @@ def update_button_states(map_screen):
                 can_create_fac = bool(not my_faction and not target_faction and not at_war)
                 create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
                 set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
-
-                can_leave_fac = bool(my_faction and in_same_faction and not i_am_leader and target_is_leader)
-                leave_text = get_status_text("LEAVE") if pending_action == "LEAVE_FACTION" else "Leave Faction"
-                set_btn(map_screen.btn_fac_leave, True, can_leave_fac or pending_action == "LEAVE_FACTION", leave_text, "orange")
-
-                can_disband_fac = bool(my_faction and i_am_leader and in_same_faction)
-                disband_text = get_status_text("DISBAND") if pending_action == "DISBAND_FACTION" else "Disband Faction"
-                set_btn(map_screen.btn_fac_disband, True, can_disband_fac or pending_action == "DISBAND_FACTION", disband_text, "red")
 
             else:
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")

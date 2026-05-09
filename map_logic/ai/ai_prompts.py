@@ -18,6 +18,7 @@ AI_FALLBACK_RESPONSES = {
     "FACTION_ABANDONED": "We will not forget your abandonment.",
     "FACTION_DISBANDED": "It is a shame to see our alliance broken.",
     "ACCEPTED_HELP": "We gratefully accept your assistance in our conflicts.",
+    "ANSWERED_CALL": "We will answer your call to arms.",
     "INVITE_IGNORED": "Your faction invitation was ignored and has expired.",
     "JOIN_REQ_IGNORED": "Your request to join the faction was ignored and has expired.",
     "CEASEFIRE_IGNORED": "Your ceasefire offer was ignored and has expired.",

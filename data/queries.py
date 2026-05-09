@@ -705,7 +705,8 @@ def get_unread_message_count(nation, nation_data):
         
     # Standard logic for normal players
     inbox = nation_data.get(nation, {}).get("inbox", [])
-    unread_count = sum(1 for msg in inbox if not msg.get("read", False))
+    # Ignore messages where the sender is the nation itself
+    unread_count = sum(1 for msg in inbox if not msg.get("read", False) and msg.get("sender") != nation)
     
     my_pending = nation_data.get(nation, {}).get("pending_diplomacy", {})
     for other_nation, other_data in nation_data.items():

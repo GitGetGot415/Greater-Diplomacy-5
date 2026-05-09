@@ -130,7 +130,7 @@ def process_basic_proactive_ai(map_screen):
                         
                         if enemy not in pending or turns == 0:
                             action_context = ai_prompts.get_proactive_action_context("CEASEFIRE")
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "We offer terms for a ceasefire.")
+                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")
                             
                             pending[enemy] = {
                                 "action": "CEASEFIRE",
@@ -207,7 +207,7 @@ def process_basic_proactive_ai(map_screen):
                         if member not in pending or turns == 0:
                             target_enemy = unshared_wars[0]
                             action_context = ai_prompts.get_proactive_action_context("CALL_TO_ARMS", target_enemy)
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "We request your aid in our ongoing conflicts!")
+                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CALL_TO_ARMS", "We request your aid in our ongoing conflicts!")
                             
                             pending[member] = {
                                 "action": "CALL_TO_ARMS",

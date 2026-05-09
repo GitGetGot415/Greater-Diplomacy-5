@@ -24,6 +24,7 @@ from screens.map_related_screens.research import Research_Screen
 from screens.map_related_screens.economy import Economy_Screen
 from screens.map_related_screens.edit_country import Edit_Country_Screen
 from screens.map_related_screens.production import Production_Screen
+from screens.map_related_screens.faction import Faction_Screen
 from screens.select_base_map import Select_Base_Map
 from screens.random_setup import Random_Setup
 
@@ -161,7 +162,8 @@ class Controller:
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),
-            "MESSAGES": Messages_Screen()
+            "MESSAGES": Messages_Screen(),
+            "FACTION": Faction_Screen()
         }
         self.active_state = self.states["MENU"]
 
@@ -178,7 +180,7 @@ class Controller:
             elif map_ref.selected_province:
                 self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)
         
-        if next_state_name in ["RESEARCH", "ECONOMY", "MESSAGES"]:
+        if next_state_name in ["RESEARCH", "ECONOMY", "MESSAGES", "FACTION"]:
             map_ref = self.states["MAP"]
             if next_state_name == "RESEARCH":
                 self.states["RESEARCH"].start_research(map_ref)
@@ -186,6 +188,8 @@ class Controller:
                 self.states["ECONOMY"].start_economy(map_ref)
             elif next_state_name == "MESSAGES":
                 self.states["MESSAGES"].start_messages(map_ref)
+            elif next_state_name == "FACTION":
+                self.states["FACTION"].start_faction(map_ref)
 
         if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
             if previous_state == self.states["MAP"]:

@@ -111,6 +111,7 @@ specific_jsons = [
 files_to_skip_but_list = [
     "**/*.dll",
     "data/**/*.json",
+    "data\editors/**/*.py",
     "soloud.py",
     "context\context_generator.py",
     "map_tools\**",

@@ -29,8 +29,6 @@ perhaps a relation button for each country might be best
 
 make FPS able to be edited
 
-remove disband faction option from diplomacy and add a faction button to the left? maybe?
-
 - land based retreating?
 
 - 106 nations on world map seems to cause lag issues
