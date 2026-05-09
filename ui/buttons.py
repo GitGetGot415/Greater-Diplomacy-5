@@ -91,7 +91,8 @@ def render_buttons(self):
 
     # Domestic Set
     self.btn_go_orders = Button(280, 603, "orders", "blue", "Give Orders", lambda: self.change_state("ORDERS"), image=icons.get("paper"), show_text=False)
-    self.btn_go_production = Button(600, 603, "medium_square", "orange", "Production", lambda: self.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
+    self.btn_go_production = Button(280, 543, "orders", "orange", "Production", lambda: self.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
+    #mwsium_square
 
     # Foreign Set
     self.btn_declare_war = Button(diplo_x, c.ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", lambda: player_diplomacy_actions.handle_declare_war(self))

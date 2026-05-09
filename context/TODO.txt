@@ -26,15 +26,17 @@ not attacking convoys that are clearly undefended
 also what are the rules for attacking when it comes to ships
 
 perhaps a relation button for each country might be best
+relations based on modifiers not absolutes
+and this can affect ai diplomacy
+modifiers can make it go really negative or positive but it should be capped at 100 or -100
+for example if you have a (-80) and (-40) modifier those modifiers should be allowed to exist but instead of having -120 opinion it should be -100 opinion
+
 
 make FPS able to be edited
 
 - land based retreating?
 
 - 106 nations on world map seems to cause lag issues
-
-- sends ai war declaration
-- ai gets war declaration and then on the same turn sends two messages saying "how dare you" "actually wait we can't fight each other"
 
 - make war declarations and the like more visible (shown in yo face)
 
