@@ -6,7 +6,7 @@ import sys
 if os.name == 'nt':
     os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
-from soloud import Soloud, Wav, WavStream # <-- SoLoud imports come AFTER the fix
+from soloud import Soloud, Wav, WavStream 
 from screens.map_related_screens.messages import Messages_Screen
 from map_logic.rendering.font_manager import fonts
 import ui_elements
@@ -33,6 +33,9 @@ class Controller:
     def __init__(self):
         pygame.init() 
         pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
+        
+        # --- FPS CLOCK FIX ---
+        self.clock = pygame.time.Clock()
         
         # --- INITIALIZE SOLOUD INSTEAD OF PYGAME.MIXER ---
         self.soloud = Soloud()
@@ -284,6 +287,9 @@ class Controller:
 
     def run(self):
         while True:
+            # --- THE MAGIC CPU FIX ---
+            self.clock.tick(60) 
+            
             # --- SOLOUD SONG END CHECK ---
             if self.music_handle is not None:
                 if not self.soloud.is_valid_voice_handle(self.music_handle):
@@ -296,7 +302,7 @@ class Controller:
                 if event.type == pygame.QUIT:
                     # Clean up C++ engine safely before closing
                     self.soloud.deinit()
-                    return
+                    os._exit(0) # Instantly kills hanging background threads
                 
                 # GLOBAL KEYBOARD HANDLING
                 if event.type == pygame.KEYDOWN:

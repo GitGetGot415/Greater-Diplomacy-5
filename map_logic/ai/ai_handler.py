@@ -7,6 +7,9 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_prompts
 
+# --- NEW GLOBAL ABORT FLAG ---
+FORCE_SKIP = False
+
 def get_gemini_api_key():
     """Helper to dynamically fetch the saved key from cache."""
     settings = queries.get_settings()
@@ -105,7 +108,9 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     )
 
 def call_ollama(system_prompt, user_prompt):
-    """Helper to hit local Ollama instance."""
+    """Helper to hit local Ollama instance with streaming to allow instant termination."""
+    if FORCE_SKIP: return None
+    
     url = get_ollama_url()
     payload = {
         "model": get_ollama_model(),
@@ -114,20 +119,37 @@ def call_ollama(system_prompt, user_prompt):
             {"role": "user", "content": user_prompt}
         ],
         "format": "json",
-        "stream": False
+        "stream": True # <--- THE FIX: Stream token-by-token
     }
     try:
-        response = requests.post(url, json=payload, timeout=45)
-        if response.status_code != 200:
-            print(f"Ollama Server Replied: {response.text}")
+        response = requests.post(url, json=payload, timeout=45, stream=True)
         response.raise_for_status()
-        data = response.json()
-        return json.loads(data["message"]["content"])
+        
+        full_text = ""
+        # Iterate over the stream as it generates
+        for line in response.iter_lines():
+            # If the user clicked skip midway through generation, sever the TCP connection!
+            if FORCE_SKIP:
+                response.close()
+                return None
+                
+            if line:
+                chunk = json.loads(line)
+                full_text += chunk.get("message", {}).get("content", "")
+                
+        # Parse the final reconstructed string
+        try:
+            return json.loads(full_text)
+        except json.JSONDecodeError:
+            return {"message": full_text} # Fallback if it fails strict parsing
+            
     except Exception as e:
         print(f"Ollama Python Error: {e}")
         return None
 
 def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None):
+    if FORCE_SKIP: return True, ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_ACCEPT", "We accept.")
+    
     if human_players is None:
         human_players = []
 
@@ -215,6 +237,9 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
         return accepted, ai_prompts.AI_FALLBACK_RESPONSES["API_ERROR"]
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None):
+    if FORCE_SKIP: 
+        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE" }
+    
     if human_players is None:
         human_players = []
 
@@ -304,6 +329,8 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
 
 def generate_proactive_text(ai_nation, target_nation, action_context, human_players=None):
     """Generates a quick one-liner for proactive hardcoded AI actions."""
+    if FORCE_SKIP: return None
+    
     if human_players is None:
         human_players = []
         

@@ -1,3 +1,4 @@
+# ui/spectator_menus.py
 import data.constants as c
 
 def force_war_menu(map_screen): 
@@ -120,5 +121,6 @@ def open_spectator_action_menu(map_screen, action_type):
         try:
             root.update()
             pygame.event.pump()
+            pygame.time.wait(10) # --- CPU LIMITER FIX ---
         except:
             break

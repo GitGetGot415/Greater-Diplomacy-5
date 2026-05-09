@@ -19,14 +19,48 @@ def process_proactive_llm_tasks(map_screen):
     
     map_screen.loading_status_text = "Drafting Proactive Responses..."
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-        futures = {}
-        for task in tasks:
-            future = executor.submit(ai_handler.generate_proactive_text, task["sender"], task["target"], task["context"], human_players)
-            futures[future] = task
+    # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
+    futures = {}
+    for task in tasks:
+        future = executor.submit(ai_handler.generate_proactive_text, task["sender"], task["target"], task["context"], human_players)
+        futures[future] = task
+        
+    while futures:
+        # Check if the user pressed the Force Skip button
+        if getattr(map_screen, 'force_skip_llm', False):
+            # Cancel pending futures to prevent API spam
+            for f in futures:
+                f.cancel()
+                
+            # Apply fallback to everything remaining
+            for f, task in futures.items():
+                final_msg = task["fallback"]
+                
+                # If it somehow just finished perfectly before we canceled it
+                if f.done() and not f.cancelled():
+                    try:
+                        llm_msg = f.result()
+                        if llm_msg: final_msg = llm_msg
+                    except:
+                        pass
+                        
+                sender_data = map_screen.nation_data.get(task["sender"], {})
+                pending = sender_data.get("pending_diplomacy", {})
+                target_info = pending.get(task["target"])
+                if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
+                    target_info["message"] = final_msg
+                    
+                map_screen.proactive_llm_tasks_completed += 1
             
-        for future in concurrent.futures.as_completed(futures):
-            task = futures[future]
+            # Tell the executor to shut down WITHOUT waiting for the API requests to finish
+            executor.shutdown(wait=False)
+            break # Exit the while loop entirely
+            
+        # Process successfully completed threads in chunks of 0.1 seconds
+        done, _ = concurrent.futures.wait(futures.keys(), timeout=0.1, return_when=concurrent.futures.FIRST_COMPLETED)
+        for future in done:
+            task = futures.pop(future)
             try:
                 llm_msg = future.result()
                 final_msg = llm_msg if llm_msg else task["fallback"]
@@ -43,6 +77,10 @@ def process_proactive_llm_tasks(map_screen):
                 
             map_screen.proactive_llm_tasks_completed += 1
             map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
+            
+    # Clean up gracefully if it finished normally without skipping
+    if not getattr(map_screen, 'force_skip_llm', False):
+        executor.shutdown(wait=True)
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""

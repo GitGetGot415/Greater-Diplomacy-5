@@ -1,10 +1,10 @@
 import random
-import concurrent.futures
 import pygame
 from map_logic.ai import ai_handler, ai_prompts
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
+import concurrent.futures
 
 def log_global_event(nation_data, event_message):
     """Stores world events so the AI can react to them on the next turn."""
@@ -250,41 +250,87 @@ def process_diplomacy_turn(self):
     # --- 3. EXECUTE AI THREADS ---
     ai_results = {}
     if ai_tasks:
-        import concurrent.futures
         from map_logic.ai import ai_handler # Import this to safely check the mode
         
         self.responsive_tasks_total = len(ai_tasks)
         self.responsive_tasks_completed = 0
         self.loading_status_text = "Awaiting LLM Responses..."
         
-        # --- Get human players for FULL AI optimization ---
+        # Get human players for FULL AI optimization
         human_players = getattr(self, 'active_players', [self.player_country])
         
-        # --- THE FIX: Throttle concurrency for local Ollama to prevent server crashes ---
+        # Throttle concurrency for local Ollama to prevent server crashes
         current_ai_mode = ai_handler.get_ai_mode()
         # ok but what if we could go higher than 25 threads that would be so cool
         max_threads = 1 if current_ai_mode == "OLLAMA" else 25
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-            futures = {}
-            for task in ai_tasks:
-                target_ai, sender = task["target"], task["sender"]
-                if task["action"] in c.UNILATERAL_ACTIONS or task["action"] in c.BILATERAL_ACTIONS:
-                    future = executor.submit(ai_handler.evaluate_diplomatic_proposal, self.nation_data, active_nations_list, target_ai, sender, task["action"], task.get("content", ""), human_players)
-                    futures[future] = task
-                elif task["action"] == "CUSTOM_MSG":
-                    future = executor.submit(ai_handler.process_custom_message, self.nation_data, active_nations_list, target_ai, sender, task["content"], human_players)
-                    futures[future] = task
-                    
-            for future in concurrent.futures.as_completed(futures):
-                task = futures[future]
+        # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
+        futures = {}
+        for task in ai_tasks:
+            target_ai, sender = task["target"], task["sender"]
+            if task["action"] in c.UNILATERAL_ACTIONS or task["action"] in c.BILATERAL_ACTIONS:
+                future = executor.submit(ai_handler.evaluate_diplomatic_proposal, self.nation_data, active_nations_list, target_ai, sender, task["action"], task.get("content", ""), human_players)
+                futures[future] = task
+            elif task["action"] == "CUSTOM_MSG":
+                future = executor.submit(ai_handler.process_custom_message, self.nation_data, active_nations_list, target_ai, sender, task["content"], human_players)
+                futures[future] = task
+                
+        while futures:
+            if getattr(self, 'force_skip_llm', False):
+                for f in futures:
+                    f.cancel()
+                for f, task in list(futures.items()):
+                    # Try to capture anything that was perfectly finished right before cancel
+                    if f.done() and not f.cancelled():
+                        try:
+                            ai_results[(task["sender"], task["target"], task["action"])] = f.result()
+                        except:
+                            pass
+                    else:
+                        # Apply native offline fallback logic instantly
+                        if task["action"] == "CUSTOM_MSG":
+                            ai_results[(task["sender"], task["target"], task["action"])] = {
+                                "message": ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
+                                "action": "NONE", "action_target": "NONE", 
+                                "follow_up_action": "NONE", "follow_up_target": "NONE"
+                            }
+                        elif task["action"] in c.UNILATERAL_ACTIONS:
+                            fallback_map = {
+                                "WAR_DECLARATION": "BETRAYAL",
+                                "LEAVE_FACTION": "FACTION_ABANDONED",
+                                "DISBAND_FACTION": "FACTION_DISBANDED",
+                                "JOIN_WARS": "ACCEPTED_HELP",
+                                "BREAK_ALLIANCE": "ALLIANCE_BROKEN",
+                                "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
+                            }
+                            fb_key = fallback_map.get(task["action"], "GENERIC_MESSAGE")
+                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(fb_key, "Message received.")
+                            ai_results[(task["sender"], task["target"], task["action"])] = (True, fallback)
+                        else:
+                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.")
+                            ai_results[(task["sender"], task["target"], task["action"])] = (True, fallback)
+                            
+                    self.responsive_tasks_completed += 1
+                
+                # --- THE FIX ---
+                executor.shutdown(wait=False)
+                break
+                
+            done, _ = concurrent.futures.wait(futures.keys(), timeout=0.1, return_when=concurrent.futures.FIRST_COMPLETED)
+            for future in done:
+                task = futures.pop(future)
                 try:
                     ai_results[(task["sender"], task["target"], task["action"])] = future.result()
                 except Exception as e: 
                     print(f"Thread error: {e}")
                     
                 self.responsive_tasks_completed += 1
-                self.loading_status_text = f"Awaiting LLM Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
+                self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
+        
+        # Clean up gracefully if it finished normally without skipping
+        if not getattr(self, 'force_skip_llm', False):
+            executor.shutdown(wait=True)
 
     # --- 4. STANDARD RESOLUTION (APPLY AI RESULTS) ---
     delayed_responses = [] # Store AI actions here to queue them for the next turn

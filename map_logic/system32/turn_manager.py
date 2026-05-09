@@ -13,7 +13,6 @@ def advance_time(map_screen):
         map_screen.loading_status_text = "Resolving Orders & Map Refreshes..."
         
         # 1. Run the heavy logic (Combat, Movement, etc.)
-        # These are fast enough to group, but the refreshes are what we want to track
         turn_processor.resolve_turn_logic(map_screen)
         
         # 2. Define Refresh Tasks
@@ -69,6 +68,11 @@ def trigger_ai_thread(map_screen):
     """Helper to lock the UI and start the background thread."""
     map_screen.ai_is_thinking = True
     map_screen.loading_status_text = "Initializing Turn..."
+    map_screen.force_skip_llm = False # Reset the skip flag
+    
+    # --- IMPORTANT: Reset the module-level abort flag so APIs work again ---
+    from map_logic.ai import ai_handler
+    ai_handler.FORCE_SKIP = False
     
     # Reset trackers for the new turn
     map_screen.proactive_tasks_total = 0
@@ -78,6 +82,10 @@ def trigger_ai_thread(map_screen):
     map_screen.proactive_llm_tasks = []
     map_screen.responsive_tasks_total = 0
     map_screen.responsive_tasks_completed = 0
+    
+    # Reset the refresh trackers!
+    map_screen.refresh_tasks_total = 0
+    map_screen.refresh_tasks_completed = 0
     
     # Fire and forget the background process
     threading.Thread(target=run_ai_processing_thread, args=(map_screen,), daemon=True).start()

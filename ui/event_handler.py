@@ -22,11 +22,9 @@ def handle_map_events(self, event):
                 self.show_feedback(f"Turn started for {self.player_country}")
         return # Block all other map events!
         
-    # NEW: Confirmation Logic Hijack
+    # --- CONFIRMATION LOGIC HIJACK ---
     if getattr(self, 'show_exit_confirmation', False):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # We calculate these positions relative to the screen center
-            # which we'll define in the renderer
             center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
             
             yes_rect = pygame.Rect(center_x - 130, center_y + 20, 100, 40)
@@ -37,6 +35,19 @@ def handle_map_events(self, event):
             elif no_rect.collidepoint(mx, my):
                 self.cancel_exit()
         return # Block all other map events while confirming
+        
+    # --- AI THINKING HIJACK ---
+    if getattr(self, 'ai_is_thinking', False):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if hasattr(self, 'force_skip_btn_rect') and self.force_skip_btn_rect.collidepoint(mx, my):
+                self.force_skip_llm = True
+                
+                # --- IMPORTANT: Set the module-level abort flag so running threads instantly die ---
+                from map_logic.ai import ai_handler
+                ai_handler.FORCE_SKIP = True
+                
+                self.show_feedback("Forcing AI to skip LLM generation...")
+        return # Block all other map events while AI is processing!
     
     # 1. UI Check (make sure the mouse can't go through the ui bars)
     

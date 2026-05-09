@@ -25,8 +25,10 @@ ITS CALLED Tkinter
 not attacking convoys that are clearly undefended
 also what are the rules for attacking when it comes to ships
 
-also add in another bar for processing the refreshing needed for the map
 perhaps a relation button for each country might be best
+
+there's a glitch where the re rendering world maps bar is set to completed before the other bars even start
+also when the bars are at 0/0 could it just be shown as filled
 
 could
 - mark messages as unread?
