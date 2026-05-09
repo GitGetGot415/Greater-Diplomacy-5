@@ -25,8 +25,6 @@ ITS CALLED Tkinter
 not attacking convoys that are clearly undefended
 also what are the rules for attacking when it comes to ships
 
-- map seems to automatically switch to political view after processing a turn even if you didn't select that
-
 make FPS able to be edited
 
 - land based retreating?
@@ -38,8 +36,6 @@ make FPS able to be edited
 - why doesn't the ai in absolute mode keep spam responding to each other when they get things like war declarations how do they know to stop after the first message
 
 - ai should be able to sign non-agression pacts that prevent wars
-
-evaluating grand strategy (19/26)
 
 could you make it such so that if a country is at war it will try to send a call to arms request to all the other countries in its faction
 (if full ai is on make the ai write a message first before declaring war)

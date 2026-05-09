@@ -182,6 +182,7 @@ class Map(GameState):
     def set_map_layer(self, layer_name):
         """Unified map layer setter."""
         self.base_layer = layer_name
+        self.map_mode = layer_name
         layer_map = {
             "TERRAIN": self.terrain_map,
             "POLITICAL": self.political_map,
