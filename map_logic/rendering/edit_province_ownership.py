@@ -9,20 +9,23 @@ def conquer_province(self, province, new_owner):
         province["owner"] = new_owner
         
         # 2. Visual Update
-        nations_dict = country_io.get_nation_colors() 
-        new_color = nations_dict.get(new_owner, (255, 255, 255)) # Fallback to white if unclaimed
-        
-        map_utils.update_single_province_surface(
-            self.political_map, 
-            self.id_map, 
-            province["map_color"], 
-            new_color
-        )
-        
-        # 3. Sync the active view
-        if self.map_mode == "POLITICAL":
-            self.active_map = self.political_map
+        # SKIP individual surface updates during Turn Resolution to prevent massive lag.
+        # The turn_manager will bulk-refresh the map using NumPy at the end of the phase.
+        if not getattr(self, 'viewing_ai_moves', False):
+            nations_dict = country_io.get_nation_colors() 
+            new_color = nations_dict.get(new_owner, (255, 255, 255)) # Fallback to white if unclaimed
             
+            map_utils.update_single_province_surface(
+                self.political_map, 
+                self.id_map, 
+                province["map_color"], 
+                new_color
+            )
+            
+            # 3. Sync the active view
+            if self.map_mode == "POLITICAL":
+                self.active_map = self.political_map
+                
         # 4. UPDATE COUNTRY CENTER FOR TEXT RENDERING
         # Flag this for an update later rather than doing the heavy math instantly
         self.centers_need_update = True
@@ -50,9 +53,11 @@ def add_core(self, province, nation):
         if nation not in cores:
             cores.insert(0, nation) # Insert at front as primary
         
-        new_color = get_mixed_core_color(cores)
-        map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
-        if self.map_mode == "CORES": self.active_map = self.cores_map
+        # Visual Update
+        if not getattr(self, 'viewing_ai_moves', False):
+            new_color = get_mixed_core_color(cores)
+            map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
+            if self.map_mode == "CORES": self.active_map = self.cores_map
 
 def remove_core(self, province, nation):
     if province and nation:
@@ -60,13 +65,18 @@ def remove_core(self, province, nation):
         if nation in cores:
             cores.remove(nation)
         
-        new_color = get_mixed_core_color(cores)
-        map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
-        if self.map_mode == "CORES": self.active_map = self.cores_map
+        # Visual Update
+        if not getattr(self, 'viewing_ai_moves', False):
+            new_color = get_mixed_core_color(cores)
+            map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
+            if self.map_mode == "CORES": self.active_map = self.cores_map
 
 def clear_cores(self, province):
     """Wipes all cores from the tile for the Unclaimed Eraser brush."""
     if province:
         province["cores"] = []
-        map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], (255, 255, 255))
-        if self.map_mode == "CORES": self.active_map = self.cores_map
+        
+        # Visual Update
+        if not getattr(self, 'viewing_ai_moves', False):
+            map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], (255, 255, 255))
+            if self.map_mode == "CORES": self.active_map = self.cores_map

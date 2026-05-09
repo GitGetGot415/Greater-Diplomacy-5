@@ -20,16 +20,15 @@ ITS CALLED Tkinter
 - gemma4 (thinking)
 - qwen3.6 (pro)
 
-
+AI thinking problems
 - are ships being too evasive?
 not attacking convoys that are clearly undefended
 also what are the rules for attacking when it comes to ships
-
-make FPS able to be edited
-
 - land based retreating?
 
-- 106 nations on world map seems to cause lag issues
+- trade mechanics (offer x territory for y thing)
+
+make FPS able to be edited
 
 - make war declarations and the like more visible (shown in yo face)
 
