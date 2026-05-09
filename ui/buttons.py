@@ -458,11 +458,9 @@ def render_settings_buttons(settings_screen):
         settings_screen.elements.append(Button(c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10, c.SETTINGS_MOD_BOX_Y, "small_square", "red", "X", lambda: settings_screen.clear_input("MOD")))
 
     # Sliders
-    # settings_screen.volume_slider = Slider(keybind_x, 320, 200, "Volume", settings_screen.volume, settings_screen.set_volume) # <--- REMOVE THIS LINE
     settings_screen.player_slider = Slider(keybind_x, 400, 200, f"Players: {settings_screen.num_players}", (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
 
     settings_screen.elements.extend([
-        # settings_screen.volume_slider, # <--- REMOVE THIS LINE
         settings_screen.player_slider,
         Button(keybind_x, 530, "medium", "grey", back_btn_text, lambda: settings_screen.start_listening("BACK")),
         Button(keybind_x, 590, "medium", "grey", orders_btn_text, lambda: settings_screen.start_listening("ORDERS")),

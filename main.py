@@ -111,10 +111,10 @@ class Controller:
         }
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
-        loaded_data = keybind_io.load_settings(default_keys, 0.5, 0.5)
+        loaded_data = keybind_io.load_settings(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)
         
         self.keybinds = loaded_data[0]
-        self.volume = loaded_data[1]
+        self.sfx_volume = loaded_data[1]
         self.music_volume = loaded_data[2]
         self.num_players = loaded_data[3]
         self.ai_mode = loaded_data[4]
@@ -133,7 +133,7 @@ class Controller:
         self.sfx_pitch = loaded_data[15] if len(loaded_data) > 15 else getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
 
         # 3. Apply volume to global sounds on boot
-        ui_elements.global_sfx_volume = self.volume
+        ui_elements.global_sfx_volume = self.sfx_volume
         ui_elements.global_sfx_pitch = self.sfx_pitch
 
         self.all_albums = {}

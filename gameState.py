@@ -12,7 +12,6 @@ class GameState:
         self.done = False
         self.next_state = None
         self.elements = []
-        self.master_volume = 0.5
         self.bg_image_path = None # Added support for generic background images
 
     def handle_events(self, events):

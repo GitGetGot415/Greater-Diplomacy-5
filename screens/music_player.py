@@ -42,11 +42,11 @@ class Music_Player(GameState):
         
         # --- Audio Sliders ---
         slider_x = c.SCREEN_WIDTH - 250
-        self.elements.append(Slider(slider_x, 40, 200, "SFX Vol", self.controller.volume, self.set_sfx_volume))
-        self.elements.append(Slider(slider_x, 100, 200, "SFX Speed/Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
+        self.elements.append(Slider(slider_x, 40, 200, "SFX Vol", self.controller.sfx_volume, self.set_sfx_volume))
+        self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
 
         self.elements.append(Slider(slider_x, 180, 200, "Music Vol", self.controller.music_volume, self.set_music_volume))
-        self.elements.append(Slider(slider_x, 240, 200, "Music Speed/Pitch", self.controller.music_pitch, self.set_music_pitch))
+        self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
         
         # --- View Mode Toggles ---
         color_ed = "blue" if self.view_mode == "EDITOR" else "grey"
@@ -107,7 +107,7 @@ class Music_Player(GameState):
 
     # --- AUDIO MODIFICATION HANDLERS ---
     def set_sfx_volume(self, val):
-        self.controller.volume = val
+        self.controller.sfx_volume = val
         ui_elements.global_sfx_volume = val    
         self.save_audio_settings()
         
@@ -132,7 +132,7 @@ class Music_Player(GameState):
     def save_audio_settings(self):
         keybind_io.save_settings(
             self.controller.keybinds, 
-            self.controller.volume, 
+            self.controller.sfx_volume, 
             self.controller.music_volume, 
             self.controller.num_players, 
             getattr(self.controller, 'ai_mode', c.DEFAULT_AI_MODE),

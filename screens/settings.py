@@ -14,7 +14,7 @@ class Settings(GameState):
         self.bg_image_path = c.SETTINGS_BG_FILE 
         self.return_state = "MENU"
         
-        self.volume = self.controller.volume
+        self.sfx_volume = self.controller.sfx_volume
         self.num_players = getattr(self.controller, 'num_players', 1)
         self.ai_mode = getattr(self.controller, 'ai_mode', 'GEMINI')
         self.ai_immersion_level = getattr(self.controller, 'ai_immersion_level', 'FULL')
@@ -102,9 +102,10 @@ class Settings(GameState):
         immersion = getattr(self.controller, 'ai_immersion_level', 'FULL')
         
         # Note: Pitch defaults to 0.5 automatically, so we don't need to explicitly pass it
-        keybind_io.save_settings(default_keys, self.volume, self.controller.music_volume, self.num_players, self.ai_mode, 
+        keybind_io.save_settings(default_keys, self.sfx_volume, self.controller.music_volume, self.num_players, self.ai_mode, 
                                  gemini_api_key, chatgpt_key, claude_key, ollama_key,
-                                 gemini_mod, chatgpt_mod, claude_mod, ollama_mod, immersion)
+                                 gemini_mod, chatgpt_mod, claude_mod, ollama_mod, immersion,
+                                 self.controller.music_pitch, self.controller.sfx_pitch) # <-- ADDED PITCHES HERE
         self.refresh_ui()
         
     def handle_events(self, events):
@@ -194,7 +195,7 @@ class Settings(GameState):
     def save_and_go_back(self, execute_exit=True):
         keybind_io.save_settings(
             self.controller.keybinds, 
-            self.controller.volume, 
+            self.controller.sfx_volume, 
             self.controller.music_volume,
             self.num_players, 
             self.ai_mode,
@@ -206,7 +207,9 @@ class Settings(GameState):
             getattr(self.controller, 'chatgpt_model', ''), 
             getattr(self.controller, 'claude_model', ''), 
             getattr(self.controller, 'ollama_model', ''), 
-            getattr(self.controller, 'ai_immersion_level', 'FULL')
+            getattr(self.controller, 'ai_immersion_level', 'FULL'),
+            self.controller.music_pitch,
+            self.controller.sfx_pitch
         )
         
         if execute_exit:
@@ -225,8 +228,8 @@ class Settings(GameState):
         pygame.display.toggle_fullscreen()
 
     def set_volume(self, val):
-        self.volume = val
-        self.controller.volume = val
+        self.sfx_volume = val
+        self.controller.sfx_volume = val
         if ui_elements.click_sound:
             ui_elements.click_sound.set_volume(val)
         if ui_elements.slider_sound:

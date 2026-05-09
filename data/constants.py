@@ -83,8 +83,9 @@ ECON_CONVERT_BTN_X2 = SCREEN_WIDTH // 2 + 50
 # AUDIO DEFAULTS
 # ==========================================
 
+DEFAULT_SFX_VOLUME = 0.5
+DEFAULT_MUSIC_VOLUME = 0.5
 DEFAULT_AUDIO_PITCH = 0.5
-DEFAULT_AUDIO_SPEED = 0.5
 
 # ==========================================
 # UI BARS
@@ -269,8 +270,12 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 # ==========================================
 
 MAX_CAMERA_ZOOM = 10.0
-OCEAN_DARK_BLUE = (10, 20, 40)
-OCEAN_LIGHT_BLUE = (40, 100, 180)
+
+# Water brightness stuff
+# OCEAN_DARK_BLUE = (10, 20, 40)
+OCEAN_DARK_BLUE = (5, 10, 20)
+# OCEAN_LIGHT_BLUE = (40, 100, 180)
+OCEAN_LIGHT_BLUE = (20, 40, 80)
 
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
