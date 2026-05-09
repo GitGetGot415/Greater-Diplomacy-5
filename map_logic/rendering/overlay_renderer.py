@@ -140,6 +140,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                 p2[0] += map_screen.map_w
 
         for offset in offsets:
+            # 1. Get the actual tilted screen coordinates for final placement
             start_pos = world_to_screen(p1, offset)
             end_pos = world_to_screen(p2, offset)
 
@@ -149,19 +150,37 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
             if max_x < 0 or min_x > surface.get_width():
                 continue
 
-            dx = end_pos[0] - start_pos[0]
-            dy = end_pos[1] - start_pos[1]
-            dist = math.hypot(dx, dy)
-            angle = math.degrees(math.atan2(-dy, dx))
+            # 2. Calculate un-tilted logic for the raw rotation and length
+            usx1 = (p1[0] + offset - cam.pos.x) * cam.zoom
+            usy1 = (p1[1] - cam.pos.y) * cam.zoom
+            usx2 = (p2[0] + offset - cam.pos.x) * cam.zoom
+            usy2 = (p2[1] - cam.pos.y) * cam.zoom
 
-            if line_base and int(dist) > 0:
+            udx = usx2 - usx1
+            udy = usy2 - usy1
+            udist = math.hypot(udx, udy)
+            uangle = math.degrees(math.atan2(-udy, udx))
+
+            if line_base and int(udist) > 0:
                 thickness = max(2, int(4 * cam.zoom))
-                scaled_line = pygame.transform.scale(line_base, (int(dist), thickness))
-                rotated_line = pygame.transform.rotate(scaled_line, angle)
+                
+                # Scale base image to the UN-TILTED distance
+                scaled_line = pygame.transform.scale(line_base, (int(udist), thickness))
+                
+                # Rotate by the UN-TILTED angle
+                rotated_line = pygame.transform.rotate(scaled_line, uangle)
                 
                 if alpha < 255:
                     rotated_line.set_alpha(alpha)
                     
+                # --- THE FIX: Apply the tilt compression to the final rotated block ---
+                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_ARROWS', False):
+                    rotated_line = pygame.transform.scale(
+                        rotated_line, 
+                        (rotated_line.get_width(), int(rotated_line.get_height() * cam.tilt_factor))
+                    )
+                
+                # Place it at the TILTED midpoint
                 rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
                 surface.blit(rotated_line, rect)
             else:
@@ -199,7 +218,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     rotated_tri = pygame.transform.rotate(triangle_img, angle)
                     if alpha < 255:
                         rotated_tri.set_alpha(alpha)
-                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_ARROWS', False):
                         rotated_tri = pygame.transform.scale(rotated_tri, (rotated_tri.get_width(), int(rotated_tri.get_height() * cam.tilt_factor)))
                     rect = rotated_tri.get_rect(center=end_pos)
                     surface.blit(rotated_tri, rect)
@@ -216,13 +235,13 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     draw_circle = circle_img.copy() if alpha < 255 else circle_img
                     if alpha < 255:
                         draw_circle.set_alpha(alpha)
-                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_ARROWS', False):
                         draw_circle = pygame.transform.scale(draw_circle, (draw_circle.get_width(), int(draw_circle.get_height() * cam.tilt_factor)))
                     rect = draw_circle.get_rect(center=end_pos)
                     surface.blit(draw_circle, rect)
                 else:
                     radius_x = max(3, int(4 * cam.zoom))
-                    radius_y = int(radius_x * getattr(cam, 'tilt_factor', 1.0)) if getattr(c, 'APPLY_TILT_TO_OVERLAYS', False) else radius_x
+                    radius_y = int(radius_x * getattr(cam, 'tilt_factor', 1.0)) if getattr(c, 'APPLY_TILT_TO_ARROWS', False) else radius_x
                     pygame.draw.ellipse(surface, color, pygame.Rect(int(end_pos[0]) - radius_x, int(end_pos[1]) - radius_y, radius_x*2, radius_y*2))
 
 def draw_overlay_content(self, surface):
@@ -256,7 +275,7 @@ def draw_overlay_content(self, surface):
                     if queries.is_training_troops(province):
                         training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if training_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_STATUS_ICONS', False):
                                 training_sym = pygame.transform.scale(training_sym, (training_sym.get_width(), int(training_sym.get_height() * self.camera.tilt_factor)))
                             training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = training_sym.get_rect(center=(sx, sy))
@@ -266,7 +285,7 @@ def draw_overlay_content(self, surface):
                     if any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
                         disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if disband_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_STATUS_ICONS', False):
                                 disband_sym = pygame.transform.scale(disband_sym, (disband_sym.get_width(), int(disband_sym.get_height() * self.camera.tilt_factor)))
                             disband_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             # Shifted slightly right to avoid overlapping completely with training
@@ -304,7 +323,7 @@ def draw_overlay_content(self, surface):
                     if queries.is_constructing_building(province):
                         hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if hammer_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_STATUS_ICONS', False):
                                 hammer_sym = pygame.transform.scale(hammer_sym, (hammer_sym.get_width(), int(hammer_sym.get_height() * self.camera.tilt_factor)))
                             hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = hammer_sym.get_rect(center=(sx, sy))

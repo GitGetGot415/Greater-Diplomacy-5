@@ -278,13 +278,14 @@ MAX_CAMERA_ZOOM = 10.0
 TILT_START_ZOOM = 6.0   # Zoom level where the 3D tilt effect starts
 MAX_Y_TILT_FACTOR = 0.6 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
+APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
+APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disbanding, and construction icons
 
 # Water brightness stuff
 # OCEAN_DARK_BLUE = (10, 20, 40)
 OCEAN_DARK_BLUE = (5, 10, 20)
 # OCEAN_LIGHT_BLUE = (40, 100, 180)
 OCEAN_LIGHT_BLUE = (20, 40, 80)
-
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
 NAME_FADE_START = 4.0
