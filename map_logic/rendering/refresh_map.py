@@ -57,14 +57,20 @@ def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
     return out_3d
 
 
+def get_id_2d_array(id_map):
+    """Helper to avoid duplicating the 3D-to-2D bitwise array extraction."""
+    id_array = pygame.surfarray.pixels3d(id_map)
+    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
+            (id_array[:, :, 1].astype(np.uint32) << 8) | \
+             id_array[:, :, 2].astype(np.uint32)
+    return id_array, id_2d
+
+
 def refresh_political_map(self):
     """Rebuilds the entire political map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
-    id_array = pygame.surfarray.pixels3d(self.id_map)
-    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
-            (id_array[:, :, 1].astype(np.uint32) << 8) | \
-             id_array[:, :, 2].astype(np.uint32)
+    id_array, id_2d = get_id_2d_array(self.id_map)
              
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)
@@ -118,10 +124,7 @@ def refresh_relations_map(self):
     """Rebuilds the relations map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
-    id_array = pygame.surfarray.pixels3d(self.id_map)
-    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
-            (id_array[:, :, 1].astype(np.uint32) << 8) | \
-             id_array[:, :, 2].astype(np.uint32)
+    id_array, id_2d = get_id_2d_array(self.id_map)
              
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)
@@ -196,10 +199,7 @@ def refresh_cores_map(self):
     """Rebuilds the cores map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
-    id_array = pygame.surfarray.pixels3d(self.id_map)
-    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
-            (id_array[:, :, 1].astype(np.uint32) << 8) | \
-             id_array[:, :, 2].astype(np.uint32)
+    id_array, id_2d = get_id_2d_array(self.id_map)
              
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)
@@ -270,10 +270,7 @@ def refresh_factions_map(self):
     """Rebuilds the factions map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
-    id_array = pygame.surfarray.pixels3d(self.id_map)
-    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
-            (id_array[:, :, 1].astype(np.uint32) << 8) | \
-             id_array[:, :, 2].astype(np.uint32)
+    id_array, id_2d = get_id_2d_array(self.id_map)
              
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)

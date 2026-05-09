@@ -173,6 +173,9 @@ SETTINGS_MOD_BOX_Y = SCREEN_HEIGHT - 60
 SETTINGS_BOX_W = 320
 SETTINGS_BOX_H = 40
 
+TARGET_FPS = 60
+CPU_LIMITER = 10
+
 # ==========================================
 # STARTING GAME RULES & TIMING
 # ==========================================

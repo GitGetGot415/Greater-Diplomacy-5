@@ -7,14 +7,37 @@ import data.constants as c
 from data.map import load_map
 from data import queries
 
+# ==========================================
+# TKINTER WINDOW HELPERS
+# ==========================================
+
+def _create_editor_window(title, geometry):
+    """Standardizes the creation of floating editor tool windows."""
+    root = tk.Tk()
+    root.title(title)
+    root.geometry(geometry)
+    root.attributes("-topmost", True)
+    return root
+
+def _run_editor_loop(map_screen, root):
+    """Standardizes the Pygame-safe Tkinter event loop."""
+    while map_screen.menu_active:
+        try:
+            root.update()
+            pygame.event.pump()
+            pygame.time.wait(10) # --- CPU LIMITER FIX ---
+        except (tk.TclError, Exception):
+            break
+
+# ==========================================
+# EDITOR MENUS
+# ==========================================
+
 def editor_load_map(self):
     """Opens a file dialog to load a map folder directly into the editor."""
-    root = tk.Tk()
-    root.withdraw()
-    # Point it to your new base_maps folder instead of scenarios
-    # path = filedialog.askdirectory(initialdir="base_maps", title="Select Map Folder to Edit")
+    root = queries.get_transient_tk_root()
     path = filedialog.askdirectory(initialdir=c.SCENARIOS_DIR, title="Select Map Folder to Edit")
-    root.destroy()
+    queries.destroy_tk_root(root)
 
     if path:
         # Re-run asset loader on this instance
@@ -24,19 +47,8 @@ def editor_load_map(self):
 
 def select_brush_nation(self):
     """Opens a Tkinter selection window and sets mode to NATION."""
-    root = tk.Tk()
-    root.title("Select Nation")
-    root.geometry("300x450")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Select Nation", "300x450")
     self.menu_active = True
-
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.brush_nation = lb.get(selection[0])
-            self.editor_mode = "NATION" 
-            self.show_feedback(f"Brush: {self.brush_nation}")
-        close_menu()
 
     def close_menu():
         self.menu_active = False
@@ -60,34 +72,24 @@ def select_brush_nation(self):
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
-    tk.Button(root, text="Confirm Selection", command=on_select, 
-              bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except (tk.TclError, Exception):
-            break
-
-def select_core_brush(self):
-    """Opens a Tkinter selection window and sets mode to CORE."""
-    root = tk.Tk()
-    root.title("Select Core Nation")
-    root.geometry("300x450")
-    root.attributes("-topmost", True)
-    self.menu_active = True
-
     def on_select(event=None):
         selection = lb.curselection()
         if selection:
             self.brush_nation = lb.get(selection[0])
-            self.editor_mode = "CORE" 
-            self.show_feedback(f"Core Brush: {self.brush_nation}")
+            self.editor_mode = "NATION" 
+            self.show_feedback(f"Brush: {self.brush_nation}")
         close_menu()
+
+    tk.Button(root, text="Confirm Selection", command=on_select, 
+              bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+
+    lb.bind('<Double-1>', on_select)
+    _run_editor_loop(self, root)
+
+def select_core_brush(self):
+    """Opens a Tkinter selection window and sets mode to CORE."""
+    root = _create_editor_window("Select Core Nation", "300x450")
+    self.menu_active = True
 
     def close_menu():
         self.menu_active = False
@@ -109,39 +111,28 @@ def select_core_brush(self):
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.brush_nation = lb.get(selection[0])
+            self.editor_mode = "CORE" 
+            self.show_feedback(f"Core Brush: {self.brush_nation}")
+        close_menu()
+
     tk.Button(root, text="Confirm Selection", command=on_select, 
               bg="#FF69B4", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
 
     lb.bind('<Double-1>', on_select)
-
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except (tk.TclError, Exception):
-            break
+    _run_editor_loop(self, root)
 
 def select_building_brush(self):
     """Opens a selection window for building types and sets mode to BUILDING."""
-    root = tk.Tk()
-    root.title("Select Building")
-    root.geometry("300x400")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Select Building", "300x400")
     self.menu_active = True
 
     # --- DYNAMIC FETCH ---
-    from data import queries
     bldg_lib = queries.get_building_library()
     buildings = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
-
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.brush_building = lb.get(selection[0])
-            self.editor_mode = "BUILDING"
-            self.show_feedback(f"Brush: {self.brush_building}")
-        close_menu()
 
     def close_menu():
         self.menu_active = False
@@ -161,18 +152,19 @@ def select_building_brush(self):
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.brush_building = lb.get(selection[0])
+            self.editor_mode = "BUILDING"
+            self.show_feedback(f"Brush: {self.brush_building}")
+        close_menu()
+
     tk.Button(root, text="Confirm Selection", command=on_select, 
               bg="#2196F3", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
 
     lb.bind('<Double-1>', on_select)
-
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except (tk.TclError, Exception):
-            break
+    _run_editor_loop(self, root)
 
 def spec_select_edit_country(self):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
@@ -181,18 +173,8 @@ def spec_select_edit_country(self):
         self.show_feedback("No active countries on map!")
         return
 
-    root = tk.Tk()
-    root.title("Select Nation to Edit")
-    root.geometry("300x450")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Select Nation to Edit", "300x450")
     self.menu_active = True
-
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.editing_country = lb.get(selection[0])
-            self.next_state, self.done = "EDIT_COUNTRY", True
-        close_menu()
 
     def close_menu():
         self.menu_active = False
@@ -212,26 +194,22 @@ def spec_select_edit_country(self):
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.editing_country = lb.get(selection[0])
+            self.next_state, self.done = "EDIT_COUNTRY", True
+        close_menu()
+
     tk.Button(root, text="Edit Country", command=on_select, 
               bg="#FF9800", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
 
     lb.bind('<Double-1>', on_select)
-
-    import pygame
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except:
-            break
+    _run_editor_loop(self, root)
 
 def open_editor_date(self):
     """Opens a Tkinter window to edit the game's starting date."""
-    root = tk.Tk()
-    root.title("Set Start Date")
-    root.geometry("250x300")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Set Start Date", "250x300")
     self.menu_active = True
 
     def close_menu():
@@ -240,7 +218,6 @@ def open_editor_date(self):
         
     root.protocol("WM_DELETE_WINDOW", close_menu)
 
-    # --- Directly use tk.Entry instead of StringVar ---
     tk.Label(root, text="Day (1-30):", font=("Arial", 10)).pack(pady=(10, 2))
     day_ent = tk.Entry(root, justify="center")
     day_ent.insert(0, str(self.time_manager.day))
@@ -281,14 +258,7 @@ def open_editor_date(self):
             messagebox.showerror("Error", "Please enter valid integers.")
 
     tk.Button(root, text="Apply Date", command=apply_date, bg="#FF9800", fg="white", pady=5).pack(pady=15, fill="x", padx=20)
-
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except:
-            break
+    _run_editor_loop(self, root)
 
 
 def open_editor_economy(self):
@@ -299,10 +269,7 @@ def open_editor_economy(self):
         self.show_feedback("No active countries on map!")
         return
 
-    root = tk.Tk()
-    root.title("Global Economy Overview")
-    root.geometry("1200x500") 
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Global Economy Overview", "1200x500")
     self.menu_active = True
 
     def close_menu():
@@ -329,12 +296,9 @@ def open_editor_economy(self):
                     rowheight=28,
                     font=('Arial', 10))
                     
-    # Economy logic
-    # We delete all the JSON loading and manual province looping here!
-    # Instead, we just grab the unified dictionary from the queries file:
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
-    # --- Treeview UI Setup (Added Current Columns) ---
+    # --- Treeview UI Setup ---
     columns = (
         "Country", 
         "|1", "P_Cur", "P_Inc", "P_Bld", "P_Upk", "P_Net", 
@@ -442,14 +406,7 @@ def open_editor_economy(self):
     scrollbar.pack(side="right", fill="y")
     tree.pack(fill="both", expand=True)
 
-    import pygame
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except:
-            break
+    _run_editor_loop(self, root)
         
 def open_spectator_messages(self):
     """Opens a Tkinter window listing all messages sent between active countries."""
@@ -459,10 +416,7 @@ def open_spectator_messages(self):
         self.show_feedback("No active countries on map!")
         return
 
-    root = tk.Tk()
-    root.title("Global Messages Overview")
-    root.geometry("1100x500")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Global Messages Overview", "1100x500")
     self.menu_active = True
 
     def close_menu():
@@ -535,7 +489,7 @@ def open_spectator_messages(self):
                         "sort_val": sort_val
                     })
 
-    # --- Sorting Logic (Matches Economy Tab) ---
+    # --- Sorting Logic ---
     sort_dirs = {col: True for col in columns}
 
     def sort_data(col):
@@ -590,14 +544,7 @@ def open_spectator_messages(self):
     scrollbar.pack(side="right", fill="y")
     tree.pack(fill="both", expand=True)
 
-    import pygame
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except Exception:
-            break
+    _run_editor_loop(self, root)
 
 def open_map_research_editor(self):
     """Opens a UI to edit research for countries currently existing on the map."""
@@ -616,7 +563,6 @@ def open_map_research_editor(self):
                 struct = json.load(f)
             fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
             
-            # --- Initialize base tech ---
             if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
             if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
 
@@ -626,7 +572,6 @@ def open_map_research_editor(self):
                 if k not in self.default_research:
                     self.default_research[k] = v
             
-            # --- NEW: Scrub out obsolete keys here too! ---
             obsolete_keys = [k for k in self.default_research.keys() if k not in fresh_template]
             for k in obsolete_keys:
                 del self.default_research[k]
@@ -638,10 +583,7 @@ def open_map_research_editor(self):
 
     default_res = get_default_research()
 
-    root = tk.Tk()
-    root.title("Map Tech Editor")
-    root.geometry("350x500")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Map Tech Editor", "350x500")
     self.menu_active = True
 
     def close_menu():
@@ -749,32 +691,14 @@ def open_map_research_editor(self):
     tk.Button(root, text="Edit ALL Nations (Bulk)", command=edit_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
     tk.Button(root, text="Edit Map Default Tech", command=edit_default_only, bg="#FF9800", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
 
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except:
-            break
+    _run_editor_loop(self, root)
 
 def select_unit_brush(self):
     """Opens a selection window for unit types and sets mode to UNIT."""
-    root = tk.Tk()
-    root.title("Select Unit")
-    root.geometry("300x400")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Select Unit", "300x400")
     self.menu_active = True
 
-    unit_path = c.UNIT_DATA_PATH
     units = list(queries.get_unit_library().keys())
-
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.brush_unit = lb.get(selection[0])
-            self.editor_mode = "UNIT"
-            self.show_feedback(f"Brush: {self.brush_unit}")
-        close_menu()
 
     def close_menu():
         self.menu_active = False
@@ -794,30 +718,34 @@ def select_unit_brush(self):
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
+    def on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            self.brush_unit = lb.get(selection[0])
+            self.editor_mode = "UNIT"
+            self.show_feedback(f"Brush: {self.brush_unit}")
+        close_menu()
+
     tk.Button(root, text="Confirm Selection", command=on_select, bg="#f44336", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
     lb.bind('<Double-1>', on_select)
 
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except:
-            break
+    _run_editor_loop(self, root)
 
 def select_resource_brush(self):
     """Opens a selection window for resource types and amounts."""
-    root = tk.Tk()
-    root.title("Resource Brush")
-    root.geometry("300x250")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Resource Brush", "300x250")
     self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", close_menu)
 
     tk.Label(root, text="Select Resource Type:", font=("Arial", 12)).pack(pady=10)
     
-    # FIX: Remove the StringVar and just use the Combobox directly
     dropdown = ttk.Combobox(root, values=["Iron", "Coal", "Oil", "None"], state="readonly", font=("Arial", 11))
-    dropdown.set("Iron") # Set the default visual value
+    dropdown.set("Iron") 
     dropdown.pack(pady=5)
 
     tk.Label(root, text="Resource Amount:", font=("Arial", 12)).pack(pady=5)
@@ -828,7 +756,6 @@ def select_resource_brush(self):
     def on_confirm():
         try:
             amt = int(amt_ent.get())
-            # Grab the value directly from the dropdown widget
             self.brush_resource_type = dropdown.get() 
             self.brush_resource_amount = amt
             self.editor_mode = "RESOURCE"
@@ -845,19 +772,7 @@ def select_resource_brush(self):
     tk.Button(root, text="Confirm Selection", command=on_confirm, 
               bg="#9C27B0", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=15)
 
-    def close_menu():
-        self.menu_active = False
-        root.destroy()
-
-    root.protocol("WM_DELETE_WINDOW", close_menu)
-
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except (tk.TclError, Exception):
-            break
+    _run_editor_loop(self, root)
 
 def open_diplomacy_editor(self):
     """Opens a Tkinter window to edit global relations and factions."""
@@ -866,10 +781,7 @@ def open_diplomacy_editor(self):
         self.show_feedback("No active countries on map!")
         return
 
-    root = tk.Tk()
-    root.title("Global Diplomacy & Factions Editor")
-    root.geometry("550x550")
-    root.attributes("-topmost", True)
+    root = _create_editor_window("Global Diplomacy & Factions Editor", "550x550")
     self.menu_active = True
 
     def close_menu():
@@ -995,10 +907,4 @@ def open_diplomacy_editor(self):
 
     tk.Button(right_frame, text="Save Changes", command=save_changes, bg="#4CAF50", fg="white", font=("Arial", 12, "bold")).pack(pady=10, fill="x")
 
-    while self.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
-        except (tk.TclError, Exception):
-            break
+    _run_editor_loop(self, root)

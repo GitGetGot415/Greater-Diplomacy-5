@@ -1,8 +1,8 @@
 import pygame
 import os
 import shutil
-import tkinter as tk
 from tkinter import filedialog, messagebox
+from data import queries
 import ui_elements 
 from gameState import GameState
 from ui_elements import Button, Slider, process_text_input
@@ -180,9 +180,7 @@ class Music_Player(GameState):
         self.refresh_ui()
 
     def delete_album(self, album):
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
+        root = queries.get_transient_tk_root()
         if messagebox.askyesno("Confirm", f"Delete album '{album}' AND physically remove all its files from your disk?"):
             
             if self.controller.now_playing != "None" and album in self.controller.now_playing:
@@ -211,19 +209,15 @@ class Music_Player(GameState):
             self.controller.build_playlist()
             self.refresh_ui()
             
-        root.destroy()
-        pygame.event.pump()
+        queries.destroy_tk_root(root)
 
     def import_track(self):
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
+        root = queries.get_transient_tk_root()
         file_paths = filedialog.askopenfilenames(
             title="Select Music Files",
             filetypes=[("Audio Files", "*.mp3 *.wav *.ogg")]
         )
-        root.destroy()
-        pygame.event.pump()
+        queries.destroy_tk_root(root)
 
         if file_paths and self.selected_album:
             album_dir = os.path.join(c.MUSIC_DIR, self.selected_album)

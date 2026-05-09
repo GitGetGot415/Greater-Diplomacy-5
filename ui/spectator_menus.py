@@ -121,6 +121,6 @@ def open_spectator_action_menu(map_screen, action_type):
         try:
             root.update()
             pygame.event.pump()
-            pygame.time.wait(10) # --- CPU LIMITER FIX ---
+            pygame.time.wait(c.CPU_LIMITER) # --- CPU LIMITER FIX ---
         except:
             break

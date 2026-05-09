@@ -1,4 +1,6 @@
 import pygame
+import data.constants as c
+from ui.bars import ui_bars
 
 # Default Keybinds
 DEFAULT_KEYS = {
@@ -26,8 +28,6 @@ class GameState:
     def draw(self, surface):
         # 1. Fill background or draw background image
         if getattr(self, 'bg_image_path', None):
-            import data.constants as c
-            from ui.bars import ui_bars
             bg_img = ui_bars.get_ui_image(self.bg_image_path, directory=c.BACKGROUNDS_DIR)
             if bg_img.get_size() != surface.get_size():
                 bg_img = pygame.transform.scale(bg_img, surface.get_size())

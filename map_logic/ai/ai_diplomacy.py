@@ -172,8 +172,9 @@ def process_basic_proactive_ai(map_screen):
                     turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
 
                     if target_leader not in pending or turns == 0:
-                        action_context = "requesting to join your faction to stand against our mutual enemies"
-                        fallback = "Our enemies are aligned, let us join your faction to stand against them."
+                        # --- REFACTORED TO PULL FROM AI_PROMPTS ---
+                        action_context = ai_prompts.get_proactive_action_context("JOIN_FACTION_REQ")
+                        fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_FACTION", "Let us join your faction.")
 
                         pending[target_leader] = {
                             "action": "JOIN_FACTION_REQ",

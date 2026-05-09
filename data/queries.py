@@ -941,3 +941,21 @@ def set_ai_diplo_cooldown(sender, target, action, nation_data, duration=None):
     cooldowns = nation_data.setdefault(sender, {}).setdefault("diplo_cooldowns", {})
     target_cooldowns = cooldowns.setdefault(target, {})
     target_cooldowns[action] = duration
+
+# ==========================================
+# TKINTER DIALOG HELPERS
+# ==========================================
+
+def get_transient_tk_root():
+    """Creates a hidden, top-most Tkinter root for native dialogs (file picking, color picking)."""
+    import tkinter as tk
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    return root
+
+def destroy_tk_root(root):
+    """Destroys the Tk root and pumps Pygame events to clear phantom inputs."""
+    import pygame
+    root.destroy()
+    pygame.event.pump()

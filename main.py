@@ -288,7 +288,7 @@ class Controller:
     def run(self):
         while True:
             # --- THE MAGIC CPU FIX ---
-            self.clock.tick(60) 
+            self.clock.tick(c.TARGET_FPS) 
             
             # --- SOLOUD SONG END CHECK ---
             if self.music_handle is not None:

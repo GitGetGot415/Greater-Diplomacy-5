@@ -27,6 +27,8 @@ also what are the rules for attacking when it comes to ships
 
 perhaps a relation button for each country might be best
 
+make FPS able to be edited
+
 there's a glitch where the re rendering world maps bar is set to completed before the other bars even start
 also when the bars are at 0/0 could it just be shown as filled
 

@@ -4,7 +4,7 @@ import pygame
 import zipfile
 from pathlib import Path
 from tkinter import filedialog, messagebox
-import tkinter as tk
+from data import queries # Needed for Tkinter helpers
 from gameState import GameState
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
@@ -149,15 +149,13 @@ class Load_Game(GameState):
         except Exception as e: messagebox.showerror("Export Error", str(e))
 
     def import_save_zip(self):
-        # ✅ ADD THIS: Create a temporary root just for the dialog
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True) # Fixes Mac hidden window bug
+        # Create a temporary root via the centralized helper
+        root = queries.get_transient_tk_root()
         
         file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")])
         
-        # ✅ ADD THIS: Destroy it immediately after getting the path
-        root.destroy()
+        # Destroy it immediately after getting the path
+        queries.destroy_tk_root(root)
         
         if file_path:
             save_name = Path(file_path).stem
