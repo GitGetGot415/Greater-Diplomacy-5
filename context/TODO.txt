@@ -27,7 +27,6 @@ AI THINKING PROBLEMS
 not attacking convoys that are clearly undefended
 also what are the rules for attacking when it comes to ships
 - land based retreating?
-- ai seems to push deep into enemies but not into unclaimed territory
 
 - let the ai be able to convert materials into oil and oil into materials???
 - make converting oil and materials more... streamlined so you don't have to click it a million times
@@ -41,6 +40,8 @@ also what are the rules for attacking when it comes to ships
 - if land is lost or gained from the territory each member had before the war, instead of checking for cores, simply check for what the map originally looked like and restore recaptured provinces that way
 - lands gained that wern't originally held by all faction members can use the coring mechanic to determine who gets to own it
 - if a faction starts the game in a war, simply use what the faction looked like at the start of the game as the map to store
+
+- make random scenarios more balanced (no starting out with just a basic factory if the year is high enough)
 
 SLIDER STUFF
 - make FPS able to be edited

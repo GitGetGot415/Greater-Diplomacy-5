@@ -350,10 +350,50 @@ def process_ai_unit_orders(map_screen):
                 speed = unit.get("speed", 1)
                 unit["order"]["path"] = [best_adj] 
                 
+                # Let fast units pathfind deeper into unclaimed territory!
+                if speed > 1:
+                    curr_node = best_adj
+                    for _ in range(speed - 1):
+                        curr_prov_data = map_screen.id_to_province.get(curr_node)
+                        if not curr_prov_data: break
+                        
+                        next_options = []
+                        for n_id in curr_prov_data.get("neighbors", []):
+                            n_prov = map_screen.id_to_province.get(n_id)
+                            if not n_prov: continue
+                            
+                            # Prevent backtracking
+                            if n_id in unit["order"]["path"] or n_id == curr_id:
+                                continue
+                                
+                            # Obey movement rules using constants
+                            if is_convoy:
+                                if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
+                                    continue
+                            else:
+                                if n_prov.get("terrain") in c.WATER_TERRAINS:
+                                    continue
+                                    
+                            # Check if it's a valid tile to push into
+                            n_owner = n_prov.get("owner", "Unclaimed")
+                            if n_owner in ["Unclaimed", "None", ""]:
+                                next_options.append(n_id)
+                                
+                        if next_options:
+                            # Pick the adjacent unclaimed tile with the least attackers to spread the expansion
+                            next_step = min(next_options, key=lambda t: target_assignments.get(t, 0))
+                            unit["order"]["path"].append(next_step)
+                            target_assignments[next_step] = target_assignments.get(next_step, 0) + 1
+                            curr_node = next_step
+                        else:
+                            # Reached a dead end (e.g. hit an ocean or claimed border)
+                            break
+                # -----------------------------------------------------------------------
+
                 target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
                 if curr_id in target_assignments:
                     target_assignments[curr_id] -= 1
-                continue
+                continue 
 
             if at_war and not is_naval_combatant:
                 # Include expedition targets in the adjacent strike check so they can push off allied territory
