@@ -47,7 +47,7 @@ def render_buttons(self):
     msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if is_spec else (lambda: self.change_state("MESSAGES"))
 
    # Editor Buttons
-    self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 500, "left_ui_bar", "green", "Country Economy", econ_callback)
+    self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 300, "left_ui_bar", "green", "Country Economy", econ_callback)
     self.btn_ed_rd = Button(c.LEFT_UI_BAR_X, 200, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research"))
     self.btn_ed_save = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Save", self.save_map_data)
     self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", lambda: editor_menus.editor_load_map(self))
@@ -203,7 +203,8 @@ def update_button_states(map_screen):
             map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_core, 
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building, 
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, 
-            map_screen.btn_ed_date, map_screen.btn_ed_diplo
+            map_screen.btn_ed_date, map_screen.btn_ed_diplo,
+            map_screen.btn_gp_settings, map_screen.btn_gp_music
         ]
         for btn in ed_btns:
             btn.visible = True
