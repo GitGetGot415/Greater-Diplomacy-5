@@ -13,6 +13,7 @@ so i have this pygame project that's essentially a turn based map game (DO NOT H
 - make the menu screen look REAL good
 
 - determine ai rules (as in how does it move / build things)
+- determine how the cooldown timer handles things more clearly so the infinite cooldown isn't completely game ruining
 
 ITS CALLED Tkinter
 
@@ -31,7 +32,3 @@ SLIDER STUFF
 - make war declarations and the like more visible (shown in yo face)
 
 - ai should be able to sign non-agression pacts that prevent wars
-
-- how does the ai determine how to ask someone else to join in a war or not?
-could you make it such so that if a country is at war it will try to send a call to arms request to all the other countries in its faction
-(if full ai is on make the ai write a message first before declaring war)

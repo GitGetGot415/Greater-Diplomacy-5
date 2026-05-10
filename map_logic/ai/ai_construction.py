@@ -34,6 +34,13 @@ def process_ai_economy_decisions(map_screen):
         at_war = len(data.get("at_war_with", [])) > 0
         war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
 
+        # Disband Militia in peacetime
+        if not at_war:
+            for prov in my_provs:
+                for u in prov.get("units", []):
+                    if u.get("owner") == ai_name and u.get("type") == "Militia" and u.get("order", {}).get("type") != "DISBAND":
+                        u["order"] = {"type": "DISBAND", "turns_left": 1}
+
         target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
         target_mat = c.AI_UPKEEP_TARGETS["materials"] * war_mult
         target_fuel = c.AI_UPKEEP_TARGETS["fuel"] * war_mult
@@ -68,7 +75,7 @@ def process_ai_economy_decisions(map_screen):
 
         # If the ai is low on fuel but has a lot of materials, let them use this feature to balance out their economy
         if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > 500:
-            data["mat_to_fuel_slider"] = 0.5 # Convert 50% of available materials to fuel
+            data["mat_to_fuel_slider"] = 0.5 # Convert 50% of available materials produced to fuel
         elif data.get("materials", 0) > 5000 and data.get("fuel", 0) < 500:
             data["mat_to_fuel_slider"] = 0.8 # Emergency conversion
         else:

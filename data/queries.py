@@ -931,6 +931,10 @@ def get_active_ai_nations(map_screen):
         if name in living_nations and name not in human_players and name not in c.UNPLAYABLE_NATIONS and data.get("is_playable"):
             ai_nations.append(name)
             
+    # Randomize the order the AI processes countries
+    import random
+    random.shuffle(ai_nations)
+    
     return ai_nations
 
 def is_unit_obsolete(group_name, player_research):
