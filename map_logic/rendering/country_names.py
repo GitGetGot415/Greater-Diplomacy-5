@@ -109,7 +109,8 @@ def draw_country_names(map_screen, surface):
                         scaled_w = int(surf.get_width() * map_screen.camera.zoom * land_scale)
                         scaled_h = int(surf.get_height() * map_screen.camera.zoom * land_scale)
                         
-                        if getattr(map_screen.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+                        # --- NEW: Apply Tilt Compression to Text ---
+                        if getattr(map_screen.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_TEXT', True):
                             scaled_h = int(scaled_h * map_screen.camera.tilt_factor)
                         
                         if scaled_w > 0 and scaled_h > 0:

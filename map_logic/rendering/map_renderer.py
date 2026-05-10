@@ -30,25 +30,41 @@ def draw_map_screen(self, surface):
 
     vw = surface.get_width() / self.camera.zoom
     vh = (surface.get_height() - self.total_ui_h) / (self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0))
-    x1, y1 = int(self.camera.pos.x), int(self.camera.pos.y)
+    
+    x1_world = self.camera.pos.x
+    y1_world = self.camera.pos.y
+    
+    # --- NEW: Extract negative Y for screen offset and skybox ---
+    render_y_offset = 0
+    if y1_world < 0:
+        render_y_offset = -y1_world * self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0)
+        vh += y1_world # Shrink the required source height since the top is sky
+        y1_world = 0
+
+    x1, y1 = int(x1_world), int(y1_world)
+    
+    # Draw Skybox
+    if render_y_offset > 0:
+        sky_rect = pygame.Rect(0, self.top_ui_height, c.SCREEN_WIDTH, int(render_y_offset) + 2) # +2 overlap to prevent seam tearing
+        pygame.draw.rect(surface, getattr(c, 'COLOR_SKYBOX', (135, 206, 235)), sky_rect)
 
     if self.loop_map:
         w1 = int(min(vw, self.map_w - x1))
         h1 = int(min(vh, self.map_h - y1))
         if w1 > 0 and h1 > 0:
             v1 = current_base.subsurface((x1, y1, w1, h1))
-            surface.blit(pygame.transform.scale(v1, (int(w1*self.camera.zoom), int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (0, self.top_ui_height))
+            surface.blit(pygame.transform.scale(v1, (int(w1*self.camera.zoom), int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (0, self.top_ui_height + int(render_y_offset)))
         if w1 < vw and h1 > 0:
             wrap_w = int(vw - w1)
             if wrap_w > 0:
                 v2 = current_base.subsurface((0, y1, wrap_w, h1))
-                surface.blit(pygame.transform.scale(v2, (int(wrap_w*self.camera.zoom), int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (int(w1*self.camera.zoom), self.top_ui_height))
+                surface.blit(pygame.transform.scale(v2, (int(wrap_w*self.camera.zoom), int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (int(w1*self.camera.zoom), self.top_ui_height + int(render_y_offset)))
     else:
         src_rect = pygame.Rect(x1, y1, int(vw), int(vh))
         clipped = src_rect.clip(current_base.get_rect())
         if clipped.width > 0 and clipped.height > 0:
             view = current_base.subsurface(clipped)
-            surface.blit(pygame.transform.scale(view, (int(clipped.width*self.camera.zoom), int(clipped.height*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (0, self.top_ui_height))
+            surface.blit(pygame.transform.scale(view, (int(clipped.width*self.camera.zoom), int(clipped.height*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0)))), (0, self.top_ui_height + int(render_y_offset)))
 
     # --- LAYER 2: SELECTION & HOVER ---
     if not self.selected_province:

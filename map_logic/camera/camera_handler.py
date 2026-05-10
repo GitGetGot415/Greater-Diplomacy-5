@@ -9,6 +9,7 @@ class MapCamera:
         self.target_pos = pygame.Vector2(0, 0)
         self.lerp_speed = 0.1
         self.tilt_factor = 1.0
+        self.manual_tilt_factor = 1.0 # Added explicit manual control factor
         # currently set to instant, but can be adjusted for smoother transitions
 
     def handle_input(self, event, self_map, on_ui):
@@ -23,13 +24,8 @@ class MapCamera:
             self.target_pos = pygame.Vector2(self.pos)
 
     def update(self, self_map, SCREEN_HEIGHT):
-        # 0. Calculate Tilt Factor
-        import data.constants as c
-        if self.zoom > getattr(c, 'TILT_START_ZOOM', 4.0):
-            progress = min(1.0, (self.zoom - c.TILT_START_ZOOM) / (c.MAX_CAMERA_ZOOM - c.TILT_START_ZOOM))
-            self.tilt_factor = 1.0 - (progress * (1.0 - getattr(c, 'MAX_Y_TILT_FACTOR', 0.6)))
-        else:
-            self.tilt_factor = 1.0
+        # 0. Apply Manual Tilt Factor
+        self.tilt_factor = self.manual_tilt_factor
 
         # 1. Smooth Zoom
         if abs(self.zoom - self.target_zoom) > 0.001:
@@ -56,7 +52,15 @@ class MapCamera:
             self.pos.x = max(0, min(self.pos.x, max(0, max_x)))
 
         max_y = self_map.map_h - ((SCREEN_HEIGHT - self_map.total_ui_h) / (self.zoom * self.tilt_factor))
-        self.pos.y = max(0, min(self.pos.y, max(0, max_y)))
+        
+        # --- NEW: Bottom Squish Logic ---
+        if max_y < 0:
+            # Map is vertically smaller than the viewport. 
+            # Lock it to the bottom to reveal the sky above it.
+            self.pos.y = max_y
+        else:
+            # Standard clamp when zoomed in
+            self.pos.y = max(0, min(self.pos.y, max_y))
 
         self.pos.x = round(self.pos.x, 2)
         self.pos.y = round(self.pos.y, 2)

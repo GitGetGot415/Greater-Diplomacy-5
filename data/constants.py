@@ -277,10 +277,13 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 
 MAX_CAMERA_ZOOM = 10.0
 TILT_START_ZOOM = 6.0   # Zoom level where the 3D tilt effect starts
-MAX_Y_TILT_FACTOR = 0.6 # The maximum compression of the Y axis (0.6 = 60% of original height)
+MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
 APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
 APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disbanding, and construction icons
+APPLY_TILT_TO_TEXT = True
+
+COLOR_SKYBOX = (135, 206, 235) # Light Sky Blue
 
 # Water brightness stuff
 OCEAN_DARK_BLUE = (10, 20, 40)

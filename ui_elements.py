@@ -121,7 +121,7 @@ class Button:
                 self.is_pressed = False
                 if self.rect.collidepoint(event.pos):
                     # --- NEW ENGINE HOOK ---
-                    if click_sound and soloud_engine:
+                    if click_sound and soloud_engine and global_sfx_volume > 0:
                         handle = soloud_engine.play(click_sound)
                         soloud_engine.set_volume(handle, global_sfx_volume)
                         soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
@@ -188,7 +188,7 @@ class Slider:
                 # 2. Has it been at least 100ms since the last click?
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_sound_tick > 50:
-                    if slider_sound and soloud_engine:
+                    if slider_sound and soloud_engine and global_sfx_volume > 0:
                         handle = soloud_engine.play(slider_sound)
                         soloud_engine.set_volume(handle, global_sfx_volume)
                         soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))

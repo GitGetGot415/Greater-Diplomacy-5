@@ -30,17 +30,22 @@ def draw_minimap(self, surface, screen_width, screen_height):
     vw = (visible_map_width / self.camera.zoom / self.map_w) * mini_w
     vh = ((screen_height - self.total_ui_h) / (self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0)) / self.map_h) * mini_h
     
-    # --- Draw with Wrap-around support ---
+    # --- Draw with Wrap-around support & Clamping ---
     vx_relative = vx - mx
     
-    if vx_relative + vw > mini_w:
-        # Part A: Draws from vx to the right edge of the minimap
-        first_part_w = mini_w - vx_relative
-        if first_part_w > 0:
-            pygame.draw.rect(surface, (255, 255, 0), (vx, vy, first_part_w, vh), 1)
-        
-        # Part B: Draws the remainder starting from the left edge (mx)
-        second_part_w = vw - first_part_w
-        pygame.draw.rect(surface, (255, 255, 0), (mx, vy, second_part_w, vh), 1)
-    else:
-        pygame.draw.rect(surface, (255, 255, 0), (vx, vy, vw, vh), 1)
+    # Clamp vertical rendering so the yellow box doesn't draw up into the sky/void
+    draw_vy = max(my, vy)
+    draw_vh = vh - (draw_vy - vy) # Shrink height if we clamped Y
+    
+    if draw_vh > 0:
+        if vx_relative + vw > mini_w:
+            # Part A: Draws from vx to the right edge of the minimap
+            first_part_w = mini_w - vx_relative
+            if first_part_w > 0:
+                pygame.draw.rect(surface, (255, 255, 0), (vx, draw_vy, first_part_w, draw_vh), 1)
+            
+            # Part B: Draws the remainder starting from the left edge (mx)
+            second_part_w = vw - first_part_w
+            pygame.draw.rect(surface, (255, 255, 0), (mx, draw_vy, second_part_w, draw_vh), 1)
+        else:
+            pygame.draw.rect(surface, (255, 255, 0), (vx, draw_vy, vw, draw_vh), 1)

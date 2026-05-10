@@ -64,6 +64,7 @@ class Map(GameState):
         self.show_country_names = True 
 
         # --- 1. Basic State Variables ---
+        self.camera_tilt_slider_val = 0.0 # Starts fully top-down
         self.selection_mode = is_scenario
         self.pending_selection = None 
         self.player_country = "None"
@@ -162,6 +163,37 @@ class Map(GameState):
     
     @property
     def player_fuel(self): return self.nation_data.get(self.player_country, {}).get("fuel", 0)
+
+    def set_camera_tilt(self, val):
+        """Callback for the manual camera tilt slider."""
+        self.camera_tilt_slider_val = val
+        
+        # Grab the old tilt before we update it to calculate the difference
+        old_tilt = getattr(self.camera, 'manual_tilt_factor', 1.0)
+        new_tilt = 1.0 - (val * (1.0 - getattr(c, 'MAX_Y_TILT_FACTOR', 0.6)))
+        
+        # Failsafe to prevent division by zero
+        if old_tilt == 0: old_tilt = 0.001
+        if new_tilt == 0: new_tilt = 0.001
+        
+        # --- NEW: Anchor the compression to the center of the camera ---
+        # Find the pixel center of the playable view area (excluding UI bars)
+        view_h = c.SCREEN_HEIGHT - self.total_ui_h
+        screen_center_y = view_h / 2.0
+        
+        # Shift the camera Y position to perfectly compensate for the scale change,
+        # keeping the exact same world coordinate centered on your screen.
+        self.camera.pos.y += (screen_center_y / self.camera.zoom) * ((1.0 / old_tilt) - (1.0 / new_tilt))
+        
+        # Sync the target position so the smooth-pan lerp doesn't aggressively snap it back
+        self.camera.target_pos.y = self.camera.pos.y
+        
+        # Apply the new tilt
+        self.camera.manual_tilt_factor = new_tilt
+        
+        # Flag the label centers for an update because tilting the world compresses 
+        # the visual space, shifting where country names need to physically render.
+        self.centers_need_update = True
 
     # --- Toggles & View Modes ---
     def toggle_country_names(self):

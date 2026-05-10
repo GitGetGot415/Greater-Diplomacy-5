@@ -83,6 +83,10 @@ def render_buttons(self):
     self.btn_gp_music = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 7, "left_ui_button", "blue", "Music Player", lambda: self.change_state("MUSIC_PLAYER"), show_text=True)
     self.btn_gp_faction = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "blue", "Faction", lambda: self.change_state("FACTION"), image=icons.get("faction"), show_text=False)
 
+    # NEW: Register the Slider below the Faction button
+    slider_y = int(start_y_val + c.LEFT_UI_BAR_STEP_Y * 9.5)
+    self.slider_camera_tilt = Slider(c.LEFT_UI_BAR_X, slider_y, 120, "Camera Tilt", getattr(self, 'camera_tilt_slider_val', 0.0), self.set_camera_tilt)
+
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
     # ======================================================================== #
@@ -133,7 +137,8 @@ def render_buttons(self):
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create,
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
         self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, self.btn_spec_leave_fac,
-        self.btn_spec_disband_fac, self.btn_spectator, self.btn_close_info, self.btn_exit_to_menu
+        self.btn_spec_disband_fac, self.btn_spectator, self.btn_close_info, self.btn_exit_to_menu,
+        self.slider_camera_tilt
     ])
 
     for el in self.elements:
@@ -204,7 +209,7 @@ def update_button_states(map_screen):
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building, 
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, 
             map_screen.btn_ed_date, map_screen.btn_ed_diplo,
-            map_screen.btn_gp_settings, map_screen.btn_gp_music
+            map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt
         ]
         for btn in ed_btns:
             btn.visible = True
@@ -233,11 +238,10 @@ def update_button_states(map_screen):
         map_screen.btn_skip_ai.color, map_screen.btn_skip_ai.hover_color = c.UI_COLORS["green" if skip_on else "red"]
 
         if not viewing_ai:
-            # Add btn_gp_faction to this list
             gp_btns = [
                 map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
                 map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
-                map_screen.btn_gp_music, map_screen.btn_gp_faction
+                map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.slider_camera_tilt
             ]
             for btn in gp_btns:
                 btn.visible = not is_sel
