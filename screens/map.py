@@ -2,6 +2,11 @@
 import pygame
 import random
 import math
+import os
+import sys
+
+# Add the parent directory (project root) to the Python path so it can find the 'data' module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Data & Constants
 import data.constants as c
@@ -117,6 +122,7 @@ class Map(GameState):
 
         self.relations_map = self.id_map.copy()
         self.factions_map = self.id_map.copy()
+        self.faction_territories_map = self.id_map.copy()
 
         # --- 3. RUN THE RANDOMIZER ---
         if is_random and random_settings:
@@ -127,6 +133,7 @@ class Map(GameState):
         self.refresh_relations_map()
         self.refresh_factions_map()
         self.refresh_cores_map()
+        self.refresh_faction_territories_map()
         
         buttons.render_buttons(self)
 
@@ -188,7 +195,8 @@ class Map(GameState):
             "POLITICAL": self.political_map,
             "RELATIONS": self.relations_map,
             "FACTIONS": self.factions_map,
-            "CORES": self.cores_map
+            "CORES": self.cores_map,
+            "FACTION_TERRITORIES": getattr(self, 'faction_territories_map', self.political_map)
         }
         self.active_map = layer_map.get(layer_name, self.political_map)
         
@@ -233,6 +241,7 @@ class Map(GameState):
     def refresh_relations_map(self): refresh_map.refresh_relations_map(self)
     def refresh_factions_map(self): refresh_map.refresh_factions_map(self)
     def refresh_cores_map(self): refresh_map.refresh_cores_map(self)
+    def refresh_faction_territories_map(self): refresh_map.refresh_faction_territories_map(self)
 
     def auto_assign_cores(self):
         for province in self.map_data.values():

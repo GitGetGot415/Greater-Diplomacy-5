@@ -326,3 +326,91 @@ def refresh_factions_map(self):
         self.active_map = self.factions_map
         
     print(f"Factions map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+def refresh_faction_territories_map(self):
+    """Rebuilds the map showing pre-war faction borders, or current borders if at peace."""
+    timer = pygame.time.get_ticks()
+    
+    id_array, id_2d = get_id_2d_array(self.id_map)
+              
+    lut = np.zeros(16777216, dtype=np.uint32)
+    owner_lut = np.zeros(16777216, dtype=np.uint32)
+    
+    owner_to_int = {}
+    next_owner_id = 1 
+
+    player_fac = self.nation_data.get(self.player_country, {}).get("faction", "")
+    members = queries.get_faction_members(player_fac, self.nation_data) if player_fac else []
+    pre_war_map = self.nation_data.get("FACTION_WAR_MAPS", {}).get(player_fac, {})
+    
+    # If the dictionary is populated, the faction is at war and we trace back to original borders
+    is_at_war = bool(pre_war_map)
+    
+    for color_key, data in self.map_data.items():
+        terrain_type = data.get("terrain", "plains")
+        
+        if terrain_type in c.VISUAL_WATER_MAPPING:
+            owner = c.VISUAL_WATER_MAPPING[terrain_type]
+            color = c.COLOR_CHROMA_PINK 
+        else:
+            curr_owner = data.get("owner", "Unclaimed")
+            
+            if is_at_war:
+                if str(data["id"]) in pre_war_map:
+                    # Belonged to the faction pre-war
+                    owner = pre_war_map[str(data["id"])]
+                    color = self.nation_colors.get(owner, (255, 255, 255))
+                else:
+                    if curr_owner in members:
+                        # Conquered by faction during war - revert to a non-faction core or unclaimed
+                        possible_cores = [c for c in data.get("cores", []) if c not in members]
+                        owner = possible_cores[0] if possible_cores else "Unclaimed"
+                    else:
+                        # Unrelated to faction
+                        owner = curr_owner
+                        
+                    # Grey out countries that are not in the faction (or were conquered during the war)
+                    if owner in ["Unclaimed", "None", ""]:
+                        color = (255, 255, 255)
+                    else:
+                        color = (100, 100, 100)
+            else:
+                # Peace time: Pre-war borders are just the current borders
+                owner = curr_owner
+                if owner in members:
+                    color = self.nation_colors.get(owner, (255, 255, 255))
+                else:
+                    # Grey out countries that are not in the faction
+                    if owner in ["Unclaimed", "None", ""]:
+                        color = (255, 255, 255)
+                    else:
+                        color = (100, 100, 100)
+            
+            if tuple(color) == c.COLOR_CHROMA_PINK:
+                color = (254, 0, 255) 
+        
+        if owner not in owner_to_int:
+            owner_to_int[owner] = next_owner_id
+            next_owner_id += 1
+            
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
+        
+        lut[packed_key] = packed_color
+        owner_lut[packed_key] = owner_to_int[owner]
+        
+    out_2d = lut[id_2d]
+    owner_2d = owner_lut[id_2d]
+    
+    water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
+    out_3d = apply_border_shading(out_2d, owner_2d, id_array, water_ids)
+    
+    new_pol_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    pygame.surfarray.blit_array(new_pol_surf, out_3d)
+    new_pol_surf.set_colorkey(c.COLOR_CHROMA_PINK) 
+    
+    self.faction_territories_map = new_pol_surf
+    if getattr(self, 'map_mode', '') == "FACTION_TERRITORIES":
+        self.active_map = self.faction_territories_map
+        
+    print(f"Faction Territories map refreshed in {pygame.time.get_ticks() - timer} ms")

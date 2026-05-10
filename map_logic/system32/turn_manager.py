@@ -21,6 +21,7 @@ def advance_time(map_screen):
             ("Refreshing Relations Map...", map_screen.refresh_relations_map),
             ("Refreshing Factions Map...", map_screen.refresh_factions_map),
             ("Refreshing Core Map...", map_screen.refresh_cores_map),
+            ("Refreshing Territories...", map_screen.refresh_faction_territories_map),
             ("Updating Map Labels...", map_screen.update_country_centers)
         ]
         

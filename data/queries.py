@@ -210,7 +210,8 @@ def is_faction_leader(nation, nation_data):
 def get_faction_core_transfer_target(capturer, province, nation_data):
     """
     Determines if a captured territory should be transferred to a faction member
-    who has a core on it. Returns the true owner to assign the province to.
+    who has a core on it, OR who originally owned it before the war began.
+    Returns the true owner to assign the province to.
     """
     if capturer in c.UNPLAYABLE_NATIONS:
         return capturer
@@ -219,6 +220,17 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
     if not faction_name:
         return capturer
 
+    # --- NEW: Check Pre-War Faction Map First ---
+    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+        pre_war_map = nation_data["FACTION_WAR_MAPS"][faction_name]
+        original_owner = pre_war_map.get(str(province["id"])) or pre_war_map.get(province["id"])
+        
+        # If the original owner is still in the faction, they get it back!
+        if original_owner and original_owner != capturer:
+            if original_owner in get_faction_members(faction_name, nation_data):
+                return original_owner
+
+    # Fallback to standard core logic
     faction_members = get_faction_members(faction_name, nation_data)
     tile_cores = province.get("cores", [])
 
@@ -231,6 +243,47 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
     
     # If 2 or more faction members have a core, or nobody does, the capturer keeps the tile
     return capturer
+
+# --- NEW FACTION WAR BORDER TRACKING QUERIES ---
+def is_faction_at_war(faction_name, nation_data):
+    """Returns True if any member of the given faction is actively at war."""
+    members = get_faction_members(faction_name, nation_data)
+    return any(len(nation_data.get(m, {}).get("at_war_with", [])) > 0 for m in members)
+
+def save_faction_pre_war_map(faction_name, map_data, nation_data):
+    """Snapshots the faction's borders right before entering a war."""
+    if "FACTION_WAR_MAPS" not in nation_data:
+        nation_data["FACTION_WAR_MAPS"] = {}
+
+    members = get_faction_members(faction_name, nation_data)
+    pre_war_map = {}
+    for prov in map_data.values():
+        owner = prov.get("owner")
+        if owner in members:
+            pre_war_map[str(prov["id"])] = owner
+
+    nation_data["FACTION_WAR_MAPS"][faction_name] = pre_war_map
+
+def add_member_to_pre_war_map(member_name, faction_name, map_data, nation_data):
+    """Adds a newly joined member's territory to the active pre-war map."""
+    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+        for prov in map_data.values():
+            if prov.get("owner") == member_name:
+                nation_data["FACTION_WAR_MAPS"][faction_name][str(prov["id"])] = member_name
+
+def remove_member_from_pre_war_map(member_name, faction_name, nation_data):
+    """Removes a leaving member's territory from the active pre-war map."""
+    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+        pre_war_map = nation_data["FACTION_WAR_MAPS"][faction_name]
+        keys_to_remove = [prov_id for prov_id, owner in pre_war_map.items() if owner == member_name]
+        for k in keys_to_remove:
+            del pre_war_map[k]
+
+def clear_faction_pre_war_map_if_peace(faction_name, nation_data):
+    """Clears the pre-war map if the faction is no longer at war."""
+    if not is_faction_at_war(faction_name, nation_data):
+        if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+            del nation_data["FACTION_WAR_MAPS"][faction_name]
 
 # ==========================================
 # MOVEMENT QUERIES

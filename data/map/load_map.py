@@ -59,8 +59,6 @@ def _load_default_images(map_obj):
 
 def load_map_assets(self, load_path):
     
-    import os
-
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
         from map_logic.random_map import procedural_map_generator
@@ -223,3 +221,11 @@ def load_map_assets(self, load_path):
         
         self.map_data[color_tuple] = v
         self.id_to_province[v["id"]] = v
+        
+    # --- NEW: Init Pre-War Maps for Factions starting at war ---
+    self.nation_data.setdefault("FACTION_WAR_MAPS", {})
+    for c_name, c_data in self.nation_data.items():
+        fac = c_data.get("faction", "")
+        if fac and queries.is_faction_at_war(fac, self.nation_data):
+            if fac not in self.nation_data["FACTION_WAR_MAPS"]:
+                queries.save_faction_pre_war_map(fac, self.map_data, self.nation_data)

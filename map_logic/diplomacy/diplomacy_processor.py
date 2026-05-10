@@ -100,7 +100,7 @@ def process_diplomacy_turn(self):
                 b_action = b_info.get("action")
                 
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
-                    finalize_faction_join(self.nation_data, nation_b, nation_a)
+                    finalize_faction_join(self.map_data, self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                     
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
@@ -111,7 +111,7 @@ def process_diplomacy_turn(self):
                     del b_data[nation_a]
                     
                 elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
-                    finalize_faction_join(self.nation_data, nation_a, nation_b)
+                    finalize_faction_join(self.map_data, self.nation_data, nation_a, nation_b)
                     
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
                     send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
@@ -148,8 +148,8 @@ def process_diplomacy_turn(self):
                 elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
                      (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
                     
-                    join_faction_wars(self.nation_data, nation_a, nation_b)
-                    join_faction_wars(self.nation_data, nation_b, nation_a)
+                    join_faction_wars(self.map_data, self.nation_data, nation_a, nation_b)
+                    join_faction_wars(self.map_data, self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
                     
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_CALL_TO_ARMS"]
@@ -301,7 +301,7 @@ def process_diplomacy_turn(self):
                     log_global_event(self.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!")
                     msg_text = custom_msg if custom_msg else "We have declared WAR upon you!"
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    finalize_war(self.nation_data, country_name, target) 
+                    finalize_war(self.map_data, self.nation_data, country_name, target) 
                 
                 elif action == "JOIN_WARS":
                     if not queries.are_in_same_faction(country_name, target, self.nation_data):
@@ -337,18 +337,18 @@ def process_diplomacy_turn(self):
                         msg_text = custom_msg if custom_msg else f"We accepted your {orig_action.replace('_', ' ').lower()}."
                         
                         if orig_action == "FACTION_INVITE":
-                            finalize_faction_join(self.nation_data, target, country_name)
+                            finalize_faction_join(self.map_data, self.nation_data, target, country_name)
                         elif orig_action == "JOIN_FACTION_REQ":
-                            finalize_faction_join(self.nation_data, country_name, target)
+                            finalize_faction_join(self.map_data, self.nation_data, country_name, target)
                         elif orig_action == "CREATE_FACTION":
-                            finalize_create_faction(self.nation_data, target)
-                            finalize_faction_join(self.nation_data, target, country_name)
+                            finalize_create_faction(self.map_data, self.nation_data, target)
+                            finalize_faction_join(self.map_data, self.nation_data, target, country_name)
                         elif orig_action == "CEASEFIRE":
                             finalize_neutral(self.nation_data, country_name, target)
                         elif orig_action == "CALL_TO_ARMS":
-                            join_faction_wars(self.nation_data, country_name, target)
+                            join_faction_wars(self.map_data, self.nation_data, country_name, target)
                         elif orig_action == "JOIN_WARS":
-                            join_faction_wars(self.nation_data, target, country_name)
+                            join_faction_wars(self.map_data, self.nation_data, target, country_name)
                             log_global_event(self.nation_data, f"ESCALATION: {target} has joined the wars of {country_name}!")
                         
                         send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -550,20 +550,20 @@ def process_diplomacy_turn(self):
                         accepted, message = ai_results.get((country_name, target, action), (False, "Timeout."))
                         if accepted:
                             if action == "FACTION_INVITE":
-                                finalize_faction_join(self.nation_data, country_name, target)
+                                finalize_faction_join(self.map_data, self.nation_data, country_name, target)
                             elif action == "JOIN_FACTION_REQ":
-                                finalize_faction_join(self.nation_data, target, country_name)
+                                finalize_faction_join(self.map_data, self.nation_data, target, country_name)
                             elif action == "CEASEFIRE":
                                 finalize_neutral(self.nation_data, country_name, target)
                             elif action == "CALL_TO_ARMS":
-                                join_faction_wars(self.nation_data, target, country_name)
+                                join_faction_wars(self.map_data, self.nation_data, target, country_name)
                                 log_global_event(self.nation_data, f"ESCALATION: {target} answered the call to arms of {country_name}!")
                             elif action == "CREATE_FACTION":
-                                finalize_create_faction(self.nation_data, country_name)
-                                finalize_faction_join(self.nation_data, country_name, target)
+                                finalize_create_faction(self.map_data, self.nation_data, country_name)
+                                finalize_faction_join(self.map_data, self.nation_data, country_name, target)
                                 log_global_event(self.nation_data, f"{country_name} and {target} have formed a new global faction!")
                             elif action == "JOIN_WARS":
-                                join_faction_wars(self.nation_data, country_name, target)
+                                join_faction_wars(self.map_data, self.nation_data, country_name, target)
                                 log_global_event(self.nation_data, f"ESCALATION: {country_name} has joined the wars of {target}!")
                         
                         send_message(self, target, country_name, message, "DIPLOMACY")

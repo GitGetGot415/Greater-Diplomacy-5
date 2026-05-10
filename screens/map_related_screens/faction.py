@@ -47,6 +47,10 @@ class Faction_Screen(GameState):
         btn_disband.disabled = not is_leader
         self.elements.append(btn_disband)
 
+        # 3. Faction Territories Button
+        btn_territories = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 160, "medium", "blue", "Faction Territories", self.view_territories)
+        self.elements.append(btn_territories)
+
     def leave_faction(self):
         msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.map_screen.player_country, "LEAVE_FACTION", "")
         self.map_screen.show_feedback(msg)
@@ -56,6 +60,9 @@ class Faction_Screen(GameState):
         msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.map_screen.player_country, "DISBAND_FACTION", "")
         self.map_screen.show_feedback(msg)
         self.refresh_ui()
+
+    def view_territories(self):
+        self.next_state, self.done = "FACTION_TERRITORIES", True
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -96,3 +103,74 @@ class Faction_Screen(GameState):
 
     def handle_back_key(self):
         self.exit_to_map()
+
+
+class Faction_Territories_Screen(GameState):
+    def __init__(self):
+        super().__init__()
+        self.bg_color = (20, 20, 40)
+        self.map_screen = None
+
+    def start_view(self, map_ref):
+        self.map_screen = map_ref
+        self.map_screen.refresh_faction_territories_map()
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_faction)]
+
+    def additional_draw(self, surface):
+        if not self.map_screen: return
+
+        # Temporarily alter map_screen state to draw cleanly
+        prev_layer = self.map_screen.base_layer
+        prev_active = self.map_screen.active_map
+        
+        self.map_screen.base_layer = "FACTION_TERRITORIES"
+        self.map_screen.active_map = self.map_screen.faction_territories_map
+        
+        self.map_screen.hide_raised_rect = True
+        self.map_screen.hide_tooltip = True
+        self.map_screen.hide_resource_hud = True
+        self.map_screen.hide_minimap = True
+        
+        self.map_screen.additional_draw(surface)
+        
+        self.map_screen.hide_raised_rect = False
+        self.map_screen.hide_tooltip = False
+        self.map_screen.hide_resource_hud = False
+        self.map_screen.hide_minimap = False
+        
+        self.map_screen.base_layer = prev_layer
+        self.map_screen.active_map = prev_active
+        
+        # Title
+        font = fonts.get("heading1")
+        title = font.render("Faction Territories (Pre-War Borders)", True, (255, 255, 255))
+        surface.blit(title, (c.SCREEN_WIDTH//2 - title.get_width()//2, c.TOP_BAR_UI_CENTER_Y))
+
+    def update(self):
+        super().update()
+        if self.map_screen:
+            self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+
+    def handle_events(self, events):
+        for event in events:
+            super().handle_events([event])
+            self.additional_events(event)
+
+    def additional_events(self, event):
+        if not self.map_screen: return
+        
+        # Camera controls
+        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
+            # Check if mouse is on top UI bar
+            mx, my = pygame.mouse.get_pos()
+            on_ui = self.map_screen.top_bar_rect.collidepoint(mx, my) or self.map_screen.bot_bar_rect.collidepoint(mx, my)
+            self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
+
+    def exit_to_faction(self):
+        self.next_state, self.done = "FACTION", True
+
+    def handle_back_key(self):
+        self.exit_to_faction()

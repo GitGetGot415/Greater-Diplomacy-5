@@ -1,4 +1,3 @@
-# ui/spectator_menus.py
 import data.constants as c
 
 def force_war_menu(map_screen): 
@@ -11,7 +10,7 @@ def spec_create_faction(map_screen):
     if not map_screen.selected_province: return
     source_nation = map_screen.selected_province.get("owner")
     from map_logic.diplomacy import diplomacy_logic
-    diplomacy_logic.finalize_create_faction(map_screen.nation_data, source_nation)
+    diplomacy_logic.finalize_create_faction(map_screen.map_data, map_screen.nation_data, source_nation)
     map_screen.show_feedback(f"Created Faction: {source_nation}")
     map_screen.refresh_relations_map()
     map_screen.refresh_factions_map()
@@ -60,16 +59,16 @@ def open_spectator_action_menu(map_screen, action_type):
             from data import queries
             
             if action_type == "WAR":
-                diplomacy_logic.finalize_war(map_screen.nation_data, source_nation, target_nation)
+                diplomacy_logic.finalize_war(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
                 map_screen.show_feedback(f"Forced War: {source_nation} vs {target_nation}")
             elif action_type == "PEACE":
                 diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
                 map_screen.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
             elif action_type == "JOIN_FACTION":
-                diplomacy_logic.finalize_faction_join(map_screen.nation_data, target_nation, source_nation)
+                diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, target_nation, source_nation)
                 map_screen.show_feedback(f"Forced Join: {source_nation} joined {target_nation}")
             elif action_type == "INVITE_FACTION":
-                diplomacy_logic.finalize_faction_join(map_screen.nation_data, source_nation, target_nation)
+                diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
                 map_screen.show_feedback(f"Forced Invite: {target_nation} joined {source_nation}")
                 
             map_screen.refresh_relations_map()
