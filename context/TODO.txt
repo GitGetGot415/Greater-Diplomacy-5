@@ -19,11 +19,16 @@ ITS CALLED Tkinter
 
 ===
 
+- default leader name please?
+- or just make the portrait bigger if no name and occupation given
+
 - llama3 (fast)
 - gemma4 (thinking)
 - qwen3.6 (pro)
 
 - trade mechanics (offer x territory for y thing)
+
+- SO MANY OTHER VISUAL BUGS
 
 SLIDER STUFF
 - make FPS able to be edited
@@ -32,3 +37,11 @@ SLIDER STUFF
 - make war declarations and the like more visible (shown in yo face)
 
 - ai should be able to sign non-agression pacts that prevent wars
+
+SLIDERS FIRST PLEASE
+i know this project is 2d, however...
+would it maybe be possible to make it look like the camera is rotating in more than just 1 direction?
+right now there's a way to do this by squishing the y axis so it looks like it's tilting up
+but is it possible to make it look like it's rotating to the left or the right as it stands right now?
+
+like 50% of the time spent on this project has been used simply on making the ai functional enough to not seem completely braindead

@@ -183,7 +183,7 @@ CPU_LIMITER = 10
 START_YEAR = 1910
 END_YEAR = 1950
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
-AI_WAR_COOLDOWN_TURNS = 0 # How many turns from the start of the game the AI waits before declaring wars
+AI_WAR_COOLDOWN_TURNS = 18 # How many turns from the start of the game the AI waits before declaring wars
 RESEARCH_TIMELINE_SPACING = 80 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10 

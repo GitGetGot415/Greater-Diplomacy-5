@@ -94,7 +94,7 @@ class Music_Player(GameState):
                     track_y += song_y
                     
         elif self.view_mode == "PLAYLIST":
-            self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "medium", "green", "Skip / Random Song", self.controller.play_random_song))
+            self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "medium", "green", "Skip / Random Song", self.play_track))
             track_y += 60
             
             for track_path in self.controller.playlist:
@@ -102,8 +102,16 @@ class Music_Player(GameState):
                 is_playing = (self.controller.now_playing == track_path)
                 color = "orange" if is_playing else "grey"
                 
-                self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, lambda p=track_path: self.controller.play_specific_song(p)))
+                self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, lambda p=track_path: self.play_track(p)))
                 track_y += song_y
+
+    def play_track(self, track_path=None):
+        """Helper to play a track and instantly update the UI colors."""
+        if track_path:
+            self.controller.play_specific_song(track_path)
+        else:
+            self.controller.play_random_song()
+        self.refresh_ui()
 
     # --- AUDIO MODIFICATION HANDLERS ---
     def set_sfx_volume(self, val):
