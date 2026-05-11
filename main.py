@@ -6,7 +6,6 @@ import sys
 if os.name == 'nt':
     os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
-from soloud import Soloud, Wav, WavStream 
 from screens.map_related_screens.messages import Messages_Screen
 from map_logic.rendering.font_manager import fonts
 import ui_elements
