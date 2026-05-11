@@ -37,6 +37,27 @@ class Controller:
         # --- FPS CLOCK FIX ---
         self.clock = pygame.time.Clock()
         
+        # --- OS COMPATIBILITY CHECK ---
+        import platform
+        
+        system = platform.system()
+        arch = platform.machine().lower()
+        
+        # Determine if the current machine can safely run our provided binaries
+        soloud_compatible = False
+        if system == "Windows" and arch in ["x86_64", "amd64"]:
+            soloud_compatible = True # Windows can use the x64 .dll
+        elif system == "Darwin" and arch in ["x86_64", "amd64"]:
+            soloud_compatible = True # Intel Macs can use the x64 .dylib
+        elif system == "Linux" and arch in ["x86_64", "amd64"]:
+            soloud_compatible = True # Linux usually uses the x64 .so
+            
+        # If the user requested SoLoud, but their hardware isn't compatible (like an M1 Mac),
+        # gracefully override their setting and force Pygame Mixer.
+        if c.USE_SOLOUD and not soloud_compatible:
+            print(f"Notice: SoLoud is not compatible with {system} ({arch}). Auto-switching to Pygame Mixer.")
+            c.USE_SOLOUD = False
+
         # --- HYBRID AUDIO ENGINE INITIALIZATION ---
         if c.USE_SOLOUD:
             try:
@@ -59,6 +80,7 @@ class Controller:
                 print(f"Failed to load SoLoud DLL: {e}. Auto-switching to Pygame Mixer.")
                 c.USE_SOLOUD = False # Fallback triggered!
 
+        # If SoLoud is disabled, or if it failed the try/except block above, boot Pygame.
         if not c.USE_SOLOUD:
             pygame.mixer.init()
             try:

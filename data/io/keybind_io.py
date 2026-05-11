@@ -16,9 +16,9 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
     
     data_to_save = {
         "keybinds": readable_binds,
-        "sfx_volume": sfx_volume,
         "music_volume": music_volume,
         "music_pitch": music_pitch,
+        "sfx_volume": sfx_volume,
         "sfx_pitch": sfx_pitch,
         "num_players": num_players,
         "ai_mode": ai_mode,
