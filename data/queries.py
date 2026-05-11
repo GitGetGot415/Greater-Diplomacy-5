@@ -77,8 +77,12 @@ def save_global_settings(controller):
         getattr(controller, 'ai_immersion_level', 'FULL'),
         getattr(controller, 'music_pitch', getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)),
         getattr(controller, 'sfx_pitch', getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)),
-        getattr(controller, 'target_fps', getattr(c, 'TARGET_FPS', 60))
+        getattr(controller, 'target_fps', getattr(c, 'TARGET_FPS', 60)),
+        getattr(controller, 'ollama_threads', 1)
     )
+
+def get_ollama_threads():
+    return get_settings().get("ollama_threads", getattr(c, 'DEFAULT_OLLAMA_THREADS', 1))
 
 # --- REFACTORED GETTERS (No paths needed here anymore!) ---
 def get_settings(): return _load_cached_json("settings")
@@ -1127,7 +1131,7 @@ def set_ai_diplo_cooldown(sender, target, action, nation_data, duration=None):
     if duration is None:
         # Check if this is a war declaration to use the specific override
         if action == "WAR_DECLARATION":
-            duration = getattr(c, 'AI_WAR_COOLDOWN', 18)
+            duration = c.AI_WAR_COOLDOWN
         else:
             duration = c.AI_DIPLO_COOLDOWN
     

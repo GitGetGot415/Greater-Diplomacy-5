@@ -40,3 +40,8 @@ Include a requirements.txt
 - make war declarations and the like more visible (shown in yo face)
 
 - ai should be able to sign non-agression pacts that prevent wars
+
+- make ai able to respond to actions taken against them not only with a reaction, but a diplomatic action too if possible
+- declared war on, might be able to offer a ceasefire to someone else as an example
+
+- the map seems to show 0/0 for loading before it realizes how many actually have to be loaded

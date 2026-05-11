@@ -41,7 +41,18 @@ class Settings(GameState):
 
         self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
 
+        self.ollama_threads = getattr(self.controller, 'ollama_threads', 1)
         self.refresh_ui()
+
+    def set_ollama_threads(self, val):
+        # Scale 0.0-1.0 to 1-8
+        threads = 1 + int(val * 7)
+        self.ollama_threads = threads
+        self.controller.ollama_threads = threads
+        if hasattr(self, 'ollama_thread_slider'):
+            self.ollama_thread_slider.text = f"Ollama Threads: {threads}"
+        # Silently save whenever the slider moves
+        queries.save_global_settings(self.controller)
 
     def update(self):
         super().update()

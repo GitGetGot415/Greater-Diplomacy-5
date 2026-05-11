@@ -188,6 +188,7 @@ ORDER_BTN_X = SCREEN_WIDTH - 250
 # ==========================================
 
 DEFAULT_AI_MODE = "OLLAMA"
+DEFAULT_OLLAMA_THREADS = 1 # Added default thread count
 
 # --- Unified Settings UI Layout ---
 SETTINGS_BOX_X = 140
@@ -206,7 +207,6 @@ CPU_LIMITER = 10
 START_YEAR = 1910
 END_YEAR = 1950
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
-AI_WAR_COOLDOWN_TURNS = 18 # How many turns from the start of the game the AI waits before declaring wars
 RESEARCH_TIMELINE_SPACING = 80 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10 
@@ -407,6 +407,7 @@ AI_WAR_STRENGTH_THRESHOLD = 1.2 # AI must be 20% stronger on the shared border t
 AI_GLOBAL_STRENGTH_THRESHOLD = 0.8 # AI must have at least 80% of the target's total alliance + economic power to consider war
 AI_DIPLO_COOLDOWN = -1 # How many turns before AI can retry a rejected/ignored proactive diplomatic action. -1 means infinite.
 AI_WAR_COOLDOWN = 18
+TURNS_TO_WAIT_BEFORE_WAR = 0 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
 
 # Distraction Weight

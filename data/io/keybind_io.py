@@ -8,7 +8,8 @@ CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode="GEMINI", 
                   gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
-                  ai_immersion_level="FULL", music_pitch=0.5, sfx_pitch=0.5, target_fps=60):
+                  ai_immersion_level="FULL", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
+                  ollama_threads=1):
     """Converts key codes to strings and saves all config data to JSON."""
     readable_binds = {}
     for action, key_code in keybind_dict.items():
@@ -31,11 +32,9 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
         "claude_model": claude_model,
         "ollama_model": ollama_model,
         "ai_immersion_level": ai_immersion_level,
-        "target_fps": target_fps
+        "target_fps": target_fps,
+        "ollama_threads": ollama_threads
     }
-    
-    # --- OPTIMIZATION: Replaced manual json.dump and clear_json_caches() ---
-    # This automatically writes to the disk AND keeps the memory updated seamlessly.
     queries.save_cached_json("settings", data_to_save)
 
 def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
@@ -99,8 +98,9 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
             s.get("ai_immersion_level", "FULL"),
             s.get("music_pitch", s.get("music_speed", default_pitch)), 
             s.get("sfx_pitch", s.get("sfx_speed", default_pitch)),
-            s.get("target_fps", getattr(c, 'TARGET_FPS', 60))
-        )
+            s.get("target_fps", getattr(c, 'TARGET_FPS', 60)),
+            s.get("ollama_threads", getattr(c, 'DEFAULT_OLLAMA_THREADS', 1))
+    )
     except Exception as e:
         print(f"Error loading settings: {e}")
         return (default_binds, default_volume, default_music_volume, 1, "GEMINI", 

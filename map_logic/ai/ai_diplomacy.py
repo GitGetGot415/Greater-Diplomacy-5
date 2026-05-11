@@ -15,7 +15,8 @@ def process_proactive_llm_tasks(map_screen):
         
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     current_ai_mode = ai_handler.get_ai_mode()
-    max_threads = 1 if current_ai_mode == "OLLAMA" else 25
+    
+    max_threads = queries.get_ollama_threads() if current_ai_mode == "OLLAMA" else 25
     
     map_screen.loading_status_text = "Drafting Proactive Responses..."
     
@@ -264,7 +265,7 @@ def process_basic_proactive_ai(map_screen):
         # --- 4. Declare War for Cores Logic (Border Check Only) ---
         if not is_already_at_war:
             current_turn = queries.get_total_turns(map_screen.time_manager)
-            if current_turn >= c.AI_WAR_COOLDOWN_TURNS:
+            if current_turn >= c.TURNS_TO_WAIT_BEFORE_WAR:
                 targets_holding_cores = queries.get_nations_holding_our_cores(ai_name, map_screen.map_data)
                 
                 if targets_holding_cores:

@@ -174,7 +174,8 @@ class Controller:
         self.music_pitch = loaded_data[14] if len(loaded_data) > 14 else getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
         self.sfx_pitch = loaded_data[15] if len(loaded_data) > 15 else getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
         self.target_fps = loaded_data[16] if len(loaded_data) > 16 else getattr(c, 'TARGET_FPS', 60)
-
+        self.ollama_threads = loaded_data[17] if len(loaded_data) > 17 else getattr(c, 'DEFAULT_OLLAMA_THREADS', 1)
+        
         # 3. Apply volume to global sounds on boot
         ui_elements.global_sfx_volume = self.sfx_volume
         ui_elements.global_sfx_pitch = self.sfx_pitch
