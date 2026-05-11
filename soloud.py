@@ -3,18 +3,35 @@
 
 import ctypes
 import sys
+import os
+import platform  # NEW: Required for checking the operating system
 
 try:
-    import os
-    # Force Python to look at the exact, absolute path of the DLL next to this script
-    dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "win64-libsoloud"
-	".dll")
-    soloud_dll = ctypes.CDLL(dll_path)
+    # Get the absolute path to the directory containing this script
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    system = platform.system()
+
+    # Dynamically choose the correct library file based on the OS
+    if system == 'Windows':
+        # Windows uses .dll files
+        lib_name = 'win64-libsoloud.dll' 
+    elif system == 'Darwin':
+        # macOS uses .dylib files
+        lib_name = 'mac64-libsoloud.dylib'
+    elif system == 'Linux':
+        # Linux uses .so files
+        lib_name = 'lin64-libsoloud.so'
+    else:
+        raise OSError(f"Unsupported operating system: {system}")
+
+    # Construct the final path and load the library
+    lib_path = os.path.join(base_path, lib_name)
+    soloud_dll = ctypes.CDLL(lib_path)
+
 except Exception as e:
     print("\n" + "="*50)
-    print(f"CRITICAL DLL ERROR: {e}")
+    print(f"CRITICAL DLL/DYLIB ERROR: {e}")
     print("="*50 + "\n")
-    import sys
     sys.exit()
 
 # Raw DLL functions
