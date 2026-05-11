@@ -75,22 +75,27 @@ def trigger_ai_thread(map_screen):
     from map_logic.ai import ai_handler
     ai_handler.FORCE_SKIP = False
     
-    # Reset trackers for the new turn
-    map_screen.proactive_tasks_total = 0
+    from data import queries
+    
+    # Pre-calculate determinable totals so the UI instantly knows the workload
+    map_screen.proactive_tasks_total = len(queries.get_active_ai_nations(map_screen))
     map_screen.proactive_tasks_completed = 0
-    map_screen.proactive_llm_tasks_total = 0
+    
+    # Dynamic LLM tasks cannot be known until previous phases finish. Mark as -1 (Pending)
+    map_screen.proactive_llm_tasks_total = -1 
     map_screen.proactive_llm_tasks_completed = 0
     map_screen.proactive_llm_tasks = []
-    map_screen.responsive_tasks_total = 0
+    
+    map_screen.responsive_tasks_total = -1
     map_screen.responsive_tasks_completed = 0
     
-    # Reset the refresh trackers!
-    map_screen.refresh_tasks_total = 0
+    # Map Refresh always executes exactly 6 background render passes
+    map_screen.refresh_tasks_total = 6
     map_screen.refresh_tasks_completed = 0
     
     # Fire and forget the background process
     threading.Thread(target=run_ai_processing_thread, args=(map_screen,), daemon=True).start()
-    
+
 def run_ai_processing_thread(map_screen):
     """This runs in the background. Pygame keeps running!"""
     try:

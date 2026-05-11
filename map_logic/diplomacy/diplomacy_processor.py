@@ -195,11 +195,15 @@ def process_diplomacy_turn(self):
 
     # --- 3. EXECUTE AI THREADS ---
     ai_results = {}
+    
+    # Pull this assignment OUT of the 'if' block so the loading bar 
+    # knows there are truly 0 tasks remaining to calculate.
+    self.responsive_tasks_total = len(ai_tasks)
+    self.responsive_tasks_completed = 0
+    
     if ai_tasks:
         from map_logic.ai import ai_handler # Import this to safely check the mode
         
-        self.responsive_tasks_total = len(ai_tasks)
-        self.responsive_tasks_completed = 0
         self.loading_status_text = "Awaiting LLM Responses..."
         
         # Get human players for FULL AI optimization

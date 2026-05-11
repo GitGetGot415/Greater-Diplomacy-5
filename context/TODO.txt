@@ -42,10 +42,13 @@ Include a requirements.txt
 - ai should be able to sign non-agression pacts that prevent wars
 
 - make ai able to respond to actions taken against them not only with a reaction, but a diplomatic action too if possible
-- declared war on, might be able to offer a ceasefire to someone else as an example
-
-- the map seems to show 0/0 for loading before it realizes how many actually have to be loaded
+- if declared war on, the ai might be able to offer a ceasefire to someone else (or whoever they're fighting) as an example
+- if full ai, they can send this to another country and the other country should be able to respond...? 
 
 - remove the fuel buildings, and instead just use the materials to fuel slider
-
+- do keep the research specifically, the research that unlocks buildings though should be removed
 - make ollama threads the threads for every ai thing
+
+- i noticed that spectator messages don't clear when starting a new game
+- also, somewhat funny, in that same game, when the german reich declared war on germany (two seperate countries, two seperate tags), they hallucinate that france actually attacked them
+- which is impressive because france doesnt actually exist...?

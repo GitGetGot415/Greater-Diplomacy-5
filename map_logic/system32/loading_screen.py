@@ -27,28 +27,33 @@ def draw_turn_loading_screen(map_screen, surface):
         # Background
         pygame.draw.rect(surface, (40, 40, 60), (bar_x, y_pos, bar_w, bar_h), border_radius=5)
 
-        # Progress Fill
-        progress_ratio = (completed / float(total)) if total > 0 else 1.0
+        # Progress Fill (Hold at 0% if total is currently unknown)
+        progress_ratio = 0.0 if total == -1 else ((completed / float(total)) if total > 0 else 1.0)
         fill_w = int(bar_w * progress_ratio)
         if fill_w > 0:
             pygame.draw.rect(surface, (100, 200, 100), (bar_x, y_pos, fill_w, bar_h), border_radius=5)
 
         # Counter text
-        pct_txt = fonts.get("tiny").render(f"{completed}/{total}", True, (255, 255, 255))
+        if total == -1:
+            display_text = "Calculating..."
+        else:
+            display_text = f"{completed}/{total}"
+            
+        pct_txt = fonts.get("tiny").render(display_text, True, (255, 255, 255))
         surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + bar_h // 2)))
 
         # Outline
         pygame.draw.rect(surface, (200, 200, 200), (bar_x, y_pos, bar_w, bar_h), 2, border_radius=5)
 
-    # Render the 4 distinct phases
-    draw_bar(center_y - 100, "1. Analyzing Global Strategy", map_screen.proactive_tasks_completed, map_screen.proactive_tasks_total)
-    draw_bar(center_y - 100 + spacing, "2. Drafting Proactive Diplomatics", getattr(map_screen, 'proactive_llm_tasks_completed', 0), getattr(map_screen, 'proactive_llm_tasks_total', 0))
-    draw_bar(center_y - 100 + spacing*2, "3. Processing Global Responses", map_screen.responsive_tasks_completed, map_screen.responsive_tasks_total)
-    draw_bar(center_y - 100 + spacing*3, "4. Re-Rendering World Maps", getattr(map_screen, 'refresh_tasks_completed', 0), getattr(map_screen, 'refresh_tasks_total', 0))
+    # Render the 4 distinct phases (safely fetching pending totals)
+    draw_bar(center_y - 100, "1. Analyzing Global Strategy", getattr(map_screen, 'proactive_tasks_completed', 0), getattr(map_screen, 'proactive_tasks_total', -1))
+    draw_bar(center_y - 100 + spacing, "2. Drafting Proactive Diplomatics", getattr(map_screen, 'proactive_llm_tasks_completed', 0), getattr(map_screen, 'proactive_llm_tasks_total', -1))
+    draw_bar(center_y - 100 + spacing*2, "3. Processing Global Responses", getattr(map_screen, 'responsive_tasks_completed', 0), getattr(map_screen, 'responsive_tasks_total', -1))
+    draw_bar(center_y - 100 + spacing*3, "4. Re-Rendering World Maps", getattr(map_screen, 'refresh_tasks_completed', 0), getattr(map_screen, 'refresh_tasks_total', 6))
 
     # --- Draw the Force Skip Button ---
     # Only show it if there are LLM tasks that might get stuck
-    if getattr(map_screen, 'proactive_llm_tasks_total', 0) > 0 or map_screen.responsive_tasks_total > 0:
+    if getattr(map_screen, 'proactive_llm_tasks_total', 0) > 0 or getattr(map_screen, 'responsive_tasks_total', 0) > 0:
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
         mx, my = pygame.mouse.get_pos()
         
