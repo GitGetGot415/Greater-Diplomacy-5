@@ -194,6 +194,9 @@ def load_map_assets(self, load_path):
     self.map_data = {}
     self.id_to_province = {}
     
+    # Load building library to scrub removed buildings (like fuel refineries) from old saves
+    bldg_lib = queries.get_building_library()
+    
     for k, v in self.raw_json_data.items():
         color_tuple = tuple(map(int, k.strip("()").split(",")))
         
@@ -214,6 +217,9 @@ def load_map_assets(self, load_path):
         v["cores"] = v.get("cores", [])
         v["units"] = v.get("units", [])
         v["deployment_queue"] = v.get("deployment_queue", [])
+        
+        # Clean obsolete buildings (Removes fuel buildings from older saves automatically)
+        v["buildings"] = [b for b in v.get("buildings", []) if b in bldg_lib]
 
         res = v.get("resources", {})
         v["resources"] = res if isinstance(res, dict) else {}

@@ -185,14 +185,6 @@ def randomize_all_provinces(map_screen, settings):
     for lvl in range(1, fac_lvl + 1):
         allowed_factories.append(f"Factory Lvl {lvl}")
 
-    allowed_refineries = []
-    if baseline_tech.get("synthetic_fuel_experiments", 0) > 0:
-        allowed_refineries.append(c.DEFAULT_STARTING_REFINERY)
-        
-    ref_lvl = baseline_tech.get("fuel_refining", 0)
-    for lvl in range(1, ref_lvl + 1):
-        allowed_refineries.append(f"Synthetic Refinery Lvl {lvl}")
-
     allowed_recruitment = []
     if baseline_tech.get("basic_recruitment", 0) > 0:
         allowed_recruitment.append("Basic Recruitment Center")
@@ -216,16 +208,13 @@ def randomize_all_provinces(map_screen, settings):
             if "Basic Factory" in fac or "Factory Lvl" in fac:
                 has_factory = True
             
-        # Guarantee refineries/recruitment centers only spawn where basic factories exist
+        # Guarantee recruitment centers only spawn where basic factories exist
         if has_factory:
-            if allowed_refineries and random.random() < 0.30:
-                prov["buildings"].append(random.choice(allowed_refineries))
             if allowed_recruitment and random.random() < 0.30:
                 prov["buildings"].append(random.choice(allowed_recruitment))
 
     # --- Step D: Guarantee Minimum Buildings (Balanced by Tech) ---
     best_factory = allowed_factories[-1] if allowed_factories else getattr(c, 'DEFAULT_STARTING_FACTORY', "Basic Factory")
-    best_refinery = allowed_refineries[-1] if allowed_refineries else None
     best_recruitment = allowed_recruitment[-1] if allowed_recruitment else None
 
     for nation in active_nations:
@@ -233,11 +222,9 @@ def randomize_all_provinces(map_screen, settings):
         if not owned_provs: continue
 
         has_best_factory = False
-        has_best_refinery = False
         has_best_recruitment = False
         
         factory_provs = []
-        refinery_provs = []
         recruitment_provs = []
 
         for prov in owned_provs:
@@ -245,12 +232,10 @@ def randomize_all_provinces(map_screen, settings):
             
             # Check if they randomly received the best tier buildings
             if best_factory and best_factory in bldgs: has_best_factory = True
-            if best_refinery and best_refinery in bldgs: has_best_refinery = True
             if best_recruitment and best_recruitment in bldgs: has_best_recruitment = True
             
             # Track existing building locations for grouping
             if any("Factory" in b for b in bldgs): factory_provs.append(prov)
-            if any("Refinery" in b for b in bldgs): refinery_provs.append(prov)
             if any("Recruitment" in b for b in bldgs): recruitment_provs.append(prov)
 
         # 1. Guarantee best factory
@@ -261,24 +246,12 @@ def randomize_all_provinces(map_screen, settings):
                 # Remove the old factory to upgrade it
                 target_prov["buildings"] = [b for b in target_prov["buildings"] if "Factory" not in b]
             else:
-                target_prov = random.choice(refinery_provs + recruitment_provs) if (refinery_provs or recruitment_provs) else random.choice(owned_provs)
+                target_prov = random.choice(recruitment_provs) if recruitment_provs else random.choice(owned_provs)
                 factory_provs.append(target_prov)
             
             target_prov.setdefault("buildings", []).append(best_factory)
 
-        # 2. Guarantee best refinery
-        if best_refinery and not has_best_refinery:
-            # Refineries should ideally be placed on tiles with factories
-            if refinery_provs:
-                target_prov = random.choice(refinery_provs)
-                # Remove the old refinery to upgrade it
-                target_prov["buildings"] = [b for b in target_prov["buildings"] if "Refinery" not in b]
-            else:
-                target_prov = random.choice(factory_provs) if factory_provs else random.choice(owned_provs)
-            
-            target_prov.setdefault("buildings", []).append(best_refinery)
-
-        # 3. Guarantee best recruitment center
+        # 2. Guarantee best recruitment center
         if best_recruitment and not has_best_recruitment:
             # Recruitment centers should also ideally be on tiles with factories
             if recruitment_provs:

@@ -359,7 +359,6 @@ def process_ai_economy_decisions(map_screen):
             
             # Fetch the dynamic lists
             industry_b_list = [b for b, d in building_library.items() if d.get("group") == "industry"]
-            refinery_b_list = [b for b, d in building_library.items() if d.get("group") == "refinery"]
             recruit_b_list = [b for b, d in building_library.items() if d.get("group") == "recruitment"]
 
             # Sort provinces by queue length to spread out construction
@@ -370,7 +369,7 @@ def process_ai_economy_decisions(map_screen):
                 queue = prov.get("deployment_queue", [])
 
                 # Double check the queue so it doesn't build two at once in the same province
-                if any(q.get("group") in ["industry", "refinery", "recruitment"] for q in queue):
+                if any(q.get("group") in ["industry", "recruitment"] for q in queue):
                     continue
 
                 target_bldg = None
@@ -379,7 +378,7 @@ def process_ai_economy_decisions(map_screen):
                 # Expand AI's building options dynamically based on the tile's current capacity
                 groups_to_check = [industry_b_list]
                 if has_factory:
-                    groups_to_check.extend([refinery_b_list, recruit_b_list])
+                    groups_to_check.extend([recruit_b_list])
                     
                 import random
                 random.shuffle(groups_to_check)

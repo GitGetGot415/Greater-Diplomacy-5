@@ -45,9 +45,4 @@ Include a requirements.txt
 - if declared war on, the ai might be able to offer a ceasefire to someone else (or whoever they're fighting) as an example
 - if full ai, they can send this to another country and the other country should be able to respond...? 
 
-- remove the fuel buildings, and instead just use the materials to fuel slider
-- do keep the research specifically, the research that unlocks buildings though should be removed
-- also for the conversion from materials to fuel, make the max only take away your income, not the stuff you have in storage
-- any saves / scenarios that have those buildings, just remove them
-
 - make ollama threads the threads for every ai thing

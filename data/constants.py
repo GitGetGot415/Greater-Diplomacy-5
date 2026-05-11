@@ -89,7 +89,6 @@ DEFAULT_OLLAMA_MODEL = "llama3"
 # ==========================================
 
 DEFAULT_STARTING_FACTORY = "Basic Factory"
-DEFAULT_STARTING_REFINERY = "Experimental Refinery"
 
 # ==========================================
 # ECONOMY SCREEN

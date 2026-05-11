@@ -104,26 +104,6 @@
         "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
         "prod_materials": 8000, "prod_manpower": 0, "prod_fuel": 0
     },
-    "Experimental Refinery": {
-        "time": 200, "group": "refinery", "req": null,
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 0, "prod_fuel": 50
-    },
-    "Synthetic Refinery Lvl 1": {
-        "time": 200, "group": "refinery", "req": "Experimental Refinery",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 0, "prod_fuel": 100
-    },
-    "Synthetic Refinery Lvl 2": {
-        "time": 200, "group": "refinery", "req": "Synthetic Refinery Lvl 1",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 0, "prod_fuel": 200
-    },
-    "Synthetic Refinery Lvl 3": {
-        "time": 200, "group": "refinery", "req": "Synthetic Refinery Lvl 2",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 0, "prod_fuel": 300
-    },
     "Basic Recruitment Center": {
         "time": 100, "group": "recruitment", "req": null,
         "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,

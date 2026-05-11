@@ -85,9 +85,9 @@ class Production_Screen(GameState):
         x_pos = 50
 
         # --- BUILDING LOGIC ---
-        bldg_groups = {"Other": ["industry"], "Fuel": ["refinery"], "Recruitment": ["recruitment"]}
+        bldg_groups = {"Other": ["industry"], "Recruitment": ["recruitment"]}
         
-        def process_building_categories(cat_groups, is_fuel):
+        def process_building_categories(cat_groups):
             nonlocal y_offset
             for group_id in cat_groups:
                 b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]
@@ -111,7 +111,7 @@ class Production_Screen(GameState):
                         continue 
 
                     # --- ENFORCE FACTORY DEPENDENCY ---
-                    if data["group"] in ["refinery", "recruitment"]:
+                    if data["group"] in ["recruitment"]:
                         if not queries.has_basic_factory(self.target_province):
                             continue
 
@@ -126,7 +126,7 @@ class Production_Screen(GameState):
                     else:
                         btn_txt = target
                         cb = lambda t=target: self.start_construction(t)
-                        btn_color = "purple" if is_fuel else "orange"
+                        btn_color = "orange"
                         if data["group"] == "recruitment": btn_color = "red"
 
                     btn = Button(x_pos, y_offset, "medium", btn_color, btn_txt, cb)
@@ -139,17 +139,12 @@ class Production_Screen(GameState):
                     y_offset += 60
 
         self.other_start_y = y_offset
-        process_building_categories(bldg_groups["Other"], is_fuel=False)
+        process_building_categories(bldg_groups["Other"])
         self.other_end_y = y_offset
 
         y_offset += 30
-        self.fuel_start_y = y_offset
-        process_building_categories(bldg_groups["Fuel"], is_fuel=True)
-        self.fuel_end_y = y_offset
-
-        y_offset += 30
         self.recruit_start_y = y_offset
-        process_building_categories(bldg_groups["Recruitment"], is_fuel=False)
+        process_building_categories(bldg_groups["Recruitment"])
         self.recruit_end_y = y_offset
         y_offset += 30
 
@@ -336,14 +331,6 @@ class Production_Screen(GameState):
             pygame.draw.rect(surface, (200, 100, 30), land_rect, 2)
             lbl = fonts.get("heading2").render("GENERAL BUILDINGS", True, (255, 150, 50))
             surface.blit(lbl, (40, self.other_start_y + scroll - 45))
-
-        # Fuel (Purple)
-        if self.fuel_end_y > self.fuel_start_y:
-            navy_rect = pygame.Rect(30, self.fuel_start_y + scroll - 15, 840, self.fuel_end_y - self.fuel_start_y + 15)
-            pygame.draw.rect(surface, (50, 30, 60), navy_rect)
-            pygame.draw.rect(surface, (150, 50, 200), navy_rect, 2)
-            lbl = fonts.get("heading2").render("FUEL REFINERIES", True, (200, 100, 255))
-            surface.blit(lbl, (40, self.fuel_start_y + scroll - 45))
 
         # Recruitment (Red)
         if getattr(self, 'recruit_end_y', 0) > getattr(self, 'recruit_start_y', 0):
