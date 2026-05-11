@@ -42,11 +42,14 @@ class Music_Player(GameState):
         
         # --- Audio Sliders ---
         slider_x = c.SCREEN_WIDTH - 250
+        
         self.elements.append(Slider(slider_x, 40, 200, "SFX Vol", self.controller.sfx_volume, self.set_sfx_volume))
-        self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
+        if c.USE_SOLOUD:
+            self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
 
         self.elements.append(Slider(slider_x, 180, 200, "Music Vol", self.controller.music_volume, self.set_music_volume))
-        self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
+        if c.USE_SOLOUD:
+            self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
         
         # --- View Mode Toggles ---
         color_ed = "blue" if self.view_mode == "EDITOR" else "grey"
@@ -117,12 +120,23 @@ class Music_Player(GameState):
     def set_sfx_volume(self, val):
         self.controller.sfx_volume = val
         ui_elements.global_sfx_volume = val    
-        self.save_audio_settings()
         
+        # If using pygame mixer, update the loaded sounds live
+        if not c.USE_SOLOUD:
+            if getattr(ui_elements, 'pygame_click_sound', None):
+                ui_elements.pygame_click_sound.set_volume(val)
+            if getattr(ui_elements, 'pygame_slider_sound', None):
+                ui_elements.pygame_slider_sound.set_volume(val)
+                
+        self.save_audio_settings()
+
     def set_music_volume(self, val):
         self.controller.music_volume = val
-        if self.controller.music_handle is not None:
-            self.controller.soloud.set_volume(self.controller.music_handle, val)
+        if c.USE_SOLOUD:
+            if self.controller.music_handle is not None:
+                self.controller.soloud.set_volume(self.controller.music_handle, val)
+        else:
+            pygame.mixer.music.set_volume(val)
         self.save_audio_settings()
 
     def set_music_pitch(self, val):

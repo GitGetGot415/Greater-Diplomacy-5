@@ -104,6 +104,8 @@ ECON_CONVERT_BTN_X2 = SCREEN_WIDTH // 2 + 50
 # AUDIO DEFAULTS
 # ==========================================
 
+USE_SOLOUD = False # Set to False to strictly force Pygame Mixer
+
 DEFAULT_SFX_VOLUME = 0.5
 DEFAULT_MUSIC_VOLUME = 0.5
 DEFAULT_AUDIO_PITCH = 0.3

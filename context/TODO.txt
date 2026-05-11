@@ -19,6 +19,7 @@ ITS CALLED Tkinter
 
 ===
 
+REMEMBER TO SET USE_SOLOUD TO FALSE
 pyinstaller --clean --onefile --add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud;." --add-binary "win64-libsoloud.dll;." main.py
 pyinstaller --clean --onefile main.py
 pyinstaller --onefile --windowed main.py

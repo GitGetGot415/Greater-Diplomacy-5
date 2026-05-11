@@ -8,6 +8,8 @@ from map_logic.rendering import symbol_loader
 soloud_engine = None
 click_sound = None
 slider_sound = None
+pygame_click_sound = None
+pygame_slider_sound = None
 global_sfx_volume = 0.5
 global_sfx_pitch = 0.5
 
@@ -120,11 +122,16 @@ class Button:
             if self.is_pressed:
                 self.is_pressed = False
                 if self.rect.collidepoint(event.pos):
-                    # --- NEW ENGINE HOOK ---
-                    if click_sound and soloud_engine and global_sfx_volume > 0:
-                        handle = soloud_engine.play(click_sound)
-                        soloud_engine.set_volume(handle, global_sfx_volume)
-                        soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                    # --- HYBRID ENGINE HOOK ---
+                    if c.USE_SOLOUD:
+                        if click_sound and soloud_engine and global_sfx_volume > 0:
+                            handle = soloud_engine.play(click_sound)
+                            soloud_engine.set_volume(handle, global_sfx_volume)
+                            soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                    else:
+                        if pygame_click_sound and global_sfx_volume > 0:
+                            pygame_click_sound.set_volume(global_sfx_volume)
+                            pygame_click_sound.play()
                     self.callback()
 
 class Slider:
@@ -188,10 +195,16 @@ class Slider:
                 # 2. Has it been at least 100ms since the last click?
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_sound_tick > 50:
-                    if slider_sound and soloud_engine and global_sfx_volume > 0:
-                        handle = soloud_engine.play(slider_sound)
-                        soloud_engine.set_volume(handle, global_sfx_volume)
-                        soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                    # --- HYBRID ENGINE HOOK ---
+                    if c.USE_SOLOUD:
+                        if slider_sound and soloud_engine and global_sfx_volume > 0:
+                            handle = soloud_engine.play(slider_sound)
+                            soloud_engine.set_volume(handle, global_sfx_volume)
+                            soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                    else:
+                        if pygame_slider_sound and global_sfx_volume > 0:
+                            pygame_slider_sound.set_volume(global_sfx_volume)
+                            pygame_slider_sound.play()
                         
                     self.last_sound_tick = current_time # Reset the throttle
 

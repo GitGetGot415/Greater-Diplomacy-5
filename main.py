@@ -38,16 +38,35 @@ class Controller:
         # --- FPS CLOCK FIX ---
         self.clock = pygame.time.Clock()
         
-        # --- INITIALIZE SOLOUD INSTEAD OF PYGAME.MIXER ---
-        self.soloud = Soloud()
-        self.soloud.init()
-        
-        # Keep track of active audio streams
-        self.music_handle = None 
-        self.music_stream = WavStream()
-        
-        # Share the engine with the UI module
-        ui_elements.soloud_engine = self.soloud
+        # --- HYBRID AUDIO ENGINE INITIALIZATION ---
+        if c.USE_SOLOUD:
+            try:
+                from soloud import Soloud, Wav, WavStream 
+                self.soloud = Soloud()
+                self.soloud.init()
+                self.music_handle = None 
+                self.music_stream = WavStream()
+                ui_elements.soloud_engine = self.soloud
+                
+                try:
+                    ui_elements.click_sound = Wav()
+                    ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
+                    ui_elements.slider_sound = Wav()
+                    ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
+                except:
+                    print("Warning: Sound files not found in assets folder")
+                    
+            except Exception as e:
+                print(f"Failed to load SoLoud DLL: {e}. Auto-switching to Pygame Mixer.")
+                c.USE_SOLOUD = False # Fallback triggered!
+
+        if not c.USE_SOLOUD:
+            pygame.mixer.init()
+            try:
+                ui_elements.pygame_click_sound = pygame.mixer.Sound(c.SOUND_CLICK_PATH)
+                ui_elements.pygame_slider_sound = pygame.mixer.Sound(c.SOUND_SLIDER_PATH)
+            except:
+                print("Warning: Sound files not found in assets folder")
 
         # Initialize fonts
         font_path = c.FONT_PATH_DEFAULT
@@ -264,8 +283,10 @@ class Controller:
     def play_random_song(self):
         if not self.playlist:
             self.now_playing = "None"
-            if self.music_handle is not None:
+            if c.USE_SOLOUD and hasattr(self, 'music_handle') and self.music_handle is not None:
                 self.soloud.stop(self.music_handle)
+            elif not c.USE_SOLOUD:
+                pygame.mixer.music.stop()
             return
             
         import random
@@ -274,17 +295,21 @@ class Controller:
 
     def play_specific_song(self, track_path):
         try:
-            if self.music_handle is not None:
-                self.soloud.stop(self.music_handle)
+            if c.USE_SOLOUD:
+                if hasattr(self, 'music_handle') and self.music_handle is not None:
+                    self.soloud.stop(self.music_handle)
+                    
+                self.music_stream.load(track_path)
+                self.music_handle = self.soloud.play(self.music_stream)
                 
-            self.music_stream.load(track_path)
-            self.music_handle = self.soloud.play(self.music_stream)
-            
-            # Apply volume and speed dynamically!
-            self.soloud.set_volume(self.music_handle, self.music_volume)
-            speed_mult = 0.5 + (self.music_pitch * 1.5) # Scale 0.0-1.0 to 0.5x-2.0x
-            self.soloud.set_relative_play_speed(self.music_handle, speed_mult)
-            
+                self.soloud.set_volume(self.music_handle, self.music_volume)
+                speed_mult = 0.5 + (self.music_pitch * 1.5) 
+                self.soloud.set_relative_play_speed(self.music_handle, speed_mult)
+            else:
+                pygame.mixer.music.load(track_path)
+                pygame.mixer.music.play()
+                pygame.mixer.music.set_volume(self.music_volume)
+                
             self.now_playing = track_path
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
@@ -294,9 +319,15 @@ class Controller:
             # --- THE MAGIC CPU FIX ---
             self.clock.tick(self.target_fps) 
             
-            # --- SOLOUD SONG END CHECK ---
-            if self.music_handle is not None:
-                if not self.soloud.is_valid_voice_handle(self.music_handle):
+            # --- HYBRID SONG END CHECK ---
+            if c.USE_SOLOUD:
+                if hasattr(self, 'music_handle') and self.music_handle is not None:
+                    if not self.soloud.is_valid_voice_handle(self.music_handle):
+                        self.play_random_song()
+                        if self.active_state == self.states.get("MUSIC_PLAYER"):
+                            self.states["MUSIC_PLAYER"].refresh_ui()
+            else:
+                if self.now_playing != "None" and not pygame.mixer.music.get_busy():
                     self.play_random_song()
                     if self.active_state == self.states.get("MUSIC_PLAYER"):
                         self.states["MUSIC_PLAYER"].refresh_ui()
@@ -304,8 +335,11 @@ class Controller:
             events = pygame.event.get()
             for event in events:
                 if event.type == pygame.QUIT:
-                    # Clean up C++ engine safely before closing
-                    self.soloud.deinit()
+                    # Clean up safely before closing
+                    if c.USE_SOLOUD and hasattr(self, 'soloud'):
+                        self.soloud.deinit()
+                    elif not c.USE_SOLOUD:
+                        pygame.mixer.quit()
                     os._exit(0) # Instantly kills hanging background threads
                 
                 # GLOBAL KEYBOARD HANDLING

@@ -203,7 +203,10 @@ class Settings(GameState):
     def set_volume(self, val):
         self.sfx_volume = val
         self.controller.sfx_volume = val
-        if ui_elements.click_sound:
-            ui_elements.click_sound.set_volume(val)
-        if ui_elements.slider_sound:
-            ui_elements.slider_sound.set_volume(val)
+        ui_elements.global_sfx_volume = val
+        
+        if not c.USE_SOLOUD:
+            if getattr(ui_elements, 'pygame_click_sound', None):
+                ui_elements.pygame_click_sound.set_volume(val)
+            if getattr(ui_elements, 'pygame_slider_sound', None):
+                ui_elements.pygame_slider_sound.set_volume(val)
