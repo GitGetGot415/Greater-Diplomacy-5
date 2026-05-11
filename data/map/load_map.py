@@ -2,6 +2,7 @@ import pygame
 import json
 import os
 import base64
+import copy
 from map_logic.system32.time_handler import TimeHandler
 from data.io import country_io
 import data.constants as c
@@ -72,7 +73,7 @@ def load_map_assets(self, load_path):
         self.time_manager = TimeHandler(start_year=c.START_YEAR)
         
         # Load the base nation templates so they are ready for the randomizer
-        self.nation_data = country_io.load_all_country_data()
+        self.nation_data = copy.deepcopy(country_io.load_all_country_data())
         _load_default_images(self) 
         # --- THE FIX: Use .get() with a fallback color ---
         self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
@@ -112,7 +113,7 @@ def load_map_assets(self, load_path):
             save_meta = json.load(f)
 
     # --- 3. Load Nation Data (The Critical Fix) ---
-    base_nation_data = country_io.load_all_country_data()
+    base_nation_data = copy.deepcopy(country_io.load_all_country_data())
 
     if save_meta and "nation_data" in save_meta:
         self.nation_data = save_meta["nation_data"]

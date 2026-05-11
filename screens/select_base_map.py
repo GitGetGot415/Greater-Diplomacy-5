@@ -21,9 +21,9 @@ class Select_Base_Map(GameState):
             
         maps = os.listdir(base_dir)
         for i, name in enumerate(maps):
-            btn_y = 150 + (i * 70)
+            btn_y = 150 + (i * 60)
             self.elements.append(
-                Button("centered", btn_y, "large", "blue", name, 
+                Button("centered", btn_y, "new_game", "blue", name, 
                        lambda n=name: self.start_editor_with_map(n))
             )
 

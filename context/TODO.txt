@@ -47,8 +47,7 @@ Include a requirements.txt
 
 - remove the fuel buildings, and instead just use the materials to fuel slider
 - do keep the research specifically, the research that unlocks buildings though should be removed
-- make ollama threads the threads for every ai thing
+- also for the conversion from materials to fuel, make the max only take away your income, not the stuff you have in storage
+- any saves / scenarios that have those buildings, just remove them
 
-- i noticed that spectator messages don't clear when starting a new game
-- also, somewhat funny, in that same game, when the german reich declared war on germany (two seperate countries, two seperate tags), they hallucinate that france actually attacked them
-- which is impressive because france doesnt actually exist...?
+- make ollama threads the threads for every ai thing

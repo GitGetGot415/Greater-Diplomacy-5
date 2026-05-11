@@ -347,7 +347,7 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
             "follow_up_action": "NONE", "follow_up_target": "NONE"
         }
 
-def generate_proactive_text(ai_nation, target_nation, action_context, human_players=None):
+def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None):
     """Generates a quick one-liner for proactive hardcoded AI actions."""
     if FORCE_SKIP: return None
     
@@ -363,17 +363,19 @@ def generate_proactive_text(ai_nation, target_nation, action_context, human_play
     if use_lite_logic:
         return None 
         
+    context = get_world_context(nation_data, active_nations, ai_nation, target_nation)
     system_prompt = ai_prompts.get_proactive_system_prompt(ai_nation, target_nation, action_context)
+    user_prompt = f"{context}\nWrite the message."
     
     if mode == "OLLAMA":
-        result = call_ollama(system_prompt, "Generate message.")
+        result = call_ollama(system_prompt, user_prompt)
         return result.get("message") if result else None
 
     try:
         client = genai.Client(api_key=get_gemini_api_key())
         response = client.models.generate_content(
             model=get_gemini_model(),
-            contents=system_prompt,
+            contents=f"{system_prompt}\n\n{user_prompt}",
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         return json.loads(response.text).get("message")

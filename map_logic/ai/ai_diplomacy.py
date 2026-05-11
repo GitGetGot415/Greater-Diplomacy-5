@@ -20,11 +20,13 @@ def process_proactive_llm_tasks(map_screen):
     
     map_screen.loading_status_text = "Drafting Proactive Responses..."
     
+    active_nations = list(queries.get_living_nations(map_screen.map_data))
+    
     # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
     futures = {}
     for task in tasks:
-        future = executor.submit(ai_handler.generate_proactive_text, task["sender"], task["target"], task["context"], human_players)
+        future = executor.submit(ai_handler.generate_proactive_text, map_screen.nation_data, active_nations, task["sender"], task["target"], task["context"], human_players)
         futures[future] = task
         
     while futures:
