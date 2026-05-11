@@ -5,7 +5,7 @@ from data import queries
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
-def save_settings(keybind_dict, volume, music_volume, num_players=1, ai_mode="GEMINI", 
+def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode="GEMINI", 
                   gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
                   ai_immersion_level="FULL", music_pitch=0.5, sfx_pitch=0.5, target_fps=60):
@@ -16,7 +16,7 @@ def save_settings(keybind_dict, volume, music_volume, num_players=1, ai_mode="GE
     
     data_to_save = {
         "keybinds": readable_binds,
-        "volume": volume,
+        "sfx_volume": sfx_volume,
         "music_volume": music_volume,
         "music_pitch": music_pitch,
         "sfx_pitch": sfx_pitch,
@@ -67,7 +67,7 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
             saved_music_vol = default_music_volume
         else:
             saved_binds = saved_data.get("keybinds", {})
-            saved_vol = saved_data.get("volume", default_volume)
+            saved_vol = saved_data.get("sfx_volume", default_volume)
             saved_music_vol = saved_data.get("music_volume", default_music_volume)
         
         # Convert strings back to pygame codes
