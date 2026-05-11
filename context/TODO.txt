@@ -19,6 +19,12 @@ ITS CALLED Tkinter
 
 ===
 
+pyinstaller --clean --onefile --add-binary "soloud_x64.dll;." --add-binary "soloud_x86.dll;." main.py
+pyinstaller --clean --onefile main.py
+pyinstaller --onefile --windowed main.py
+
+Include a requirements.txt
+
 - default leader name please?
 - or just make the portrait bigger if no name and occupation given
 
