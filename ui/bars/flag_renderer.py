@@ -1,6 +1,6 @@
 import pygame
-import base64
 import data.constants as c
+from data import queries
 
 def draw_flag(map_screen, surface):
     """Handles decoding and drawing the nation's flag in the top UI bar."""
@@ -15,22 +15,11 @@ def draw_flag(map_screen, surface):
             display_country = owner
             
     player_data = map_screen.nation_data.get(display_country, {})
-    flag_str = player_data.get("flag_data")
+    flag_str = player_data.get("flag_data", "DEFAULT")
     
-    if flag_str:
-        try:
-            img_bytes = base64.b64decode(flag_str)
-            # Route based on byte-length for backwards compatibility
-            if len(img_bytes) == c.FLAG_SIZE[0] * c.FLAG_SIZE[1] * 4:
-                flag_surf = pygame.image.fromstring(img_bytes, c.FLAG_SIZE, "RGBA")
-            else:
-                flag_surf = pygame.image.fromstring(img_bytes, c.FLAG_SIZE, "RGB")
-            
-            # Scale it up to fit the UI
-            flag_surf = pygame.transform.scale(flag_surf, (120, 80))
-            
-            # Position it (Adjust X here if you want it further right)
-            surface.blit(flag_surf, (20, 20))
-            pygame.draw.rect(surface, (200, 200, 200), (20, 20, 120, 80), 1) 
-        except Exception:
-            pass # If parsing fails, just skip drawing safely
+    flag_surf = queries.decode_b64_to_surf(flag_str, c.FLAG_SIZE, is_portrait=False)
+    flag_surf = pygame.transform.scale(flag_surf, (120, 80))
+    
+    # Position it (Adjust X here if you want it further right)
+    surface.blit(flag_surf, (20, 20))
+    pygame.draw.rect(surface, (200, 200, 200), (20, 20, 120, 80), 1)

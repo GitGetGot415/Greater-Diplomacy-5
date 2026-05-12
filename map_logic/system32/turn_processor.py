@@ -40,6 +40,7 @@ def prepare_turn(self):
     print("--- [PHASE 1] COMPLETE ---")
 
 def snapshot_history(self):
+    queries.scrub_default_images(self.nation_data)
     import copy
     if not hasattr(self, 'history'):
         self.history = {}

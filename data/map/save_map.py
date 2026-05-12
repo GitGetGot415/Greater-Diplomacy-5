@@ -4,9 +4,12 @@ import os
 from datetime import datetime
 from pathlib import Path
 import data.constants as c
+from data import queries
 
 def save_map_data(self, save_name=None):
     """Saves logical data and visual state."""
+    queries.scrub_default_images(self.nation_data)
+    
     if not save_name:
         save_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     

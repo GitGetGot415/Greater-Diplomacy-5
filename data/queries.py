@@ -1075,13 +1075,58 @@ def get_combat_predictions(map_data, nation_data, id_to_province):
 # IMAGE ENCODING / DECODING
 # ==========================================
 
+_default_flag_b64 = None
+_default_port_b64 = None
+
+def get_default_b64(is_portrait=False):
+    global _default_flag_b64, _default_port_b64
+    if is_portrait:
+        if _default_port_b64 is None:
+            try:
+                img = pygame.image.load(c.DEFAULT_PORTRAIT_PATH).convert_alpha()
+                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
+                _default_port_b64 = encode_surf_to_b64(img)
+            except:
+                _default_port_b64 = "ERROR"
+        return _default_port_b64
+    else:
+        if _default_flag_b64 is None:
+            try:
+                img = pygame.image.load(c.DEFAULT_FLAG_PATH).convert_alpha()
+                img = pygame.transform.scale(img, c.FLAG_SIZE)
+                _default_flag_b64 = encode_surf_to_b64(img)
+            except:
+                _default_flag_b64 = "ERROR"
+        return _default_flag_b64
+
+def scrub_default_images(nation_data_block):
+    """Replaces large Base64 strings with 'DEFAULT' if they match the default images."""
+    def_flag = get_default_b64(is_portrait=False)
+    def_port = get_default_b64(is_portrait=True)
+    
+    for country, data in nation_data_block.items():
+        if data.get("flag_data") == def_flag:
+            data["flag_data"] = "DEFAULT"
+        if data.get("portrait_data") == def_port:
+            data["portrait_data"] = "DEFAULT"
+
 def encode_surf_to_b64(surf, fmt="RGBA"):
     #Encodes a pygame surface to a Base64 string.
     img_str = pygame.image.tostring(surf, fmt)
     return base64.b64encode(img_str).decode('utf-8')
 
-def decode_b64_to_surf(b64_str, size):
+def decode_b64_to_surf(b64_str, size, is_portrait=False):
     # Decodes a Base64 string back into a pygame surface.
+    if not b64_str or b64_str == "DEFAULT":
+        path = c.DEFAULT_PORTRAIT_PATH if is_portrait else c.DEFAULT_FLAG_PATH
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            return pygame.transform.scale(img, size)
+        except:
+            surf = pygame.Surface(size, pygame.SRCALPHA)
+            surf.fill((200, 200, 200, 255))
+            return surf
+
     try:
         img_bytes = base64.b64decode(b64_str)
         # Check if the save file is using the new RGBA format or the old RGB format

@@ -179,7 +179,7 @@ def draw_owner_portrait(self, surface):
     owner_data = self.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")
     leader_title = owner_data.get("leader_title", "").strip()
-    portrait_str = owner_data.get("portrait_data", "")
+    portrait_str = owner_data.get("portrait_data", "DEFAULT")
 
     # Position safely beside the Left UI Bar and below the Top UI Bar
     start_x = c.UI_LEFT_OFFSET + 20
@@ -191,20 +191,10 @@ def draw_owner_portrait(self, surface):
     portrait_dim = 160 if has_title or has_name else 200
 
     # Draw Portrait
-    if portrait_str:
-        try:
-            img_bytes = base64.b64decode(portrait_str)
-            # Route based on byte-length for backwards compatibility
-            if len(img_bytes) == c.PORTRAIT_SIZE[0] * c.PORTRAIT_SIZE[1] * 4:
-                portrait_surf = pygame.image.fromstring(img_bytes, c.PORTRAIT_SIZE, "RGBA")
-            else:
-                portrait_surf = pygame.image.fromstring(img_bytes, c.PORTRAIT_SIZE, "RGB")
-                
-            portrait_surf = pygame.transform.scale(portrait_surf, (portrait_dim, portrait_dim)) # Scale dynamically
-            surface.blit(portrait_surf, (start_x, start_y))
-            pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, portrait_dim, portrait_dim), 2)
-        except Exception:
-            pass
+    portrait_surf = queries.decode_b64_to_surf(portrait_str, c.PORTRAIT_SIZE, is_portrait=True)
+    portrait_surf = pygame.transform.scale(portrait_surf, (portrait_dim, portrait_dim)) # Scale dynamically
+    surface.blit(portrait_surf, (start_x, start_y))
+    pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, portrait_dim, portrait_dim), 2)
 
     # Render Text
     font = fonts.get("heading2")
