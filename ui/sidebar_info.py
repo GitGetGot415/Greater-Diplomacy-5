@@ -164,10 +164,11 @@ def draw_sidebar_info(self, surface):
             
             current_y += 10
 
-# --- NEW FUNCTION FOR PORTRAIT ---
+# --- MODIFIED FUNCTION FOR PORTRAIT ---
 def draw_owner_portrait(self, surface):
     """
     Draws the portrait, name, and title of the selected province's owner in the top left.
+    Dynamically scales the image slightly larger if the leader title is empty.
     """
     province = self.selected_province
     if not province: return
@@ -177,12 +178,17 @@ def draw_owner_portrait(self, surface):
 
     owner_data = self.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")
-    leader_title = owner_data.get("leader_title", "")
+    leader_title = owner_data.get("leader_title", "").strip()
     portrait_str = owner_data.get("portrait_data", "")
 
     # Position safely beside the Left UI Bar and below the Top UI Bar
     start_x = c.UI_LEFT_OFFSET + 20
     start_y = 80
+    
+    # Determine the size
+    has_title = bool(leader_title)
+    has_name = bool(leader_name)
+    portrait_dim = 160 if has_title or has_name else 200
 
     # Draw Portrait
     if portrait_str:
@@ -194,9 +200,9 @@ def draw_owner_portrait(self, surface):
             else:
                 portrait_surf = pygame.image.fromstring(img_bytes, c.PORTRAIT_SIZE, "RGB")
                 
-            portrait_surf = pygame.transform.scale(portrait_surf, (120, 120)) # Scale like the flag
+            portrait_surf = pygame.transform.scale(portrait_surf, (portrait_dim, portrait_dim)) # Scale dynamically
             surface.blit(portrait_surf, (start_x, start_y))
-            pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, 120, 120), 2)
+            pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, portrait_dim, portrait_dim), 2)
         except Exception:
             pass
 
@@ -205,19 +211,19 @@ def draw_owner_portrait(self, surface):
     small_font = fonts.get("normal")
 
     name_surf = font.render(leader_name, True, (255, 255, 255))
-    title_surf = small_font.render(leader_title, True, (200, 200, 200))
-
-    # Text shadows for visibility over the map
     name_shadow = font.render(leader_name, True, (0, 0, 0))
-    title_shadow = small_font.render(leader_title, True, (0, 0, 0))
 
-    text_x = start_x # + 135
-    text_y = start_y + 135
+    # Shift the text downwards cleanly based on whichever dimension we just used
+    text_x = start_x
+    text_y = start_y + portrait_dim - 5
     
     # Blit Name
     surface.blit(name_shadow, (text_x + 1, text_y + 11))
     surface.blit(name_surf, (text_x, text_y + 10))
 
-    # Blit Title
-    surface.blit(title_shadow, (text_x + 1, text_y + 41))
-    surface.blit(title_surf, (text_x, text_y + 40))
+    # Blit Title (Only if it exists to save cycles drawing empty strings)
+    if has_title:
+        title_surf = small_font.render(leader_title, True, (200, 200, 200))
+        title_shadow = small_font.render(leader_title, True, (0, 0, 0))
+        surface.blit(title_shadow, (text_x + 1, text_y + 41))
+        surface.blit(title_surf, (text_x, text_y + 40))
