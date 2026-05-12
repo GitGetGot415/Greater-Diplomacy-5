@@ -9,6 +9,11 @@ from data import queries
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
 
+    # --- POPUP INTERCEPT ---
+    from ui import diplomatic_popups
+    if diplomatic_popups.handle_events(self, event):
+        return
+
     # --- HOTSEAT MULTIPLAYER HIJACK ---
     if getattr(self, 'show_player_ready_screen', False):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

@@ -66,6 +66,16 @@ NON_CORE_MULTIPLIERS = {
 }
 
 # ==========================================
+# DIPLOMATIC POPUPS
+# ==========================================
+
+POPUP_WIDTH = 450
+POPUP_HEIGHT = 130
+POPUP_START_X = (SCREEN_WIDTH // 2) - (POPUP_WIDTH // 2)
+POPUP_START_Y = 100
+POPUP_OFFSET_STEP = 30
+
+# ==========================================
 # DEFAULTS & ASSETS
 # ==========================================
 

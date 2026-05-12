@@ -18,6 +18,7 @@ from ui_elements import Button, process_text_input
 from ui import event_handler, spectator_menus, buttons, editor_menus
 
 # Game Logic & Rendering Submodules
+from ui import diplomatic_popups
 from map_logic.setup import player_setup
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions
@@ -49,6 +50,7 @@ class Map(GameState):
         self.proactive_llm_tasks = []
         self.responsive_tasks_total = 0
         self.responsive_tasks_completed = 0
+        self.diplomatic_popups = []
 
         # --- NEW REFRESH TRACKERS ---
         self.refresh_tasks_total = 0
@@ -291,6 +293,7 @@ class Map(GameState):
         self.show_feedback("Exit cancelled")
 
     def confirm_exit(self):
+        diplomatic_popups.clear_popups(self)
         self.change_state("MENU")
 
     def show_feedback(self, text): 
@@ -385,6 +388,8 @@ class Map(GameState):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
         
+        diplomatic_popups.draw(self, surface)
+        
         if getattr(self, 'thread_error', None):
             surface.fill((150, 0, 0))
             title = fonts.get("heading1").render("FATAL THREAD ERROR", True, (255, 255, 255))
@@ -463,6 +468,16 @@ class Map(GameState):
         if getattr(self, "centers_need_update", False) and not pygame.mouse.get_pressed()[0]:
             self.update_country_centers()
             self.centers_need_update = False
+
+        # Only spawn popups when the player is fully in control of the current turn
+        is_playing = not getattr(self, 'viewing_ai_moves', False) and \
+                     not getattr(self, 'ai_is_thinking', False) and \
+                     not getattr(self, 'show_player_ready_screen', False) and \
+                     not self.selection_mode
+
+        if is_playing:
+            from ui import diplomatic_popups
+            diplomatic_popups.spawn_popups_for_player(self)
 
         if getattr(self, 'show_player_ready_screen', False):
             for el in self.elements: el.visible = False

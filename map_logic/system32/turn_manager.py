@@ -2,11 +2,13 @@ import pygame
 import threading
 from map_logic.system32 import turn_processor
 from map_logic.system32 import loading_screen
-from ui import buttons
+from ui import buttons, diplomatic_popups
 import traceback
 
 def advance_time(map_screen):
-    map_screen.turn_start_time = pygame.time.get_ticks() 
+    diplomatic_popups.clear_popups(map_screen)
+    
+    map_screen.turn_start_time = pygame.time.get_ticks()
     
     # PHASE 2: Resolve the turn (Synchronous execution with UI updates for refreshes)
     if getattr(map_screen, 'viewing_ai_moves', False):
