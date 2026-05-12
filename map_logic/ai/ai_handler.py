@@ -147,7 +147,14 @@ def call_ollama(system_prompt, user_prompt):
         return None
 
 def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None):
-    if FORCE_SKIP: return True, ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"]
+    if FORCE_SKIP: 
+        return {
+            "accepted": True, 
+            "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], 
+            "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE", 
+            "opinion_change": 0
+        }
     
     if human_players is None:
         human_players = []
@@ -155,22 +162,8 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     mode = get_ai_mode()
     immersion = get_ai_immersion_level()
     
-    # stuff to maybe replace the hardcoded true?
-    rel_score = queries.get_relation_score(ai_nation, sender_nation, nation_data)
-    
-    # Base logic: If they hate us (-100), they won't accept anything but a ceasefire.
-    # If they like us (80+), they are very likely to accept.
-    chance = 50 + (rel_score / 2) # Scale -100 to 100 into 0% to 100% chance
-    
-    # War specific logic
-    if rel_score <= -100 and action_type != "CEASEFIRE":
-        accepted = False
-    else:
-        accepted = random.randint(0, 100) < chance
-
-    # Ensure 50/50 strict logic regardless of model behavior
+    # Base 50/50 fallback logic
     accepted = random.choice([True, False])
-    # actually true, always
     accepted = True
 
     # Check if this is an AI talking to an AI
@@ -190,7 +183,6 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
         use_lite_logic = True
 
     if use_lite_logic:
-        # --- OPTIMIZATION: Stripped hardcoded text, defer to dictionary strictly ---
         if action_type == "WAR_DECLARATION":
             fallback = ai_prompts.AI_FALLBACK_RESPONSES["BETRAYAL"]
         elif action_type == "LEAVE_FACTION":
@@ -207,7 +199,14 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             fallback = ai_prompts.AI_FALLBACK_RESPONSES["ANSWERED_CALL"]
         else:
             fallback = ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_ACCEPT"] if accepted else ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_REJECT"]
-        return accepted, fallback
+            
+        return {
+            "accepted": accepted, 
+            "message": fallback, 
+            "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE", 
+            "opinion_change": 0
+        }
 
     print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
 
@@ -226,14 +225,22 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     if mode == "OLLAMA":
         result = call_ollama(system_prompt, user_prompt)
         if result:
-            return accepted, result.get("message", ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"])
-        return accepted, ai_prompts.AI_FALLBACK_RESPONSES["OLLAMA_ERROR"]
+            return {
+                "accepted": accepted,
+                "message": result.get("message", ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"]),
+                "action": result.get("action", "NONE"),
+                "action_target": result.get("action_target", "NONE"),
+                "follow_up_action": result.get("follow_up_action", "NONE"),
+                "follow_up_target": result.get("follow_up_target", "NONE"),
+                "opinion_change": result.get("opinion_change", 0)
+            }
+        return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["OLLAMA_ERROR"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
     elif mode == "CHATGPT":
         print("[LLM] Custom ChatGPT hook to be placed here.")
-        return accepted, ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"]
+        return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
     elif mode == "CLAUDE":
         print("[LLM] Custom Claude hook to be placed here.")
-        return accepted, ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"]
+        return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
 
     # Fallback to Gemini
     try:
@@ -244,14 +251,28 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         reply_json = json.loads(response.text)
-        return accepted, reply_json.get("message", ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"])
+        
+        try:
+            op_val = int(reply_json.get("opinion_change", 0))
+        except:
+            op_val = 0
+            
+        return {
+            "accepted": accepted,
+            "message": reply_json.get("message", ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"]),
+            "action": reply_json.get("action", "NONE"),
+            "action_target": reply_json.get("action_target", "NONE"),
+            "follow_up_action": reply_json.get("follow_up_action", "NONE"),
+            "follow_up_target": reply_json.get("follow_up_target", "NONE"),
+            "opinion_change": op_val
+        }
     except Exception as e:
         print(f"Gemini Error: {e}")
-        return accepted, ai_prompts.AI_FALLBACK_RESPONSES["API_ERROR"]
+        return {"accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["API_ERROR"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None):
     if FORCE_SKIP: 
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE" }
+        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
     
     if human_players is None:
         human_players = []
@@ -276,7 +297,8 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         return {
             "message": ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
             "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE"
+            "follow_up_action": "NONE", "follow_up_target": "NONE",
+            "opinion_change": 0
         }
 
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
@@ -293,19 +315,20 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
                 "action": result.get("action", "NONE"),
                 "action_target": result.get("action_target", "NONE"),
                 "follow_up_action": result.get("follow_up_action", "NONE"),
-                "follow_up_target": result.get("follow_up_target", "NONE")
+                "follow_up_target": result.get("follow_up_target", "NONE"),
+                "opinion_change": result.get("opinion_change", 0)
             }
         return {
             "message": ai_prompts.AI_FALLBACK_RESPONSES["OLLAMA_ERROR"], 
             "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE"
+            "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
         }
     elif mode == "CHATGPT":
         print("[LLM] Custom ChatGPT hook to be placed here.")
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE" }
+        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
     elif mode == "CLAUDE":
         print("[LLM] Custom Claude hook to be placed here.")
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE" }
+        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
 
     try:
         client = genai.Client(api_key=get_gemini_api_key())
@@ -316,35 +339,26 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
         )
         reply_json = json.loads(response.text)
         
-        ai_action = reply_json.get("action", "NONE")
-        act_target = reply_json.get("action_target", "NONE")
-        if ai_action == "WAR_DECLARATION":
-            from data import queries
-            if queries.are_at_war(ai_nation, act_target, nation_data):
-                print(f"[AI GUARDRAIL] Prevented {ai_nation} from declaring war on existing enemy {act_target}.")
-                ai_action = "NONE"
-
-        # --- Extract Opinion Mod ---
         try:
             op_val = int(reply_json.get("opinion_change", 0))
-            if op_val != 0:
-                queries.add_temporary_modifier(ai_nation, sender_nation, "general", op_val, nation_data)
-        except Exception as e:
-            pass
+        except:
+            op_val = 0
                 
         return {
             "message": reply_json.get("message", ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"]), 
-            "action": ai_action,
-            "action_target": act_target,
+            "action": reply_json.get("action", "NONE"),
+            "action_target": reply_json.get("action_target", "NONE"),
             "follow_up_action": reply_json.get("follow_up_action", "NONE"),
-            "follow_up_target": reply_json.get("follow_up_target", "NONE")
+            "follow_up_target": reply_json.get("follow_up_target", "NONE"),
+            "opinion_change": op_val
         }
     except Exception as e:
         print(f"Gemini Error: {e}")
         return {
             "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], 
             "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE"
+            "follow_up_action": "NONE", "follow_up_target": "NONE",
+            "opinion_change": 0
         }
 
 def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None):

@@ -7,8 +7,6 @@ AI_FALLBACK_RESPONSES = {
     "AI_OFF_REJECT": "We reject your proposal.",
     "AI_OFF_MESSAGE": "Message received (AI is OFF).",
     "GENERIC_ACCEPT": "We have made our decision.",
-    # WHY WOULD YOU JUST SAY "WE HAVE MADE OUR DESICION" THAT'S AWFUL AND HORRIBLY VAGUE
-    # WHO THOUGHT THAT WAS A GOOD IDEA???
     "GENERIC_MESSAGE": "Message received.",
     "OLLAMA_ERROR": "Ollama server error or timeout.",
     "API_ERROR": "API Error.",
@@ -28,7 +26,7 @@ AI_FALLBACK_RESPONSES = {
     "KICKED_FROM_FACTION": "We will not forget being expelled from the alliance.",
     "PROACTIVE_JOIN_WAR": "May we join you in your war?",
     "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
-    "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.", # <-- ADDED THIS
+    "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.",
 
     "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
     "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
@@ -36,10 +34,7 @@ AI_FALLBACK_RESPONSES = {
     "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!",
 
     "PROACTIVE_CEASEFIRE": "We offer terms for a ceasefire.",
-    "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
-    "PROACTIVE_JOIN_WAR": "Brothers, let us join your fight.",
-    "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
-    "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them."
+    "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!"
 }
 
 # ==========================================
@@ -103,8 +98,6 @@ def get_unilateral_receive_context(action_type, sender_nation, custom_msg=""):
 
 def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
     """Returns the context for when an AI receives a bilateral proposal."""
-    
-    # Translate the raw action constants into explicit directional actions for the LLM
     if action_type == "JOIN_WARS":
         context = f"{sender_nation} is offering to join YOUR ongoing wars."
     elif action_type == "CALL_TO_ARMS":
@@ -114,7 +107,6 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
     elif action_type == "JOIN_FACTION_REQ":
         context = f"{sender_nation} is requesting to join YOUR faction."
     else:
-        # Fallback for things like CEASEFIRE or CREATE_FACTION
         context = f"{sender_nation} has proposed a {action_type.replace('_', ' ').title()}."
 
     if custom_msg:
@@ -127,8 +119,18 @@ def get_unilateral_system_prompt(action_context):
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
         f"You have just received the following unilateral declaration: {action_context} "
         "There is no proposal to accept or reject. You must send a reply to the country that sent you this declaration in character. "
+        "You may also take a diplomatic action in retaliation or response.\n"
+        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
+        "RULES FOR ACTIONS:\n"
+        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
+        "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
+        "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
+        "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
+        "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
+        "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
+        "- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this event improved or worsened your general opinion of the sender.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "In-character dialogue reacting to the event in english"}'
+        '{"message": "In-character dialogue reacting to the event in english", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
     )
 
 def get_bilateral_system_prompt(accepted):
@@ -137,8 +139,18 @@ def get_bilateral_system_prompt(accepted):
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
         f"You have already decided to strongly {decision_str} the diplomatic proposal. "
         "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
+        "You may also take a diplomatic action in response to this proposal.\n"
+        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
+        "RULES FOR ACTIONS:\n"
+        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
+        "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
+        "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
+        "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
+        "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
+        "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
+        "- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this proposal improved or worsened your general opinion of the sender.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "In-character dialogue responding to the proposal in english"}'
+        '{"message": "In-character dialogue responding to the proposal in english", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
     )
 
 def get_custom_message_system_prompt():
@@ -153,7 +165,7 @@ def get_custom_message_system_prompt():
         "- Relations > 50: Be warm, brotherly, and highly cooperative.\n"
         #"If you are at war (Relations -100 or lower), do not agree to anything friendly unless it's a 'CEASEFIRE'. "
         "You may also take a diplomatic action if the sender's reasoning is convincing or offensive. " 
-        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', or 'NONE'.\n"
+        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
         "RULES FOR ACTIONS:\n"
         "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
         "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
