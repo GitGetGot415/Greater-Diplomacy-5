@@ -112,7 +112,7 @@ files_to_skip_but_list = [
     "**/*.dll",
     "**/*.dylib",
     "**/*.so",
-    #"data/**/*.json",
+    "data/**/*.json",
     "data\editors/**/*.py",
     "soloud.py",
     "context\context_generator.py",

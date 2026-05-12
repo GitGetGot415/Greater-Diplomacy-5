@@ -86,6 +86,7 @@ class Map(GameState):
         
         # --- 2. Data Loading ---
         if is_random and random_settings:
+            self.random_settings = random_settings  # <--- ADD THIS LINE
             load_map.load_map_assets(self, random_settings["map_path"])
             self.time_manager.year = random_settings["year"]
         else:

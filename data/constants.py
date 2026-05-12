@@ -510,6 +510,14 @@ COLOR_REL_MAX_NEG = (150, 0, 0)     # Very dark red at -200
 MUSIC_LEFT_PANE_W = 350
 
 # ==========================================
+# PROCEDURAL MAP GENERATION DEFAULTS
+# ==========================================
+
+PROCEDURAL_MAP_WIDTH = 1200
+PROCEDURAL_MAP_HEIGHT = 400
+PROCEDURAL_PROVINCE_COUNT = 600
+
+# ==========================================
 # FILE PATHS
 # ==========================================
 

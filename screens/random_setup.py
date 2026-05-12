@@ -7,9 +7,12 @@ from data import queries
 
 class Random_Setup(GameState):
     def __init__(self):
-
-        # Inside __init__, add a variable to track if we are doing a procedural world
+        # Track if we are doing a procedural world
         self.procedural_world = False
+        
+        # Track the active procedural algorithm
+        self.procedural_types = ["Grid", "Voronoi", "Cellular Automata"]
+        self.proc_type_index = 0
 
         super().__init__()
         self.bg_color = (20, 50, 20)
@@ -39,6 +42,10 @@ class Random_Setup(GameState):
         
         self.map_index = 0
 
+    def toggle_procedural_type(self):
+        self.proc_type_index = (self.proc_type_index + 1) % len(self.procedural_types)
+        self.refresh_ui()
+
     def refresh_ui(self):
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.go_back),
@@ -57,7 +64,12 @@ class Random_Setup(GameState):
         ]
         
         # Hide the map selection grid if procedural world is checked
-        if not self.procedural_world:
+        if self.procedural_world:
+            map_type_str = self.procedural_types[self.proc_type_index]
+            self.elements.append(
+                Button(100, 180, "large", "blue", f"Type: {map_type_str}", self.toggle_procedural_type)
+            )
+        else:
             if not self.available_maps:
                 self.elements.append(Button("centered", 200, "large", "grey", "No Maps Found", lambda: None))
             else:
@@ -88,10 +100,6 @@ class Random_Setup(GameState):
         self.year_slider_val = val
         # Dynamically scale the value based on the total timeline gap
         self.current_year = int(c.START_YEAR + (val * (c.END_YEAR - c.START_YEAR)))
-
-        # previous hardcoded version (DO YOU SEE WHY THE ABOVE ONE IS BETTER)
-        # self.current_year = int(c.START_YEAR + (val * 100))
-
         self.elements[2].text = f"Start Year: {self.current_year}"
 
     def do_reset(self):
@@ -109,7 +117,6 @@ class Random_Setup(GameState):
         self.procedural_world = not self.procedural_world
         self.refresh_ui()
 
-    # Modify start_game to pass the flag
     def start_game(self):
         if not self.procedural_world and not self.available_maps: return
         
@@ -118,7 +125,8 @@ class Random_Setup(GameState):
         self.random_settings = {
             "map_path": selected_path,
             "countries": self.current_countries,
-            "year": self.current_year
+            "year": self.current_year,
+            "procedural_type": self.procedural_types[self.proc_type_index]
         }
         self.next_state = "MAP"
         self.done = True
