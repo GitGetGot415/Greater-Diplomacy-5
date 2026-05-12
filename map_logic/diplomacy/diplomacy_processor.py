@@ -209,11 +209,7 @@ def process_diplomacy_turn(self):
         # Get human players for FULL AI optimization
         human_players = getattr(self, 'active_players', [self.player_country])
         
-        # Throttle concurrency for local Ollama to prevent server crashes
-        current_ai_mode = ai_handler.get_ai_mode()
-        
-        # ok but what if we could go higher than 25 threads that would be so cool
-        max_threads = queries.get_ollama_threads() if current_ai_mode == "OLLAMA" else 25
+        max_threads = queries.get_ai_threads()
         
         # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)

@@ -16,7 +16,7 @@ def process_proactive_llm_tasks(map_screen):
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     current_ai_mode = ai_handler.get_ai_mode()
     
-    max_threads = queries.get_ollama_threads() if current_ai_mode == "OLLAMA" else 25
+    max_threads = queries.get_ai_threads()
     
     map_screen.loading_status_text = "Drafting Proactive Responses..."
     

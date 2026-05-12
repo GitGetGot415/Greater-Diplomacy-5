@@ -38,5 +38,3 @@ pyinstaller --onefile --windowed main.py
 - make ai able to respond to actions taken against them not only with a reaction, but a diplomatic action too if possible
 - if declared war on, the ai might be able to offer a ceasefire to someone else (or whoever they're fighting) as an example
 - if full ai, they can send this to another country and the other country should be able to respond...? 
-
-- make ollama threads the threads for every ai thing

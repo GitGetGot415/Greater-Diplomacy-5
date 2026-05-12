@@ -197,7 +197,7 @@ ORDER_BTN_X = SCREEN_WIDTH - 250
 # ==========================================
 
 DEFAULT_AI_MODE = "OLLAMA"
-DEFAULT_OLLAMA_THREADS = 1 # Added default thread count
+DEFAULT_AI_THREADS = 1 # Added default thread count
 
 # --- Unified Settings UI Layout ---
 SETTINGS_BOX_X = 140

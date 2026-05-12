@@ -465,13 +465,13 @@ def render_settings_buttons(settings_screen):
     settings_screen.fps_slider = Slider(keybind_x, 460, 200, f"Max FPS: {settings_screen.controller.target_fps}", fps_val, settings_screen.set_fps)
 
     # Render above the player count
-    thread_val = (settings_screen.ollama_threads - 1) / 7.0
-    settings_screen.ollama_thread_slider = Slider(keybind_x, 340, 200, f"Ollama Threads: {settings_screen.ollama_threads}", thread_val, settings_screen.set_ollama_threads)
+    thread_val = (settings_screen.ai_threads - 1) / 7.0
+    settings_screen.ai_thread_slider = Slider(keybind_x, 340, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
     
-    # Only show the slider if Ollama is the active mode
-    settings_screen.ollama_thread_slider.visible = (settings_screen.ai_mode == "OLLAMA")
+    # Only show the slider if an AI mode is active
+    settings_screen.ai_thread_slider.visible = (settings_screen.ai_mode != "OFF")
     
-    settings_screen.elements.append(settings_screen.ollama_thread_slider)
+    settings_screen.elements.append(settings_screen.ai_thread_slider)
 
     settings_screen.elements.extend([
         settings_screen.player_slider,
