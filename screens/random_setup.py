@@ -46,6 +46,15 @@ class Random_Setup(GameState):
         self.proc_type_index = (self.proc_type_index + 1) % len(self.procedural_types)
         self.refresh_ui()
 
+    def toggle_procedural(self):
+        self.procedural_world = True
+        self.refresh_ui()
+
+    def select_map(self, idx):
+        self.procedural_world = False
+        self.map_index = idx
+        self.refresh_ui()
+
     def refresh_ui(self):
         self.elements = [
             Button(50, 50, "small", "red", "Back", self.go_back),
@@ -57,38 +66,39 @@ class Random_Setup(GameState):
             # Controls
             Button("centered", 500, "medium", "grey", "Reset Defaults", self.do_reset),
             Button("centered", 600, "large", "green", "START GAME", self.start_game),
-            
-            # --- NEW: The Procedural Generation Button ---
-            Button(100, 100, "large", "orange" if self.procedural_world else "grey", 
-                "RANDOM NEW WORLD (PROCEDURAL)", self.toggle_procedural)
         ]
         
-        # Hide the map selection grid if procedural world is checked
+        total_items = 1 + len(self.available_maps)
+        cols = min(5, total_items)
+        grid_width = cols * 220
+        start_x = (c.SCREEN_WIDTH - grid_width) // 2 + 10 
+        start_y = 180
+        
+        # 1. Procedural Option
+        proc_btn = Button(start_x, start_y, "medium", "orange" if self.procedural_world else "grey", 
+                          "Random Map", self.toggle_procedural)
+        if self.procedural_world:
+            proc_btn.is_selected = True
+        self.elements.append(proc_btn)
+        
+        # 2. Base Maps
+        for i, map_name in enumerate(self.available_maps):
+            grid_idx = i + 1
+            col = grid_idx % cols
+            row = grid_idx // cols
+            btn = Button(start_x + (col * 220), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
+            if not self.procedural_world and i == self.map_index:
+                btn.is_selected = True 
+            self.elements.append(btn)
+            
+        # 3. Procedural Type Toggle (Only visible if the random procedural map is selected)
         if self.procedural_world:
             map_type_str = self.procedural_types[self.proc_type_index]
+            max_row = (total_items - 1) // cols
+            type_toggle_y = start_y + (max_row + 1) * 60
             self.elements.append(
-                Button(100, 180, "large", "blue", f"Type: {map_type_str}", self.toggle_procedural_type)
+                Button(start_x, type_toggle_y, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type)
             )
-        else:
-            if not self.available_maps:
-                self.elements.append(Button("centered", 200, "large", "grey", "No Maps Found", lambda: None))
-            else:
-                cols = min(5, len(self.available_maps))
-                grid_width = cols * 220
-                start_x = (c.SCREEN_WIDTH - grid_width) // 2 + 10 
-                start_y = 180
-                
-                for i, map_name in enumerate(self.available_maps):
-                    col = i % cols
-                    row = i // cols
-                    btn = Button(start_x + (col * 220), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
-                    if i == self.map_index:
-                        btn.is_selected = True 
-                    self.elements.append(btn)
-
-    def select_map(self, idx):
-        self.map_index = idx
-        self.refresh_ui()
 
     def update_countries(self, val):
         self.country_slider_val = val
@@ -112,10 +122,6 @@ class Random_Setup(GameState):
         
         map_title = fonts.get("heading2").render("Select Base Map", True, (200, 200, 200))
         surface.blit(map_title, (c.SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
-
-    def toggle_procedural(self):
-        self.procedural_world = not self.procedural_world
-        self.refresh_ui()
 
     def start_game(self):
         if not self.procedural_world and not self.available_maps: return
