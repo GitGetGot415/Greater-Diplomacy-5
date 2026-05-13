@@ -1,6 +1,5 @@
 import pygame
 import data.constants as c
-# Import your font manager to access larger text presets
 from map_logic.rendering.font_manager import fonts
 
 def draw_top_text(map_screen, surface):
@@ -24,7 +23,7 @@ def draw_top_text(map_screen, surface):
 
     # 1. Draw Date (Centered)
     date_str = map_screen.time_manager.get_date_string()
-    date_surf = map_screen.font.render(date_str, True, (255, 255, 255))
+    date_surf = fonts.get("top_bar_date").render(date_str, True, (255, 255, 255))
     date_x = c.SCREEN_WIDTH // 2 - date_surf.get_width() // 2
     draw_with_bg(date_surf, date_x, c.TOP_BAR_DATE_Y)
 
@@ -37,8 +36,8 @@ def draw_top_text(map_screen, surface):
         
     player_display = map_screen.nation_data.get(display_id, {}).get("name", display_id)
     
-    # Grab a larger font preset from the manager (e.g., "heading1" or "title")
-    big_font = fonts.get("heading1")
+    # Grab our new dedicated top bar font preset
+    big_font = fonts.get("top_bar_country")
     name_surf = big_font.render(f"{player_display.title()}", True, (200, 200, 200))
 
     # Position it

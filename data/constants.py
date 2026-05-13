@@ -557,7 +557,14 @@ PORTRAIT_SIZE = (60, 60)
 
 # Fonts & Sounds
 FONT_PATH_DEFAULT = "assets/fonts/W95F.otf"
-FONT_PATH_MAP = "assets/fonts/OpenSans-Regular.ttf"
+#FONT_PATH_MAP = "assets/fonts/OpenSans-Regular.ttf"
+FONT_PATH_MAP = "assets/fonts/VerilySerifMono.otf"
+
+# UI Specific Font Paths
+FONT_PATH_DATE = "assets/fonts/MonoSpatial.ttf"
+FONT_PATH_TOP_COUNTRY = "assets/fonts/PixelOperatorMonoHB.ttf"
+FONT_PATH_RESOURCES = "assets/fonts/W95F.otf"
+
 SOUND_CLICK_PATH = "assets/sounds/slider.wav"
 SOUND_SLIDER_PATH = "assets/sounds/slider.wav"
 

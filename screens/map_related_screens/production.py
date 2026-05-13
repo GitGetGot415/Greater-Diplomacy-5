@@ -402,7 +402,9 @@ class Production_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         p_data = self.map_screen.nation_data.get(owner_nation, {})
-        res_font = fonts.get("heading2")
+        
+        res_font = fonts.get("production_hud")
+        
         resources = [
             (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
             (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),

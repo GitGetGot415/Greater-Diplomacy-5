@@ -1,3 +1,4 @@
+# --- Start of file: .\map_logic\rendering\font_manager.py ---
 import pygame
 import data.constants as c
 
@@ -19,7 +20,14 @@ class FontManager:
             "title": {"size": 40, "bold": False},
             # Map names get a specific font path override here
             "country_name_display": {"size": 100, "bold": False, "path": c.FONT_PATH_MAP},
+            
+            # --- NEW: Dedicated UI Fonts ---
+            "top_bar_date": {"size": 18, "bold": False, "path": getattr(c, 'FONT_PATH_DATE', c.FONT_PATH_DEFAULT)},
+            "top_bar_country": {"size": 32, "bold": False, "path": getattr(c, 'FONT_PATH_TOP_COUNTRY', c.FONT_PATH_DEFAULT)},
+            "resource_hud": {"size": 18, "bold": False, "path": getattr(c, 'FONT_PATH_RESOURCES', c.FONT_PATH_DEFAULT)},
             # fonts.get("title")
+            # --- NEW: Production HUD mapping ---
+            "production_hud": {"size": 28, "bold": False, "path": getattr(c, 'FONT_PATH_RESOURCES', c.FONT_PATH_DEFAULT)},
         }
 
     def init_fonts(self, font_path=None):

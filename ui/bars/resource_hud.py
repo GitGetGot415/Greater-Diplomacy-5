@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from map_logic.rendering.font_manager import fonts
 
 def draw_bottom_text(map_screen, surface):
     """Draws the bottom resource bar with net income overlays."""
@@ -42,6 +43,7 @@ def draw_bottom_text(map_screen, surface):
     surface.blit(bg_surf, bg_rect.topleft)
     pygame.draw.rect(surface, (100, 100, 100), bg_rect, 1) 
 
-    # Draw Text
+    # Draw Text using the dedicated preset
+    hud_font = fonts.get("resource_hud")
     for i, (text, color) in enumerate(resources):
-        surface.blit(map_screen.font.render(text, True, color), (c.RESOURCE_HUD_START_X + (i * c.RESOURCE_HUD_SPACING), hud_y))
+        surface.blit(hud_font.render(text, True, color), (c.RESOURCE_HUD_START_X + (i * c.RESOURCE_HUD_SPACING), hud_y))
