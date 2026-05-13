@@ -17,6 +17,7 @@ input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
 right_ui_x = c.EDIT_COUNTRY_UI_X3
 x_offset_confirmation = -100
+
 class Edit_Country_Screen(GameState):
     def __init__(self):
         super().__init__()
@@ -45,6 +46,7 @@ class Edit_Country_Screen(GameState):
         self.draw_mode = "BRUSH" # Can be "BRUSH" or "FILL"
         self.active_input = None # "COUNTRY_NAME", "NAME", or "TITLE"
         self.resetting_type = None # "FLAG" or "PORTRAIT"
+        self.show_unsaved_confirmation = False
         
         self.is_drawing = False
         self.history = []
@@ -54,6 +56,12 @@ class Edit_Country_Screen(GameState):
         self.leader_name = ""
         self.leader_title = ""
         self.new_map_color = [150, 150, 150]
+
+        # Original state trackers for unsaved changes popup
+        self.orig_country_name = ""
+        self.orig_leader_name = ""
+        self.orig_leader_title = ""
+        self.orig_map_color = [150, 150, 150]
         
         # https://smilebasic.com/en/e-manual/manual28/
         self.palette = [
@@ -121,6 +129,12 @@ class Edit_Country_Screen(GameState):
         self.leader_title = p_data.get("leader_title", "")
         self.new_map_color = list(p_data.get("color", [150, 150, 150]))
 
+        # Track the original baseline to check for unsaved changes on exit
+        self.orig_country_name = self.country_name
+        self.orig_leader_name = self.leader_name
+        self.orig_leader_title = self.leader_title
+        self.orig_map_color = list(self.new_map_color)
+
         self.flag_surf = queries.decode_b64_to_surf(p_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=self.editing_country)
         self.portrait_surf = queries.decode_b64_to_surf(p_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=self.editing_country)
             
@@ -129,6 +143,14 @@ class Edit_Country_Screen(GameState):
         self.history_index = 0
             
         self.refresh_ui()
+
+    def has_unsaved_changes(self):
+        if self.history_index > 0: return True
+        if self.country_name != self.orig_country_name: return True
+        if self.leader_name != self.orig_leader_name: return True
+        if self.leader_title != self.orig_leader_title: return True
+        if self.new_map_color != self.orig_map_color: return True
+        return False
 
     def pick_map_color(self):
         """Opens a native color picker to select the country's map color."""
@@ -227,15 +249,7 @@ class Edit_Country_Screen(GameState):
         self.active_color = color
 
     def set_tool(self, tool):
-        self.draw_mode = tool
-        """
-        # If we click the picker while it's already active, toggle it off and grab the brush
-        if tool == "PICKER" and self.draw_mode == "PICKER":
-            self.draw_mode = "BRUSH"
-        else:
-            self.draw_mode = tool
-        """
-            
+        self.draw_mode = tool            
         self.refresh_ui()
 
     def save_state(self):
@@ -301,10 +315,28 @@ class Edit_Country_Screen(GameState):
             self.map_screen.refresh_cores_map()
         
         self.map_screen.show_feedback("Country Data Saved!")
-        self.exit_to_map()
+        self.force_exit_to_map()
 
     def handle_events(self, events):
         for event in events:
+            # --- UNSAVED CHANGES POPUP INTERCEPT ---
+            if getattr(self, "show_unsaved_confirmation", False):
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.force_exit_to_map()
+                    elif event.key == pygame.K_ESCAPE:
+                        self.show_unsaved_confirmation = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mx, my = event.pos
+                    center_x, center_y = c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2
+                    yes_rect = pygame.Rect(center_x - 130, center_y + 40, 100, 40)
+                    no_rect = pygame.Rect(center_x + 30, center_y + 40, 100, 40)
+                    if yes_rect.collidepoint(mx, my):
+                        self.force_exit_to_map()
+                    elif no_rect.collidepoint(mx, my):
+                        self.show_unsaved_confirmation = False
+                continue
+
             if self.resetting_type:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
@@ -353,7 +385,6 @@ class Edit_Country_Screen(GameState):
                             if y > 0: stack.append((x, y - 1))
                             if y < h - 1: stack.append((x, y + 1))
                             
-                # --- ADD THIS: Color Picker Logic ---
                 elif self.draw_mode == "PICKER" and is_click:
                     self.active_color = surf.get_at((rel_x, rel_y))
                     self.draw_mode = "BRUSH" # Auto-revert back to the brush after picking
@@ -452,8 +483,7 @@ class Edit_Country_Screen(GameState):
         pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
         surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x, color_y - 20))
 
-        # --- NEW: Map Color Preview ---
-        # Shifted slightly right to fit cleanly next to the side-by-side buttons
+        # --- Map Color Preview ---
         map_color_x = c.SCREEN_WIDTH - 200
         map_color_y = 600
         surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (map_color_x, map_color_y - 30))
@@ -484,11 +514,10 @@ class Edit_Country_Screen(GameState):
             pygame.draw.rect(surface, (60, 20, 20), box_rect)
             pygame.draw.rect(surface, (255, 50, 50), box_rect, 3)
 
-            font = fonts.get("heading2")
-            msg = font.render(f"Reset {self.resetting_type.title()} to Default?", True, (255, 255, 255))
+            msg = heading_font.render(f"Reset {self.resetting_type.title()} to Default?", True, (255, 255, 255))
             surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
 
-            sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
+            sub_msg = normal_font.render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
             surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
 
             yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
@@ -505,8 +534,46 @@ class Edit_Country_Screen(GameState):
             surface.blit(yes_txt, yes_txt.get_rect(center=yes_rect.center))
             surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
 
+        # --- DRAW UNSAVED CONFIRMATION POPUP ---
+        if getattr(self, "show_unsaved_confirmation", False):
+            overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            surface.blit(overlay, (0, 0))
+
+            box_rect = pygame.Rect(0, 0, 450, 200)
+            box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
+            pygame.draw.rect(surface, (60, 20, 20), box_rect)
+            pygame.draw.rect(surface, (255, 50, 50), box_rect, 3)
+
+            msg = heading_font.render("Discard Unsaved Changes?", True, (255, 255, 255))
+            surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
+
+            sub_msg = normal_font.render("Press Enter to Discard or Esc to Cancel", True, (200, 200, 200))
+            surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
+
+            yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
+            no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 140, 100, 40)
+
+            mx, my = pygame.mouse.get_pos()
+            pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
+            pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
+
+            btn_font = fonts.get("button")
+            yes_txt = btn_font.render("DISCARD", True, (255, 255, 255))
+            no_txt = btn_font.render("CANCEL", True, (255, 255, 255))
+            
+            surface.blit(yes_txt, yes_txt.get_rect(center=yes_rect.center))
+            surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
+
     def handle_back_key(self):
         self.exit_to_map()
 
     def exit_to_map(self):
+        if self.has_unsaved_changes():
+            self.show_unsaved_confirmation = True
+        else:
+            self.force_exit_to_map()
+
+    def force_exit_to_map(self):
+        self.show_unsaved_confirmation = False
         self.next_state, self.done = "MAP", True
