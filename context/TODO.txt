@@ -10,4 +10,6 @@ so i have this pygame project that's essentially a turn based map game (DO NOT H
     - settings
     - country editor
 
+- add confirmation screen in case you cancel before saving changes
+
 - make the menu screen look REAL good
