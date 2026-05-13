@@ -120,8 +120,8 @@ class Edit_Country_Screen(GameState):
         self.leader_title = p_data.get("leader_title", "")
         self.new_map_color = list(p_data.get("color", [150, 150, 150]))
 
-        self.flag_surf = queries.decode_b64_to_surf(p_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False)
-        self.portrait_surf = queries.decode_b64_to_surf(p_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True)
+        self.flag_surf = queries.decode_b64_to_surf(p_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=self.editing_country)
+        self.portrait_surf = queries.decode_b64_to_surf(p_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=self.editing_country)
             
         # Initialize History
         self.history = [(self.flag_surf.copy(), self.portrait_surf.copy())]

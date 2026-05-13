@@ -9,7 +9,7 @@ import data.constants as c
 from data import queries
 
 def _load_default_images(map_obj):
-    """Helper to auto-load flags and portraits from the local assets folder."""
+    """Helper to ensure image data keys exist."""
     os.makedirs(c.FLAGS_DIR, exist_ok=True)
     os.makedirs(c.PORTRAITS_DIR, exist_ok=True)
     
@@ -17,30 +17,9 @@ def _load_default_images(map_obj):
     queries.scrub_default_images(map_obj.nation_data)
         
     for country_name, n_data in map_obj.nation_data.items():
-        # --- FLAG LOGIC ---
-        f_path = f"{c.FLAGS_DIR}/{country_name}.png"
-        
-        # 1. Prioritize local custom file if it exists
-        if os.path.exists(f_path):
-            try:
-                img = pygame.image.load(f_path).convert_alpha()
-                img = pygame.transform.scale(img, c.FLAG_SIZE)
-                n_data["flag_data"] = queries.encode_surf_to_b64(img)
-            except: pass
-        # 2. If no local file, and no custom b64 data exists in the dictionary, assign DEFAULT
-        elif not n_data.get("flag_data"):
+        if not n_data.get("flag_data"):
             n_data["flag_data"] = "DEFAULT"
-            
-        # --- PORTRAIT LOGIC ---
-        p_path = f"{c.PORTRAITS_DIR}/{country_name}.png"
-        
-        if os.path.exists(p_path):
-            try:
-                img = pygame.image.load(p_path).convert_alpha()
-                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                n_data["portrait_data"] = queries.encode_surf_to_b64(img)
-            except: pass
-        elif not n_data.get("portrait_data"):
+        if not n_data.get("portrait_data"):
             n_data["portrait_data"] = "DEFAULT"
 
 def load_map_assets(self, load_path):

@@ -1077,6 +1077,11 @@ def get_combat_predictions(map_data, nation_data, id_to_province):
 
 _default_flag_b64 = None
 _default_port_b64 = None
+_dynamic_image_cache = {}
+
+def clear_image_cache():
+    global _dynamic_image_cache
+    _dynamic_image_cache.clear()
 
 def get_default_b64(is_portrait=False):
     global _default_flag_b64, _default_port_b64
@@ -1100,7 +1105,7 @@ def get_default_b64(is_portrait=False):
         return _default_flag_b64
 
 def scrub_default_images(nation_data_block):
-    """Replaces large Base64 strings with 'DEFAULT' if they match the default images."""
+    """Replaces large Base64 strings with 'DEFAULT' if they match the default images or local files."""
     def_flag = get_default_b64(is_portrait=False)
     def_port = get_default_b64(is_portrait=True)
     
@@ -1109,34 +1114,78 @@ def scrub_default_images(nation_data_block):
             data["flag_data"] = "DEFAULT"
         if data.get("portrait_data") == def_port:
             data["portrait_data"] = "DEFAULT"
+            
+        # Check against local country-specific files to scrub custom imports that are already on disk
+        f_path = os.path.join(c.FLAGS_DIR, f"{country}.png")
+        if data.get("flag_data") != "DEFAULT" and os.path.exists(f_path):
+            try:
+                img = pygame.image.load(f_path).convert_alpha()
+                img = pygame.transform.scale(img, c.FLAG_SIZE)
+                if data["flag_data"] == encode_surf_to_b64(img):
+                    data["flag_data"] = "DEFAULT"
+            except: pass
+            
+        p_path = os.path.join(c.PORTRAITS_DIR, f"{country}.png")
+        if data.get("portrait_data") != "DEFAULT" and os.path.exists(p_path):
+            try:
+                img = pygame.image.load(p_path).convert_alpha()
+                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
+                if data["portrait_data"] == encode_surf_to_b64(img):
+                    data["portrait_data"] = "DEFAULT"
+            except: pass
 
 def encode_surf_to_b64(surf, fmt="RGBA"):
     #Encodes a pygame surface to a Base64 string.
     img_str = pygame.image.tostring(surf, fmt)
     return base64.b64encode(img_str).decode('utf-8')
 
-def decode_b64_to_surf(b64_str, size, is_portrait=False):
+def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
     # Decodes a Base64 string back into a pygame surface.
+    global _dynamic_image_cache
+    
+    cache_key = (b64_str, size, is_portrait, country_name)
+    if cache_key in _dynamic_image_cache:
+        return _dynamic_image_cache[cache_key]
+
     if not b64_str or b64_str == "DEFAULT":
+        # --- Check for country-specific local file first ---
+        if country_name:
+            base_dir = c.PORTRAITS_DIR if is_portrait else c.FLAGS_DIR
+            file_path = os.path.join(base_dir, f"{country_name}.png")
+            if os.path.exists(file_path):
+                try:
+                    img = pygame.image.load(file_path).convert_alpha()
+                    scaled = pygame.transform.scale(img, size)
+                    _dynamic_image_cache[cache_key] = scaled
+                    return scaled
+                except:
+                    pass # Fallback to absolute default
+        
+        # --- Fallback to absolute default ---
         path = c.DEFAULT_PORTRAIT_PATH if is_portrait else c.DEFAULT_FLAG_PATH
         try:
             img = pygame.image.load(path).convert_alpha()
-            return pygame.transform.scale(img, size)
+            scaled = pygame.transform.scale(img, size)
+            _dynamic_image_cache[cache_key] = scaled
+            return scaled
         except:
             surf = pygame.Surface(size, pygame.SRCALPHA)
             surf.fill((200, 200, 200, 255))
+            _dynamic_image_cache[cache_key] = surf
             return surf
 
     try:
         img_bytes = base64.b64decode(b64_str)
-        # Check if the save file is using the new RGBA format or the old RGB format
         if len(img_bytes) == size[0] * size[1] * 4:
-            return pygame.image.fromstring(img_bytes, size, "RGBA")
+            scaled = pygame.image.fromstring(img_bytes, size, "RGBA")
         else:
-            return pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
+            scaled = pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
+        _dynamic_image_cache[cache_key] = scaled
+        return scaled
     except:
         surf = pygame.Surface(size, pygame.SRCALPHA)
         surf.fill((255, 255, 255, 255))
+        _dynamic_image_cache[cache_key] = surf
         return surf
 
 # ==========================================

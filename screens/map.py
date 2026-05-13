@@ -429,34 +429,13 @@ class Map(GameState):
                             updated_count += 1
 
         # --- NEW: AUTO-RESET ASSETS TO DISK DEFAULTS ---
-        for c_name, n_data in self.nation_data.items():
-            # 1. Process Flags
-            f_path = os.path.join(c.FLAGS_DIR, f"{c_name}.png")
-            if os.path.exists(f_path):
-                try:
-                    img = pygame.image.load(f_path).convert_alpha()
-                    img = pygame.transform.scale(img, c.FLAG_SIZE)
-                    n_data["flag_data"] = queries.encode_surf_to_b64(img)
-                except Exception as e:
-                    print(f"Failed to refresh flag for {c_name}: {e}")
-                    n_data["flag_data"] = "DEFAULT"
-            else:
+            # By setting to DEFAULT, we force the rendering engine to search the disk again.
+            queries.clear_image_cache()
+            for c_name, n_data in self.nation_data.items():
                 n_data["flag_data"] = "DEFAULT"
-
-            # 2. Process Portraits
-            p_path = os.path.join(c.PORTRAITS_DIR, f"{c_name}.png")
-            if os.path.exists(p_path):
-                try:
-                    img = pygame.image.load(p_path).convert_alpha()
-                    img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                    n_data["portrait_data"] = queries.encode_surf_to_b64(img)
-                except Exception as e:
-                    print(f"Failed to refresh portrait for {c_name}: {e}")
-                    n_data["portrait_data"] = "DEFAULT"
-            else:
                 n_data["portrait_data"] = "DEFAULT"
 
-        # Clean up obsolete research for EVERY nation currently on the map
+            # Clean up obsolete research for EVERY nation currently on the map
         tech_tree = queries.get_tech_tree()
         for country, data in self.nation_data.items():
             if "research" in data:

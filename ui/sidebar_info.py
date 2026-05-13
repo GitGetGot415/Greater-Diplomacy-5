@@ -191,7 +191,7 @@ def draw_owner_portrait(self, surface):
     portrait_dim = 160 if has_title or has_name else 200
 
     # Draw Portrait
-    portrait_surf = queries.decode_b64_to_surf(portrait_str, c.PORTRAIT_SIZE, is_portrait=True)
+    portrait_surf = queries.decode_b64_to_surf(portrait_str, c.PORTRAIT_SIZE, is_portrait=True, country_name=owner_id)
     portrait_surf = pygame.transform.scale(portrait_surf, (portrait_dim, portrait_dim)) # Scale dynamically
     surface.blit(portrait_surf, (start_x, start_y))
     pygame.draw.rect(surface, (200, 200, 200), (start_x, start_y, portrait_dim, portrait_dim), 2)

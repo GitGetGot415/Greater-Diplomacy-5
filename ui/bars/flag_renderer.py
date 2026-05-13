@@ -17,7 +17,7 @@ def draw_flag(map_screen, surface):
     player_data = map_screen.nation_data.get(display_country, {})
     flag_str = player_data.get("flag_data", "DEFAULT")
     
-    flag_surf = queries.decode_b64_to_surf(flag_str, c.FLAG_SIZE, is_portrait=False)
+    flag_surf = queries.decode_b64_to_surf(flag_str, c.FLAG_SIZE, is_portrait=False, country_name=display_country)
     flag_surf = pygame.transform.scale(flag_surf, (120, 80))
     
     # Position it (Adjust X here if you want it further right)
