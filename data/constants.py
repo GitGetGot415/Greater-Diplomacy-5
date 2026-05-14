@@ -79,7 +79,20 @@ POPUP_OFFSET_STEP = 30
 # DEFAULTS & ASSETS
 # ==========================================
 
-MENU_BOTTOM_LEFT_TEXT = "Last Updated: May 14th, 2026" # Edit this string to change the text on the main menu
+# --- Dynamic Menu Text & Links ---
+# The first item will be placed at the bottom, and subsequent items will stack upwards.
+MENU_BOTTOM_TEXTS = [
+    {"main_text": "Discord - ", "link_text": "link", "url": "https://discord.com/"},
+    {"main_text": "Github - ", "link_text": "link", "url": "https://github.com/"}
+]
+MENU_BOTTOM_TEXT_START_X = 20
+MENU_BOTTOM_TEXT_START_Y = SCREEN_HEIGHT - 40
+MENU_BOTTOM_TEXT_STEP_Y = -30
+
+MENU_BOTTOM_TEXT_COLOR = (255, 255, 255)
+MENU_BOTTOM_TEXT_LINK_COLOR = (150, 200, 255)
+MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
+
 
 DEFAULT_BG_COLOR = (30, 30, 30)
 ICON_PATH = 'assets/icon/icon.png'

@@ -1,6 +1,6 @@
 INTRO.TXT:
 
-so i have this pygame project that's essentially a turn based map game (DO NOT HARD CODE THINGS, TRY TO USE CONSTANTS.PY / QUERIES.PY WHERE APPLICABLE) (DO NOT REMOVE COMMENTS WHEN TRYING TO EDIT FILES) (DO NOT SHOW A GITHUB CHANGE LOG, SHOW THE ACTUAL FILE)
+so i have this pygame project that's essentially a turn based map game (DO NOT HARD CODE THINGS, TRY TO USE CONSTANTS.PY / QUERIES.PY WHERE APPLICABLE) (DO NOT REMOVE COMMENTS WHEN TRYING TO EDIT FILES) (DO NOT SHOW A GITHUB CHANGE LOG, SHOW THE ACTUAL INDIVIDUAL FILES CHANGED)
 
 ==================================================
 
@@ -13,3 +13,5 @@ so i have this pygame project that's essentially a turn based map game (DO NOT H
 - ai declaring war seems to keep saying "oh we're not declaring war we just want to talk", please fix this
 
 - maybe make the ai_prompts.py use a seperate json file located in data/json
+
+- when making a map there is a country you can choose called global events, please remove that from the list
