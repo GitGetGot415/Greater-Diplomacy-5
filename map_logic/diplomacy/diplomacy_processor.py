@@ -196,16 +196,41 @@ def process_diplomacy_turn(self):
     # --- 3. EXECUTE AI THREADS ---
     ai_results = {}
     
-    self.responsive_tasks_total = len(ai_tasks)
-    self.responsive_tasks_completed = 0
-    
-    if ai_tasks:
+    if not ai_tasks:
+        self.responsive_tasks_total = 0
+        self.responsive_tasks_completed = 0
+    else:
         from map_logic.ai import ai_handler # Import this to safely check the mode
         
-        self.loading_status_text = "Awaiting LLM Responses..."
         human_players = getattr(self, 'active_players', [self.player_country])
-        max_threads = queries.get_ai_threads()
         
+        mode = ai_handler.get_ai_mode()
+        immersion = ai_handler.get_ai_immersion_level()
+        
+        # --- DYNAMIC LOADING BAR CALCULATION ---
+        task_count = 0
+        if mode != "OFF":
+            for t in ai_tasks:
+                is_human_related = (t["sender"] in human_players or t["target"] in human_players)
+                
+                if immersion == "ABSOLUTE":
+                    # In Absolute, every task calls the LLM, so count them all
+                    task_count += 1
+                elif immersion == "FULL":
+                    # In Full, only process if a human is involved
+                    if is_human_related:
+                        task_count += 1
+                elif immersion == "LITE":
+                    # In Lite, only process if human sent a message or if it's a responding CUSTOM_MSG
+                    if is_human_related and (t["action"] == "CUSTOM_MSG" or bool(t.get("content", "").strip())):
+                        task_count += 1
+                    
+        self.responsive_tasks_total = task_count
+        self.responsive_tasks_completed = 0
+        
+        self.loading_status_text = f"Processing Global Responses (0/{self.responsive_tasks_total})..."
+        
+        max_threads = queries.get_ai_threads()
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
         futures = {}
         for task in ai_tasks:
@@ -258,7 +283,13 @@ def process_diplomacy_turn(self):
                                 "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
                             }
                             
-                self.responsive_tasks_completed += 1
+                    # Incremental Progress logic
+                    is_human_related = (task["sender"] in human_players or task["target"] in human_players)
+                    if mode != "OFF":
+                        if immersion == "ABSOLUTE" or (immersion == "FULL" and is_human_related) or (immersion == "LITE" and is_human_related and (task["action"] == "CUSTOM_MSG" or bool(task.get("content", "").strip()))):
+                            self.responsive_tasks_completed += 1
+                            
+                self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
                 executor.shutdown(wait=False)
                 break
                 
@@ -270,8 +301,12 @@ def process_diplomacy_turn(self):
                 except Exception as e: 
                     print(f"Thread error: {e}")
                     
-                self.responsive_tasks_completed += 1
-                self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
+                # Incremental Progress logic
+                is_human_related = (task["sender"] in human_players or task["target"] in human_players)
+                if mode != "OFF":
+                    if immersion == "ABSOLUTE" or (immersion == "FULL" and is_human_related) or (immersion == "LITE" and is_human_related and (task["action"] == "CUSTOM_MSG" or bool(task.get("content", "").strip()))):
+                        self.responsive_tasks_completed += 1
+                        self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
         
         if not getattr(self, 'force_skip_llm', False):
             executor.shutdown(wait=True)

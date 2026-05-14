@@ -7,18 +7,33 @@ import concurrent.futures
 def process_proactive_llm_tasks(map_screen):
     """Processes all queued proactive diplomacy texts in a background ThreadPoolExecutor."""
     tasks = getattr(map_screen, 'proactive_llm_tasks', [])
-    map_screen.proactive_llm_tasks_total = len(tasks)
-    map_screen.proactive_llm_tasks_completed = 0
     
-    if map_screen.proactive_llm_tasks_total == 0:
+    if not tasks:
+        map_screen.proactive_llm_tasks_total = 0
+        map_screen.proactive_llm_tasks_completed = 0
         return
         
     human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
     current_ai_mode = ai_handler.get_ai_mode()
+    immersion = ai_handler.get_ai_immersion_level()
+    
+    # --- DYNAMIC LOADING BAR CALCULATION ---
+    task_count = 0
+    if current_ai_mode != "OFF":
+        if immersion == "ABSOLUTE":
+            # In Absolute mode, every single proactive task calls the LLM
+            task_count = len(tasks)
+        elif immersion == "FULL":
+            # In Full mode, only tasks targeting human players call the LLM
+            task_count = sum(1 for t in tasks if t["target"] in human_players)
+        # In Lite mode, proactive tasks return None immediately, so count remains 0
+        
+    map_screen.proactive_llm_tasks_total = task_count
+    map_screen.proactive_llm_tasks_completed = 0
     
     max_threads = queries.get_ai_threads()
     
-    map_screen.loading_status_text = "Drafting Proactive Responses..."
+    map_screen.loading_status_text = f"Drafting Proactive Responses (0/{map_screen.proactive_llm_tasks_total})..."
     
     active_nations = list(queries.get_living_nations(map_screen.map_data))
     
@@ -54,7 +69,11 @@ def process_proactive_llm_tasks(map_screen):
                 if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
                     target_info["message"] = final_msg
                     
-                map_screen.proactive_llm_tasks_completed += 1
+                # Progress Increment Logic
+                is_ai_to_human = task["target"] in human_players
+                if current_ai_mode != "OFF":
+                    if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
+                        map_screen.proactive_llm_tasks_completed += 1
             
             # Tell the executor to shut down WITHOUT waiting for the API requests to finish
             executor.shutdown(wait=False)
@@ -78,8 +97,12 @@ def process_proactive_llm_tasks(map_screen):
             if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
                 target_info["message"] = final_msg
                 
-            map_screen.proactive_llm_tasks_completed += 1
-            map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
+            # Progress Increment Logic
+            is_ai_to_human = task["target"] in human_players
+            if current_ai_mode != "OFF":
+                if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
+                    map_screen.proactive_llm_tasks_completed += 1
+                    map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
             
     # Clean up gracefully if it finished normally without skipping
     if not getattr(map_screen, 'force_skip_llm', False):

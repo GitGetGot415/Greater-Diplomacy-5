@@ -8,5 +8,4 @@ so i have this pygame project that's essentially a turn based map game (DO NOT H
 
 - maybe make left ui buttons not clickable when turns are processing
 
-- when in full ai, for proactive diplomatics, instead of showing every country that might return a response (58), only show the number of countries that have to return you a response (3)
 - also ive seen it happen multiple times where the ai spends time genuinely thinking of a message but instead just sends a generic one instead?
