@@ -2,6 +2,7 @@ import ui_elements
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
+from map_logic.rendering.font_manager import fonts
 
 class Menu(GameState):
     def __init__(self):
@@ -16,6 +17,18 @@ class Menu(GameState):
             Button("centered", "centered + 140", "medium", "blue", "Music Player", self.music_player, image=ui_elements.UI_ICONS.get("music")),
             Button("centered", "centered + 220", "medium", "grey", "Settings", self.settings, image=ui_elements.UI_ICONS.get("settings"))
         ]
+
+    def additional_draw(self, surface):
+        font = fonts.get("heading2")
+        display_str = f"{c.MENU_BOTTOM_LEFT_TEXT}"
+        
+        # Shadow
+        shadow = font.render(display_str, True, (0, 0, 0))
+        surface.blit(shadow, (21, c.SCREEN_HEIGHT - 39))
+        
+        # Main text
+        text_surf = font.render(display_str, True, (255, 255, 255))
+        surface.blit(text_surf, (20, c.SCREEN_HEIGHT - 40))
 
     def new_game(self):
         self.next_state = "NEW_GAME"

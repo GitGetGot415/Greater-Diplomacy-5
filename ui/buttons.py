@@ -110,13 +110,13 @@ def render_buttons(self):
     self.btn_reject_req = Button(diplo_x, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "diplomatic", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
 
     # Spectator God Power Buttons
-    self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "medium", "red", "Force War", lambda: spectator_menus.force_war_menu(self))
-    self.btn_force_peace = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "medium", "green", "Force Ceasefire", lambda: spectator_menus.force_peace_menu(self))
-    self.btn_spec_create_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Create Faction", lambda: spectator_menus.spec_create_faction(self))
-    self.btn_spec_join_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "green", "Join Faction", lambda: spectator_menus.spec_join_faction(self))
-    self.btn_spec_invite_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "medium", "blue", "Invite to Faction", lambda: spectator_menus.spec_invite_faction(self))
-    self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "orange", "Leave Faction", lambda: spectator_menus.spec_leave_faction(self))
-    self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "medium", "red", "Disband Faction", lambda: spectator_menus.spec_disband_faction(self))
+    self.btn_force_war = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y, "diplomatic", "red", "Force War", lambda: spectator_menus.force_war_menu(self))
+    self.btn_force_peace = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y, "diplomatic", "green", "Force Ceasefire", lambda: spectator_menus.force_peace_menu(self))
+    self.btn_spec_create_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "diplomatic", "blue", "Create Faction", lambda: spectator_menus.spec_create_faction(self))
+    self.btn_spec_join_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "diplomatic", "yellow", "Join Faction", lambda: spectator_menus.spec_join_faction(self))
+    self.btn_spec_invite_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 2, "diplomatic", "blue", "Invite to Faction", lambda: spectator_menus.spec_invite_faction(self))
+    self.btn_spec_leave_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "diplomatic", "orange", "Leave Faction", lambda: spectator_menus.spec_leave_faction(self))
+    self.btn_spec_disband_fac = Button(c.ACTION_BTN_X, c.ACTION_BTN_START_Y + c.ACTION_BTN_STEP_Y * 3, "diplomatic", "red", "Disband Faction", lambda: spectator_menus.spec_disband_faction(self))
 
     # General Controls
     self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", lambda: player_setup.start_spectator(self))

@@ -79,6 +79,8 @@ POPUP_OFFSET_STEP = 30
 # DEFAULTS & ASSETS
 # ==========================================
 
+MENU_BOTTOM_LEFT_TEXT = "Last Updated: May 14th, 2026" # Edit this string to change the text on the main menu
+
 DEFAULT_BG_COLOR = (30, 30, 30)
 ICON_PATH = 'assets/icon/icon.png'
 
@@ -559,7 +561,8 @@ PORTRAIT_SIZE = (60, 60)
 # Fonts & Sounds
 FONT_PATH_DEFAULT = "assets/fonts/W95F.otf"
 #FONT_PATH_MAP = "assets/fonts/OpenSans-Regular.ttf"
-FONT_PATH_MAP = "assets/fonts/VerilySerifMono.otf"
+#FONT_PATH_MAP = "assets/fonts/VerilySerifMono.otf"
+FONT_PATH_MAP = "assets/fonts/PixelOperatorMonoHB.ttf"
 
 # UI Specific Font Paths
 FONT_PATH_DATE = "assets/fonts/MonoSpatial.ttf"
