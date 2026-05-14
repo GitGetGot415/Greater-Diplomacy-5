@@ -127,7 +127,7 @@ USE_SOLOUD = True # Set to False to strictly force Pygame Mixer
 
 DEFAULT_SFX_VOLUME = 0.5
 DEFAULT_MUSIC_VOLUME = 0.5
-DEFAULT_AUDIO_PITCH = 0.3
+DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default playback speed
 
 # ==========================================
 # UI BARS

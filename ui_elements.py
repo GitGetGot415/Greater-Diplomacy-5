@@ -140,7 +140,8 @@ class Button:
                         if click_sound and soloud_engine and global_sfx_volume > 0:
                             handle = soloud_engine.play(click_sound)
                             soloud_engine.set_volume(handle, global_sfx_volume)
-                            soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                            # Mathematical tweak to center speed variance directly on 0.5 input
+                            soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
                     else:
                         if pygame_click_sound and global_sfx_volume > 0:
                             pygame_click_sound.set_volume(global_sfx_volume)
@@ -233,7 +234,8 @@ class Slider:
                         if slider_sound and soloud_engine and global_sfx_volume > 0:
                             handle = soloud_engine.play(slider_sound)
                             soloud_engine.set_volume(handle, global_sfx_volume)
-                            soloud_engine.set_relative_play_speed(handle, 0.5 + (global_sfx_pitch * 1.5))
+                            # Mathematical tweak to center speed variance directly on 0.5 input
+                            soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
                     else:
                         if pygame_slider_sound and global_sfx_volume > 0:
                             pygame_slider_sound.set_volume(global_sfx_volume)

@@ -86,7 +86,7 @@ class Music_Player(GameState):
                         except Exception as e:
                             print(f"Error loading icon {file} for {album}: {e}")
             
-            # THE FIX: Conditionally fire the callback ONLY if the mouse is below the clipping header!
+            # Conditionally fire the callback ONLY if the mouse is below the clipping header!
             album_cb = lambda a=album: self.toggle_album(a) if pygame.mouse.get_pos()[1] >= 120 else None
 
             if icon_img:
@@ -111,7 +111,7 @@ class Music_Player(GameState):
             is_playing = (self.controller.now_playing == track_path)
             color = "orange" if is_playing else "grey"
             
-            # THE FIX: Conditionally fire the callback ONLY if the mouse is below the clipping header!
+            # Conditionally fire the callback ONLY if the mouse is below the clipping header!
             track_cb = lambda p=track_path: self.play_track(p) if pygame.mouse.get_pos()[1] >= 140 else None
             
             self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb))
@@ -139,6 +139,10 @@ class Music_Player(GameState):
         if c.USE_SOLOUD:
             self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
 
+        # --- 5. Reset Audio Button ---
+        reset_y = 300 if c.USE_SOLOUD else 240
+        self.elements.append(Button(slider_x, reset_y, "medium", "red", "Reset to Default", self.reset_audio_defaults))
+
     def play_track(self, track_path=None):
         """Helper to play a track and instantly update the UI colors."""
         if track_path:
@@ -148,6 +152,15 @@ class Music_Player(GameState):
         self.refresh_ui()
 
     # --- AUDIO MODIFICATION HANDLERS ---
+    def reset_audio_defaults(self):
+        """Resets sliders to 100% Volume, and 50% Pitch (1.0x multiplier)"""
+        self.set_sfx_volume(1.0)
+        self.set_music_volume(1.0)
+        if c.USE_SOLOUD:
+            self.set_sfx_pitch(0.5)
+            self.set_music_pitch(0.5)
+        self.refresh_ui()
+
     def set_sfx_volume(self, val):
         self.controller.sfx_volume = val
         ui_elements.global_sfx_volume = val    
@@ -172,7 +185,8 @@ class Music_Player(GameState):
     def set_music_pitch(self, val):
         self.controller.music_pitch = val
         if self.controller.music_handle is not None:
-            speed_mult = 0.5 + (val * 1.5) 
+            # Shifted from 0.5 + (val * 1.5) to a clean 0.5 + val mapping
+            speed_mult = 0.5 + val 
             self.controller.soloud.set_relative_play_speed(self.controller.music_handle, speed_mult)
         self.save_audio_settings()
         

@@ -1,6 +1,5 @@
 import pygame
 import os
-import sys
 
 # --- NEW: macOS Tkinter/Pygame NSApplication Clash Fix ---
 import platform
@@ -375,7 +374,8 @@ class Controller:
                     self.soloud.seek(self.music_handle, start_time)
                 
                 self.soloud.set_volume(self.music_handle, self.music_volume)
-                speed_mult = 0.5 + (self.music_pitch * 1.5) 
+                # Mathematical tweak to center speed variance directly on 0.5 input
+                speed_mult = 0.5 + self.music_pitch 
                 self.soloud.set_relative_play_speed(self.music_handle, speed_mult)
             else:
                 pygame.mixer.music.load(track_path)
