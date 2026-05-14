@@ -99,7 +99,14 @@ class Settings(GameState):
     def reset_defaults(self):
         default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q}
         self.controller.keybinds = default_keys
-        self.controller.target_fps = 60
+        self.controller.target_fps = getattr(c, 'TARGET_FPS', 60)
+        
+        self.controller.ai_threads = getattr(c, 'DEFAULT_AI_THREADS', 1)
+        self.ai_threads = self.controller.ai_threads
+        
+        self.controller.num_players = 1
+        self.num_players = self.controller.num_players
+        
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
