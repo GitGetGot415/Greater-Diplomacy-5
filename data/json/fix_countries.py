@@ -11,7 +11,13 @@ new_research_block = {
     "dreadnought": 0, "destroyer": 0, 
     "aircraft_carrier": 0, "basic_factory": 0, "factory": 0, "bergius_process": 0, 
     "fuel_refining": 0,
-    "general_recruitment": 0
+    "general_recruitment": 0,
+    "militia": 0,
+    "motorized_infantry": 0,
+    "mechanized_infantry": 0,
+    "battleship": 0,
+    "basic_recruitment": 0,
+    "recruitment_buildings": 0
 }
 
 for path in files_to_fix:
