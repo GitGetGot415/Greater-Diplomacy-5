@@ -12,4 +12,5 @@ so i have this pygame project that's essentially a turn based map game (DO NOT H
 
 - severe issue where, even when skipping ai moves, the fans on the computer continue to run for noticably long amount of time
 
-- games seem to take a really long time to be saved when you get to like 5 years into the game
+- games seem to take a really long time to be saved when you get to like 5 years into the game (IT'S 100% HISTORY)
+- could you find a way to speed it up and be more compressed
