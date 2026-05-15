@@ -24,7 +24,7 @@ def load_symbols():
 # --- NEW: NumPy Colorizer ---
 def colorize_red_image(img, new_color):
     """Treats the Red channel as brightness, but ONLY for red-tinted pixels.
-       Leaves white, grey, and black pixels completely untouched."""
+        Leaves white, grey, and black pixels completely untouched."""
     
     # 1. Extract RGB and Alpha channels. Convert to float32 for precise math.
     rgb = pygame.surfarray.pixels3d(img).astype(np.float32)
@@ -96,6 +96,10 @@ def get_symbol(name, zoom, color=None):
     if base_name not in SYMBOLS:
         base_name = re.sub(r'\s+(X{0,1}V{0,1}I{0,3}|X{0,2}|I[VX]|VI{0,3})$', '', name).strip()
         
+    # Fallback for Lvl # (Research, Buildings, etc.)
+    if base_name not in SYMBOLS:
+        base_name = re.sub(r'\s+Lvl\s+\d+$', '', name, flags=re.IGNORECASE).strip()
+
     if base_name not in SYMBOLS:
         return None
 

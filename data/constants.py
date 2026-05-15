@@ -296,7 +296,7 @@ SIZES = {
     "small_square": (40, 40),
     "medium_square": (50, 50),
     "tech_square": (80, 80),
-    "tech_square_wide": (120, 80),
+    "tech_square_wide": (160, 80),
     "album_square": (200, 200),
     "left_ui_button": (120, 40),
     "new_game": (300, 50),

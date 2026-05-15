@@ -111,9 +111,9 @@
     "Main Battle Tank II": {"health": 5500, "attack": 5000, "defense": 250, "speed": 2, "cost_materials": 15000, "cost_manpower": 1000, "cost_fuel": 200, "production_time": 90, "naval_unit": false, "order": {}},
     "Main Battle Tank III": {"health": 6000, "attack": 6000, "defense": 250, "speed": 2, "cost_materials": 15000, "cost_manpower": 1000, "cost_fuel": 200, "production_time": 90, "naval_unit": false, "order": {}},
     
-    "Dreadnought": {"health": 10000, "attack": 5000, "defense": 1000, "speed": 1, "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
+    "Dreadnought": {"health": 10000, "attack": 6000, "defense": 1000, "speed": 1, "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
     
-    "Battleship": {"health": 12000, "attack": 8000, "defense": 1000, "speed": 1, "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
+    "Battleship": {"health": 12000, "attack": 8000, "defense": 1200, "speed": 1, "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
 
     "Destroyer I": {"health": 5000, "attack": 3000, "defense": 500, "speed": 1, "cost_materials": 10000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
     "Destroyer II": {"health": 6000, "attack": 4000, "defense": 600, "speed": 1, "cost_materials": 10000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 180, "naval_unit": true, "order": {}},
