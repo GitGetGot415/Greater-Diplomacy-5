@@ -1,7 +1,7 @@
 import pygame
 from gameState import GameState
 import data.constants as c
-from ui_elements import Button
+from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.diplomacy import diplomacy_logic
@@ -11,9 +11,13 @@ class Faction_Screen(GameState):
         super().__init__()
         self.bg_color = (30, 35, 40)
         self.map_screen = None
+        self.is_renaming = False
+        self.new_faction_name = ""
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
+        self.is_renaming = False
+        self.new_faction_name = ""
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -37,7 +41,7 @@ class Faction_Screen(GameState):
         leave_text = "Undo Leave" if pending_action == "LEAVE_FACTION" else "Leave Faction"
         leave_color = "red" if pending_action == "LEAVE_FACTION" else "orange"
         btn_leave = Button(c.SCREEN_WIDTH // 2 - 250, c.SCREEN_HEIGHT - 100, "medium", leave_color, leave_text, self.leave_faction)
-        btn_leave.disabled = is_leader  # Leaders cannot 'leave', they must disband or transfer (which isn't implemented here)
+        btn_leave.disabled = is_leader  # Leaders cannot 'leave', they must disband or transfer
         self.elements.append(btn_leave)
 
         # 2. Disband Faction Button
@@ -50,6 +54,11 @@ class Faction_Screen(GameState):
         # 3. Faction Territories Button
         btn_territories = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 160, "medium", "blue", "Faction Territories", self.view_territories)
         self.elements.append(btn_territories)
+        
+        # 4. Rename Faction Button
+        if is_leader and not getattr(self, "is_renaming", False):
+            btn_rename = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium", "blue", "Rename Faction", self.start_rename)
+            self.elements.append(btn_rename)
 
     def leave_faction(self):
         msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.map_screen.player_country, "LEAVE_FACTION", "")
@@ -63,6 +72,48 @@ class Faction_Screen(GameState):
 
     def view_territories(self):
         self.next_state, self.done = "FACTION_TERRITORIES", True
+        
+    def start_rename(self):
+        self.is_renaming = True
+        player_country = self.map_screen.player_country
+        self.new_faction_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        self.refresh_ui()
+
+    def confirm_rename(self):
+        if not self.map_screen: return
+        player_country = self.map_screen.player_country
+        old_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        new_name = self.new_faction_name.strip()
+        
+        if new_name and old_name and new_name != old_name:
+            members = queries.get_faction_members(old_name, self.map_screen.nation_data)
+            for m in members:
+                self.map_screen.nation_data[m]["faction"] = new_name
+            
+            if "FACTION_WAR_MAPS" in self.map_screen.nation_data and old_name in self.map_screen.nation_data["FACTION_WAR_MAPS"]:
+                self.map_screen.nation_data["FACTION_WAR_MAPS"][new_name] = self.map_screen.nation_data["FACTION_WAR_MAPS"].pop(old_name)
+            
+            self.map_screen.show_feedback(f"Faction renamed to {new_name}")
+            self.map_screen.refresh_factions_map()
+            if hasattr(self.map_screen, 'refresh_faction_territories_map'):
+                self.map_screen.refresh_faction_territories_map()
+                
+        self.is_renaming = False
+        self.refresh_ui()
+
+    def cancel_rename(self):
+        self.is_renaming = False
+        self.refresh_ui()
+        
+    def additional_events(self, event):
+        if getattr(self, "is_renaming", False):
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.confirm_rename()
+                elif event.key == pygame.K_ESCAPE:
+                    self.cancel_rename()
+                else:
+                    self.new_faction_name, _ = process_text_input(event, self.new_faction_name, max_length=40)
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -75,14 +126,24 @@ class Faction_Screen(GameState):
         font_heading = fonts.get("heading1")
         font_normal = fonts.get("normal")
 
-        # Failsafe if accessed without a faction
         if not my_faction:
             txt = font_title.render("No Faction", True, (150, 150, 150))
             surface.blit(txt, (c.SCREEN_WIDTH // 2 - txt.get_width() // 2, 100))
             return
 
-        title = font_title.render(f"Faction: {my_faction}", True, (255, 255, 255))
-        surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
+        if getattr(self, "is_renaming", False):
+            title_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 200, 30, 400, 50)
+            pygame.draw.rect(surface, (100, 100, 100), title_rect)
+            pygame.draw.rect(surface, (255, 255, 255), title_rect, 2)
+            
+            txt_surf = font_title.render(self.new_faction_name + "|", True, (255, 255, 255))
+            surface.blit(txt_surf, (title_rect.x + 10, title_rect.y + 10))
+            
+            instr = font_normal.render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
+            surface.blit(instr, (c.SCREEN_WIDTH // 2 - instr.get_width() // 2, 90))
+        else:
+            title = font_title.render(f"Faction: {my_faction}", True, (255, 255, 255))
+            surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
 
         members = queries.get_faction_members(my_faction, nation_data)
         leader = queries.get_faction_leader(my_faction, nation_data)
@@ -102,7 +163,10 @@ class Faction_Screen(GameState):
         self.next_state, self.done = "MAP", True
 
     def handle_back_key(self):
-        self.exit_to_map()
+        if getattr(self, "is_renaming", False):
+            self.cancel_rename()
+        else:
+            self.exit_to_map()
 
 
 class Faction_Territories_Screen(GameState):
@@ -122,7 +186,6 @@ class Faction_Territories_Screen(GameState):
     def additional_draw(self, surface):
         if not self.map_screen: return
 
-        # Temporarily alter map_screen state to draw cleanly
         prev_layer = self.map_screen.base_layer
         prev_active = self.map_screen.active_map
         
@@ -144,7 +207,6 @@ class Faction_Territories_Screen(GameState):
         self.map_screen.base_layer = prev_layer
         self.map_screen.active_map = prev_active
         
-        # Title
         font = fonts.get("heading1")
         title = font.render("Faction Territories (Pre-War Borders)", True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH//2 - title.get_width()//2, c.TOP_BAR_UI_CENTER_Y))
@@ -162,9 +224,7 @@ class Faction_Territories_Screen(GameState):
     def additional_events(self, event):
         if not self.map_screen: return
         
-        # Camera controls
         if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
-            # Check if mouse is on top UI bar
             mx, my = pygame.mouse.get_pos()
             on_ui = self.map_screen.top_bar_rect.collidepoint(mx, my) or self.map_screen.bot_bar_rect.collidepoint(mx, my)
             self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
