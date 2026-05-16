@@ -297,7 +297,7 @@ SIZES = {
     "orders": (100, 50),
     "small": (100, 40),
     "left_ui_bar": (120, 50),
-    "song": (300, 30),
+    "song": (700, 30),
     "diplomatic": (200, 30),
     "medium": (200, 50),
     "large": (300, 80)
