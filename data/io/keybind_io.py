@@ -37,7 +37,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
     }
     queries.save_cached_json("settings", data_to_save)
 
-def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
+def load_settings(default_binds, default_volume=1, default_music_volume=0.5):
     """Loads all settings variables, safely falling back to defaults if missing."""
     default_pitch = getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
     
