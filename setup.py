@@ -7,7 +7,7 @@ DATA_FILES = [
     'assets', 
     'base_maps', 
     'scenarios', 
-    'data/json', 
+    'data', 
     'mac64-libsoloud.dylib'
 ] 
 
