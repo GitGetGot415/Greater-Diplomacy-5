@@ -49,7 +49,7 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
                 getattr(c, 'DEFAULT_CHATGPT_MODEL', "gpt-4o-mini"), 
                 getattr(c, 'DEFAULT_CLAUDE_MODEL', "claude-3-haiku-20240307"), 
                 getattr(c, 'DEFAULT_OLLAMA_MODEL', "llama3"), 
-                "FULL", default_pitch, default_pitch, getattr(c, 'TARGET_FPS', 60), getattr(c, 'DEFAULT_AI_THREADS', 1))
+                "LITE", default_pitch, default_pitch, getattr(c, 'TARGET_FPS', 60), getattr(c, 'DEFAULT_AI_THREADS', 1))
     
     try:
         # Utilize the caching manager
@@ -109,4 +109,4 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
                 getattr(c, 'DEFAULT_CHATGPT_MODEL', "gpt-4o-mini"), 
                 getattr(c, 'DEFAULT_CLAUDE_MODEL', "claude-3-haiku-20240307"), 
                 getattr(c, 'DEFAULT_OLLAMA_MODEL', "llama3"), 
-                "FULL", default_pitch, default_pitch, getattr(c, 'TARGET_FPS', 60), getattr(c, 'DEFAULT_AI_THREADS', 1))
+                "LITE", default_pitch, default_pitch, getattr(c, 'TARGET_FPS', 60), getattr(c, 'DEFAULT_AI_THREADS', 1))

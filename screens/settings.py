@@ -18,7 +18,7 @@ class Settings(GameState):
         self.sfx_volume = self.controller.sfx_volume
         self.num_players = getattr(self.controller, 'num_players', 1)
         self.ai_mode = getattr(self.controller, 'ai_mode', 'GEMINI')
-        self.ai_immersion_level = getattr(self.controller, 'ai_immersion_level', 'FULL')
+        self.ai_immersion_level = getattr(self.controller, 'ai_immersion_level', 'LITE')
         self.ai_modes = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE"]
         
         self.last_ai_mode = self.ai_mode if self.ai_mode != "OFF" else c.DEFAULT_AI_MODE

@@ -55,7 +55,7 @@ def get_ai_mode():
 
 def get_ai_immersion_level():
     """Reads the settings config to see which immersion level is active."""
-    return queries.get_settings().get("ai_immersion_level", "FULL")
+    return queries.get_settings().get("ai_immersion_level", "LITE")
 
 # --- MODEL / URL GETTERS ---
 
