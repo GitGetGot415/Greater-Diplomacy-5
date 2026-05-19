@@ -8,7 +8,7 @@ CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode="GEMINI", 
                   gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
-                  ai_immersion_level="FULL", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
+                  ai_immersion_level="LITE", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
                   ai_threads=1):
     """Converts key codes to strings and saves all config data to JSON."""
     readable_binds = {}
