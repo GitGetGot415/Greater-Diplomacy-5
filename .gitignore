@@ -6,6 +6,7 @@ __pycache__/
 !assets/**
 !map_tools/*
 !base_maps/**
+!scenarios/**
 !context/**
 context/combined_scripts.txt
 *.mp3
