@@ -95,7 +95,7 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
             s.get("chatgpt_model", getattr(c, 'DEFAULT_CHATGPT_MODEL', "gpt-4o-mini")),
             s.get("claude_model", getattr(c, 'DEFAULT_CLAUDE_MODEL', "claude-3-haiku-20240307")),
             s.get("ollama_model", getattr(c, 'DEFAULT_OLLAMA_MODEL', "llama3")),
-            s.get("ai_immersion_level", "FULL"),
+            s.get("ai_immersion_level", "LITE"),
             s.get("music_pitch", s.get("music_speed", default_pitch)), 
             s.get("sfx_pitch", s.get("sfx_speed", default_pitch)),
             s.get("target_fps", getattr(c, 'TARGET_FPS', 60)),
