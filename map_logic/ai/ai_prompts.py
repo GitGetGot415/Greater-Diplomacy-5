@@ -71,7 +71,7 @@ def get_proactive_action_context(action_type, target=None):
     elif action_type == "JOIN_WARS":
         return f"mobilizing our forces to join your war against {target}"
     elif action_type == "WAR_DECLARATION":
-        return f"declaring war on {target} to reclaim our rightful core territory"
+        return f"declaring war on {target} to reclaim rightful core territory, you are not negotiating"
     elif action_type == "JOIN_FACTION_REQ":
         return "requesting to join your faction to stand against our mutual enemies"
     return ""

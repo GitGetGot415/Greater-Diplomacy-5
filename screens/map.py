@@ -328,6 +328,16 @@ class Map(GameState):
     def refresh_cores_map(self): refresh_map.refresh_cores_map(self)
     def refresh_faction_territories_map(self): refresh_map.refresh_faction_territories_map(self)
 
+    def refresh_all_maps(self):
+        """Unified method to refresh all visual map layers and text at once."""
+        self.update_country_centers()
+        self.refresh_political_map()
+        self.refresh_relations_map()
+        self.refresh_factions_map()
+        self.refresh_cores_map()
+        self.refresh_faction_territories_map()
+        self.show_feedback("Maps refreshed!")
+
     def auto_assign_cores(self):
         for province in self.map_data.values():
             owner = province.get("owner", "Unclaimed")
