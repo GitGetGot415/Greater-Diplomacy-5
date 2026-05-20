@@ -425,7 +425,7 @@ def render_settings_buttons(settings_screen):
     # --- MASTER AI TOGGLE BUTTON ---
     ai_is_on = settings_screen.ai_mode != "OFF"
     toggle_color = "green" if ai_is_on else "red"
-    toggle_text = "AI: ON" if ai_is_on else "AI: OFF"
+    toggle_text = "LLM AI: ON" if ai_is_on else "LLM AI: OFF"
     settings_screen.elements.append(Button(10, c.SCREEN_HEIGHT - 60, "small", toggle_color, toggle_text, settings_screen.toggle_ai_enabled))
 
     # --- Only render the sub-options if AI is currently turned ON ---
