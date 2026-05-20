@@ -18,7 +18,7 @@ def render_buttons(self):
     # ==================================================================== #
     #                        MAP VIEW TOGGLES                              #
     # ==================================================================== #
-    self.btn_refresh_all = Button(c.SCREEN_WIDTH - 240, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", self.refresh_all_maps)
+    self.btn_refresh_all = Button(c.SCREEN_WIDTH - 240, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", self.refresh_all_maps, font_preset="normal")
 
     self.btn_view_terrain = Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", lambda: self.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
     self.btn_view_political = Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Political", lambda: self.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
@@ -59,7 +59,7 @@ def render_buttons(self):
 
     # Gameplay Buttons
     self.btn_next_turn = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", lambda: turn_manager.advance_time(self))
-    self.btn_skip_ai = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", self.toggle_skip_ai)
+    self.btn_skip_ai = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", self.toggle_skip_ai, font_preset="normal")
     self.btn_multi_turn = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Multi-Turn", self.trigger_multi_turn)
     
     start_y_val = 60
@@ -426,7 +426,7 @@ def render_settings_buttons(settings_screen):
     ai_is_on = settings_screen.ai_mode != "OFF"
     toggle_color = "green" if ai_is_on else "red"
     toggle_text = "LLM AI: ON" if ai_is_on else "LLM AI: OFF"
-    settings_screen.elements.append(Button(10, c.SCREEN_HEIGHT - 60, "small", toggle_color, toggle_text, settings_screen.toggle_ai_enabled))
+    settings_screen.elements.append(Button(10, c.SCREEN_HEIGHT - 60, "small", toggle_color, toggle_text, settings_screen.toggle_ai_enabled, font_preset="normal"))
 
     # --- Only render the sub-options if AI is currently turned ON ---
     if ai_is_on:

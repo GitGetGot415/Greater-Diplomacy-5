@@ -27,7 +27,8 @@ def parse_pos(val, limit, size):
     return val
 
 class Button:
-    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal"):
+    # UPDATED: Added font_preset parameter defaulting to "button"
+    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button"):
         self.width, self.height = c.SIZES.get(size_preset, (200, 50))
         final_x = parse_pos(x, c.SCREEN_WIDTH, self.width)
         final_y = parse_pos(y, c.SCREEN_HEIGHT, self.height)
@@ -42,7 +43,8 @@ class Button:
         self.show_text = show_text
         self.layout = layout
 
-        self.font = fonts.get("button")
+        # Pull the requested font preset from the FontManager
+        self.font = fonts.get(font_preset)
 
         self.visible = True
         self.is_pressed = False
