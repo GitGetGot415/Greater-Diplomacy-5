@@ -21,10 +21,10 @@
     "aircraft_carrier": { "category": "NAVY", "max_lvl": 4, "cost": 2000, "req": {"battleship": 1}, "years": [1930, 1935, 1940, 1945] },
 
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 2000, "req": {}, "years": [1910] },
-    "factory": { "category": "INDUSTRY", "max_lvl": 15, "cost": 2000, "req": {"basic_factory": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940] },
+    "factory": { "category": "INDUSTRY", "max_lvl": 20, "cost": 2000, "req": {"basic_factory": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940, 1942, 1944, 1946, 1948, 1950] },
     "bergius_process": { "category": "INDUSTRY", "max_lvl": 1, "cost": 2000, "req": {}, "years": [1910] },
-    "fuel_refining": { "category": "INDUSTRY", "max_lvl": 15, "cost": 2000, "req": {"bergius_process": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940] },
+    "fuel_refining": { "category": "INDUSTRY", "max_lvl": 20, "cost": 2000, "req": {"bergius_process": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940, 1942, 1944, 1946, 1948, 1950] },
     "basic_recruitment": { "category": "INDUSTRY", "max_lvl": 1, "cost": 2000, "req": {}, "years": [1910] },
-    "recruitment_buildings": { "category": "INDUSTRY", "max_lvl": 15, "cost": 1000, "req": {"basic_recruitment": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940] },
-    "general_recruitment": { "category": "INDUSTRY", "max_lvl": 15, "cost": 1000, "req": {"recruitment_buildings": "MATCH_LEVEL"}, "years": [1913, 1915, 1917, 1919, 1921, 1923, 1925, 1927, 1929, 1931, 1933, 1935, 1937, 1939, 1941] }
+    "recruitment_buildings": { "category": "INDUSTRY", "max_lvl": 20, "cost": 1000, "req": {"basic_recruitment": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940, 1942, 1944, 1946, 1948, 1950] },
+    "general_recruitment": { "category": "INDUSTRY", "max_lvl": 20, "cost": 1000, "req": {"recruitment_buildings": "MATCH_LEVEL"}, "years": [1913, 1915, 1917, 1919, 1921, 1923, 1925, 1927, 1929, 1931, 1933, 1935, 1937, 1939, 1941, 1943, 1945, 1947, 1949, 1951] }
 }
