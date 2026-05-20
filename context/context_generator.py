@@ -115,14 +115,26 @@ files_to_skip_but_list = [
     "data/**/*.json",
     "data\editors/**/*.py",
     "soloud.py",
+    "setup.py",
+    "gameState.py",
+    "main.py",
+    "ui_elements.py",
     "data\constants.py",
     "data\queries.py",
     "context\context_generator.py",
     "map_tools\**",
-    #"ui\**",
-    #"screens\**",
-    #"map_logic\**",
-    #"data\**",
+    "data\**",
+
+    "ui\**",
+    "screens\**",
+
+    #"map_logic/ai\**",
+    "map_logic/camera\**",
+    #"map_logic/diplomacy\**",
+    "map_logic/random_map\**",
+    "map_logic/rendering\**",
+    "map_logic/setup\**",
+    #"map_logic/system32\**",
 ]
 
 # Files you want totally wiped from existence in the final .txt
