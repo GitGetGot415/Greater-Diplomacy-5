@@ -200,22 +200,39 @@ class Research_Screen(GameState):
         else:
             self.draw_tech_nodes(res_levels, queue)
 
+    def get_button_size(self, tech_key, display_name):
+        """Returns the appropriate button size based on category or specific items."""
+        # Check for our specific large ships
+        special_ships = ["aircraft carrier", "battleship", "dreadnought"]
+        if any(ship in display_name.lower() for ship in special_ships):
+            return "tech_square_ultra_wide"
+        
+        # Check for wide categories
+        if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]):
+            return "tech_square_wide"
+            
+        # Default
+        return "tech_square"
+    
     def draw_tech_nodes(self, res_levels, queue):
         current_year = self.map_screen.time_manager.year
         
-        # Determine button size preset and X offset based on current category
-        btn_size = "tech_square_wide" if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]) else "tech_square"
-        x_offset = c.SIZES.get(btn_size, (80, 80))[0] // 2
-
         for node in self.nodes.get(self.current_category, []):
             tech_key = node["key"]
             lvl = node["lvl"]
             year = node["year"]
             base_y = node["base_y"]
             
-            # Use the dynamic x_offset instead of hardcoded 40
+            # 1. Get the display name first
+            display_name = self.get_display_name(tech_key, lvl)
+            
+            # 2. Use our new helper to get the size
+            btn_size = self.get_button_size(tech_key, display_name)
+            x_offset = c.SIZES.get(btn_size, (80, 80))[0] // 2
+            
             base_x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) - x_offset
             
+            # ... (Rest of your existing logic for status, color, and icon)
             cur_lvl = res_levels.get(tech_key, 0)
             is_researching = any(q["tech_name"] == tech_key for q in queue)
             
@@ -242,9 +259,6 @@ class Research_Screen(GameState):
             
             icon_scale = 4.0 if is_large else 2.0
 
-            if "aircraft_carrier" in tech_key.lower() or "battleship" in tech_key.lower() or "dreadnought" in tech_key.lower():
-                icon_scale = 1.0
-
             icon = symbol_loader.get_symbol(display_name, icon_scale)
             
             node_info = {
@@ -257,7 +271,6 @@ class Research_Screen(GameState):
                 "target_year": year
             }
             
-            # Feed the dynamically assigned btn_size into the Button call
             btn = Button(base_x + self.scroll_x, base_y, btn_size, btn_color, display_name, 
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
             
