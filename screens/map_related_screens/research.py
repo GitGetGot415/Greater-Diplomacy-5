@@ -239,9 +239,12 @@ class Research_Screen(GameState):
             unlocks = queries.get_tech_unlocks(tech_key, lvl)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or 
                         any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
-            is_small = display_name in c.SMALL_ICON_BUILDING_GROUPS 
             
-            icon_scale = 4.0 if is_large else 1.5 if is_small else 2.0
+            icon_scale = 4.0 if is_large else 2.0
+
+            if "aircraft_carrier" in tech_key.lower() or "battleship" in tech_key.lower() or "dreadnought" in tech_key.lower():
+                icon_scale = 1.0
+
             icon = symbol_loader.get_symbol(display_name, icon_scale)
             
             node_info = {

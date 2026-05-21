@@ -401,7 +401,6 @@ SYMBOL_BASE_SCALES = {
 }
 
 LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]
-SMALL_ICON_BUILDING_GROUPS = ["aircraft carrier"]
 BUILDING_ICON_SCALE = 1.0
 
 # ==========================================
