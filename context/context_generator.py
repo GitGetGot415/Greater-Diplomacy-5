@@ -132,7 +132,7 @@ files_to_skip_but_list = [
     "map_logic/camera\**",
     #"map_logic/diplomacy\**",
     "map_logic/random_map\**",
-    "map_logic/rendering\**",
+    #"map_logic/rendering\**",
     "map_logic/setup\**",
     #"map_logic/system32\**",
 ]

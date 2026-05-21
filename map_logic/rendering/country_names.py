@@ -151,6 +151,12 @@ def update_country_centers(map_screen):
     
     timer = pygame.time.get_ticks()
 
+    # Clear name surface caches to force reconstruction with updated faction info
+    if hasattr(map_screen, 'country_name_surfs'):
+        delattr(map_screen, 'country_name_surfs')
+    if hasattr(map_screen, 'faction_name_surfs'):
+        delattr(map_screen, 'faction_name_surfs')
+
     def get_blobs(grouping_key_func):
         blobs = []
         visited = set()
