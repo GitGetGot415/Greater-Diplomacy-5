@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import data.constants as c
 from data import queries
 
@@ -371,7 +372,6 @@ def process_ai_economy_decisions(map_screen):
             # Sort provinces by queue length to spread out construction
             my_provs.sort(key=lambda p: len(p.get("deployment_queue", [])))
 
-            import random
             for prov in my_provs:
                 current_buildings = prov.get("buildings", [])
                 queue = prov.get("deployment_queue", [])
