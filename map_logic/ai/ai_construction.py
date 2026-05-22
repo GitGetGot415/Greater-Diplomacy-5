@@ -1,6 +1,7 @@
 import json
 import os
 import data.constants as c
+import random
 from data import queries
 
 def process_ai_economy_decisions(map_screen):
@@ -387,7 +388,6 @@ def process_ai_economy_decisions(map_screen):
                 if has_factory:
                     groups_to_check.extend([recruit_b_list])
                     
-                import random
                 random.shuffle(groups_to_check)
 
                 for b_list in groups_to_check:
