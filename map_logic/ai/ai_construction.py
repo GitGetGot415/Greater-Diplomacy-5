@@ -371,6 +371,7 @@ def process_ai_economy_decisions(map_screen):
             # Sort provinces by queue length to spread out construction
             my_provs.sort(key=lambda p: len(p.get("deployment_queue", [])))
 
+            import random
             for prov in my_provs:
                 current_buildings = prov.get("buildings", [])
                 queue = prov.get("deployment_queue", [])
@@ -387,7 +388,6 @@ def process_ai_economy_decisions(map_screen):
                 if has_factory:
                     groups_to_check.extend([recruit_b_list])
                     
-                import random
                 random.shuffle(groups_to_check)
 
                 for b_list in groups_to_check:
