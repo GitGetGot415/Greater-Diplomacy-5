@@ -8,10 +8,15 @@ __pycache__/
 !base_maps/**
 !scenarios/**
 !context/**
-context/combined_scripts.txt
-*.mp3
 
-music
+assets/music/*
+!assets/music/Greater Diplomacy 1/
+!assets/music/Greater Diplomacy 2/
+!assets/music/Greater Diplomacy 3/
+!assets/music/Greater Diplomacy 4/
+
+context/combined_scripts.txt
+
 build
 dist
 context/stuff
