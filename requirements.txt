@@ -1,0 +1,6 @@
+numpy==2.4.6
+Pillow==12.2.0
+protobuf==7.35.0
+pygame==2.6.1
+Requests==2.34.2
+setuptools==82.0.1
