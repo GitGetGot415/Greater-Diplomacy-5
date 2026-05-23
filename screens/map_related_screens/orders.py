@@ -453,13 +453,14 @@ class Orders_Screen(GameState):
             immediate_path = path[:speed]
             queued_path = path[speed:]
             
+            # Since the player is viewing their own orders panel, force the rendering to bypass fog of war 
             if immediate_path:
-                overlay_renderer.draw_movement_path(surface, self.map_screen, start_prov, immediate_path, color=base_color)
+                overlay_renderer.draw_movement_path(surface, self.map_screen, start_prov, immediate_path, color=base_color, force_visible=True)
                 
             if queued_path:
                 bright_color = (min(255, base_color[0] + 150), min(255, base_color[1] + 150), min(255, base_color[2] + 150))
                 q_start = self.map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
-                overlay_renderer.draw_movement_path(surface, self.map_screen, q_start, queued_path, color=bright_color, alpha=120)
+                overlay_renderer.draw_movement_path(surface, self.map_screen, q_start, queued_path, color=bright_color, alpha=120, force_visible=True)
         
         display_index = 0
         for i, unit in enumerate(units):
@@ -555,7 +556,7 @@ class Orders_Screen(GameState):
                             preview_alpha = 120
                             
                         # Use the owner's color to draw the cursor hover with correct alpha logic
-                        overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha)
+                        overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha, force_visible=True)
 
     def update(self):
         super().update()

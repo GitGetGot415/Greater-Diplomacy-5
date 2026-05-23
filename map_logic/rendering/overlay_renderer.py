@@ -110,7 +110,7 @@ def draw_combat_bubbles(self_map, surface):
                     
                 surface.blit(inner, (int(sx) - radius_x, int(sy) - radius_y))
 
-def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255):
+def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
     if not path_ids: return
 
@@ -130,6 +130,14 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
             nodes.append(target_node)
 
     if len(nodes) < 2: return
+    
+    # --- FOG OF WAR VISIBILITY CHECK ---
+    visible_provs = getattr(map_screen, 'visible_provinces', None)
+    def is_segment_visible(n1, n2):
+        if force_visible or visible_provs is None:
+            return True
+        # If EITHER the start or end of this specific segment is visible, draw the segment!
+        return n1["id"] in visible_provs or n2["id"] in visible_provs
 
     # Grab the UI symbols (Base scale is tweaked for zoom)
     line_base = symbol_loader.get_symbol("Line", cam.zoom * 1, color)
@@ -140,8 +148,15 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
 
     # PASS 1: Draw all lines FIRST so they render underneath the shapes
     for i in range(len(nodes) - 1):
-        p1 = list(nodes[i]["center"])
-        p2 = list(nodes[i+1]["center"])
+        n1 = nodes[i]
+        n2 = nodes[i+1]
+        
+        # --- Apply the fog mask ---
+        if not is_segment_visible(n1, n2):
+            continue
+            
+        p1 = list(n1["center"])
+        p2 = list(n2["center"])
 
         # Account for map wrap to get the shortest continuous distance
         if map_screen.loop_map:
@@ -200,8 +215,15 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
 
     # PASS 2: Draw the node markers on top of the lines
     for i in range(1, len(nodes)):
-        p1 = list(nodes[i-1]["center"])
-        p2 = list(nodes[i]["center"])
+        n1 = nodes[i-1]
+        n2 = nodes[i]
+        
+        # --- Apply the fog mask ---
+        if not is_segment_visible(n1, n2):
+            continue
+
+        p1 = list(n1["center"])
+        p2 = list(n2["center"])
 
         is_last = (i == len(nodes) - 1)
 
