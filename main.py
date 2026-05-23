@@ -435,11 +435,9 @@ class Controller:
             self.active_state.update()
             self.active_state.draw(self.screen)
 
-            if self.active_state.done:
-                self.flip_state()
-                
-            fps_surface = self.fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
-            self.screen.blit(fps_surface, (c.SCREEN_WIDTH - 75, 10))
+            if c.SHOW_FPS:
+                fps_surface = self.fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
+                self.screen.blit(fps_surface, (c.SCREEN_WIDTH - 75, 10))
 
             if self.active_state.done:
                 self.flip_state()

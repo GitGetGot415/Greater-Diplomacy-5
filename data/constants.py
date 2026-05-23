@@ -70,6 +70,8 @@ CREDITS_DATA = [
     {"main_text": "Terrain Art: ", "link_text": "litbrb", "url": "https://github.com/litbrb"},
 ]
 
+SHOW_FPS = True
+
 # --- FOG OF WAR ---
 USE_FOG_OF_WAR = True # Toggle Fog of War mechanics on or off
 FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
