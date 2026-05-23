@@ -425,8 +425,14 @@ def refresh_fog_map(self):
         self.visible_provinces = None
         return
 
-    # Dynamically fetch get_visible_provinces from queries
-    self.visible_provinces = queries.get_visible_provinces(self.player_country, self.map_data, self.nation_data)
+    # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
+    # Prevents hotseat players from seeing Player 1's vision before the next turn starts
+    is_multiplayer = hasattr(self, 'active_players') and len(self.active_players) > 1
+    if getattr(self, 'viewing_ai_moves', False) and is_multiplayer:
+        self.visible_provinces = set() # Return an empty set so nothing is visible
+    else:
+        # Dynamically fetch get_visible_provinces from queries
+        self.visible_provinces = queries.get_visible_provinces(self.player_country, self.map_data, self.nation_data)
 
     if self.visible_provinces is None:
         self.fog_map = None
