@@ -26,7 +26,7 @@ class Orders_Screen(GameState):
         self.max_scroll_y = 0
         self.row_height = 80
         self.panel_top = 140
-        self.panel_max_h = 580
+        self.panel_max_h = 280
         
         # Load unit library so we can check unit stats (like naval_unit) dynamically
         self.unit_library = queries.get_unit_library()
