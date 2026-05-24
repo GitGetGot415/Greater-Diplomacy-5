@@ -12,6 +12,7 @@ from map_logic.rendering import symbol_loader
 class Orders_Screen(GameState):
     PANEL_X = 80
     PANEL_WIDTH = 400
+    PANEL_TRANSPARENCY = 255
 
     def __init__(self):
         super().__init__()
@@ -219,6 +220,10 @@ class Orders_Screen(GameState):
     def additional_events(self, event):
         mx, my = pygame.mouse.get_pos()
         
+        # --- NEW: Block clicks inside the Orders Panel ---
+        # Define the panel area
+        panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
+        
         # --- NEW: Camera Controls (Zooming and Panning) ---
         on_ui = False
         units = self.target_province.get("units", [])
@@ -235,6 +240,15 @@ class Orders_Screen(GameState):
                 pass 
             else:
                 self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
+
+        # --- Standard Order Placement Click ---
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
+            # If the click is inside the panel, ignore it completely
+            if panel_rect.collidepoint(event.pos):
+                return
+
+            dest = self.get_clicked_province(event.pos)
+            if not dest: return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
@@ -434,7 +448,7 @@ class Orders_Screen(GameState):
             
             # Draw semi-transparent panel
             panel_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-            panel_surf.fill((30, 30, 50, 200))
+            panel_surf.fill((30, 30, 50, self.PANEL_TRANSPARENCY))
             surface.blit(panel_surf, bg_rect.topleft)
             
             # Draw border
