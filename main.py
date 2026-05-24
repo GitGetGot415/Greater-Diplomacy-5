@@ -446,5 +446,13 @@ class Controller:
             pygame.display.flip()
 
 if __name__ == "__main__":
+   # Mod Handler
+    for filename in os.listdir(os.getcwd()):
+        if filename.endswith(".GD5MOD"):
+            with open(filename, "r") as mod:
+                lines = mod.readlines()
+                with open(lines[0][:-1], "w") as target: # Cut off the last character from the file name (\n)
+                    target.write("".join(lines[1:])) # We only want everything after the first line (filename)
+
     game = Controller()
     game.run()
