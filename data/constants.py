@@ -62,7 +62,7 @@ DAYS_PER_TURN = 15
 NON_CORE_MULTIPLIERS = {
     "manpower": 0.1,
     "materials": 0.5,
-    "fuel": 0.5
+    "fuel": 1.0
 }
 
 CREDITS_DATA = [
