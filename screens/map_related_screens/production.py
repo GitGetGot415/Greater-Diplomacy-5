@@ -157,8 +157,13 @@ class Production_Screen(GameState):
 
                 highest_unlocked = None
                 tech_key = group_name.lower().replace(" ", "_")
-                researched_lvl = player_research.get(tech_key, 0)
+                
+                # --- FIX: Patch for motorized/mechanized types ---
+                if tech_key == "motorized_infantry_type": tech_key = "motorized_infantry"
+                if tech_key == "mechanized_infantry_type": tech_key = "mechanized_infantry"
 
+                researched_lvl = player_research.get(tech_key, 0)
+                
                 if tech_key == "infantry_type":
                     inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
                     if researched_lvl > 0:
@@ -167,6 +172,12 @@ class Production_Screen(GameState):
                 elif tech_key == "cavalry":
                     if researched_lvl > 0:
                         highest_unlocked = "Cavalry"
+                # --- FIX: Handle Motorized/Mechanized Year-Based Research ---
+                elif tech_key in ["motorized_infantry", "mechanized_infantry"]:
+                    tech_years = self.tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
+                    if researched_lvl > 0:
+                        year = tech_years[min(researched_lvl - 1, len(tech_years)-1)]
+                        highest_unlocked = f"{group_name} {year}"
                 else:
                     group_units = [(n, s) for n, s in self.unit_library.items() if self.get_group_name(n) == group_name]
                     highest_lvl = -1
