@@ -13,6 +13,7 @@ class Orders_Screen(GameState):
     PANEL_X = 80
     PANEL_WIDTH = 380
     PANEL_TRANSPARENCY = 255
+    bottom_vanish_y = 20
 
     def __init__(self):
         super().__init__()
@@ -26,7 +27,7 @@ class Orders_Screen(GameState):
         self.max_scroll_y = 0
         self.row_height = 80
         self.panel_top = 180
-        self.panel_max_h = 200
+        self.panel_max_h = 180
         
         self.unit_library = queries.get_unit_library()
 
@@ -71,7 +72,7 @@ class Orders_Screen(GameState):
                 
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
             
-            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.row_height:
+            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
                 color = "blue" if self.selected_unit_index == i or self.selected_unit_index == "ALL" else "grey"
                 unit_name = unit["type"]
                 
@@ -488,7 +489,8 @@ class Orders_Screen(GameState):
 
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
             
-            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - 20:
+            # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
+            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
                 hp = int(unit.get("health", 0))
                 m_hp = int(unit.get("max_health", 0))
                 
