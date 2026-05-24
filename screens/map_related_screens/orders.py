@@ -68,17 +68,22 @@ class Orders_Screen(GameState):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
                 
-            # Adjusted Y position by scroll
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
             
-            # Clipping: Only add buttons if they are within the visible panel area
             if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.row_height:
-                # 1. Selection Button (Name)
                 color = "blue" if self.selected_unit_index == i or self.selected_unit_index == "ALL" else "grey"
                 unit_name = unit["type"]
-                btn_sel = Button(100, y_pos, "medium_square", color, f"{unit_name}", lambda idx=i: self.select_unit(idx))
+                
+                # Fetch the icon using the symbol_loader (zoom 1.5 is a standard starting scale)
+                unit_icon = symbol_loader.get_symbol(unit_name, zoom=1.5)
+                
+                # Create the button with the icon and set show_text=False
+                btn_sel = Button(100, y_pos, "medium_square", color, "", 
+                                lambda idx=i: self.select_unit(idx), 
+                                image=unit_icon, 
+                                show_text=False)
                 self.elements.append(btn_sel)
-
+                
                 order = unit.get("order", {})
                 order_type = order.get("type", "")
 
