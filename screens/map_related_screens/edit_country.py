@@ -315,7 +315,7 @@ class Edit_Country_Screen(GameState):
         countries = sorted(list(self.map_screen.nation_data.keys()))
         lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
         for country in countries:
-            if country not in c.UNPLAYABLE_NATIONS and country != self.editing_country:
+            if country not in c.UNPLAYABLE_NATIONS:
                 lb.insert(tk.END, country)
         lb.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=lb.yview)
