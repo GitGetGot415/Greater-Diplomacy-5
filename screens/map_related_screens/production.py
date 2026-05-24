@@ -1,5 +1,3 @@
-# screens/map_related_screens/production.py
-
 import pygame
 import data.constants as c
 from gameState import GameState
@@ -8,6 +6,8 @@ from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
+
+section_spacing = 60
 
 class Production_Screen(GameState):
     def __init__(self):
@@ -142,11 +142,11 @@ class Production_Screen(GameState):
         process_building_categories(bldg_groups["Other"])
         self.other_end_y = y_offset
 
-        y_offset += 30
+        y_offset += section_spacing
         self.recruit_start_y = y_offset
         process_building_categories(bldg_groups["Recruitment"])
         self.recruit_end_y = y_offset
-        y_offset += 30
+        y_offset += section_spacing
 
         # --- UNIT LOGIC ---
         def process_unit_groups(groups, btn_color):
@@ -219,12 +219,12 @@ class Production_Screen(GameState):
         process_unit_groups(self.infantry_groups, "green")
         self.infantry_end_y = y_offset
 
-        y_offset += 30 
+        y_offset += section_spacing 
         self.tank_start_y = y_offset
         process_unit_groups(self.tank_groups, "green")
         self.tank_end_y = y_offset
 
-        y_offset += 30 
+        y_offset += section_spacing 
         if self.target_province.get("is_coastal", False):
             self.navy_start_y = y_offset
             process_unit_groups(self.navy_groups, "blue")
