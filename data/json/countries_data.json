@@ -15226,9 +15226,9 @@
     "Ordensstaat Burgund": {
         "name": "Ordensstaat Burgund",
         "color": [
+            32,
             0,
-            0,
-            0
+            64
         ],
         "research": {
             "infantry_type": 1,
