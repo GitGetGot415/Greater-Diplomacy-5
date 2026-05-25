@@ -27,7 +27,7 @@ class Orders_Screen(GameState):
         self.max_scroll_y = 0
         self.row_height = 80
         self.panel_top = 180
-        self.panel_max_h = 180
+        self.panel_max_h = 420
         
         self.unit_library = queries.get_unit_library()
 
