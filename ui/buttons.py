@@ -385,10 +385,13 @@ def render_edit_country_buttons(edit_screen):
     edit_screen.btn_imp_port = Button(c.EDIT_COUNTRY_UI_X2 + 50, 520, "small_square", "green", "Import Portrait", edit_screen.import_portrait, image=icons.get("import"), show_text=False)
     edit_screen.btn_reset_port = Button(c.EDIT_COUNTRY_UI_X2 + 100, 520, "small", "red", "Reset", lambda: edit_screen.trigger_reset("PORTRAIT"))
     
+    edit_screen.btn_reset_map_color = Button(c.SCREEN_WIDTH - 330, 550, "small", "red", "Reset Color", edit_screen.reset_map_color)
+    
     edit_screen.elements.extend([
         edit_screen.btn_cancel, edit_screen.btn_save, edit_screen.btn_switch_appearance,
         edit_screen.btn_exp_flag, edit_screen.btn_imp_flag, edit_screen.btn_reset_flag,
-        edit_screen.btn_exp_port, edit_screen.btn_imp_port, edit_screen.btn_reset_port
+        edit_screen.btn_exp_port, edit_screen.btn_imp_port, edit_screen.btn_reset_port,
+        edit_screen.btn_reset_map_color
     ])
     
     for i, color in enumerate(edit_screen.palette):

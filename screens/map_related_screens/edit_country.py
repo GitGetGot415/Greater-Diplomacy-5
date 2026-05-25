@@ -277,6 +277,12 @@ class Edit_Country_Screen(GameState):
     def trigger_reset(self, target_type):
         self.resetting_type = target_type
 
+    def reset_map_color(self):
+        """Resets the map color to the original value stored upon entering the editor."""
+        self.new_map_color = list(self.orig_map_color)
+        self.map_screen.show_feedback("Map color reset to default!")
+        self.save_state()
+
     def confirm_reset(self):
         if self.resetting_type == "FLAG":
             self.flag_surf = queries.decode_b64_to_surf("DEFAULT", self.flag_size, is_portrait=False, country_name=self.editing_country)
