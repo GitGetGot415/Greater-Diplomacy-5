@@ -129,7 +129,8 @@ class Production_Screen(GameState):
                         btn_color = "orange"
                         if data["group"] == "recruitment": btn_color = "red"
 
-                    btn = Button(x_pos, y_offset, "medium", btn_color, btn_txt, cb)
+                    # FIXED: Apply current scroll_y during creation
+                    btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color, btn_txt, cb)
                     btn.base_y = y_offset
                     btn.is_scrollable = True
                     self.elements.append(btn)
@@ -205,7 +206,8 @@ class Production_Screen(GameState):
                         final_btn_color = btn_color if can_build else "grey"
                         cb = lambda n=lookup_name: self.buy_unit(n)
                     
-                    btn = Button(x_pos, y_offset, "medium", final_btn_color, highest_unlocked, cb)
+                    # FIXED: Apply current scroll_y during creation
+                    btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", final_btn_color, highest_unlocked, cb)
                     btn.base_y = y_offset
                     btn.is_scrollable = True
                     self.elements.append(btn)
