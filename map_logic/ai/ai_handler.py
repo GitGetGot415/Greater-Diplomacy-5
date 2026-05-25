@@ -230,9 +230,28 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     in_faction = bool(ai_stats.get("faction", ""))
 
     accepted = False
+    
+    # --- IMPROVED FACTION LOGIC ---
+    # 1. Check for basic aggressive acceptance
     if at_war and not in_faction:
         if action_type in ["FACTION_INVITE", "CREATE_FACTION", "CEASEFIRE"]:
             accepted = True
+            
+    # 2. Check for Join Faction Requests (If we are the leader)
+    if action_type == "JOIN_FACTION_REQ" and ai_stats.get("is_faction_leader", False):
+        relation_score = queries.get_relation_score(ai_nation, sender_nation, nation_data)
+        
+        # Calculate shared enemies
+        ai_enemies = set(ai_stats.get("at_war_with", []))
+        sender_enemies = set(nation_data.get(sender_nation, {}).get("at_war_with", []))
+        share_enemies = bool(ai_enemies.intersection(sender_enemies))
+        
+        # Accept if relations are good OR they are helping us fight common threats
+        # Using a constant for threshold, defaulting to 50 if undefined
+        threshold = getattr(c, 'AI_RELATION_FACTION_THRESHOLD', 50)
+        if relation_score >= threshold or share_enemies:
+            accepted = True
+    # ------------------------------
 
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
