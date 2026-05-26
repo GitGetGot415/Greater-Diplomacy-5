@@ -9,6 +9,21 @@ import data.constants as c
 
 song_y = 32
 
+# ==========================================
+# PYGAME MIXER PAUSE BUG PATCH
+# Pygame 2+ returns False for get_busy() when music is paused.
+# This makes standard game loops auto-skip to the next song. 
+# We monkey-patch it here so the controller respects the pause!
+# ==========================================
+if not hasattr(pygame.mixer.music, '_original_get_busy'):
+    pygame.mixer.music._original_get_busy = pygame.mixer.music.get_busy
+    def _patched_get_busy():
+        if getattr(pygame.mixer.music, '_custom_is_paused', False):
+            return True
+        return pygame.mixer.music._original_get_busy()
+    pygame.mixer.music.get_busy = _patched_get_busy
+
+
 class TopBarOverlay:
     """A custom UI element injected to act as a solid header, clipping scrolled items."""
     def __init__(self, controller):
@@ -21,7 +36,7 @@ class TopBarOverlay:
     def draw(self, surface):
         # Draw solid backgrounds over the scrolling area
         pygame.draw.rect(surface, (35, 35, 45), (0, 0, c.MUSIC_LEFT_PANE_W, 120))
-        pygame.draw.rect(surface, (25, 25, 30), (c.MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - c.MUSIC_LEFT_PANE_W, 200)) # Increased height to fit the scrubber
+        pygame.draw.rect(surface, (25, 25, 30), (c.MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - c.MUSIC_LEFT_PANE_W, 200)) # Height for scrubber
         
         # Re-draw the divider line over the header
         pygame.draw.line(surface, (100, 100, 100), (c.MUSIC_LEFT_PANE_W, 0), (c.MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
@@ -32,6 +47,7 @@ class TopBarOverlay:
         
         np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if getattr(self.controller, 'now_playing', "None") != "None" else "Now Playing: Nothing"
         surface.blit(font_norm.render(np_text, True, (255, 215, 0)), (c.MUSIC_LEFT_PANE_W + 20, 30))
+
 
 class MusicScrubber:
     """A dedicated interactive UI slider specifically for scrubbing music playback."""
@@ -51,8 +67,14 @@ class MusicScrubber:
     def update_progress(self, current_sec, total_sec):
         if total_sec > 0:
             self.total_time_str = self._format_time(total_sec)
-            self.current_time_str = self._format_time(current_sec)
-            if not self.is_dragging:
+            
+            if self.is_dragging:
+                # Show projected time while dragging
+                scrub_time = self.value * total_sec
+                self.current_time_str = self._format_time(scrub_time)
+            else:
+                # Sync exactly with playback if not dragging
+                self.current_time_str = self._format_time(current_sec)
                 self.value = max(0.0, min(1.0, current_sec / total_sec))
         else:
             self.total_time_str = "00:00"
@@ -111,12 +133,16 @@ class MusicScrubber:
         # Draw outline
         pygame.draw.rect(surface, (100, 100, 100), self.rect, 2, border_radius=5)
 
+
 class Music_Player(GameState):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
         self.bg_color = (25, 25, 30)
         self.return_state = "MENU"
+        
+        # Track auto-plays so UI syncs when a song naturally ends
+        self._last_playing_track = getattr(self.controller, 'now_playing', None)
         
         # Ensure directories and files exist
         if not os.path.exists(c.MUSIC_DIR):
@@ -234,6 +260,12 @@ class Music_Player(GameState):
 
     def play_track(self, track_path=None):
         """Helper to play a track and instantly update the UI colors."""
+        # Reset Pygame tracking vars
+        self.controller._pygame_playback_offset = 0.0
+        self.controller._pygame_scrub_base_pos = 0.0
+        self.controller._pygame_frozen_time = 0.0
+        pygame.mixer.music._custom_is_paused = False
+        
         if track_path:
             self.controller.play_specific_song(track_path)
         else:
@@ -253,8 +285,10 @@ class Music_Player(GameState):
                 self.controller.soloud.set_pause(self.controller.music_handle, self.controller.is_paused)
         else:
             if self.controller.is_paused:
+                pygame.mixer.music._custom_is_paused = True
                 pygame.mixer.music.pause()
             else:
+                pygame.mixer.music._custom_is_paused = False
                 pygame.mixer.music.unpause()
         
         self.refresh_ui()
@@ -273,11 +307,25 @@ class Music_Player(GameState):
             if getattr(self.controller, 'music_handle', None) is not None:
                 self.controller.soloud.seek(self.controller.music_handle, target_time)
         else:
+            # Unpause automatically if scrubbing while paused
+            if getattr(pygame.mixer.music, '_custom_is_paused', False):
+                pygame.mixer.music._custom_is_paused = False
+                self.controller.is_paused = False
+                pygame.mixer.music.unpause()
+                self.refresh_ui()
+                
             try:
-                # Note: pygame mixer set_pos behavior is format dependent 
                 pygame.mixer.music.set_pos(target_time)
-            except Exception as e:
-                print(f"Cannot scrub format: {e}")
+            except pygame.error:
+                # Fallback to play(start=) which works better on modern Pygame for MP3/OGG
+                try:
+                    pygame.mixer.music.play(start=target_time)
+                except Exception as e:
+                    print(f"Cannot scrub format: {e}")
+                    
+            self.controller._pygame_playback_offset = target_time
+            self.controller._pygame_scrub_base_pos = pygame.mixer.music.get_pos() / 1000.0
+            self.controller._pygame_frozen_time = target_time
 
     def get_current_track_length(self):
         track = getattr(self.controller, 'now_playing', None)
@@ -296,12 +344,35 @@ class Music_Player(GameState):
         if c.USE_SOLOUD:
             if getattr(self.controller, 'music_handle', None) is not None:
                 return self.controller.soloud.get_stream_time(self.controller.music_handle)
+            return 0
         else:
-            return pygame.mixer.music.get_pos() / 1000.0
-        return 0
+            if getattr(pygame.mixer.music, '_custom_is_paused', False):
+                return getattr(self.controller, '_pygame_frozen_time', 0.0)
+                
+            raw_pos = pygame.mixer.music.get_pos() / 1000.0
+            offset = getattr(self.controller, '_pygame_playback_offset', 0.0)
+            base_pos = getattr(self.controller, '_pygame_scrub_base_pos', 0.0)
+            
+            # The actual position is the offset we scrubbed to + the time elapsed SINCE the scrub
+            current = offset + (raw_pos - base_pos)
+            
+            # Save this in case the user pauses next frame
+            self.controller._pygame_frozen_time = current
+            return current
 
     def update(self):
         super().update()
+        
+        # Sync UI if track auto-plays/changes externally
+        current_track = getattr(self.controller, 'now_playing', None)
+        if getattr(self, '_last_playing_track', None) != current_track:
+            self._last_playing_track = current_track
+            self.controller._pygame_playback_offset = 0.0
+            self.controller._pygame_scrub_base_pos = 0.0
+            self.controller._pygame_frozen_time = 0.0
+            pygame.mixer.music._custom_is_paused = False
+            self.controller.is_paused = False
+            self.refresh_ui()
         
         # Continuously sync the scrubber visual and text with actual audio progress
         if hasattr(self, 'progress_slider'):
