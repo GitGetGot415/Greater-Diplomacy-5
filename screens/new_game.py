@@ -52,13 +52,14 @@ class New_Game(GameState):
                 continue
                 
             try:
-                # 1. Instantiate the working Map engine pointing directly at the scenario directory
-                # This headlessly runs load_map_assets behind the scenes without drawing onto the display canvas
-                temp_map_context = Map(load_path=scenario_path, is_scenario=True)
+                # 1. Instantiate the Map engine utilizing force_editor=True
+                # This bypasses singleplayer session routing and forces saves back to the loaded path directory
+                temp_map_context = Map(load_path=scenario_path, force_editor=True)
                 
                 # 2. Leverage your master resync function (includes sub-modules like sync_units_to_data)
                 temp_map_context.refresh_nation_data()
                 print(f"refreshed")
+                
                 # 3. Leverage the map's native disk writer to serialize cleanly onto the disk
                 temp_map_context.save_map_data()
                 
