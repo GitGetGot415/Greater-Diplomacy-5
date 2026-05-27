@@ -18,7 +18,7 @@ class MapCamera:
             max_zoom = c.MAX_CAMERA_ZOOM
             self.target_zoom = max(self_map.min_zoom, min(self.target_zoom + zoom_change, max_zoom))
 
-        if event.type == pygame.MOUSEMOTION and event.buttons[2] and not on_ui:
+        if event.type == pygame.MOUSEMOTION and event.buttons[2 if c.DRAG_MOUSE_BUTTON_TOGGLE == "RIGHT" else 0] and not on_ui:
             self.pos.x -= event.rel[0] / self.zoom
             self.pos.y -= event.rel[1] / (self.zoom * getattr(self, 'tilt_factor', 1.0))
             self.target_pos = pygame.Vector2(self.pos)
