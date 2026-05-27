@@ -302,7 +302,10 @@ class Music_Player(GameState):
         length = self.get_current_track_length()
         if length <= 0: return
         
-        target_time = val * length
+        # FIX: Clamp the max seek time slightly behind Pygame's estimated length
+        # This prevents seeking past SoLoud's actual End-Of-File, which kills the track.
+        safe_length = max(0, length - 0.5)
+        target_time = val * safe_length
         
         if c.USE_SOLOUD:
             if getattr(self.controller, 'music_handle', None) is not None:
@@ -360,7 +363,10 @@ class Music_Player(GameState):
                 offset = getattr(self.controller, '_playback_offset', 0.0)
                 base_pos = getattr(self.controller, '_scrub_base_pos', 0.0)
                 
-                current = offset + (raw_pos - base_pos)
+                # FIX: Scale the time delta by the current pitch/speed multiplier!
+                speed_mult = 0.5 + getattr(self.controller, 'music_pitch', 0.5) 
+                current = offset + ((raw_pos - base_pos) * speed_mult)
+                
                 self.controller._frozen_time = current
                 return current
             return 0
@@ -436,9 +442,14 @@ class Music_Player(GameState):
         self.save_audio_settings()
 
     def set_music_pitch(self, val):
+        # FIX: Snapshot current position BEFORE changing speed to prevent timeline jumping
+        if c.USE_SOLOUD and getattr(self.controller, 'music_handle', None) is not None:
+            current_pos = self.get_current_track_pos() 
+            self.controller._playback_offset = current_pos
+            self.controller._scrub_base_pos = self.controller.soloud.get_stream_time(self.controller.music_handle)
+
         self.controller.music_pitch = val
         if getattr(self.controller, 'music_handle', None) is not None:
-            # Shifted from 0.5 + (val * 1.5) to a clean 0.5 + val mapping
             speed_mult = 0.5 + val 
             self.controller.soloud.set_relative_play_speed(self.controller.music_handle, speed_mult)
         self.save_audio_settings()
