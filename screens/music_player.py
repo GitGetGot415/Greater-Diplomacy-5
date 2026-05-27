@@ -261,9 +261,9 @@ class Music_Player(GameState):
 
     def play_track(self, track_path=None):
         """Helper to play a track and instantly update the UI colors."""
-        self.controller._playback_offset = 0.0
-        self.controller._scrub_base_pos = 0.0
         self.controller._frozen_time = 0.0
+        self.controller._last_raw_pos = 0.0
+        self._seek_ignore_until = pygame.time.get_ticks() + 150 # Protect track start
         pygame.mixer.music._custom_is_paused = False
         
         if track_path:
@@ -272,7 +272,6 @@ class Music_Player(GameState):
             self.controller.play_random_song()
         
         self.controller.is_paused = False # Safety reset
-        self._awaiting_seek_confirm = True # Allow update loop to capture the initial stream base position
         self.refresh_ui()
 
     def toggle_pause(self):
@@ -302,19 +301,13 @@ class Music_Player(GameState):
         length = self.get_current_track_length()
         if length <= 0: return
         
-        # FIX: Clamp the max seek time slightly behind Pygame's estimated length
-        # This prevents seeking past SoLoud's actual End-Of-File, which kills the track.
+        # Clamp slightly to prevent SoLoud End-of-File crashes
         safe_length = max(0, length - 0.5)
         target_time = val * safe_length
         
         if c.USE_SOLOUD:
             if getattr(self.controller, 'music_handle', None) is not None:
                 self.controller.soloud.seek(self.controller.music_handle, target_time)
-                
-                # Manual tracking baseline to prevent rubber-banding
-                self.controller._playback_offset = target_time
-                self.controller._frozen_time = target_time
-                self._awaiting_seek_confirm = True
         else:
             # Unpause automatically if scrubbing while paused
             if getattr(pygame.mixer.music, '_custom_is_paused', False):
@@ -326,15 +319,15 @@ class Music_Player(GameState):
             try:
                 pygame.mixer.music.set_pos(target_time)
             except pygame.error:
-                # Fallback to play(start=) which works better on modern Pygame for MP3/OGG
                 try:
                     pygame.mixer.music.play(start=target_time)
                 except Exception as e:
                     print(f"Cannot scrub format: {e}")
                     
-            self.controller._playback_offset = target_time
-            self.controller._frozen_time = target_time
-            self._awaiting_seek_confirm = True
+        # Update our integrator baseline instantly and lock it for 150ms 
+        # so the backend audio thread has time to execute the jump without corrupting the UI
+        self.controller._frozen_time = target_time
+        self._seek_ignore_until = pygame.time.get_ticks() + 150
 
     def get_current_track_length(self):
         track = getattr(self.controller, 'now_playing', None)
@@ -350,37 +343,45 @@ class Music_Player(GameState):
         return self._track_lengths[track]
 
     def get_current_track_pos(self):
-        # If waiting for the backend to update its internal buffer, return the frozen time
-        if getattr(self, '_awaiting_seek_confirm', False):
-            return getattr(self.controller, '_frozen_time', 0.0)
-
         if c.USE_SOLOUD:
-            if getattr(self.controller, 'is_paused', False):
+            if getattr(self.controller, 'is_paused', False) or getattr(self.controller, 'music_handle', None) is None:
                 return getattr(self.controller, '_frozen_time', 0.0)
-                
-            if getattr(self.controller, 'music_handle', None) is not None:
-                raw_pos = self.controller.soloud.get_stream_time(self.controller.music_handle)
-                offset = getattr(self.controller, '_playback_offset', 0.0)
-                base_pos = getattr(self.controller, '_scrub_base_pos', 0.0)
-                
-                # FIX: Scale the time delta by the current pitch/speed multiplier!
-                speed_mult = 0.5 + getattr(self.controller, 'music_pitch', 0.5) 
-                current = offset + ((raw_pos - base_pos) * speed_mult)
-                
-                self.controller._frozen_time = current
-                return current
-            return 0
+            raw_pos = self.controller.soloud.get_stream_time(self.controller.music_handle)
         else:
             if getattr(pygame.mixer.music, '_custom_is_paused', False):
                 return getattr(self.controller, '_frozen_time', 0.0)
-                
             raw_pos = pygame.mixer.music.get_pos() / 1000.0
-            offset = getattr(self.controller, '_playback_offset', 0.0)
-            base_pos = getattr(self.controller, '_scrub_base_pos', 0.0)
-            
-            current = offset + (raw_pos - base_pos)
-            self.controller._frozen_time = current
-            return current
+
+        # Wait out the 150ms buffer lock so async thread jumps don't blow up our delta math
+        current_ticks = pygame.time.get_ticks()
+        if current_ticks < getattr(self, '_seek_ignore_until', 0):
+            self.controller._last_raw_pos = raw_pos
+            return getattr(self.controller, '_frozen_time', 0.0)
+
+        # Delta-Time Integrator
+        last_raw = getattr(self.controller, '_last_raw_pos', raw_pos)
+        delta = raw_pos - last_raw
+        self.controller._last_raw_pos = raw_pos
+
+        # Failsafe: Ignore massive jumps (lag spikes) or negative jumps (engine resets/loops)
+        if delta < 0 or delta > 1.0:
+            delta = 0.0
+
+        # Scale ONLY the tiny frame delta by the pitch, making the timeline perfectly immune to desyncs
+        speed_mult = 1.0
+        if c.USE_SOLOUD:
+            speed_mult = 0.5 + getattr(self.controller, 'music_pitch', 0.5)
+
+        current = getattr(self.controller, '_frozen_time', 0.0)
+        current += (delta * speed_mult)
+        
+        # Clamp to max track length so it never bleeds past visually
+        max_len = self.get_current_track_length()
+        if max_len > 0:
+            current = min(current, max_len)
+
+        self.controller._frozen_time = current
+        return current
 
     def update(self):
         super().update()
@@ -389,21 +390,13 @@ class Music_Player(GameState):
         current_track = getattr(self.controller, 'now_playing', None)
         if getattr(self, '_last_playing_track', None) != current_track:
             self._last_playing_track = current_track
-            self.controller._playback_offset = 0.0
             self.controller._frozen_time = 0.0
-            self._awaiting_seek_confirm = True # Allow it to settle for a frame
+            self.controller._last_raw_pos = 0.0
+            self._seek_ignore_until = pygame.time.get_ticks() + 150
             pygame.mixer.music._custom_is_paused = False
             self.controller.is_paused = False
             self.refresh_ui()
             
-        # Capture the raw stream position one frame after seeking so it's guaranteed to have updated its buffer
-        if getattr(self, '_awaiting_seek_confirm', False):
-            self._awaiting_seek_confirm = False
-            if c.USE_SOLOUD and getattr(self.controller, 'music_handle', None) is not None:
-                self.controller._scrub_base_pos = self.controller.soloud.get_stream_time(self.controller.music_handle)
-            elif not c.USE_SOLOUD:
-                self.controller._scrub_base_pos = pygame.mixer.music.get_pos() / 1000.0
-        
         # Continuously sync the scrubber visual and text with actual audio progress
         if hasattr(self, 'progress_slider'):
             length = self.get_current_track_length()
@@ -442,12 +435,6 @@ class Music_Player(GameState):
         self.save_audio_settings()
 
     def set_music_pitch(self, val):
-        # FIX: Snapshot current position BEFORE changing speed to prevent timeline jumping
-        if c.USE_SOLOUD and getattr(self.controller, 'music_handle', None) is not None:
-            current_pos = self.get_current_track_pos() 
-            self.controller._playback_offset = current_pos
-            self.controller._scrub_base_pos = self.controller.soloud.get_stream_time(self.controller.music_handle)
-
         self.controller.music_pitch = val
         if getattr(self.controller, 'music_handle', None) is not None:
             speed_mult = 0.5 + val 
