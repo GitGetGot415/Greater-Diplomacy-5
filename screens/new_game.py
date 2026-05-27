@@ -19,7 +19,7 @@ class New_Game(GameState):
             Button(20, 20, "small", "red", "Back", self.exit_to_menu),
             Button("centered", "centered + 200", "new_game", "orange", "RANDOM SCENARIO", self.start_random_scenario),
             # Button for global data refresh positioned via configuration anchors
-            Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "small", "blue", "Data Refresh", self.trigger_global_data_refresh),
+            Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "purple", "Data Refresh", self.trigger_global_data_refresh),
         ]
         
         # Look for scenarios in the scenarios folder
