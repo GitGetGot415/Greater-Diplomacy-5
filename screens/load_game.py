@@ -5,7 +5,7 @@ import pygame
 import zipfile
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from data import queries # Needed for Tkinter helpers
+from data import queries 
 from gameState import GameState
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
@@ -19,10 +19,14 @@ class Load_Game(GameState):
         # State variables
         self.renaming_folder = None
         self.new_name_text = ""
-        self.deleting_folder = None # Track which save is pending deletion
+        self.deleting_folder = None 
         
-        #self.root = tk.Tk()
-        #self.root.withdraw()
+        # --- NEW SCROLL STATE ---
+        self.save_scroll_y = 0
+        self.max_save_scroll = 0
+        self.is_dragging_scrollbar = False
+        self.scroll_track_rect = None
+        self.scroll_handle_rect = None
         
         self.refresh_save_list()
 
@@ -36,70 +40,82 @@ class Load_Game(GameState):
             os.makedirs(c.SAVES_DIR)
             
         save_folders = os.listdir(c.SAVES_DIR)
+        
+        # Calculate scroll boundaries
+        total_content_height = len(save_folders) * 40
+        self.max_save_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height)
+
         for i, folder in enumerate(save_folders):
-            btn_y = 120 + (i * 40)
+            # Apply the scroll offset to the button Y position
+            btn_y = 120 + (i * 40) + self.save_scroll_y
             
+            # Simple Y-based culling so we don't draw off-screen buttons
+            if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
+                continue
+
             # Hide buttons for the row being renamed or deleted
             if self.renaming_folder == folder or self.deleting_folder == folder:
                 continue
 
             # Load
             self.elements.append(Button(20, btn_y, "save_file", "blue", folder, 
-                                       lambda f=folder: self.load_specific_save(f)))
+                                        lambda f=folder: self.load_specific_save(f)))
             # History
-            self.elements.append(Button(830, btn_y, "small_save_button", "purple", "History", 
-                                       lambda f=folder: self.open_history_menu(f)))
+            self.elements.append(Button(785, btn_y, "small_save_button", "purple", "History", 
+                                        lambda f=folder: self.open_history_menu(f)))
             # Rename
-            self.elements.append(Button(940, btn_y, "small_save_button", "grey", "Rename", 
-                                       lambda f=folder: self.start_rename(f)))
+            self.elements.append(Button(895, btn_y, "small_save_button", "grey", "Rename", 
+                                        lambda f=folder: self.start_rename(f)))
             # Export
-            self.elements.append(Button(1050, btn_y, "small_save_button", "green", "Export", 
-                                       lambda f=folder: self.export_save_zip(f)))
+            self.elements.append(Button(1005, btn_y, "small_save_button", "green", "Export", 
+                                        lambda f=folder: self.export_save_zip(f)))
             # Delete trigger
-            self.elements.append(Button(1160, btn_y, "small_save_button", "red", "Del", 
-                                       lambda f=folder: self.trigger_delete_conf(f)))
+            self.elements.append(Button(1115, btn_y, "small_save_button", "red", "Del", 
+                                        lambda f=folder: self.trigger_delete_conf(f)))
 
-    def trigger_delete_conf(self, folder_name):
-        """Activates the delete confirmation state."""
-        self.deleting_folder = folder_name
-        self.refresh_save_list()
-
-    def confirm_delete(self):
-        """Actually deletes the folder."""
-        path = os.path.join(c.SAVES_DIR, self.deleting_folder)
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        self.deleting_folder = None
-        self.refresh_save_list()
-
-    def cancel_delete(self):
-        """Backs out of deletion."""
-        self.deleting_folder = None
+    def _snap_scroll(self, my):
+        """Helper to map mouse Y to scroll position."""
+        view_h = c.SCREEN_HEIGHT - 200
+        handle_h = max(30, int(view_h * (view_h / max(1, view_h - self.max_save_scroll))))
+        rel_y = my - 120 - (handle_h / 2)
+        max_y = view_h - handle_h
+        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
+        self.save_scroll_y = ratio * self.max_save_scroll
         self.refresh_save_list()
 
     def additional_events(self, event):
         # 1. Renaming Input Logic
         if self.renaming_folder:
-            # Custom validation lambda for safe folder names
             is_valid_char = lambda c: c.isalnum() or c in " _-"
-            
-            self.new_name_text, status = process_text_input(
-                event, self.new_name_text, validation_func=is_valid_char
-            )
-
-            if status == "SUBMIT":
-                self.finish_rename()
-            elif status == "CANCEL":
-                self.renaming_folder = None
-                self.refresh_save_list()
+            self.new_name_text, status = process_text_input(event, self.new_name_text, validation_func=is_valid_char)
+            if status == "SUBMIT": self.finish_rename()
+            elif status == "CANCEL": self.renaming_folder = None; self.refresh_save_list()
         
-        # 2. Deletion Input Logic (Enter to confirm, Esc to cancel)
+        # 2. Deletion Input Logic
         elif self.deleting_folder:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    self.confirm_delete()
-                elif event.key == pygame.K_ESCAPE:
-                    self.cancel_delete()
+                if event.key == pygame.K_RETURN: self.confirm_delete()
+                elif event.key == pygame.K_ESCAPE: self.cancel_delete()
+
+        # 3. Scrolling Logic
+        if event.type == pygame.MOUSEWHEEL:
+            self.save_scroll_y += event.y * 40
+            self.save_scroll_y = max(self.max_save_scroll, min(0, self.save_scroll_y))
+            self.refresh_save_list()
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(mx, my):
+                self.is_dragging_scrollbar = True
+            elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(mx, my):
+                self.is_dragging_scrollbar = True
+                self._snap_scroll(my)
+
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.is_dragging_scrollbar = False
+
+        elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
+            self._snap_scroll(event.pos[1])
 
     def additional_draw(self, surface):
         # --- Draw Rename Input Box ---
@@ -139,6 +155,43 @@ class Load_Game(GameState):
             sub_msg = font.render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
             sub_rect = sub_msg.get_rect(center=(800, 450))
             surface.blit(sub_msg, sub_rect)
+
+        # --- Draw Scrollbar ---
+        if self.max_save_scroll < 0:
+            view_h = c.SCREEN_HEIGHT - 200
+            track_rect = pygame.Rect(c.SCREEN_WIDTH - 40, 120, 15, view_h)
+            pygame.draw.rect(surface, (50, 50, 60), track_rect)
+            
+            ratio = self.save_scroll_y / self.max_save_scroll
+            handle_h = max(30, int(view_h * (view_h / (view_h - self.max_save_scroll))))
+            handle_y = 120 + ratio * (view_h - handle_h)
+            
+            handle_rect = pygame.Rect(c.SCREEN_WIDTH - 40, handle_y, 15, handle_h)
+            pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+            
+            self.scroll_track_rect = track_rect
+            self.scroll_handle_rect = handle_rect
+        else:
+            self.scroll_track_rect = None
+            self.scroll_handle_rect = None
+
+    def trigger_delete_conf(self, folder_name):
+        """Activates the delete confirmation state."""
+        self.deleting_folder = folder_name
+        self.refresh_save_list()
+
+    def confirm_delete(self):
+        """Actually deletes the folder."""
+        path = os.path.join(c.SAVES_DIR, self.deleting_folder)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        self.deleting_folder = None
+        self.refresh_save_list()
+
+    def cancel_delete(self):
+        """Backs out of deletion."""
+        self.deleting_folder = None
+        self.refresh_save_list()
 
     def open_history_menu(self, folder_name):
         import tkinter as tk

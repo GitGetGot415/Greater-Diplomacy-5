@@ -321,7 +321,7 @@ SIZES = {
     "orders_panel_button_2": (70, 40),
     "left_ui_bar": (120, 50),
     "song": (700, 30),
-    "save_file": (800, 30),
+    "save_file": (745, 30),
     "small_save_button": (100, 30),
     "diplomatic": (200, 30),
     "medium": (200, 50),
