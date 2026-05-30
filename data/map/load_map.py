@@ -31,16 +31,12 @@ def load_map_assets(self, load_path):
     self.history = {}
     self.raw_json_data = {}
     
+    # --- UNIFIED SETTINGS LOADING ---
     scenario_settings = queries.get_scenario_settings()
-    if scenario_settings:
-        c.USE_FOG_OF_WAR = scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
-        print("YEAH")
-    else:
-        self.scenario_settings = {"fog_of_war": c.USE_FOG_OF_WAR}
-
-    # 1. PRE-LOAD: Apply settings from the instance variable if they exist
-    if hasattr(self, 'scenario_settings'):
-        c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
+    # Ensure we always have a dictionary to reference
+    self.scenario_settings = scenario_settings if scenario_settings is not None else {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
+    c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
+    print(f"[SYSTEM] Fog of War set to: {c.USE_FOG_OF_WAR}")
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
@@ -102,14 +98,6 @@ def load_map_assets(self, load_path):
     if save_meta and "scenario_settings" in save_meta:
         self.scenario_settings = save_meta["scenario_settings"]
         c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
-
-    # --- APPLY SCENARIO SETTINGS ---
-    if save_meta and "scenario_settings" in save_meta:
-        self.scenario_settings = save_meta["scenario_settings"]
-        c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
-    else:
-        self.scenario_settings = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
-        c.USE_FOG_OF_WAR = c.DEFAULT_FOG_OF_WAR
 
     if load_path:
         history_path = os.path.join(load_path, "history.json")
