@@ -27,7 +27,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering.country_names import update_country_centers as calc_country_centers
 
 class Map(GameState):
-    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, num_players=1, history_turn=None):
+    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None):
         super().__init__()
 
         self.history_turn = history_turn
@@ -97,6 +97,9 @@ class Map(GameState):
         # Sync constants mapping directly from loaded configuration store values if they exist
         if hasattr(self, 'controller') and getattr(self.controller, 'drag_mouse_button_toggle', None):
             c.DRAG_MOUSE_BUTTON_TOGGLE = self.controller.drag_mouse_button_toggle
+
+        # Capture settings passed from New_Game
+        self.scenario_settings = map_settings if map_settings else {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
 
         # --- 3. Visuals & UI Setup ---
         self.bg_color = (20, 20, 20)

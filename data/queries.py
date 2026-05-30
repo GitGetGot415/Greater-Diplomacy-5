@@ -42,12 +42,19 @@ def get_visible_provinces(player_country, map_data, nation_data):
 # By mapping the path directly to the cache, we can automate loading and saving!
 _JSON_CACHE = {
     "settings": {"path": c.SETTINGS_CONFIG_PATH, "data": None},
+    "scenario_settings": {"path": "data/json/scenario_settings.json", "data": None},
     "unit_library": {"path": c.UNIT_DATA_PATH, "data": None},
     "building_library": {"path": c.BUILDING_DATA_PATH, "data": None},
     "tech_tree": {"path": c.RESEARCH_TEMPLATE_PATH, "data": None},
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
     "active_albums": {"path": getattr(c, 'ACTIVE_ALBUMS_PATH', "data/json/active_albums.json"), "data": None}
 }
+
+def get_scenario_settings(): 
+    return _load_cached_json("scenario_settings")
+
+def save_scenario_settings(data):
+    save_cached_json("scenario_settings", data)
 
 def clear_json_caches():
     """Forces the game to fetch the updated files on the next read."""

@@ -31,6 +31,17 @@ def load_map_assets(self, load_path):
     self.history = {}
     self.raw_json_data = {}
     
+    scenario_settings = queries.get_scenario_settings()
+    if scenario_settings:
+        c.USE_FOG_OF_WAR = scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
+        print("YEAH")
+    else:
+        self.scenario_settings = {"fog_of_war": c.USE_FOG_OF_WAR}
+
+    # 1. PRE-LOAD: Apply settings from the instance variable if they exist
+    if hasattr(self, 'scenario_settings'):
+        c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
+
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
         from map_logic.random_map import procedural_map_generator
@@ -80,12 +91,17 @@ def load_map_assets(self, load_path):
     except:
         self.cores_map = self.id_map.copy() 
 
-    # --- 2. Load Metadata (The Save File) ---
+   # 2. Load Metadata (The Save File)
     save_meta = None
     meta_path = os.path.join(load_path, "meta.json")
     if os.path.exists(meta_path):
         with open(meta_path, "r") as f:
             save_meta = json.load(f)
+            
+    # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
+    if save_meta and "scenario_settings" in save_meta:
+        self.scenario_settings = save_meta["scenario_settings"]
+        c.USE_FOG_OF_WAR = self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
 
     # --- APPLY SCENARIO SETTINGS ---
     if save_meta and "scenario_settings" in save_meta:

@@ -158,14 +158,6 @@ class New_Game(GameState):
     def map_selected(self):
         self.next_state = "MAP"
         self.done = True
-    
-    def start_scenario(self, scenario_name):
-        # We pass the path to the scenario folder
-
-        # selected save path not scenario path because scenario path doesn't seem to be working
-        self.selected_save_path = os.path.join(c.SCENARIOS_DIR, scenario_name)
-        self.next_state = "MAP"
-        self.done = True
 
     def exit_to_menu(self):
         self.next_state = "MENU"
