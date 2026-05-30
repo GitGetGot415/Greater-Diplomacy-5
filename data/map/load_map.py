@@ -23,6 +23,13 @@ def _load_default_images(map_obj):
             n_data["portrait_data"] = "DEFAULT"
 
 def load_map_assets(self, load_path):
+    # --- NEW: RESET STATE ---
+    # Ensure no residual data from a previous map persists during the load
+    self.map_data = {}
+    self.id_to_province = {}
+    self.nation_data = {}
+    self.history = {}
+    self.raw_json_data = {}
     
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
@@ -59,6 +66,10 @@ def load_map_assets(self, load_path):
     self.terrain_map = pygame.image.load(os.path.join(load_path, "terrain.png")).convert()
     self.id_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
     
+    # --- ADD THIS: Update map dimensions and camera constraints ---
+    self.map_w, self.map_h = self.id_map.get_size()
+    self.min_zoom = (c.SCREEN_HEIGHT - 120) / self.map_h
+    
     try:
         self.political_map = pygame.image.load(os.path.join(load_path, "political.png")).convert()
     except:
@@ -76,7 +87,6 @@ def load_map_assets(self, load_path):
         with open(meta_path, "r") as f:
             save_meta = json.load(f)
 
-    self.history = {}
     if load_path:
         history_path = os.path.join(load_path, "history.json")
         if os.path.exists(history_path):
@@ -185,9 +195,6 @@ def load_map_assets(self, load_path):
     with open(json_path, "r") as f:
         self.raw_json_data = json.load(f)
 
-    self.map_data = {}
-    self.id_to_province = {}
-    
     # Load building library to scrub removed buildings (like fuel refineries) from old saves
     bldg_lib = queries.get_building_library()
     

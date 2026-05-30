@@ -82,8 +82,14 @@ def handle_map_events(self, event):
         wx = ((mx / self.camera.zoom) + self.camera.pos.x) % self.map_w
         wy = ((my - self.top_ui_height) / (self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0))) + self.camera.pos.y
         
+        # --- ADD THIS: Safety clamping ---
+        # Ensure wx/wy stay within valid bounds even if math is slightly off
+        safe_x = max(0, min(int(wx), self.map_w - 1))
+        safe_y = max(0, min(int(wy), self.map_h - 1))
+        
         if 0 <= wy < self.map_h:
-            color = self.id_map.get_at((int(wx), int(wy)))
+            # Use the clamped values
+            color = self.id_map.get_at((safe_x, safe_y))
             self.hovered_province = self.map_data.get((color.r, color.g, color.b))
             
             if self.hovered_province:
