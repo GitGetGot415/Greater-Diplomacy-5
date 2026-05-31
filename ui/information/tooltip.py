@@ -18,9 +18,14 @@ def draw_tooltip(self, surface):
     owner_id = prov.get('owner', 'Unclaimed')
     owner_display = self.nation_data.get(owner_id, {}).get("name", owner_id)
     
+    # Coastal Sea and Inland Sea display
+    terrain = prov.get('terrain', 'Unknown')
+    if terrain in c.WATER_TERRAINS:
+        owner_display = terrain.replace('_', ' ').title()
+    
     # 1. Start with the basic header info based on the primary map mode
     if getattr(self, 'base_layer', '') == "TERRAIN":
-        terrain_display = prov.get('terrain', 'Unknown').replace('_', ' ').title()
+        terrain_display = terrain.replace('_', ' ').title()
         lines = [f"ID: {prov['id']} | {terrain_display}"]
     elif getattr(self, 'base_layer', '') == "RELATIONS":
         # Show exactly how much they like us
