@@ -460,8 +460,17 @@ class Research_Screen(GameState):
         surface.blit(title, (panel_rect.x + 30, panel_rect.y + 30))
 
         if self.active_modal["icon"]:
-            big_icon = pygame.transform.scale(self.active_modal["icon"], (120, 120))
-            surface.blit(big_icon, (panel_rect.x + 30, panel_rect.y + 100))
+            original_icon = self.active_modal["icon"]
+            width, height = original_icon.get_size()
+
+            scale_factor = min(120 / width, 120 / height)
+            
+            new_width = width * scale_factor
+            new_height = height * scale_factor
+        
+            big_icon = pygame.transform.scale(original_icon, (new_width, new_height))
+            
+            surface.blit(big_icon, (panel_rect.x + 30 + (120 - new_width) // 2, panel_rect.y + 100 + (120 - new_height) // 2))
 
         cost = self.active_modal["cost"]
         # Use dynamic points per turn calculation here as well
