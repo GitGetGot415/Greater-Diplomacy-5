@@ -3,6 +3,13 @@ import math
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
+def clear_country_name_cache(map_screen):
+    """Clears cached name surfaces so they are re-rendered on the next update."""
+    if hasattr(map_screen, 'country_name_surfs'):
+        delattr(map_screen, 'country_name_surfs')
+    if hasattr(map_screen, 'faction_name_surfs'):
+        delattr(map_screen, 'faction_name_surfs')
+
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes

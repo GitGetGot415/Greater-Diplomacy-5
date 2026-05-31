@@ -12,6 +12,7 @@ from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from ui import buttons
 from data import queries
+from map_logic.rendering import country_names
 
 input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
@@ -368,6 +369,9 @@ class Edit_Country_Screen(GameState):
         # Scrub it immediately to keep RAM clean
         queries.scrub_default_images({self.editing_country: p_data})
         
+        # --- NEW: Refresh Country Name Cache ---
+        country_names.clear_country_name_cache(self.map_screen)
+        
         # --- NEW COLOR SAVE LOGIC ---
         old_color = p_data.get("color")
         if list(old_color) != list(self.new_map_color):
@@ -378,7 +382,6 @@ class Edit_Country_Screen(GameState):
             
             # Trigger full map re-renders so the new color shows up instantly!
             self.map_screen.refresh_political_map()
-            # self.map_screen.refresh_relations_map()
             self.map_screen.refresh_cores_map()
         
         self.map_screen.show_feedback("Country Data Saved!")
