@@ -429,10 +429,15 @@ def randomize_all_provinces(map_screen, settings):
                     if queries.has_basic_factory(p):
                         has_coastal_factory = True
                         break
-                
+                    
                 if not has_coastal_factory:
                     # Inject a factory into the first coastal province to validate the ships
-                    coastal_provs[0].setdefault("buildings", []).append(getattr(c, 'DEFAULT_STARTING_FACTORY', "Basic Factory"))
+                    fac_to_place = random.choice(allowed_factories) if allowed_factories else getattr(c, 'DEFAULT_STARTING_FACTORY', "Basic Factory")
+                    coastal_provs[0].setdefault("buildings", []).append(fac_to_place)
+                    
+                    # Also spawn a random level recruitment center
+                    if allowed_recruitment:
+                        coastal_provs[0]["buildings"].append(random.choice(allowed_recruitment))
 
             # 5. Distribute Units Evenly Across Borders
             random.shuffle(border_provs)
