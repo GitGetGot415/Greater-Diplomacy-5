@@ -1,7 +1,7 @@
 {
     "(1, 0, 0)": {
         "id": 1,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             84,
@@ -23,7 +23,7 @@
     },
     "(2, 0, 0)": {
         "id": 2,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             226,
@@ -247,7 +247,7 @@
     },
     "(12, 0, 0)": {
         "id": 12,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3678,
@@ -684,7 +684,7 @@
     },
     "(32, 0, 0)": {
         "id": 32,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3709,
@@ -857,7 +857,7 @@
     },
     "(40, 0, 0)": {
         "id": 40,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             171,
@@ -1110,7 +1110,7 @@
     },
     "(51, 0, 0)": {
         "id": 51,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             58,
@@ -1134,7 +1134,7 @@
     },
     "(52, 0, 0)": {
         "id": 52,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             285,
@@ -1159,7 +1159,7 @@
     },
     "(53, 0, 0)": {
         "id": 53,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3540,
@@ -1182,7 +1182,7 @@
     },
     "(54, 0, 0)": {
         "id": 54,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3630,
@@ -1956,7 +1956,7 @@
     },
     "(89, 0, 0)": {
         "id": 89,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             410,
@@ -3605,7 +3605,7 @@
     },
     "(161, 0, 0)": {
         "id": 161,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3427,
@@ -3919,7 +3919,7 @@
     },
     "(175, 0, 0)": {
         "id": 175,
-        "terrain": "ocean",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3331,
@@ -25670,7 +25670,7 @@
     },
     "(99, 4, 0)": {
         "id": 1123,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             635,
@@ -29823,7 +29823,7 @@
     },
     "(25, 5, 0)": {
         "id": 1305,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             901,
@@ -30021,7 +30021,7 @@
     },
     "(34, 5, 0)": {
         "id": 1314,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             944,
@@ -30226,7 +30226,7 @@
     },
     "(43, 5, 0)": {
         "id": 1323,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             3295,
@@ -30476,7 +30476,7 @@
     },
     "(54, 5, 0)": {
         "id": 1334,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             838,
@@ -32302,7 +32302,7 @@
     },
     "(134, 5, 0)": {
         "id": 1414,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3154,
@@ -32329,7 +32329,7 @@
     },
     "(135, 5, 0)": {
         "id": 1415,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3209,
@@ -32715,7 +32715,7 @@
     },
     "(152, 5, 0)": {
         "id": 1432,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             925,
@@ -32827,7 +32827,7 @@
     },
     "(157, 5, 0)": {
         "id": 1437,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             874,
@@ -33000,7 +33000,7 @@
     },
     "(165, 5, 0)": {
         "id": 1445,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             808,
@@ -33926,7 +33926,7 @@
     },
     "(205, 5, 0)": {
         "id": 1485,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             3410,
@@ -34627,7 +34627,7 @@
     },
     "(236, 5, 0)": {
         "id": 1516,
-        "terrain": "coastal_sea",
+        "terrain": "inland_sea",
         "is_coastal": false,
         "center": [
             844,
@@ -35146,7 +35146,7 @@
     },
     "(3, 6, 0)": {
         "id": 1539,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3108,
@@ -35701,7 +35701,7 @@
     },
     "(28, 6, 0)": {
         "id": 1564,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3216,
@@ -36586,7 +36586,7 @@
     },
     "(67, 6, 0)": {
         "id": 1603,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3165,
@@ -36883,7 +36883,7 @@
     },
     "(80, 6, 0)": {
         "id": 1616,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             3280,
@@ -37087,7 +37087,7 @@
     },
     "(89, 6, 0)": {
         "id": 1625,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3045,
@@ -38132,7 +38132,7 @@
     },
     "(135, 6, 0)": {
         "id": 1671,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             3390,
@@ -38988,7 +38988,7 @@
     },
     "(173, 6, 0)": {
         "id": 1709,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3063,
@@ -39149,7 +39149,7 @@
     },
     "(180, 6, 0)": {
         "id": 1716,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3155,
@@ -39513,7 +39513,7 @@
     },
     "(196, 6, 0)": {
         "id": 1732,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3213,
@@ -41065,7 +41065,7 @@
     },
     "(8, 7, 0)": {
         "id": 1800,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3049,
@@ -41239,7 +41239,7 @@
     },
     "(16, 7, 0)": {
         "id": 1808,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             2957,
@@ -41644,7 +41644,7 @@
     },
     "(34, 7, 0)": {
         "id": 1826,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3269,
@@ -42466,7 +42466,7 @@
     },
     "(70, 7, 0)": {
         "id": 1862,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3195,
@@ -42875,7 +42875,7 @@
     },
     "(88, 7, 0)": {
         "id": 1880,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3137,
@@ -43377,7 +43377,7 @@
     },
     "(110, 7, 0)": {
         "id": 1902,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             2991,
@@ -43476,7 +43476,7 @@
     },
     "(114, 7, 0)": {
         "id": 1906,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             2750,
@@ -45018,7 +45018,7 @@
     },
     "(182, 7, 0)": {
         "id": 1974,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3063,
@@ -45337,7 +45337,7 @@
     },
     "(196, 7, 0)": {
         "id": 1988,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3004,
@@ -45360,7 +45360,7 @@
     },
     "(197, 7, 0)": {
         "id": 1989,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3160,
@@ -45409,7 +45409,7 @@
     },
     "(199, 7, 0)": {
         "id": 1991,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3224,
@@ -45939,7 +45939,7 @@
     },
     "(222, 7, 0)": {
         "id": 2014,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3289,
@@ -46463,7 +46463,7 @@
     },
     "(245, 7, 0)": {
         "id": 2037,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3008,
@@ -47407,7 +47407,7 @@
     },
     "(31, 8, 0)": {
         "id": 2079,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3041,
@@ -48434,7 +48434,7 @@
     },
     "(76, 8, 0)": {
         "id": 2124,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3126,
@@ -48461,7 +48461,7 @@
     },
     "(77, 8, 0)": {
         "id": 2125,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3207,
@@ -48491,7 +48491,7 @@
     },
     "(78, 8, 0)": {
         "id": 2126,
-        "terrain": "inland_sea",
+        "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
             3277,
@@ -48563,7 +48563,7 @@
     },
     "(81, 8, 0)": {
         "id": 2129,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             2406,
@@ -52101,7 +52101,7 @@
     },
     "(238, 8, 0)": {
         "id": 2286,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             2482,
@@ -52722,7 +52722,7 @@
     },
     "(9, 9, 0)": {
         "id": 2313,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             2388,
@@ -54484,7 +54484,7 @@
     },
     "(87, 9, 0)": {
         "id": 2391,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
             2311,
@@ -55395,8 +55395,8 @@
         "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
-            3254,
-            1261
+            3244,
+            1269
         ],
         "neighbors": [
             2494,
@@ -55874,8 +55874,8 @@
         "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
-            3155,
-            1290
+            3136,
+            1288
         ],
         "neighbors": [
             2494,
