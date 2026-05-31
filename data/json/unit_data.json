@@ -76,11 +76,11 @@
     "Mechanized Infantry Type 1950": {"health": 3000, "attack": 500, "defense": 50, "speed": 2, "cost_materials": 2500, "cost_manpower": 1000, "cost_fuel": 50, "production_time": 60, "naval_unit": false, "order": {}},
 
     "Cavalry I": {"health": 600, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
-    "Cavalry II": {"health": 650, "attack": 325, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
-    "Cavalry III": {"health": 700, "attack": 350, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
-    "Cavalry IV": {"health": 750, "attack": 375, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
-    "Cavalry V": {"health": 800, "attack": 400, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
-    
+    "Cavalry II": {"health": 700, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
+    "Cavalry III": {"health": 800, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
+    "Cavalry IV": {"health": 900, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
+    "Cavalry V": {"health": 1000, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
+
     "Militia I": {"health": 500, "attack": 50, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
     "Militia II": {"health": 600, "attack": 60, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
     "Militia III": {"health": 700, "attack": 70, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
