@@ -194,7 +194,7 @@ class Production_Screen(GameState):
                 if highest_unlocked:
                     lookup_name = highest_unlocked
                     
-                    if lookup_name == "Militia":
+                    if queries.get_base_unit_name(lookup_name) == "Militia":
                         can_build = queries.has_industry(self.target_province)
                     else:
                         can_build = queries.has_basic_factory(self.target_province)
@@ -265,7 +265,7 @@ class Production_Screen(GameState):
         stats = self.unit_library.get(unit_name)
         if not stats or not self.map_screen: return
 
-        if unit_name == "Militia":
+        if queries.get_base_unit_name(unit_name) == "Militia":
             if not queries.has_industry(self.target_province):
                 self.map_screen.show_feedback("Requires a Workshop or Factory to recruit Militia!")
                 return

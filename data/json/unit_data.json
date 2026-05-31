@@ -77,7 +77,12 @@
 
     "Cavalry": {"health": 600, "attack": 300, "defense": 0, "speed": 2, "cost_materials": 1000, "cost_manpower": 2000, "cost_fuel": 0, "production_time": 60, "naval_unit": false, "order": {}},
     
-    "Militia": {"health": 500, "attack": 50, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia I": {"health": 500, "attack": 50, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia II": {"health": 600, "attack": 60, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia III": {"health": 700, "attack": 70, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia IV": {"health": 800, "attack": 80, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia V": {"health": 900, "attack": 90, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
+    "Militia VI": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 300, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 15, "naval_unit": false, "order": {}},
 
     "WW1 Tank": {"health": 3000, "attack": 1500, "defense": 100, "speed": 1, "cost_materials": 6000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 90, "naval_unit": false, "order": {}},
     

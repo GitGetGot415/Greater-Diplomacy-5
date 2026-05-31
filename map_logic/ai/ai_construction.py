@@ -39,7 +39,7 @@ def process_ai_economy_decisions(map_screen):
         if not at_war:
             for prov in my_provs:
                 for u in prov.get("units", []):
-                    if u.get("owner") == ai_name and u.get("type") == "Militia" and u.get("order", {}).get("type") != "DISBAND":
+                    if u.get("owner") == ai_name and queries.get_base_unit_name(u.get("type", "")) == "Militia" and u.get("order", {}).get("type") != "DISBAND":
                         u["order"] = {"type": "DISBAND", "turns_left": 1}
 
         target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
@@ -168,7 +168,7 @@ def process_ai_economy_decisions(map_screen):
                         if not is_bldg and not is_naval and turns <= 1:
                             safe_to_panic = False # Let the ground unit finish!
                     
-                    if safe_to_panic and (not queue or queue[0].get("unit_type") != "Militia"):
+                    if safe_to_panic and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", "")) != "Militia"):
                         # Cancel existing queue
                         while queue:
                             item = queue.pop(0)
@@ -178,7 +178,8 @@ def process_ai_economy_decisions(map_screen):
                                 data["fuel"] += item["refund"].get("fuel", 0)
                         
                         # Queue Militia
-                        militia_stats = unit_library.get("Militia", {})
+                        militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"]) or "Militia I"
+                        militia_stats = unit_library.get(militia_name, {})
                         c_mat = militia_stats.get("cost_materials", 0)
                         c_man = militia_stats.get("cost_manpower", 0)
                         c_fuel = militia_stats.get("cost_fuel", 0)
@@ -195,7 +196,7 @@ def process_ai_economy_decisions(map_screen):
                             infantry_count += 1
                             
                             order = {
-                                "unit_type": "Militia",
+                                "unit_type": militia_name,
                                 "turns_remaining": max(1, militia_stats.get("production_time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
                                 "refund": {"materials": c_mat, "manpower": c_man, "fuel": c_fuel}
                             }
@@ -205,7 +206,7 @@ def process_ai_economy_decisions(map_screen):
             for u in prov.get("units", []):
                 if u.get("owner") == ai_name:
                     u_type = u.get("type", "")
-                    if "Infantry" in u_type or u_type == "Militia":
+                    if "Infantry" in u_type or queries.get_base_unit_name(u_type) == "Militia":
                         infantry_count += 1
                     elif "Tank" in u_type or "Armored" in u_type or u_type == "Cavalry":  
                         tank_count += 1
@@ -215,7 +216,7 @@ def process_ai_economy_decisions(map_screen):
             # Count queued units
             for q in prov.get("deployment_queue", []):
                 q_type = q.get("unit_type", "")
-                if "Infantry" in q_type or q_type == "Militia":
+                if "Infantry" in q_type or queries.get_base_unit_name(q_type) == "Militia":
                     infantry_count += 1
                 elif "Tank" in q_type or "Armored" in q_type or q_type == "Cavalry":  
                     tank_count += 1
@@ -307,7 +308,7 @@ def process_ai_economy_decisions(map_screen):
                 cost_fuel = unit_stats.get("cost_fuel", 0)
             
             # Find a province capable of recruiting (Exclude tiles in combat)
-            if unit_name_to_build == "Militia":
+            if queries.get_base_unit_name(unit_name_to_build) == "Militia":
                 factory_provs = [p for p in my_provs if queries.has_industry(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data)]
             else:
                 factory_provs = [p for p in my_provs if queries.has_basic_factory(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data)]
