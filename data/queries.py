@@ -521,7 +521,7 @@ def get_best_preferred_unit(player_research, unit_library, preference_list):
         res_lvl = player_research.get(tech_key, 0)
 
         if res_lvl > 0:
-            if base_pref in ["Cavalry", "WW1 Armored Car", "WW1 Tank", "Dreadnought"]:
+            if base_pref in ["WW1 Armored Car", "WW1 Tank", "Dreadnought"]:
                 return base_pref
 
             # For numbered tiers, find the highest roman numeral available

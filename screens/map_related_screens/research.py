@@ -117,9 +117,7 @@ class Research_Screen(GameState):
             mech_years = self.tech_tree.get("mechanized_infantry", {}).get("years", [c.START_YEAR])
             year = mech_years[min(lvl - 1, len(mech_years)-1)]
             return f"Mechanized Infantry Type {year}"
-        
-        if tech_key == "cavalry": return "Cavalry"
-        
+                
         romans = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
         
         if tech_key == "civilian_car": return "Civilian Car"

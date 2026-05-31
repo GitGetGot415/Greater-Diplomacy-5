@@ -1,8 +1,8 @@
 {
     "infantry_type": { "category": "INFANTRY", "max_lvl": 41, "cost": 900, "req": {}, "years": [1910, 1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
-    "cavalry": { "category": "INFANTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },
-    "militia": { "category": "INFANTRY", "max_lvl": 6, "cost": 600, "req": {}, "years": [1910, 1915, 1920, 1925, 1930, 1935] },
-    "motorized_infantry": { "category": "INFANTRY", "max_lvl": 21, "cost": 900, "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 1}, "years": [1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
+    "cavalry": { "category": "INFANTRY", "max_lvl": 5, "cost": 1200, "req": {}, "years": [1910, 1914, 1918, 1922, 1926] },
+    "militia": { "category": "INFANTRY", "max_lvl": 6, "cost": 600, "req": {}, "years": [1910, 1920, 1930, 1940, 1950, 1960] },
+    "motorized_infantry": { "category": "INFANTRY", "max_lvl": 21, "cost": 900, "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 5}, "years": [1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
     "mechanized_infantry": { "category": "INFANTRY", "max_lvl": 11, "cost": 900, "req": {"motorized_infantry": "MATCH_LEVEL_+10"}, "years": [1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950] },
     
     "civilian_car": { "category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {}, "years": [1910] },
