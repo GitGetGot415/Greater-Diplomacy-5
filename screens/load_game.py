@@ -122,7 +122,7 @@ class Load_Game(GameState):
         if self.renaming_folder:
             save_folders = os.listdir("saves")
             idx = save_folders.index(self.renaming_folder) if self.renaming_folder in save_folders else 0
-            box_y = 120 + (idx * 60)
+            box_y = 120 + (idx * 40)
             
             input_rect = pygame.Rect(200, box_y, 300, 50)
             pygame.draw.rect(surface, (100, 100, 100), input_rect)
