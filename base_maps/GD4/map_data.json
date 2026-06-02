@@ -944,7 +944,7 @@
     },
     "(43, 0, 0)": {
         "id": 43,
-        "terrain": "forest",
+        "terrain": "swamp",
         "is_coastal": true,
         "center": [
             746,
@@ -1400,7 +1400,7 @@
     },
     "(63, 0, 0)": {
         "id": 63,
-        "terrain": "hills",
+        "terrain": "mountain",
         "is_coastal": false,
         "center": [
             834,
@@ -1932,7 +1932,7 @@
     },
     "(86, 0, 0)": {
         "id": 86,
-        "terrain": "forest",
+        "terrain": "plains",
         "is_coastal": true,
         "center": [
             697,
@@ -2573,7 +2573,7 @@
     },
     "(114, 0, 0)": {
         "id": 114,
-        "terrain": "forest",
+        "terrain": "plains",
         "is_coastal": true,
         "center": [
             661,
@@ -2849,7 +2849,7 @@
     },
     "(126, 0, 0)": {
         "id": 126,
-        "terrain": "hills",
+        "terrain": "mountain",
         "is_coastal": false,
         "center": [
             829,
@@ -3125,7 +3125,7 @@
     },
     "(138, 0, 0)": {
         "id": 138,
-        "terrain": "mountain",
+        "terrain": "plains",
         "is_coastal": false,
         "center": [
             774,
@@ -3403,7 +3403,7 @@
     },
     "(150, 0, 0)": {
         "id": 150,
-        "terrain": "plains",
+        "terrain": "mountain",
         "is_coastal": false,
         "center": [
             809,
@@ -5391,7 +5391,7 @@
     },
     "(237, 0, 0)": {
         "id": 237,
-        "terrain": "hills",
+        "terrain": "forest",
         "is_coastal": false,
         "center": [
             640,
@@ -5482,7 +5482,7 @@
     },
     "(241, 0, 0)": {
         "id": 241,
-        "terrain": "plains",
+        "terrain": "forest",
         "is_coastal": false,
         "center": [
             634,
@@ -5665,7 +5665,7 @@
     },
     "(249, 0, 0)": {
         "id": 249,
-        "terrain": "forest",
+        "terrain": "plains",
         "is_coastal": false,
         "center": [
             625,
@@ -5897,7 +5897,7 @@
     },
     "(3, 1, 0)": {
         "id": 259,
-        "terrain": "plains",
+        "terrain": "forest",
         "is_coastal": true,
         "center": [
             615,
@@ -6009,7 +6009,7 @@
     },
     "(8, 1, 0)": {
         "id": 264,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             657,
@@ -6397,7 +6397,7 @@
     },
     "(25, 1, 0)": {
         "id": 281,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             648,
@@ -6508,7 +6508,7 @@
     },
     "(30, 1, 0)": {
         "id": 286,
-        "terrain": "plains",
+        "terrain": "mountain",
         "is_coastal": true,
         "center": [
             759,
@@ -7682,7 +7682,7 @@
     },
     "(81, 1, 0)": {
         "id": 337,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             785,
@@ -7845,7 +7845,7 @@
     },
     "(88, 1, 0)": {
         "id": 344,
-        "terrain": "plains",
+        "terrain": "mountain",
         "is_coastal": false,
         "center": [
             599,
@@ -7932,7 +7932,7 @@
     },
     "(92, 1, 0)": {
         "id": 348,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             763,
@@ -7955,7 +7955,7 @@
     },
     "(93, 1, 0)": {
         "id": 349,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": false,
         "center": [
             775,
@@ -8115,7 +8115,7 @@
     },
     "(100, 1, 0)": {
         "id": 356,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             717,
@@ -8397,7 +8397,7 @@
     },
     "(112, 1, 0)": {
         "id": 368,
-        "terrain": "plains",
+        "terrain": "mountain",
         "is_coastal": true,
         "center": [
             780,
@@ -8540,7 +8540,7 @@
     },
     "(118, 1, 0)": {
         "id": 374,
-        "terrain": "mountain",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             597,
@@ -8633,7 +8633,7 @@
     },
     "(122, 1, 0)": {
         "id": 378,
-        "terrain": "mountain",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             696,
@@ -9270,7 +9270,7 @@
     },
     "(150, 1, 0)": {
         "id": 406,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             798,
@@ -9549,7 +9549,7 @@
     },
     "(162, 1, 0)": {
         "id": 418,
-        "terrain": "plains",
+        "terrain": "hills",
         "is_coastal": true,
         "center": [
             733,
@@ -9885,7 +9885,7 @@
     },
     "(177, 1, 0)": {
         "id": 433,
-        "terrain": "desert",
+        "terrain": "plains",
         "is_coastal": true,
         "center": [
             649,
@@ -10357,7 +10357,7 @@
     },
     "(198, 1, 0)": {
         "id": 454,
-        "terrain": "hills",
+        "terrain": "plains",
         "is_coastal": true,
         "center": [
             662,
@@ -10426,7 +10426,7 @@
     },
     "(201, 1, 0)": {
         "id": 457,
-        "terrain": "hills",
+        "terrain": "desert",
         "is_coastal": true,
         "center": [
             694,
