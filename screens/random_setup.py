@@ -40,8 +40,8 @@ class Random_Setup(GameState):
         self.current_countries = min(20, self.max_countries)
         self.country_slider_val = self.current_countries / self.max_countries
         
-        self.current_island_size = getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER', 4)
-        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 20)
+        self.current_island_size = getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER')
+        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER')
         self.island_size_slider_val = (self.current_island_size - 1) / (max_island - 1)
         
         self.map_index = 0
@@ -73,47 +73,48 @@ class Random_Setup(GameState):
             Button("centered", 600, "large", "green", "START GAME", self.start_game),
         ]
         
-        total_items = 1 + len(self.available_maps)
-        cols = min(5, total_items)
+        # 1. Isolated Procedural Options (Placed above the table display)
+        if self.procedural_world:
+            # Side-by-side positioning when procedural is active
+            proc_x = (c.SCREEN_WIDTH // 2) - 210
+            type_x = (c.SCREEN_WIDTH // 2) + 10
+            
+            proc_btn = Button(proc_x, 90, "medium", "orange", "Random Map", self.toggle_procedural)
+            proc_btn.is_selected = True
+            self.elements.append(proc_btn)
+            
+            map_type_str = self.procedural_types[self.proc_type_index]
+            self.elements.append(
+                Button(type_x, 90, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type)
+            )
+        else:
+            # Perfectly centered when it's the lone option
+            proc_btn = Button("centered", 90, "medium", "grey", "Random Map", self.toggle_procedural)
+            self.elements.append(proc_btn)
+        
+        # 2. Base Maps Table Layout
+        total_items = len(self.available_maps)
+        cols = min(5, max(1, total_items))
         grid_width = cols * 220
         start_x = (c.SCREEN_WIDTH - grid_width) // 2 + 10 
         start_y = 180
         
-        # 1. Procedural Option
-        proc_btn = Button(start_x, start_y, "medium", "orange" if self.procedural_world else "grey", 
-                          "Random Map", self.toggle_procedural)
-        if self.procedural_world:
-            proc_btn.is_selected = True
-        self.elements.append(proc_btn)
-        
-        # 2. Base Maps
         for i, map_name in enumerate(self.available_maps):
-            grid_idx = i + 1
+            grid_idx = i  # Reset to 0 base since Random Map isn't taking slot 0 anymore
             col = grid_idx % cols
             row = grid_idx // cols
             btn = Button(start_x + (col * 220), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
             if not self.procedural_world and i == self.map_index:
                 btn.is_selected = True 
             self.elements.append(btn)
-            
-        # 3. Procedural Type Toggle (Only visible if the random procedural map is selected)
-        if self.procedural_world:
-            map_type_str = self.procedural_types[self.proc_type_index]
-            max_row = (total_items - 1) // cols
-            type_toggle_y = start_y + (max_row + 1) * 60
-            self.elements.append(
-                Button(start_x, type_toggle_y, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type)
-            )
 
     def update_countries(self, val):
         self.country_slider_val = val
         self.current_countries = max(1, int(val * self.max_countries))
-        # Directly update the text on the existing slider at Index 1
         self.elements[1].text = f"Countries: {self.current_countries}"
 
     def update_year(self, val):
         self.year_slider_val = val
-        # Dynamically scale the value based on the total timeline gap
         self.current_year = int(c.START_YEAR + (val * (c.END_YEAR - c.START_YEAR)))
         self.elements[2].text = f"Start Year: {self.current_year}"
 
@@ -131,8 +132,9 @@ class Random_Setup(GameState):
         title = fonts.get("heading1").render("RANDOM SCENARIO SETUP", True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
+        # Adjusted y-position slightly to sit clean right above the map table grid
         map_title = fonts.get("heading2").render("Select Base Map", True, (200, 200, 200))
-        surface.blit(map_title, (c.SCREEN_WIDTH // 2 - map_title.get_width() // 2, 130))
+        surface.blit(map_title, (c.SCREEN_WIDTH // 2 - map_title.get_width() // 2, 145))
 
     def start_game(self):
         if not self.procedural_world and not self.available_maps: return
