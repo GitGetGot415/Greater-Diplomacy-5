@@ -625,7 +625,7 @@ ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
 
 RECORD_HISTORY = True
 HISTORY_INDENT = None # this used to be 4
-SAVE_INDENT = None # this also used to be 4
+SAVE_INDENT = 4
 
 # Camera Settings
 DEFAULT_MOUSE_BUTTON_TOGGLE = "RIGHT"
