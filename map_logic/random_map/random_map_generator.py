@@ -201,7 +201,7 @@ def randomize_all_provinces(map_screen, settings):
     for prov in valid_land_provinces:
         if random.random() < resource_chance:
             res_type = random.choice(["Iron", "Coal", "Oil"])
-            prov["resources"] = {res_type: random.randint(20, 80)}
+            prov["resources"] = {res_type: random.randint(20, 200)}
             
         prov.setdefault("buildings", [])
         has_factory = False
