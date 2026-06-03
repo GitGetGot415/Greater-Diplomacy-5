@@ -5,6 +5,8 @@ import data.constants as c
 from data import queries
 
 class Scenario_Settings(GameState):
+    return_screen = "NEW_GAME" # Track which screen to return to
+
     def __init__(self):
         super().__init__()
         self.bg_color = (80, 20, 60)
@@ -34,7 +36,7 @@ class Scenario_Settings(GameState):
         self.refresh_ui()
 
     def exit_to_menu(self):
-        self.next_state = "NEW_GAME"
+        self.next_state = self.__class__.return_screen
         self.done = True
 
     def handle_back_key(self):

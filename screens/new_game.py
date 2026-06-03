@@ -39,17 +39,15 @@ class New_Game(GameState):
                        lambda n=name: self.start_scenario(n))
             )
     def scenario_settings(self):
-        # We assume you need to modify your GameState/Menu flow to pass this
-        # or store this in a global manager. For now, we inject into the instance.
         from screens.scenario_settings import Scenario_Settings
-        # You may need to update your game flow to pass self.scenario_settings
+        Scenario_Settings.return_screen = "NEW_GAME"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True
 
     def start_scenario(self, scenario_name):
         self.selected_save_path = os.path.join(c.SCENARIOS_DIR, scenario_name)
         # Pass the settings to the Map class
-        self.map_settings = self.scenario_settings 
+        self.map_settings = queries.get_scenario_settings() 
         self.next_state = "MAP"
         self.done = True
 
@@ -163,10 +161,6 @@ class New_Game(GameState):
         self.next_state = "MENU"
         self.done = True
     
-    def scenario_settings(self):
-        self.next_state = "SCENARIO_SETTINGS"
-        self.done = True
-
     def handle_back_key(self):
         self.exit_to_menu()
 
