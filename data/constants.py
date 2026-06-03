@@ -264,6 +264,8 @@ RANDOM_SCENARIO_MIN_INFANTRY = 3 # Minimum ground army before buying ships/tanks
 RANDOM_SCENARIO_MIN_FACTORIES = 2 # Minimum factories a country should spawn with
 RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER = 5
 RANDOM_SCENARIO_MAX_ISLAND_FILTER = 50
+RANDOM_SCENARIO_SINGLE_TILE_START = False
+RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE = 0.15
 
 # Unlocked tech exception for starting exactly in 1910
 DEFAULT_1910_TECH = {

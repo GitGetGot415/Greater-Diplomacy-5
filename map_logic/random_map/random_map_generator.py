@@ -7,6 +7,8 @@ def randomize_all_provinces(map_screen, settings):
     target_country_count = settings["countries"]
     start_year = settings["year"]
     island_filter_size = settings.get("island_filter_size", getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER', 4))
+    single_tile_start = settings.get("single_tile_start", getattr(c, 'RANDOM_SCENARIO_SINGLE_TILE_START', False))
+    resource_chance = settings.get("resource_chance", getattr(c, 'RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE', 0.15))
 
     playable_nations = [
         name for name, stats in map_screen.nation_data.items()
@@ -71,33 +73,34 @@ def randomize_all_provinces(map_screen, settings):
             if n_id in unassigned_land: frontiers[nation].append(n_id)
 
     # --- Step B: Round-Robin Expansion (Ensures Even Sizes) ---
-    while unassigned_land:
-        expanded_this_round = False
-        for nation in active_nations:
-            frontier_list = [pid for pid in frontiers[nation] if pid in unassigned_land]
-            frontiers[nation] = frontier_list
+    if not single_tile_start:
+        while unassigned_land:
+            expanded_this_round = False
+            for nation in active_nations:
+                frontier_list = [pid for pid in frontiers[nation] if pid in unassigned_land]
+                frontiers[nation] = frontier_list
+                
+                if frontier_list:
+                    target_id = frontier_list.pop(random.randint(0, len(frontier_list) - 1))
+                    target_prov = map_screen.id_to_province[target_id]
+                    
+                    target_prov["owner"] = nation
+                    target_prov["cores"] = [nation]
+                    unassigned_land.remove(target_id)
+                    expanded_this_round = True
+                    
+                    for n_id in target_prov.get("neighbors", []):
+                        if n_id in unassigned_land: frontier_list.append(n_id)
             
-            if frontier_list:
-                target_id = frontier_list.pop(random.randint(0, len(frontier_list) - 1))
-                target_prov = map_screen.id_to_province[target_id]
-                
-                target_prov["owner"] = nation
-                target_prov["cores"] = [nation]
+            # Walled off island catch
+            if not expanded_this_round and unassigned_land:
+                target_id = random.choice(list(unassigned_land))
+                nation = random.choice(active_nations)
+                map_screen.id_to_province[target_id]["owner"] = nation
+                map_screen.id_to_province[target_id]["cores"] = [nation]
                 unassigned_land.remove(target_id)
-                expanded_this_round = True
-                
-                for n_id in target_prov.get("neighbors", []):
-                    if n_id in unassigned_land: frontier_list.append(n_id)
-        
-        # Walled off island catch
-        if not expanded_this_round and unassigned_land:
-            target_id = random.choice(list(unassigned_land))
-            nation = random.choice(active_nations)
-            map_screen.id_to_province[target_id]["owner"] = nation
-            map_screen.id_to_province[target_id]["cores"] = [nation]
-            unassigned_land.remove(target_id)
-            for n_id in map_screen.id_to_province[target_id].get("neighbors", []):
-                if n_id in unassigned_land: frontiers[nation].append(n_id)
+                for n_id in map_screen.id_to_province[target_id].get("neighbors", []):
+                    if n_id in unassigned_land: frontiers[nation].append(n_id)
 
     # --- Step B.5: Assign Bordering Cores ---
     for nation in active_nations:
@@ -196,7 +199,7 @@ def randomize_all_provinces(map_screen, settings):
 
     # Give out random resources and buildings
     for prov in valid_land_provinces:
-        if random.random() < 0.15:
+        if random.random() < resource_chance:
             res_type = random.choice(["Iron", "Coal", "Oil"])
             prov["resources"] = {res_type: random.randint(20, 80)}
             
@@ -463,4 +466,4 @@ def randomize_all_provinces(map_screen, settings):
                     border_idx += 1
                     target_prov.setdefault("units", []).append(generate_unit(nation, u_name))
 
-    map_screen.show_feedback(f"Randomized {target_country_count} evenly sized nations for {start_year}!")
+    map_screen.show_feedback(f"Randomized {target_country_count} nations for {start_year}!")

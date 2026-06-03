@@ -40,9 +40,13 @@ class Random_Setup(GameState):
         self.current_countries = min(20, self.max_countries)
         self.country_slider_val = self.current_countries / self.max_countries
         
-        self.current_island_size = getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER')
-        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER')
+        self.current_island_size = getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER', 5)
+        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 50)
         self.island_size_slider_val = (self.current_island_size - 1) / (max_island - 1)
+        
+        self.single_tile_start = getattr(c, 'RANDOM_SCENARIO_SINGLE_TILE_START', False)
+        self.resource_chance = getattr(c, 'RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE', 0.15)
+        self.resource_slider_val = self.resource_chance
         
         self.map_index = 0
 
@@ -59,18 +63,59 @@ class Random_Setup(GameState):
         self.map_index = idx
         self.refresh_ui()
 
+    def update_countries(self, val):
+        self.country_slider_val = val
+        self.current_countries = max(1, int(val * self.max_countries))
+        if hasattr(self, 'country_slider'):
+            self.country_slider.text = f"Countries: {self.current_countries}"
+
+    def update_year(self, val):
+        self.year_slider_val = val
+        self.current_year = int(c.START_YEAR + (val * (c.END_YEAR - c.START_YEAR)))
+        if hasattr(self, 'year_slider'):
+            self.year_slider.text = f"Start Year: {self.current_year}"
+
+    def update_island_size(self, val):
+        self.island_size_slider_val = val
+        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 50)
+        self.current_island_size = 1 + int(val * (max_island - 1))
+        if hasattr(self, 'island_slider'):
+            self.island_slider.text = f"Island Filter Size: {self.current_island_size}"
+
+    def update_resource_chance(self, val):
+        self.resource_slider_val = val
+        self.resource_chance = val
+        if hasattr(self, 'resource_slider'):
+            self.resource_slider.text = f"Resource Spawn: {int(self.resource_chance * 100)}%"
+
+    def toggle_single_tile(self):
+        self.single_tile_start = not self.single_tile_start
+        self.refresh_ui()
+
+    def scenario_settings(self):
+        self.next_state = "SCENARIO_SETTINGS"
+        self.done = True
+
     def refresh_ui(self):
+        self.country_slider = Slider((c.SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries)
+        self.year_slider = Slider((c.SCREEN_WIDTH/2) - 100, 360, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year)
+        self.island_slider = Slider((c.SCREEN_WIDTH/2) - 100, 420, 200, f"Island Filter Size: {self.current_island_size}", self.island_size_slider_val, self.update_island_size)
+        self.resource_slider = Slider((c.SCREEN_WIDTH/2) - 100, 480, 200, f"Resource Spawn: {int(self.resource_chance * 100)}%", self.resource_slider_val, self.update_resource_chance)
+        
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.go_back),
+            Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
             
             # Sliders 
-            Slider((c.SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries),
-            Slider((c.SCREEN_WIDTH/2) - 100, 360, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year),
-            Slider((c.SCREEN_WIDTH/2) - 100, 420, 200, f"Island Filter Size: {self.current_island_size}", self.island_size_slider_val, self.update_island_size),
+            self.country_slider,
+            self.year_slider,
+            self.island_slider,
+            self.resource_slider,
             
             # Controls
-            Button("centered", 500, "medium", "grey", "Reset Defaults", self.do_reset),
-            Button("centered", 600, "large", "green", "START GAME", self.start_game),
+            Button((c.SCREEN_WIDTH/2) + 120, 470, "medium", "green" if self.single_tile_start else "red", f"1-Tile Start: {'ON' if self.single_tile_start else 'OFF'}", self.toggle_single_tile),
+            Button("centered", 550, "medium", "grey", "Reset Defaults", self.do_reset),
+            Button("centered", 630, "large", "green", "START GAME", self.start_game),
         ]
         
         random_map_x = 100
@@ -111,22 +156,6 @@ class Random_Setup(GameState):
                 btn.is_selected = True 
             self.elements.append(btn)
 
-    def update_countries(self, val):
-        self.country_slider_val = val
-        self.current_countries = max(1, int(val * self.max_countries))
-        self.elements[1].text = f"Countries: {self.current_countries}"
-
-    def update_year(self, val):
-        self.year_slider_val = val
-        self.current_year = int(c.START_YEAR + (val * (c.END_YEAR - c.START_YEAR)))
-        self.elements[2].text = f"Start Year: {self.current_year}"
-
-    def update_island_size(self, val):
-        self.island_size_slider_val = val
-        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 20)
-        self.current_island_size = 1 + int(val * (max_island - 1))
-        self.elements[3].text = f"Island Filter Size: {self.current_island_size}"
-
     def do_reset(self):
         self.reset_to_defaults()
         self.refresh_ui()
@@ -149,7 +178,9 @@ class Random_Setup(GameState):
             "countries": self.current_countries,
             "year": self.current_year,
             "island_filter_size": self.current_island_size,
-            "procedural_type": self.procedural_types[self.proc_type_index]
+            "procedural_type": self.procedural_types[self.proc_type_index],
+            "single_tile_start": getattr(self, "single_tile_start", False),
+            "resource_chance": getattr(self, "resource_chance", 0.15)
         }
         self.next_state = "MAP"
         self.done = True
