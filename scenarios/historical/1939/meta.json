@@ -68,7 +68,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -114,7 +115,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -160,7 +162,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -206,7 +209,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -252,7 +256,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -298,7 +303,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -344,7 +350,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -446,7 +453,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -592,7 +600,8 @@
                 "mechanized_infantry": 0,
                 "motorized_infantry": 0,
                 "recruitment_buildings": 1,
-                "militia": 1
+                "militia": 1,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -645,7 +654,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -691,7 +701,8 @@
                 "mechanized_infantry": 0,
                 "motorized_infantry": 10,
                 "recruitment_buildings": 2,
-                "militia": 1
+                "militia": 1,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -745,7 +756,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1299,7 +1311,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1345,7 +1358,8 @@
                 "mechanized_infantry": 0,
                 "motorized_infantry": 0,
                 "recruitment_buildings": 1,
-                "militia": 1
+                "militia": 1,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1447,7 +1461,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1493,7 +1508,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1639,7 +1655,8 @@
                 "mechanized_infantry": 0,
                 "motorized_infantry": 0,
                 "recruitment_buildings": 1,
-                "militia": 1
+                "militia": 1,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1692,7 +1709,8 @@
                 "mechanized_infantry": 0,
                 "motorized_infantry": 0,
                 "recruitment_buildings": 1,
-                "militia": 1
+                "militia": 1,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1896,7 +1914,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1942,7 +1961,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1988,7 +2008,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2034,7 +2055,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2127,7 +2149,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2173,7 +2196,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2219,7 +2243,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2265,7 +2290,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2311,7 +2337,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2787,7 +2814,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2833,7 +2861,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2919,7 +2948,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2965,7 +2995,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3011,7 +3042,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3057,7 +3089,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3103,7 +3136,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3149,7 +3183,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3241,7 +3276,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3287,7 +3323,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3386,7 +3423,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3573,7 +3611,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3666,7 +3705,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3712,7 +3752,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3758,7 +3799,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3804,7 +3846,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3850,7 +3893,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3896,7 +3940,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3942,7 +3987,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3988,7 +4034,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4034,7 +4081,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4080,7 +4128,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4126,7 +4175,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4172,7 +4222,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4218,7 +4269,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4264,7 +4316,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4310,7 +4363,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4356,7 +4410,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4442,7 +4497,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4488,7 +4544,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4534,7 +4591,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4580,7 +4638,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4626,7 +4685,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4672,7 +4732,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4718,7 +4779,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4764,7 +4826,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4810,7 +4873,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4856,7 +4920,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4902,7 +4967,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4948,7 +5014,8 @@
                 "mechanized_infantry": 11,
                 "battleship": 1,
                 "basic_recruitment": 1,
-                "recruitment_buildings": 10
+                "recruitment_buildings": 10,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4994,7 +5061,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5040,7 +5108,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5086,7 +5155,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5132,7 +5202,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5178,7 +5249,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5258,7 +5330,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5304,7 +5377,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5359,7 +5433,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "basic_recruitment": 0,
-                "recruitment_buildings": 0
+                "recruitment_buildings": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5405,7 +5480,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5451,7 +5527,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5497,7 +5574,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5543,7 +5621,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5589,7 +5668,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5635,7 +5715,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5681,7 +5762,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5727,7 +5809,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5773,7 +5856,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5819,7 +5903,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5865,7 +5950,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5911,7 +5997,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -5957,7 +6044,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6003,7 +6091,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6049,7 +6138,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6095,7 +6185,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6141,7 +6232,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6187,7 +6279,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6233,7 +6326,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6279,7 +6373,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6325,7 +6420,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6371,7 +6467,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6417,7 +6514,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6463,7 +6561,8 @@
                 "mechanized_infantry": 0,
                 "battleship": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6509,7 +6608,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6555,7 +6655,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6601,7 +6702,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6647,7 +6749,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6693,7 +6796,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6739,7 +6843,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6785,7 +6890,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6831,7 +6937,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6877,7 +6984,8 @@
                 "fuel_refining": 0,
                 "general_recruitment": 0,
                 "recruitment_buildings": 0,
-                "basic_recruitment": 0
+                "basic_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6923,7 +7031,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -6969,7 +7078,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7015,7 +7125,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7061,7 +7172,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7107,7 +7219,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7153,7 +7266,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7199,7 +7313,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7245,7 +7360,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7291,7 +7407,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7337,7 +7454,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7383,7 +7501,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7429,7 +7548,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7475,7 +7595,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7521,7 +7642,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7567,7 +7689,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7613,7 +7736,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7659,7 +7783,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7705,7 +7830,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7751,7 +7877,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7797,7 +7924,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7843,7 +7971,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7889,7 +8018,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7935,7 +8065,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -7981,7 +8112,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8027,7 +8159,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8073,7 +8206,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8119,7 +8253,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8165,7 +8300,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8211,7 +8347,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8257,7 +8394,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8303,7 +8441,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8349,7 +8488,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8395,7 +8535,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8441,7 +8582,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8487,7 +8629,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8533,7 +8676,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8579,7 +8723,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8625,7 +8770,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8671,7 +8817,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8717,7 +8864,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8763,7 +8911,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8809,7 +8958,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8855,7 +9005,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8901,7 +9052,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8947,7 +9099,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -8993,7 +9146,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9039,7 +9193,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9085,7 +9240,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9131,7 +9287,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9177,7 +9334,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9223,7 +9381,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9269,7 +9428,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9315,7 +9475,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9361,7 +9522,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9407,7 +9569,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9453,7 +9616,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9499,7 +9663,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9545,7 +9710,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9591,7 +9757,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9637,7 +9804,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9683,7 +9851,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9729,7 +9898,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9775,7 +9945,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9821,7 +9992,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9867,7 +10039,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9913,7 +10086,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -9959,7 +10133,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10005,7 +10180,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10051,7 +10227,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10097,7 +10274,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10143,7 +10321,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10189,7 +10368,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10235,7 +10415,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10281,7 +10462,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10327,7 +10509,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10373,7 +10556,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10419,7 +10603,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10465,7 +10650,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10511,7 +10697,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10557,7 +10744,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10603,7 +10791,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10649,7 +10838,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10695,7 +10885,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10741,7 +10932,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10787,7 +10979,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10833,7 +11026,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10879,7 +11073,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10925,7 +11120,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -10971,7 +11167,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11017,7 +11214,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11063,7 +11261,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11109,7 +11308,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11155,7 +11355,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11201,7 +11402,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11247,7 +11449,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11293,7 +11496,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11339,7 +11543,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11385,7 +11590,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11431,7 +11637,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11477,7 +11684,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11523,7 +11731,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11569,7 +11778,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11615,7 +11825,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11661,7 +11872,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11707,7 +11919,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11753,7 +11966,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11799,7 +12013,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11845,7 +12060,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11891,7 +12107,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11937,7 +12154,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -11983,7 +12201,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12029,7 +12248,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12075,7 +12295,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12121,7 +12342,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12167,7 +12389,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12213,7 +12436,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12259,7 +12483,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12305,7 +12530,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12351,7 +12577,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12397,7 +12624,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12443,7 +12671,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12489,7 +12718,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12535,7 +12765,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12581,7 +12812,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12627,7 +12859,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12673,7 +12906,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12719,7 +12953,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12765,7 +13000,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12811,7 +13047,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12857,7 +13094,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12903,7 +13141,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12949,7 +13188,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -12995,7 +13235,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13041,7 +13282,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13087,7 +13329,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13133,7 +13376,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13179,7 +13423,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13225,7 +13470,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13271,7 +13517,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13317,7 +13564,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13363,7 +13611,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13409,7 +13658,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13455,7 +13705,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13501,7 +13752,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13547,7 +13799,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13593,7 +13846,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13639,7 +13893,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13685,7 +13940,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13731,7 +13987,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13777,7 +14034,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13823,7 +14081,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13869,7 +14128,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13915,7 +14175,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -13961,7 +14222,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14007,7 +14269,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14053,7 +14316,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14099,7 +14363,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14145,7 +14410,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14191,7 +14457,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14237,7 +14504,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14283,7 +14551,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14329,7 +14598,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14375,7 +14645,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14421,7 +14692,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14467,7 +14739,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14513,7 +14786,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14559,7 +14833,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14605,7 +14880,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14651,7 +14927,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14697,7 +14974,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14743,7 +15021,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14789,7 +15068,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14835,7 +15115,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14881,7 +15162,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14927,7 +15209,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -14973,7 +15256,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15019,7 +15303,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15065,7 +15350,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15111,7 +15397,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15157,7 +15444,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15203,7 +15491,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15249,7 +15538,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15295,7 +15585,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15341,7 +15632,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15387,7 +15679,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15433,7 +15726,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15479,7 +15773,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15525,7 +15820,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15571,7 +15867,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15617,7 +15914,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15663,7 +15961,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15709,7 +16008,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15755,7 +16055,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15801,7 +16102,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15847,7 +16149,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15893,7 +16196,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15939,7 +16243,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -15985,7 +16290,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16031,7 +16337,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16077,7 +16384,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16123,7 +16431,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16169,7 +16478,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16261,7 +16571,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16307,7 +16618,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16353,7 +16665,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16399,7 +16712,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16445,7 +16759,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16491,7 +16806,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16537,7 +16853,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16583,7 +16900,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16629,7 +16947,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16675,7 +16994,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16721,7 +17041,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16767,7 +17088,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16813,7 +17135,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16859,7 +17182,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16905,7 +17229,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16951,7 +17276,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -16997,7 +17323,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17043,7 +17370,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17089,7 +17417,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17135,7 +17464,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17181,7 +17511,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17227,7 +17558,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17273,7 +17605,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17319,7 +17652,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17365,7 +17699,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17411,7 +17746,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17457,7 +17793,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17503,7 +17840,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17549,7 +17887,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17595,7 +17934,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17641,7 +17981,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17687,7 +18028,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17733,7 +18075,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17779,7 +18122,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17825,7 +18169,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17871,7 +18216,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17917,7 +18263,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -17963,7 +18310,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18055,7 +18403,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18101,7 +18450,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18147,7 +18497,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18193,7 +18544,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18239,7 +18591,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18285,7 +18638,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18331,7 +18685,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18377,7 +18732,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18423,7 +18779,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18469,7 +18826,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18515,7 +18873,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18561,7 +18920,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18607,7 +18967,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18653,7 +19014,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18699,7 +19061,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18745,7 +19108,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18791,7 +19155,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18837,7 +19202,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18883,7 +19249,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18929,7 +19296,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -18975,7 +19343,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19021,7 +19390,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19067,7 +19437,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19113,7 +19484,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19159,7 +19531,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19205,7 +19578,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19251,7 +19625,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19297,7 +19672,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19343,7 +19719,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19389,7 +19766,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19435,7 +19813,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19481,7 +19860,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19527,7 +19907,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19573,7 +19954,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19619,7 +20001,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19665,7 +20048,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19711,7 +20095,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19757,7 +20142,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19803,7 +20189,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19849,7 +20236,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19895,7 +20283,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19941,7 +20330,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -19987,7 +20377,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -20033,7 +20424,8 @@
                 "fuel_refining": 0,
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
-                "general_recruitment": 0
+                "general_recruitment": 0,
+                "submarine": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -20073,6 +20465,148 @@
                 "battleship": 0,
                 "destroyer": 0,
                 "aircraft_carrier": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0,
+                "submarine": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {},
+            "relations": {}
+        },
+        "Ostafrika": {
+            "name": "Ostafrika",
+            "color": [
+                64,
+                0,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {},
+            "relations": {}
+        },
+        "Croatia": {
+            "name": "Croatia",
+            "color": [
+                200,
+                0,
+                200
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {},
+            "relations": {}
+        },
+        "Reichskommissariat Kaukasien": {
+            "name": "Reichskommissariat Kaukasien",
+            "color": [
+                64,
+                0,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
                 "basic_factory": 0,
                 "factory": 0,
                 "bergius_process": 0,
