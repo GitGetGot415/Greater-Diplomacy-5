@@ -403,19 +403,40 @@ class Peace_Screen(GameState):
         self.terms = [
             getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"),
             getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"),
-            getattr(c, 'PEACE_SURRENDER', "Surrender")
+            getattr(c, 'PEACE_SURRENDER', "Surrender"),
+            "Don't offer peace"
         ]
-        self.selected_term_idx = 0
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 200, c.SCREEN_HEIGHT//2 - 175, 400, 350)
+        
+        # Check for existing peace offer
+        pending = map_screen.nation_data.get(map_screen.player_country, {}).get("pending_diplomacy", {}).get(target_nation, {})
+        self.is_editing = isinstance(pending, dict) and pending.get("action") in ["PEACE_TREATY", "CEASEFIRE"]
+        
+        if self.is_editing:
+            pending_msg = pending.get("message", "")
+            self.selected_term_idx = 3 # Default to Don't offer peace
+            for i, term in enumerate(self.terms):
+                if term == pending_msg:
+                    self.selected_term_idx = i
+                    break
+            
+            # Catch raw CEASEFIRE actions from legacy behavior
+            if self.selected_term_idx == 3 and pending.get("action") == "CEASEFIRE":
+                self.selected_term_idx = 0
+        else:
+            self.selected_term_idx = 0
+            
+        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 200, c.SCREEN_HEIGHT//2 - 190, 400, 380)
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", self.exit_screen)]
-        self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "green", "Send Proposal", self.confirm))
+        
+        confirm_text = "Update Offer" if self.is_editing else "Send Proposal"
+        self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "green", confirm_text, self.confirm))
         
         for i, term in enumerate(self.terms):
-            color = "blue" if self.selected_term_idx == i else "grey"
-            self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.y + 70 + (i * 60), "new_game", color, term, lambda idx=i: self.select_term(idx)))
+            color = "green" if self.selected_term_idx == i else "blue"
+            self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.y + 60 + (i * 55), "new_game", color, term, lambda idx=i: self.select_term(idx)))
 
     def select_term(self, idx):
         self.selected_term_idx = idx
@@ -423,9 +444,26 @@ class Peace_Screen(GameState):
 
     def confirm(self):
         term = self.terms[self.selected_term_idx]
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.target_nation, "PEACE_TREATY", term)
-        self.map_screen.show_feedback(msg)
-        self.done = True
+        
+        if term == "Don't offer peace":
+            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
+            if self.target_nation in pending and pending[self.target_nation].get("action") in ["PEACE_TREATY", "CEASEFIRE"]:
+                del pending[self.target_nation]
+            self.map_screen.show_feedback("Peace Offer Cancelled.")
+            self.done = True
+        else:
+            action_type = "CEASEFIRE" if term == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)") else "PEACE_TREATY"
+            
+            # Overwrite directly to bypass toggle
+            pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
+            pending[self.target_nation] = {
+                "action": action_type,
+                "turns": 0,
+                "timer": 0,
+                "message": term
+            }
+            self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
+            self.done = True
 
     def exit_screen(self):
         self.done = True

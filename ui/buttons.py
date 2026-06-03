@@ -327,7 +327,7 @@ def update_button_states(map_screen):
                 # War / Peace UI routing
                 dw_enabled = not (not at_war and in_same_faction)
                 if pending_action == "PEACE_TREATY" or pending_action == "CEASEFIRE": 
-                    dw_text = get_status_text("PEACE") 
+                    dw_text = "Edit Peace Offer"
                 elif pending_action == "WAR_DECLARATION": 
                     dw_text = "Edit War Declaration"
                 else: 
