@@ -337,10 +337,10 @@ def update_button_states(map_screen):
                 
                 # Justify wargoal UI
                 if pending_action == "JUSTIFY_WARGOAL":
-                    set_btn(map_screen.btn_justify_war, True, True, get_status_text("JUSTIFY"), "orange")
+                    set_btn(map_screen.btn_justify_war, True, True, "Edit Justification", "orange")
                 else:
                     set_btn(map_screen.btn_justify_war, True, not at_war, "Justify War Goal", "orange")
-
+                
                 target_wars = queries.get_enemies(owner, map_screen.nation_data)
                 player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
                 can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))

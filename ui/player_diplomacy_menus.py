@@ -133,32 +133,67 @@ class Justify_Screen(GameState):
         
         self.valid_targets = queries.get_valid_claim_targets(map_screen.player_country, target_nation, map_screen.map_data)
         self.valid_ids = [p["id"] for p in self.valid_targets]
-        self.selected_ids = []
+        
+        # Check for existing justification
+        self.is_editing = False
+        self.original_selected_ids = []
+        self.remaining_turns = 0
+        self.original_total_turns = 0
+        
+        pending = map_screen.nation_data.get(map_screen.player_country, {}).get("pending_diplomacy", {}).get(target_nation, {})
+        if isinstance(pending, dict) and pending.get("action") == "JUSTIFY_WARGOAL":
+            self.is_editing = True
+            self.selected_ids = [int(x) for x in pending.get("message", "").split(",") if x]
+            self.original_selected_ids = list(self.selected_ids)
+            self.remaining_turns = pending.get("timer", 0)
+            self.original_total_turns = queries.calculate_justification_time(map_screen.player_country, self.original_selected_ids, map_screen.id_to_province)
+        else:
+            self.selected_ids = []
         
         # Left Panel mimic
         self.panel_rect = pygame.Rect(80, 120, 380, c.SCREEN_HEIGHT - 240)
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", self.exit_screen)]
-        btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "orange", "Start Justification", self.confirm)
-        self.elements.append(btn_confirm)
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        
+        if self.is_editing:
+            btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Update Justification", self.confirm)
+            btn_cancel = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel Justification", self.cancel_justification)
+            self.elements.extend([btn_confirm, btn_cancel])
+        else:
+            btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "orange", "Start Justification", self.confirm)
+            self.elements.append(btn_confirm)
         
     def confirm(self):
         if not self.selected_ids:
             self.map_screen.show_feedback("Select at least one province!")
             return
             
-        turns = queries.calculate_justification_time(self.map_screen.player_country, self.selected_ids, self.map_screen.id_to_province)
-        msg = diplomacy_logic.toggle_diplomacy_action(
-            self.map_screen.nation_data, 
-            self.map_screen.player_country, 
-            self.target_nation, 
-            "JUSTIFY_WARGOAL", 
-            ",".join(map(str, self.selected_ids)),
-            timer=turns
-        )
-        self.map_screen.show_feedback(msg)
+        new_total_turns = queries.calculate_justification_time(self.map_screen.player_country, self.selected_ids, self.map_screen.id_to_province)
+        if self.is_editing:
+            elapsed = self.original_total_turns - self.remaining_turns
+            final_timer = max(1, new_total_turns - elapsed)
+        else:
+            final_timer = new_total_turns
+            
+        pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
+        
+        # Manually set the dictionary to bypass the toggle/delete logic in toggle_diplomacy_action
+        pending[self.target_nation] = {
+            "action": "JUSTIFY_WARGOAL",
+            "turns": 0,
+            "timer": final_timer,
+            "message": ",".join(map(str, self.selected_ids))
+        }
+        self.map_screen.show_feedback("Justification Updated!" if self.is_editing else "Justification Started!")
+        self.done = True
+
+    def cancel_justification(self):
+        pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
+        if self.target_nation in pending:
+            del pending[self.target_nation]
+        self.map_screen.show_feedback("Justification Cancelled.")
         self.done = True
 
     def exit_screen(self):
@@ -272,20 +307,32 @@ class Justify_Screen(GameState):
         if not self.selected_ids:
             surface.blit(tiny_font.render("No provinces selected.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
         else:
-            for i, pid in enumerate(self.selected_ids[:15]):
+            # Cut down max items to 10 to ensure it doesn't overlap our newly placed buttons!
+            for i, pid in enumerate(self.selected_ids[:10]):
                 is_core = self.map_screen.player_country in self.map_screen.id_to_province[pid].get("cores", [])
                 core_str = " (CORE)" if is_core else ""
                 txt = tiny_font.render(f"- Province {pid}{core_str}", True, (200, 200, 200))
                 surface.blit(txt, (self.panel_rect.x + 30, y_off))
                 y_off += 25
             
-            if len(self.selected_ids) > 15:
-                txt = tiny_font.render(f"...and {len(self.selected_ids)-15} more", True, (150, 150, 150))
+            if len(self.selected_ids) > 10:
+                txt = tiny_font.render(f"...and {len(self.selected_ids)-10} more", True, (150, 150, 150))
                 surface.blit(txt, (self.panel_rect.x + 30, y_off))
 
-        turns = queries.calculate_justification_time(self.map_screen.player_country, self.selected_ids, self.map_screen.id_to_province) if self.selected_ids else 0
-        time_txt = sub_font.render(f"Estimated Time: {turns} turns", True, (255, 100, 100))
-        surface.blit(time_txt, (self.panel_rect.centerx - time_txt.get_width()//2, self.panel_rect.bottom - 110))
+        new_total_turns = queries.calculate_justification_time(self.map_screen.player_country, self.selected_ids, self.map_screen.id_to_province) if self.selected_ids else 0
+        if self.is_editing:
+            elapsed = self.original_total_turns - self.remaining_turns
+            current_estimated_turns = max(1, new_total_turns - elapsed) if self.selected_ids else 0
+        else:
+            current_estimated_turns = new_total_turns
+            
+        if self.is_editing and self.selected_ids == self.original_selected_ids:
+            time_txt = sub_font.render(f"Time Remaining: {self.remaining_turns} turns", True, (255, 100, 100))
+        else:
+            time_txt = sub_font.render(f"Estimated Time: {current_estimated_turns} turns", True, (255, 100, 100))
+            
+        time_y = self.panel_rect.bottom - (170 if self.is_editing else 110)
+        surface.blit(time_txt, (self.panel_rect.centerx - time_txt.get_width()//2, time_y))
 
         # Draw UI elements manually to prevent super().draw() from filling the screen with a solid background color
         for el in self.elements:
@@ -344,7 +391,7 @@ class Peace_Screen(GameState):
         temp_prov = self.map_screen.selected_province
         self.map_screen.selected_province = None
         self.map_screen.hide_raised_rect = True
-        
+
         self.map_screen.hide_tooltip = True
         self.map_screen.hide_resource_hud = True
         self.map_screen.hide_minimap = True
