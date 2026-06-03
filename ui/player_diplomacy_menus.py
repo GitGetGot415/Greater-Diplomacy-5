@@ -86,9 +86,13 @@ class Declare_War_Screen(GameState):
                 el.handle_event(event)
 
     def draw(self, surface):
+        # FIX: Wipe the frame clean to prevent the "Solitaire Effect" smearing through the transparent oceans
+        surface.fill(self.map_screen.bg_color)
+        
         temp_prov = self.map_screen.selected_province
         self.map_screen.selected_province = None
         self.map_screen.hide_raised_rect = True
+
         self.map_screen.hide_tooltip = True
         self.map_screen.hide_resource_hud = True
         self.map_screen.hide_minimap = True
@@ -205,9 +209,13 @@ class Justify_Screen(GameState):
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
     def draw(self, surface):
+        # FIX: Wipe the frame clean to prevent the "Solitaire Effect" smearing through the transparent oceans
+        surface.fill(self.map_screen.bg_color)
+        
         temp_prov = self.map_screen.selected_province
         self.map_screen.selected_province = None
         self.map_screen.hide_raised_rect = True
+
         self.map_screen.hide_tooltip = True
         self.map_screen.hide_resource_hud = True
         self.map_screen.hide_minimap = True
@@ -330,9 +338,13 @@ class Peace_Screen(GameState):
                 el.handle_event(event)
 
     def draw(self, surface):
+        # FIX: Wipe the frame clean to prevent the "Solitaire Effect" smearing through the transparent oceans
+        surface.fill(self.map_screen.bg_color)
+        
         temp_prov = self.map_screen.selected_province
         self.map_screen.selected_province = None
         self.map_screen.hide_raised_rect = True
+        
         self.map_screen.hide_tooltip = True
         self.map_screen.hide_resource_hud = True
         self.map_screen.hide_minimap = True
