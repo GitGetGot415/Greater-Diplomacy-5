@@ -422,7 +422,8 @@ def process_basic_proactive_ai(map_screen):
                                             time_needed = queries.calculate_justification_time(ai_name, core_ids, map_screen.id_to_province)
                                             pending[target] = {
                                                 "action": "JUSTIFY_WARGOAL",
-                                                "turns": time_needed,
+                                                "turns": 0,
+                                                "timer": time_needed,
                                                 "message": ",".join(map(str, core_ids))
                                             }
                                             queries.set_ai_diplo_cooldown(ai_name, target, "JUSTIFY_WARGOAL", map_screen.nation_data, duration=time_needed + 5)

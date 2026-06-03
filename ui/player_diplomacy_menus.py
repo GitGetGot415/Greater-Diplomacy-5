@@ -110,13 +110,16 @@ def open_justify_menu(map_screen, target_nation):
             return
             
         selected_ids = [prov_ids[i] for i in selection]
+        turns = queries.calculate_justification_time(map_screen.player_country, selected_ids, map_screen.id_to_province)
+        
         # Pass the formatted strings dynamically downstream to the backend
         msg = diplomacy_logic.toggle_diplomacy_action(
             map_screen.nation_data, 
             map_screen.player_country, 
             target_nation, 
             "JUSTIFY_WARGOAL", 
-            ",".join(map(str, selected_ids))
+            ",".join(map(str, selected_ids)),
+            timer=turns
         )
         map_screen.show_feedback(msg)
         close_menu()
