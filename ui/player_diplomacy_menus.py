@@ -205,6 +205,7 @@ class Justify_Screen(GameState):
             self.original_selected_ids = list(self.selected_ids)
             self.remaining_turns = pending.get("timer", 0)
             self.original_total_turns = queries.calculate_justification_time(map_screen.player_country, self.original_selected_ids, map_screen.id_to_province)
+            self.view_only_mode = True # Default to view-only when opening a processing justification
         elif self.has_wargoal:
             self.selected_ids = [pid for pid in self.valid_ids if pid in player_claims]
             self.original_selected_ids = list(self.selected_ids)
@@ -226,17 +227,21 @@ class Justify_Screen(GameState):
             # Read-only mode, no confirm buttons
             pass
         elif self.is_editing:
-            btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Update Justification", self.confirm)
-            btn_cancel = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel Justification", self.cancel_justification)
-            self.elements.extend([btn_confirm, btn_cancel])
+            if self.view_only_mode:
+                btn_edit = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "blue", "Edit Justification", self.enable_editing)
+                self.elements.append(btn_edit)
+            else:
+                btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Update Justification", self.confirm)
+                btn_cancel_edit = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel", self.cancel_edit)
+                self.elements.extend([btn_confirm, btn_cancel_edit])
         elif self.has_wargoal:
             if self.view_only_mode:
                 btn_edit = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "blue", "Edit Justification", self.enable_editing)
                 self.elements.append(btn_edit)
             else:
                 btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Confirm Edit", self.confirm)
-                btn_cancel = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel", self.cancel_edit)
-                self.elements.extend([btn_confirm, btn_cancel])
+                btn_cancel_edit = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel", self.cancel_edit)
+                self.elements.extend([btn_confirm, btn_cancel_edit])
         else:
             btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "orange", "Start Justification", self.confirm)
             self.elements.append(btn_confirm)
@@ -276,13 +281,6 @@ class Justify_Screen(GameState):
             "message": ",".join(map(str, self.selected_ids))
         }
         self.map_screen.show_feedback("Justification Updated!" if self.is_editing else "Justification Started!")
-        self.done = True
-
-    def cancel_justification(self):
-        pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
-        if self.target_nation in pending:
-            del pending[self.target_nation]
-        self.map_screen.show_feedback("Justification Cancelled.")
         self.done = True
 
     def exit_screen(self):
@@ -434,7 +432,7 @@ class Justify_Screen(GameState):
             else:
                 time_txt = sub_font.render(f"Estimated Time: {current_estimated_turns} turns", True, (255, 100, 100))
                 
-            is_two_buttons = self.is_editing or (self.has_wargoal and not self.view_only_mode)
+            is_two_buttons = not self.view_only_mode and (self.is_editing or self.has_wargoal)
             time_y = self.panel_rect.bottom - (170 if is_two_buttons else 110)
             
         surface.blit(time_txt, (self.panel_rect.centerx - time_txt.get_width()//2, time_y))
