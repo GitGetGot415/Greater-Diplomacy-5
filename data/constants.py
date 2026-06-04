@@ -121,6 +121,9 @@ DEFAULT_CHATGPT_MODEL = "gpt-4o-mini"
 DEFAULT_CLAUDE_MODEL = "claude-3-haiku-20240307"
 DEFAULT_OLLAMA_MODEL = "llama3"
 
+# Models that safely support Ollama's strict JSON grammar engine
+OLLAMA_JSON_SUPPORTED_MODELS = ["llama", "mistral", "phi", "gemma"]
+
 # ==========================================
 # STARTING BUILDINGS
 # ==========================================

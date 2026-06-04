@@ -140,16 +140,24 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
     url_str = get_ollama_url()
     parsed_url = urllib.parse.urlparse(url_str)
     
+    model_name = get_ollama_model()
+    
+    # 1. Combine system and user prompts to prevent 400 errors on lightweight models
+    # that lack a system prompt block in their instruction template (like many 0.5b models).
+    combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+    
     payload = {
-        "model": get_ollama_model(),
+        "model": model_name,
         "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": combined_prompt}
         ],
-        "format": "json",
         "stream": True # Stream token-by-token
     }
     
+    # Conditionally apply strict JSON formatting if the model supports it natively
+    if hasattr(c, 'OLLAMA_JSON_SUPPORTED_MODELS') and any(supported in model_name.lower() for supported in c.OLLAMA_JSON_SUPPORTED_MODELS):
+        payload["format"] = "json"
+        
     payload_bytes = json.dumps(payload).encode('utf-8')
     
     # Bypass requests and create a raw HTTP connection directly
@@ -170,7 +178,16 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
         response = conn.getresponse()
         
         if response.status >= 400:
-            return {"message": f"OLLAMA HTTP ERROR: {response.status}"}
+            # 2. Extract and decode the actual error message from Ollama
+            error_body = response.read().decode('utf-8')
+            try:
+                # Try to parse it cleanly if it's a JSON error response
+                error_json = json.loads(error_body)
+                err_msg = error_json.get("error", error_body)
+            except:
+                err_msg = error_body
+                
+            return {"message": f"OLLAMA HTTP ERROR {response.status}: {err_msg}"}
         
         full_text = ""
         # Iterate over the stream as it generates
