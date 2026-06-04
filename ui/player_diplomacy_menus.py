@@ -205,6 +205,7 @@ class Justify_Screen(GameState):
             self.original_selected_ids = list(self.selected_ids)
             self.remaining_turns = pending.get("timer", 0)
             self.original_total_turns = queries.calculate_justification_time(map_screen.player_country, self.original_selected_ids, map_screen.id_to_province)
+            self.view_only_mode = True # Default to view-only when opening a processing justification
         elif self.has_wargoal:
             self.selected_ids = [pid for pid in self.valid_ids if pid in player_claims]
             self.original_selected_ids = list(self.selected_ids)
@@ -226,9 +227,9 @@ class Justify_Screen(GameState):
             # Read-only mode, no confirm buttons
             pass
         elif self.is_editing:
-            btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Update Justification", self.confirm)
+            # btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 130, "new_game", "orange", "Update Justification", self.confirm)
             btn_cancel = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", "Cancel Justification", self.cancel_justification)
-            self.elements.extend([btn_confirm, btn_cancel])
+            self.elements.extend([btn_cancel])
         elif self.has_wargoal:
             if self.view_only_mode:
                 btn_edit = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "blue", "Edit Justification", self.enable_editing)
@@ -412,7 +413,8 @@ class Justify_Screen(GameState):
         if self.at_war:
             time_txt = sub_font.render("War Goal Active (Read-Only)", True, (200, 200, 200))
             time_y = self.panel_rect.bottom - 110
-        elif self.has_wargoal and self.view_only_mode:
+        # ADDED 'and not self.is_editing' so it shows the edit timer instead of "War Goal Ready"
+        elif self.has_wargoal and self.view_only_mode and not self.is_editing: 
             time_txt = sub_font.render("War Goal Ready", True, (100, 255, 100))
             time_y = self.panel_rect.bottom - 110
         else:
@@ -434,9 +436,9 @@ class Justify_Screen(GameState):
             else:
                 time_txt = sub_font.render(f"Estimated Time: {current_estimated_turns} turns", True, (255, 100, 100))
                 
-            is_two_buttons = self.is_editing or (self.has_wargoal and not self.view_only_mode)
+            is_two_buttons = (self.has_wargoal and not self.view_only_mode)
             time_y = self.panel_rect.bottom - (170 if is_two_buttons else 110)
-            
+
         surface.blit(time_txt, (self.panel_rect.centerx - time_txt.get_width()//2, time_y))
 
         # Draw UI elements manually to prevent super().draw() from filling the screen with a solid background color
