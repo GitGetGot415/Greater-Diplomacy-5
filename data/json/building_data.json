@@ -1,237 +1,237 @@
 {
     "Workshop Lvl 1": {
-        "time": 90, "group": "industry", "req": null,
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 45, "group": "industry", "req": null,
+        "cost_materials": 2000, "cost_manpower": 200, "cost_fuel": 0,
         "prod_materials": 50, "prod_manpower": 0, "prod_fuel": 0
     },
     "Workshop Lvl 2": {
-        "time": 90, "group": "industry", "req": "Workshop Lvl 1",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 60, "group": "industry", "req": "Workshop Lvl 1",
+        "cost_materials": 4000, "cost_manpower": 250, "cost_fuel": 0,
         "prod_materials": 100, "prod_manpower": 0, "prod_fuel": 0
     },
     "Workshop Lvl 3": {
-        "time": 90, "group": "industry", "req": "Workshop Lvl 2",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 75, "group": "industry", "req": "Workshop Lvl 2",
+        "cost_materials": 7000, "cost_manpower": 300, "cost_fuel": 0,
         "prod_materials": 150, "prod_manpower": 0, "prod_fuel": 0
     },
     "Workshop Lvl 4": {
         "time": 90, "group": "industry", "req": "Workshop Lvl 3",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "cost_materials": 11000, "cost_manpower": 350, "cost_fuel": 0,
         "prod_materials": 200, "prod_manpower": 0, "prod_fuel": 0
     },
     "Workshop Lvl 5": {
-        "time": 90, "group": "industry", "req": "Workshop Lvl 4",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 120, "group": "industry", "req": "Workshop Lvl 4",
+        "cost_materials": 16000, "cost_manpower": 400, "cost_fuel": 0,
         "prod_materials": 300, "prod_manpower": 0, "prod_fuel": 0
     },
     "Basic Factory": {
-        "time": 90, "group": "industry", "req": "Workshop Lvl 5",
-        "cost_materials": 30000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 180, "group": "industry", "req": "Workshop Lvl 5",
+        "cost_materials": 30000, "cost_manpower": 800, "cost_fuel": 200,
         "prod_materials": 500, "prod_manpower": 0, "prod_fuel": 0
     },
     "Factory Lvl 1": {
-        "time": 180, "group": "industry", "req": "Basic Factory",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 200, "group": "industry", "req": "Basic Factory",
+        "cost_materials": 45000, "cost_manpower": 1000, "cost_fuel": 500,
         "prod_materials": 1000, "prod_manpower": 0, "prod_fuel": 10
     },
     "Factory Lvl 2": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 1",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 220, "group": "industry", "req": "Factory Lvl 1",
+        "cost_materials": 55000, "cost_manpower": 1100, "cost_fuel": 750,
         "prod_materials": 1500, "prod_manpower": 0, "prod_fuel": 20
     },
     "Factory Lvl 3": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 2",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 240, "group": "industry", "req": "Factory Lvl 2",
+        "cost_materials": 68000, "cost_manpower": 1200, "cost_fuel": 1000,
         "prod_materials": 2000, "prod_manpower": 0, "prod_fuel": 30
     },
     "Factory Lvl 4": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 3",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 260, "group": "industry", "req": "Factory Lvl 3",
+        "cost_materials": 82000, "cost_manpower": 1300, "cost_fuel": 1250,
         "prod_materials": 2500, "prod_manpower": 0, "prod_fuel": 40
     },
     "Factory Lvl 5": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 4",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 280, "group": "industry", "req": "Factory Lvl 4",
+        "cost_materials": 98000, "cost_manpower": 1400, "cost_fuel": 1500,
         "prod_materials": 3000, "prod_manpower": 0, "prod_fuel": 50
     },
     "Factory Lvl 6": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 5",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 300, "group": "industry", "req": "Factory Lvl 5",
+        "cost_materials": 115000, "cost_manpower": 1500, "cost_fuel": 1800,
         "prod_materials": 3500, "prod_manpower": 0, "prod_fuel": 60
     },
     "Factory Lvl 7": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 6",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 320, "group": "industry", "req": "Factory Lvl 6",
+        "cost_materials": 135000, "cost_manpower": 1600, "cost_fuel": 2100,
         "prod_materials": 4000, "prod_manpower": 0, "prod_fuel": 70
     },
     "Factory Lvl 8": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 7",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 340, "group": "industry", "req": "Factory Lvl 7",
+        "cost_materials": 158000, "cost_manpower": 1700, "cost_fuel": 2500,
         "prod_materials": 4500, "prod_manpower": 0, "prod_fuel": 80
     },
     "Factory Lvl 9": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 8",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 360, "group": "industry", "req": "Factory Lvl 8",
+        "cost_materials": 182000, "cost_manpower": 1800, "cost_fuel": 3000,
         "prod_materials": 5000, "prod_manpower": 0, "prod_fuel": 90
     },
     "Factory Lvl 10": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 9",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
+        "time": 400, "group": "industry", "req": "Factory Lvl 9",
+        "cost_materials": 210000, "cost_manpower": 2000, "cost_fuel": 3600,
         "prod_materials": 5500, "prod_manpower": 0, "prod_fuel": 100
     },
     "Factory Lvl 11": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 10",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 6000, "prod_manpower": 0, "prod_fuel": 110
+        "time": 440, "group": "industry", "req": "Factory Lvl 10",
+        "cost_materials": 240000, "cost_manpower": 2100, "cost_fuel": 4200,
+        "prod_materials": 6000, "prod_manpower": 0, "prod_fuel": 115
     },
     "Factory Lvl 12": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 11",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 6500, "prod_manpower": 0, "prod_fuel": 120
+        "time": 480, "group": "industry", "req": "Factory Lvl 11",
+        "cost_materials": 275000, "cost_manpower": 2200, "cost_fuel": 4800,
+        "prod_materials": 6500, "prod_manpower": 0, "prod_fuel": 130
     },
     "Factory Lvl 13": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 12",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 7000, "prod_manpower": 0, "prod_fuel": 130
+        "time": 520, "group": "industry", "req": "Factory Lvl 12",
+        "cost_materials": 315000, "cost_manpower": 2300, "cost_fuel": 5500,
+        "prod_materials": 7000, "prod_manpower": 0, "prod_fuel": 145
     },
     "Factory Lvl 14": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 13",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 7500, "prod_manpower": 0, "prod_fuel": 140
+        "time": 560, "group": "industry", "req": "Factory Lvl 13",
+        "cost_materials": 360000, "cost_manpower": 2400, "cost_fuel": 6300,
+        "prod_materials": 7500, "prod_manpower": 0, "prod_fuel": 160
     },
     "Factory Lvl 15": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 14",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 8000, "prod_manpower": 0, "prod_fuel": 150
+        "time": 600, "group": "industry", "req": "Factory Lvl 14",
+        "cost_materials": 410000, "cost_manpower": 2500, "cost_fuel": 7200,
+        "prod_materials": 8000, "prod_manpower": 0, "prod_fuel": 180
     },
     "Factory Lvl 16": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 15",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 8500, "prod_manpower": 0, "prod_fuel": 160
+        "time": 650, "group": "industry", "req": "Factory Lvl 15",
+        "cost_materials": 465000, "cost_manpower": 2600, "cost_fuel": 8200,
+        "prod_materials": 8500, "prod_manpower": 0, "prod_fuel": 200
     },
     "Factory Lvl 17": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 16",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 9000, "prod_manpower": 0, "prod_fuel": 170
+        "time": 700, "group": "industry", "req": "Factory Lvl 16",
+        "cost_materials": 525000, "cost_manpower": 2700, "cost_fuel": 9300,
+        "prod_materials": 9000, "prod_manpower": 0, "prod_fuel": 220
     },
     "Factory Lvl 18": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 17",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 9500, "prod_manpower": 0, "prod_fuel": 180
+        "time": 750, "group": "industry", "req": "Factory Lvl 17",
+        "cost_materials": 590000, "cost_manpower": 2800, "cost_fuel": 10500,
+        "prod_materials": 9500, "prod_manpower": 0, "prod_fuel": 240
     },
     "Factory Lvl 19": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 18",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 10000, "prod_manpower": 0, "prod_fuel": 190
+        "time": 800, "group": "industry", "req": "Factory Lvl 18",
+        "cost_materials": 660000, "cost_manpower": 2900, "cost_fuel": 12000,
+        "prod_materials": 10500, "prod_manpower": 0, "prod_fuel": 265
     },
     "Factory Lvl 20": {
-        "time": 180, "group": "industry", "req": "Factory Lvl 19",
-        "cost_materials": 50000, "cost_manpower": 0, "cost_fuel": 1000,
-        "prod_materials": 10000, "prod_manpower": 0, "prod_fuel": 200
+        "time": 900, "group": "industry", "req": "Factory Lvl 19",
+        "cost_materials": 750000, "cost_manpower": 3000, "cost_fuel": 14000,
+        "prod_materials": 12000, "prod_manpower": 0, "prod_fuel": 300
     },
     "Basic Recruitment Center": {
-        "time": 90, "group": "recruitment", "req": null,
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 60, "group": "recruitment", "req": null,
+        "cost_materials": 4000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 50, "prod_fuel": 0
     },
     "Recruitment Building Lvl 1": {
-        "time": 90, "group": "recruitment", "req": "Basic Recruitment Center",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 75, "group": "recruitment", "req": "Basic Recruitment Center",
+        "cost_materials": 8000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 100, "prod_fuel": 0
     },
     "Recruitment Building Lvl 2": {
         "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 1",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "cost_materials": 15000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 200, "prod_fuel": 0
     },
     "Recruitment Building Lvl 3": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 2",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 105, "group": "recruitment", "req": "Recruitment Building Lvl 2",
+        "cost_materials": 24000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 300, "prod_fuel": 0
     },
     "Recruitment Building Lvl 4": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 3",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 120, "group": "recruitment", "req": "Recruitment Building Lvl 3",
+        "cost_materials": 35000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 400, "prod_fuel": 0
     },
     "Recruitment Building Lvl 5": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 4",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 135, "group": "recruitment", "req": "Recruitment Building Lvl 4",
+        "cost_materials": 48000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 500, "prod_fuel": 0
     },
     "Recruitment Building Lvl 6": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 5",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 150, "group": "recruitment", "req": "Recruitment Building Lvl 5",
+        "cost_materials": 62000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 600, "prod_fuel": 0
     },
     "Recruitment Building Lvl 7": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 6",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 165, "group": "recruitment", "req": "Recruitment Building Lvl 6",
+        "cost_materials": 78000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 700, "prod_fuel": 0
     },
     "Recruitment Building Lvl 8": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 7",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 180, "group": "recruitment", "req": "Recruitment Building Lvl 7",
+        "cost_materials": 95000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 800, "prod_fuel": 0
     },
     "Recruitment Building Lvl 9": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 8",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 195, "group": "recruitment", "req": "Recruitment Building Lvl 8",
+        "cost_materials": 115000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 900, "prod_fuel": 0
     },
     "Recruitment Building Lvl 10": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 9",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 210, "group": "recruitment", "req": "Recruitment Building Lvl 9",
+        "cost_materials": 140000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1000, "prod_fuel": 0
     },
     "Recruitment Building Lvl 11": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 10",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 230, "group": "recruitment", "req": "Recruitment Building Lvl 10",
+        "cost_materials": 165000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1100, "prod_fuel": 0
     },
     "Recruitment Building Lvl 12": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 11",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 250, "group": "recruitment", "req": "Recruitment Building Lvl 11",
+        "cost_materials": 195000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1200, "prod_fuel": 0
     },
     "Recruitment Building Lvl 13": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 12",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 270, "group": "recruitment", "req": "Recruitment Building Lvl 12",
+        "cost_materials": 230000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1300, "prod_fuel": 0
     },
     "Recruitment Building Lvl 14": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 13",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 290, "group": "recruitment", "req": "Recruitment Building Lvl 13",
+        "cost_materials": 270000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1400, "prod_fuel": 0
     },
     "Recruitment Building Lvl 15": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 14",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 310, "group": "recruitment", "req": "Recruitment Building Lvl 14",
+        "cost_materials": 315000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1500, "prod_fuel": 0
     },
     "Recruitment Building Lvl 16": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 15",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 330, "group": "recruitment", "req": "Recruitment Building Lvl 15",
+        "cost_materials": 365000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1600, "prod_fuel": 0
     },
     "Recruitment Building Lvl 17": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 16",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 350, "group": "recruitment", "req": "Recruitment Building Lvl 16",
+        "cost_materials": 420000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1700, "prod_fuel": 0
     },
     "Recruitment Building Lvl 18": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 17",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 370, "group": "recruitment", "req": "Recruitment Building Lvl 17",
+        "cost_materials": 480000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1800, "prod_fuel": 0
     },
     "Recruitment Building Lvl 19": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 18",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
+        "time": 390, "group": "recruitment", "req": "Recruitment Building Lvl 18",
+        "cost_materials": 550000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 0, "prod_manpower": 1900, "prod_fuel": 0
     },
     "Recruitment Building Lvl 20": {
-        "time": 90, "group": "recruitment", "req": "Recruitment Building Lvl 19",
-        "cost_materials": 20000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 0, "prod_manpower": 2000, "prod_fuel": 0
+        "time": 420, "group": "recruitment", "req": "Recruitment Building Lvl 19",
+        "cost_materials": 630000, "cost_manpower": 0, "cost_fuel": 0,
+        "prod_materials": 0, "prod_manpower": 2100, "prod_fuel": 0
     }
 }
