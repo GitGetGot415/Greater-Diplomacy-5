@@ -55,7 +55,7 @@ class Declare_War_Screen(GameState):
 
         self.wargoal_options = [
             {"label": getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims"), "enabled": take_claims_enabled},
-            {"label": getattr(c, 'WARGOAL_NO_CB', "No Casus Belli"), "enabled": True},
+            {"label": getattr(c, 'WARGOAL_NO_CB', "No Casus Belli"), "enabled": not c.CASUS_BELLI_REQUIRED},
             {"label": "Don't Declare War", "enabled": True}
         ]
             
