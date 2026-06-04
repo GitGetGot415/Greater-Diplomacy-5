@@ -281,7 +281,7 @@ DEFAULT_1910_TECH = {
 # ==========================================
 
 WARGOAL_TAKE_CLAIMS = "Take Claims"
-WARGOAL_ANNEX = "Total Annexation"
+WARGOAL_NO_CB = "No Casus Belli"
 
 PEACE_SURRENDER = "Surrender"
 PEACE_WHITE_PEACE = "Ceasefire (White Peace)"

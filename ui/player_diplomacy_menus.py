@@ -48,16 +48,14 @@ class Declare_War_Screen(GameState):
         
         # Determine available wargoals to choose from
         take_claims_enabled = has_wg and (wg_type == getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims") or not wg_type)
-        annex_enabled = has_wg and wg_type == getattr(c, 'WARGOAL_ANNEX', "Total Annexation")
         
         # Spectator / Override catch: if it's the spectator, let them force it anyway
         if map_screen.player_country == "Spectator":
             take_claims_enabled = True
-            annex_enabled = True
 
         self.wargoal_options = [
             {"label": getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims"), "enabled": take_claims_enabled},
-            {"label": getattr(c, 'WARGOAL_ANNEX', "Total Annexation"), "enabled": annex_enabled},
+            {"label": getattr(c, 'WARGOAL_NO_CB', "No Casus Belli"), "enabled": True},
             {"label": "Don't Declare War", "enabled": True}
         ]
             
@@ -456,11 +454,21 @@ class Peace_Screen(GameState):
         self.map_screen = map_screen
         self.target_nation = target_nation
         
+        my_wargoal = map_screen.nation_data.get(map_screen.player_country, {}).get("wargoals", {}).get(target_nation, {}).get("type", "")
+        their_wargoal = map_screen.nation_data.get(target_nation, {}).get("wargoals", {}).get(map_screen.player_country, {}).get("type", "")
+        
         self.terms = [
             getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"),
             getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"),
             getattr(c, 'PEACE_SURRENDER', "Surrender"),
             "Don't offer peace"
+        ]
+        
+        self.terms_enabled = [
+            True,
+            my_wargoal == getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims"),
+            my_wargoal != getattr(c, 'WARGOAL_NO_CB', "No Casus Belli") and their_wargoal != getattr(c, 'WARGOAL_NO_CB', "No Casus Belli"),
+            True
         ]
         
         # Check for existing peace offer
@@ -471,7 +479,7 @@ class Peace_Screen(GameState):
             pending_msg = pending.get("message", "")
             self.selected_term_idx = 3 # Default to Don't offer peace
             for i, term in enumerate(self.terms):
-                if term == pending_msg:
+                if term == pending_msg and self.terms_enabled[i]:
                     self.selected_term_idx = i
                     break
             
@@ -491,12 +499,21 @@ class Peace_Screen(GameState):
         self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "green", confirm_text, self.confirm))
         
         for i, term in enumerate(self.terms):
-            color = "green" if self.selected_term_idx == i else "blue"
-            self.elements.append(Button(self.panel_rect.centerx - 150, self.panel_rect.y + 60 + (i * 55), "new_game", color, term, lambda idx=i: self.select_term(idx)))
+            is_enabled = self.terms_enabled[i]
+            if is_enabled:
+                color = "green" if self.selected_term_idx == i else "blue"
+            else:
+                color = "grey"
+                
+            btn = Button(self.panel_rect.centerx - 150, self.panel_rect.y + 60 + (i * 55), "new_game", color, term, lambda idx=i: self.select_term(idx))
+            if not is_enabled:
+                btn.disabled = True
+            self.elements.append(btn)
 
     def select_term(self, idx):
-        self.selected_term_idx = idx
-        self.refresh_ui()
+        if self.terms_enabled[idx]:
+            self.selected_term_idx = idx
+            self.refresh_ui()
 
     def confirm(self):
         term = self.terms[self.selected_term_idx]

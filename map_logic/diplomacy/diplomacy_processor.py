@@ -411,7 +411,8 @@ def process_diplomacy_turn(self):
                 ai_queue = self.nation_data[country_name].setdefault("queued_ai_actions", [])
                 ai_queue.append({"target": act_target, "action": "WAR_DECLARATION"})
             else:
-                delayed_responses.append((country_name, act_target, "WAR_DECLARATION", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "We have declared WAR upon you!")))
+                # --- NEW: Explicitly force LLM reaction wars to use No CB ---
+                delayed_responses.append((country_name, act_target, "WAR_DECLARATION", 0, getattr(c, 'WARGOAL_NO_CB', "No Casus Belli")))
         elif ai_action == "JOIN_WARS":
             if queries.are_in_same_faction(country_name, act_target, self.nation_data):
                 delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "We stand with you.")))

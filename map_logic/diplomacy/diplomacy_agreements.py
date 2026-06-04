@@ -61,17 +61,11 @@ def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, ma
                 edit_province_ownership.conquer_province(map_screen, prov, proposer)
 
     elif peace_type == c.PEACE_SURRENDER:
-        # Target gets their claims, or annexes if their wargoal was ANNEX
-        wargoal = nation_data.get(target, {}).get("wargoals", {}).get(proposer, {}).get("type", "")
-        if wargoal == c.WARGOAL_ANNEX:
-            for prov in map_data.values():
-                if prov.get("owner") == proposer:
-                    edit_province_ownership.conquer_province(map_screen, prov, target)
-        else:
-            claims = nation_data.get(target, {}).get("claims", [])
-            for prov in map_data.values():
-                if prov["id"] in claims and prov.get("owner") == proposer:
-                    edit_province_ownership.conquer_province(map_screen, prov, target)
+        # Target gets their claims.
+        claims = nation_data.get(target, {}).get("claims", [])
+        for prov in map_data.values():
+            if prov["id"] in claims and prov.get("owner") == proposer:
+                edit_province_ownership.conquer_province(map_screen, prov, target)
 
     # Clear wargoals between the two
     if proposer in nation_data.get(target, {}).get("wargoals", {}):
