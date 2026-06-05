@@ -64,7 +64,10 @@ def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, ma
 
     # Extract frozen IDs using regex
     frozen_ids = []
-    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)\)', peace_type)
+    
+    # Updated regex: Drops the closing parenthesis requirement so "+ cores" doesn't break the match
+    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ] +)', peace_type)
+    
     if match:
         frozen_ids = [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
 
