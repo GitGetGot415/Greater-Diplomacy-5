@@ -620,9 +620,9 @@ def calculate_all_economies(map_data, nation_data):
                 "fuel": c.BASE_YIELDS["fuel"] 
             },
             "breakdown": {
-                "manpower": {"base": c.COUNTRY_BASE_YIELDS["manpower"], "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0},
-                "materials": {"base": c.COUNTRY_BASE_YIELDS["materials"], "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0},
-                "fuel": {"base": c.COUNTRY_BASE_YIELDS["fuel"] + bergius_bonus, "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
+                "manpower": {"base": c.COUNTRY_BASE_YIELDS["manpower"], "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0, "conscription": 0},
+                "materials": {"base": c.COUNTRY_BASE_YIELDS["materials"], "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0, "conscription": 0},
+                "fuel": {"base": c.COUNTRY_BASE_YIELDS["fuel"] + bergius_bonus, "core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0, "conscription": 0}
             },
             "upkeep": {"manpower": 0, "materials": 0, "fuel": 0},
             "total_inc": {"manpower": 0, "materials": 0, "fuel": 0}
@@ -677,10 +677,21 @@ def calculate_all_economies(map_data, nation_data):
     for name, data in econ_data.items():
         n_data = nation_data.get(name, {})
         conv_rate = min(n_data.get("mat_to_fuel_slider", 0.0), get_max_fuel_conversion(n_data))
+        conscript_rate = n_data.get("conscription_slider", 1.0)
         
-        # Calculate raw material income
+        # Calculate raw material income BEFORE conscription so fuel strictly ignores it
         raw_inc_mat = sum(data["breakdown"]["materials"].values())
-        
+        raw_inc_man = sum(data["breakdown"]["manpower"].values())
+
+        # Conscription is based on Gross Manpower Income (1.0 = keep all, 0.0 = convert all)
+        if conscript_rate < 1.0 and raw_inc_man >= 10:
+            convert_man_amount = int(raw_inc_man * (1.0 - conscript_rate))
+            convert_man_amount = (convert_man_amount // 10) * 10
+            mat_gained = int(convert_man_amount * c.CONSCRIPTION_RATIO)
+            
+            data["breakdown"]["manpower"]["conscription"] = -convert_man_amount
+            data["breakdown"]["materials"]["conscription"] = mat_gained
+            
         # Conversion is based on Gross Income, not Net Income (Expenses are ignored)
         if conv_rate > 0 and raw_inc_mat >= 10:
             convert_amount = int(raw_inc_mat * conv_rate)

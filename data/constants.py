@@ -143,6 +143,7 @@ DEFAULT_STARTING_FACTORY = "Basic Factory"
 # ==========================================
 
 # --- Economy Screen Placement ---
+ECON_CONSCRIPTION_BTN_Y = 530
 ECON_CONVERT_BTN_Y = 600
 ECON_CONVERT_BTN_X1 = SCREEN_WIDTH // 2 - 250
 ECON_CONVERT_BTN_X2 = SCREEN_WIDTH // 2 + 50
@@ -150,6 +151,7 @@ ECON_CONVERT_BTN_X2 = SCREEN_WIDTH // 2 + 50
 FUEL_REFINING_CONVERSION_PER_LVL = 0.01
 
 MAX_CONVERSION_SLIDER_VAL = 0.20
+CONSCRIPTION_RATIO = 0.5
 
 # ==========================================
 # AUDIO DEFAULTS

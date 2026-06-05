@@ -28,9 +28,20 @@ class Economy_Screen(GameState):
         slider_val = min(p_data.get("mat_to_fuel_slider", 0.0), max_allowed)
         p_data["mat_to_fuel_slider"] = slider_val
         
+        conscript_val = p_data.get("conscription_slider", 1.0)
+        p_data["conscription_slider"] = conscript_val
+        
+        self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONSCRIPTION_BTN_Y, 400, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0))
+
         self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONVERT_BTN_Y, 400, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
 
+    def set_conscription(self, val):
+        if not self.map_screen: return
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data["conscription_slider"] = val
+
     def set_conversion(self, val):
+        if not self.map_screen: return
         if not self.map_screen: return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val

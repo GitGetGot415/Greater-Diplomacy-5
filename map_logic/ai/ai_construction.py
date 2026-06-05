@@ -74,6 +74,16 @@ def process_ai_economy_decisions(map_screen):
         if ratio_mat > target_mat: deficits.append("cost_materials")
         if ratio_fuel > target_fuel: deficits.append("cost_fuel")
 
+        # --- DYNAMIC AI CONSCRIPTION LOGIC ---
+        # If AI has excess manpower but needs materials, convert manpower to materials
+        # 1.0 = keep all, 0.0 = convert all
+        if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > 1000:
+            data["conscription_slider"] = 0.5 # Convert 50%
+        elif (data.get("manpower", 0) > 10000 and data.get("materials", 0) < 1000) or data.get("manpower", 0) > 100000:
+            data["conscription_slider"] = 0.0 # Emergency: Convert 100%
+        else:
+            data["conscription_slider"] = 1.0 # Normal (keep 100%)
+
         # --- DYNAMIC AI CONVERSION FIX ---
         # Fetch the exact maximum conversion limit this specific AI is legally allowed to use
         max_conversion = queries.get_max_fuel_conversion(data)
