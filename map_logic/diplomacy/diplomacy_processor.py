@@ -791,3 +791,21 @@ def process_diplomacy_turn(self):
                 
                 if country_name == self.player_country:
                     self.show_feedback(f"Claim on Province {prov_id} complete!")
+
+        # --- PROCESS REVOKE QUEUE (Simultaneous) ---
+        revoke_queue = data.get("revoke_queue", [])
+        if revoke_queue:
+            # Iterate backwards so we can safely pop elements as they complete
+            for i in range(len(revoke_queue) - 1, -1, -1):
+                rq = revoke_queue[i]
+                rq["turns_left"] -= 1
+                
+                if rq["turns_left"] <= 0:
+                    prov_id = rq["prov_id"]
+                    claims = data.get("claims", [])
+                    if prov_id in claims:
+                        claims.remove(prov_id)
+                    revoke_queue.pop(i)
+                    
+                    if country_name == self.player_country:
+                        self.show_feedback(f"Claim on Province {prov_id} revoked!")

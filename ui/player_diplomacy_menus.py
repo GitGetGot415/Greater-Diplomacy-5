@@ -221,11 +221,20 @@ class Claims_Screen(GameState):
         
         claims = data.setdefault("claims", [])
         queue = data.setdefault("claim_queue", [])
+        revoke_queue = data.setdefault("revoke_queue", [])
         
-        # Revoke existing claim
+        # Check if it's currently being revoked
+        for i, rq in enumerate(revoke_queue):
+            if rq["prov_id"] == pid:
+                revoke_queue.pop(i)
+                self.map_screen.show_feedback("Revoke cancelled. Claim retained.")
+                self.refresh_ui()
+                return
+
+        # Revoke existing claim (takes 1 turn)
         if pid in claims:
-            claims.remove(pid)
-            self.map_screen.show_feedback("Claim revoked.")
+            revoke_queue.append({"prov_id": pid, "turns_left": 1})
+            self.map_screen.show_feedback("Revoking claim (1 turn).")
             self.refresh_ui()
             return
         
@@ -269,12 +278,21 @@ class Claims_Screen(GameState):
         data = self.map_screen.nation_data.get(self.player, {})
         claims = data.get("claims", [])
         queue = data.get("claim_queue", [])
+        revoke_queue = data.get("revoke_queue", [])
+        
+        revoke_ids = [rq["prov_id"] for rq in revoke_queue]
         
         for pid in claims:
-            self.draw_highlight(surface, pid, (255, 215, 0)) # Gold (Claimed)
+            if pid in revoke_ids:
+                self.draw_highlight(surface, pid, (255, 50, 50)) # Red (Revoking)
+            else:
+                self.draw_highlight(surface, pid, (255, 215, 0)) # Gold (Claimed)
             
-        for q in queue:
-            self.draw_highlight(surface, q["prov_id"], (0, 150, 255)) # Blue (In Queue)
+        for i, q in enumerate(queue):
+            if i == 0:
+                self.draw_highlight(surface, q["prov_id"], (0, 255, 0)) # Green (Actively Justifying)
+            else:
+                self.draw_highlight(surface, q["prov_id"], (0, 150, 255)) # Blue (Waiting in Queue)
             
         # Draw Information Panel
         panel_surf = pygame.Surface((self.panel_rect.width, self.panel_rect.height), pygame.SRCALPHA)
@@ -317,7 +335,16 @@ class Claims_Screen(GameState):
                 prov = self.map_screen.id_to_province.get(pid)
                 owner = prov.get("owner", "Unknown") if prov else "Unknown"
                 owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                txt = tiny_font.render(f"- Prov {pid} ({owner_name})", True, (200, 200, 200))
+                
+                revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
+                if revoke_item:
+                    status_text = f" (Revoking in {revoke_item['turns_left']})"
+                    color = (255, 100, 100)
+                else:
+                    status_text = ""
+                    color = (200, 200, 200)
+
+                txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
                 surface.blit(txt, (self.panel_rect.x + 30, y_off))
                 y_off += 25
             if len(claims) > 15:
