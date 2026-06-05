@@ -195,7 +195,7 @@ VIEW_BTN_ROW2_Y = SCREEN_HEIGHT - 100
 
 # --- Left UI Bar Placement ---
 LEFT_UI_BAR_X = 20
-LEFT_UI_BAR_STEP_Y = 50
+LEFT_UI_BAR_STEP_Y = 45
 BTN_SPECTATOR_Y = SCREEN_HEIGHT - 50
 
 # ==========================================
