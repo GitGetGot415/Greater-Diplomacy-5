@@ -394,6 +394,24 @@ class Map(GameState):
         print(f"[UI EVENT] {text}")
 
     def additional_events(self, event): 
+        # Intercept inputs if the game has crashed
+        if getattr(self, 'thread_error', None):
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
+                if btn_rect.collidepoint(event.pos):
+                    try:
+                        import tkinter as tk
+                        root = tk.Tk()
+                        root.withdraw()
+                        root.clipboard_clear()
+                        root.clipboard_append(self.thread_error)
+                        root.update()
+                        root.destroy()
+                        self.error_copied = True
+                    except Exception as e:
+                        print(f"Failed to copy to clipboard: {e}")
+            return # Block all other map events!
+
         event_handler.handle_map_events(self, event)
 
     def sync_units_to_data(self):
@@ -491,6 +509,25 @@ class Map(GameState):
             for line in self.thread_error.split('\n'):
                 surface.blit(fonts.get("small").render(line, True, (255, 200, 200)), (20, y_offset))
                 y_offset += 25
+                
+            # Draw Copy Button
+            btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
+            mx, my = pygame.mouse.get_pos()
+            
+            # Hover effect
+            color = (200, 50, 50) if btn_rect.collidepoint(mx, my) else (150, 30, 30)
+            
+            pygame.draw.rect(surface, color, btn_rect, border_radius=5)
+            pygame.draw.rect(surface, (255, 255, 255), btn_rect, 2, border_radius=5)
+            
+            btn_txt = fonts.get("button").render("Copy to Clipboard", True, (255, 255, 255))
+            surface.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
+            
+            # Show "Copied!" feedback text above the button
+            if getattr(self, 'error_copied', False):
+                copied_txt = fonts.get("small").render("Copied!", True, (100, 255, 100))
+                surface.blit(copied_txt, (btn_rect.centerx - copied_txt.get_width()//2, btn_rect.y - 25))
+                
             return
 
     def refresh_nation_data(self):
