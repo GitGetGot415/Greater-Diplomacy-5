@@ -158,7 +158,7 @@ def draw_sidebar_info(self, surface):
         
         for side_id in owners_present:
             side_data = self.nation_data.get(side_id, {})
-            side_display = side_data.get("name", side_id).title()
+            side_display = side_data.get("name", side_id)
             side_color = self.nation_colors.get(side_id, (200, 200, 200))
             
             title = self.small_font.render(f"{side_display}:", True, side_color)

@@ -15,7 +15,8 @@ def draw_map_screen(self, surface):
         surface.fill((10, 10, 15)) # Deep black/blue
         
         font = fonts.get("title")
-        txt = font.render(f"Player {self.current_player_index + 1} ({self.player_country.title()}) Ready?", True, (255, 255, 255))
+        display_name = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
+        txt = font.render(f"Player {self.current_player_index + 1} ({display_name}) Ready?", True, (255, 255, 255))
         surface.blit(txt, txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 - 50)))
 
         btn_font = fonts.get("heading2")
@@ -190,7 +191,12 @@ def draw_map_screen(self, surface):
 
     # --- LAYER 5: SELECTION MODE ---
     else:
-        prompt_txt = "Select a Country to Play As" if not self.pending_selection else f"Play as {self.pending_selection.title()}?"
+        if self.pending_selection:
+            disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
+            prompt_txt = f"Play as {disp_name}?"
+        else:
+            prompt_txt = "Select a Country to Play As"
+            
         big_font = fonts.get("title")
         txt = big_font.render(prompt_txt, True, (255, 255, 255))
         bg_rect = txt.get_rect(center=(surface.get_width()//2, 50))
@@ -208,7 +214,8 @@ def draw_map_screen(self, surface):
             pygame.draw.rect(surface, (200, 200, 200), box_rect, 2)
             
             confirm_font = fonts.get("heading2")
-            instr = confirm_font.render(f"Start Game as {self.pending_selection.title()}?", True, (255, 255, 255))
+            disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
+            instr = confirm_font.render(f"Start Game as {disp_name}?", True, (255, 255, 255))
             surface.blit(instr, instr.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
             
             self.confirm_rect = pygame.Rect(box_rect.x + 50, box_rect.bottom - 70, 120, 40)
