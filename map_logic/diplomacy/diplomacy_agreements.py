@@ -50,31 +50,47 @@ def finalize_neutral(nation_data, a, b):
 def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
     """Executes the specific terms of a peace deal based on its type."""
 
-    if peace_type == c.PEACE_WHITE_PEACE:
-        # Status Quo: Return occupied cores back to their original owners
+    # Helper to check original ownership (Uses the pre-war border snapshot if available)
+    def was_original_owner(prov, nation):
+        fac = nation_data.get(nation, {}).get("faction", "")
+        if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
+            pre_war = nation_data["FACTION_WAR_MAPS"][fac]
+            if str(prov["id"]) in pre_war:
+                return pre_war[str(prov["id"])] == nation
+        # Fallback to cores if the war snapshot doesn't exist
+        return nation in prov.get("cores", [])
+
+    if peace_type == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"):
+        # Status Quo: Return ALL occupied territory to their original owners
         for prov in map_data.values():
-            if prov.get("owner") == proposer and target in prov.get("cores", []) and proposer not in prov.get("cores", []):
+            if prov.get("owner") == proposer and was_original_owner(prov, target):
                 edit_province_ownership.conquer_province(map_screen, prov, target)
-            elif prov.get("owner") == target and proposer in prov.get("cores", []) and target not in prov.get("cores", []):
+            elif prov.get("owner") == target and was_original_owner(prov, proposer):
                 edit_province_ownership.conquer_province(map_screen, prov, proposer)
 
-    elif peace_type == c.PEACE_DEMAND_CLAIMS:
-        # Proposer wins.
-        # Proposer keeps everything they currently own (occupy).
-        # Proposer gets any of their claims/cores that the Target currently owns.
+    elif peace_type == getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"):
+        # Proposer wins. Target is Loser.
         claims = nation_data.get(proposer, {}).get("claims", [])
         for prov in map_data.values():
+            # 1. Proposer gets their claims (even if Target owns them)
             if prov.get("owner") == target and (prov["id"] in claims or proposer in prov.get("cores", [])):
                 edit_province_ownership.conquer_province(map_screen, prov, proposer)
+            # 2. Loser (Target) must return any of Proposer's territory they occupied
+            elif prov.get("owner") == target and was_original_owner(prov, proposer):
+                edit_province_ownership.conquer_province(map_screen, prov, proposer)
+            # Proposer keeps anything they currently occupy, so no action needed.
 
-    elif peace_type == c.PEACE_SURRENDER:
-        # Target wins.
-        # Target keeps everything they currently own (occupy).
-        # Target gets any of their claims/cores that the Proposer currently owns.
+    elif peace_type == getattr(c, 'PEACE_SURRENDER', "Surrender"):
+        # Target wins. Proposer is Loser.
         claims = nation_data.get(target, {}).get("claims", [])
         for prov in map_data.values():
+            # 1. Target gets their claims (even if Proposer owns them)
             if prov.get("owner") == proposer and (prov["id"] in claims or target in prov.get("cores", [])):
                 edit_province_ownership.conquer_province(map_screen, prov, target)
+            # 2. Loser (Proposer) must return any of Target's territory they occupied
+            elif prov.get("owner") == proposer and was_original_owner(prov, target):
+                edit_province_ownership.conquer_province(map_screen, prov, target)
+            # Target keeps anything they currently occupy, so no action needed.
 
     # Clear wargoals between the two
     if proposer in nation_data.get(target, {}).get("wargoals", {}):
