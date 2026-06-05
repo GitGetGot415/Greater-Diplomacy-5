@@ -684,19 +684,25 @@ def calculate_all_economies(map_data, nation_data):
         raw_inc_man = sum(data["breakdown"]["manpower"].values())
 
         # Conscription is based on Gross Manpower Income (1.0 = keep all, 0.0 = convert all)
-        if conscript_rate < 1.0 and raw_inc_man >= 10:
+        man_ratio = getattr(c, 'CONSCRIPTION_RATIO', 0.5)
+        man_divisor = max(1, int(1 / man_ratio) if man_ratio > 0 else 1)
+        
+        if conscript_rate < 1.0 and raw_inc_man >= man_divisor:
             convert_man_amount = int(raw_inc_man * (1.0 - conscript_rate))
-            convert_man_amount = (convert_man_amount // 10) * 10
-            mat_gained = int(convert_man_amount * c.CONSCRIPTION_RATIO)
+            convert_man_amount = (convert_man_amount // man_divisor) * man_divisor
+            mat_gained = int(convert_man_amount * man_ratio)
             
             data["breakdown"]["manpower"]["conscription"] = -convert_man_amount
             data["breakdown"]["materials"]["conscription"] = mat_gained
             
         # Conversion is based on Gross Income, not Net Income (Expenses are ignored)
-        if conv_rate > 0 and raw_inc_mat >= 10:
+        fuel_ratio = getattr(c, 'FUEL_CONVERSION_RATIO', 0.1)
+        fuel_divisor = max(1, int(1 / fuel_ratio) if fuel_ratio > 0 else 1)
+        
+        if conv_rate > 0 and raw_inc_mat >= fuel_divisor:
             convert_amount = int(raw_inc_mat * conv_rate)
-            convert_amount = (convert_amount // 10) * 10
-            fuel_gained = convert_amount // 10
+            convert_amount = (convert_amount // fuel_divisor) * fuel_divisor
+            fuel_gained = int(convert_amount * fuel_ratio)
             
             # Treat materials consumed as an expense, and fuel generated as an income
             data["breakdown"]["materials"]["conversion"] = -convert_amount

@@ -96,14 +96,33 @@ class Economy_Screen(GameState):
             
             # Detailed Breakdown
             detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"
+            if bd.get('conscription', 0) != 0:
+                cons_val = int(bd.get('conscription', 0))
+                sign = "+" if cons_val > 0 else ""
+                label = "Conscription Income" if cons_val > 0 else "Conscription Cost"
+                detail_breakdown += f"  |  {label}: {sign}{cons_val}"
             if bd.get('conversion', 0) != 0:
                 conv_val = int(bd.get('conversion', 0))
                 sign = "+" if conv_val > 0 else ""
-                detail_breakdown += f"  |  Conversion: {sign}{conv_val}"
+                label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
+                detail_breakdown += f"  |  {label}: {sign}{conv_val}"
 
             surface.blit(font_small.render(detail_breakdown, True, (150, 150, 150)), (row_rect.x + 350, row_rect.y + 60))
             
             y_offset += 120
+
+        # Draw dynamic conversion info below sliders
+        man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
+        mat_gained = breakdown.get("materials", {}).get("conscription", 0)
+        if man_lost > 0:
+            cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, (255, 215, 0))
+            surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2, c.ECON_CONSCRIPTION_BTN_Y + 25))
+
+        mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
+        fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
+        if mat_lost > 0:
+            conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, (255, 215, 0))
+            surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, c.ECON_CONVERT_BTN_Y + 25))
 
     def handle_back_key(self):
         self.exit_to_map()
