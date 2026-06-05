@@ -573,7 +573,7 @@ class Peace_Screen(GameState):
         proposer = self.map_screen.player_country
         target = self.target_nation
 
-        if peace_type == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"):
+        if peace_type == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire"):
             if curr == proposer and target in prov.get("cores", []) and proposer not in prov.get("cores", []):
                 proj = target
             elif curr == target and proposer in prov.get("cores", []) and target not in prov.get("cores", []):
@@ -640,10 +640,12 @@ class Peace_Screen(GameState):
             # Only highlight provinces currently involved in the conflict between these two
             if curr in [proposer, target]:
                 proj = self.get_projected_owner(prov, peace_type)
-                if proj == proposer:
-                    self.draw_highlight(surface, prov["id"], p_color)
-                elif proj == target:
-                    self.draw_highlight(surface, prov["id"], t_color)
+                # Only highlight tiles that are ACTUALLY changing ownership
+                if proj != curr:
+                    if proj == proposer:
+                        self.draw_highlight(surface, prov["id"], p_color)
+                    elif proj == target:
+                        self.draw_highlight(surface, prov["id"], t_color)
 
         # Draw the Banner
         panel_surf = pygame.Surface((self.panel_rect.width, self.panel_rect.height), pygame.SRCALPHA)

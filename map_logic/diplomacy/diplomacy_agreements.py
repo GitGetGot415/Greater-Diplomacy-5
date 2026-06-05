@@ -62,11 +62,7 @@ def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, ma
 
     if peace_type == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"):
         # Status Quo: Return ALL occupied territory to their original owners
-        for prov in map_data.values():
-            if prov.get("owner") == proposer and was_original_owner(prov, target):
-                edit_province_ownership.conquer_province(map_screen, prov, target)
-            elif prov.get("owner") == target and was_original_owner(prov, proposer):
-                edit_province_ownership.conquer_province(map_screen, prov, proposer)
+        pass
 
     elif peace_type == getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"):
         # Proposer wins. Target is Loser.

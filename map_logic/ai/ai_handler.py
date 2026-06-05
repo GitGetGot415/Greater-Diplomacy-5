@@ -269,7 +269,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
             accepted = True
 
     # 3. Always accept peace deals for now (Per the user request)
-    if action_type == "PEACE_TREATY":
+    if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
         accepted = True
     # ------------------------------
 
