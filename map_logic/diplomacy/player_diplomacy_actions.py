@@ -15,6 +15,11 @@ def handle_declare_war(map_screen):
         map_screen.show_feedback("Cannot declare war on a faction member!")
         return
 
+    # --- NEW: Prevent declaring war with active truce ---
+    if queries.has_active_truce(map_screen.player_country, target, map_screen.nation_data):
+        map_screen.show_feedback("Cannot declare war while a truce is active!")
+        return
+
     # Direct import to bypass __init__.py namespace issues
     from ui.player_diplomacy_menus import open_wargoal_selection_menu
     open_wargoal_selection_menu(map_screen, target)

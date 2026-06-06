@@ -303,6 +303,7 @@ WARGOAL_NO_CB = "No Casus Belli"
 PEACE_SURRENDER = "Surrender"
 PEACE_WHITE_PEACE = "Ceasefire"
 PEACE_DEMAND_CLAIMS = "Demand Claims"
+TRUCE_TURNS = 12
 
 # ==========================================
 # INPUT SETTINGS

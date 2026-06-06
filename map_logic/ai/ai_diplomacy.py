@@ -281,7 +281,7 @@ def process_basic_proactive_ai(map_screen):
                 if member == ai_name or member not in active_nations: continue
                 
                 member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-                unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations]
+                unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations and not queries.has_active_truce(member, e, map_screen.nation_data)]
                 
                 if unshared_wars:
                     if not queries.is_ai_diplo_on_cooldown(ai_name, member, "CALL_TO_ARMS", map_screen.nation_data):
@@ -317,7 +317,7 @@ def process_basic_proactive_ai(map_screen):
                     continue
                 
                 member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-                unshared_wars = [e for e in member_enemies if e not in my_enemies and e in active_nations]
+                unshared_wars = [e for e in member_enemies if e not in my_enemies and e in active_nations and not queries.has_active_truce(ai_name, e, map_screen.nation_data)]
                 
                 if unshared_wars:
                     target_enemy = unshared_wars[0]
@@ -360,6 +360,7 @@ def process_basic_proactive_ai(map_screen):
                         if target not in active_nations: continue
                         if target in my_enemies: continue
                         if queries.are_in_same_faction(ai_name, target, map_screen.nation_data): continue
+                        if queries.has_active_truce(ai_name, target, map_screen.nation_data): continue
                         
                         # Check localized border strength instead of global strength
                         my_border_str, target_border_str = queries.get_border_strength(ai_name, target, map_screen.map_data, map_screen.id_to_province)

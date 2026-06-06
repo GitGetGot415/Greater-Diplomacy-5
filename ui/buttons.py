@@ -326,6 +326,14 @@ def update_button_states(map_screen):
 
                 # War / Peace UI routing
                 dw_enabled = not (not at_war and in_same_faction)
+                has_truce = queries.has_active_truce(map_screen.player_country, owner, map_screen.nation_data)
+                
+                # --- NEW: Fetch the exact number of turns remaining ---
+                truce_turns = map_screen.nation_data.get(map_screen.player_country, {}).get("truces", {}).get(owner, 0)
+                
+                if has_truce and not at_war:
+                    dw_enabled = False
+
                 if pending_action == "PEACE_TREATY" or pending_action == "CEASEFIRE": 
                     if pending_turns > 0:
                         dw_text = "Peace Offer Pending"
@@ -335,7 +343,11 @@ def update_button_states(map_screen):
                 elif pending_action == "WAR_DECLARATION": 
                     dw_text = "Edit War Declaration"
                 else: 
-                    dw_text = "Ceasefire / Peace" if at_war else "Declare War"
+                    if has_truce and not at_war:
+                        # --- NEW: Display the turns in the button text ---
+                        dw_text = f"Truce Active ({truce_turns})"
+                    else:
+                        dw_text = "Ceasefire / Peace" if at_war else "Declare War"
                     
                 set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
                 

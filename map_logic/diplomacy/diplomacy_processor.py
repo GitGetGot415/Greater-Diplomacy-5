@@ -55,7 +55,7 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
     return "Message drafted. Will send at end of turn."
 
 def process_diplomacy_turn(self):
-    # --- DECAY TEMPORARY MODIFIERS ---
+    # --- DECAY TEMPORARY MODIFIERS & TRUCES ---
     for country_name, data in list(self.nation_data.items()):
         if not isinstance(data, dict): 
             continue
@@ -70,6 +70,14 @@ def process_diplomacy_turn(self):
                     
                 if mods[mod_name] == 0:
                     del mods[mod_name]
+
+        # --- DECAY TRUCES ---
+        truces = data.get("truces", {})
+        for target in list(truces.keys()):
+            if truces[target] > 0:
+                truces[target] -= 1
+            if truces[target] <= 0:
+                del truces[target]
 
     # --- 0. PROCESS QUEUED AI MULTI-TURN ACTIONS ---
     for country_name, data in self.nation_data.items():
@@ -394,10 +402,13 @@ def process_diplomacy_turn(self):
             print(f"[AI GUARDRAIL] Aborting follow-up {follow_up}: Target '{raw_f_up_target}' not found.")
             follow_up = "NONE"
 
-        # Check cooldown
+        # Check cooldown and truces
         if ai_action != "NONE":
             if queries.is_ai_diplo_on_cooldown(country_name, act_target, ai_action, self.nation_data):
                 print(f"[AI GUARDRAIL] Aborting {ai_action}: Cooldown active.")
+                ai_action = "NONE"
+            elif ai_action == "WAR_DECLARATION" and queries.has_active_truce(country_name, act_target, self.nation_data):
+                print(f"[AI GUARDRAIL] Aborting {ai_action}: Truce active.")
                 ai_action = "NONE"
             else:
                 queries.set_ai_diplo_cooldown(country_name, act_target, ai_action, self.nation_data)
@@ -411,7 +422,6 @@ def process_diplomacy_turn(self):
                 ai_queue = self.nation_data[country_name].setdefault("queued_ai_actions", [])
                 ai_queue.append({"target": act_target, "action": "WAR_DECLARATION"})
             else:
-                # --- NEW: Explicitly force LLM reaction wars to use No CB ---
                 delayed_responses.append((country_name, act_target, "WAR_DECLARATION", 0, getattr(c, 'WARGOAL_NO_CB', "No Casus Belli")))
         elif ai_action == "JOIN_WARS":
             if queries.are_in_same_faction(country_name, act_target, self.nation_data):
@@ -420,6 +430,7 @@ def process_diplomacy_turn(self):
                 target_enemies = queries.get_enemies(act_target, self.nation_data)
                 if target_enemies:
                     for enemy in target_enemies:
+                        if queries.has_active_truce(country_name, enemy, self.nation_data): continue
                         delayed_responses.append((country_name, enemy, "WAR_DECLARATION", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "We have declared WAR upon you!")))
         elif ai_action == "LEAVE_FACTION":
             delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))

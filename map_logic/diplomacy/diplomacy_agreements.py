@@ -42,6 +42,9 @@ def finalize_neutral(nation_data, a, b):
         # Apply Temporary Post-War Modifier
         queries.add_temporary_modifier(country, other, "recent_war", c.REL_MOD_RECENT_WAR, nation_data)
 
+        # Apply Non-Aggression Pact
+        nation_data[country].setdefault("truces", {})[other] = getattr(c, 'TRUCE_TURNS', 12)
+
     fac_a = nation_data.get(a, {}).get("faction", "")
     fac_b = nation_data.get(b, {}).get("faction", "")
 

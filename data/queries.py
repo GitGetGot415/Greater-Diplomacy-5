@@ -885,6 +885,11 @@ def has_free_research_slots(nation, nation_data):
     queue = nation_data.get(nation, {}).get("research_queue", [])
     return len(queue) < 2
 
+def has_active_truce(nation_a, nation_b, nation_data):
+    """Returns True if there is an active non-aggression pact/truce between the two nations."""
+    if nation_a not in nation_data: return False
+    return nation_data[nation_a].get("truces", {}).get(nation_b, 0) > 0
+
 def get_relation_score(nation_a, nation_b, nation_data):
     """Calculates dynamic relations based on flat state modifiers and temporary modifiers."""
     if nation_a == nation_b:
