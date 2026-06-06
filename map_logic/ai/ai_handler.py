@@ -250,7 +250,7 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
     # --- IMPROVED FACTION LOGIC ---
     # 1. Check for basic aggressive acceptance
     if at_war and not in_faction:
-        if action_type in ["FACTION_INVITE", "CREATE_FACTION", "CEASEFIRE", "PEACE_TREATY"]:
+        if action_type in ["FACTION_INVITE", "CREATE_FACTION"]:
             accepted = True
             
     # 2. Check for Join Faction Requests (If we are the leader)
@@ -268,9 +268,10 @@ def evaluate_diplomatic_proposal(nation_data, active_nations, ai_nation, sender_
         if relation_score >= threshold or share_enemies:
             accepted = True
 
-    # 3. Always accept peace deals for now (Per the user request)
+    # 3. Evaluate peace deals dynamically using the centralized query
     if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
-        accepted = True
+        # Passing None for map_data as it's not currently required for this claim check
+        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, custom_msg, None, nation_data)
     # ------------------------------
 
     # Check if this is an AI talking to an AI

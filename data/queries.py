@@ -1320,7 +1320,10 @@ def has_wargoal(nation, target_nation, nation_data, map_data=None):
 
 def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, nation_data):
     """Evaluates if the AI will accept the proposed peace deal."""
-    # Currently, the AI handler is hardcoded to accept all peace treaties.
+    # The AI declines peace deals where the other side demands claims, but accepts all others.
+    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
+        return False
+        
     # This query acts as a centralized place to expand logic later (e.g. check war score).
     return True
 
