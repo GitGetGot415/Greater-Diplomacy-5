@@ -4722,7 +4722,9 @@
         "deployment_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Afrika Korps"
         ],
@@ -6189,7 +6191,22 @@
             189
         ],
         "owner": "Afrika Korps",
-        "units": [],
+        "units": [
+            {
+                "type": "Motorized Infantry Type 1930",
+                "owner": "Afrika Korps",
+                "health": 2000,
+                "max_health": 2000,
+                "speed": 2,
+                "attack": 300,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                }
+            }
+        ],
         "deployment_queue": [],
         "orders": [],
         "buildings": [],
@@ -6667,7 +6684,22 @@
             223
         ],
         "owner": "49ers",
-        "units": [],
+        "units": [
+            {
+                "type": "Motorized Infantry Type 1930",
+                "owner": "49ers",
+                "health": 2000,
+                "max_health": 2000,
+                "speed": 2,
+                "attack": 300,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                }
+            }
+        ],
         "deployment_queue": [],
         "orders": [],
         "buildings": [],
@@ -7813,7 +7845,9 @@
         "deployment_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "49ers"
         ],
