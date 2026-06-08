@@ -94,12 +94,14 @@ class Random_Setup(GameState):
         self.refresh_ui()
 
     def toggle_days_per_turn(self):
-        options = [5, 10, 15, 30]
+        """options = [5, 10, 15, 30]
         if self.base_days_per_turn in options:
             idx = options.index(self.base_days_per_turn)
             self.base_days_per_turn = options[(idx + 1) % len(options)]
         else:
-            self.base_days_per_turn = 15
+            self.base_days_per_turn = 15"""
+
+        self.base_days_per_turn = 15
         self.refresh_ui()
 
     def scenario_settings(self):
@@ -126,9 +128,9 @@ class Random_Setup(GameState):
             
             # Controls
             Button((c.SCREEN_WIDTH/2) + 120, 470, "medium", "green" if self.single_tile_start else "red", f"1-Tile Start: {'ON' if self.single_tile_start else 'OFF'}", self.toggle_single_tile),
-            Button("centered", 550, "medium", "blue", f"Base Days Per Turn: {self.base_days_per_turn}", self.toggle_days_per_turn),
-            Button("centered", 630, "medium", "grey", "Reset Defaults", self.do_reset),
-            Button("centered", 710, "large", "green", "START GAME", self.start_game),
+            # Button("centered + 250", 550, "medium", "blue", f"Base Days Per Turn: {self.base_days_per_turn}", self.toggle_days_per_turn),
+            Button("centered", 550, "medium", "grey", "Reset Defaults", self.do_reset),
+            Button("centered", 630, "large", "green", "START GAME", self.start_game),
         ]
         
         random_map_x = 100
