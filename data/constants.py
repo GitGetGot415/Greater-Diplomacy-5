@@ -68,7 +68,7 @@ NON_CORE_MULTIPLIERS = {
 
 CREDITS_DATA = [
     {"main_text": "Lead Developer: ", "link_text": "GitGetGot415", "url": "https://github.com/GitGetGot415"},
-    {"main_text": "Terrain Art: ", "link_text": "litbrb", "url": "https://github.com/litbrb"},
+    {"main_text": "Contributors: ", "link_text": "litbrb", "url": "https://github.com/litbrb"},
 ]
 
 SHOW_FPS = True
