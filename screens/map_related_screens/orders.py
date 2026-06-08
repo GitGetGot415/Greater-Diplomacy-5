@@ -215,7 +215,6 @@ class Orders_Screen(GameState):
 
     def handle_events(self, events):
         for event in events:
-            # FIX: Added 'and event.button == 1' so scrolling the wheel doesn't cancel orders
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for rect, idx in self.cancel_rects:
                     if rect.collidepoint(event.pos):
@@ -224,7 +223,7 @@ class Orders_Screen(GameState):
             
             # --- Handle Mousewheel Scrolling ---
             if event.type == pygame.MOUSEWHEEL:
-                # FIX: Only scroll if mouse is over the orders panel
+                # Only scroll if mouse is over the orders panel
                 mx, my = pygame.mouse.get_pos()
                 units = self.target_province.get("units", [])
                 player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -247,7 +246,7 @@ class Orders_Screen(GameState):
         # Define the panel area
         panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
         
-        # --- NEW: Camera Controls (Zooming and Panning) ---
+        # Camera Controls (Zooming and Panning) 
         on_ui = False
         units = self.target_province.get("units", [])
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -314,7 +313,6 @@ class Orders_Screen(GameState):
 
             if not target_units: return
 
-            # --- THE FIX ---
             if any(isinstance(u.get("order"), dict) and u["order"].get("type") in ["CONVERT", "DISBAND"] for u in target_units):
                 self.map_screen.show_feedback("Cannot move while converting or disbanding!")
                 return

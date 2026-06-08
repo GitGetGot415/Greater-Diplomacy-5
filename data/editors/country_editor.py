@@ -140,7 +140,6 @@ class CountryEditor:
             self.data[int_id].setdefault("at_war_with", [])
             self.data[int_id].setdefault("allied_with", [])
 
-            # --- NEW DATA FIELDS ---
             self.data[int_id].setdefault("leader_name", "")
             self.data[int_id].setdefault("leader_title", "")
             self.data[int_id].setdefault("flag_data", "")

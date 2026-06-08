@@ -191,7 +191,7 @@ def process_basic_proactive_ai(map_screen):
 
         # --- 1.5. Defensive Faction Seeking Logic ---
         if is_already_at_war and not my_faction:
-            # --- THE FIX: Prevent sending multiple faction requests ---
+            # Prevent sending multiple faction requests
             has_pending_faction_req = False
             for target_nation, info in pending.items():
                 if isinstance(info, dict) and info.get("action") in ["CREATE_FACTION", "JOIN_FACTION_REQ"]:

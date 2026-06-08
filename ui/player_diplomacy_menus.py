@@ -155,7 +155,7 @@ class Declare_War_Screen(GameState):
                 el.handle_event(event)
 
     def draw(self, surface):
-        # FIX: Wipe the frame clean to prevent the "Solitaire Effect" smearing through the transparent oceans
+        # Wipe the frame clean to prevent the "Solitaire Effect" smearing through the transparent oceans
         surface.fill(self.map_screen.bg_color)
         
         temp_prov = self.map_screen.selected_province

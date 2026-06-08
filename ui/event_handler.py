@@ -61,7 +61,7 @@ def handle_map_events(self, event):
     # Always check the top and bottom bars
     on_ui = self.top_bar_rect.collidepoint(mx, my) or self.bot_bar_rect.collidepoint(mx, my)
 
-    # THE FIX: Only check the side bars if they are actually being rendered
+    # Only check the side bars if they are actually being rendered
     side_ui_hidden = self.selection_mode or getattr(self, 'hide_raised_rect', False)
     
     if not side_ui_hidden:

@@ -24,7 +24,7 @@ def process_pinning(self):
                 dest_id = order["path"][0]
                 dest_prov = self.id_to_province.get(dest_id)
                 if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
-                    # FIX: Track the origin province ID (province["id"]) along with the unit
+                    # Track the origin province ID (province["id"]) along with the unit
                     incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
     # --- NEW: RESOLVE SUICIDE CHARGES ---
@@ -95,7 +95,7 @@ def process_pinning(self):
                 if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
                     attackers = incoming_attacks.get(province["id"], [])
                     
-                    # FIX: ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
+                    # ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
                     hostile_attackers = [
                         a for a, origin_id in attackers 
                         if queries.are_at_war(unit["owner"], a["owner"], self.nation_data) and origin_id != dest_id
@@ -135,13 +135,12 @@ def process_meeting_engagements(self):
                     units1 = [u for u in prov1.get("units", []) if u.get("order", {}).get("path") and u["order"]["path"][0] == pair[1]]
                     units2 = [u for u in prov2.get("units", []) if u.get("order", {}).get("path") and u["order"]["path"][0] == pair[0]]
                     
-                    # --- NEW: Unpack Convoys Caught in Land Engagements ---
+                    # Unpack Convoys Caught in Land Engagements
                     is_land_engagement = (prov1.get("terrain") not in c.WATER_TERRAINS) or (prov2.get("terrain") not in c.WATER_TERRAINS)
                     if is_land_engagement:
                         for u in units1 + units2:
                             if u.get("type", "").startswith("Convoy"):
                                 queries.revert_transport(u)
-                    # ------------------------------------------------------
                     
                     # Sort and cap attackers
                     top_units1 = sorted(units1, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
@@ -176,12 +175,11 @@ def process_combat(self):
             
         is_land = province.get("terrain") not in c.WATER_TERRAINS
         
-        # --- NEW: Unpack Convoys Caught on Land ---
+        # Unpack Convoys Caught on Land
         if is_land and queries.is_province_in_active_combat(province, self.nation_data):
             for u in units:
                 if u.get("type", "").startswith("Convoy"):
                     queries.revert_transport(u)
-        # ------------------------------------------
             
         # Group units by owner to calculate total attack per side
         sides = {}
@@ -262,7 +260,7 @@ def check_for_post_combat_captures(self):
                 edit_province_ownership.conquer_province(self, province, turn_start_owner)
             continue
             
-        # --- CRITICAL FIX: Ensure capturer is legally allowed to take the tile ---
+        # Ensure capturer is legally allowed to take the tile
         valid_capturer_units = []
         for u in units:
             # You can't steal land from someone you are at peace with!

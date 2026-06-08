@@ -421,7 +421,7 @@ class Music_Player(GameState):
         if getattr(self, '_last_playing_track', None) != current_track:
             self._last_playing_track = current_track
             
-            # --- FIX: Retrieve actual elapsed time from backend so scrubber doesn't start at 0:00 ---
+            # Retrieve actual elapsed time from backend so scrubber doesn't start at 0:00
             actual_pos = 0.0
             if c.USE_SOLOUD and getattr(self.controller, 'music_handle', None) is not None:
                 try:

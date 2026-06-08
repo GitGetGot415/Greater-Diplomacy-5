@@ -108,7 +108,6 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
         )
     except Exception as e:
         print(f"Error loading settings: {e}")
-        # Fixed the hardcoded "GEMINI" string on failure to use the proper c.DEFAULT_AI_MODE fallback
         return (default_binds, default_volume, default_music_volume, 1, c.DEFAULT_AI_MODE, 
                 "", "", "", "", 
                 c.DEFAULT_GEMINI_MODEL, 

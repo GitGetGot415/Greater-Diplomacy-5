@@ -426,7 +426,7 @@ def randomize_all_provinces(map_screen, settings):
                 units_to_spawn.append(best_inf)
                 inf_count += 1
 
-            # --- FIX: GUARANTEE COASTAL FACTORY IF NAVY SPAWNS ---
+            # GUARANTEE COASTAL FACTORY IF NAVY SPAWNS
             if navy_count > 0 and coastal_provs:
                 has_coastal_factory = False
                 for p in coastal_provs:

@@ -10,12 +10,12 @@ def handle_declare_war(map_screen):
         handle_ceasefire(map_screen)
         return
 
-    # --- FIX: Prevent declaring war on your own faction ---
+    # Prevent declaring war on your own faction
     if queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback("Cannot declare war on a faction member!")
         return
 
-    # --- NEW: Prevent declaring war with active truce ---
+    # Prevent declaring war with active truce
     if queries.has_active_truce(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback("Cannot declare war while a truce is active!")
         return

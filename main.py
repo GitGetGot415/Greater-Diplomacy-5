@@ -45,13 +45,10 @@ class Controller:
         pygame.init() 
         pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
         
-        # --- FPS CLOCK FIX ---
         self.clock = pygame.time.Clock()
         self.fps_font = pygame.font.Font(None, 24)
         
         # --- OS COMPATIBILITY CHECK ---
-        import platform
-        
         system = platform.system()
         arch = platform.machine().lower()
         

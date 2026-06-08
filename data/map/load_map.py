@@ -23,7 +23,6 @@ def _load_default_images(map_obj):
             n_data["portrait_data"] = "DEFAULT"
 
 def load_map_assets(self, load_path):
-    # --- NEW: RESET STATE ---
     # Ensure no residual data from a previous map persists during the load
     self.map_data = {}
     self.id_to_province = {}
@@ -145,10 +144,9 @@ def load_map_assets(self, load_path):
             if country not in self.nation_data:
                 self.nation_data[country] = base_data
             else:
-                # --- RELATIONS INIT ---
+                # RELATIONS INIT
                 if "relations" not in self.nation_data[country]:
                     self.nation_data[country]["relations"] = {}
-                # ----------------------
 
                 if "research" in base_data:
                     current_res = self.nation_data[country].setdefault("research", {})
@@ -159,7 +157,7 @@ def load_map_assets(self, load_path):
         # Fallback to default starting data
         self.nation_data = base_nation_data
 
-    # --- FIX: INITIALIZE RELATIONS FOR STARTING WARS & FACTIONS ---
+    # INITIALIZE RELATIONS FOR STARTING WARS & FACTIONS
     for c_name, c_data in self.nation_data.items():
         for enemy in c_data.get("at_war_with", []):
             c_data.setdefault("relations", {})[enemy] = -100
@@ -169,7 +167,6 @@ def load_map_assets(self, load_path):
             for other_c, other_d in self.nation_data.items():
                 if other_c != c_name and other_d.get("faction", "") == fac:
                     c_data.setdefault("relations", {})[other_c] = 100
-    # --------------------------------------------------------------
 
     if getattr(self, 'random_settings', None) and "base_days_per_turn" in self.random_settings:
         self.scenario_settings["base_days_per_turn"] = self.random_settings["base_days_per_turn"]

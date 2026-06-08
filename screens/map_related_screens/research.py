@@ -475,7 +475,6 @@ class Research_Screen(GameState):
 
         cost = self.active_modal["cost"]
         
-        # --- FIXED: Use dynamic points per turn calculation here ---
         days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
         pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
         
@@ -491,7 +490,6 @@ class Research_Screen(GameState):
         sim_year = current_exact_year
         pts_accumulated = 0
         
-        # --- FIXED: Base points generation using dynamic days ---
         base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
         year_inc = days_per_turn / 360.0
         

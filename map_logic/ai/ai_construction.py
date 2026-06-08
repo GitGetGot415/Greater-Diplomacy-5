@@ -260,7 +260,6 @@ def process_ai_economy_decisions(map_screen):
                 # Otherwise, proceed with the normal ratio (this protects tiny island nations)
                 target_navy_ratio = min(getattr(c, 'AI_MAX_NAVY_RATIO', 0.2), sea_border_count / total_borders)
 
-        # --- THE FIX: AI Recruitment Loop ---
         # Allow the AI to purchase multiple units per turn until its budget maxes out
         failsafe = 0
         while failsafe < 50:

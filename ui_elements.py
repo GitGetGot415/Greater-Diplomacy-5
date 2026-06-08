@@ -4,7 +4,6 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 
-# --- NEW ENGINE HOOKS ---
 soloud_engine = None
 click_sound = None
 slider_sound = None

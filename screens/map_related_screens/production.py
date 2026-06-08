@@ -129,7 +129,7 @@ class Production_Screen(GameState):
                         btn_color = "orange"
                         if data["group"] == "recruitment": btn_color = "red"
 
-                    # FIXED: Apply current scroll_y during creation
+                    # Apply current scroll_y during creation
                     btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color, btn_txt, cb)
                     btn.base_y = y_offset
                     btn.is_scrollable = True
@@ -159,7 +159,7 @@ class Production_Screen(GameState):
                 highest_unlocked = None
                 tech_key = group_name.lower().replace(" ", "_")
                 
-                # --- FIX: Patch for motorized/mechanized types ---
+                # Patch for motorized/mechanized types
                 if tech_key == "motorized_infantry_type": tech_key = "motorized_infantry"
                 if tech_key == "mechanized_infantry_type": tech_key = "mechanized_infantry"
 
@@ -203,7 +203,6 @@ class Production_Screen(GameState):
                         final_btn_color = btn_color if can_build else "grey"
                         cb = lambda n=lookup_name: self.buy_unit(n)
                     
-                    # FIXED: Apply current scroll_y during creation
                     btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", final_btn_color, highest_unlocked, cb)
                     btn.base_y = y_offset
                     btn.is_scrollable = True
@@ -381,7 +380,6 @@ class Production_Screen(GameState):
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
-            # --- FIXED: Fetch raw turns directly ---
             if bar_type == "BUILDING":
                 t = max(1, stats.get('time', 1))
                 draw_resource_string(surface, bar_font, f"Build Time: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, (255, 215, 0))
