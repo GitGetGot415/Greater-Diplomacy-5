@@ -257,8 +257,9 @@ def process_basic_proactive_ai(map_screen):
                             turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
 
                             if target_partner not in pending or turns == 0:
-                                action_context = "proposing to create a new faction together to combat mutual threats"
-                                fallback = "We propose establishing a new faction together."
+                                # Updated to reference ai_prompts dynamically
+                                action_context = ai_prompts.get_proactive_action_context("CREATE_FACTION")
+                                fallback = ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_CREATE_FACTION"]
                                 pending[target_partner] = {
                                     "action": "CREATE_FACTION",
                                     "turns": 0,

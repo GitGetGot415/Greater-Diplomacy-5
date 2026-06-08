@@ -136,8 +136,9 @@ class Edit_Country_Screen(GameState):
         self.orig_leader_title = self.leader_title
         self.orig_map_color = list(self.new_map_color)
 
-        self.flag_surf = queries.decode_b64_to_surf(p_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=self.editing_country)
-        self.portrait_surf = queries.decode_b64_to_surf(p_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=self.editing_country)
+        # Added .copy() here to protect the global image cache from being mutated by the brush tools!
+        self.flag_surf = queries.decode_b64_to_surf(p_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=self.editing_country).copy()
+        self.portrait_surf = queries.decode_b64_to_surf(p_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=self.editing_country).copy()
             
         # Initialize History
         self.history = [(self.flag_surf.copy(), self.portrait_surf.copy())]

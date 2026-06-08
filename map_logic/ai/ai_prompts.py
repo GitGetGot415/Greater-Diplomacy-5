@@ -27,6 +27,7 @@ AI_FALLBACK_RESPONSES = {
     "PROACTIVE_JOIN_WAR": "May we join you in your war?",
     "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
     "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.",
+    "PROACTIVE_CREATE_FACTION": "We propose establishing a new faction together.", # Added this line
 
     "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
     "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
@@ -74,6 +75,8 @@ def get_proactive_action_context(action_type, target=None):
         return f"declaring war on {target} to reclaim rightful core territory, you are not negotiating"
     elif action_type == "JOIN_FACTION_REQ":
         return "requesting to join your faction to stand against our mutual enemies"
+    elif action_type == "CREATE_FACTION": # Added this block
+        return "proposing to create a new faction together to combat mutual threats"
     return ""
 
 def get_unilateral_receive_context(action_type, sender_nation, custom_msg=""):
