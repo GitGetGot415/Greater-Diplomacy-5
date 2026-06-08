@@ -299,16 +299,16 @@ def process_ai_unit_orders(map_screen):
         # Apply massive negative weights so warships heavily prioritize covering active convoys
         for c_id in friendly_convoys:
             if c_id in naval_assignments:
-                naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_ESCORT_WEIGHT', 5)
+                naval_assignments[c_id] -= c.AI_CONVOY_ESCORT_WEIGHT
                 if c_id in convoy_in_combat:
-                    naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_COMBAT_WEIGHT', 50)
+                    naval_assignments[c_id] -= c.AI_CONVOY_COMBAT_WEIGHT
                 elif c_id in convoy_in_danger:
-                    naval_assignments[c_id] -= getattr(c, 'AI_CONVOY_DANGER_WEIGHT', 15)
+                    naval_assignments[c_id] -= c.AI_CONVOY_DANGER_WEIGHT
 
         # Active Battle Reinforcement Priority
         for b_id in active_battles:
             if b_id in target_assignments:
-                target_assignments[b_id] -= getattr(c, 'AI_REINFORCE_COMBAT_WEIGHT', 20)
+                target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT
 
         # Pre-count units already AT the targets
         for unit, prov in units_info:
@@ -335,7 +335,7 @@ def process_ai_unit_orders(map_screen):
         # 3. Penalize expedition targets so the AI defends its homeland fronts FIRST.
         for e_id in expedition_targets:
             if e_id in target_assignments and e_id not in enemy_targets and e_id not in war_borders:
-                target_assignments[e_id] += getattr(c, 'AI_EXPEDITION_WEIGHT', 5)
+                target_assignments[e_id] += c.AI_EXPEDITION_WEIGHT
 
         for unit, prov in units_info:
             u_type = unit.get("type", "")

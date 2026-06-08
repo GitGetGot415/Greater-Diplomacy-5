@@ -27,7 +27,7 @@ def _run_pygame_sub_screen(map_screen, screen_obj):
         screen_obj.draw(surface)
         pygame.display.flip()
         
-        clock.tick(getattr(c, 'TARGET_FPS', 60))
+        clock.tick(c.TARGET_FPS)
         
     # Clear any phantom hovering from the sub-screen
     map_screen.hovered_province = None
@@ -45,7 +45,7 @@ class Declare_War_Screen(GameState):
         has_wg = queries.has_wargoal(map_screen.player_country, target_nation, map_screen.nation_data, map_screen.map_data)
         
         # Safely parse the setting in case it was saved as a string in the JSON
-        raw_cb_setting = map_screen.scenario_settings.get("casus_belli_required", getattr(c, 'CASUS_BELLI_REQUIRED', True))
+        raw_cb_setting = map_screen.scenario_settings.get("casus_belli_required", c.CASUS_BELLI_REQUIRED)
         cb_required = False if str(raw_cb_setting).lower() == "false" else bool(raw_cb_setting)
 
         # Spectator / Override catch: if it's the spectator, let them force it anyway
@@ -54,8 +54,8 @@ class Declare_War_Screen(GameState):
             cb_required = False
 
         self.wargoal_options = [
-            {"label": getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims"), "enabled": has_wg},
-            {"label": getattr(c, 'WARGOAL_NO_CB', "No Casus Belli"), "enabled": not cb_required},
+            {"label": c.WARGOAL_TAKE_CLAIMS, "enabled": has_wg},
+            {"label": c.WARGOAL_NO_CB, "enabled": not cb_required},
             {"label": "Don't Declare War", "enabled": True}
         ]
             
@@ -295,7 +295,7 @@ class Claims_Screen(GameState):
                 return
         
         # Begin fabricating a new claim (Cores are instant, so queued claims are always non-cores)
-        turns = getattr(c, 'CLAIM_TURN_NON_CORE', 2)
+        turns = c.CLAIM_TURN_NON_CORE
         queue.append({"prov_id": pid, "turns_left": turns})
         self.map_screen.show_feedback(f"Claim queued ({turns} turns).")
         self.refresh_ui()
@@ -535,14 +535,14 @@ class Peace_Screen(GameState):
         their_wargoal = map_screen.nation_data.get(target_nation, {}).get("wargoals", {}).get(map_screen.player_country, {}).get("type", "")
         
         self.terms = [
-            getattr(c, 'PEACE_SURRENDER', "Surrender"),
-            getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"),
-            getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)")
+            c.PEACE_SURRENDER,
+            c.PEACE_DEMAND_CLAIMS,
+            c.PEACE_WHITE_PEACE
         ]
         
         self.terms_enabled = [
             True, # Surrender is always an option if at war
-            my_wargoal in [getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims"), getattr(c, 'WARGOAL_NO_CB', "No Casus Belli")] or their_wargoal != "", # Allowed if we claimed, No CB, or if it's a defensive war!
+            my_wargoal in [c.WARGOAL_TAKE_CLAIMS, c.WARGOAL_NO_CB] or their_wargoal != "", # Allowed if we claimed, No CB, or if it's a defensive war!
             True
         ]
         
@@ -627,14 +627,14 @@ class Peace_Screen(GameState):
 
     def confirm(self):
         term = self.terms[self.selected_term_idx]
-        action_type = "CEASEFIRE" if term == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)") else "PEACE_TREATY"
+        action_type = "CEASEFIRE" if term == c.PEACE_WHITE_PEACE else "PEACE_TREATY"
         
         proposer = self.map_screen.player_country
         target = self.target_nation
         
         # Calculate and freeze territories into the message string
         frozen_ids = []
-        if term == getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"):
+        if term == c.PEACE_DEMAND_CLAIMS:
             claims = self.map_screen.nation_data.get(proposer, {}).get("claims", [])
             for prov in self.map_screen.map_data.values():
                 if prov.get("owner") == target and (prov["id"] in claims or proposer in prov.get("cores", [])):
@@ -644,7 +644,7 @@ class Peace_Screen(GameState):
             else:
                 term += " (No territories demanded)"
                 
-        elif term == getattr(c, 'PEACE_SURRENDER', "Surrender"):
+        elif term == c.PEACE_SURRENDER:
             claims = self.map_screen.nation_data.get(target, {}).get("claims", [])
             for prov in self.map_screen.map_data.values():
                 if prov.get("owner") == proposer and (prov["id"] in claims or target in prov.get("cores", [])):
@@ -689,14 +689,14 @@ class Peace_Screen(GameState):
         proposer = self.map_screen.player_country
         target = self.target_nation
 
-        if peace_type == getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)"):
+        if peace_type == c.PEACE_WHITE_PEACE:
             pass # A ceasefire freezes the map exactly as it is right now.
-        elif peace_type == getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims"):
+        elif peace_type == c.PEACE_DEMAND_CLAIMS:
             claims = self.map_screen.nation_data.get(proposer, {}).get("claims", [])
             # Proposer gets their claims/cores that the target currently owns
             if curr == target and (prov["id"] in claims or proposer in prov.get("cores", [])):
                 proj = proposer
-        elif peace_type == getattr(c, 'PEACE_SURRENDER', "Surrender"):
+        elif peace_type == c.PEACE_SURRENDER:
             claims = self.map_screen.nation_data.get(target, {}).get("claims", [])
             # Target gets their claims/cores that the proposer currently owns
             if curr == proposer and (prov["id"] in claims or target in prov.get("cores", [])):
@@ -712,7 +712,7 @@ class Peace_Screen(GameState):
             sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(6, int(10 * self.map_screen.camera.zoom))
-                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if getattr(c, 'APPLY_TILT_TO_OVERLAYS', False) else radius_x
+                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 
                 # Draw thick semi-transparent fill
                 ellipse_surf = pygame.Surface((radius_x*2, radius_y*2), pygame.SRCALPHA)
@@ -832,14 +832,14 @@ class View_Peace_Treaty_Screen(GameState):
                     return pre_war[str(prov["id"])] == nation
             return nation in prov.get("cores", [])
 
-        if peace_type.startswith(getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire (White Peace)")):
+        if peace_type.startswith(c.PEACE_WHITE_PEACE):
             pass
-        elif peace_type.startswith(getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims")):
+        elif peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
             if prov["id"] in frozen_ids and curr == target:
                 proj = proposer
             elif curr == target and was_original_owner(prov, proposer):
                 proj = proposer
-        elif peace_type.startswith(getattr(c, 'PEACE_SURRENDER', "Surrender")):
+        elif peace_type.startswith(c.PEACE_SURRENDER):
             if prov["id"] in frozen_ids and curr == proposer:
                 proj = target
             elif curr == proposer and was_original_owner(prov, target):
@@ -855,7 +855,7 @@ class View_Peace_Treaty_Screen(GameState):
             sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(6, int(10 * self.map_screen.camera.zoom))
-                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if getattr(c, 'APPLY_TILT_TO_OVERLAYS', False) else radius_x
+                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 
                 ellipse_surf = pygame.Surface((radius_x*2, radius_y*2), pygame.SRCALPHA)
                 pygame.draw.ellipse(ellipse_surf, (*color, 150), ellipse_surf.get_rect())

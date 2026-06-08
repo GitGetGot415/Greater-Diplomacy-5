@@ -254,11 +254,11 @@ def process_ai_economy_decisions(map_screen):
         
         if total_borders > 0:
             # If they have a tiny coast BUT they have land borders to focus on, ignore the navy.
-            if sea_border_count < getattr(c, 'AI_MIN_COAST_FOR_NAVY', 8) and land_border_count > 0:
+            if sea_border_count < c.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
                 target_navy_ratio = 0.0
             else:
                 # Otherwise, proceed with the normal ratio (this protects tiny island nations)
-                target_navy_ratio = min(getattr(c, 'AI_MAX_NAVY_RATIO', 0.2), sea_border_count / total_borders)
+                target_navy_ratio = min(c.AI_MAX_NAVY_RATIO, sea_border_count / total_borders)
 
         # Allow the AI to purchase multiple units per turn until its budget maxes out
         failsafe = 0

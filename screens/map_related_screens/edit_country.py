@@ -355,7 +355,7 @@ class Edit_Country_Screen(GameState):
             try:
                 root.update()
                 pygame.event.pump()
-                pygame.time.wait(getattr(c, 'CPU_LIMITER', 10))
+                pygame.time.wait(c.CPU_LIMITER)
             except:
                 break
 
@@ -516,7 +516,7 @@ class Edit_Country_Screen(GameState):
         heading_font = fonts.get("heading2")
         normal_font = fonts.get("normal")
 
-        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), (getattr(c, 'EDIT_COUNTRY_TITLE_X', 600), getattr(c, 'EDIT_COUNTRY_TITLE_Y', 20)))
+        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), c.EDIT_COUNTRY_TITLE_X, c.EDIT_COUNTRY_TITLE_Y)
 
         # Render Scaled Canvases
         scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))
@@ -637,8 +637,8 @@ class Edit_Country_Screen(GameState):
             surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
 
         # --- Draw Original Key Country ID block ---
-        id_display_x = getattr(c, 'EDIT_COUNTRY_ID_DISPLAY_X', c.SCREEN_WIDTH - 250)
-        id_display_y = getattr(c, 'EDIT_COUNTRY_ID_DISPLAY_Y', c.SCREEN_HEIGHT - 40)
+        id_display_x = c.EDIT_COUNTRY_ID_DISPLAY_X
+        id_display_y = c.EDIT_COUNTRY_ID_DISPLAY_Y
         id_text = f"Country ID: {self.editing_country}"
         id_surf = normal_font.render(id_text, True, (150, 150, 150))
         surface.blit(id_surf, (id_display_x, id_display_y))

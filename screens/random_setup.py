@@ -40,15 +40,15 @@ class Random_Setup(GameState):
         self.current_countries = min(20, self.max_countries)
         self.country_slider_val = self.current_countries / self.max_countries
         
-        self.current_island_size = getattr(c, 'RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER', 5)
-        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 50)
+        self.current_island_size = c.RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER
+        max_island = c.RANDOM_SCENARIO_MAX_ISLAND_FILTER
         self.island_size_slider_val = (self.current_island_size - 1) / (max_island - 1)
         
-        self.single_tile_start = getattr(c, 'RANDOM_SCENARIO_SINGLE_TILE_START', False)
-        self.resource_chance = getattr(c, 'RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE', 0.15)
+        self.single_tile_start = c.RANDOM_SCENARIO_SINGLE_TILE_START
+        self.resource_chance = c.RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE
         self.resource_slider_val = self.resource_chance
         
-        self.base_days_per_turn = getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)
+        self.base_days_per_turn = c.DEFAULT_DAYS_PER_TURN
         self.map_index = 0
 
     def toggle_procedural_type(self):
@@ -78,7 +78,7 @@ class Random_Setup(GameState):
 
     def update_island_size(self, val):
         self.island_size_slider_val = val
-        max_island = getattr(c, 'RANDOM_SCENARIO_MAX_ISLAND_FILTER', 50)
+        max_island = c.RANDOM_SCENARIO_MAX_ISLAND_FILTER
         self.current_island_size = 1 + int(val * (max_island - 1))
         if hasattr(self, 'island_slider'):
             self.island_slider.text = f"Island Filter Size: {self.current_island_size}"

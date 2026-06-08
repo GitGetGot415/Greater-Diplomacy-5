@@ -6,15 +6,15 @@ import ui_elements
 
 class DiplomaticPopup:
     def __init__(self, sender, text, index):
-        self.width = getattr(c, 'POPUP_WIDTH', 450)
-        self.height = getattr(c, 'POPUP_HEIGHT', 130)
+        self.width = c.POPUP_WIDTH
+        self.height = c.POPUP_HEIGHT
         
         # Start positions
-        start_x = getattr(c, 'POPUP_START_X', (c.SCREEN_WIDTH // 2) - (self.width // 2))
-        start_y = getattr(c, 'POPUP_START_Y', 100)
+        start_x = c.POPUP_START_X
+        start_y = c.POPUP_START_Y
         
         # Cascade offset (cap it so it doesn't push completely off screen)
-        offset_step = getattr(c, 'POPUP_OFFSET_STEP', 30)
+        offset_step = c.POPUP_OFFSET_STEP
         max_offset = min(start_x, c.SCREEN_HEIGHT - start_y - self.height)
         total_offset = min(offset_step * index, max_offset)
         

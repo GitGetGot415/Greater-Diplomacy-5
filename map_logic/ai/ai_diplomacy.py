@@ -401,7 +401,7 @@ def process_basic_proactive_ai(map_screen):
                                             pending[target] = {
                                                 "action": "WAR_DECLARATION",
                                                 "turns": 0,
-                                                "message": getattr(c, 'WARGOAL_TAKE_CLAIMS', "Take Claims")
+                                                "message": c.WARGOAL_TAKE_CLAIMS
                                             }
                                             queries.set_ai_diplo_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data)
                                             

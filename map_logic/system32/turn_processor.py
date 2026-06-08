@@ -113,7 +113,7 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     
     research_processor.process_national_research(self)
     
-    if getattr(c, 'RECORD_HISTORY', True):
+    if c.RECORD_HISTORY:
         print("[SYSTEM] Saving Turn History Snapshot...")
         snapshot_history(self)
     else:

@@ -186,14 +186,14 @@ class Controller:
         self.claude_model = loaded_data[11]
         self.ollama_model = loaded_data[12]
         self.ai_immersion_level = loaded_data[13]
-        self.music_pitch = loaded_data[14] if len(loaded_data) > 14 else getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
-        self.sfx_pitch = loaded_data[15] if len(loaded_data) > 15 else getattr(c, 'DEFAULT_AUDIO_PITCH', 0.5)
-        self.target_fps = loaded_data[16] if len(loaded_data) > 16 else getattr(c, 'TARGET_FPS', 60)
-        self.ai_threads = loaded_data[17] if len(loaded_data) > 17 else getattr(c, 'DEFAULT_AI_THREADS', 1)
-        self.show_fps = loaded_data[18] if len(loaded_data) > 18 else getattr(c, 'SHOW_FPS', True)
+        self.music_pitch = loaded_data[14] if len(loaded_data) > 14 else c.DEFAULT_AUDIO_PITCH
+        self.sfx_pitch = loaded_data[15] if len(loaded_data) > 15 else c.DEFAULT_AUDIO_PITCH
+        self.target_fps = loaded_data[16] if len(loaded_data) > 16 else c.TARGET_FPS
+        self.ai_threads = loaded_data[17] if len(loaded_data) > 17 else c.DEFAULT_AI_THREADS
+        self.show_fps = loaded_data[18] if len(loaded_data) > 18 else c.SHOW_FPS
         
         # --- FIXED MOUSE TOGGLE LOADING BLOCKS ---
-        self.drag_mouse_button_toggle = loaded_data[19] if len(loaded_data) > 19 else getattr(c, 'DRAG_MOUSE_BUTTON_TOGGLE', 'RIGHT')
+        self.drag_mouse_button_toggle = loaded_data[19] if len(loaded_data) > 19 else c.DRAG_MOUSE_BUTTON_TOGGLE
         c.DRAG_MOUSE_BUTTON_TOGGLE = self.drag_mouse_button_toggle
 
         # 3. Apply volume to global sounds on boot

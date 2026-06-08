@@ -59,17 +59,17 @@ def get_ai_immersion_level():
 # --- MODEL / URL GETTERS ---
 
 def get_gemini_model():
-    return queries.get_settings().get("gemini_model", getattr(c, 'DEFAULT_GEMINI_MODEL', "gemini-2.5-flash"))
+    return queries.get_settings().get("gemini_model", c.DEFAULT_GEMINI_MODEL)
 
 def get_chatgpt_model():
-    return queries.get_settings().get("chatgpt_model", getattr(c, 'DEFAULT_CHATGPT_MODEL', "gpt-4o-mini"))
+    return queries.get_settings().get("chatgpt_model", c.DEFAULT_CHATGPT_MODEL)
 
 def get_claude_model():
-    return queries.get_settings().get("claude_model", getattr(c, 'DEFAULT_CLAUDE_MODEL', "claude-3-haiku-20240307"))
+    return queries.get_settings().get("claude_model", c.DEFAULT_CLAUDE_MODEL)
 
 def get_ollama_model():
     """Reads the settings config to see which Ollama model is requested."""
-    return queries.get_settings().get("ollama_model", getattr(c, 'DEFAULT_OLLAMA_MODEL', "llama3"))
+    return queries.get_settings().get("ollama_model", c.DEFAULT_OLLAMA_MODEL)
 
 def get_ollama_url():
     """Reads the URL from the settings. Defaults to localhost if empty."""

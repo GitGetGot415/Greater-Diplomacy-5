@@ -201,7 +201,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     rotated_line.set_alpha(alpha)
                     
                 # --- THE FIX: Apply the tilt compression to the final rotated block ---
-                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_ARROWS', False):
+                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_ARROWS:
                     rotated_line = pygame.transform.scale(
                         rotated_line, 
                         (rotated_line.get_width(), int(rotated_line.get_height() * cam.tilt_factor))
@@ -424,14 +424,14 @@ def draw_unit_icon(self, surface, sx, sy, province):
         units_by_owner.setdefault(owner, []).append(u)
 
     # Base high-res rendering dimensions
-    internal_w = getattr(c, 'UNIT_BOX_WIDTH', 120)
-    internal_h = getattr(c, 'UNIT_BOX_HEIGHT', 48)
+    internal_w = c.UNIT_BOX_WIDTH
+    internal_h = c.UNIT_BOX_HEIGHT
     
     # Dampened Scaling rules
     display_scale = 0.25 + (self.camera.zoom * 0.12)
     scaled_w = max(20, int(internal_w * display_scale))
     scaled_h = max(8, int(internal_h * display_scale))
-    if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', False):
+    if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
         scaled_h = max(8, int(scaled_h * self.camera.tilt_factor))
         
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
@@ -470,7 +470,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
             
         # Create unscaled, high-res subsurface to preserve crispness
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
-        box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40, 200)))
+        box_surf.fill(c.UNIT_BOX_BG_COLOR)
         pygame.draw.rect(box_surf, owner_color, box_surf.get_rect(), 4)
         
         # Grab symbol

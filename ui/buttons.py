@@ -391,8 +391,8 @@ def render_edit_country_buttons(edit_screen):
     
     # Switch country graphics configuration handler
     edit_screen.btn_switch_appearance = Button(
-        getattr(c, 'EDIT_COUNTRY_SWITCH_BTN_X', 350), 
-        getattr(c, 'EDIT_COUNTRY_SWITCH_BTN_Y', 20), 
+        c.EDIT_COUNTRY_SWITCH_BTN_X, 
+        c.EDIT_COUNTRY_SWITCH_BTN_Y, 
         "medium", "orange", "Switch Appearance", 
         edit_screen.open_switch_appearance_menu
     )

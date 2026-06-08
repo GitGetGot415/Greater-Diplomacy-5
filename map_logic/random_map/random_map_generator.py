@@ -219,7 +219,7 @@ def randomize_all_provinces(map_screen, settings):
     # --- Step D: Guarantee Minimum Buildings (Balanced by Tech) ---
     best_factory = allowed_factories[-1] if allowed_factories else getattr(c, 'DEFAULT_STARTING_FACTORY', "Basic Factory")
     best_recruitment = allowed_recruitment[-1] if allowed_recruitment else None
-    min_factories_required = getattr(c, 'RANDOM_SCENARIO_MIN_FACTORIES', 2)
+    min_factories_required = c.RANDOM_SCENARIO_MIN_FACTORIES
 
     for nation in active_nations:
         owned_provs = [p for p in valid_land_provinces if p["owner"] == nation]
@@ -285,7 +285,7 @@ def randomize_all_provinces(map_screen, settings):
                     recruitment_provs.append(target_prov)
 
     # --- Step E: Generate Starting Armies & Spread Across Borders ---
-    if getattr(c, 'RANDOM_SCENARIO_SPAWN_UNITS', True):
+    if c.RANDOM_SCENARIO_SPAWN_UNITS:
         unit_library = queries.get_unit_library()
         tech_tree = queries.get_tech_tree()
 
@@ -376,8 +376,8 @@ def randomize_all_provinces(map_screen, settings):
 
                 unit_to_buy = None
                 
-                # --- FIX: GUARANTEE GROUND ARMY FIRST ---
-                if inf_count < getattr(c, 'RANDOM_SCENARIO_MIN_INFANTRY', 3):
+                # GUARANTEE GROUND ARMY FIRST
+                if inf_count < c.RANDOM_SCENARIO_MIN_INFANTRY:
                     unit_to_buy = best_inf
                 elif current_navy_ratio < target_navy_ratio and best_navy:
                     unit_to_buy = best_navy

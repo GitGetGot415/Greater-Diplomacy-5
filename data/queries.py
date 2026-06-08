@@ -489,7 +489,7 @@ def get_tech_unlocks(tech_key, level):
         unlocks.append(f"Max Mat-to-Fuel Conversion: {limit}%")
         
     if tech_key == "general_recruitment":
-        bonus = getattr(c, 'GENERAL_RECRUITMENT_BONUS', 5)
+        bonus = c.GENERAL_RECRUITMENT_BONUS
         unlocks.append(f"+{bonus} Base Manpower/Tile")
         
     return unlocks
@@ -1389,22 +1389,22 @@ def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_
     target_econ_power = get_economic_power(target_nation, nation_data) / 100.0
 
     # Factor in how distracted the target is by their existing wars
-    target_distraction_str = get_combined_enemy_strength(target_nation, map_data, nation_data) * getattr(c, 'AI_ENEMY_DISTRACTION_WEIGHT', 0.8)
+    target_distraction_str = get_combined_enemy_strength(target_nation, map_data, nation_data) * (c.AI_ENEMY_DISTRACTION_WEIGHT)
 
     # Add the target's distraction to our perceived power
     my_total_power = my_alliance_str + my_econ_power + target_distraction_str
     target_total_power = max(1.0, target_alliance_str + target_econ_power)
     
     # AI needs local border superiority AND overall global viability
-    return my_border_str >= (target_border_str * getattr(c, 'AI_WAR_STRENGTH_THRESHOLD', 1.2)) and my_total_power >= (target_total_power * getattr(c, 'AI_GLOBAL_STRENGTH_THRESHOLD', 0.8))
+    return my_border_str >= (target_border_str * c.AI_WAR_STRENGTH_THRESHOLD) and my_total_power >= (target_total_power * c.AI_GLOBAL_STRENGTH_THRESHOLD)
 
 def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, nation_data):
     """Evaluates if the AI will accept the proposed peace deal."""
     # The AI declines peace deals where the other side demands claims.
-    if peace_type.startswith(getattr(c, 'PEACE_DEMAND_CLAIMS', "Demand Claims")):
+    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
         return False
         
-    if peace_type.startswith(getattr(c, 'PEACE_WHITE_PEACE', "Ceasefire")):
+    if peace_type.startswith(c.PEACE_WHITE_PEACE):
         if map_data:
             # If CTW is True, the AI thinks it can win, so it refuses the ceasefire.
             if ai_thinks_it_can_win(target_nation, proposer_nation, map_data, nation_data):

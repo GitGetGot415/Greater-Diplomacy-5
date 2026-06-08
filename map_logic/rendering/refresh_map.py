@@ -420,7 +420,7 @@ def refresh_fog_map(self):
     timer = pygame.time.get_ticks()
     
     # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not getattr(c, 'USE_FOG_OF_WAR', True) or getattr(self, 'selection_mode', False):
+    if not c.USE_FOG_OF_WAR or getattr(self, 'selection_mode', False):
         self.fog_map = None
         self.visible_provinces = None
         return
@@ -439,7 +439,7 @@ def refresh_fog_map(self):
         return
 
     id_array, id_2d = get_id_2d_array(self.id_map)
-    lut = np.full(16777216, getattr(c, 'FOG_OF_WAR_ALPHA', 160), dtype=np.uint8)
+    lut = np.full(16777216, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
 
     for color_key, data in self.map_data.items():
         if data["id"] in self.visible_provinces:

@@ -29,7 +29,7 @@ def draw_recruitment_overlay(surface, target_province):
         display_name = raw_name.replace("Chadian ", "").replace("Synthetic ", "Syn. ")
         
         # Safely determine the turns, fallback to converting legacy days format
-        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)) // getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)))
+        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', c.DEFAULT_DAYS_PER_TURN) // c.DEFAULT_DAYS_PER_TURN))
         
         # Draw the info text
         txt = small_font.render(f"{display_name} ({turns_val} turns)", True, (255, 200, 50))
@@ -84,7 +84,7 @@ def draw_map_queue_overlay(surface, target_province):
         if len(display_name) > 16:
             display_name = display_name[:14] + ".."
             
-        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)) // getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)))
+        turns_val = item.get('turns_remaining', max(1, item.get('days_remaining', c.DEFAULT_DAYS_PER_TURN) // c.DEFAULT_DAYS_PER_TURN))
             
         txt = small_font.render(f"{display_name} ({turns_val} turns)", True, (255, 200, 50))
         surface.blit(txt, (panel_rect.x + 10, y_pos))

@@ -146,7 +146,7 @@ class New_Game(GameState):
                         }
 
                     # 5. Perform the manual write operations in-place inside the scenario path directory
-                    indent_val = getattr(c, 'SAVE_INDENT', None)
+                    indent_val = c.SAVE_INDENT
                     
                     # Overwrite master operational dataset file
                     with open(os.path.join(scenario_path, "meta.json"), "w") as f:
@@ -159,7 +159,7 @@ class New_Game(GameState):
                     # Overwrite turning history logs if applicable
                     if hasattr(temp_map_context, 'history'):
                         with open(os.path.join(scenario_path, "history.json"), "w") as f:
-                            json.dump(temp_map_context.history, f, indent=getattr(c, 'HISTORY_INDENT', None))
+                            json.dump(temp_map_context.history, f, indent=c.HISTORY_INDENT)
                             
                     # Overwrite visual map files in place
                     pygame.image.save(temp_map_context.political_map, os.path.join(scenario_path, "political.png"))

@@ -103,8 +103,8 @@ class Map(GameState):
             self.scenario_settings = map_settings
         elif not hasattr(self, 'scenario_settings'):
             self.scenario_settings = {
-                "fog_of_war": getattr(c, 'DEFAULT_FOG_OF_WAR', True),
-                "casus_belli_required": getattr(c, 'DEFAULT_CASUS_BELLI', True)
+                "fog_of_war": c.DEFAULT_FOG_OF_WAR,
+                "casus_belli_required": c.DEFAULT_CASUS_BELLI
             }
 
         # --- 3. Visuals & UI Setup ---
