@@ -44,8 +44,8 @@ def render_buttons(self):
     msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if is_spec else (lambda: self.change_state("MESSAGES"))
 
    # Editor Buttons
-    self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 280, "left_ui_bar", "green", "Country Economy", econ_callback)
-    self.btn_ed_rd = Button(c.LEFT_UI_BAR_X, 200, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research"))
+    self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 220, "left_ui_bar", "green", "Country Economy", econ_callback)
+    self.btn_ed_rd = Button(c.LEFT_UI_BAR_X, 160, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research"))
     self.btn_ed_save = Button(c.EDITOR_BOT_BTN_START_X + c.EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
     self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", lambda: editor_menus.editor_load_map(self))
     self.btn_ed_nation = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(self))
