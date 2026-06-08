@@ -21,6 +21,13 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
         if isinstance(info, dict) and info.get("turns", 0) > 0:
             return "Cannot undo! The diplomat has already crossed their borders."
             
+        # --- NEW: Refund trade escrow if the sender cancels a drafted trade ---
+        if current_action == "TRADE":
+            params = info.get("parameters", {})
+            p_data = nation_data[player_name]
+            p_data["materials"] = p_data.get("materials", 0) + params.get("give_materials", 0)
+            p_data["fuel"] = p_data.get("fuel", 0) + params.get("give_fuel", 0)
+            
         del pending[target_name]
         return f"Undo {action_type.replace('_', ' ').title()}"
         
@@ -564,6 +571,34 @@ def process_diplomacy_turn(self):
                             treaty_type = other_pending.get("parameters", other_pending.get("message", c.PEACE_WHITE_PEACE))
                             execute_peace_treaty(self.map_data, self.nation_data, target, country_name, treaty_type, self)
                             msg_text = f"We accepted your peace terms."
+                            
+                        # --- NEW: EXECUTE APPROVED TRADE ---
+                        elif orig_action == "TRADE":
+                            params = other_pending.get("parameters", {})
+                            p_mats = params.get("give_materials", 0)
+                            p_fuel = params.get("give_fuel", 0)
+                            t_mats = params.get("take_materials", 0)
+                            t_fuel = params.get("take_fuel", 0)
+
+                            # Country_name is the receiver. Target is the proposer.
+                            c_data = self.nation_data[country_name]
+                            t_data = self.nation_data[target]
+
+                            # Receiver gains proposer's escrow
+                            c_data["materials"] = c_data.get("materials", 0) + p_mats
+                            c_data["fuel"] = c_data.get("fuel", 0) + p_fuel
+
+                            # Receiver pays their side (floor at 0 if they don't have enough, though they shouldn't accept if they don't)
+                            actual_t_mats = min(t_mats, c_data.get("materials", 0))
+                            c_data["materials"] -= actual_t_mats
+                            actual_t_fuel = min(t_fuel, c_data.get("fuel", 0))
+                            c_data["fuel"] -= actual_t_fuel
+
+                            # Proposer receives their side
+                            t_data["materials"] = t_data.get("materials", 0) + actual_t_mats
+                            t_data["fuel"] = t_data.get("fuel", 0) + actual_t_fuel
+
+                            msg_text = custom_msg if custom_msg else "We accepted your trade."
                         elif orig_action == "CALL_TO_ARMS":
                             join_faction_wars(self.map_data, self.nation_data, country_name, target)
                         elif orig_action == "JOIN_WARS":
@@ -587,6 +622,14 @@ def process_diplomacy_turn(self):
                     
                     if isinstance(other_pending, dict) and other_pending.get("action") == orig_action:
                         msg_text = custom_msg if custom_msg else f"We rejected your {orig_action.replace('_', ' ').lower()}."
+                        
+                        # --- NEW: REFUND REJECTED TRADE ESCROW ---
+                        if orig_action == "TRADE":
+                            params = other_pending.get("parameters", {})
+                            t_data = self.nation_data[target]
+                            t_data["materials"] = t_data.get("materials", 0) + params.get("give_materials", 0)
+                            t_data["fuel"] = t_data.get("fuel", 0) + params.get("give_fuel", 0)
+                            
                         send_message(self, country_name, target, msg_text, "DIPLOMACY")
                         
                         # Clear the original request from the sender
@@ -767,9 +810,16 @@ def process_diplomacy_turn(self):
                         actions_to_clear.append(target)
 
             elif turns > 1:
-                # It should never reach this point, but just in case it does...
                 # Auto-decline if ignored for 0 turns (applies to both AI and Human targets)
                 if turns >= 0 and action in c.BILATERAL_ACTIONS:
+                    
+                    # --- NEW: REFUND TIMED OUT TRADE ESCROW ---
+                    if action == "TRADE":
+                        params = info.get("parameters", {})
+                        p_data = self.nation_data[country_name]
+                        p_data["materials"] = p_data.get("materials", 0) + params.get("give_materials", 0)
+                        p_data["fuel"] = p_data.get("fuel", 0) + params.get("give_fuel", 0)
+                        
                     send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
                     actions_to_clear.append(target)
                 else:

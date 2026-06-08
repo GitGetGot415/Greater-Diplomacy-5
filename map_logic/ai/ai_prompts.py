@@ -27,7 +27,11 @@ AI_FALLBACK_RESPONSES = {
     "PROACTIVE_JOIN_WAR": "May we join you in your war?",
     "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
     "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.",
-    "PROACTIVE_CREATE_FACTION": "We propose establishing a new faction together.", # Added this line
+    "PROACTIVE_CREATE_FACTION": "We propose establishing a new faction together.",
+    
+    "PROACTIVE_TRADE": "We propose a trade agreement.",
+    "ACCEPT_TRADE": "We gladly accept your trade offer.",
+    "REJECT_TRADE": "This trade is unacceptable to us.",
 
     "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
     "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",

@@ -574,7 +574,8 @@ BILATERAL_ACTIONS = [
     "CEASEFIRE",
     "CALL_TO_ARMS",
     "CREATE_FACTION",
-    "PEACE_TREATY"
+    "PEACE_TREATY",
+    "TRADE"
 ]
 
 # ==========================================

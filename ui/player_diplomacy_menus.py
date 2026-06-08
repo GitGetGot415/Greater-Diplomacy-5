@@ -904,6 +904,235 @@ class View_Peace_Treaty_Screen(GameState):
                 el.draw(surface)
 
 # ==========================================
+# TRADE SCREEN
+# ==========================================
+
+class Trade_Screen(GameState):
+    def __init__(self, map_screen, target_nation):
+        super().__init__()
+        self.map_screen = map_screen
+        self.target_nation = target_nation
+        
+        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 300, c.SCREEN_HEIGHT//2 - 200, 600, 320)
+        
+        # State tracking for inputs
+        self.give_mats_str = "0"
+        self.give_fuel_str = "0"
+        self.take_mats_str = "0"
+        self.take_fuel_str = "0"
+        
+        # Escrow trackers (resources removed from the player while the offer is pending)
+        self.escrow_mats = 0
+        self.escrow_fuel = 0
+        
+        self.active_input = None
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", self.cancel_trade)]
+        self.elements.append(Button(self.panel_rect.centerx - 100, self.panel_rect.bottom - 60, "medium", "green", "Confirm Trade", self.confirm_trade))
+
+    def evaluate_input(self):
+        """Processes typed text, applies clamps, and secures/refunds the escrow safely."""
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+
+        # Give Materials
+        try:
+            val = int(self.give_mats_str)
+            if val < 0: val = 0
+        except ValueError:
+            val = 0
+
+        p_data["materials"] += self.escrow_mats
+        taken = min(val, p_data.get("materials", 0))
+        p_data["materials"] -= taken
+        self.escrow_mats = taken
+        self.give_mats_str = str(taken)
+
+        # Give Fuel
+        try:
+            val = int(self.give_fuel_str)
+            if val < 0: val = 0
+        except ValueError:
+            val = 0
+
+        p_data["fuel"] += self.escrow_fuel
+        taken = min(val, p_data.get("fuel", 0))
+        p_data["fuel"] -= taken
+        self.escrow_fuel = taken
+        self.give_fuel_str = str(taken)
+
+        # Take Inputs (No limits, they can ask for a billion if they want)
+        try:
+            val = int(self.take_mats_str)
+            if val < 0: val = 0
+            self.take_mats_str = str(val)
+        except ValueError:
+            self.take_mats_str = "0"
+
+        try:
+            val = int(self.take_fuel_str)
+            if val < 0: val = 0
+            self.take_fuel_str = str(val)
+        except ValueError:
+            self.take_fuel_str = "0"
+
+    def confirm_trade(self):
+        self.evaluate_input()
+        
+        # Don't allow empty trades
+        if self.escrow_mats == 0 and self.escrow_fuel == 0 and self.take_mats_str == "0" and self.take_fuel_str == "0":
+            self.map_screen.show_feedback("Cannot send an empty trade offer!")
+            return
+
+        pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
+        
+        pending[self.target_nation] = {
+            "action": "TRADE",
+            "turns": 0,
+            "timer": 0,
+            "parameters": {
+                "give_materials": self.escrow_mats,
+                "give_fuel": self.escrow_fuel,
+                "take_materials": int(self.take_mats_str),
+                "take_fuel": int(self.take_fuel_str)
+            },
+            "message": f"TRADE PROPOSAL:\nGive: {self.escrow_mats} Mat, {self.escrow_fuel} Fuel\nTake: {self.take_mats_str} Mat, {self.take_fuel_str} Fuel"
+        }
+        
+        self.map_screen.show_feedback("Trade Offer Sent!")
+        self.done = True
+
+    def cancel_trade(self):
+        # Refund any held resources
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data["materials"] += self.escrow_mats
+        p_data["fuel"] += self.escrow_fuel
+        self.done = True
+
+    def handle_events(self, events):
+        from ui_elements import process_text_input
+        
+        for event in events:
+            for el in self.elements:
+                el.handle_event(event)
+
+            on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos())
+            if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
+                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                
+                # Check bounding boxes for the 4 inputs
+                if pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 100, 120, 30).collidepoint(mx, my):
+                    self.active_input = "GIVE_MATS"
+                elif pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 150, 120, 30).collidepoint(mx, my):
+                    self.active_input = "GIVE_FUEL"
+                elif pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 100, 120, 30).collidepoint(mx, my):
+                    self.active_input = "TAKE_MATS"
+                elif pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 150, 120, 30).collidepoint(mx, my):
+                    self.active_input = "TAKE_FUEL"
+                else:
+                    self.evaluate_input()
+                    self.active_input = None
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.evaluate_input()
+                    self.active_input = None
+                elif self.active_input:
+                    # Input routing
+                    val_func = lambda c: c.isdigit() or c == "-"
+                    if self.active_input == "GIVE_MATS":
+                        self.give_mats_str, _ = process_text_input(event, self.give_mats_str, validation_func=val_func)
+                    elif self.active_input == "GIVE_FUEL":
+                        self.give_fuel_str, _ = process_text_input(event, self.give_fuel_str, validation_func=val_func)
+                    elif self.active_input == "TAKE_MATS":
+                        self.take_mats_str, _ = process_text_input(event, self.take_mats_str, validation_func=val_func)
+                    elif self.active_input == "TAKE_FUEL":
+                        self.take_fuel_str, _ = process_text_input(event, self.take_fuel_str, validation_func=val_func)
+
+    def update(self):
+        super().update()
+        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+
+    def draw(self, surface):
+        surface.fill(self.map_screen.bg_color)
+        
+        temp_prov = self.map_screen.selected_province
+        self.map_screen.selected_province = None
+        self.map_screen.hide_raised_rect = True
+        self.map_screen.hide_tooltip = True
+        self.map_screen.hide_resource_hud = True
+        self.map_screen.hide_minimap = True
+        
+        self.map_screen.additional_draw(surface)
+        
+        self.map_screen.hide_raised_rect = False
+        self.map_screen.hide_tooltip = False
+        self.map_screen.hide_resource_hud = False
+        self.map_screen.hide_minimap = False
+        self.map_screen.selected_province = temp_prov
+
+        overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        # Main Panel
+        pygame.draw.rect(surface, (40, 40, 50), self.panel_rect)
+        pygame.draw.rect(surface, (100, 200, 100), self.panel_rect, 3)
+
+        font_large = fonts.get("heading1")
+        font_med = fonts.get("heading2")
+        font_small = fonts.get("normal")
+
+        title = font_large.render(f"Trade Agreement: {self.target_nation}", True, (255, 255, 255))
+        surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 15))
+
+        # You Give Section
+        surface.blit(font_med.render("You Give:", True, (255, 100, 100)), (self.panel_rect.x + 30, self.panel_rect.y + 60))
+        surface.blit(font_small.render("Materials:", True, (200, 200, 200)), (self.panel_rect.x + 30, self.panel_rect.y + 105))
+        surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.x + 30, self.panel_rect.y + 155))
+
+        # They Give Section
+        surface.blit(font_med.render("They Give:", True, (100, 255, 100)), (self.panel_rect.centerx + 30, self.panel_rect.y + 60))
+        surface.blit(font_small.render("Materials:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 105))
+        surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 155))
+
+        # Draw Input Boxes
+        def draw_box(x, y, text, is_active):
+            rect = pygame.Rect(x, y, 120, 30)
+            pygame.draw.rect(surface, (20, 20, 30) if not is_active else (60, 60, 80), rect)
+            pygame.draw.rect(surface, (150, 150, 150), rect, 1)
+            display = text + ("|" if is_active else "")
+            surface.blit(font_small.render(display, True, (255, 255, 255)), (rect.x + 5, rect.y + 5))
+
+        draw_box(self.panel_rect.x + 130, self.panel_rect.y + 100, self.give_mats_str, self.active_input == "GIVE_MATS")
+        draw_box(self.panel_rect.x + 130, self.panel_rect.y + 150, self.give_fuel_str, self.active_input == "GIVE_FUEL")
+        draw_box(self.panel_rect.x + 430, self.panel_rect.y + 100, self.take_mats_str, self.active_input == "TAKE_MATS")
+        draw_box(self.panel_rect.x + 430, self.panel_rect.y + 150, self.take_fuel_str, self.active_input == "TAKE_FUEL")
+
+        for el in self.elements:
+            if getattr(el, 'visible', True):
+                el.draw(surface)
+
+        # Resource HUD (Replicating Production Screen Logic)
+        hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
+        pygame.draw.rect(surface, (30, 30, 30), hud_rect)
+        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
+
+        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        res_font = fonts.get("production_hud")
+        resources = [
+            (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
+            (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),
+            (f"Fuel: {p_data.get('fuel', 0)}", (200, 100, 255))
+        ]
+        for i, (text, color) in enumerate(resources):
+            surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
+
+# ==========================================
 # PUBLIC INTERCEPT LAUNCHERS
 # ==========================================
 
@@ -921,4 +1150,8 @@ def open_peace_menu(map_screen, target_nation):
 
 def open_view_peace_treaty_menu(map_screen, proposer):
     screen = View_Peace_Treaty_Screen(map_screen, proposer)
+    _run_pygame_sub_screen(map_screen, screen)
+
+def open_trade_menu(map_screen, target_nation):
+    screen = Trade_Screen(map_screen, target_nation)
     _run_pygame_sub_screen(map_screen, screen)

@@ -271,6 +271,22 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     # 3. Evaluate peace deals dynamically using the centralized query
     if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
         accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, custom_msg, map_data, nation_data)
+        
+    # --- NEW AI TRADE LOGIC ---
+    elif action_type == "TRADE":
+        pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
+        params = pending.get("parameters", {})
+        
+        # We are the AI (Receiving). Therefore we "Take" what they "Give", and we "Give" what they "Take".
+        ai_takes_mats = params.get("give_materials", 0)
+        ai_takes_fuel = params.get("give_fuel", 0)
+        ai_gives_mats = params.get("take_materials", 0)
+        ai_gives_fuel = params.get("take_fuel", 0)
+        
+        if ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
+            accepted = True
+        else:
+            accepted = False
     # ------------------------------
 
     # Check if this is an AI talking to an AI

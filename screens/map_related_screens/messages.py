@@ -185,8 +185,16 @@ class Messages_Screen(GameState):
             if hasattr(self, 'draft_edit_rects'):
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
-                        self.drafts.pop(idx)
-                        self.save_current_draft()
+                        
+                        # --- NEW: HANDLE TRADE UNDO CLICKS ---
+                        if idx == "TRADE_OFFER":
+                            # Passing it to the toggle logic safely refunds the escrow!
+                            diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
+                            self.map_screen.show_feedback("Trade Offer Cancelled.")
+                        else:
+                            self.drafts.pop(idx)
+                            self.save_current_draft()
+                            
                         self.refresh_ui()
                         return
 
@@ -317,6 +325,7 @@ class Messages_Screen(GameState):
                 self.elements.append(Button(btn_x, btn_y, "small", "grey", "Diplomat Busy", lambda: None))
             else:
                 self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
+                self.elements.append(Button(btn_x - 130, btn_y, "small", "green", "Trade", self.open_trade))
 
             # --- Bilateral Accept/Reject Buttons ---
             incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
@@ -346,6 +355,12 @@ class Messages_Screen(GameState):
                         self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
                         if is_peace:
                             self.elements.append(Button(c.MSG_LEFT_PANE_W + 460, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+
+    def open_trade(self):
+        self.save_current_draft()
+        from ui.player_diplomacy_menus import open_trade_menu
+        open_trade_menu(self.map_screen, self.selected_recipient)
+        self.refresh_ui()
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -392,17 +407,16 @@ class Messages_Screen(GameState):
             if act_str and not act_str.startswith("MSG:"):
                 is_diplo_action = True
                 
-        # 2. Append active drafts chronologically
-        for i, draft in enumerate(self.drafts):
-            if draft.strip():
-                display_thread.append({
-                    "content": draft, 
-                    "is_player": True, 
-                    "is_draft": True, 
-                    "draft_idx": i,
-                    "is_diplo": is_diplo_action,
-                    "date": "" # Drafts don't have official dates yet
-                })
+                # --- NEW: INJECT PENDING TRADES AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
+                if act_str == "TRADE" and pending.get("turns", 0) == 0:
+                    display_thread.append({
+                        "content": pending.get("message", "Proposed Trade"),
+                        "is_player": True,
+                        "is_draft": True,
+                        "draft_idx": "TRADE_OFFER", # Setup the flag for the event listener below
+                        "is_diplo": True,
+                        "date": ""
+                    })
         
         input_rect = pygame.Rect(c.MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - c.MSG_INPUT_H, c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W, c.MSG_INPUT_H)
         pygame.draw.rect(surface, c.MSG_BG_LIGHT, input_rect)
