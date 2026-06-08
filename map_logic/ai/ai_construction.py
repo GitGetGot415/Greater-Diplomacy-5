@@ -435,12 +435,12 @@ def process_ai_economy_decisions(map_screen):
                         order = {
                             "order_type": "BUILDING",
                             "item_name": target_bldg,
-                            "turns_remaining": max(1, b_stats.get("time", getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)) // getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)),
+                            "turns_remaining": max(1, b_stats.get("time", 1)),
                             "group": b_stats["group"],
                             "refund": {"materials": c_mat, "manpower": 0, "fuel": c_fuel}
                         }
                         prov.setdefault("deployment_queue", []).append(order)
                         
-                        # Successfully queued a building. Break out of the loop so it only queues one per turn 
+                        # Successfully queued a building. Break out of the loop so it only queues one per turn
                         # to avoid instantly draining its treasury on 30 workshops at once.
                         break

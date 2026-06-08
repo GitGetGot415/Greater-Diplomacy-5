@@ -244,7 +244,7 @@ class Production_Screen(GameState):
             order = {
                 "order_type": "BUILDING",
                 "item_name": b_name,
-                "turns_remaining": max(1, data.get("time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
+                "turns_remaining": max(1, data.get("time", 1)),
                 "group": data["group"],
                 "refund": {
                     "materials": data.get("cost_materials", 0),
@@ -278,7 +278,7 @@ class Production_Screen(GameState):
             queries.deduct_resources(p_data, stats)
             order = {
                 "unit_type": unit_name,
-                "turns_remaining": max(1, stats.get("production_time", c.DAYS_PER_TURN) // c.DAYS_PER_TURN),
+                "turns_remaining": max(1, stats.get("production_time", 1)),
                 "refund": {
                     "materials": stats.get("cost_materials", 0),
                     "manpower": stats.get("cost_manpower", 0),
@@ -381,8 +381,9 @@ class Production_Screen(GameState):
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
             
+            # --- FIXED: Fetch raw turns directly ---
             if bar_type == "BUILDING":
-                t = max(1, stats.get('time', getattr(c, 'DEFAULT_DAYS_PER_TURN', 15)) // getattr(c, 'DEFAULT_DAYS_PER_TURN', 15))
+                t = max(1, stats.get('time', 1))
                 draw_resource_string(surface, bar_font, f"Build Time: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, (255, 215, 0))
                 draw_resource_string(surface, bar_font, f"Yield (Per Turn):   ", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), bar_rect.x + 15, bar_rect.y + 26, (150, 255, 150), is_yield=True)
             else:

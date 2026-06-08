@@ -474,10 +474,13 @@ class Research_Screen(GameState):
             surface.blit(big_icon, (panel_rect.x + 30 + (120 - new_width) // 2, panel_rect.y + 100 + (120 - new_height) // 2))
 
         cost = self.active_modal["cost"]
-        # Use dynamic points per turn calculation here as well
-        pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * c.DAYS_PER_TURN
+        
+        # --- FIXED: Use dynamic points per turn calculation here ---
+        days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
+        pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+        
         base_time = max(1, cost // max(1, pts_per_turn)) 
-        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({base_time} turns)", True, (255, 215, 0))
+        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({int(base_time)} turns)", True, (255, 215, 0))
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
         # --- AHEAD OF TIME SIMULATION ---
@@ -487,8 +490,10 @@ class Research_Screen(GameState):
         actual_turns = 0
         sim_year = current_exact_year
         pts_accumulated = 0
-        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * c.DAYS_PER_TURN
-        year_inc = c.DAYS_PER_TURN / 360.0
+        
+        # --- FIXED: Base points generation using dynamic days ---
+        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+        year_inc = days_per_turn / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query
         while pts_accumulated < cost and actual_turns < 5000: # 5000 is a safety breaker
@@ -659,7 +664,8 @@ class Research_Screen(GameState):
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, 75))
 
         # --- DYNAMIC OUTPUT CALCULATION ---
-        pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * c.DAYS_PER_TURN)
+        days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
+        pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn)
         output_text = font.render(f"RESEARCH OUTPUT: {pts_per_turn} pts/turn", True, (0, 255, 255))
         surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - 30, 85))
 
