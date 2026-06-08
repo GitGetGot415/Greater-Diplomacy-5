@@ -94,7 +94,7 @@ class Random_Setup(GameState):
         self.refresh_ui()
 
     def toggle_days_per_turn(self):
-        options = [5, 10, 15, 30, 90]
+        options = [5, 10, 15, 30]
         if self.base_days_per_turn in options:
             idx = options.index(self.base_days_per_turn)
             self.base_days_per_turn = options[(idx + 1) % len(options)]
