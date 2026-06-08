@@ -279,6 +279,7 @@ def draw_badges(self, surface):
         # Get counts
         unread_msgs = queries.get_unread_message_count(self.player_country, self.nation_data)
         free_research = queries.has_free_research_slots(self.player_country, self.nation_data)
+        incoming_claims = queries.get_incoming_justifications_count(self.player_country, self.nation_data, self.id_to_province)
         
         badge_font = fonts.get("tiny")
         
@@ -297,3 +298,6 @@ def draw_badges(self, surface):
             
         if free_research:
             draw_badge(self.btn_gp_rd, "!")
+            
+        if incoming_claims > 0:
+            draw_badge(self.btn_gp_claims, incoming_claims)

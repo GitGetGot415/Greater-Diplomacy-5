@@ -203,11 +203,23 @@ class Claims_Screen(GameState):
         
         self.scroll_y = 0
         self.max_scroll = 0
+        self.view_mode = "YOURS"
         
+        self.refresh_ui()
+
+    def set_view_mode(self, mode):
+        self.view_mode = mode
+        self.scroll_y = 0
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        
+        btn_yours = Button(self.panel_rect.x + 20, self.panel_rect.y + 40, "medium", "blue" if self.view_mode == "YOURS" else "grey", "Your Claims", lambda: self.set_view_mode("YOURS"))
+        btn_theirs = Button(self.panel_rect.x + 200, self.panel_rect.y + 40, "medium", "blue" if self.view_mode == "THEIRS" else "grey", "Claims On You", lambda: self.set_view_mode("THEIRS"))
+        btn_yours.is_selected = (self.view_mode == "YOURS")
+        btn_theirs.is_selected = (self.view_mode == "THEIRS")
+        self.elements.extend([btn_yours, btn_theirs])
         
     def exit_screen(self):
         self.done = True
@@ -221,9 +233,12 @@ class Claims_Screen(GameState):
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if not on_ui:
-                    dest = self.get_clicked_province(event.pos)
-                    if dest and dest.get("owner") != self.player and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
-                        self.toggle_claim(dest)
+                    if self.view_mode == "YOURS":
+                        dest = self.get_clicked_province(event.pos)
+                        if dest and dest.get("owner") != self.player and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
+                            self.toggle_claim(dest)
+                    else:
+                        self.map_screen.show_feedback("Can only edit claims in 'Your Claims' view.")
                         
             elif event.type == pygame.MOUSEWHEEL:
                 if on_ui:
@@ -320,21 +335,56 @@ class Claims_Screen(GameState):
                     and prov.get("owner") != self.player 
                     and prov.get("owner") not in c.UNPLAYABLE_NATIONS]
                     
-        for pid in core_ids:
-            self.draw_highlight(surface, pid, (255, 105, 180)) # Pink (Core Claim)
+        foreign_claims_list = []
+        foreign_claims_map = {}
+        for n, d in self.map_screen.nation_data.items():
+            if n == self.player or n in c.UNPLAYABLE_NATIONS: continue
+            
+            for pid in d.get("claims", []):
+                prov = self.map_screen.id_to_province.get(pid)
+                if prov and prov.get("owner") == self.player:
+                    info = {"nation": n, "type": "CLAIM", "turns": 0, "prov_id": pid}
+                    foreign_claims_list.append(info)
+                    foreign_claims_map.setdefault(pid, []).append(info)
+                    
+            for prov in self.map_screen.map_data.values():
+                if prov.get("owner") == self.player and n in prov.get("cores", []) and prov["id"] not in d.get("claims", []):
+                    info = {"nation": n, "type": "CORE", "turns": 0, "prov_id": prov["id"]}
+                    foreign_claims_list.append(info)
+                    foreign_claims_map.setdefault(prov["id"], []).append(info)
+                    
+            for q in d.get("claim_queue", []):
+                pid = q["prov_id"]
+                prov = self.map_screen.id_to_province.get(pid)
+                if prov and prov.get("owner") == self.player:
+                    info = {"nation": n, "type": "QUEUE", "turns": q["turns_left"], "prov_id": pid}
+                    foreign_claims_list.append(info)
+                    foreign_claims_map.setdefault(pid, []).append(info)
         
-        for pid in claims:
-            if pid in revoke_ids:
-                self.draw_highlight(surface, pid, (255, 50, 50)) # Red (Revoking)
-            else:
-                self.draw_highlight(surface, pid, (255, 215, 0)) # Gold (Claimed)
+        foreign_claims_list.sort(key=lambda x: (x["prov_id"], x["nation"]))
+        
+        if self.view_mode == "YOURS":
+            for pid in core_ids:
+                self.draw_highlight(surface, pid, (255, 105, 180))
             
-        for i, q in enumerate(queue):
-            if i == 0:
-                self.draw_highlight(surface, q["prov_id"], (0, 255, 0)) # Green (Actively Justifying)
-            else:
-                self.draw_highlight(surface, q["prov_id"], (0, 150, 255)) # Blue (Waiting in Queue)
-            
+            for pid in claims:
+                if pid in revoke_ids:
+                    self.draw_highlight(surface, pid, (255, 50, 50))
+                else:
+                    self.draw_highlight(surface, pid, (255, 215, 0))
+                
+            for i, q in enumerate(queue):
+                if i == 0:
+                    self.draw_highlight(surface, q["prov_id"], (0, 255, 0))
+                else:
+                    self.draw_highlight(surface, q["prov_id"], (0, 150, 255))
+        else:
+            for pid, claims_on_tile in foreign_claims_map.items():
+                for i, claim_info in enumerate(claims_on_tile):
+                    color = self.map_screen.nation_colors.get(claim_info["nation"], (255, 255, 255))
+                    is_just = (claim_info["type"] == "QUEUE")
+                    self.draw_highlight(surface, pid, color, inset=i, is_justifying=is_just)
+        
         # Draw Information Panel
         panel_surf = pygame.Surface((self.panel_rect.width, self.panel_rect.height), pygame.SRCALPHA)
         panel_surf.fill((30, 30, 50, 230))
@@ -346,77 +396,99 @@ class Claims_Screen(GameState):
         tiny_font = fonts.get("normal")
 
         title = font.render("Territory Claims", True, (255, 255, 255))
-        surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 20))
+        surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
         
         # Combine manually claimed tiles and foreign-owned cores into one list
         # Order forced: Manual non-core claims first, then Auto-Cores at the bottom
         display_claims = claims + [c_id for c_id in core_ids if c_id not in claims]
         
-        # --- SCROLLING LOGIC ---
-        content_h = 40 + (len(queue) * 25 if queue else 25) + 40 + (len(display_claims) * 25 if display_claims else 25)
-        viewport_h = self.panel_rect.height - 65
+        if self.view_mode == "YOURS":
+            content_h = 40 + (len(queue) * 25 if queue else 25) + 40 + (len(display_claims) * 25 if display_claims else 25)
+        else:
+            content_h = 40 + (len(foreign_claims_list) * 25 if foreign_claims_list else 25)
+            
+        viewport_h = self.panel_rect.height - 95
         self.max_scroll = min(0, viewport_h - content_h - 20)
         self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
         
-        # Clip rendering so scrolling text doesn't bleed out of the panel
-        clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 60, self.panel_rect.width - 10, viewport_h)
+        clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, viewport_h)
         old_clip = surface.get_clip()
         surface.set_clip(clip_rect)
         
-        y_off = self.panel_rect.y + 70 + self.scroll_y
+        y_off = self.panel_rect.y + 100 + self.scroll_y
         
-        # Render Queue
-        surface.blit(sub_font.render("Queued Claims:", True, (150, 200, 255)), (self.panel_rect.x + 20, y_off))
-        y_off += 30
-        
-        if not queue:
-            surface.blit(tiny_font.render("No claims queued.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-            y_off += 25
-        else:
-            for q in queue:
-                prov = self.map_screen.id_to_province.get(q["prov_id"])
-                owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, (200, 200, 200))
-                surface.blit(txt, (self.panel_rect.x + 30, y_off))
+        if self.view_mode == "YOURS":
+            surface.blit(sub_font.render("Queued Claims:", True, (150, 200, 255)), (self.panel_rect.x + 20, y_off))
+            y_off += 30
+            
+            if not queue:
+                surface.blit(tiny_font.render("No claims queued.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
                 y_off += 25
-                
-        y_off += 10
-        
-        # Render Active Claims
-        surface.blit(sub_font.render("Active Claims:", True, (255, 215, 0)), (self.panel_rect.x + 20, y_off))
-        y_off += 30
-        
-        if not display_claims:
-            surface.blit(tiny_font.render("No active claims.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-        else:
-            for pid in display_claims:
-                prov = self.map_screen.id_to_province.get(pid)
-                owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                
-                is_core = pid in core_ids
-                revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
-                
-                if revoke_item:
-                    status_text = f" (Revoking in {revoke_item['turns_left']})"
-                    color = (255, 100, 100)
-                elif is_core:
-                    status_text = " (Auto-Claimed Core)"
-                    color = (255, 150, 200) # Pinkish
-                else:
-                    status_text = ""
-                    color = (200, 200, 200)
+            else:
+                for q in queue:
+                    prov = self.map_screen.id_to_province.get(q["prov_id"])
+                    owner = prov.get("owner", "Unknown") if prov else "Unknown"
+                    owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
+                    txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, (200, 200, 200))
+                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                    y_off += 25
+                    
+            y_off += 10
+            
+            surface.blit(sub_font.render("Active Claims:", True, (255, 215, 0)), (self.panel_rect.x + 20, y_off))
+            y_off += 30
+            
+            if not display_claims:
+                surface.blit(tiny_font.render("No active claims.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+            else:
+                for pid in display_claims:
+                    prov = self.map_screen.id_to_province.get(pid)
+                    owner = prov.get("owner", "Unknown") if prov else "Unknown"
+                    owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
+                    
+                    is_core = pid in core_ids
+                    revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
+                    
+                    if revoke_item:
+                        status_text = f" (Revoking in {revoke_item['turns_left']})"
+                        color = (255, 100, 100)
+                    elif is_core:
+                        status_text = " (Auto-Claimed Core)"
+                        color = (255, 150, 200)
+                    else:
+                        status_text = ""
+                        color = (200, 200, 200)
 
-                txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
-                surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                y_off += 25
-                
+                    txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
+                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                    y_off += 25
+        else:
+            surface.blit(sub_font.render("Claims on You:", True, (255, 100, 100)), (self.panel_rect.x + 20, y_off))
+            y_off += 30
+            
+            if not foreign_claims_list:
+                surface.blit(tiny_font.render("No foreign claims on your territory.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+            else:
+                for item in foreign_claims_list:
+                    nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
+                    color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
+                    
+                    if item["type"] == "QUEUE":
+                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Actively Justifying ({item['turns']}t)"
+                    elif item["type"] == "CORE":
+                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Auto-Claimed Core"
+                    else:
+                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Active Claim"
+                        
+                    txt = tiny_font.render(txt_str, True, color)
+                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                    y_off += 25
+                    
         surface.set_clip(old_clip)
 
         # Draw a custom scrollbar if the content exceeds the box height
         if self.max_scroll < 0:
-            track_rect = pygame.Rect(self.panel_rect.right - 15, self.panel_rect.y + 60, 10, viewport_h)
+            track_rect = pygame.Rect(self.panel_rect.right - 15, self.panel_rect.y + 90, 10, viewport_h)
             pygame.draw.rect(surface, (50, 50, 70), track_rect)
             
             ratio = self.scroll_y / self.max_scroll
@@ -429,7 +501,7 @@ class Claims_Screen(GameState):
             if getattr(el, 'visible', True):
                 el.draw(surface)
 
-    def draw_highlight(self, surface, pid, color):
+    def draw_highlight(self, surface, pid, color, inset=0, is_justifying=False):
         prov = self.map_screen.id_to_province.get(pid)
         if not prov: return
         cx, cy = prov["center"]
@@ -438,6 +510,13 @@ class Claims_Screen(GameState):
             sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(2, int(4 * self.map_screen.camera.zoom))
+                
+                if is_justifying:
+                    radius_x = max(1, int(radius_x * 0.6))
+                    
+                if inset > 0:
+                    radius_x = max(1, radius_x - (inset * max(1, int(1.5 * self.map_screen.camera.zoom))))
+                    
                 radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if getattr(c, 'APPLY_TILT_TO_OVERLAYS', False) else radius_x
                 pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*self.map_screen.camera.zoom)))
 

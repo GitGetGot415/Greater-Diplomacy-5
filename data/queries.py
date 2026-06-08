@@ -852,6 +852,17 @@ def is_diplomat_busy(sender, target, nation_data):
         return True
     return False
 
+def get_incoming_justifications_count(nation, nation_data, id_to_province):
+    """Returns the number of active claim justifications against the given nation."""
+    count = 0
+    for other_nation, data in nation_data.items():
+        if other_nation == nation: continue
+        for q in data.get("claim_queue", []):
+            prov = id_to_province.get(q["prov_id"])
+            if prov and prov.get("owner") == nation:
+                count += 1
+    return count
+
 def get_unread_message_count(nation, nation_data):
     """Returns the total number of unread messages and unanswered requests for a nation."""
     # If the user is the spectator, count unread messages across ALL playable nations
@@ -902,7 +913,7 @@ def has_active_truce(nation_a, nation_b, nation_data):
     if nation_a not in nation_data: return False
     return nation_data[nation_a].get("truces", {}).get(nation_b, 0) > 0
 
-def get_relation_score(nation_a, nation_b, nation_data):
+def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     """Calculates dynamic relations based on flat state modifiers and temporary modifiers."""
     if nation_a == nation_b:
         return 0
@@ -926,6 +937,16 @@ def get_relation_score(nation_a, nation_b, nation_data):
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})
     for mod_val in temp_mods.values():
         score += mod_val
+        
+    if id_to_province:
+        claims_a = nation_data.get(nation_a, {}).get("claims", [])
+        claims_b = nation_data.get(nation_b, {}).get("claims", [])
+        
+        a_claims_b = sum(1 for pid in claims_a if id_to_province.get(pid, {}).get("owner") == nation_b)
+        b_claims_a = sum(1 for pid in claims_b if id_to_province.get(pid, {}).get("owner") == nation_a)
+        
+        claim_penalty = min(50, (a_claims_b + b_claims_a) * 5)
+        score -= claim_penalty
         
     return score
 

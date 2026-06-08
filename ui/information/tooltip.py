@@ -29,7 +29,7 @@ def draw_tooltip(self, surface):
         lines = [f"ID: {prov['id']} | {terrain_display}"]
     elif getattr(self, 'base_layer', '') == "RELATIONS":
         # Show exactly how much they like us
-        rel_score = queries.get_relation_score(self.player_country, owner_id, self.nation_data)
+        rel_score = queries.get_relation_score(self.player_country, owner_id, self.nation_data, self.id_to_province)
         lines = [f"ID: {prov['id']} | {owner_display}", f"Opinion: {rel_score}"]
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]

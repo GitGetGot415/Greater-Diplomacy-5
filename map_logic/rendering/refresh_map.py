@@ -157,7 +157,7 @@ def refresh_relations_map(self):
                 color = (0, 0, 255)
             else:
                 # Safely fetch the relation score dynamically
-                relation = queries.get_relation_score(self.player_country, owner, self.nation_data)
+                relation = queries.get_relation_score(self.player_country, owner, self.nation_data, self.id_to_province)
                 color = queries.get_relation_color(relation)
                 
         if owner not in owner_to_int:
