@@ -14584,9 +14584,9 @@
         "Aktobe": {
             "name": "Aktobe",
             "color": [
-                255,
-                255,
-                0
+                0,
+                100,
+                255
             ],
             "research": {
                 "infantry_type": 1,
@@ -20317,7 +20317,12 @@
             "faction": "",
             "is_faction_leader": false,
             "master": "Afrika Korps",
-            "puppet_type": "Integrated"
+            "puppet_type": "Integrated",
+            "siphon_rates": {
+                "manpower": 0.0,
+                "materials": 0.0,
+                "fuel": 0.0
+            }
         },
         "San Francisco": {
             "name": "San Francisco",
@@ -21407,7 +21412,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Democratic Republic of the Congo": {
             "name": "Democratic Republic of the Congo",
@@ -21453,7 +21459,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Republic of the Congo": {
             "name": "Republic of the Congo",
@@ -21499,7 +21506,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Ayumu Kasuga": {
             "name": "Ayumu Kasuga",
@@ -21545,7 +21553,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "British America": {
             "name": "British America",
@@ -21591,7 +21600,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Free France": {
             "name": "Free France",
@@ -21637,7 +21647,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Croissant Republic": {
             "name": "Croissant Republic",
@@ -21683,7 +21694,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Mongol Empire": {
             "name": "Mongol Empire",
@@ -21729,7 +21741,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Republic of South Africa": {
             "name": "Republic of South Africa",
@@ -21775,7 +21788,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Bosnia and Herzegovina": {
             "name": "Bosnia and Herzegovina",
@@ -21821,7 +21835,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Amur": {
             "name": "Amur",
@@ -21867,7 +21882,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Andalusia": {
             "name": "Andalusia",
@@ -21913,7 +21929,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "United Colonies": {
             "name": "United Colonies",
@@ -21959,7 +21976,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Thirteen Colonies": {
             "name": "Thirteen Colonies",
@@ -22005,7 +22023,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Chad": {
             "name": "Chad",
@@ -22051,7 +22070,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Mauritania": {
             "name": "Mauritania",
@@ -22097,7 +22117,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Madagascar": {
             "name": "Madagascar",
@@ -22143,7 +22164,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Pakistan": {
             "name": "Pakistan",
@@ -22189,7 +22211,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Myanmar": {
             "name": "Myanmar",
@@ -22235,7 +22258,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Namibia": {
             "name": "Namibia",
@@ -22281,7 +22305,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Midway": {
             "name": "Midway",
@@ -22327,7 +22352,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
         },
         "Mali": {
             "name": "Mali",
@@ -22373,7 +22399,422 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "relations": {}
+            "relations": {},
+            "pending_diplomacy": {}
+        },
+        "United Arab Emirates": {
+            "name": "United Arab Emirates",
+            "color": [
+                128,
+                128,
+                255
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Arkhangelsk": {
+            "name": "Arkhangelsk",
+            "color": [
+                128,
+                128,
+                255
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Telangana": {
+            "name": "Telangana",
+            "color": [
+                128,
+                0,
+                64
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Orkhon": {
+            "name": "Orkhon",
+            "color": [
+                0,
+                128,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Novosibirsk": {
+            "name": "Novosibirsk",
+            "color": [
+                0,
+                128,
+                0
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Zabaykalsky": {
+            "name": "Zabaykalsky",
+            "color": [
+                0,
+                0,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Tatarstan": {
+            "name": "Tatarstan",
+            "color": [
+                128,
+                128,
+                100
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Caucasus": {
+            "name": "Caucasus",
+            "color": [
+                255,
+                200,
+                0
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Almaty": {
+            "name": "Almaty",
+            "color": [
+                0,
+                100,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "ww1_tank": 0,
+                "armored_car": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "destroyer": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "general_recruitment": 0,
+                "recruitment_buildings": 0,
+                "basic_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
         }
     },
     "provinces": {
@@ -26224,9 +26665,5 @@
             "resources": {},
             "buildings": []
         }
-    },
-    "scenario_settings": {
-        "fog_of_war": true,
-        "casus_belli_required": false
     }
 }
