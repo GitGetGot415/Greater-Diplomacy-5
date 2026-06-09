@@ -320,9 +320,9 @@ def randomize_all_provinces(map_screen, settings):
             inc_mat = econ["total_inc"]["materials"]
             inc_fuel = econ["total_inc"]["fuel"]
 
-            target_man = inc_man * c.AI_UPKEEP_TARGETS
-            target_mat = inc_mat * c.AI_UPKEEP_TARGETS
-            target_fuel = inc_fuel * c.AI_UPKEEP_TARGETS
+            target_man = inc_man * c.AI_UPKEEP_TARGETS["manpower"]
+            target_mat = inc_mat * c.AI_UPKEEP_TARGETS["materials"]
+            target_fuel = inc_fuel * c.AI_UPKEEP_TARGETS["fuel"]
 
             # 2. Get highest unlocked tech
             res_levels = data.get("research", {})
@@ -363,7 +363,7 @@ def randomize_all_provinces(map_screen, settings):
                 if len(coastal_provs) < c.AI_MIN_COAST_FOR_NAVY and len(border_provs) > 0:
                     target_navy_ratio = 0.0
                 else:
-                    target_navy_ratio = min(c.AI_MAX_NAVY_RATIO), len(coastal_provs) / total_borders
+                    target_navy_ratio = min(c.AI_MAX_NAVY_RATIO, len(coastal_provs) / total_borders)
 
             inf_count, tank_count, navy_count = 0, 0, 0
             failsafe = 0
