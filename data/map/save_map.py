@@ -17,7 +17,7 @@ def save_map_data(self, save_name=None):
     if getattr(self, 'is_editor', False):
         # Save to User's Downloads Folder
         downloads_path = Path(__file__).resolve().parents[2]
-        save_path = os.path.join(downloads_path, "scenarios", "custom", f"MapExport_{save_name}")
+        save_path = os.path.join(downloads_path, "scenarios", "map_editor", f"MapExport_{save_name}")
     else:
         # Standard Game Save
         save_path = os.path.join(c.SAVES_DIR, save_name)

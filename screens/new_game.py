@@ -1,9 +1,13 @@
+# screens/new_game.py
 import os
 import json
 import shutil
 import pygame
+import zipfile
+from pathlib import Path
+from tkinter import filedialog, messagebox
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import Button, process_text_input
 import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
@@ -16,7 +20,7 @@ class New_Game(GameState):
         self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
         self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
         
-        # --- SCROLLING AND DELETION STATE ---
+        # --- SCROLLING, RENAMING AND DELETION STATE ---
         self.scroll_y = 0
         self.max_scroll = 0
         self.is_dragging_scrollbar = False
@@ -26,6 +30,16 @@ class New_Game(GameState):
         self.deleting_scenario = None
         self.deleting_directory = None
         
+        self.renaming_scenario = None
+        self.new_name_text = ""
+        
+        self.refresh_scenarios()
+
+    def set_sub_state(self, state):
+        self.sub_state = state
+        self.scroll_y = 0
+        self.deleting_scenario = None
+        self.renaming_scenario = None
         self.refresh_scenarios()
 
     def refresh_scenarios(self):
@@ -36,7 +50,7 @@ class New_Game(GameState):
                 Button(20, 20, "small", "red", "Back", self.exit_to_menu),
                 Button("centered", 200, "large", "blue", "Historical Scenarios", lambda: self.set_sub_state("HISTORICAL")),
                 Button("centered", 300, "large", "purple", "Alternate Scenarios", lambda: self.set_sub_state("ALTERNATE")),
-                Button("centered", 400, "large", "purple", "Custom Scenarios", lambda: self.set_sub_state("CUSTOM")),
+                Button("centered", 400, "large", "green", "Map Editor Scenarios", lambda: self.set_sub_state("MAP_EDITOR")),
                 Button("centered", 500, "large", "orange", "Random Scenario", self.start_random_scenario),
                 Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 160, "medium", "purple", "Data Refresh", self.trigger_global_data_refresh),
                 Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
@@ -46,6 +60,9 @@ class New_Game(GameState):
                 Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CATEGORY")),
                 Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
             ]
+            
+            if self.sub_state == "MAP_EDITOR":
+                self.elements.append(Button(160, 20, "medium", "green", "Import .zip", self.import_scenario_zip))
             
             if self.sub_state == "HISTORICAL":
                 scenario_dir = c.SCENARIOS_HISTORICAL_DIR  
@@ -63,8 +80,8 @@ class New_Game(GameState):
             self.max_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height - 20)
 
             for i, name in enumerate(scenarios):
-                if getattr(self, 'deleting_scenario', None) == name:
-                    continue # Hide buttons for the row being deleted
+                if getattr(self, 'deleting_scenario', None) == name or getattr(self, 'renaming_scenario', None) == name:
+                    continue # Hide buttons for the row being manipulated
                     
                 btn_y = 200 + (i * 60) + self.scroll_y
                 
@@ -72,18 +89,79 @@ class New_Game(GameState):
                 if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
                     continue
 
-                # Create a button for each scenario
-                self.elements.append(
-                    Button("centered", btn_y, "new_game", "blue", name, 
-                           lambda n=name, d=scenario_dir: self.start_scenario(n, d))
-                )
-                
-                # Add a delete button for custom scenarios
-                if self.sub_state == "CUSTOM":
+                if self.sub_state == "MAP_EDITOR":
+                    # Custom Scenarios get the management tools
                     self.elements.append(
-                        Button(c.SCREEN_WIDTH // 2 + 160, btn_y + 5, "small_square", "red", "X",
+                        Button(c.SCREEN_WIDTH // 2 - 250, btn_y, "new_game", "blue", name, 
+                               lambda n=name, d=scenario_dir: self.start_scenario(n, d))
+                    )
+                    self.elements.append(
+                        Button(c.SCREEN_WIDTH // 2 + 70, btn_y + 5, "small", "grey", "Rename",
+                               lambda n=name: self.start_rename(n))
+                    )
+                    self.elements.append(
+                        Button(c.SCREEN_WIDTH // 2 + 190, btn_y + 5, "small", "green", "Export",
+                               lambda n=name: self.export_scenario_zip(n))
+                    )
+                    self.elements.append(
+                        Button(c.SCREEN_WIDTH // 2 + 310, btn_y + 5, "small_square", "red", "X",
                                lambda n=name, d=scenario_dir: self.trigger_delete_conf(n, d))
                     )
+                else:
+                    # Standard centered layout for built-in scenarios
+                    self.elements.append(
+                        Button("centered", btn_y, "new_game", "blue", name, 
+                               lambda n=name, d=scenario_dir: self.start_scenario(n, d))
+                    )
+
+    # --- FILE MANAGEMENT LOGIC ---
+    def import_scenario_zip(self):
+        root = queries.get_transient_tk_root()
+        file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")], parent=root)
+        
+        if file_path:
+            save_name = Path(file_path).stem
+            target_dir = os.path.join(c.SCENARIOS_CUSTOM_DIR, save_name)
+            if os.path.exists(target_dir): target_dir += "_imported"
+            try:
+                with zipfile.ZipFile(file_path, 'r') as zip_ref: 
+                    zip_ref.extractall(target_dir)
+                self.refresh_scenarios()
+                messagebox.showinfo("Import Success", "Scenario Imported successfully.", parent=root)
+            except Exception as e: 
+                messagebox.showerror("Import Error", str(e), parent=root)
+                
+        queries.destroy_tk_root(root)
+
+    def export_scenario_zip(self, scenario_name):
+        root = queries.get_transient_tk_root()
+        try:
+            source_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, scenario_name)
+            zip_filename = os.path.join(str(Path.home() / "Downloads"), f"{scenario_name}_scenario.zip")
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root_dir, dirs, files in os.walk(source_path):
+                    for file in files:
+                        zipf.write(os.path.join(root_dir, file), os.path.relpath(os.path.join(root_dir, file), source_path))
+            messagebox.showinfo("Export Success", f"Exported to Downloads as {scenario_name}_scenario.zip", parent=root)
+        except Exception as e: 
+            messagebox.showerror("Export Error", str(e), parent=root)
+            
+        queries.destroy_tk_root(root)
+
+    # --- RENAMING LOGIC ---
+    def start_rename(self, scenario_name):
+        self.renaming_scenario = scenario_name
+        self.new_name_text = scenario_name
+        self.refresh_scenarios()
+
+    def finish_rename(self):
+        if self.new_name_text.strip() != "" and self.new_name_text != self.renaming_scenario:
+            old_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, self.renaming_scenario)
+            new_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, self.new_name_text.strip())
+            if not os.path.exists(new_path): 
+                os.rename(old_path, new_path)
+        self.renaming_scenario = None
+        self.refresh_scenarios()
 
     # --- DELETION LOGIC ---
     def trigger_delete_conf(self, scenario_name, directory):
@@ -116,14 +194,24 @@ class New_Game(GameState):
         self.refresh_scenarios()
 
     def additional_events(self, event):
-        # 1. Deletion Input Logic
+        # 1. Renaming Input Logic
+        if getattr(self, 'renaming_scenario', None):
+            is_valid_char = lambda ch: ch.isalnum() or ch in " _-"
+            self.new_name_text, status = process_text_input(event, self.new_name_text, validation_func=is_valid_char)
+            if status == "SUBMIT": self.finish_rename()
+            elif status == "CANCEL": 
+                self.renaming_scenario = None
+                self.refresh_scenarios()
+            return # Block background inputs when typing
+        
+        # 2. Deletion Input Logic
         if getattr(self, 'deleting_scenario', None):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN: self.confirm_delete()
                 elif event.key == pygame.K_ESCAPE: self.cancel_delete()
             return # Block background inputs when a popup is rendering
 
-        # 2. Scrolling Logic
+        # 3. Scrolling Logic
         if self.sub_state != "CATEGORY":
             if event.type == pygame.MOUSEWHEEL:
                 self.scroll_y += event.y * 40
@@ -152,7 +240,7 @@ class New_Game(GameState):
         elif self.sub_state == "ALTERNATE":
             title_text = "ALTERNATE SCENARIOS"
         else:
-            title_text = "CUSTOM SCENARIOS"
+            title_text = "MAP EDITOR SCENARIOS"
             
         title = fonts.get("heading1").render(title_text, True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
@@ -176,6 +264,24 @@ class New_Game(GameState):
             else:
                 self.scroll_track_rect = None
                 self.scroll_handle_rect = None
+
+        # --- Draw Rename Input Box ---
+        if getattr(self, 'renaming_scenario', None):
+            scenario_dir = c.SCENARIOS_CUSTOM_DIR
+            scenarios = os.listdir(scenario_dir)
+            idx = scenarios.index(self.renaming_scenario) if self.renaming_scenario in scenarios else 0
+            box_y = 200 + (idx * 60) + self.scroll_y
+            
+            input_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 250, box_y, 300, 50)
+            pygame.draw.rect(surface, (100, 100, 100), input_rect)
+            pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
+            
+            font = fonts.get("heading2")
+            txt_surf = font.render(self.new_name_text + "|", True, (255, 255, 255))
+            surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
+            
+            instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
+            surface.blit(instr, (input_rect.x, input_rect.y - 25))
 
         # --- Draw Delete Confirmation Popup ---
         if getattr(self, 'deleting_scenario', None):
@@ -201,6 +307,7 @@ class New_Game(GameState):
         self.sub_state = state
         self.scroll_y = 0
         self.deleting_scenario = None
+        self.renaming_scenario = None
         self.refresh_scenarios()
 
     def scenario_settings(self):

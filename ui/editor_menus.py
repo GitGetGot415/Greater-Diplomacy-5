@@ -37,7 +37,7 @@ def _run_editor_loop(map_screen, root):
 def editor_load_map(self):
     """Opens a file dialog to load a map folder directly into the editor."""
     root = queries.get_transient_tk_root()
-    path = filedialog.askdirectory(initialdir=c.SCENARIOS_DIR, title="Select Map Folder to Edit")
+    path = filedialog.askdirectory(initialdir=c.SCENARIOS_CUSTOM_DIR, title="Select Map Folder to Edit")
     queries.destroy_tk_root(root)
 
     if path:
