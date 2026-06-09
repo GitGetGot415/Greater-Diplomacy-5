@@ -1,6 +1,6 @@
-# screens/new_game.py
 import os
 import json
+import shutil
 import pygame
 from gameState import GameState
 from ui_elements import Button
@@ -15,6 +15,17 @@ class New_Game(GameState):
         self.selected_scenario_path = None
         self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
         self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
+        
+        # --- SCROLLING AND DELETION STATE ---
+        self.scroll_y = 0
+        self.max_scroll = 0
+        self.is_dragging_scrollbar = False
+        self.scroll_track_rect = None
+        self.scroll_handle_rect = None
+        
+        self.deleting_scenario = None
+        self.deleting_directory = None
+        
         self.refresh_scenarios()
 
     def refresh_scenarios(self):
@@ -46,13 +57,92 @@ class New_Game(GameState):
                 os.makedirs(scenario_dir)
                 
             scenarios = os.listdir(scenario_dir)
+            
+            # Calculate scroll boundaries
+            total_content_height = len(scenarios) * 60
+            self.max_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height - 20)
+
             for i, name in enumerate(scenarios):
-                btn_y = 200 + (i * 60)
+                if getattr(self, 'deleting_scenario', None) == name:
+                    continue # Hide buttons for the row being deleted
+                    
+                btn_y = 200 + (i * 60) + self.scroll_y
+                
+                # Simple Y-based culling so we don't draw off-screen buttons
+                if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
+                    continue
+
                 # Create a button for each scenario
                 self.elements.append(
                     Button("centered", btn_y, "new_game", "blue", name, 
                            lambda n=name, d=scenario_dir: self.start_scenario(n, d))
                 )
+                
+                # Add a delete button for custom scenarios
+                if self.sub_state == "CUSTOM":
+                    self.elements.append(
+                        Button(c.SCREEN_WIDTH // 2 + 160, btn_y + 5, "small_square", "red", "X",
+                               lambda n=name, d=scenario_dir: self.trigger_delete_conf(n, d))
+                    )
+
+    # --- DELETION LOGIC ---
+    def trigger_delete_conf(self, scenario_name, directory):
+        self.deleting_scenario = scenario_name
+        self.deleting_directory = directory
+        self.refresh_scenarios()
+
+    def confirm_delete(self):
+        if self.deleting_scenario and self.deleting_directory:
+            path = os.path.join(self.deleting_directory, self.deleting_scenario)
+            if os.path.exists(path):
+                shutil.rmtree(path)
+        self.deleting_scenario = None
+        self.deleting_directory = None
+        self.refresh_scenarios()
+
+    def cancel_delete(self):
+        self.deleting_scenario = None
+        self.deleting_directory = None
+        self.refresh_scenarios()
+
+    # --- SCROLL LOGIC ---
+    def _snap_scroll(self, my):
+        view_h = c.SCREEN_HEIGHT - 200
+        handle_h = max(30, int(view_h * (view_h / max(1, view_h - self.max_scroll))))
+        rel_y = my - 200 - (handle_h / 2)
+        max_y = view_h - handle_h
+        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
+        self.scroll_y = ratio * self.max_scroll
+        self.refresh_scenarios()
+
+    def additional_events(self, event):
+        # 1. Deletion Input Logic
+        if getattr(self, 'deleting_scenario', None):
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN: self.confirm_delete()
+                elif event.key == pygame.K_ESCAPE: self.cancel_delete()
+            return # Block background inputs when a popup is rendering
+
+        # 2. Scrolling Logic
+        if self.sub_state != "CATEGORY":
+            if event.type == pygame.MOUSEWHEEL:
+                self.scroll_y += event.y * 40
+                self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+                self.refresh_scenarios()
+
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(mx, my):
+                    self.is_dragging_scrollbar = True
+                elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(mx, my):
+                    self.is_dragging_scrollbar = True
+                    self._snap_scroll(my)
+
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.is_dragging_scrollbar = False
+
+            elif event.type == pygame.MOUSEMOTION and getattr(self, 'is_dragging_scrollbar', False):
+                self._snap_scroll(event.pos[1])
 
     def additional_draw(self, surface):
         if self.sub_state == "CATEGORY":
@@ -67,8 +157,50 @@ class New_Game(GameState):
         title = fonts.get("heading1").render(title_text, True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
 
+        if self.sub_state != "CATEGORY":
+            # --- Draw Scrollbar ---
+            if self.max_scroll < 0:
+                view_h = c.SCREEN_HEIGHT - 200
+                track_rect = pygame.Rect(c.SCREEN_WIDTH - 40, 200, 15, view_h)
+                pygame.draw.rect(surface, (50, 50, 60), track_rect)
+                
+                ratio = self.scroll_y / self.max_scroll
+                handle_h = max(30, int(view_h * (view_h / (view_h - self.max_scroll))))
+                handle_y = 200 + ratio * (view_h - handle_h)
+                
+                handle_rect = pygame.Rect(c.SCREEN_WIDTH - 40, handle_y, 15, handle_h)
+                pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+                
+                self.scroll_track_rect = track_rect
+                self.scroll_handle_rect = handle_rect
+            else:
+                self.scroll_track_rect = None
+                self.scroll_handle_rect = None
+
+        # --- Draw Delete Confirmation Popup ---
+        if getattr(self, 'deleting_scenario', None):
+            overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            surface.blit(overlay, (0, 0))
+            
+            pop_rect = pygame.Rect(0, 0, 500, 200)
+            pop_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+            pygame.draw.rect(surface, (60, 20, 20), pop_rect)
+            pygame.draw.rect(surface, (255, 50, 50), pop_rect, 3)
+            
+            font = fonts.get("heading2")
+            msg = font.render(f"Delete '{self.deleting_scenario}'?", True, (255, 255, 255))
+            msg_rect = msg.get_rect(center=(pop_rect.centerx, pop_rect.y + 60))
+            surface.blit(msg, msg_rect)
+            
+            sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
+            sub_rect = sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.y + 110))
+            surface.blit(sub_msg, sub_rect)
+
     def set_sub_state(self, state):
         self.sub_state = state
+        self.scroll_y = 0
+        self.deleting_scenario = None
         self.refresh_scenarios()
 
     def scenario_settings(self):
