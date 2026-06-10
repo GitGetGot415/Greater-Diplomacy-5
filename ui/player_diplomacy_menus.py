@@ -1064,7 +1064,7 @@ class Trade_Screen(GameState):
         self.evaluate_input()
         
         # Don't allow empty trades
-        if self.escrow_mats == 0 and self.escrow_fuel == 0 and self.take_mats_str == "0" and self.take_fuel_str == "0":
+        if self.escrow_mats == 0 and self.escrow_fuel == 0 and self.take_mats_str == "0" and self.take_fuel_str == "0" and self.puppet_state == "NONE":
             self.map_screen.show_feedback("Cannot send an empty trade offer!")
             return
 
@@ -1243,16 +1243,28 @@ class Puppets_Screen(GameState):
             p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
             siphon = p_data.setdefault("siphon_rates", {"manpower": 0.0, "materials": 0.0, "fuel": 0.0})
             
+            pending_action, _ = queries.get_diplomatic_status(self.player, p, self.map_screen.nation_data)
+            
+            rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
+            rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
+            btn_release = Button(self.panel_rect.x + 680, y_pos, "small", rel_col, rel_txt, lambda nation=p: self.queue_release(nation))
+            self.elements.append(btn_release)
+            
             if p_type == c.PUPPET_TYPE_INTEGRATED:
-                btn_edit = Button(self.panel_rect.x + 600, y_pos, "small", "blue", "Edit Appearance", lambda nation=p: self.edit_puppet(nation))
+                btn_edit = Button(self.panel_rect.x + 570, y_pos, "small", "blue", "Edit", lambda nation=p: self.edit_puppet(nation))
                 self.elements.append(btn_edit)
                 
-                s_man = Slider(self.panel_rect.x + 200, y_pos, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                s_mat = Slider(self.panel_rect.x + 320, y_pos, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                s_fuel = Slider(self.panel_rect.x + 440, y_pos, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                self.elements.extend([s_man, s_mat, s_fuel])
+                anx_txt = "Undo Annex" if pending_action == "ANNEX_PUPPET" else "Annex"
+                anx_col = "orange" if pending_action == "ANNEX_PUPPET" else "red"
+                btn_annex = Button(self.panel_rect.x + 570, y_pos + 45, "small", anx_col, anx_txt, lambda nation=p: self.queue_annex(nation))
+                self.elements.append(btn_annex)
                 
-            y_pos += 80
+            s_man = Slider(self.panel_rect.x + 200, y_pos, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+            s_mat = Slider(self.panel_rect.x + 320, y_pos, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+            s_fuel = Slider(self.panel_rect.x + 440, y_pos, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+            self.elements.extend([s_man, s_mat, s_fuel])
+            
+            y_pos += 90
             
         self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
 
@@ -1263,6 +1275,16 @@ class Puppets_Screen(GameState):
         self.map_screen.editing_country = puppet
         self.map_screen.change_state("EDIT_COUNTRY")
         self.done = True
+        
+    def queue_annex(self, puppet):
+        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, puppet, "ANNEX_PUPPET", "")
+        self.map_screen.show_feedback(msg)
+        self.refresh_ui()
+
+    def queue_release(self, puppet):
+        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, puppet, "RELEASE_PUPPET", "")
+        self.map_screen.show_feedback(msg)
+        self.refresh_ui()
 
     def exit_screen(self):
         self.next_state, self.done = "MAP", True

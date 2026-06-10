@@ -60,6 +60,33 @@ def pull_puppets_out_of_faction(master, nation_data):
         nation_data[puppet]["faction"] = ""
         nation_data[puppet]["is_faction_leader"] = False
         pull_puppets_out_of_faction(puppet, nation_data)
+
+def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
+    if puppet in nation_data.get(master, {}).get("puppets", []):
+        nation_data[master]["puppets"].remove(puppet)
+    nation_data.get(puppet, {})["master"] = ""
+    nation_data.get(puppet, {})["puppet_type"] = ""
+    
+    # Transfer all territory and units
+    from map_logic.system32 import edit_province_ownership
+    for prov in map_data.values():
+        if prov.get("owner") == puppet:
+            edit_province_ownership.conquer_province(map_screen, prov, master)
+        for unit in prov.get("units", []):
+            if unit.get("owner") == puppet:
+                unit["owner"] = master
+                
+    from map_logic.diplomacy.diplomacy_events import log_global_event
+    log_global_event(nation_data, f"{master} has fully annexed {puppet}.")
+
+def finalize_release(map_data, nation_data, master, puppet, map_screen):
+    if puppet in nation_data.get(master, {}).get("puppets", []):
+        nation_data[master]["puppets"].remove(puppet)
+    nation_data.get(puppet, {})["master"] = ""
+    nation_data.get(puppet, {})["puppet_type"] = ""
+    
+    from map_logic.diplomacy.diplomacy_events import log_global_event
+    log_global_event(nation_data, f"{master} has released {puppet} as an independent nation.")
 # ---------------------------------
 
 def finalize_war(map_data, nation_data, a, b):

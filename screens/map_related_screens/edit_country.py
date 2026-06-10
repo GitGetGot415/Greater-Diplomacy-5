@@ -516,7 +516,10 @@ class Edit_Country_Screen(GameState):
         heading_font = fonts.get("heading2")
         normal_font = fonts.get("normal")
 
-        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), c.EDIT_COUNTRY_TITLE_X, c.EDIT_COUNTRY_TITLE_Y)
+        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), (c.EDIT_COUNTRY_TITLE_X, c.EDIT_COUNTRY_TITLE_Y))
+
+        # Render Scaled Canvases
+        scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))
 
         # Render Scaled Canvases
         scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))

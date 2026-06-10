@@ -571,7 +571,9 @@ UNILATERAL_ACTIONS = [
     "KICK_FACTION_MEMBER",
     "LEAVE_FACTION",
     "DISBAND_FACTION",
-    "JUSTIFY_WARGOAL"
+    "JUSTIFY_WARGOAL",
+    "ANNEX_PUPPET",
+    "RELEASE_PUPPET"
 ]
 
 # Proposals that require the target to explicitly Accept or Reject

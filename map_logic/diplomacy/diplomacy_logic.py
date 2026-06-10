@@ -21,7 +21,9 @@ from map_logic.diplomacy.diplomacy_agreements import (
     finalize_faction_join, 
     finalize_faction_leave,
     join_faction_wars, 
-    finalize_faction_kick
+    finalize_faction_kick,
+    finalize_annexation,
+    finalize_release
 )
 
 from map_logic.diplomacy.diplomacy_processor import (
