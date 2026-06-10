@@ -734,7 +734,7 @@
     },
     "(34, 0, 0)": {
         "id": 34,
-        "terrain": "forest",
+        "terrain": "mountain",
         "is_coastal": true,
         "center": [
             830,
