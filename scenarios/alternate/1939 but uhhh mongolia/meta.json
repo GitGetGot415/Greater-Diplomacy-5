@@ -25912,7 +25912,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New South Wales": {
             "name": "New South Wales",
@@ -25958,7 +25959,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Perth": {
             "name": "Perth",
@@ -26004,7 +26006,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pilbara": {
             "name": "Pilbara",
@@ -26050,7 +26053,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "South Australia": {
             "name": "South Australia",
@@ -26096,7 +26100,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tierra del Fuego": {
             "name": "Tierra del Fuego",
@@ -26142,7 +26147,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Western Australia": {
             "name": "Western Australia",
@@ -26188,13 +26194,245 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Victoria": {
             "name": "Victoria",
             "color": [
                 255,
                 0,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {},
+            "relations": {}
+        },
+        "Buenos Aires": {
+            "name": "Buenos Aires",
+            "color": [
+                0,
+                128,
+                192
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Salta": {
+            "name": "Salta",
+            "color": [
+                105,
+                15,
+                150
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Santiago": {
+            "name": "Santiago",
+            "color": [
+                100,
+                100,
+                150
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Bahia": {
+            "name": "Bahia",
+            "color": [
+                0,
+                128,
+                128
+            ],
+            "research": {
+                "infantry_type": 1,
+                "cavalry": 1,
+                "militia": 0,
+                "motorized_infantry": 0,
+                "mechanized_infantry": 0,
+                "civilian_car": 0,
+                "ww1_armored_car": 0,
+                "armored_car": 0,
+                "ww1_tank": 0,
+                "light_tank": 0,
+                "medium_tank": 0,
+                "heavy_tank": 0,
+                "main_battle_tank": 0,
+                "dreadnought": 0,
+                "battleship": 0,
+                "destroyer": 0,
+                "aircraft_carrier": 0,
+                "submarine": 0,
+                "basic_factory": 0,
+                "factory": 0,
+                "bergius_process": 0,
+                "fuel_refining": 0,
+                "basic_recruitment": 0,
+                "recruitment_buildings": 0,
+                "general_recruitment": 0
+            },
+            "manpower": 0,
+            "materials": 0,
+            "fuel": 0,
+            "is_playable": true,
+            "at_war_with": [],
+            "allied_with": [],
+            "leader_name": "",
+            "leader_title": "",
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT",
+            "pending_diplomacy": {}
+        },
+        "Rio de Janeiro": {
+            "name": "Rio de Janeiro",
+            "color": [
+                128,
+                255,
                 128
             ],
             "research": {
