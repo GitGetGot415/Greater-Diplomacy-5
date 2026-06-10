@@ -43,7 +43,7 @@ BASE_YIELDS = {
 GENERAL_RECRUITMENT_BONUS = 5 # Add this
 
 COUNTRY_BASE_YIELDS = {
-    "manpower": 100,
+    "manpower": 200,
     "materials": 100,
     "fuel": 0
 }

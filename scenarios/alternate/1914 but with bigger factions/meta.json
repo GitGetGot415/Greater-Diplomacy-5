@@ -24163,7 +24163,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Salta": {
             "name": "Salta",
@@ -24209,7 +24210,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Santiago": {
             "name": "Santiago",
@@ -24255,7 +24257,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bahia": {
             "name": "Bahia",
@@ -24301,7 +24304,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rio de Janeiro": {
             "name": "Rio de Janeiro",
@@ -24347,7 +24351,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         }
     },
     "provinces": {
