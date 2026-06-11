@@ -28,7 +28,7 @@ class Random_Setup(GameState):
 
     def calculate_max_countries(self):
         data = queries.get_country_data()
-        playable = sum(1 for n, d in data.items() if d.get("is_playable"))
+        playable = sum(1 for n, d in data.items() if queries.is_playable(n, data))
         return max(1, playable) # Fallback to 1
 
     def reset_to_defaults(self):

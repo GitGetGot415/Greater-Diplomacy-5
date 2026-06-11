@@ -16,13 +16,13 @@ VISUAL_WATER_MAPPING = {
     "lakes": "Ocean"
 }
 
-# Handy list to check if terrain is water in several movement/combat files
+# Used to check if terrain is water in several movement/combat files
 WATER_TERRAINS = ["ocean", "coastal_sea", "inland_sea", "lakes"]
 OCEAN_TERRAINS = ["ocean", "coastal_sea", "inland_sea"]
 
 # Owner groupings for logic and UI checks
 WATER_NATIONS = ["Ocean", "Lakes"]
-UNPLAYABLE_NATIONS = ["None", "Unclaimed", "Ocean", "Lakes", "Spectator", "GLOBAL_EVENTS", "FACTION_WAR_MAPS"]
+UNPLAYABLE_NATIONS = ["None", "Unclaimed", "The Rot", "Ocean", "Lakes", "Spectator", "GLOBAL_EVENTS", "FACTION_WAR_MAPS"]
 
 # Width and Height
 SCREEN_WIDTH = 1280

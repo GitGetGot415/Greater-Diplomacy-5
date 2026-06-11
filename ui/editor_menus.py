@@ -68,16 +68,32 @@ def select_brush_nation(self):
     # Sort and filter out utility 'countries'
     nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
     lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+    
+    # Explicitly add the requested elements to the top
+    lb.insert(tk.END, "Unclaimed")
+    lb.insert(tk.END, "The Rot")
+    lb.insert(tk.END, "----------")
+
     for n in nations:
-        if n not in c.UNPLAYABLE_NATIONS or n in ["Unclaimed", "None"]:
+        if n in ["Unclaimed", "The Rot"]:
+            continue
+        if n not in c.UNPLAYABLE_NATIONS or n in ["None"]:
             lb.insert(tk.END, n)
+            
     lb.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=lb.yview)
     
     def on_select(event=None):
         selection = lb.curselection()
         if selection:
-            self.brush_nation = lb.get(selection[0])
+            selected_val = lb.get(selection[0])
+            
+            # Prevent the separator line from doing anything
+            if selected_val == "----------":
+                lb.selection_clear(selection[0])
+                return
+                
+            self.brush_nation = selected_val
             self.editor_mode = "NATION" 
             self.show_feedback(f"Brush: {self.brush_nation}")
         close_menu()

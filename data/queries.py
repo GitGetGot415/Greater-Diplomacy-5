@@ -1281,12 +1281,12 @@ def scrub_default_images(nation_data_block):
             except: pass
 
 def encode_surf_to_b64(surf, fmt="RGBA"):
-    #Encodes a pygame surface to a Base64 string.
+    """Encodes a pygame surface to a Base64 string."""
     img_str = pygame.image.tostring(surf, fmt)
     return base64.b64encode(img_str).decode('utf-8')
 
 def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
-    # Decodes a Base64 string back into a pygame surface.
+    """Decodes a Base64 string back into a pygame surface."""
     global _dynamic_image_cache
     
     cache_key = (b64_str, size, is_portrait, country_name)
@@ -1339,7 +1339,7 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
 # ==========================================
 
 def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, nation_data):
-    # Determines if a nation can physically reach another via land borders (including faction borders) or sea.
+    """Determines if a nation can physically reach another via land borders (including faction borders) or sea."""
     nation_a_faction = nation_data.get(nation_a, {}).get("faction", "")
     friendly_nations = {nation_a}
     if nation_a_faction:
@@ -1376,13 +1376,13 @@ def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, natio
     return False
 
 def is_ai_diplo_on_cooldown(sender, target, action, nation_data):
-    # Checks if a specific proactive diplomatic action is on cooldown.
+    """Checks if a specific proactive diplomatic action is on cooldown."""
     cooldowns = nation_data.get(sender, {}).get("diplo_cooldowns", {})
     target_cooldowns = cooldowns.get(target, {})
     return target_cooldowns.get(action, 0) != 0
 
 def set_ai_diplo_cooldown(sender, target, action, nation_data, duration=None):
-    # Sets a cooldown for a proactive diplomatic action to prevent spamming.
+    """Sets a cooldown for a proactive diplomatic action to prevent spamming."""
     if duration is None:
         # Check if this is a war declaration to use the specific override
         if action == "WAR_DECLARATION":
