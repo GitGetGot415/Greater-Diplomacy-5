@@ -1280,7 +1280,7 @@ class Puppets_Screen(GameState):
             
             rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
             rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
-            btn_release = Button(self.panel_rect.x + 720, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
+            btn_release = Button(self.panel_rect.x + 750, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
             self.elements.append(btn_release)
             
             # --- Make all buttons visible but greyscaled out if requirements aren't met ---
@@ -1305,20 +1305,20 @@ class Puppets_Screen(GameState):
             
             # Take Puppets Button
             take_txt = "Undo Take" if pending_action == "TAKE_PUPPETS" else "Take Puppets"
-            btn_take = Button(self.panel_rect.x + 720, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
+            btn_take = Button(self.panel_rect.x + 750, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
             has_puppets = len(p_data.get("puppets", [])) > 0
             if p_type != c.PUPPET_TYPE_INTEGRATED or not has_puppets:
                 btn_take.disabled = True
-                btn_take.text = "Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED else "They've 0 Puppets!"
+                btn_take.text = "Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED else "They have 0 Puppets!"
                 btn_take.color, btn_take.hover_color = c.UI_COLORS["grey"]
             self.elements.append(btn_take)
             
             # if you ever want to add this
-            # s_man = Slider(self.panel_rect.x + 200, y_pos + 50, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+            s_man = Slider(self.panel_rect.x + 200, y_pos + 50, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
             s_mat = Slider(self.panel_rect.x + 320, y_pos + 50, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
             s_fuel = Slider(self.panel_rect.x + 440, y_pos + 50, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
             if p_type == c.PUPPET_TYPE_INTEGRATED:
-                self.elements.extend([s_mat, s_fuel])
+                self.elements.extend([s_man, s_mat, s_fuel])
             
             y_pos += self.y_space_between_puppets
             
@@ -1423,6 +1423,24 @@ class Puppets_Screen(GameState):
                 surface.blit(name_txt, (self.panel_rect.x + 20, y_pos))
                 surface.blit(type_txt, (self.panel_rect.x + 20, y_pos + 30))
                 
+                # --- FIX: Show exact siphoned amounts below sliders ---
+                if p_type == c.PUPPET_TYPE_INTEGRATED:
+                    econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
+                    if len(econ_tuple) == 3:
+                        _, _, breakdown = econ_tuple
+                        siphoned_man = abs(breakdown.get('manpower', {}).get('siphon', 0))
+                        siphoned_mats = abs(breakdown.get('materials', {}).get('siphon', 0))
+                        siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
+                        
+                        tiny_font = fonts.get("tiny")
+                        man_txt = tiny_font.render(f"Taking: {siphoned_man}", True, (200, 200, 200))
+                        mat_txt = tiny_font.render(f"Taking: {siphoned_mats}", True, (200, 200, 200))
+                        fuel_txt = tiny_font.render(f"Taking: {siphoned_fuel}", True, (200, 200, 200))
+                        
+                        surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
+                        surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))
+                        surface.blit(fuel_txt, (self.panel_rect.x + 440, y_pos + 75))
+
                 y_pos += self.y_space_between_puppets
 
         surface.set_clip(old_clip)

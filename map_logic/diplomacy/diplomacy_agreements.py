@@ -1,4 +1,4 @@
-import re
+import copy
 from map_logic.system32 import edit_province_ownership
 from data import queries
 from map_logic.system32 import edit_province_ownership
@@ -143,14 +143,21 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
         suffix += 1
         new_id = f"{base_str} {suffix}"
         new_name = f"{base_str} {suffix}"
-        
-    import copy
+    
     new_data = copy.deepcopy(base_data)
     new_data["name"] = new_name
     
-    # --- NEW: Inherit Master's Color ---
+    # Inherit Master's Color
     master_color = nation_data.get(master, {}).get("color", [255, 255, 255])
     new_data["color"] = list(master_color)
+    
+    # Update map_screen's color cache so the white default bug doesn't happen ---
+    if hasattr(map_screen, 'nation_colors'):
+        map_screen.nation_colors[new_id] = tuple(master_color)
+        
+    # Inherit Master's Research exactly
+    master_research = nation_data.get(master, {}).get("research", {})
+    new_data["research"] = copy.deepcopy(master_research)
     
     new_data["is_playable"] = True
     new_data["at_war_with"] = []

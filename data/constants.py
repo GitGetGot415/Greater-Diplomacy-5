@@ -362,7 +362,7 @@ SIZES = {
     "new_game": (300, 50),
     "orders": (100, 50),
     "small": (100, 40),
-    "puppet_option": (130, 30),
+    "puppet_option": (160, 30),
     "top_orders_panel_button": (90, 40),
     "orders_panel_button": (80, 40),
     "orders_panel_button_2": (70, 40),
