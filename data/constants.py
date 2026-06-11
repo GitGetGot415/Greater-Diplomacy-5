@@ -555,9 +555,12 @@ AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 
 AI_MAX_NAVY_RATIO = 0.2 # Maximum percentage of an AI's army that can be navy
-AI_CONVOY_ESCORT_WEIGHT = 5 # Negative weight to pull pathing warships towards convoys
+AI_CONVOY_ESCORT_WEIGHT = 1 # Negative weight to pull pathing warships towards convoys
 AI_CONVOY_COMBAT_WEIGHT = 50 # MASSIVE priority to escort convoys actively being attacked
-AI_CONVOY_DANGER_WEIGHT = 15 # Priority for convoys near enemy borders/coasts
+AI_CONVOY_DANGER_SHIP_WEIGHT = 25 # Priority for convoys near enemy ships
+AI_CONVOY_DANGER_COAST_WEIGHT = 10 # Priority for convoys near enemy borders/coasts
+
+AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea is this much faster (2.0 = 2x faster)
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
 

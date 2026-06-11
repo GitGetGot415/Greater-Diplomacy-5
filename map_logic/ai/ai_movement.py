@@ -1,31 +1,33 @@
+# --- START OF FILE CHANGES ---
+import heapq
 import data.constants as c
 from data import queries
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None):
-    """Finds shortest path using BFS. Returns the path to the target with the least units assigned."""
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0):
+    """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if unsafe_waters is None:
         unsafe_waters = {}
         
-    queue = [[start_id]]
-    visited = set([start_id])
+    queue = [(0.0, 0, start_id, [start_id])]
+    visited = {start_id: 0.0}
     valid_paths = []
-    found_depth = -1
+    found_cost = -1.0
+    counter = 1
 
     # If already on a target, staying is evaluated as a valid option
     if start_id in target_ids:
-        valid_paths.append([start_id])
-        found_depth = 0
+        valid_paths.append((0.0, [start_id]))
+        found_cost = 0.0
 
     while queue:
-        path = queue.pop(0)
+        current_cost, _, curr, path = heapq.heappop(queue)
 
-        # Allow BFS to search a few tiles deeper than the first found target 
+        # Allow search a few tiles deeper than the first found target 
         # so it can accurately discover empty borders further down the line.
-        # DEPTH OF 10 SO AI CAN SEE FAR
-        if found_depth != -1 and (len(path) - 1) > found_depth + 10:
+        # DEPTH OF 10 SO AI CAN SEE FAR (Scaled by speed)
+        if found_cost != -1.0 and current_cost > found_cost + (10.0 / max(1.0, float(unit_speed))):
             break
 
-        curr = path[-1]
         prov = id_to_province.get(curr)
         if not prov: continue
 
@@ -34,18 +36,13 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
             if not n_prov: continue
             
             # --- NEW CONVOY AND NAVAL BFS RULE ---
+            curr_is_water = prov.get("terrain") in c.WATER_TERRAINS
+            dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS
+            
             if is_convoy or is_ship:
-                curr_is_water = prov.get("terrain") in c.WATER_TERRAINS
-                dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS
-                
                 if not curr_is_water and not dest_is_water:
                     continue # Convoys and Ships on land cannot move to another land tile
                     
-                if is_ship and not dest_is_water:
-                    # Ships can only enter friendly coastal tiles
-                    if not queries.can_ships_enter(moving_nation, n_prov, nation_data):
-                        continue
-                        
                 if is_ship and not dest_is_water:
                     # Ships can only enter friendly coastal tiles
                     if not queries.can_ships_enter(moving_nation, n_prov, nation_data):
@@ -56,20 +53,32 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
                     if not queries.can_land_units_enter(moving_nation, n_prov, nation_data):
                         continue
 
-                # --- BLOCK SUICIDE PATHS ---
+            # --- NEW: Cost Calculation for Dijkstra ---
+            if dest_is_water and not is_ship:
+                # Land unit moving over water (Convoy) applies the 2x sea penalty
+                step_cost = 1.0 * getattr(c, 'AI_SEA_PATH_PENALTY_MULTIPLIER', 2.0)
+            else:
+                # Land unit moving over land, or ship moving over water
+                step_cost = 1.0 / max(1.0, float(unit_speed)) if not is_ship else 1.0
+
+            new_cost = current_cost + step_cost
+
+            # --- BLOCK SUICIDE PATHS ---
 
             if n_id in target_ids:
-                valid_paths.append(path + [n_id])
-                if found_depth == -1:
-                    found_depth = len(path)
+                valid_paths.append((new_cost, path + [n_id]))
+                if found_cost == -1.0:
+                    found_cost = new_cost
 
-            if n_id not in visited and n_id in allowed_prov_ids:
-                visited.add(n_id)
-                queue.append(path + [n_id])
+            if n_id in allowed_prov_ids and (n_id not in visited or new_cost < visited[n_id]):
+                visited[n_id] = new_cost
+                heapq.heappush(queue, (new_cost, counter, n_id, path + [n_id]))
+                counter += 1
 
-    # Pick the path pointing to the target with the LEAST assignments, tie-breaking by distance.
+    # Pick the path pointing to the target with the LEAST assignments, tie-breaking by cost.
     if valid_paths:
-        best_path = min(valid_paths, key=lambda p: (target_assignments.get(p[-1], 0), len(p)))
+        best_path_tuple = min(valid_paths, key=lambda p: (target_assignments.get(p[1][-1], 0), p[0]))
+        best_path = best_path_tuple[1]
         
         # If the best path is just staying where we are, return an empty array so we don't move
         if best_path[-1] == start_id:
@@ -216,7 +225,8 @@ def process_ai_unit_orders(map_screen):
         # --- FIND ACTIVE BATTLES, RETREATS & CONVOY STATUS ---
         friendly_convoys = set()
         convoy_in_combat = set()
-        convoy_in_danger = set()
+        convoy_near_ship = set()
+        convoy_near_coast = set()
 
         lost_battles = {} # prov_id -> safe_retreat_id
 
@@ -271,10 +281,18 @@ def process_ai_unit_orders(map_screen):
                 if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
                     convoy_in_combat.add(p_id)
                 else:
+                    near_ship = False
+                    near_coast = False
                     for n_id in prov.get("neighbors", []):
-                        if n_id in all_enemy_coasts or n_id in enemy_coastal_waters or n_id in unsafe_waters:
-                            convoy_in_danger.add(p_id)
-                            break
+                        if n_id in unsafe_waters:
+                            near_ship = True
+                        elif n_id in all_enemy_coasts or n_id in enemy_coastal_waters:
+                            near_coast = True
+                            
+                    if near_ship:
+                        convoy_near_ship.add(p_id)
+                    elif near_coast:
+                        convoy_near_coast.add(p_id)
 
         # --- FIX: UNIVERSAL TARGETS ---
         # ALWAYS include peace and coastal borders to prevent abandonment
@@ -302,8 +320,10 @@ def process_ai_unit_orders(map_screen):
                 naval_assignments[c_id] -= c.AI_CONVOY_ESCORT_WEIGHT
                 if c_id in convoy_in_combat:
                     naval_assignments[c_id] -= c.AI_CONVOY_COMBAT_WEIGHT
-                elif c_id in convoy_in_danger:
-                    naval_assignments[c_id] -= c.AI_CONVOY_DANGER_WEIGHT
+                elif c_id in convoy_near_ship:
+                    naval_assignments[c_id] -= c.AI_CONVOY_DANGER_SHIP_WEIGHT
+                elif c_id in convoy_near_coast:
+                    naval_assignments[c_id] -= c.AI_CONVOY_DANGER_COAST_WEIGHT
 
         # Active Battle Reinforcement Priority
         for b_id in active_battles:
@@ -543,7 +563,8 @@ def process_ai_unit_orders(map_screen):
                 is_ship=is_naval_combatant, 
                 moving_nation=ai_name, 
                 nation_data=map_screen.nation_data,
-                unsafe_waters=unsafe_waters
+                unsafe_waters=unsafe_waters,
+                unit_speed=unit.get("speed", 1)
             )
 
             if path:
