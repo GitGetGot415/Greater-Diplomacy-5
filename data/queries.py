@@ -169,7 +169,7 @@ def get_combined_enemy_strength(target_nation, map_data, nation_data):
 
 def get_total_turns(time_manager):
     """Calculates the total number of turns elapsed since the start of the scenario."""
-    return getattr(time_manager, 'total_turns', 0)
+    return time_manager.total_turns
 
 def get_economic_power(nation, nation_data):
     """Estimates a nation's economic power based on its resource stockpiles."""

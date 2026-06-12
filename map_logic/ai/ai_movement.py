@@ -56,7 +56,7 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
             # --- NEW: Cost Calculation for Dijkstra ---
             if dest_is_water and not is_ship:
                 # Land unit moving over water (Convoy) applies the 2x sea penalty
-                step_cost = 1.0 * getattr(c, 'AI_SEA_PATH_PENALTY_MULTIPLIER', 2.0)
+                step_cost = 1.0 * c.AI_SEA_PATH_PENALTY_MULTIPLIER
             else:
                 # Land unit moving over land, or ship moving over water
                 step_cost = 1.0 / max(1.0, float(unit_speed)) if not is_ship else 1.0
