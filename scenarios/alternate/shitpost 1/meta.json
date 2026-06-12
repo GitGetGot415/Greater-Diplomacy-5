@@ -24126,7 +24126,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vinland": {
             "name": "Vinland",
@@ -24172,7 +24173,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Timbuktu": {
             "name": "Timbuktu",
@@ -24218,7 +24220,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Songhai": {
             "name": "Songhai",
@@ -24264,7 +24267,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Songhai Empire": {
             "name": "Songhai Empire",
@@ -24310,7 +24314,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rondon": {
             "name": "Rondon",
@@ -24356,7 +24361,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oldeg\u00e5rd": {
             "name": "Oldeg\u00e5rd",
@@ -24402,7 +24408,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gotia": {
             "name": "Gotia",
@@ -24448,7 +24455,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Eastern Sanctuaries": {
             "name": "Eastern Sanctuaries",
@@ -24494,7 +24502,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bremen": {
             "name": "Bremen",
@@ -24540,7 +24549,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Abyssonia": {
             "name": "Abyssonia",
@@ -24586,7 +24596,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sulawesi Separatists": {
             "name": "Sulawesi Separatists",
@@ -24632,7 +24643,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         }
     },
     "provinces": {
@@ -24641,7 +24653,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24651,7 +24664,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24661,7 +24675,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24671,7 +24686,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24681,7 +24697,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24691,7 +24708,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24703,7 +24721,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -24715,7 +24734,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24725,7 +24745,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24738,7 +24759,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24748,7 +24770,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24761,7 +24784,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24773,7 +24797,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24786,7 +24811,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24799,7 +24825,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24811,7 +24838,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24824,7 +24852,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24837,7 +24866,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24850,7 +24880,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24860,7 +24891,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24872,7 +24904,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24884,7 +24917,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24897,7 +24931,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24907,7 +24942,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24920,7 +24956,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24932,7 +24969,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24944,7 +24982,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -24959,7 +24998,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24971,7 +25011,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24981,7 +25022,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -24991,7 +25033,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25003,7 +25046,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25015,7 +25059,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25028,7 +25073,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25040,7 +25086,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25053,7 +25100,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25066,7 +25114,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25080,7 +25129,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25092,7 +25142,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25105,7 +25156,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25118,7 +25170,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25128,7 +25181,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25140,7 +25194,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25154,7 +25209,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25166,7 +25222,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25179,7 +25236,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25192,7 +25250,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25207,7 +25266,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25220,7 +25280,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25233,7 +25294,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25243,7 +25305,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25255,7 +25318,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25271,7 +25335,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25283,7 +25348,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25297,7 +25363,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25310,7 +25377,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25323,7 +25391,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25335,7 +25404,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25345,7 +25415,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25357,7 +25428,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25369,7 +25441,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25383,7 +25456,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25396,7 +25470,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25409,7 +25484,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25419,7 +25495,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25429,7 +25506,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25443,7 +25521,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25453,7 +25532,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25463,7 +25543,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25475,7 +25556,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25487,7 +25569,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25499,7 +25582,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25511,7 +25595,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25523,7 +25608,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25535,7 +25621,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25545,7 +25632,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25557,7 +25645,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25572,7 +25661,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25584,7 +25674,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25596,7 +25687,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25611,7 +25703,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25621,7 +25714,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25633,7 +25727,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25643,7 +25738,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25655,7 +25751,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25667,7 +25764,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25680,7 +25778,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25692,7 +25791,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25705,7 +25805,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25717,7 +25818,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25730,7 +25832,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25744,7 +25847,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25757,7 +25861,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25772,7 +25877,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25785,7 +25891,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25797,7 +25904,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25807,7 +25915,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25819,7 +25928,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25834,7 +25944,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25846,7 +25957,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {
                 "Oil": 50
@@ -25860,7 +25972,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25872,7 +25985,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25885,7 +25999,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25899,7 +26014,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25911,7 +26027,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -25925,7 +26042,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25938,7 +26056,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25951,7 +26070,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25964,7 +26084,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25976,7 +26097,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25989,7 +26111,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -25999,7 +26122,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26012,7 +26136,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26024,7 +26149,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26037,7 +26163,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26051,7 +26178,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26066,7 +26194,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26079,7 +26208,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26091,7 +26221,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26106,7 +26237,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26118,7 +26250,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26130,7 +26263,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26142,7 +26276,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26155,7 +26290,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26168,7 +26304,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26181,7 +26318,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26193,7 +26331,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26203,7 +26342,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26215,7 +26355,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26227,7 +26368,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26240,7 +26382,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26254,7 +26397,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26269,7 +26413,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26282,7 +26427,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26297,7 +26443,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26310,7 +26457,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26323,7 +26471,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26336,7 +26485,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26349,7 +26499,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26362,7 +26513,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26372,7 +26524,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26385,7 +26538,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26401,7 +26555,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26414,7 +26569,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26427,7 +26583,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26441,7 +26598,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26455,7 +26613,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26468,7 +26627,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26483,7 +26643,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26497,7 +26658,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26512,7 +26674,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26525,7 +26688,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26538,7 +26702,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26551,7 +26716,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26566,7 +26732,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26579,7 +26746,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26589,7 +26757,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26601,7 +26770,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26614,7 +26784,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26627,7 +26798,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26643,7 +26815,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26658,7 +26831,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26673,7 +26847,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {
                 "Oil": 50
@@ -26685,7 +26860,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26697,7 +26873,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26709,7 +26886,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26722,7 +26900,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26735,7 +26914,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26751,7 +26931,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26763,7 +26944,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26776,7 +26958,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26790,7 +26973,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26803,7 +26987,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26818,7 +27003,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26832,7 +27018,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26845,7 +27032,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26855,7 +27043,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26869,7 +27058,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26881,7 +27071,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26895,7 +27086,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -26911,7 +27103,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26921,7 +27114,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26937,7 +27131,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26949,7 +27144,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26959,7 +27155,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26971,7 +27168,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26985,7 +27183,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -26998,7 +27197,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27012,7 +27212,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27027,7 +27228,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27043,7 +27245,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27057,7 +27260,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27069,7 +27273,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27081,7 +27286,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27093,7 +27299,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27105,7 +27312,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27119,7 +27327,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27129,7 +27338,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27143,7 +27353,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27156,7 +27367,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27168,7 +27380,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27182,7 +27395,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27198,7 +27412,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27208,7 +27423,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27222,7 +27438,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27235,7 +27452,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27245,7 +27463,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27259,7 +27478,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27271,7 +27491,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27281,7 +27502,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27291,7 +27513,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27303,7 +27526,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27313,7 +27537,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27328,7 +27553,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27338,7 +27564,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27350,7 +27577,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27363,7 +27591,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27375,7 +27604,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27389,7 +27619,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27401,7 +27632,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27415,7 +27647,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27428,7 +27661,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27441,7 +27675,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27455,7 +27690,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27468,7 +27704,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27480,7 +27717,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27494,7 +27732,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27508,7 +27747,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27522,7 +27762,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27534,7 +27775,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27548,7 +27790,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27558,7 +27801,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27571,7 +27815,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27586,7 +27831,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27598,7 +27844,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27613,7 +27860,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27625,7 +27873,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27638,7 +27887,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27650,7 +27900,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27660,7 +27911,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27672,7 +27924,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27686,7 +27939,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27698,7 +27952,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27711,7 +27966,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27721,7 +27977,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27734,7 +27991,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27746,7 +28004,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27761,7 +28020,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27774,7 +28034,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27784,7 +28045,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27797,7 +28059,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27810,7 +28073,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27823,7 +28087,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27835,7 +28100,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27848,7 +28114,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27860,7 +28127,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27872,7 +28140,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27882,7 +28151,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27894,7 +28164,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27906,7 +28177,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27916,7 +28188,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27928,7 +28201,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27940,7 +28214,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27955,7 +28230,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -27969,7 +28245,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27984,7 +28261,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -27999,7 +28277,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28014,7 +28293,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28027,7 +28307,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28040,7 +28321,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28052,7 +28334,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28064,7 +28347,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28074,7 +28358,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28086,7 +28371,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28100,7 +28386,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28112,7 +28399,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28125,7 +28413,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28135,7 +28424,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28145,7 +28435,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28159,7 +28450,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28171,7 +28463,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28187,7 +28480,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28201,7 +28495,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28217,7 +28512,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28231,7 +28527,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28241,7 +28538,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28255,7 +28553,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28268,7 +28567,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28281,7 +28581,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28295,7 +28596,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28307,7 +28609,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28321,7 +28624,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28333,7 +28637,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28345,7 +28650,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28357,7 +28663,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28371,7 +28678,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28383,7 +28691,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28399,7 +28708,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28413,7 +28723,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28427,7 +28738,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28439,7 +28751,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28452,7 +28765,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28467,7 +28781,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28479,7 +28794,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28494,7 +28810,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28508,7 +28825,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28524,7 +28842,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28538,7 +28857,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28551,7 +28871,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28565,7 +28886,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28577,7 +28899,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28592,7 +28915,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28604,7 +28928,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28618,7 +28943,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28632,7 +28958,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28644,7 +28971,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28658,7 +28986,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28673,7 +29002,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28685,7 +29015,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28695,7 +29026,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28705,7 +29037,8 @@
             "cores": [],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28718,7 +29051,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": [
@@ -28734,7 +29068,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28746,7 +29081,8 @@
             ],
             "is_coastal": false,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28758,7 +29094,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28772,7 +29109,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28785,7 +29123,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
@@ -28797,7 +29136,8 @@
             ],
             "is_coastal": true,
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "resources": {},
             "buildings": []
