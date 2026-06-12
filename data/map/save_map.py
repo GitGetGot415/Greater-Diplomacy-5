@@ -35,15 +35,12 @@ def save_map_data(self, save_name=None):
         },
         "loop_map": self.loop_map,
         "player_country": self.player_country,
-        "active_players": getattr(self, "active_players", [self.player_country]),
-        "current_player_index": getattr(self, "current_player_index", 0),
-        "default_research": getattr(self, "default_research", None),
+        "active_players": self.active_players,
+        "current_player_index": self.current_player_index,
+        "default_research": self.default_research,
         "nation_data": self.nation_data,
         "provinces": {},
-        "scenario_settings": getattr(self, "scenario_settings", {
-            "fog_of_war": c.DEFAULT_FOG_OF_WAR,
-            "casus_belli_required": c.DEFAULT_CASUS_BELLI
-        })
+        "scenario_settings": self.scenario_settings
     }
     
     for data in self.map_data.values():

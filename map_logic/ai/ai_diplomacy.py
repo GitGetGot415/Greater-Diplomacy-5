@@ -6,14 +6,14 @@ import concurrent.futures
 
 def process_proactive_llm_tasks(map_screen):
     """Processes all queued proactive diplomacy texts in a background ThreadPoolExecutor."""
-    tasks = getattr(map_screen, 'proactive_llm_tasks', [])
+    tasks = map_screen.proactive_llm_tasks
     
     if not tasks:
         map_screen.proactive_llm_tasks_total = 0
         map_screen.proactive_llm_tasks_completed = 0
         return
         
-    human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
+    human_players = map_screen.active_players
     current_ai_mode = ai_handler.get_ai_mode()
     immersion = ai_handler.get_ai_immersion_level()
     

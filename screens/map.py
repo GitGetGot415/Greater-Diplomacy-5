@@ -32,8 +32,8 @@ class Map(GameState):
 
         self.history_turn = history_turn
         self.num_players = num_players
-        self.active_players = getattr(self, 'active_players', []) # Usually empty on boot unless loaded from save
-        self.current_player_index = getattr(self, 'current_player_index', 0)
+        self.active_players = [] # Usually empty on boot unless loaded from save
+        self.current_player_index = 0
         self.show_player_ready_screen = False
 
        # --- BACKGROUND PROCESSING FLAGS ---
