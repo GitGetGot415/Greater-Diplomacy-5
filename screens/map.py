@@ -68,6 +68,12 @@ class Map(GameState):
         self.responsive_tasks_completed = 0
         self.diplomatic_popups = []
 
+        # Initialize variables previously hidden by getattr
+        self.fog_map = None
+        self.visible_provinces = None
+        self.mail_draft_text = ""
+        self.mail_input_active = False
+
         # --- NEW REFRESH TRACKERS ---
         self.refresh_tasks_total = 0
         self.refresh_tasks_completed = 0
@@ -228,11 +234,11 @@ class Map(GameState):
 
     # --- Toggles & View Modes ---
     def toggle_country_names(self):
-        self.show_country_names = not getattr(self, 'show_country_names', True)
+        self.show_country_names = not self.show_country_names
         self.show_feedback(f"Country Names: {'ON' if self.show_country_names else 'OFF'}")
 
     def toggle_skip_ai(self):
-        self.skip_ai_view = not getattr(self, 'skip_ai_view', False)
+        self.skip_ai_view = not self.skip_ai_view
         self.show_feedback(f"Skip AI View: {'ON' if self.skip_ai_view else 'OFF'}")
         buttons.update_button_states(self)
         

@@ -5,6 +5,8 @@ import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic.setup import player_setup
 from data import queries
+from ui_elements import process_text_input
+from map_logic.diplomacy import diplomacy_logic
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
@@ -109,7 +111,7 @@ def handle_map_events(self, event):
 
     # 4. EDITOR PAINTING LOGIC
     # We do this AFTER hover logic so we know what we are hovering over
-    if getattr(self, 'is_editor', False) and not on_ui:
+    if self.is_editor and not on_ui:
         if pygame.mouse.get_pressed()[0]: # Left Click
             if self.hovered_province:
                 # --- NATION MODE ---
@@ -164,7 +166,7 @@ def handle_map_events(self, event):
 
                 # --- RESOURCE MODE ---
                 elif self.editor_mode == "RESOURCE":
-                    if getattr(self, "brush_resource_type", "None") == "None":
+                    if self.brush_resource_type == "None":
                         # Wipe all resources if the "None" brush is used
                         self.hovered_province["resources"] = {}
                     else:
@@ -187,8 +189,8 @@ def handle_map_events(self, event):
 
         # --- NEW UNIT PLACEMENT LOGIC ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.hovered_province and getattr(self, "editor_mode", "") == "UNIT":
-                if getattr(self, "brush_unit", "None") == "None":
+            if self.hovered_province and self.editor_mode == "UNIT":
+                if self.brush_unit == "None":
                     self.hovered_province["units"] = []
                     self.show_feedback("Units cleared from province")
                 else:
@@ -249,12 +251,11 @@ def handle_map_events(self, event):
                     self.mail_input_active = False
             
             # 2. Handle typing and sending if the box is active
-            elif getattr(self, "mail_input_active", False):
-                from ui_elements import process_text_input
-                from map_logic.diplomacy import diplomacy_logic
+            elif self.mail_input_active:
                 
                 self.mail_draft_text, status = process_text_input(
-                    event, getattr(self, "mail_draft_text", ""), max_length=120
+                    # TODO: maybe make this 120 stored in constants.py somewhere
+                    event, self.mail_draft_text, max_length=120
                 )
                 
                 if status == "SUBMIT":
@@ -269,8 +270,8 @@ def handle_map_events(self, event):
 
     # 6. STANDARD GAME SELECTION
     # Ignore clicks if a province is already selected, or if we are watching AI moves
-    if self.selected_province or getattr(self, 'viewing_ai_moves', False):
-        return 
+    if self.selected_province or self.viewing_ai_moves:
+        return
 
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         if self.hovered_province:

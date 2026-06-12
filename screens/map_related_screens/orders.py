@@ -276,7 +276,7 @@ class Orders_Screen(GameState):
         if event.type == pygame.MOUSEMOTION:
             cam = self.map_screen.camera
             wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-            wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * getattr(cam, 'tilt_factor', 1.0))) + cam.pos.y
+            wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
             
             if 0 <= wy < self.map_screen.map_h:
                 color = self.map_screen.id_map.get_at((int(wx), int(wy)))
@@ -415,7 +415,7 @@ class Orders_Screen(GameState):
         cam = self.map_screen.camera
         mx, my = mouse_pos
         wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * getattr(cam, 'tilt_factor', 1.0))) + cam.pos.y
+        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
         if 0 <= wy < self.map_screen.map_h:
             color = self.map_screen.id_map.get_at((int(wx), int(wy)))
             return self.map_screen.map_data.get((color.r, color.g, color.b))
@@ -571,7 +571,7 @@ class Orders_Screen(GameState):
                             offsets = [0, -self.map_screen.map_w, self.map_screen.map_w] if self.map_screen.loop_map else [0]
                             for offset in offsets:
                                 sx = (cx + offset - cam.pos.x) * cam.zoom
-                                sy = (cy - cam.pos.y) * cam.zoom * getattr(cam, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
+                                sy = (cy - cam.pos.y) * cam.zoom * cam.tilt_factor + self.map_screen.top_ui_height
                                 
                                 if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
                                     pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)

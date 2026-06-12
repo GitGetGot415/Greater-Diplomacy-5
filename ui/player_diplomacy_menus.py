@@ -208,7 +208,7 @@ class Declare_War_Screen(GameState):
 
         # Draw UI elements manually to prevent super().draw() from filling the screen with a solid background color
         for el in self.elements:
-            if getattr(el, 'visible', True):
+            if el.visible:
                 el.draw(surface)
 
 # ==========================================
@@ -279,7 +279,7 @@ class Claims_Screen(GameState):
         cam = self.map_screen.camera
         mx, my = mouse_pos
         wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * getattr(cam, 'tilt_factor', 1.0))) + cam.pos.y
+        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
         if 0 <= wy < self.map_screen.map_h:
             color = self.map_screen.id_map.get_at((int(wx), int(wy)))
             return self.map_screen.map_data.get((color.r, color.g, color.b))
@@ -578,7 +578,7 @@ class Claims_Screen(GameState):
             pygame.draw.rect(surface, (150, 150, 150), pygame.Rect(track_rect.x, handle_y, 10, handle_h), border_radius=5)
 
         for el in self.elements:
-            if getattr(el, 'visible', True):
+            if el.visible:
                 el.draw(surface)
 
     def draw_highlight(self, surface, pid, color, inset=0, is_justifying=False):
@@ -587,7 +587,7 @@ class Claims_Screen(GameState):
         cx, cy = prov["center"]
         for offset in [0, -self.map_screen.map_w, self.map_screen.map_w]:
             sx = (cx + offset - self.map_screen.camera.pos.x) * self.map_screen.camera.zoom
-            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
+            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * self.map_screen.camera.tilt_factor + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(2, int(4 * self.map_screen.camera.zoom))
                 
@@ -597,7 +597,7 @@ class Claims_Screen(GameState):
                 if inset > 0:
                     radius_x = max(1, radius_x - (inset * max(1, int(1.5 * self.map_screen.camera.zoom))))
                     
-                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
+                radius_y = int(radius_x * self.map_screen.camera.tilt_factor) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*self.map_screen.camera.zoom)))
 
 # ==========================================
@@ -788,10 +788,10 @@ class Peace_Screen(GameState):
         cx, cy = prov["center"]
         for offset in [0, -self.map_screen.map_w, self.map_screen.map_w]:
             sx = (cx + offset - self.map_screen.camera.pos.x) * self.map_screen.camera.zoom
-            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
+            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * self.map_screen.camera.tilt_factor + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(6, int(10 * self.map_screen.camera.zoom))
-                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
+                radius_y = int(radius_x * self.map_screen.camera.tilt_factor) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 
                 # Draw thick semi-transparent fill
                 ellipse_surf = pygame.Surface((radius_x*2, radius_y*2), pygame.SRCALPHA)
@@ -850,7 +850,7 @@ class Peace_Screen(GameState):
         title = font.render(f"Peace Terms: {self.target_nation}", True, (255, 255, 255))
         surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 15))
 
-        acc_surf = small_font.render(getattr(self, 'acceptance_text', ""), True, getattr(self, 'acceptance_color', (200, 200, 200)))
+        acc_surf = small_font.render(self.acceptance_text, True, self.acceptance_color)
         surface.blit(acc_surf, (self.panel_rect.centerx - acc_surf.get_width()//2, self.panel_rect.y + 50))
 
         for el in self.elements:
@@ -1492,7 +1492,7 @@ class Create_Integrated_Puppet_Screen(GameState):
                 territory_count = 0
                 for prov in self.map_screen.map_data.values():
                     if prov.get("owner") == self.player and subject in prov.get("cores", []):
-                        if getattr(self, 'keep_cores', False) and self.player in prov.get("cores", []):
+                        if self.keep_cores and self.player in prov.get("cores", []):
                             continue
                             
                         # Account for previously queued puppets taking the land first
@@ -1532,7 +1532,7 @@ class Create_Integrated_Puppet_Screen(GameState):
         super().update()
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
         for el in self.elements:
-            if getattr(el, 'is_scrollable', False):
+            if el.is_scrollable:
                 el.rect.y = el.base_y + self.scroll_y
 
     def queue_creation(self, subject):
@@ -1571,10 +1571,10 @@ class Create_Integrated_Puppet_Screen(GameState):
         cx, cy = prov["center"]
         for offset in [0, -self.map_screen.map_w, self.map_screen.map_w]:
             sx = (cx + offset - self.map_screen.camera.pos.x) * self.map_screen.camera.zoom
-            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * getattr(self.map_screen.camera, 'tilt_factor', 1.0) + self.map_screen.top_ui_height
+            sy = (cy - self.map_screen.camera.pos.y) * self.map_screen.camera.zoom * self.map_screen.camera.tilt_factor + self.map_screen.top_ui_height
             if -100 < sx < c.SCREEN_WIDTH + 100:
                 radius_x = max(6, int(10 * self.map_screen.camera.zoom))
-                radius_y = int(radius_x * getattr(self.map_screen.camera, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
+                radius_y = int(radius_x * self.map_screen.camera.tilt_factor) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 ellipse_surf = pygame.Surface((radius_x*2, radius_y*2), pygame.SRCALPHA)
                 pygame.draw.ellipse(ellipse_surf, (*color, 150), ellipse_surf.get_rect())
                 surface.blit(ellipse_surf, (int(sx) - radius_x, int(sy) - radius_y))

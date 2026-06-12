@@ -13,11 +13,11 @@ def draw_bottom_text(map_screen, surface):
     hud_y = c.SCREEN_HEIGHT - c.RESOURCE_HUD_HEIGHT_OFFSET
     
     # Cache logic to prevent calculating economy 60 times a second
-    if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - getattr(map_screen, 'econ_cache_time', 0) > 1000:
+    if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
         map_screen.econ_cache = queries.get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
         map_screen.econ_cache_time = pygame.time.get_ticks()
         
-    cached_data = getattr(map_screen, 'econ_cache', None)
+    cached_data = map_screen.econ_cache
     if cached_data and len(cached_data) == 3:
         total_inc, total_upkeep, _ = cached_data
     else:

@@ -61,7 +61,7 @@ def draw_map_screen(self, surface):
             surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, self.top_ui_height + int(render_y_offset)))
             
             # Fog Map
-            if getattr(self, 'fog_map', None):
+            if self.fog_map:
                 f1 = self.fog_map.subsurface((x1, y1, w1, h1))
                 surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, self.top_ui_height + int(render_y_offset)))
                 
@@ -76,7 +76,7 @@ def draw_map_screen(self, surface):
                 surface.blit(pygame.transform.scale(v2, (scaled_wrap_w, scaled_h1)), (int(w1*self.camera.zoom), self.top_ui_height + int(render_y_offset)))
                 
                 # Fog Map
-                if getattr(self, 'fog_map', None):
+                if self.fog_map:
                     f2 = self.fog_map.subsurface((0, y1, wrap_w, h1))
                     surface.blit(pygame.transform.scale(f2, (scaled_wrap_w, scaled_h1)), (int(w1*self.camera.zoom), self.top_ui_height + int(render_y_offset)))
     else:
@@ -91,7 +91,7 @@ def draw_map_screen(self, surface):
             surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (0, self.top_ui_height + int(render_y_offset)))
             
             # Fog Map
-            if getattr(self, 'fog_map', None):
+            if self.fog_map:
                 f_view = self.fog_map.subsurface(clipped)
                 surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, self.top_ui_height + int(render_y_offset)))
 
