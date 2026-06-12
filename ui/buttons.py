@@ -41,12 +41,9 @@ def render_buttons(self):
 
     econ_callback = (lambda: editor_menus.open_editor_economy(self)) if (is_ed or is_spec) else (lambda: self.change_state("ECONOMY"))
     research_callback = (lambda: editor_menus.open_map_research_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("RESEARCH"))
-    msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if is_spec else (lambda: self.change_state("MESSAGES"))
+    msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if (is_ed or is_spec) else (lambda: self.change_state("MESSAGES"))
 
    # Editor Buttons
-    self.btn_ed_econ = Button(c.LEFT_UI_BAR_X, 220, "left_ui_bar", "green", "Country Economy", econ_callback)
-    self.btn_ed_rd = Button(c.LEFT_UI_BAR_X, 160, "left_ui_bar", "blue", "R&D", research_callback, image=icons.get("research"))
-    self.btn_ed_save = Button(c.EDITOR_BOT_BTN_START_X + c.EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Save", self.save_map_data, image=icons.get("save"), show_text=False)
     self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Load", lambda: editor_menus.editor_load_map(self))
     self.btn_ed_nation = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(self))
     self.btn_ed_core = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*2.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(self))
@@ -66,7 +63,7 @@ def render_buttons(self):
     start_y_val = 65
     
     def open_edit_country_action():
-        if self.player_country == "Spectator":
+        if self.player_country == "Spectator" or self.is_editor:
             editor_menus.spec_select_edit_country(self)
         elif self.player_country and self.player_country != "None":
             self.editing_country = self.player_country
@@ -131,7 +128,7 @@ def render_buttons(self):
         self.btn_refresh_all,
         self.btn_view_terrain, self.btn_view_political, self.btn_view_relations, self.btn_view_cores, self.btn_view_factions,
         self.btn_view_resources, self.btn_view_blank, self.btn_view_units, self.btn_view_economy, self.btn_toggle_names,
-        self.btn_ed_econ, self.btn_ed_rd, self.btn_ed_save, self.btn_ed_load, self.btn_ed_nation,
+        self.btn_ed_load, self.btn_ed_nation,
         self.btn_ed_core, self.btn_ed_autocore, self.btn_ed_resource, self.btn_ed_building,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_date, self.btn_ed_diplo,
         self.btn_next_turn, self.btn_skip_ai, self.btn_multi_turn, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
@@ -203,7 +200,8 @@ def update_button_states(map_screen):
     # ==================================================================== #
     if map_screen.is_editor:
         ed_btns = [
-            map_screen.btn_ed_econ, map_screen.btn_ed_rd, map_screen.btn_ed_save, 
+            map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
+            map_screen.btn_gp_msgs, map_screen.btn_gp_save,
             map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_core, 
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building, 
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, 
