@@ -112,7 +112,7 @@ def load_map_assets(self, load_path):
             except Exception as e:
                 print(f"Error loading history.json: {e}")
 
-    if getattr(self, 'history_turn', None) is not None and save_meta:
+    if self.history_turn is not None and save_meta:
         turn_key = str(self.history_turn)
         if turn_key in self.history:
             snap = self.history[turn_key]
@@ -168,7 +168,7 @@ def load_map_assets(self, load_path):
                 if other_c != c_name and other_d.get("faction", "") == fac:
                     c_data.setdefault("relations", {})[other_c] = 100
 
-    if getattr(self, 'random_settings', None) and "base_days_per_turn" in self.random_settings:
+    if self.random_settings and "base_days_per_turn" in self.random_settings:
         self.scenario_settings["base_days_per_turn"] = self.random_settings["base_days_per_turn"]
 
     _load_default_images(self)
@@ -181,7 +181,7 @@ def load_map_assets(self, load_path):
         
         # --- HOTSEAT FIX ---
         # If we are in selection mode (new scenario/random map), we MUST start with an empty list
-        if getattr(self, 'selection_mode', False):
+        if self.selection_mode:
             self.active_players = []
         else:
             # If loading a save, get the active players. Prevent ["None"] bug from older saves.

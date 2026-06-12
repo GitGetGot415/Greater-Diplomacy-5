@@ -1150,7 +1150,7 @@ def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
     ai_nations = []
     # Account for potential hotseat active_players lists or standard player_country setups
-    human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
+    human_players = map_screen.active_players if map_screen.active_players else [map_screen.player_country]
     
     # Cross-reference with nations that actually own territory
     living_nations = get_living_nations(map_screen.map_data)

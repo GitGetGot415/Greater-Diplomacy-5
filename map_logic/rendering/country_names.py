@@ -13,7 +13,7 @@ def clear_country_name_cache(map_screen):
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
-    if getattr(map_screen, 'show_country_names', True): 
+    if map_screen.show_country_names: 
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(map_screen, 'country_name_surfs'):
@@ -95,7 +95,7 @@ def draw_country_names(map_screen, surface):
                 offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
                 for offset in offsets:
                     sx = (cx + offset - map_screen.camera.pos.x) * map_screen.camera.zoom
-                    sy = (cy - map_screen.camera.pos.y) * map_screen.camera.zoom * getattr(map_screen.camera, 'tilt_factor', 1.0) + map_screen.top_ui_height
+                    sy = (cy - map_screen.camera.pos.y) * map_screen.camera.zoom * map_screen.camera.tilt_factor + map_screen.top_ui_height
 
                     # Frustum Culling: Only draw if it's actually on the screen
                     if -200 < sx < surface.get_width() + 200 and 0 < sy < surface.get_height():

@@ -14,7 +14,7 @@ def save_map_data(self, save_name=None):
         save_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
     # --- CONDITIONAL PATH LOGIC ---
-    if getattr(self, 'is_editor', False):
+    if self.is_editor:
         # Save to User's Downloads Folder
         downloads_path = Path(__file__).resolve().parents[2]
         save_path = os.path.join(downloads_path, "scenarios", "map_editor", f"MapExport_{save_name}")

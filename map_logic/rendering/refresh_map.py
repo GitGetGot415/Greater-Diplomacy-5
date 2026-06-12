@@ -420,7 +420,7 @@ def refresh_fog_map(self):
     timer = pygame.time.get_ticks()
     
     # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not c.USE_FOG_OF_WAR or getattr(self, 'selection_mode', False):
+    if not c.USE_FOG_OF_WAR or self.selection_mode:
         self.fog_map = None
         self.visible_provinces = None
         return
@@ -428,7 +428,7 @@ def refresh_fog_map(self):
     # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
     # Prevents hotseat players from seeing Player 1's vision before the next turn starts
     is_multiplayer = hasattr(self, 'active_players') and len(self.active_players) > 1
-    if getattr(self, 'viewing_ai_moves', False) and is_multiplayer:
+    if self.viewing_ai_moves and is_multiplayer:
         self.visible_provinces = set() # Return an empty set so nothing is visible
     else:
         # Dynamically fetch get_visible_provinces from queries

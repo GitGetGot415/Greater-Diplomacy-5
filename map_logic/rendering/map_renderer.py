@@ -1,17 +1,18 @@
 import pygame
 from map_logic.rendering import hover_renderer, province_select, overlay_renderer, country_names
+from map_logic.system32 import loading_screen
 from ui import minimap
 from ui.information import feedback_text
+from data import queries
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from ui.bars import flag_renderer
 from ui.information import tooltip, ui_info_popup as unit_info_popup
 from ui.bars import resource_hud, top_bar_text, ui_bars
-from data import queries
 
 def draw_map_screen(self, surface):
     # --- HOTSEAT MULTIPLAYER OVERRIDE ---
-    if getattr(self, 'show_player_ready_screen', False):
+    if self.show_player_ready_screen:
         surface.fill((10, 10, 15)) # Deep black/blue
         
         font = fonts.get("title")
@@ -160,8 +161,7 @@ def draw_map_screen(self, surface):
         province_select.draw_province_select(self, surface)
             
     # --- LAYER 3.9: TURN LOADING SCREEN ---
-    if getattr(self, 'ai_is_thinking', False) or getattr(self, 'is_refreshing', False):
-        from map_logic.system32 import loading_screen
+    if self.ai_is_thinking or self.is_refreshing:
         loading_screen.draw_turn_loading_screen(self, surface)
 
     # --- LAYER 4: UI BARS & HUD ---
@@ -185,7 +185,7 @@ def draw_map_screen(self, surface):
                 from screens.map_related_screens import recruit_ui
                 recruit_ui.draw_map_queue_overlay(surface, self.selected_province)
 
-        hide_mini = getattr(self, 'hide_minimap', False) or self.selected_province
+        hide_mini = self.hide_minimap or self.selected_province
         if not hide_mini:
             minimap.draw_minimap(self, surface, surface.get_width(), surface.get_height())
 
@@ -238,7 +238,7 @@ def draw_map_screen(self, surface):
         tooltip.draw_tooltip(self, surface)
         
     # --- LAYER 7: EXIT CONFIRMATION MODAL ---
-    if getattr(self, 'show_exit_confirmation', False):
+    if self.show_exit_confirmation:
         overlay = pygame.Surface((surface.get_width(), surface.get_height()), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
         surface.blit(overlay, (0, 0))
@@ -272,9 +272,7 @@ def draw_map_screen(self, surface):
     
 def draw_badges(self, surface):
     """Draws notification badges on top of buttons after the main UI renders."""
-    if not self.selection_mode and not getattr(self, 'hide_raised_rect', False):
-        from data import queries
-        import data.constants as c
+    if not self.selection_mode and not self.hide_raised_rect:
         
         # Get counts
         unread_msgs = queries.get_unread_message_count(self.player_country, self.nation_data)

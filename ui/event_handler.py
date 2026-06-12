@@ -15,7 +15,7 @@ def handle_map_events(self, event):
         return
 
     # --- HOTSEAT MULTIPLAYER HIJACK ---
-    if getattr(self, 'show_player_ready_screen', False):
+    if self.show_player_ready_screen:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if hasattr(self, 'ready_btn_rect') and self.ready_btn_rect.collidepoint(mx, my):
                 self.show_player_ready_screen = False
@@ -29,7 +29,7 @@ def handle_map_events(self, event):
         return # Block all other map events!
         
     # --- CONFIRMATION LOGIC HIJACK ---
-    if getattr(self, 'show_exit_confirmation', False):
+    if self.show_exit_confirmation:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
             
@@ -43,7 +43,7 @@ def handle_map_events(self, event):
         return # Block all other map events while confirming
         
     # --- AI THINKING HIJACK ---
-    if getattr(self, 'ai_is_thinking', False):
+    if self.ai_is_thinking:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if hasattr(self, 'force_skip_btn_rect') and self.force_skip_btn_rect.collidepoint(mx, my):
                 self.force_skip_llm = True
@@ -62,7 +62,7 @@ def handle_map_events(self, event):
     on_ui = self.top_bar_rect.collidepoint(mx, my) or self.bot_bar_rect.collidepoint(mx, my)
 
     # Only check the side bars if they are actually being rendered
-    side_ui_hidden = self.selection_mode or getattr(self, 'hide_raised_rect', False)
+    side_ui_hidden = self.selection_mode or self.hide_raised_rect
     
     if not side_ui_hidden:
         if self.raised_rect.collidepoint(mx, my) or self.ui_background_rect.collidepoint(mx, my):

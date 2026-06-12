@@ -88,14 +88,14 @@ def draw_combat_bubbles(self_map, surface):
         offsets = [0, -self_map.map_w, self_map.map_w] if self_map.loop_map else [0]
         for offset in offsets:
             sx = int((cx + offset - cam.pos.x) * cam.zoom)
-            sy = int((cy - cam.pos.y) * cam.zoom * getattr(cam, 'tilt_factor', 1.0)) + self_map.top_ui_height
+            sy = int((cy - cam.pos.y) * cam.zoom * cam.tilt_factor) + self_map.top_ui_height
             
             if -50 < sx < surface.get_width() + 50 and 0 < sy < surface.get_height():
                 radius_x = int(12 * cam.zoom) # Bubble size
-                radius_y = int(radius_x * getattr(cam, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_OVERLAYS else radius_x
+                radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_OVERLAYS else radius_x
                 
                 # Draw visual effect
-                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+                if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
                     rect = pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x * 2, radius_y * 2)
                     pygame.draw.ellipse(surface, color, rect, max(1, int(3 * cam.zoom)))
                 else:
@@ -105,7 +105,7 @@ def draw_combat_bubbles(self_map, surface):
                 inner = pygame.Surface((radius_x*2, radius_x*2), pygame.SRCALPHA)
                 pygame.draw.circle(inner, color + (80,), (radius_x, radius_x), radius_x)
                 
-                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+                if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
                     inner = pygame.transform.scale(inner, (radius_x * 2, radius_y * 2))
                     
                 surface.blit(inner, (int(sx) - radius_x, int(sy) - radius_y))
@@ -119,7 +119,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     # 1. Convert to Screen Coordinates (Added offset support for looped rendering)
     def world_to_screen(pos, offset=0):
         sx = (pos[0] + offset - cam.pos.x) * cam.zoom
-        sy = (pos[1] - cam.pos.y) * cam.zoom * getattr(cam, 'tilt_factor', 1.0) + map_screen.top_ui_height
+        sy = (pos[1] - cam.pos.y) * cam.zoom * cam.tilt_factor + map_screen.top_ui_height
         return sx, sy
 
     # Build an ordered list of all nodes in the path
@@ -201,7 +201,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     rotated_line.set_alpha(alpha)
                     
                 # --- THE FIX: Apply the tilt compression to the final rotated block ---
-                if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_ARROWS:
+                if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_ARROWS:
                     rotated_line = pygame.transform.scale(
                         rotated_line, 
                         (rotated_line.get_width(), int(rotated_line.get_height() * cam.tilt_factor))
@@ -252,7 +252,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     rotated_tri = pygame.transform.rotate(triangle_img, angle)
                     if alpha < 255:
                         rotated_tri.set_alpha(alpha)
-                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_ARROWS:
+                    if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_ARROWS:
                         rotated_tri = pygame.transform.scale(rotated_tri, (rotated_tri.get_width(), int(rotated_tri.get_height() * cam.tilt_factor)))
                     rect = rotated_tri.get_rect(center=end_pos)
                     surface.blit(rotated_tri, rect)
@@ -269,13 +269,13 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     draw_circle = circle_img.copy() if alpha < 255 else circle_img
                     if alpha < 255:
                         draw_circle.set_alpha(alpha)
-                    if getattr(cam, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_ARROWS:
+                    if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_ARROWS:
                         draw_circle = pygame.transform.scale(draw_circle, (draw_circle.get_width(), int(draw_circle.get_height() * cam.tilt_factor)))
                     rect = draw_circle.get_rect(center=end_pos)
                     surface.blit(draw_circle, rect)
                 else:
                     radius_x = max(3, int(4 * cam.zoom))
-                    radius_y = int(radius_x * getattr(cam, 'tilt_factor', 1.0)) if c.APPLY_TILT_TO_ARROWS else radius_x
+                    radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_ARROWS else radius_x
                     pygame.draw.ellipse(surface, color, pygame.Rect(int(end_pos[0]) - radius_x, int(end_pos[1]) - radius_y, radius_x*2, radius_y*2))
 
 def draw_overlay_content(self, surface):

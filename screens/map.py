@@ -411,7 +411,7 @@ class Map(GameState):
 
     def additional_events(self, event): 
         # Intercept inputs if the game has crashed
-        if getattr(self, 'thread_error', None):
+        if self.thread_error:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
                 if btn_rect.collidepoint(event.pos):
@@ -620,7 +620,7 @@ class Map(GameState):
         self.camera.update(self, c.SCREEN_HEIGHT)
 
         # Defer editor map label updates until the user finishes their brush stroke
-        if getattr(self, "centers_need_update", False) and not pygame.mouse.get_pressed()[0]:
+        if self.centers_need_update and not pygame.mouse.get_pressed()[0]:
             self.update_country_centers()
             self.centers_need_update = False
 
@@ -638,7 +638,7 @@ class Map(GameState):
             for el in self.elements: el.visible = False
             return
 
-        if getattr(self, 'multi_turn_processing_complete', False):
+        if self.multi_turn_processing_complete:
             self.multi_turn_processing_complete = False
             self.multi_turns_total = 0
             self.ai_is_thinking = False
