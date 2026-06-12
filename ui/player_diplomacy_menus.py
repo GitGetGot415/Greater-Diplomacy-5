@@ -1532,7 +1532,7 @@ class Create_Integrated_Puppet_Screen(GameState):
         super().update()
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
         for el in self.elements:
-            if el.is_scrollable:
+            if getattr(el, 'is_scrollable', False):
                 el.rect.y = el.base_y + self.scroll_y
 
     def queue_creation(self, subject):
