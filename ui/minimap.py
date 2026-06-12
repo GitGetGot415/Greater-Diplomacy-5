@@ -28,7 +28,7 @@ def draw_minimap(self, surface, screen_width, screen_height):
     
     # 4. Calculate the Width (vw)
     vw = (visible_map_width / self.camera.zoom / self.map_w) * mini_w
-    vh = ((screen_height - self.total_ui_h) / (self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0)) / self.map_h) * mini_h
+    vh = ((screen_height - self.total_ui_h) / (self.camera.zoom * self.camera.tilt_factor) / self.map_h) * mini_h
     
     # --- Draw with Wrap-around support & Clamping ---
     vx_relative = vx - mx

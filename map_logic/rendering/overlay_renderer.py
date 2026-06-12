@@ -301,7 +301,7 @@ def draw_overlay_content(self, surface):
         
         for offset in offsets:
             sx = int((cx + offset - self.camera.pos.x) * self.camera.zoom)
-            sy = int((cy - self.camera.pos.y) * self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0)) + self.top_ui_height
+            sy = int((cy - self.camera.pos.y) * self.camera.zoom * self.camera.tilt_factor) + self.top_ui_height
             
             # Culling: only draw if within screen width
             if -50 < sx < surface.get_width() + 50:
@@ -314,7 +314,7 @@ def draw_overlay_content(self, surface):
                     if queries.is_training_troops(province):
                         training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if training_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
                                 training_sym = pygame.transform.scale(training_sym, (training_sym.get_width(), int(training_sym.get_height() * self.camera.tilt_factor)))
                             training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = training_sym.get_rect(center=(sx, sy))
@@ -324,7 +324,7 @@ def draw_overlay_content(self, surface):
                     if any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
                         disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if disband_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
                                 disband_sym = pygame.transform.scale(disband_sym, (disband_sym.get_width(), int(disband_sym.get_height() * self.camera.tilt_factor)))
                             disband_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             # Shifted slightly right to avoid overlapping completely with training
@@ -357,7 +357,7 @@ def draw_overlay_content(self, surface):
                         symbol = symbol_loader.get_symbol(sym_name, self.camera.zoom * c.BUILDING_ICON_SCALE)
                         
                         if symbol:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
                                 symbol = pygame.transform.scale(symbol, (symbol.get_width(), int(symbol.get_height() * self.camera.tilt_factor)))
                             
                             # Center the symbol based on the calculated sx/sy
@@ -371,7 +371,7 @@ def draw_overlay_content(self, surface):
                             if "Refinery" in b_name: color = (200, 100, 100) # Red-ish for refinery
                             
                             w_scaled = int(12 * self.camera.zoom)
-                            h_scaled = int(12 * self.camera.zoom * (getattr(self.camera, 'tilt_factor', 1.0) if c.APPLY_TILT_TO_OVERLAYS else 1.0))
+                            h_scaled = int(12 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                             
                             # Center the rect using the same logic
                             rect = pygame.Rect(
@@ -387,7 +387,7 @@ def draw_overlay_content(self, surface):
                     if queries.is_constructing_building(province):
                         hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if hammer_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
                                 hammer_sym = pygame.transform.scale(hammer_sym, (hammer_sym.get_width(), int(hammer_sym.get_height() * self.camera.tilt_factor)))
                             hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = hammer_sym.get_rect(center=(sx, sy))
@@ -402,7 +402,7 @@ def draw_overlay_content(self, surface):
                             if amount > 0:
                                 sym = symbol_loader.get_symbol(res_type, self.camera.zoom * 0.8)
                                 if sym:
-                                    if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+                                    if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
                                         sym = pygame.transform.scale(sym, (sym.get_width(), int(sym.get_height() * self.camera.tilt_factor)))
                                     surface.blit(sym, (sx + offset_x, sy))
                                 else:
@@ -411,7 +411,7 @@ def draw_overlay_content(self, surface):
                                     if res_type == "Iron": c_col = (180, 180, 180)
                                     if res_type == "Coal": c_col = (50, 50, 50)
                                     if res_type == "Oil": c_col = (30, 30, 30)
-                                    h_scaled = int(15 * self.camera.zoom * (getattr(self.camera, 'tilt_factor', 1.0) if c.APPLY_TILT_TO_OVERLAYS else 1.0))
+                                    h_scaled = int(15 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                                     pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), h_scaled))
                                 
                                 # Shift right so multiple icons stack side-by-side
@@ -425,7 +425,7 @@ def draw_overlay_content(self, surface):
                     if is_building:
                         hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if hammer_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
                                 hammer_sym = pygame.transform.scale(hammer_sym, (hammer_sym.get_width(), int(hammer_sym.get_height() * self.camera.tilt_factor)))
                             hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = hammer_sym.get_rect(center=(sx, sy))
@@ -434,7 +434,7 @@ def draw_overlay_content(self, surface):
                     if is_training:
                         training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if training_sym:
-                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                            if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
                                 training_sym = pygame.transform.scale(training_sym, (training_sym.get_width(), int(training_sym.get_height() * self.camera.tilt_factor)))
                             training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = training_sym.get_rect(center=(sx, sy))
@@ -459,7 +459,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
     display_scale = 0.25 + (self.camera.zoom * 0.12)
     scaled_w = max(20, int(internal_w * display_scale))
     scaled_h = max(8, int(internal_h * display_scale))
-    if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+    if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
         scaled_h = max(8, int(scaled_h * self.camera.tilt_factor))
         
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes

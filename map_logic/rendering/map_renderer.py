@@ -30,7 +30,7 @@ def draw_map_screen(self, surface):
     current_base = self.active_map
 
     vw = surface.get_width() / self.camera.zoom
-    vh = (surface.get_height() - self.total_ui_h) / (self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0))
+    vh = (surface.get_height() - self.total_ui_h) / (self.camera.zoom * self.camera.tilt_factor)
     
     x1_world = self.camera.pos.x
     y1_world = self.camera.pos.y
@@ -38,7 +38,7 @@ def draw_map_screen(self, surface):
     # --- NEW: Extract negative Y for screen offset and skybox ---
     render_y_offset = 0
     if y1_world < 0:
-        render_y_offset = -y1_world * self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0)
+        render_y_offset = -y1_world * self.camera.zoom * self.camera.tilt_factor
         vh += y1_world # Shrink the required source height since the top is sky
         y1_world = 0
 
@@ -56,7 +56,7 @@ def draw_map_screen(self, surface):
             # Base Map
             v1 = current_base.subsurface((x1, y1, w1, h1))
             scaled_w1 = int(w1*self.camera.zoom)
-            scaled_h1 = int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0))
+            scaled_h1 = int(h1*self.camera.zoom*self.camera.tilt_factor)
             surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, self.top_ui_height + int(render_y_offset)))
             
             # Fog Map
@@ -68,7 +68,7 @@ def draw_map_screen(self, surface):
             wrap_w = int(vw - w1)
             if wrap_w > 0:
                 scaled_wrap_w = int(wrap_w*self.camera.zoom)
-                scaled_h1 = int(h1*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0))
+                scaled_h1 = int(h1*self.camera.zoom*self.camera.tilt_factor)
                 
                 # Base Map
                 v2 = current_base.subsurface((0, y1, wrap_w, h1))
@@ -83,7 +83,7 @@ def draw_map_screen(self, surface):
         clipped = src_rect.clip(current_base.get_rect())
         if clipped.width > 0 and clipped.height > 0:
             scaled_w = int(clipped.width*self.camera.zoom)
-            scaled_h = int(clipped.height*self.camera.zoom*getattr(self.camera, 'tilt_factor', 1.0))
+            scaled_h = int(clipped.height*self.camera.zoom*self.camera.tilt_factor)
             
             # Base Map
             view = current_base.subsurface(clipped)

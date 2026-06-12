@@ -11,7 +11,7 @@ def draw_hover_glow(self, surface):
 
     # 2. Calculate scaled dimensions
     scaled_w = int(pw * self.camera.zoom)
-    scaled_h = int(ph * self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0))
+    scaled_h = int(ph * self.camera.zoom * self.camera.tilt_factor)
     
     if scaled_w > 0 and scaled_h > 0:
         scaled_glow = pygame.transform.scale(self.hover_glow_surf, (scaled_w, scaled_h))
@@ -24,7 +24,7 @@ def draw_hover_glow(self, surface):
         for offset in [0, -self.map_w, self.map_w]:
             # Subtract the integer camera pos, THEN multiply by zoom.
             sx = (px + offset - cam_x_int) * self.camera.zoom
-            sy = (py - cam_y_int) * self.camera.zoom * getattr(self.camera, 'tilt_factor', 1.0) + self.top_ui_height
+            sy = (py - cam_y_int) * self.camera.zoom * self.camera.tilt_factor + self.top_ui_height
             
             # Final cast to int for blitting coordinates
             surface.blit(scaled_glow, (int(sx), int(sy)))
