@@ -464,20 +464,25 @@ class Map(GameState):
                 removed_count += (original_b_count - len(province["buildings"]))
                 
             # 3. Clean Queues
+            for queue_key in ["building_queue", "unit_queue"]:
+                if queue_key in province:
+                    valid_queue = []
+                    for q in province[queue_key]:
+                        is_valid = True
+                        if q.get("order_type") == "BUILDING" and q.get("item_name") not in building_library:
+                            is_valid = False
+                        elif "unit_type" in q and q.get("unit_type") not in unit_library:
+                            is_valid = False
+                            
+                        if is_valid:
+                            valid_queue.append(q)
+                        else:
+                            removed_count += 1
+                    province[queue_key] = valid_queue
+                    
+            # Wipe legacy data if it exists
             if "deployment_queue" in province:
-                valid_queue = []
-                for q in province["deployment_queue"]:
-                    is_valid = True
-                    if q.get("order_type") == "BUILDING" and q.get("item_name") not in building_library:
-                        is_valid = False
-                    elif "unit_type" in q and q.get("unit_type") not in unit_library:
-                        is_valid = False
-                        
-                    if is_valid:
-                        valid_queue.append(q)
-                    else:
-                        removed_count += 1
-                province["deployment_queue"] = valid_queue
+                del province["deployment_queue"]
                 
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")
 

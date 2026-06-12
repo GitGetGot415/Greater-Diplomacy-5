@@ -24,37 +24,25 @@ def process_economy(self):
     return self.nation_data.get(self.player_country, {}).get("manpower", 0)
 
 def process_queues(self):
-    """Processes only the VERY FIRST item in the deployment queue sequentially."""
-    unit_stats_path = c.UNIT_DATA_PATH
-    building_stats_path = c.BUILDING_DATA_PATH
-    
+    """Processes only the VERY FIRST item in the unit and building queues sequentially."""
     # REPLACE DISK I/O WITH CACHED QUERIES
     unit_library = queries.get_unit_library()
     building_library = queries.get_building_library()
 
     for province in self.map_data.values():
-        queue = province.get("deployment_queue", [])
-        if not queue: continue
-            
-        # --- Combat Pause Mechanic ---
-        if queries.is_province_in_active_combat(province, self.nation_data):
-            continue
-        # ----------------------------------
-            
-        # ONLY touch the first item!
-        item = queue[0]
+        current_owner = province.get("owner", "None")
+        in_combat = queries.is_province_in_active_combat(province, self.nation_data)
         
-        # Backwards compatibility check and dynamic day-to-turn scaling
-        if "days_remaining" in item:
-            item["turns_remaining"] = max(1, item.pop("days_remaining") // c.DEFAULT_DAYS_PER_TURN)
+        # --- BUILDING QUEUE ---
+        b_queue = province.get("building_queue", [])
+        if b_queue and not in_combat:
+            item = b_queue[0]
+            if "days_remaining" in item:
+                item["turns_remaining"] = max(1, item.pop("days_remaining") // c.DEFAULT_DAYS_PER_TURN)
             
-        item["turns_remaining"] -= 1
-        
-        if item["turns_remaining"] <= 0:
-            current_owner = province.get("owner", "None")
+            item["turns_remaining"] -= 1
             
-            # IS BUILDING?
-            if item.get("order_type") == "BUILDING":
+            if item["turns_remaining"] <= 0:
                 b_name = item["item_name"]
                 b_data = building_library.get(b_name, {})
                 
@@ -67,9 +55,18 @@ def process_queues(self):
                 
                 if current_owner == self.player_country:
                     self.show_feedback(f"CONSTRUCTION COMPLETE: {b_name}")
+                b_queue.pop(0)
 
-            # IS UNIT?
-            else:
+        # --- UNIT QUEUE ---
+        u_queue = province.get("unit_queue", [])
+        if u_queue and not in_combat:
+            item = u_queue[0]
+            if "days_remaining" in item:
+                item["turns_remaining"] = max(1, item.pop("days_remaining") // c.DEFAULT_DAYS_PER_TURN)
+            
+            item["turns_remaining"] -= 1
+            
+            if item["turns_remaining"] <= 0:
                 unit_type = item["unit_type"]
                 stats = unit_library.get(unit_type, {})
                 
@@ -94,5 +91,4 @@ def process_queues(self):
                 if current_owner == self.player_country:
                     self.show_feedback(f"DEPLOYED: {unit_type}")
             
-            # Remove the finished item so the next one can start on the next turn
-            queue.pop(0)
+                u_queue.pop(0)

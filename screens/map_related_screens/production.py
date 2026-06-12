@@ -72,7 +72,7 @@ class Production_Screen(GameState):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
         current_buildings = self.target_province.get("buildings", [])
-        queue = self.target_province.get("deployment_queue", [])
+        building_queue = self.target_province.get("building_queue", [])
         
         owner_nation = self.target_province.get("owner")
         player_research = self.map_screen.nation_data.get(owner_nation, {}).get("research", {})
@@ -103,8 +103,9 @@ class Production_Screen(GameState):
                                 target = b_list[i+1]
 
                 if target:
-                    data = self.building_library[target]
-                    is_building = any(q.get("group") == data["group"] for q in queue)
+                    # Dynamically calculate the visual cost for the player
+                    data = queries.get_building_cost(target, owner_nation, self.map_screen.map_data, self.building_library)
+                    is_building = any(q.get("group") == data["group"] for q in building_queue)
                     req_tech, req_lvl = queries.get_building_required_tech(target)
 
                     if req_tech and player_research.get(req_tech, 0) < req_lvl:
@@ -234,8 +235,8 @@ class Production_Screen(GameState):
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
 
     def start_construction(self, b_name):
-        data = self.building_library[b_name]
         owner = self.target_province.get("owner")
+        data = queries.get_building_cost(b_name, owner, self.map_screen.map_data, self.building_library)
         p_data = self.map_screen.nation_data.get(owner, {})
 
         if queries.can_afford(p_data, data):
@@ -251,7 +252,7 @@ class Production_Screen(GameState):
                     "fuel": data.get("cost_fuel", 0)
                 }
             }
-            self.target_province.setdefault("deployment_queue", []).append(order)
+            self.target_province.setdefault("building_queue", []).append(order)
             self.map_screen.show_feedback(f"Started {b_name}")
             self.refresh_ui()
         else:
@@ -284,14 +285,16 @@ class Production_Screen(GameState):
                     "fuel": stats.get("cost_fuel", 0)
                 }
             }
-            self.target_province.setdefault("deployment_queue", []).append(order)
+            self.target_province.setdefault("unit_queue", []).append(order)
             self.map_screen.show_feedback(f"Production started: {unit_name}")
             self.refresh_ui()
         else:
             self.map_screen.show_feedback("Insufficient resources!")
 
-    def cancel_order(self, index):
-        queue = self.target_province.get("deployment_queue", [])
+    def cancel_order(self, index, q_type):
+        queue_key = "building_queue" if q_type == "building" else "unit_queue"
+        queue = self.target_province.get(queue_key, [])
+        
         if 0 <= index < len(queue):
             item = queue.pop(index)
             
@@ -304,7 +307,7 @@ class Production_Screen(GameState):
             else:
                 stats = {}
                 if item.get("order_type") == "BUILDING":
-                    stats = self.building_library.get(item.get("item_name"), {})
+                    stats = queries.get_building_cost(item.get("item_name"), owner, self.map_screen.map_data, self.building_library)
                 elif "unit_type" in item:
                     stats = self.unit_library.get(item["unit_type"], {})
                 queries.refund_resources(p_data, stats)
@@ -321,9 +324,9 @@ class Production_Screen(GameState):
             if self.map_screen.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION:
                 return
                 
-            for rect, index in self.cancel_hitboxes:
+            for rect, index, q_type in self.cancel_hitboxes:
                 if rect.collidepoint(event.pos):
-                    self.cancel_order(index)
+                    self.cancel_order(index, q_type)
                     return
 
     def additional_draw(self, surface):

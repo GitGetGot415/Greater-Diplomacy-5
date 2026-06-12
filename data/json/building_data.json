@@ -1,31 +1,6 @@
 {
-    "Workshop Lvl 1": {
-        "time": 6, "group": "industry", "req": null,
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 50, "prod_manpower": 0, "prod_fuel": 0
-    },
-    "Workshop Lvl 2": {
-        "time": 6, "group": "industry", "req": "Workshop Lvl 1",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 100, "prod_manpower": 0, "prod_fuel": 0
-    },
-    "Workshop Lvl 3": {
-        "time": 6, "group": "industry", "req": "Workshop Lvl 2",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 150, "prod_manpower": 0, "prod_fuel": 0
-    },
-    "Workshop Lvl 4": {
-        "time": 6, "group": "industry", "req": "Workshop Lvl 3",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 200, "prod_manpower": 0, "prod_fuel": 0
-    },
-    "Workshop Lvl 5": {
-        "time": 6, "group": "industry", "req": "Workshop Lvl 4",
-        "cost_materials": 10000, "cost_manpower": 0, "cost_fuel": 0,
-        "prod_materials": 300, "prod_manpower": 0, "prod_fuel": 0
-    },
     "Basic Factory": {
-        "time": 6, "group": "industry", "req": "Workshop Lvl 5",
+        "time": 6, "group": "industry", "req": "null",
         "cost_materials": 30000, "cost_manpower": 0, "cost_fuel": 0,
         "prod_materials": 500, "prod_manpower": 0, "prod_fuel": 0
     },

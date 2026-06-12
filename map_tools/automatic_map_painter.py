@@ -154,7 +154,8 @@ def run_generator(progress_var, root):
             "neighbors": list(neighbors),
             "owner": "Unclaimed",
             "units": [],
-            "deployment_queue": [],
+            "building_queue": [],
+            "unit_queue": [],
             "orders": [],
             "buildings": [],
             "resources": []

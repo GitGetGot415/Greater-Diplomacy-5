@@ -454,14 +454,15 @@ def get_industry(province):
     """Returns the highest level of industry in the province."""
     level = 0
     for b in province.get("buildings", []):
-        if "Workshop Lvl" in b:
-            lvl = int(b.split()[-1])
-            level = max(level, lvl)
-        elif b == "Basic Factory":
+        if b == "Basic Factory":
             level = max(level, 6)
         elif "Factory Lvl" in b:
             lvl = int(b.split()[-1])
             level = max(level, 6 + lvl)
+    # The construction site itself counts as Level 1 industry so Militia can be built on it!
+    for q in province.get("building_queue", []):
+        if q.get("item_name") == "Basic Factory":
+            level = max(level, 1)
     return level
 
 def has_industry(province):
@@ -592,15 +593,38 @@ def check_tech_requirements(res_levels, reqs, target_lvl=1):
 
 def is_training_troops(province):
     """Returns True if the province has any troops in its deployment queue."""
-    return any("unit_type" in q for q in province.get("deployment_queue", []))
+    return any("unit_type" in q for q in province.get("unit_queue", []))
 
 def is_constructing_building(province):
     """Returns True if the province has any buildings in its deployment queue."""
-    return any(q.get("order_type") == "BUILDING" for q in province.get("deployment_queue", []))
+    return any(q.get("order_type") == "BUILDING" for q in province.get("building_queue", []))
 
 # ==========================================
 # ECONOMY QUERIES
 # ==========================================
+
+def get_factory_count(nation, map_data):
+    """Counts the total number of factories a nation has (built and in-progress)."""
+    count = 0
+    for prov in map_data.values():
+        if prov.get("owner") == nation:
+            for b in prov.get("buildings", []):
+                if "Factory" in b: count += 1
+            for q in prov.get("building_queue", []):
+                if "Factory" in q.get("item_name", ""): count += 1
+    return count
+
+def get_building_cost(b_name, nation, map_data, bldg_lib):
+    """Dynamically scales the building cost, bypassing the JSON for Basic Factories."""
+    stats = bldg_lib.get(b_name, {}).copy()
+    if b_name == "Basic Factory":
+        count = get_factory_count(nation, map_data)
+        x = c.BASIC_FACTORY_BASE_COST_X + (c.BASIC_FACTORY_COST_MULTIPLIER * count)
+        stats["cost_materials"] = x * 2
+        stats["cost_manpower"] = x
+        stats["cost_fuel"] = 0
+        stats["time"] = c.BASIC_FACTORY_TURNS
+    return stats
 
 def get_nation_manpower(nation, nation_data):
     return nation_data.get(nation, {}).get("manpower", 0)
@@ -695,6 +719,20 @@ def calculate_all_economies(map_data, nation_data):
                 bd["manpower"]["buildings"] += stats.get("prod_manpower", 0) 
                 bd["materials"]["buildings"] += stats.get("prod_materials", 0) 
                 bd["fuel"]["buildings"] += stats.get("prod_fuel", 0) 
+
+            # Basic Factory transitional construction yields
+            for q in province.get("building_queue", []):
+                if q.get("item_name") == "Basic Factory":
+                    rem = q.get("turns_remaining", c.BASIC_FACTORY_TURNS)
+                    
+                    if rem >= 17: yield_mat = 80
+                    elif rem >= 13: yield_mat = 160
+                    elif rem >= 9: yield_mat = 240
+                    elif rem >= 5: yield_mat = 320
+                    else: yield_mat = 400
+                    
+                    if owner in econ_data:
+                        econ_data[owner]["breakdown"]["materials"]["buildings"] += yield_mat
 
         # --- UPKEEP LOGIC ---
         for unit in province.get("units", []):

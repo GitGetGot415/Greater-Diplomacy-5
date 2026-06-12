@@ -53,7 +53,8 @@ def save_map_data(self, save_name=None):
             "cores": data.get("cores", []),
             "is_coastal": data.get("is_coastal", False),
             "units": data.get("units", []),
-            "deployment_queue": data.get("deployment_queue", []),
+            "unit_queue": data.get("unit_queue", []),
+            "building_queue": data.get("building_queue", []),
             "orders": data.get("orders", []),
             "resources": data.get("resources", []),
             "buildings": data.get("buildings", [])

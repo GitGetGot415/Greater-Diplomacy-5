@@ -234,7 +234,17 @@ def load_map_assets(self, load_path):
 
         v["cores"] = v.get("cores", [])
         v["units"] = v.get("units", [])
-        v["deployment_queue"] = v.get("deployment_queue", [])
+        v["unit_queue"] = v.get("unit_queue", [])
+        v["building_queue"] = v.get("building_queue", [])
+        
+        # Legacy save migration
+        if "deployment_queue" in v:
+            for q in v["deployment_queue"]:
+                if q.get("order_type") == "BUILDING":
+                    v["building_queue"].append(q)
+                else:
+                    v["unit_queue"].append(q)
+            del v["deployment_queue"]
         
         # Clean obsolete buildings (Removes fuel buildings from older saves automatically)
         v["buildings"] = [b for b in v.get("buildings", []) if b in bldg_lib]

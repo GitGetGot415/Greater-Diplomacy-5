@@ -56,7 +56,7 @@ def process_ai_economy_decisions(map_screen):
         # --- THE FIX: Include Pending Queue in Upkeep Projections ---
         # Prevents the AI from bankupting itself on units that haven't spawned yet
         for prov in my_provs:
-            for q in prov.get("deployment_queue", []):
+            for q in prov.get("unit_queue", []):
                 q_type = q.get("unit_type")
                 if q_type:
                     q_stats = unit_library.get(q_type, {})
@@ -143,8 +143,14 @@ def process_ai_economy_decisions(map_screen):
             
             # 1. Clear queues on tiles in active combat
             if in_combat:
-                while prov.get("deployment_queue"):
-                    item = prov["deployment_queue"].pop(0)
+                while prov.get("unit_queue"):
+                    item = prov["unit_queue"].pop(0)
+                    if "refund" in item:
+                        data["materials"] += item["refund"].get("materials", 0)
+                        data["manpower"] += item["refund"].get("manpower", 0)
+                        data["fuel"] += item["refund"].get("fuel", 0)
+                while prov.get("building_queue"):
+                    item = prov["building_queue"].pop(0)
                     if "refund" in item:
                         data["materials"] += item["refund"].get("materials", 0)
                         data["manpower"] += item["refund"].get("manpower", 0)
@@ -165,17 +171,16 @@ def process_ai_economy_decisions(map_screen):
                     if enemy_adjacent: break
                 
                 if enemy_adjacent:
-                    queue = prov.get("deployment_queue", [])
+                    queue = prov.get("unit_queue", [])
                     safe_to_panic = True
                     
                     if queue:
                         first_item = queue[0]
-                        is_bldg = first_item.get("order_type") == "BUILDING"
                         u_type = first_item.get("unit_type", "")
                         is_naval = queries.is_naval_unit(u_type) if u_type else False
                         turns = first_item.get("turns_remaining", 999)
                         
-                        if not is_bldg and not is_naval and turns <= 1:
+                        if not is_naval and turns <= 1:
                             safe_to_panic = False # Let the ground unit finish!
                     
                     if safe_to_panic and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", "")) != "Militia"):
@@ -210,7 +215,7 @@ def process_ai_economy_decisions(map_screen):
                                 "turns_remaining": max(1, militia_stats.get("production_time", 1)),
                                 "refund": {"materials": c_mat, "manpower": c_man, "fuel": c_fuel}
                             }
-                            prov.setdefault("deployment_queue", []).append(order)
+                            prov.setdefault("unit_queue", []).append(order)
 
             # Count existing units
             for u in prov.get("units", []):
@@ -224,7 +229,7 @@ def process_ai_economy_decisions(map_screen):
                         naval_count += 1
             
             # Count queued units
-            for q in prov.get("deployment_queue", []):
+            for q in prov.get("unit_queue", []):
                 q_type = q.get("unit_type", "")
                 if "Infantry" in q_type or queries.get_base_unit_name(q_type) == "Militia":
                     infantry_count += 1
@@ -343,7 +348,7 @@ def process_ai_economy_decisions(map_screen):
             # Can we afford the upfront cost AND have a valid province?
             if valid_recruit_provs and data.get("materials", 0) >= cost_mat and data.get("manpower", 0) >= cost_man and data.get("fuel", 0) >= cost_fuel:
                 # Pick the province with the shortest queue! Do not overload a province!
-                target_prov = min(valid_recruit_provs, key=lambda p: len(p.get("deployment_queue", [])))
+                target_prov = min(valid_recruit_provs, key=lambda p: len(p.get("unit_queue", [])))
                 
                 data["materials"] -= cost_mat
                 data["manpower"] -= cost_man
@@ -366,7 +371,7 @@ def process_ai_economy_decisions(map_screen):
                     "turns_remaining": max(1, unit_stats.get("production_time", 1)),
                     "refund": {"materials": cost_mat, "manpower": cost_man, "fuel": cost_fuel}
                 }
-                target_prov.setdefault("deployment_queue", []).append(order)
+                target_prov.setdefault("unit_queue", []).append(order)
             else:
                 break # Can't afford it or out of valid factories. Exit recruitment loop.
 
@@ -380,11 +385,11 @@ def process_ai_economy_decisions(map_screen):
             recruit_b_list = [b for b, d in building_library.items() if d.get("group") == "recruitment"]
 
             # Sort provinces by queue length to spread out construction
-            my_provs.sort(key=lambda p: len(p.get("deployment_queue", [])))
+            my_provs.sort(key=lambda p: len(p.get("building_queue", [])))
 
             for prov in my_provs:
                 current_buildings = prov.get("buildings", [])
-                queue = prov.get("deployment_queue", [])
+                queue = prov.get("building_queue", [])
 
                 # Double check the queue so it doesn't build two at once in the same province
                 if any(q.get("group") in ["industry", "recruitment"] for q in queue):
@@ -422,8 +427,8 @@ def process_ai_economy_decisions(map_screen):
                         break # Found a valid, fully-researched building!
 
                 if target_bldg:
-                    # We have the tech and the physical foundation, now check costs
-                    b_stats = building_library[target_bldg]
+                    # We have the tech and the physical foundation, now check dynamic costs
+                    b_stats = queries.get_building_cost(target_bldg, ai_name, map_screen.map_data, building_library)
                     c_mat = b_stats.get("cost_materials", 0)
                     c_fuel = b_stats.get("cost_fuel", 0)
 
@@ -438,7 +443,7 @@ def process_ai_economy_decisions(map_screen):
                             "group": b_stats["group"],
                             "refund": {"materials": c_mat, "manpower": 0, "fuel": c_fuel}
                         }
-                        prov.setdefault("deployment_queue", []).append(order)
+                        prov.setdefault("building_queue", []).append(order)
                         
                         # Successfully queued a building. Break out of the loop so it only queues one per turn
                         # to avoid instantly draining its treasury on 30 workshops at once.

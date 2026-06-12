@@ -60,7 +60,8 @@ def snapshot_history(self):
             "cores": data.get("cores", []),
             "is_coastal": data.get("is_coastal", False),
             "units": copy.deepcopy(data.get("units", [])),
-            "deployment_queue": copy.deepcopy(data.get("deployment_queue", [])),
+            "building_queue": copy.deepcopy(data.get("building_queue", [])),
+            "unit_queue": copy.deepcopy(data.get("unit_queue", [])),
             "orders": copy.deepcopy(data.get("orders", [])),
             "resources": copy.deepcopy(data.get("resources", [])),
             "buildings": copy.deepcopy(data.get("buildings", []))

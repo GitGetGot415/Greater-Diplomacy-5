@@ -334,10 +334,16 @@ def draw_overlay_content(self, surface):
                 # --- ECONOMY VIEW ---
                 elif self.secondary_mode == "ECONOMY":
                     # Draw Buildings
-                    buildings = province.get("buildings", [])
+                    buildings = province.get("buildings", []).copy()
                     
+                    # --- NEW: Inject transitional workshop building ---
+                    b_queue = province.get("building_queue", [])
+                    if b_queue and b_queue[0].get("item_name") == "Basic Factory":
+                        rem = b_queue[0].get("turns_remaining", c.BASIC_FACTORY_TURNS)
+                        lvl = 1 if rem >= 17 else 2 if rem >= 13 else 3 if rem >= 9 else 4 if rem >= 5 else 5
+                        buildings.append(f"Workshop Lvl {lvl}")
+
                     # Sort buildings to ensure recruitment centers render on top
-                    # Grouping is retrieved from building_library via queries
                     b_lib = queries.get_building_library()
                     buildings = sorted(buildings, key=lambda b: 1 if b_lib.get(b, {}).get("group") == "recruitment" else 0)
                     
@@ -411,6 +417,28 @@ def draw_overlay_content(self, surface):
                                 # Shift right so multiple icons stack side-by-side
                                 offset_x += 20 * self.camera.zoom
 
+                # --- OVERLAPPING BUILDING & RECRUITMENT STATUS ICONS ---
+                """if self.secondary_mode in ["UNITS", "ECONOMY"]:
+                    is_training = queries.is_training_troops(province)
+                    is_building = queries.is_constructing_building(province)
+                    
+                    if is_building:
+                        hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        if hammer_sym:
+                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                                hammer_sym = pygame.transform.scale(hammer_sym, (hammer_sym.get_width(), int(hammer_sym.get_height() * self.camera.tilt_factor)))
+                            hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                            rect = hammer_sym.get_rect(center=(sx, sy))
+                            surface.blit(hammer_sym, rect)
+
+                    if is_training:
+                        training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        if training_sym:
+                            if getattr(self.camera, 'tilt_factor', 1.0) < 0.99 and c.APPLY_TILT_TO_STATUS_ICONS:
+                                training_sym = pygame.transform.scale(training_sym, (training_sym.get_width(), int(training_sym.get_height() * self.camera.tilt_factor)))
+                            training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                            rect = training_sym.get_rect(center=(sx, sy))
+                            surface.blit(training_sym, rect)"""
 
 def draw_unit_icon(self, surface, sx, sy, province):
     units = province.get("units", [])
