@@ -18,7 +18,7 @@ song_y = 32
 if not hasattr(pygame.mixer.music, '_original_get_busy'):
     pygame.mixer.music._original_get_busy = pygame.mixer.music.get_busy
     def _patched_get_busy():
-        if getattr(pygame.mixer.music, '_custom_is_paused', False):
+        if pygame.mixer.music._custom_is_paused:
             return True
         return pygame.mixer.music._original_get_busy()
     pygame.mixer.music.get_busy = _patched_get_busy
@@ -274,7 +274,7 @@ class Music_Player(GameState):
         else:
             self.controller.play_random_song()
             
-        self._last_playing_track = getattr(self.controller, 'now_playing', None)
+        self._last_playing_track = self.controller.now_playing
         
         self.controller.is_paused = False
         self._awaiting_seek_confirm = True # Restored for Pygame compatibility
@@ -287,7 +287,7 @@ class Music_Player(GameState):
         self.controller.is_paused = not self.controller.is_paused
         
         if c.USE_SOLOUD:
-            if getattr(self.controller, 'music_handle', None) is not None:
+            if self.controller.music_handle is not None:
                 self.controller.soloud.set_pause(self.controller.music_handle, self.controller.is_paused)
         else:
             if self.controller.is_paused:
@@ -300,7 +300,7 @@ class Music_Player(GameState):
         self.refresh_ui()
 
     def scrub_music(self, val):
-        if not getattr(self.controller, 'now_playing', None) or self.controller.now_playing == "None":
+        if not self.controller.now_playing or self.controller.now_playing == "None":
             return
             
         length = self.get_current_track_length()
@@ -311,14 +311,14 @@ class Music_Player(GameState):
         target_time = val * safe_length
         
         if c.USE_SOLOUD:
-            if getattr(self.controller, 'music_handle', None) is not None:
+            if self.controller.music_handle is not None:
                 self.controller.soloud.seek(self.controller.music_handle, target_time)
                 # Pure UI tracking: ignore SoLoud's internal clock completely
                 self.controller._frozen_time = target_time
                 self._last_ticks = pygame.time.get_ticks()
         else:
             # Original Pygame logic restored
-            if getattr(pygame.mixer.music, '_custom_is_paused', False):
+            if pygame.mixer.music._custom_is_paused:
                 pygame.mixer.music._custom_is_paused = False
                 self.controller.is_paused = False
                 pygame.mixer.music.unpause()
@@ -337,7 +337,7 @@ class Music_Player(GameState):
             self._awaiting_seek_confirm = True
 
     def get_current_track_length(self):
-        track = getattr(self.controller, 'now_playing', None)
+        track = self.controller.now_playing
         if not track or track == "None": return 0
         
         if track not in self._track_lengths:
@@ -354,16 +354,16 @@ class Music_Player(GameState):
         # PYGAME: Uses original offset logic
         # ----------------------------------------------------
         if not c.USE_SOLOUD:
-            if getattr(self, '_awaiting_seek_confirm', False):
-                return getattr(self.controller, '_frozen_time', 0.0)
+            if self._awaiting_seek_confirm:
+                return self.controller._frozen_time
                 
-            if getattr(pygame.mixer.music, '_custom_is_paused', False):
-                return getattr(self.controller, '_frozen_time', 0.0)
+            if pygame.mixer.music._custom_is_paused:
+                return self.controller._frozen_time
                 
             raw_pos = pygame.mixer.music.get_pos() / 1000.0
             if raw_pos < 0: raw_pos = 0.0
-            offset = getattr(self.controller, '_playback_offset', 0.0)
-            base_pos = getattr(self.controller, '_scrub_base_pos', 0.0)
+            offset = self.controller._playback_offset
+            base_pos = self.controller._scrub_base_pos
             
             current = offset + (raw_pos - base_pos)
             self.controller._frozen_time = current
@@ -373,9 +373,9 @@ class Music_Player(GameState):
         # SOLOUD: Uses Pure Wall-Clock Integrator
         # ----------------------------------------------------
         else:
-            if getattr(self.controller, 'is_paused', False) or getattr(self.controller, 'music_handle', None) is None:
+            if self.controller.is_paused or self.controller.music_handle is None:
                 self._last_ticks = pygame.time.get_ticks() # Prevent jumping when unpaused
-                return getattr(self.controller, '_frozen_time', 0.0)
+                return self.controller._frozen_time
 
             # Measure real time passed since last frame
             current_ticks = pygame.time.get_ticks()
@@ -400,9 +400,9 @@ class Music_Player(GameState):
                 wall_delta = 0.0
 
             # Scale only the pure time delta by the pitch
-            speed_mult = 0.5 + getattr(self.controller, 'music_pitch', 0.5)
+            speed_mult = 0.5 + self.controller.music_pitch
             
-            current = getattr(self.controller, '_frozen_time', 0.0)
+            current = self.controller._frozen_time
             current += (wall_delta * speed_mult)
             
             # Prevent the visual bar from bleeding past the end
@@ -417,13 +417,13 @@ class Music_Player(GameState):
         super().update()
         
         # Sync UI if track auto-plays/changes externally or upon first opening the menu
-        current_track = getattr(self.controller, 'now_playing', None)
-        if getattr(self, '_last_playing_track', None) != current_track:
+        current_track = self.controller.now_playing
+        if self._last_playing_track != current_track:
             self._last_playing_track = current_track
             
             # Retrieve actual elapsed time from backend so scrubber doesn't start at 0:00
             actual_pos = 0.0
-            if c.USE_SOLOUD and getattr(self.controller, 'music_handle', None) is not None:
+            if c.USE_SOLOUD and self.controller.music_handle is not None:
                 try:
                     if hasattr(self.controller.soloud, 'get_stream_position'):
                         actual_pos = self.controller.soloud.get_stream_position(self.controller.music_handle)
@@ -449,7 +449,7 @@ class Music_Player(GameState):
             self.refresh_ui()
             
         # Capture Pygame's raw stream position one frame after seeking
-        if getattr(self, '_awaiting_seek_confirm', False) and not c.USE_SOLOUD:
+        if self._awaiting_seek_confirm and not c.USE_SOLOUD:
             self._awaiting_seek_confirm = False
             self.controller._scrub_base_pos = pygame.mixer.music.get_pos() / 1000.0
             
@@ -474,9 +474,9 @@ class Music_Player(GameState):
         ui_elements.global_sfx_volume = val    
         
         if not c.USE_SOLOUD:
-            if getattr(ui_elements, 'pygame_click_sound', None):
+            if ui_elements.pygame_click_sound:
                 ui_elements.pygame_click_sound.set_volume(val)
-            if getattr(ui_elements, 'pygame_slider_sound', None):
+            if ui_elements.pygame_slider_sound:
                 ui_elements.pygame_slider_sound.set_volume(val)
                 
         self.save_audio_settings()
@@ -492,7 +492,7 @@ class Music_Player(GameState):
 
     def set_music_pitch(self, val):
         self.controller.music_pitch = val
-        if getattr(self.controller, 'music_handle', None) is not None:
+        if self.controller.music_handle is not None:
             speed_mult = 0.5 + val 
             self.controller.soloud.set_relative_play_speed(self.controller.music_handle, speed_mult)
         self.save_audio_settings()
@@ -577,9 +577,9 @@ class Music_Player(GameState):
             
         # 4. Scrollbar Drag Motion
         elif event.type == pygame.MOUSEMOTION:
-            if getattr(self, 'album_dragging', False):
+            if self.album_dragging:
                 self._snap_album_scroll(my)
-            elif getattr(self, 'track_dragging', False):
+            elif self.track_dragging:
                 self._snap_track_scroll(my)
 
     def additional_draw(self, surface):
@@ -628,5 +628,5 @@ class Music_Player(GameState):
             self.track_handle_rect = None
 
     def handle_back_key(self):
-        self.next_state = getattr(self, 'return_state', 'MENU')
+        self.next_state = self.return_state
         self.done = True

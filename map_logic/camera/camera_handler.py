@@ -35,7 +35,7 @@ class MapCamera:
 
         if event.type == pygame.MOUSEMOTION and drag_active and not on_ui:
             self.pos.x -= event.rel[0] / self.zoom
-            self.pos.y -= event.rel[1] / (self.zoom * getattr(self, 'tilt_factor', 1.0))
+            self.pos.y -= event.rel[1] / (self.zoom * self.tilt_factor)
             self.target_pos = pygame.Vector2(self.pos)
 
     def update(self, self_map, SCREEN_HEIGHT):

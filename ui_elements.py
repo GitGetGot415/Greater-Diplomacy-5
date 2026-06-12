@@ -58,7 +58,7 @@ class Button:
         is_hovered = self.rect.collidepoint(mouse_pos)
         
         current_color = self.color
-        if getattr(self, 'disabled', False): current_color = c.UI_COLORS["grey"][0]
+        if self.disabled: current_color = c.UI_COLORS["grey"][0]
         elif self.is_pressed and is_hovered: current_color = self.pressed_color
         elif is_hovered: current_color = self.hover_color
         
@@ -67,11 +67,11 @@ class Button:
         else:
             pygame.draw.rect(surface, current_color, self.rect)
         
-        if getattr(self, 'is_selected', False):
+        if self.is_selected:
             border_color = c.COLOR_GOLD_HIGHLIGHT
             border_thickness = 3
         else:
-            if getattr(self, 'disabled', False):
+            if self.disabled:
                 border_color = c.COLOR_DIM_BORDER
             else:
                 border_color = (255, 255, 255) if is_hovered else (20, 20, 20)

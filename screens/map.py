@@ -184,7 +184,7 @@ class Map(GameState):
         self.camera_tilt_slider_val = val
         
         # Grab the old tilt before we update it to calculate the difference
-        old_tilt = getattr(self.camera, 'manual_tilt_factor', 1.0)
+        old_tilt = self.camera.manual_tilt_factor
         new_tilt = 1.0 - (val * (1.0 - c.MAX_Y_TILT_FACTOR))
         
         # Failsafe to prevent division by zero
@@ -609,16 +609,16 @@ class Map(GameState):
             self.centers_need_update = False
 
         # Only spawn popups when the player is fully in control of the current turn
-        is_playing = not getattr(self, 'viewing_ai_moves', False) and \
-                     not getattr(self, 'ai_is_thinking', False) and \
-                     not getattr(self, 'show_player_ready_screen', False) and \
+        is_playing = not self.viewing_ai_moves and \
+                     not self.ai_is_thinking and \
+                     not self.show_player_ready_screen and \
                      not self.selection_mode
 
         if is_playing:
             from ui import diplomatic_popups
             diplomatic_popups.spawn_popups_for_player(self)
 
-        if getattr(self, 'show_player_ready_screen', False):
+        if self.show_player_ready_screen:
             for el in self.elements: el.visible = False
             return
 
@@ -627,7 +627,7 @@ class Map(GameState):
             self.multi_turns_total = 0
             self.ai_is_thinking = False
             
-            if getattr(self, 'thread_error', None): return
+            if self.thread_error: return
             
             self.refresh_political_map()
             self.refresh_relations_map()
@@ -643,13 +643,13 @@ class Map(GameState):
             self.show_feedback(f"Multi-Turn Processing Complete!")
             return
 
-        if getattr(self, 'ai_processing_complete', False):
+        if self.ai_processing_complete:
             self.ai_processing_complete = False
             self.ai_is_thinking = False
             
-            if getattr(self, 'thread_error', None): return
+            if self.thread_error: return
             
-            if getattr(self, 'skip_ai_view', False):
+            if self.skip_ai_view:
                 self.viewing_ai_moves = True
                 turn_manager.advance_time(self)
             else:
