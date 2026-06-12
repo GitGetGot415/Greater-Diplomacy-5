@@ -36,7 +36,7 @@ class Orders_Screen(GameState):
         self.map_screen = map_ref
         self.scroll_y = 0 # Reset scroll
         
-        # --- NEW: Auto-select logic ---
+        # --- Auto-select logic ---
         # Gather the exact list indices of the units you own on this tile
         units = self.target_province.get("units", [])
         player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.player_country]
@@ -59,7 +59,7 @@ class Orders_Screen(GameState):
         total_content_h = len(player_units) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
 
-        # --- NEW: Select All & Clear Orders Buttons ---
+        # --- Select All & Clear Orders Buttons ---
         if player_units:
             if len(player_units) > 1:
                 all_color = "blue" if self.selected_unit_index == "ALL" else "grey"
@@ -242,7 +242,7 @@ class Orders_Screen(GameState):
     def additional_events(self, event):
         mx, my = pygame.mouse.get_pos()
         
-        # --- NEW: Block clicks inside the Orders Panel ---
+        # --- Block clicks inside the Orders Panel ---
         # Define the panel area
         panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
         
@@ -333,7 +333,7 @@ class Orders_Screen(GameState):
             else:
                 start_node = self.map_screen.id_to_province.get(current_path[-1])
 
-            # --- NEW: Unlimited Queueing Logic ---
+            # --- Unlimited Queueing Logic ---
             if dest["id"] in start_node["neighbors"]:
                 if all(self.can_unit_enter(u, dest) for u in target_units):
                     
@@ -370,13 +370,12 @@ class Orders_Screen(GameState):
                 self.map_screen.show_feedback("Naval units blocked by land!")
                 return False
 
-            # --- NEW: Ships can only dock at friendly coasts ---
+            # Ships can only dock at friendly coasts
             if not is_convoy and not queries.can_ships_enter(unit["owner"], dest, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Ships can only enter friendly/owned coastal tiles!")
                 return False
-            # ---------------------------------------------------
 
-        # --- NEW: Convoy Movement Rules ---
+        # Convoy Movement Rules
         if is_convoy:
             current_path = unit.get("order", {}).get("path", [])
             if not current_path:
@@ -391,19 +390,17 @@ class Orders_Screen(GameState):
             if not dest_is_water and not queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
                 self.map_screen.show_feedback(f"Neutral territory!")
                 return False
-        # ----------------------------------
 
         # Enforce Diplomacy/Border Rules
         dest_owner = dest.get("owner", "Unclaimed")
         
-        # --- NEW: Combat Lock (Player UI Check) ---
+        # Combat Lock (Player UI Check)
         current_path = unit.get("order", {}).get("path", [])
         if not current_path: # First step of the move order
             in_combat = queries.is_nation_in_combat_here(unit["owner"], self.target_province, self.map_screen.nation_data)
             if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Cannot advance into enemy territory while in combat! (Retreat only)")
                 return False
-        # ------------------------------------------
 
         if not is_naval and not queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
             self.map_screen.show_feedback(f"Neutral {dest_owner} territory!")

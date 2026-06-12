@@ -21,7 +21,6 @@ class Load_Game(GameState):
         self.new_name_text = ""
         self.deleting_folder = None 
         
-        # --- NEW SCROLL STATE ---
         self.save_scroll_y = 0
         self.max_save_scroll = 0
         self.is_dragging_scrollbar = False

@@ -176,7 +176,6 @@ def handle_map_events(self, event):
                         
                         self.hovered_province["resources"][self.brush_resource_type] = self.brush_resource_amount
         
-        # ADD THIS: Right Click (or Middle Click)
         if pygame.mouse.get_pressed()[2]: # Right Click
             if self.hovered_province:
                 if self.hovered_province.get("owner") not in c.WATER_NATIONS:
@@ -187,7 +186,7 @@ def handle_map_events(self, event):
                         self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
                         self.show_feedback(f"Picked: {self.brush_nation}")
 
-        # --- NEW UNIT PLACEMENT LOGIC ---
+        # --- UNIT PLACEMENT LOGIC ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.hovered_province and self.editor_mode == "UNIT":
                 if self.brush_unit == "None":
@@ -233,7 +232,7 @@ def handle_map_events(self, event):
                 player_setup.select_player_country(self, self.hovered_province)
         return 
 
-    # --- NEW: Direct Map Message Editing ---
+    # --- Direct Map Message Editing ---
     # Moved ABOVE the "STANDARD GAME SELECTION" return block!
     if self.selected_province:
         owner = self.selected_province.get("owner")
@@ -278,6 +277,6 @@ def handle_map_events(self, event):
             self.selected_province = self.hovered_province
             camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, self.total_ui_h)
             
-            # NEW: Load draft if one exists so the box isn't empty if you return
+            # Load draft if one exists so the box isn't empty if you return
             owner = self.selected_province.get("owner")
             self.mail_draft_text = queries.get_message_draft(self.player_country, owner, self.nation_data)

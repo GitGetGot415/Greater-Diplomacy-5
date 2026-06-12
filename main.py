@@ -1,7 +1,7 @@
 import pygame
 import os
 
-# --- NEW: macOS Tkinter/Pygame NSApplication Clash Fix ---
+# macOS Tkinter/Pygame NSApplication Clash Fix
 import platform
 import tkinter as tk
 if platform.system() == "Darwin":
@@ -10,7 +10,7 @@ if platform.system() == "Darwin":
     _mac_tk_fix = tk.Tk()
     _mac_tk_fix.withdraw()
 
-# --- NEW: Tell Python 3.8+ to trust the current folder for DLLs ---
+# Tell Python 3.8+ to trust the current folder for DLLs
 if os.name == 'nt':
     os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
@@ -303,7 +303,7 @@ class Controller:
                 if os.path.isdir(album_dir):
                     synced_albums[item] = []
                     
-                    # --- NEW: Check for start_times.json ---
+                    # Check for start_times.json
                     album_start_times = {}
                     start_times_path = os.path.join(album_dir, "start_times.json")
                     if os.path.exists(start_times_path):
@@ -318,7 +318,7 @@ class Controller:
                             track_path = os.path.join(album_dir, file).replace("\\", "/")
                             synced_albums[item].append(track_path)
                             
-                            # --- NEW: Map the start time if defined ---
+                            # Map the start time if defined
                             file_stem = os.path.splitext(file)[0]
                             if file in album_start_times:
                                 self.track_start_times[track_path] = float(album_start_times[file])

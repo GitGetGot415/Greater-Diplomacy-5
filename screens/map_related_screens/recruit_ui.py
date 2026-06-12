@@ -49,8 +49,6 @@ def draw_recruitment_overlay(surface, target_province):
         
     return cancel_buttons
 
-
-# --- NEW FUNCTION FOR THE READ-ONLY MAP VIEW QUEUE ---
 def draw_map_queue_overlay(surface, target_province):
     """Draws a read-only split queue under the construction button on the map screen."""
     b_queue = target_province.get("building_queue", [])

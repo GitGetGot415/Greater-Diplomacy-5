@@ -1,4 +1,5 @@
 import data.constants as c
+from data import queries
 
 def force_war_menu(map_screen): 
     open_spectator_action_menu(map_screen, "WAR")
@@ -87,8 +88,7 @@ def open_spectator_action_menu(map_screen, action_type):
     scrollbar = tk.Scrollbar(frame)
     scrollbar.pack(side="right", fill="y")
     
-    # --- NEW: Dynamic filtering based on action type ---
-    from data import queries
+    # --- Dynamic filtering based on action type ---
     living_nations = queries.get_living_nations(map_screen.map_data)
     
     if action_type == "JOIN_FACTION":

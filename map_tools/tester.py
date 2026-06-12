@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 
-# --- NEW: Ask which map to test BEFORE starting Pygame ---
+# Ask which map to test BEFORE starting Pygame
 root = tk.Tk()
 root.withdraw()
 target_dir = filedialog.askdirectory(initialdir=c.BASE_MAPS_DIR, title="Select Map to Test")

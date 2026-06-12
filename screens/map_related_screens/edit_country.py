@@ -370,10 +370,10 @@ class Edit_Country_Screen(GameState):
         # Scrub it immediately to keep RAM clean
         queries.scrub_default_images({self.editing_country: p_data})
         
-        # --- NEW: Refresh Country Name Cache ---
+        # Refresh Country Name Cache
         country_names.clear_country_name_cache(self.map_screen)
         
-        # --- NEW COLOR SAVE LOGIC ---
+        # COLOR SAVE LOGIC
         old_color = p_data.get("color")
         if list(old_color) != list(self.new_map_color):
             p_data["color"] = self.new_map_color

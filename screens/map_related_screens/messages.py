@@ -194,7 +194,7 @@ class Messages_Screen(GameState):
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
                         
-                        # --- NEW: HANDLE TRADE UNDO CLICKS ---
+                        # HANDLE TRADE UNDO CLICKS
                         if idx == "TRADE_OFFER":
                             # Passing it to the toggle logic safely refunds the escrow!
                             diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
@@ -435,7 +435,7 @@ class Messages_Screen(GameState):
             if act_str and not act_str.startswith("MSG:"):
                 is_diplo_action = True
                 
-                # --- NEW: INJECT PENDING TRADES AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
+                # --- INJECT PENDING TRADES AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
                 if act_str == "TRADE" and pending.get("turns", 0) == 0:
                     display_thread.append({
                         "content": pending.get("message", "Proposed Trade"),

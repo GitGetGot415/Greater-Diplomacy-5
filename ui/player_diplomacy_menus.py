@@ -1416,14 +1416,14 @@ class Puppets_Screen(GameState):
                 p_name = p_data.get("name", p)
                 p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
                 
-                # --- NEW: Formatted Puppet Sub-text ---
+                # Formatted Puppet Sub-text
                 name_txt = font_body.render(p_name, True, (255, 255, 255))
                 type_txt = fonts.get("normal").render(f"({p_type})", True, (255, 215, 0) if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
                 
                 surface.blit(name_txt, (self.panel_rect.x + 20, y_pos))
                 surface.blit(type_txt, (self.panel_rect.x + 20, y_pos + 30))
                 
-                # --- FIX: Show exact siphoned amounts below sliders ---
+                # Show exact siphoned amounts below sliders
                 if p_type == c.PUPPET_TYPE_INTEGRATED:
                     econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
                     if len(econ_tuple) == 3:
@@ -1488,7 +1488,7 @@ class Create_Integrated_Puppet_Screen(GameState):
         for subject in self.valid_subjects:
             if y_pos > self.panel_rect.y + 100 and y_pos < self.panel_rect.bottom - 40:
                 
-                # --- NEW: Calculate if creating this puppet would leave it with 0 territories ---
+                # Calculate if creating this puppet would leave it with 0 territories
                 territory_count = 0
                 for prov in self.map_screen.map_data.values():
                     if prov.get("owner") == self.player and subject in prov.get("cores", []):

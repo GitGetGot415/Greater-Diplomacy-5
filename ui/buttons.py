@@ -1,12 +1,9 @@
-# --- Start of file: .\ui\buttons.py ---
 import pygame
 from map_logic.system32 import turn_manager
 import ui_elements
 from ui_elements import Button, Slider
 import data.constants as c
 from data import queries
-
-# New imports for the refactored logic modules
 from map_logic.setup import player_setup
 from map_logic.diplomacy import player_diplomacy_actions
 from ui import event_handler, spectator_menus, editor_menus
@@ -80,9 +77,9 @@ def render_buttons(self):
     self.btn_gp_claims = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "pink", "Claims", lambda: player_diplomacy_actions.open_claims_menu(self), image=icons.get("paper"), show_text=True)
     self.btn_gp_puppets = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "pink", "Puppets", lambda: player_diplomacy_actions.open_puppets_menu(self), image=icons.get("faction"), show_text=True)
 
-    # NEW: Register the Slider below the Faction button
+    # Register the Slider below the Faction button
     slider_y = int(start_y_val + c.LEFT_UI_BAR_STEP_Y * 12)
-    self.slider_camera_tilt = Slider(c.LEFT_UI_BAR_X, slider_y, 120, "Camera Tilt", getattr(self, 'camera_tilt_slider_val', 0.0), self.set_camera_tilt)
+    self.slider_camera_tilt = Slider(c.LEFT_UI_BAR_X, slider_y, 120, "Camera Tilt", self.camera_tilt_slider_val, self.set_camera_tilt)
 
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
@@ -287,7 +284,7 @@ def update_button_states(map_screen):
                     else:
                         set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
 
-            # --- NEW: Allow Spectator to view production lines ---
+            # Allow Spectator to view production lines
             terrain = map_screen.selected_province.get("terrain", "")
             is_land = terrain not in c.WATER_TERRAINS
             set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")

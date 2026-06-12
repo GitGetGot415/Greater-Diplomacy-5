@@ -4,7 +4,7 @@
 import ctypes
 import sys
 import os
-import platform  # NEW: Required for checking the operating system
+import platform
 
 try:
     # Get the absolute path to the directory containing this script

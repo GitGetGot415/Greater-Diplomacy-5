@@ -75,7 +75,7 @@ def draw_sidebar_info(self, surface):
 
     current_y += 10 # Padding
 
-    # --- NEW: Buildings Section ---
+    # Buildings Section
     header = self.font.render("--- BUILDINGS ---", True, (255, 255, 255))
     surface.blit(header, (text_x, current_y))
     current_y += 25
@@ -107,7 +107,7 @@ def draw_sidebar_info(self, surface):
     owners_present = list(set(u.get("owner", "Unknown") for u in units))
     is_combat = queries.is_province_in_active_combat(province, self.nation_data)
 
-    # --- NEW: Active Garrison ---
+    # --- Active Garrison ---
     header = self.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
     surface.blit(header, (text_x, current_y))
     current_y += 25
