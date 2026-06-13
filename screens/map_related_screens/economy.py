@@ -54,8 +54,17 @@ class Economy_Screen(GameState):
         title = font_title.render("National Economy", True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
-        # Grab the projections and data
-        econ_tuple = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+
+        # Cache the economy to prevent 60 FPS global recalculations
+        current_sliders = (p_data.get("conscription_slider", 1.0), p_data.get("mat_to_fuel_slider", 0.0))
+        if not hasattr(self, 'last_econ_state') or self.last_econ_state != current_sliders or self.map_screen.time_manager.total_turns != getattr(self, 'last_econ_turn', -1):
+            self.econ_cache = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
+            self.last_econ_state = current_sliders
+            self.last_econ_turn = self.map_screen.time_manager.total_turns
+        
+        econ_tuple = self.econ_cache
+
         if len(econ_tuple) == 3:
             total_inc, upkeep, breakdown = econ_tuple
         else:

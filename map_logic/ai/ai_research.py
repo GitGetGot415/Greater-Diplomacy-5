@@ -5,10 +5,10 @@ from data import queries
 
 def process_ai_research(map_screen):
     """Automates research queueing for AI nations."""
-    if not os.path.exists(c.RESEARCH_TEMPLATE_PATH): 
-        return
-        
+    # REPLACED DISK I/O WITH CACHED QUERIES
     tech_tree = queries.get_tech_tree()
+    if not tech_tree: 
+        return
 
     ai_nations = queries.get_active_ai_nations(map_screen)
 

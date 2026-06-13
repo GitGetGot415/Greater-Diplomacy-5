@@ -44,7 +44,13 @@ AI_FALLBACK_RESPONSES = {
     "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!",
 
     "PROACTIVE_CEASEFIRE": "We offer terms for a ceasefire.",
-    "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!"
+    "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
+
+    "ACCEPT_GENERIC": "We accepted your {action}.",
+    "REJECT_GENERIC": "We rejected your {action}.",
+    "ACCEPT_FACTION_ALREADY_IN": "We wanted to accept, but we are already in a faction.",
+    "ACCEPT_FACTION_JOIN_ALREADY_IN": "We cannot accept as you are already in a faction.",
+    "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties."
 }
 
 # ==========================================

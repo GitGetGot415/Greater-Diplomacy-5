@@ -560,30 +560,31 @@ def process_diplomacy_turn(self):
                     other_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
                     
                     if isinstance(other_pending, dict) and other_pending.get("action") == orig_action:
-                        msg_text = custom_msg if custom_msg else f"We accepted your {orig_action.replace('_', ' ').lower()}."
+                        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+                        msg_text = custom_msg if custom_msg else fallback_msg
                         
                         if orig_action == "FACTION_INVITE":
                             if not self.nation_data[country_name].get("faction", ""):
                                 finalize_faction_join(self.map_data, self.nation_data, target, country_name)
                             else:
-                                msg_text = "We wanted to accept, but we are already in a faction."
+                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_ALREADY_IN")
                         elif orig_action == "JOIN_FACTION_REQ":
                             if not self.nation_data[target].get("faction", ""):
                                 finalize_faction_join(self.map_data, self.nation_data, country_name, target)
                             else:
-                                msg_text = "We cannot accept as you are already in a faction."
+                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_JOIN_ALREADY_IN")
                         elif orig_action == "CREATE_FACTION":
                             if not self.nation_data[country_name].get("faction", "") and not self.nation_data[target].get("faction", ""):
                                 finalize_create_faction(self.map_data, self.nation_data, target)
                                 finalize_faction_join(self.map_data, self.nation_data, target, country_name)
                             else:
-                                msg_text = "The proposed faction could not be formed because one of us is already bound by other treaties."
+                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("CREATE_FACTION_CONFLICT")
                         elif orig_action == "CEASEFIRE":
                             finalize_neutral(self.nation_data, country_name, target)
                         elif orig_action == "PEACE_TREATY":
                             treaty_type = other_pending.get("parameters", other_pending.get("message", c.PEACE_WHITE_PEACE))
                             execute_peace_treaty(self.map_data, self.nation_data, target, country_name, treaty_type, self)
-                            msg_text = f"We accepted your peace terms."
+                            msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_PEACE")
                             
                         # --- NEW: EXECUTE APPROVED TRADE ---
                         elif orig_action == "TRADE":
@@ -619,7 +620,7 @@ def process_diplomacy_turn(self):
                                 from map_logic.diplomacy.diplomacy_agreements import assign_puppet
                                 assign_puppet(self.map_data, self.nation_data, country_name, target)
 
-                            msg_text = custom_msg if custom_msg else "We accepted your trade."
+                            msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_TRADE")
                         elif orig_action == "CALL_TO_ARMS":
                             join_faction_wars(self.map_data, self.nation_data, country_name, target)
                         elif orig_action == "JOIN_WARS":
@@ -627,7 +628,7 @@ def process_diplomacy_turn(self):
                             log_global_event(self.nation_data, f"ESCALATION: {target} has joined the wars of {country_name}!")
                         
                         send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                        if msg_text == custom_msg or "accepted" in msg_text:
+                        if msg_text == custom_msg or "accepted" in msg_text.lower():
                             log_global_event(self.nation_data, f"Diplomatic agreement reached between {country_name} and {target}.")
                         
                         # Clear the original request from the sender
@@ -642,7 +643,8 @@ def process_diplomacy_turn(self):
                     other_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
                     
                     if isinstance(other_pending, dict) and other_pending.get("action") == orig_action:
-                        msg_text = custom_msg if custom_msg else f"We rejected your {orig_action.replace('_', ' ').lower()}."
+                        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+                        msg_text = custom_msg if custom_msg else fallback_msg
                         
                         # --- NEW: REFUND REJECTED TRADE ESCROW ---
                         if orig_action == "TRADE":

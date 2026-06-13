@@ -583,16 +583,12 @@ def open_map_research_editor(self):
         return
 
     def get_default_research():
-        # 1. ALWAYS generate a fresh template from the JSON first
-        template_path = c.RESEARCH_TEMPLATE_PATH
-        fresh_template = {}
-        if os.path.exists(template_path):
-            with open(template_path, "r") as f:
-                struct = json.load(f)
-            fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
+        # 1. ALWAYS generate a fresh template from the cached JSON first
+        struct = queries.get_tech_tree()
+        fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
             
-            if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
-            if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
+        if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
+        if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
 
         # 2. If the loaded map has an older default_research dict, update it with missing keys
         if getattr(self, "default_research", None) is not None:

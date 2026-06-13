@@ -57,10 +57,6 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
     try:
         # Utilize the caching manager
         saved_data = queries.get_settings()
-        if not saved_data:
-            import json
-            with open(CONFIG_PATH, "r") as f:
-                saved_data = json.load(f)
         
         # Backwards compatibility if old save file only has keybinds directly
         if "keybinds" not in saved_data:
