@@ -1,0 +1,8181 @@
+{
+    "(1, 0, 0)": {
+        "id": 1,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            86,
+            23
+        ],
+        "neighbors": [
+            35,
+            14,
+            16,
+            22,
+            25
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(1, 0, 0)",
+        "map_color": [
+            1,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(2, 0, 0)": {
+        "id": 2,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            233,
+            11
+        ],
+        "neighbors": [
+            3,
+            20,
+            12,
+            14
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(2, 0, 0)",
+        "map_color": [
+            2,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(3, 0, 0)": {
+        "id": 3,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            321,
+            11
+        ],
+        "neighbors": [
+            2,
+            4,
+            7,
+            12,
+            13
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(3, 0, 0)",
+        "map_color": [
+            3,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(4, 0, 0)": {
+        "id": 4,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            411,
+            6
+        ],
+        "neighbors": [
+            9,
+            10,
+            3,
+            7
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(4, 0, 0)",
+        "map_color": [
+            4,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(5, 0, 0)": {
+        "id": 5,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            828,
+            14
+        ],
+        "neighbors": [
+            19,
+            6,
+            23
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(5, 0, 0)",
+        "map_color": [
+            5,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(6, 0, 0)": {
+        "id": 6,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            935,
+            16
+        ],
+        "neighbors": [
+            24,
+            11,
+            19,
+            5
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(6, 0, 0)",
+        "map_color": [
+            6,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(7, 0, 0)": {
+        "id": 7,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            371,
+            24
+        ],
+        "neighbors": [
+            3,
+            4,
+            9,
+            13,
+            18
+        ],
+        "owner": "Finland",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Finland"
+        ],
+        "json_key": "(7, 0, 0)",
+        "map_color": [
+            7,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(8, 0, 0)": {
+        "id": 8,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            749,
+            51
+        ],
+        "neighbors": [
+            32,
+            65,
+            51,
+            23,
+            63
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(8, 0, 0)",
+        "map_color": [
+            8,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(9, 0, 0)": {
+        "id": 9,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            397,
+            26
+        ],
+        "neighbors": [
+            4,
+            7,
+            10,
+            26,
+            29
+        ],
+        "owner": "Karelia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Karelia"
+        ],
+        "json_key": "(9, 0, 0)",
+        "map_color": [
+            9,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(10, 0, 0)": {
+        "id": 10,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            440,
+            44
+        ],
+        "neighbors": [
+            4,
+            9,
+            44,
+            26,
+            28
+        ],
+        "owner": "Arkhangelsk",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Arkhangelsk"
+        ],
+        "json_key": "(10, 0, 0)",
+        "map_color": [
+            10,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(11, 0, 0)": {
+        "id": 11,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            999,
+            19
+        ],
+        "neighbors": [
+            24,
+            17,
+            6,
+            15
+        ],
+        "owner": "Alaska",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Alaska"
+        ],
+        "json_key": "(11, 0, 0)",
+        "map_color": [
+            11,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(12, 0, 0)": {
+        "id": 12,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            276,
+            44
+        ],
+        "neighbors": [
+            33,
+            2,
+            3,
+            36,
+            13,
+            49,
+            20
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(12, 0, 0)",
+        "map_color": [
+            12,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(13, 0, 0)": {
+        "id": 13,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            338,
+            39
+        ],
+        "neighbors": [
+            33,
+            3,
+            7,
+            12,
+            18
+        ],
+        "owner": "Sweden",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Sweden"
+        ],
+        "json_key": "(13, 0, 0)",
+        "map_color": [
+            13,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(14, 0, 0)": {
+        "id": 14,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            166,
+            45
+        ],
+        "neighbors": [
+            1,
+            2,
+            39,
+            41,
+            20,
+            25
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(14, 0, 0)",
+        "map_color": [
+            14,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(15, 0, 0)": {
+        "id": 15,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            1047,
+            44
+        ],
+        "neighbors": [
+            17,
+            11,
+            21,
+            43
+        ],
+        "owner": "British Columbia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "British Columbia"
+        ],
+        "json_key": "(15, 0, 0)",
+        "map_color": [
+            15,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(16, 0, 0)": {
+        "id": 16,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            82,
+            52
+        ],
+        "neighbors": [
+            1,
+            35,
+            52,
+            25,
+            59
+        ],
+        "owner": "Quebec",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Quebec"
+        ],
+        "json_key": "(16, 0, 0)",
+        "map_color": [
+            16,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(17, 0, 0)": {
+        "id": 17,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            1004,
+            43
+        ],
+        "neighbors": [
+            34,
+            43,
+            11,
+            15,
+            24
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(17, 0, 0)",
+        "map_color": [
+            17,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(18, 0, 0)": {
+        "id": 18,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            359,
+            54
+        ],
+        "neighbors": [
+            33,
+            7,
+            40,
+            13,
+            46,
+            29
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(18, 0, 0)",
+        "map_color": [
+            18,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(19, 0, 0)": {
+        "id": 19,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            878,
+            55
+        ],
+        "neighbors": [
+            5,
+            6,
+            23,
+            24,
+            58
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(19, 0, 0)",
+        "map_color": [
+            19,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(20, 0, 0)": {
+        "id": 20,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            218,
+            56
+        ],
+        "neighbors": [
+            2,
+            41,
+            12,
+            14,
+            49
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(20, 0, 0)",
+        "map_color": [
+            20,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(21, 0, 0)": {
+        "id": 21,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            1089,
+            53
+        ],
+        "neighbors": [
+            43,
+            45,
+            22,
+            15
+        ],
+        "owner": "Alberta",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Alberta"
+        ],
+        "json_key": "(21, 0, 0)",
+        "map_color": [
+            21,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(22, 0, 0)": {
+        "id": 22,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            16,
+            51
+        ],
+        "neighbors": [
+            1,
+            35,
+            45,
+            47,
+            48,
+            21
+        ],
+        "owner": "Manitoba",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Manitoba"
+        ],
+        "json_key": "(22, 0, 0)",
+        "map_color": [
+            22,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(23, 0, 0)": {
+        "id": 23,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            819,
+            65
+        ],
+        "neighbors": [
+            5,
+            8,
+            51,
+            19,
+            58
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(23, 0, 0)",
+        "map_color": [
+            23,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(24, 0, 0)": {
+        "id": 24,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            943,
+            69
+        ],
+        "neighbors": [
+            34,
+            6,
+            11,
+            17,
+            19,
+            53,
+            58
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(24, 0, 0)",
+        "map_color": [
+            24,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(25, 0, 0)": {
+        "id": 25,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            113,
+            77
+        ],
+        "neighbors": [
+            1,
+            68,
+            39,
+            14,
+            16,
+            59
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(25, 0, 0)",
+        "map_color": [
+            25,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(26, 0, 0)": {
+        "id": 26,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            415,
+            66
+        ],
+        "neighbors": [
+            37,
+            9,
+            10,
+            44,
+            56,
+            29
+        ],
+        "owner": "Moscow",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Moscow"
+        ],
+        "json_key": "(26, 0, 0)",
+        "map_color": [
+            26,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(27, 0, 0)": {
+        "id": 27,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            665,
+            63
+        ],
+        "neighbors": [
+            32,
+            38,
+            50,
+            54,
+            31
+        ],
+        "owner": "Zabaykalsky",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Zabaykalsky"
+        ],
+        "json_key": "(27, 0, 0)",
+        "map_color": [
+            27,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(28, 0, 0)": {
+        "id": 28,
+        "terrain": "hills",
+        "is_coastal": false,
+        "center": [
+            490,
+            65
+        ],
+        "neighbors": [
+            10,
+            42,
+            44,
+            57,
+            30
+        ],
+        "owner": "Tatarstan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Tatarstan"
+        ],
+        "json_key": "(28, 0, 0)",
+        "map_color": [
+            28,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(29, 0, 0)": {
+        "id": 29,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            379,
+            62
+        ],
+        "neighbors": [
+            37,
+            9,
+            46,
+            18,
+            26
+        ],
+        "owner": "United Baltic Dutchy",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "United Baltic Dutchy"
+        ],
+        "json_key": "(29, 0, 0)",
+        "map_color": [
+            29,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(30, 0, 0)": {
+        "id": 30,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            563,
+            69
+        ],
+        "neighbors": [
+            42,
+            50,
+            55,
+            28,
+            62,
+            31
+        ],
+        "owner": "Novosibirsk",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Novosibirsk"
+        ],
+        "json_key": "(30, 0, 0)",
+        "map_color": [
+            30,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(31, 0, 0)": {
+        "id": 31,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            613,
+            66
+        ],
+        "neighbors": [
+            50,
+            27,
+            30
+        ],
+        "owner": "Irkutsk",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Irkutsk"
+        ],
+        "json_key": "(31, 0, 0)",
+        "map_color": [
+            31,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(32, 0, 0)": {
+        "id": 32,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            727,
+            74
+        ],
+        "neighbors": [
+            69,
+            38,
+            8,
+            27,
+            63
+        ],
+        "owner": "Zakytaishchyna",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Zakytaishchyna"
+        ],
+        "json_key": "(32, 0, 0)",
+        "map_color": [
+            32,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(33, 0, 0)": {
+        "id": 33,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            312,
+            70
+        ],
+        "neighbors": [
+            36,
+            40,
+            12,
+            13,
+            49,
+            18,
+            61
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(33, 0, 0)",
+        "map_color": [
+            33,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(34, 0, 0)": {
+        "id": 34,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            997,
+            88
+        ],
+        "neighbors": [
+            43,
+            78,
+            17,
+            53,
+            24,
+            60
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(34, 0, 0)",
+        "map_color": [
+            34,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(35, 0, 0)": {
+        "id": 35,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            41,
+            75
+        ],
+        "neighbors": [
+            64,
+            1,
+            47,
+            16,
+            48,
+            52,
+            22
+        ],
+        "owner": "Ontario",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Ontario"
+        ],
+        "json_key": "(35, 0, 0)",
+        "map_color": [
+            35,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(36, 0, 0)": {
+        "id": 36,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            284,
+            79
+        ],
+        "neighbors": [
+            49,
+            12,
+            33
+        ],
+        "owner": "United Kingdom",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "United Kingdom"
+        ],
+        "json_key": "(36, 0, 0)",
+        "map_color": [
+            36,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(37, 0, 0)": {
+        "id": 37,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            391,
+            79
+        ],
+        "neighbors": [
+            56,
+            26,
+            29,
+            46
+        ],
+        "owner": "Belarus",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Belarus"
+        ],
+        "json_key": "(37, 0, 0)",
+        "map_color": [
+            37,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(38, 0, 0)": {
+        "id": 38,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            709,
+            95
+        ],
+        "neighbors": [
+            32,
+            69,
+            71,
+            83,
+            54,
+            27
+        ],
+        "owner": "Manchukuo",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Manchukuo"
+        ],
+        "json_key": "(38, 0, 0)",
+        "map_color": [
+            38,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(39, 0, 0)": {
+        "id": 39,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            143,
+            118
+        ],
+        "neighbors": [
+            68,
+            41,
+            109,
+            14,
+            88,
+            25
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(39, 0, 0)",
+        "map_color": [
+            39,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(40, 0, 0)": {
+        "id": 40,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            334,
+            92
+        ],
+        "neighbors": [
+            33,
+            74,
+            76,
+            46,
+            18,
+            61
+        ],
+        "owner": "German Reich",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "German Reich"
+        ],
+        "json_key": "(40, 0, 0)",
+        "map_color": [
+            40,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(41, 0, 0)": {
+        "id": 41,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            201,
+            109
+        ],
+        "neighbors": [
+            39,
+            14,
+            49,
+            20,
+            85,
+            88
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(41, 0, 0)",
+        "map_color": [
+            41,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(42, 0, 0)": {
+        "id": 42,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            522,
+            84
+        ],
+        "neighbors": [
+            57,
+            28,
+            30,
+            55
+        ],
+        "owner": "Kazakhstan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Kazakhstan"
+        ],
+        "json_key": "(42, 0, 0)",
+        "map_color": [
+            42,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(43, 0, 0)": {
+        "id": 43,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            1047,
+            83
+        ],
+        "neighbors": [
+            34,
+            66,
+            45,
+            15,
+            17,
+            21,
+            60
+        ],
+        "owner": "Washington",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Washington"
+        ],
+        "json_key": "(43, 0, 0)",
+        "map_color": [
+            43,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(44, 0, 0)": {
+        "id": 44,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            444,
+            86
+        ],
+        "neighbors": [
+            67,
+            10,
+            56,
+            57,
+            26,
+            28
+        ],
+        "owner": "Volgograd",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Volgograd"
+        ],
+        "json_key": "(44, 0, 0)",
+        "map_color": [
+            44,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(45, 0, 0)": {
+        "id": 45,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            1095,
+            89
+        ],
+        "neighbors": [
+            66,
+            73,
+            43,
+            48,
+            21,
+            22
+        ],
+        "owner": "Montana",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Montana"
+        ],
+        "json_key": "(45, 0, 0)",
+        "map_color": [
+            45,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(46, 0, 0)": {
+        "id": 46,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            363,
+            92
+        ],
+        "neighbors": [
+            37,
+            70,
+            40,
+            74,
+            18,
+            56,
+            29
+        ],
+        "owner": "Poland",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Poland"
+        ],
+        "json_key": "(46, 0, 0)",
+        "map_color": [
+            46,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(47, 0, 0)": {
+        "id": 47,
+        "terrain": "lakes",
+        "is_coastal": false,
+        "center": [
+            18,
+            83
+        ],
+        "neighbors": [
+            48,
+            35,
+            22
+        ],
+        "owner": "Lakes",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(47, 0, 0)",
+        "map_color": [
+            47,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(48, 0, 0)": {
+        "id": 48,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            10,
+            101
+        ],
+        "neighbors": [
+            64,
+            35,
+            73,
+            45,
+            79,
+            47,
+            52,
+            22
+        ],
+        "owner": "Ohio",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Ohio"
+        ],
+        "json_key": "(48, 0, 0)",
+        "map_color": [
+            48,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(49, 0, 0)": {
+        "id": 49,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            261,
+            108
+        ],
+        "neighbors": [
+            33,
+            36,
+            41,
+            12,
+            20,
+            85,
+            86,
+            61
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(49, 0, 0)",
+        "map_color": [
+            49,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(50, 0, 0)": {
+        "id": 50,
+        "terrain": "plains",
+        "is_coastal": false,
+        "center": [
+            622,
+            93
+        ],
+        "neighbors": [
+            54,
+            30,
+            27,
+            62,
+            31
+        ],
+        "owner": "Orkhon",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Orkhon"
+        ],
+        "json_key": "(50, 0, 0)",
+        "map_color": [
+            50,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(51, 0, 0)": {
+        "id": 51,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            817,
+            114
+        ],
+        "neighbors": [
+            65,
+            97,
+            8,
+            23,
+            58,
+            92
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(51, 0, 0)",
+        "map_color": [
+            51,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(52, 0, 0)": {
+        "id": 52,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            47,
+            101
+        ],
+        "neighbors": [
+            64,
+            35,
+            79,
+            16,
+            48,
+            59
+        ],
+        "owner": "New England",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "New England"
+        ],
+        "json_key": "(52, 0, 0)",
+        "map_color": [
+            52,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(53, 0, 0)": {
+        "id": 53,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            952,
+            118
+        ],
+        "neighbors": [
+            34,
+            101,
+            78,
+            87,
+            24,
+            58
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(53, 0, 0)",
+        "map_color": [
+            53,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(54, 0, 0)": {
+        "id": 54,
+        "terrain": "plains",
+        "is_coastal": false,
+        "center": [
+            659,
+            105
+        ],
+        "neighbors": [
+            38,
+            71,
+            81,
+            50,
+            27,
+            62
+        ],
+        "owner": "Mongolia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Mongolia"
+        ],
+        "json_key": "(54, 0, 0)",
+        "map_color": [
+            54,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(55, 0, 0)": {
+        "id": 55,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            546,
+            109
+        ],
+        "neighbors": [
+            42,
+            77,
+            30,
+            57,
+            62
+        ],
+        "owner": "Almaty",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Almaty"
+        ],
+        "json_key": "(55, 0, 0)",
+        "map_color": [
+            55,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(56, 0, 0)": {
+        "id": 56,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            406,
+            102
+        ],
+        "neighbors": [
+            67,
+            37,
+            70,
+            75,
+            44,
+            46,
+            26
+        ],
+        "owner": "Ukraine",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Ukraine"
+        ],
+        "json_key": "(56, 0, 0)",
+        "map_color": [
+            56,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(57, 0, 0)": {
+        "id": 57,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            482,
+            105
+        ],
+        "neighbors": [
+            67,
+            72,
+            42,
+            44,
+            77,
+            55,
+            28
+        ],
+        "owner": "Aktobe",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Aktobe"
+        ],
+        "json_key": "(57, 0, 0)",
+        "map_color": [
+            57,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(58, 0, 0)": {
+        "id": 58,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            885,
+            114
+        ],
+        "neighbors": [
+            19,
+            51,
+            53,
+            87,
+            23,
+            24,
+            92,
+            93
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(58, 0, 0)",
+        "map_color": [
+            58,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(59, 0, 0)": {
+        "id": 59,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            62,
+            121
+        ],
+        "neighbors": [
+            89,
+            68,
+            79,
+            16,
+            52,
+            25
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(59, 0, 0)",
+        "map_color": [
+            59,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(60, 0, 0)": {
+        "id": 60,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            1026,
+            118
+        ],
+        "neighbors": [
+            96,
+            34,
+            66,
+            43,
+            78,
+            82
+        ],
+        "owner": "California",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "California"
+        ],
+        "json_key": "(60, 0, 0)",
+        "map_color": [
+            60,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(61, 0, 0)": {
+        "id": 61,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            308,
+            112
+        ],
+        "neighbors": [
+            33,
+            40,
+            76,
+            49,
+            84,
+            86
+        ],
+        "owner": "France",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "France"
+        ],
+        "json_key": "(61, 0, 0)",
+        "map_color": [
+            61,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(62, 0, 0)": {
+        "id": 62,
+        "terrain": "mountain",
+        "is_coastal": false,
+        "center": [
+            593,
+            130
+        ],
+        "neighbors": [
+            100,
+            105,
+            107,
+            77,
+            110,
+            81,
+            50,
+            54,
+            55,
+            30
+        ],
+        "owner": "Xinjiang",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Xinjiang"
+        ],
+        "json_key": "(62, 0, 0)",
+        "map_color": [
+            62,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(63, 0, 0)": {
+        "id": 63,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            766,
+            123
+        ],
+        "neighbors": [
+            32,
+            65,
+            69,
+            8,
+            83
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(63, 0, 0)",
+        "map_color": [
+            63,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(64, 0, 0)": {
+        "id": 64,
+        "terrain": "lakes",
+        "is_coastal": false,
+        "center": [
+            32,
+            98
+        ],
+        "neighbors": [
+            48,
+            35,
+            52
+        ],
+        "owner": "Lakes",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(64, 0, 0)",
+        "map_color": [
+            64,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(65, 0, 0)": {
+        "id": 65,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            785,
+            130
+        ],
+        "neighbors": [
+            97,
+            8,
+            83,
+            51,
+            63
+        ],
+        "owner": "Japanese Empire",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Japanese Empire"
+        ],
+        "json_key": "(65, 0, 0)",
+        "map_color": [
+            65,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(66, 0, 0)": {
+        "id": 66,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            1060,
+            112
+        ],
+        "neighbors": [
+            73,
+            43,
+            45,
+            82,
+            60
+        ],
+        "owner": "Deseret",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Deseret"
+        ],
+        "json_key": "(66, 0, 0)",
+        "map_color": [
+            66,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(67, 0, 0)": {
+        "id": 67,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            451,
+            123
+        ],
+        "neighbors": [
+            99,
+            72,
+            75,
+            44,
+            56,
+            57,
+            91
+        ],
+        "owner": "Caucasus",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Caucasus"
+        ],
+        "json_key": "(67, 0, 0)",
+        "map_color": [
+            67,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(68, 0, 0)": {
+        "id": 68,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            87,
+            144
+        ],
+        "neighbors": [
+            39,
+            109,
+            89,
+            59,
+            25
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(68, 0, 0)",
+        "map_color": [
+            68,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(69, 0, 0)": {
+        "id": 69,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            743,
+            129
+        ],
+        "neighbors": [
+            32,
+            83,
+            38,
+            63
+        ],
+        "owner": "Korea",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Korea"
+        ],
+        "json_key": "(69, 0, 0)",
+        "map_color": [
+            69,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(70, 0, 0)": {
+        "id": 70,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            385,
+            119
+        ],
+        "neighbors": [
+            74,
+            75,
+            46,
+            56,
+            90
+        ],
+        "owner": "Romania",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Romania"
+        ],
+        "json_key": "(70, 0, 0)",
+        "map_color": [
+            70,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(71, 0, 0)": {
+        "id": 71,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            690,
+            129
+        ],
+        "neighbors": [
+            38,
+            81,
+            83,
+            54,
+            94
+        ],
+        "owner": "Beijing",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Beijing"
+        ],
+        "json_key": "(71, 0, 0)",
+        "map_color": [
+            71,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(72, 0, 0)": {
+        "id": 72,
+        "terrain": "lakes",
+        "is_coastal": false,
+        "center": [
+            477,
+            134
+        ],
+        "neighbors": [
+            99,
+            57,
+            67,
+            77
+        ],
+        "owner": "Lakes",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(72, 0, 0)",
+        "map_color": [
+            72,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(73, 0, 0)": {
+        "id": 73,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            1102,
+            130
+        ],
+        "neighbors": [
+            66,
+            103,
+            45,
+            79,
+            48,
+            82
+        ],
+        "owner": "Louisiana",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Louisiana"
+        ],
+        "json_key": "(73, 0, 0)",
+        "map_color": [
+            73,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(74, 0, 0)": {
+        "id": 74,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            362,
+            122
+        ],
+        "neighbors": [
+            70,
+            40,
+            76,
+            46,
+            80,
+            90
+        ],
+        "owner": "Yugoslavia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Yugoslavia"
+        ],
+        "json_key": "(74, 0, 0)",
+        "map_color": [
+            74,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(75, 0, 0)": {
+        "id": 75,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            417,
+            128
+        ],
+        "neighbors": [
+            67,
+            70,
+            56,
+            90,
+            91,
+            95
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(75, 0, 0)",
+        "map_color": [
+            75,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(76, 0, 0)": {
+        "id": 76,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            341,
+            130
+        ],
+        "neighbors": [
+            98,
+            40,
+            74,
+            80,
+            84,
+            61
+        ],
+        "owner": "Italy",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Italy"
+        ],
+        "json_key": "(76, 0, 0)",
+        "map_color": [
+            76,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(77, 0, 0)": {
+        "id": 77,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            524,
+            139
+        ],
+        "neighbors": [
+            99,
+            100,
+            72,
+            55,
+            57,
+            62
+        ],
+        "owner": "Uzbekistan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Uzbekistan"
+        ],
+        "json_key": "(77, 0, 0)",
+        "map_color": [
+            77,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(78, 0, 0)": {
+        "id": 78,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            992,
+            138
+        ],
+        "neighbors": [
+            96,
+            34,
+            101,
+            102,
+            53,
+            60
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(78, 0, 0)",
+        "map_color": [
+            78,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(79, 0, 0)": {
+        "id": 79,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            14,
+            136
+        ],
+        "neighbors": [
+            73,
+            48,
+            52,
+            89,
+            59
+        ],
+        "owner": "Florida",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Florida"
+        ],
+        "json_key": "(79, 0, 0)",
+        "map_color": [
+            79,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(80, 0, 0)": {
+        "id": 80,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            355,
+            132
+        ],
+        "neighbors": [
+            74,
+            76,
+            90,
+            98
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(80, 0, 0)",
+        "map_color": [
+            80,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(81, 0, 0)": {
+        "id": 81,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            646,
+            147
+        ],
+        "neighbors": [
+            71,
+            107,
+            112,
+            54,
+            94,
+            62
+        ],
+        "owner": "Xibei San Ma",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Xibei San Ma"
+        ],
+        "json_key": "(81, 0, 0)",
+        "map_color": [
+            81,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(82, 0, 0)": {
+        "id": 82,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            1069,
+            143
+        ],
+        "neighbors": [
+            96,
+            66,
+            103,
+            104,
+            73,
+            60
+        ],
+        "owner": "Texas",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Texas"
+        ],
+        "json_key": "(82, 0, 0)",
+        "map_color": [
+            82,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(83, 0, 0)": {
+        "id": 83,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            748,
+            157
+        ],
+        "neighbors": [
+            65,
+            97,
+            69,
+            38,
+            71,
+            111,
+            116,
+            94,
+            63
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(83, 0, 0)",
+        "map_color": [
+            83,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(84, 0, 0)": {
+        "id": 84,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            322,
+            147
+        ],
+        "neighbors": [
+            98,
+            108,
+            76,
+            113,
+            85,
+            86,
+            61
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(84, 0, 0)",
+        "map_color": [
+            84,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(85, 0, 0)": {
+        "id": 85,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            240,
+            171
+        ],
+        "neighbors": [
+            130,
+            41,
+            49,
+            113,
+            84,
+            86,
+            88,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(85, 0, 0)",
+        "map_color": [
+            85,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(86, 0, 0)": {
+        "id": 86,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            284,
+            144
+        ],
+        "neighbors": [
+            49,
+            61,
+            84,
+            85
+        ],
+        "owner": "Spain",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Spain"
+        ],
+        "json_key": "(86, 0, 0)",
+        "map_color": [
+            86,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(87, 0, 0)": {
+        "id": 87,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            900,
+            163
+        ],
+        "neighbors": [
+            129,
+            101,
+            53,
+            58,
+            92,
+            93
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(87, 0, 0)",
+        "map_color": [
+            87,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(88, 0, 0)": {
+        "id": 88,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            177,
+            172
+        ],
+        "neighbors": [
+            39,
+            41,
+            109,
+            85,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(88, 0, 0)",
+        "map_color": [
+            88,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(89, 0, 0)": {
+        "id": 89,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            32,
+            169
+        ],
+        "neighbors": [
+            68,
+            103,
+            109,
+            79,
+            118,
+            119,
+            59
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(89, 0, 0)",
+        "map_color": [
+            89,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(90, 0, 0)": {
+        "id": 90,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            380,
+            143
+        ],
+        "neighbors": [
+            98,
+            70,
+            74,
+            75,
+            80,
+            95
+        ],
+        "owner": "Greece",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Greece"
+        ],
+        "json_key": "(90, 0, 0)",
+        "map_color": [
+            90,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(91, 0, 0)": {
+        "id": 91,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            425,
+            149
+        ],
+        "neighbors": [
+            99,
+            67,
+            106,
+            75,
+            95
+        ],
+        "owner": "Turkey",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Turkey"
+        ],
+        "json_key": "(91, 0, 0)",
+        "map_color": [
+            91,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(92, 0, 0)": {
+        "id": 92,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            851,
+            174
+        ],
+        "neighbors": [
+            97,
+            129,
+            51,
+            117,
+            87,
+            58
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(92, 0, 0)",
+        "map_color": [
+            92,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(93, 0, 0)": {
+        "id": 93,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            895,
+            139
+        ],
+        "neighbors": [
+            58,
+            87
+        ],
+        "owner": "Midway",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Midway"
+        ],
+        "json_key": "(93, 0, 0)",
+        "map_color": [
+            93,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(94, 0, 0)": {
+        "id": 94,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            707,
+            156
+        ],
+        "neighbors": [
+            71,
+            111,
+            112,
+            81,
+            83
+        ],
+        "owner": "Shangdong Clique",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Shangdong Clique"
+        ],
+        "json_key": "(94, 0, 0)",
+        "map_color": [
+            94,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(95, 0, 0)": {
+        "id": 95,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            401,
+            169
+        ],
+        "neighbors": [
+            98,
+            106,
+            75,
+            115,
+            121,
+            90,
+            91
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(95, 0, 0)",
+        "map_color": [
+            95,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(96, 0, 0)": {
+        "id": 96,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            1037,
+            155
+        ],
+        "neighbors": [
+            102,
+            104,
+            78,
+            82,
+            114,
+            60
+        ],
+        "owner": "Baja California",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Baja California"
+        ],
+        "json_key": "(96, 0, 0)",
+        "map_color": [
+            96,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(97, 0, 0)": {
+        "id": 97,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            797,
+            171
+        ],
+        "neighbors": [
+            65,
+            83,
+            51,
+            117,
+            116,
+            92
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(97, 0, 0)",
+        "map_color": [
+            97,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(98, 0, 0)": {
+        "id": 98,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            361,
+            169
+        ],
+        "neighbors": [
+            76,
+            108,
+            80,
+            115,
+            84,
+            90,
+            95
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(98, 0, 0)",
+        "map_color": [
+            98,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(99, 0, 0)": {
+        "id": 99,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            499,
+            179
+        ],
+        "neighbors": [
+            67,
+            100,
+            72,
+            105,
+            106,
+            77,
+            91,
+            124
+        ],
+        "owner": "Iran",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Iran"
+        ],
+        "json_key": "(99, 0, 0)",
+        "map_color": [
+            99,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(100, 0, 0)": {
+        "id": 100,
+        "terrain": "mountain",
+        "is_coastal": false,
+        "center": [
+            542,
+            170
+        ],
+        "neighbors": [
+            105,
+            99,
+            77,
+            62
+        ],
+        "owner": "Afghanistan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Afghanistan"
+        ],
+        "json_key": "(100, 0, 0)",
+        "map_color": [
+            100,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(101, 0, 0)": {
+        "id": 101,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            953,
+            186
+        ],
+        "neighbors": [
+            129,
+            102,
+            134,
+            78,
+            53,
+            87
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(101, 0, 0)",
+        "map_color": [
+            101,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(102, 0, 0)": {
+        "id": 102,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            1009,
+            183
+        ],
+        "neighbors": [
+            96,
+            101,
+            134,
+            78,
+            114,
+            127
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(102, 0, 0)",
+        "map_color": [
+            102,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(103, 0, 0)": {
+        "id": 103,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            1098,
+            178
+        ],
+        "neighbors": [
+            104,
+            73,
+            137,
+            82,
+            119,
+            89,
+            122
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(103, 0, 0)",
+        "map_color": [
+            103,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(104, 0, 0)": {
+        "id": 104,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            1062,
+            171
+        ],
+        "neighbors": [
+            96,
+            82,
+            114,
+            103
+        ],
+        "owner": "Chihuahua",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Chihuahua"
+        ],
+        "json_key": "(104, 0, 0)",
+        "map_color": [
+            104,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(105, 0, 0)": {
+        "id": 105,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            557,
+            190
+        ],
+        "neighbors": [
+            99,
+            100,
+            139,
+            110,
+            124,
+            62
+        ],
+        "owner": "Pakistan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Pakistan"
+        ],
+        "json_key": "(105, 0, 0)",
+        "map_color": [
+            105,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(106, 0, 0)": {
+        "id": 106,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            450,
+            177
+        ],
+        "neighbors": [
+            99,
+            120,
+            121,
+            91,
+            124,
+            126,
+            95
+        ],
+        "owner": "Iraq",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Iraq"
+        ],
+        "json_key": "(106, 0, 0)",
+        "map_color": [
+            106,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(107, 0, 0)": {
+        "id": 107,
+        "terrain": "mountain",
+        "is_coastal": false,
+        "center": [
+            625,
+            181
+        ],
+        "neighbors": [
+            128,
+            110,
+            112,
+            81,
+            123,
+            62
+        ],
+        "owner": "Tibet",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Tibet"
+        ],
+        "json_key": "(107, 0, 0)",
+        "map_color": [
+            107,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(108, 0, 0)": {
+        "id": 108,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            314,
+            170
+        ],
+        "neighbors": [
+            113,
+            98,
+            115,
+            84
+        ],
+        "owner": "Algeria",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Algeria"
+        ],
+        "json_key": "(108, 0, 0)",
+        "map_color": [
+            108,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(109, 0, 0)": {
+        "id": 109,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            111,
+            195
+        ],
+        "neighbors": [
+            68,
+            39,
+            136,
+            119,
+            88,
+            89,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(109, 0, 0)",
+        "map_color": [
+            109,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(110, 0, 0)": {
+        "id": 110,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            584,
+            206
+        ],
+        "neighbors": [
+            128,
+            105,
+            107,
+            139,
+            142,
+            62
+        ],
+        "owner": "Delhi",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Delhi"
+        ],
+        "json_key": "(110, 0, 0)",
+        "map_color": [
+            110,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(111, 0, 0)": {
+        "id": 111,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            735,
+            187
+        ],
+        "neighbors": [
+            132,
+            135,
+            112,
+            83,
+            116,
+            94
+        ],
+        "owner": "Shanghai",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Shanghai"
+        ],
+        "json_key": "(111, 0, 0)",
+        "map_color": [
+            111,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(112, 0, 0)": {
+        "id": 112,
+        "terrain": "plains",
+        "is_coastal": false,
+        "center": [
+            697,
+            186
+        ],
+        "neighbors": [
+            135,
+            107,
+            111,
+            81,
+            123,
+            94
+        ],
+        "owner": "Sichuan Clique",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Sichuan Clique"
+        ],
+        "json_key": "(112, 0, 0)",
+        "map_color": [
+            112,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(113, 0, 0)": {
+        "id": 113,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            263,
+            200
+        ],
+        "neighbors": [
+            130,
+            108,
+            84,
+            85,
+            149
+        ],
+        "owner": "Morocco",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Morocco"
+        ],
+        "json_key": "(113, 0, 0)",
+        "map_color": [
+            113,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(114, 0, 0)": {
+        "id": 114,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            1057,
+            192
+        ],
+        "neighbors": [
+            96,
+            102,
+            104,
+            122,
+            127
+        ],
+        "owner": "Mexico",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Mexico"
+        ],
+        "json_key": "(114, 0, 0)",
+        "map_color": [
+            114,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(115, 0, 0)": {
+        "id": 115,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            361,
+            190
+        ],
+        "neighbors": [
+            121,
+            98,
+            108,
+            95
+        ],
+        "owner": "Libya",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Libya"
+        ],
+        "json_key": "(115, 0, 0)",
+        "map_color": [
+            115,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(116, 0, 0)": {
+        "id": 116,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            773,
+            210
+        ],
+        "neighbors": [
+            97,
+            132,
+            133,
+            111,
+            146,
+            83,
+            117,
+            153
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(116, 0, 0)",
+        "map_color": [
+            116,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(117, 0, 0)": {
+        "id": 117,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            834,
+            218
+        ],
+        "neighbors": [
+            97,
+            129,
+            146,
+            116,
+            150,
+            92
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(117, 0, 0)",
+        "map_color": [
+            117,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(118, 0, 0)": {
+        "id": 118,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            30,
+            191
+        ],
+        "neighbors": [
+            89,
+            119
+        ],
+        "owner": "Cuba",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Cuba"
+        ],
+        "json_key": "(118, 0, 0)",
+        "map_color": [
+            118,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(119, 0, 0)": {
+        "id": 119,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            33,
+            212
+        ],
+        "neighbors": [
+            103,
+            136,
+            137,
+            109,
+            143,
+            144,
+            118,
+            89
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(119, 0, 0)",
+        "map_color": [
+            119,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(120, 0, 0)": {
+        "id": 120,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            469,
+            223
+        ],
+        "neighbors": [
+            106,
+            124,
+            126,
+            138
+        ],
+        "owner": "Saudi Arabia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Saudi Arabia"
+        ],
+        "json_key": "(120, 0, 0)",
+        "map_color": [
+            120,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(121, 0, 0)": {
+        "id": 121,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            416,
+            208
+        ],
+        "neighbors": [
+            106,
+            115,
+            147,
+            126,
+            95
+        ],
+        "owner": "Egypt",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Egypt"
+        ],
+        "json_key": "(121, 0, 0)",
+        "map_color": [
+            121,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(122, 0, 0)": {
+        "id": 122,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            1094,
+            204
+        ],
+        "neighbors": [
+            103,
+            137,
+            140,
+            114,
+            127
+        ],
+        "owner": "Yucatan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Yucatan"
+        ],
+        "json_key": "(122, 0, 0)",
+        "map_color": [
+            122,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(123, 0, 0)": {
+        "id": 123,
+        "terrain": "mountain",
+        "is_coastal": false,
+        "center": [
+            683,
+            207
+        ],
+        "neighbors": [
+            128,
+            131,
+            135,
+            107,
+            141,
+            112
+        ],
+        "owner": "Yunnan Clique",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Yunnan Clique"
+        ],
+        "json_key": "(123, 0, 0)",
+        "map_color": [
+            123,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(124, 0, 0)": {
+        "id": 124,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            506,
+            211
+        ],
+        "neighbors": [
+            99,
+            105,
+            106,
+            138,
+            139,
+            120
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(124, 0, 0)",
+        "map_color": [
+            124,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(125, 0, 0)": {
+        "id": 125,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            174,
+            239
+        ],
+        "neighbors": [
+            130,
+            136,
+            171,
+            109,
+            85,
+            88
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(125, 0, 0)",
+        "map_color": [
+            125,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(126, 0, 0)": {
+        "id": 126,
+        "terrain": "inland_sea",
+        "is_coastal": false,
+        "center": [
+            446,
+            238
+        ],
+        "neighbors": [
+            106,
+            138,
+            147,
+            120,
+            121
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(126, 0, 0)",
+        "map_color": [
+            126,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(127, 0, 0)": {
+        "id": 127,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            1050,
+            228
+        ],
+        "neighbors": [
+            161,
+            164,
+            134,
+            102,
+            140,
+            114,
+            122
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(127, 0, 0)",
+        "map_color": [
+            127,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(128, 0, 0)": {
+        "id": 128,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            629,
+            216
+        ],
+        "neighbors": [
+            131,
+            107,
+            110,
+            142,
+            145,
+            123
+        ],
+        "owner": "West Bengal",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "West Bengal"
+        ],
+        "json_key": "(128, 0, 0)",
+        "map_color": [
+            128,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(129, 0, 0)": {
+        "id": 129,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            916,
+            240
+        ],
+        "neighbors": [
+            163,
+            101,
+            134,
+            117,
+            150,
+            87,
+            92
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(129, 0, 0)",
+        "map_color": [
+            129,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(130, 0, 0)": {
+        "id": 130,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            221,
+            256
+        ],
+        "neighbors": [
+            170,
+            171,
+            176,
+            113,
+            85,
+            149,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(130, 0, 0)",
+        "map_color": [
+            130,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(131, 0, 0)": {
+        "id": 131,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            667,
+            228
+        ],
+        "neighbors": [
+            128,
+            155,
+            141,
+            145,
+            148,
+            123
+        ],
+        "owner": "Myanmar",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Myanmar"
+        ],
+        "json_key": "(131, 0, 0)",
+        "map_color": [
+            131,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(132, 0, 0)": {
+        "id": 132,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            741,
+            249
+        ],
+        "neighbors": [
+            133,
+            135,
+            168,
+            169,
+            141,
+            111,
+            116,
+            153
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(132, 0, 0)",
+        "map_color": [
+            132,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(133, 0, 0)": {
+        "id": 133,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            757,
+            212
+        ],
+        "neighbors": [
+            132,
+            116
+        ],
+        "owner": "Taiwan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Taiwan"
+        ],
+        "json_key": "(133, 0, 0)",
+        "map_color": [
+            133,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(134, 0, 0)": {
+        "id": 134,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            996,
+            246
+        ],
+        "neighbors": [
+            129,
+            161,
+            163,
+            101,
+            102,
+            127
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(134, 0, 0)",
+        "map_color": [
+            134,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(135, 0, 0)": {
+        "id": 135,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            721,
+            215
+        ],
+        "neighbors": [
+            132,
+            141,
+            111,
+            112,
+            123
+        ],
+        "owner": "Guangxi Clique",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Guangxi Clique"
+        ],
+        "json_key": "(135, 0, 0)",
+        "map_color": [
+            135,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(136, 0, 0)": {
+        "id": 136,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            118,
+            254
+        ],
+        "neighbors": [
+            160,
+            171,
+            172,
+            109,
+            119,
+            151,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(136, 0, 0)",
+        "map_color": [
+            136,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(137, 0, 0)": {
+        "id": 137,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            1112,
+            224
+        ],
+        "neighbors": [
+            103,
+            140,
+            144,
+            119,
+            122
+        ],
+        "owner": "Nicaragua",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Nicaragua"
+        ],
+        "json_key": "(137, 0, 0)",
+        "map_color": [
+            137,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(138, 0, 0)": {
+        "id": 138,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            498,
+            247
+        ],
+        "neighbors": [
+            139,
+            120,
+            154,
+            124,
+            126
+        ],
+        "owner": "United Arab Emirates",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "United Arab Emirates"
+        ],
+        "json_key": "(138, 0, 0)",
+        "map_color": [
+            138,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(139, 0, 0)": {
+        "id": 139,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            552,
+            242
+        ],
+        "neighbors": [
+            162,
+            105,
+            138,
+            110,
+            142,
+            154,
+            124
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(139, 0, 0)",
+        "map_color": [
+            139,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(140, 0, 0)": {
+        "id": 140,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            1094,
+            250
+        ],
+        "neighbors": [
+            164,
+            137,
+            152,
+            122,
+            127
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(140, 0, 0)",
+        "map_color": [
+            140,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(141, 0, 0)": {
+        "id": 141,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            706,
+            253
+        ],
+        "neighbors": [
+            131,
+            132,
+            135,
+            168,
+            148,
+            123
+        ],
+        "owner": "Vietnam",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Vietnam"
+        ],
+        "json_key": "(141, 0, 0)",
+        "map_color": [
+            141,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(142, 0, 0)": {
+        "id": 142,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            601,
+            257
+        ],
+        "neighbors": [
+            128,
+            162,
+            165,
+            139,
+            110,
+            145
+        ],
+        "owner": "Telangana",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Telangana"
+        ],
+        "json_key": "(142, 0, 0)",
+        "map_color": [
+            142,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(143, 0, 0)": {
+        "id": 143,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            52,
+            244
+        ],
+        "neighbors": [
+            144,
+            151,
+            119
+        ],
+        "owner": "Venezuela",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Venezuela"
+        ],
+        "json_key": "(143, 0, 0)",
+        "map_color": [
+            143,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(144, 0, 0)": {
+        "id": 144,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            26,
+            256
+        ],
+        "neighbors": [
+            166,
+            137,
+            143,
+            119,
+            152
+        ],
+        "owner": "Colombia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Colombia"
+        ],
+        "json_key": "(144, 0, 0)",
+        "map_color": [
+            144,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(145, 0, 0)": {
+        "id": 145,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            636,
+            252
+        ],
+        "neighbors": [
+            128,
+            131,
+            165,
+            142,
+            155
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(145, 0, 0)",
+        "map_color": [
+            145,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(146, 0, 0)": {
+        "id": 146,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            798,
+            264
+        ],
+        "neighbors": [
+            169,
+            174,
+            116,
+            117,
+            150,
+            153
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(146, 0, 0)",
+        "map_color": [
+            146,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(147, 0, 0)": {
+        "id": 147,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            419,
+            275
+        ],
+        "neighbors": [
+            175,
+            188,
+            121,
+            187,
+            156,
+            126,
+            159
+        ],
+        "owner": "Sudan",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Sudan"
+        ],
+        "json_key": "(147, 0, 0)",
+        "map_color": [
+            147,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(148, 0, 0)": {
+        "id": 148,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            693,
+            269
+        ],
+        "neighbors": [
+            193,
+            131,
+            168,
+            141,
+            155
+        ],
+        "owner": "Thailand",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Thailand"
+        ],
+        "json_key": "(148, 0, 0)",
+        "map_color": [
+            148,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(149, 0, 0)": {
+        "id": 149,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            251,
+            258
+        ],
+        "neighbors": [
+            170,
+            113,
+            130,
+            158
+        ],
+        "owner": "Mauritania",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Mauritania"
+        ],
+        "json_key": "(149, 0, 0)",
+        "map_color": [
+            149,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(150, 0, 0)": {
+        "id": 150,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            850,
+            268
+        ],
+        "neighbors": [
+            129,
+            163,
+            174,
+            177,
+            146,
+            117
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(150, 0, 0)",
+        "map_color": [
+            150,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(151, 0, 0)": {
+        "id": 151,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            85,
+            255
+        ],
+        "neighbors": [
+            136,
+            160,
+            143
+        ],
+        "owner": "Guyana",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Guyana"
+        ],
+        "json_key": "(151, 0, 0)",
+        "map_color": [
+            151,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(152, 0, 0)": {
+        "id": 152,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            11,
+            325
+        ],
+        "neighbors": [
+            164,
+            166,
+            202,
+            140,
+            144,
+            184,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(152, 0, 0)",
+        "map_color": [
+            152,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(153, 0, 0)": {
+        "id": 153,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            779,
+            274
+        ],
+        "neighbors": [
+            132,
+            146,
+            169,
+            116
+        ],
+        "owner": "Philippines",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Philippines"
+        ],
+        "json_key": "(153, 0, 0)",
+        "map_color": [
+            153,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(154, 0, 0)": {
+        "id": 154,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            522,
+            275
+        ],
+        "neighbors": [
+            162,
+            138,
+            139,
+            173,
+            159
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(154, 0, 0)",
+        "map_color": [
+            154,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(155, 0, 0)": {
+        "id": 155,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            670,
+            282
+        ],
+        "neighbors": [
+            193,
+            131,
+            165,
+            145,
+            178,
+            148,
+            186
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(155, 0, 0)",
+        "map_color": [
+            155,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(156, 0, 0)": {
+        "id": 156,
+        "terrain": "plains",
+        "is_coastal": false,
+        "center": [
+            373,
+            277
+        ],
+        "neighbors": [
+            167,
+            147,
+            157,
+            175
+        ],
+        "owner": "Chad",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Chad"
+        ],
+        "json_key": "(156, 0, 0)",
+        "map_color": [
+            156,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(157, 0, 0)": {
+        "id": 157,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            329,
+            268
+        ],
+        "neighbors": [
+            156,
+            158,
+            167
+        ],
+        "owner": "Niger",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Niger"
+        ],
+        "json_key": "(157, 0, 0)",
+        "map_color": [
+            157,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(158, 0, 0)": {
+        "id": 158,
+        "terrain": "desert",
+        "is_coastal": false,
+        "center": [
+            285,
+            278
+        ],
+        "neighbors": [
+            170,
+            149,
+            157,
+            167
+        ],
+        "owner": "Mali",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Mali"
+        ],
+        "json_key": "(158, 0, 0)",
+        "map_color": [
+            158,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(159, 0, 0)": {
+        "id": 159,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            464,
+            301
+        ],
+        "neighbors": [
+            154,
+            147,
+            187,
+            173
+        ],
+        "owner": "Ethiopia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Ethiopia"
+        ],
+        "json_key": "(159, 0, 0)",
+        "map_color": [
+            159,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(160, 0, 0)": {
+        "id": 160,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            110,
+            280
+        ],
+        "neighbors": [
+            136,
+            172,
+            151
+        ],
+        "owner": "Maranh\u00e3o",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Maranh\u00e3o"
+        ],
+        "json_key": "(160, 0, 0)",
+        "map_color": [
+            160,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(161, 0, 0)": {
+        "id": 161,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1020,
+            298
+        ],
+        "neighbors": [
+            163,
+            164,
+            134,
+            127,
+            190,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(161, 0, 0)",
+        "map_color": [
+            161,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(162, 0, 0)": {
+        "id": 162,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            574,
+            297
+        ],
+        "neighbors": [
+            165,
+            139,
+            173,
+            142,
+            180,
+            154,
+            189
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(162, 0, 0)",
+        "map_color": [
+            162,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(163, 0, 0)": {
+        "id": 163,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            940,
+            306
+        ],
+        "neighbors": [
+            129,
+            161,
+            194,
+            134,
+            177,
+            150,
+            190
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(163, 0, 0)",
+        "map_color": [
+            163,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(164, 0, 0)": {
+        "id": 164,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1088,
+            296
+        ],
+        "neighbors": [
+            161,
+            140,
+            152,
+            127,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(164, 0, 0)",
+        "map_color": [
+            164,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(165, 0, 0)": {
+        "id": 165,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            630,
+            294
+        ],
+        "neighbors": [
+            162,
+            142,
+            145,
+            178,
+            180,
+            155
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(165, 0, 0)",
+        "map_color": [
+            165,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(166, 0, 0)": {
+        "id": 166,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            23,
+            305
+        ],
+        "neighbors": [
+            152,
+            144,
+            184
+        ],
+        "owner": "Peru",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Peru"
+        ],
+        "json_key": "(166, 0, 0)",
+        "map_color": [
+            166,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(167, 0, 0)": {
+        "id": 167,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            332,
+            294
+        ],
+        "neighbors": [
+            170,
+            175,
+            182,
+            156,
+            157,
+            158
+        ],
+        "owner": "Nigeria",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Nigeria"
+        ],
+        "json_key": "(167, 0, 0)",
+        "map_color": [
+            167,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(168, 0, 0)": {
+        "id": 168,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            723,
+            303
+        ],
+        "neighbors": [
+            193,
+            132,
+            169,
+            141,
+            179,
+            148
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(168, 0, 0)",
+        "map_color": [
+            168,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(169, 0, 0)": {
+        "id": 169,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            778,
+            307
+        ],
+        "neighbors": [
+            192,
+            193,
+            132,
+            168,
+            174,
+            146,
+            179,
+            181,
+            153
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(169, 0, 0)",
+        "map_color": [
+            169,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(170, 0, 0)": {
+        "id": 170,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            270,
+            298
+        ],
+        "neighbors": [
+            130,
+            167,
+            176,
+            149,
+            182,
+            158
+        ],
+        "owner": "Ivory Coast",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Ivory Coast"
+        ],
+        "json_key": "(170, 0, 0)",
+        "map_color": [
+            170,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(171, 0, 0)": {
+        "id": 171,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            184,
+            326
+        ],
+        "neighbors": [
+            130,
+            199,
+            136,
+            172,
+            204,
+            176,
+            185,
+            125
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(171, 0, 0)",
+        "map_color": [
+            171,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(172, 0, 0)": {
+        "id": 172,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            141,
+            304
+        ],
+        "neighbors": [
+            136,
+            185,
+            171,
+            160
+        ],
+        "owner": "Bahia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Bahia"
+        ],
+        "json_key": "(172, 0, 0)",
+        "map_color": [
+            172,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(173, 0, 0)": {
+        "id": 173,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            507,
+            328
+        ],
+        "neighbors": [
+            162,
+            201,
+            154,
+            187,
+            189,
+            159
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(173, 0, 0)",
+        "map_color": [
+            173,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(174, 0, 0)": {
+        "id": 174,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            840,
+            304
+        ],
+        "neighbors": [
+            169,
+            177,
+            146,
+            181,
+            150,
+            183
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(174, 0, 0)",
+        "map_color": [
+            174,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(175, 0, 0)": {
+        "id": 175,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            367,
+            324
+        ],
+        "neighbors": [
+            196,
+            167,
+            156,
+            147,
+            182,
+            188
+        ],
+        "owner": "Republic of the Congo",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Republic of the Congo"
+        ],
+        "json_key": "(175, 0, 0)",
+        "map_color": [
+            175,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(176, 0, 0)": {
+        "id": 176,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            245,
+            330
+        ],
+        "neighbors": [
+            130,
+            199,
+            200,
+            170,
+            171,
+            182
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(176, 0, 0)",
+        "map_color": [
+            176,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(177, 0, 0)": {
+        "id": 177,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            891,
+            326
+        ],
+        "neighbors": [
+            194,
+            163,
+            198,
+            174,
+            150,
+            183
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(177, 0, 0)",
+        "map_color": [
+            177,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(178, 0, 0)": {
+        "id": 178,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            681,
+            349
+        ],
+        "neighbors": [
+            193,
+            165,
+            218,
+            209,
+            211,
+            180,
+            213,
+            186,
+            155
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(178, 0, 0)",
+        "map_color": [
+            178,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(179, 0, 0)": {
+        "id": 179,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            750,
+            334
+        ],
+        "neighbors": [
+            168,
+            169,
+            193
+        ],
+        "owner": "Brunei",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Brunei"
+        ],
+        "json_key": "(179, 0, 0)",
+        "map_color": [
+            179,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(180, 0, 0)": {
+        "id": 180,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            630,
+            340
+        ],
+        "neighbors": [
+            162,
+            165,
+            203,
+            209,
+            178,
+            189
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(180, 0, 0)",
+        "map_color": [
+            180,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(181, 0, 0)": {
+        "id": 181,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            807,
+            350
+        ],
+        "neighbors": [
+            192,
+            193,
+            198,
+            169,
+            174,
+            208,
+            213,
+            183
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(181, 0, 0)",
+        "map_color": [
+            181,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(182, 0, 0)": {
+        "id": 182,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            303,
+            333
+        ],
+        "neighbors": [
+            196,
+            167,
+            200,
+            170,
+            175,
+            176
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(182, 0, 0)",
+        "map_color": [
+            182,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(183, 0, 0)": {
+        "id": 183,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            855,
+            336
+        ],
+        "neighbors": [
+            177,
+            198,
+            181,
+            174
+        ],
+        "owner": "Papua New Guinea",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Papua New Guinea"
+        ],
+        "json_key": "(183, 0, 0)",
+        "map_color": [
+            183,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(184, 0, 0)": {
+        "id": 184,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            57,
+            340
+        ],
+        "neighbors": [
+            195,
+            197,
+            166,
+            202,
+            205,
+            152
+        ],
+        "owner": "Bolivia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Bolivia"
+        ],
+        "json_key": "(184, 0, 0)",
+        "map_color": [
+            184,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(185, 0, 0)": {
+        "id": 185,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            129,
+            337
+        ],
+        "neighbors": [
+            204,
+            195,
+            172,
+            171
+        ],
+        "owner": "Rio de Janeiro",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Rio de Janeiro"
+        ],
+        "json_key": "(185, 0, 0)",
+        "map_color": [
+            185,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(186, 0, 0)": {
+        "id": 186,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            700,
+            342
+        ],
+        "neighbors": [
+            193,
+            178,
+            155
+        ],
+        "owner": "Sumatra",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Sumatra"
+        ],
+        "json_key": "(186, 0, 0)",
+        "map_color": [
+            186,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(187, 0, 0)": {
+        "id": 187,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            438,
+            354
+        ],
+        "neighbors": [
+            201,
+            173,
+            206,
+            147,
+            220,
+            188,
+            159
+        ],
+        "owner": "Tanzania",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Tanzania"
+        ],
+        "json_key": "(187, 0, 0)",
+        "map_color": [
+            187,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(188, 0, 0)": {
+        "id": 188,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            388,
+            352
+        ],
+        "neighbors": [
+            196,
+            206,
+            175,
+            210,
+            147,
+            187
+        ],
+        "owner": "Democratic Republic of the Congo",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Democratic Republic of the Congo"
+        ],
+        "json_key": "(188, 0, 0)",
+        "map_color": [
+            188,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(189, 0, 0)": {
+        "id": 189,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            555,
+            357
+        ],
+        "neighbors": [
+            162,
+            201,
+            203,
+            173,
+            180,
+            214,
+            217
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(189, 0, 0)",
+        "map_color": [
+            189,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(190, 0, 0)": {
+        "id": 190,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1005,
+            353
+        ],
+        "neighbors": [
+            161,
+            194,
+            163,
+            216,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(190, 0, 0)",
+        "map_color": [
+            190,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(191, 0, 0)": {
+        "id": 191,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1077,
+            369
+        ],
+        "neighbors": [
+            161,
+            164,
+            202,
+            152,
+            216,
+            190,
+            223
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(191, 0, 0)",
+        "map_color": [
+            191,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(192, 0, 0)": {
+        "id": 192,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            778,
+            348
+        ],
+        "neighbors": [
+            169,
+            193,
+            181
+        ],
+        "owner": "Sulawesi",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Sulawesi"
+        ],
+        "json_key": "(192, 0, 0)",
+        "map_color": [
+            192,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(193, 0, 0)": {
+        "id": 193,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            740,
+            359
+        ],
+        "neighbors": [
+            192,
+            168,
+            169,
+            178,
+            179,
+            148,
+            211,
+            213,
+            181,
+            186,
+            155
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(193, 0, 0)",
+        "map_color": [
+            193,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(194, 0, 0)": {
+        "id": 194,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            942,
+            380
+        ],
+        "neighbors": [
+            226,
+            163,
+            198,
+            177,
+            216,
+            190
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(194, 0, 0)",
+        "map_color": [
+            194,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(195, 0, 0)": {
+        "id": 195,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            105,
+            357
+        ],
+        "neighbors": [
+            197,
+            204,
+            212,
+            184,
+            185
+        ],
+        "owner": "Rio Grande",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Rio Grande"
+        ],
+        "json_key": "(195, 0, 0)",
+        "map_color": [
+            195,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(196, 0, 0)": {
+        "id": 196,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            326,
+            380
+        ],
+        "neighbors": [
+            225,
+            200,
+            175,
+            210,
+            182,
+            188
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(196, 0, 0)",
+        "map_color": [
+            196,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(197, 0, 0)": {
+        "id": 197,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            81,
+            371
+        ],
+        "neighbors": [
+            195,
+            205,
+            212,
+            215,
+            184
+        ],
+        "owner": "Paraguay",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Paraguay"
+        ],
+        "json_key": "(197, 0, 0)",
+        "map_color": [
+            197,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(198, 0, 0)": {
+        "id": 198,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            875,
+            391
+        ],
+        "neighbors": [
+            194,
+            226,
+            231,
+            207,
+            208,
+            177,
+            181,
+            183
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(198, 0, 0)",
+        "map_color": [
+            198,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(199, 0, 0)": {
+        "id": 199,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            218,
+            387
+        ],
+        "neighbors": [
+            229,
+            200,
+            171,
+            204,
+            176,
+            219
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(199, 0, 0)",
+        "map_color": [
+            199,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(200, 0, 0)": {
+        "id": 200,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            281,
+            400
+        ],
+        "neighbors": [
+            225,
+            196,
+            229,
+            199,
+            233,
+            176,
+            182
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(200, 0, 0)",
+        "map_color": [
+            200,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(201, 0, 0)": {
+        "id": 201,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            475,
+            386
+        ],
+        "neighbors": [
+            230,
+            173,
+            214,
+            187,
+            220,
+            189,
+            222
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(201, 0, 0)",
+        "map_color": [
+            201,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(202, 0, 0)": {
+        "id": 202,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            19,
+            415
+        ],
+        "neighbors": [
+            224,
+            223,
+            234,
+            205,
+            243,
+            152,
+            184,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(202, 0, 0)",
+        "map_color": [
+            202,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(203, 0, 0)": {
+        "id": 203,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            612,
+            388
+        ],
+        "neighbors": [
+            217,
+            209,
+            180,
+            189
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(203, 0, 0)",
+        "map_color": [
+            203,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(204, 0, 0)": {
+        "id": 204,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            130,
+            406
+        ],
+        "neighbors": [
+            224,
+            195,
+            199,
+            234,
+            171,
+            238,
+            212,
+            215,
+            185,
+            219
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(204, 0, 0)",
+        "map_color": [
+            204,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(205, 0, 0)": {
+        "id": 205,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            52,
+            383
+        ],
+        "neighbors": [
+            224,
+            197,
+            202,
+            215,
+            184
+        ],
+        "owner": "Salta",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Salta"
+        ],
+        "json_key": "(205, 0, 0)",
+        "map_color": [
+            205,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(206, 0, 0)": {
+        "id": 206,
+        "terrain": "forest",
+        "is_coastal": false,
+        "center": [
+            406,
+            396
+        ],
+        "neighbors": [
+            227,
+            228,
+            210,
+            188,
+            187,
+            220
+        ],
+        "owner": "Zambia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Zambia"
+        ],
+        "json_key": "(206, 0, 0)",
+        "map_color": [
+            206,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(207, 0, 0)": {
+        "id": 207,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            851,
+            409
+        ],
+        "neighbors": [
+            208,
+            198,
+            231
+        ],
+        "owner": "Queensland",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Queensland"
+        ],
+        "json_key": "(207, 0, 0)",
+        "map_color": [
+            207,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(208, 0, 0)": {
+        "id": 208,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            810,
+            390
+        ],
+        "neighbors": [
+            221,
+            181,
+            198,
+            207
+        ],
+        "owner": "Northern Territory",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Northern Territory"
+        ],
+        "json_key": "(208, 0, 0)",
+        "map_color": [
+            208,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(209, 0, 0)": {
+        "id": 209,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            654,
+            420
+        ],
+        "neighbors": [
+            203,
+            237,
+            178,
+            242,
+            180,
+            217,
+            218
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(209, 0, 0)",
+        "map_color": [
+            209,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(210, 0, 0)": {
+        "id": 210,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            369,
+            400
+        ],
+        "neighbors": [
+            225,
+            196,
+            228,
+            206,
+            188
+        ],
+        "owner": "Angola",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Angola"
+        ],
+        "json_key": "(210, 0, 0)",
+        "map_color": [
+            210,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(211, 0, 0)": {
+        "id": 211,
+        "terrain": "jungle",
+        "is_coastal": true,
+        "center": [
+            733,
+            378
+        ],
+        "neighbors": [
+            193,
+            178,
+            213
+        ],
+        "owner": "Java",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Java"
+        ],
+        "json_key": "(211, 0, 0)",
+        "map_color": [
+            211,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(212, 0, 0)": {
+        "id": 212,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            99,
+            396
+        ],
+        "neighbors": [
+            195,
+            204,
+            197,
+            215
+        ],
+        "owner": "Uruguay",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Uruguay"
+        ],
+        "json_key": "(212, 0, 0)",
+        "map_color": [
+            212,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(213, 0, 0)": {
+        "id": 213,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            748,
+            396
+        ],
+        "neighbors": [
+            193,
+            178,
+            211,
+            181,
+            218,
+            221
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(213, 0, 0)",
+        "map_color": [
+            213,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(214, 0, 0)": {
+        "id": 214,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            506,
+            427
+        ],
+        "neighbors": [
+            230,
+            232,
+            201,
+            246,
+            217,
+            189,
+            222
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(214, 0, 0)",
+        "map_color": [
+            214,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(215, 0, 0)": {
+        "id": 215,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            74,
+            408
+        ],
+        "neighbors": [
+            224,
+            197,
+            204,
+            205,
+            212
+        ],
+        "owner": "Buenos Aires",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Buenos Aires"
+        ],
+        "json_key": "(215, 0, 0)",
+        "map_color": [
+            215,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(216, 0, 0)": {
+        "id": 216,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1000,
+            441
+        ],
+        "neighbors": [
+            191,
+            194,
+            226,
+            241,
+            249,
+            190,
+            223
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(216, 0, 0)",
+        "map_color": [
+            216,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(217, 0, 0)": {
+        "id": 217,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            571,
+            428
+        ],
+        "neighbors": [
+            232,
+            203,
+            209,
+            242,
+            214,
+            189
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(217, 0, 0)",
+        "map_color": [
+            217,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(218, 0, 0)": {
+        "id": 218,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            708,
+            428
+        ],
+        "neighbors": [
+            235,
+            237,
+            209,
+            178,
+            213,
+            221
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(218, 0, 0)",
+        "map_color": [
+            218,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(219, 0, 0)": {
+        "id": 219,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            154,
+            443
+        ],
+        "neighbors": [
+            229,
+            199,
+            204,
+            238,
+            240
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(219, 0, 0)",
+        "map_color": [
+            219,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(220, 0, 0)": {
+        "id": 220,
+        "terrain": "forest",
+        "is_coastal": true,
+        "center": [
+            437,
+            418
+        ],
+        "neighbors": [
+            227,
+            230,
+            201,
+            236,
+            206,
+            187
+        ],
+        "owner": "Mozambique",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Mozambique"
+        ],
+        "json_key": "(220, 0, 0)",
+        "map_color": [
+            220,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(221, 0, 0)": {
+        "id": 221,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            752,
+            424
+        ],
+        "neighbors": [
+            208,
+            218,
+            235,
+            213
+        ],
+        "owner": "Pilbara",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Pilbara"
+        ],
+        "json_key": "(221, 0, 0)",
+        "map_color": [
+            221,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(222, 0, 0)": {
+        "id": 222,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            479,
+            434
+        ],
+        "neighbors": [
+            201,
+            214,
+            230
+        ],
+        "owner": "Madagascar",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Madagascar"
+        ],
+        "json_key": "(222, 0, 0)",
+        "map_color": [
+            222,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(223, 0, 0)": {
+        "id": 223,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            1080,
+            467
+        ],
+        "neighbors": [
+            202,
+            243,
+            216,
+            249,
+            191
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(223, 0, 0)",
+        "map_color": [
+            223,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(224, 0, 0)": {
+        "id": 224,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            55,
+            429
+        ],
+        "neighbors": [
+            202,
+            234,
+            204,
+            205,
+            215
+        ],
+        "owner": "Santiago",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Santiago"
+        ],
+        "json_key": "(224, 0, 0)",
+        "map_color": [
+            224,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(225, 0, 0)": {
+        "id": 225,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            328,
+            442
+        ],
+        "neighbors": [
+            196,
+            228,
+            200,
+            233,
+            210,
+            244
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(225, 0, 0)",
+        "map_color": [
+            225,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(226, 0, 0)": {
+        "id": 226,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            902,
+            463
+        ],
+        "neighbors": [
+            194,
+            198,
+            231,
+            241,
+            216,
+            250
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(226, 0, 0)",
+        "map_color": [
+            226,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(227, 0, 0)": {
+        "id": 227,
+        "terrain": "plains",
+        "is_coastal": false,
+        "center": [
+            401,
+            440
+        ],
+        "neighbors": [
+            228,
+            220,
+            236,
+            206
+        ],
+        "owner": "Zimbabwe",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Zimbabwe"
+        ],
+        "json_key": "(227, 0, 0)",
+        "map_color": [
+            227,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(228, 0, 0)": {
+        "id": 228,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            366,
+            445
+        ],
+        "neighbors": [
+            225,
+            227,
+            236,
+            206,
+            210,
+            244
+        ],
+        "owner": "Namibia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Namibia"
+        ],
+        "json_key": "(228, 0, 0)",
+        "map_color": [
+            228,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(229, 0, 0)": {
+        "id": 229,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            230,
+            444
+        ],
+        "neighbors": [
+            199,
+            200,
+            233,
+            240,
+            245,
+            219
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(229, 0, 0)",
+        "map_color": [
+            229,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(230, 0, 0)": {
+        "id": 230,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            446,
+            469
+        ],
+        "neighbors": [
+            201,
+            236,
+            214,
+            246,
+            251,
+            220,
+            222
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(230, 0, 0)",
+        "map_color": [
+            230,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(231, 0, 0)": {
+        "id": 231,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            845,
+            454
+        ],
+        "neighbors": [
+            226,
+            198,
+            239,
+            207,
+            247
+        ],
+        "owner": "New South Wales",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "New South Wales"
+        ],
+        "json_key": "(231, 0, 0)",
+        "map_color": [
+            231,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(232, 0, 0)": {
+        "id": 232,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            541,
+            471
+        ],
+        "neighbors": [
+            217,
+            242,
+            214,
+            246
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(232, 0, 0)",
+        "map_color": [
+            232,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(233, 0, 0)": {
+        "id": 233,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            279,
+            469
+        ],
+        "neighbors": [
+            225,
+            229,
+            200,
+            244,
+            245
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(233, 0, 0)",
+        "map_color": [
+            233,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(234, 0, 0)": {
+        "id": 234,
+        "terrain": "mountain",
+        "is_coastal": true,
+        "center": [
+            62,
+            472
+        ],
+        "neighbors": [
+            224,
+            202,
+            204,
+            238,
+            243
+        ],
+        "owner": "Tierra del Fuego",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Tierra del Fuego"
+        ],
+        "json_key": "(234, 0, 0)",
+        "map_color": [
+            234,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(235, 0, 0)": {
+        "id": 235,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            742,
+            466
+        ],
+        "neighbors": [
+            237,
+            239,
+            248,
+            218,
+            221
+        ],
+        "owner": "Perth",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Perth"
+        ],
+        "json_key": "(235, 0, 0)",
+        "map_color": [
+            235,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(236, 0, 0)": {
+        "id": 236,
+        "terrain": "hills",
+        "is_coastal": true,
+        "center": [
+            394,
+            478
+        ],
+        "neighbors": [
+            227,
+            228,
+            230,
+            244,
+            251,
+            220
+        ],
+        "owner": "Republic of South Africa",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Republic of South Africa"
+        ],
+        "json_key": "(236, 0, 0)",
+        "map_color": [
+            236,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(237, 0, 0)": {
+        "id": 237,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            679,
+            487
+        ],
+        "neighbors": [
+            235,
+            209,
+            242,
+            248,
+            218
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(237, 0, 0)",
+        "map_color": [
+            237,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(238, 0, 0)": {
+        "id": 238,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            99,
+            490
+        ],
+        "neighbors": [
+            234,
+            204,
+            240,
+            243,
+            219
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(238, 0, 0)",
+        "map_color": [
+            238,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(239, 0, 0)": {
+        "id": 239,
+        "terrain": "desert",
+        "is_coastal": true,
+        "center": [
+            795,
+            470
+        ],
+        "neighbors": [
+            248,
+            247,
+            235,
+            231
+        ],
+        "owner": "South Australia",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "South Australia"
+        ],
+        "json_key": "(239, 0, 0)",
+        "map_color": [
+            239,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(240, 0, 0)": {
+        "id": 240,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            179,
+            491
+        ],
+        "neighbors": [
+            245,
+            219,
+            229,
+            238
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(240, 0, 0)",
+        "map_color": [
+            240,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(241, 0, 0)": {
+        "id": 241,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            926,
+            489
+        ],
+        "neighbors": [
+            216,
+            249,
+            226,
+            250
+        ],
+        "owner": "New Zealand",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "New Zealand"
+        ],
+        "json_key": "(241, 0, 0)",
+        "map_color": [
+            241,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(242, 0, 0)": {
+        "id": 242,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            599,
+            498
+        ],
+        "neighbors": [
+            232,
+            237,
+            209,
+            246,
+            217
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(242, 0, 0)",
+        "map_color": [
+            242,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(243, 0, 0)": {
+        "id": 243,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            30,
+            495
+        ],
+        "neighbors": [
+            202,
+            234,
+            238,
+            223
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(243, 0, 0)",
+        "map_color": [
+            243,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(244, 0, 0)": {
+        "id": 244,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            331,
+            496
+        ],
+        "neighbors": [
+            225,
+            228,
+            233,
+            236,
+            245,
+            251
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(244, 0, 0)",
+        "map_color": [
+            244,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(245, 0, 0)": {
+        "id": 245,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            252,
+            502
+        ],
+        "neighbors": [
+            240,
+            233,
+            244,
+            229
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(245, 0, 0)",
+        "map_color": [
+            245,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(246, 0, 0)": {
+        "id": 246,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            493,
+            500
+        ],
+        "neighbors": [
+            230,
+            232,
+            242,
+            214,
+            251
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(246, 0, 0)",
+        "map_color": [
+            246,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(247, 0, 0)": {
+        "id": 247,
+        "terrain": "plains",
+        "is_coastal": true,
+        "center": [
+            818,
+            493
+        ],
+        "neighbors": [
+            248,
+            250,
+            239,
+            231
+        ],
+        "owner": "Victoria",
+        "units": [],
+        "orders": [],
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {},
+        "cores": [
+            "Victoria"
+        ],
+        "json_key": "(247, 0, 0)",
+        "map_color": [
+            247,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(248, 0, 0)": {
+        "id": 248,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            756,
+            501
+        ],
+        "neighbors": [
+            235,
+            237,
+            239,
+            247,
+            250
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(248, 0, 0)",
+        "map_color": [
+            248,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(249, 0, 0)": {
+        "id": 249,
+        "terrain": "ocean",
+        "is_coastal": false,
+        "center": [
+            967,
+            503
+        ],
+        "neighbors": [
+            216,
+            241,
+            250,
+            223
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(249, 0, 0)",
+        "map_color": [
+            249,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(250, 0, 0)": {
+        "id": 250,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            851,
+            510
+        ],
+        "neighbors": [
+            226,
+            241,
+            247,
+            248,
+            249
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(250, 0, 0)",
+        "map_color": [
+            250,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    },
+    "(251, 0, 0)": {
+        "id": 251,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
+        "center": [
+            414,
+            510
+        ],
+        "neighbors": [
+            236,
+            244,
+            230,
+            246
+        ],
+        "owner": "Ocean",
+        "units": [],
+        "orders": [],
+        "buildings": [],
+        "resources": {},
+        "cores": [],
+        "json_key": "(251, 0, 0)",
+        "map_color": [
+            251,
+            0,
+            0
+        ],
+        "unit_queue": [],
+        "building_queue": []
+    }
+}
