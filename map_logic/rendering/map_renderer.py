@@ -9,6 +9,8 @@ from map_logic.rendering.font_manager import fonts
 from ui.bars import flag_renderer
 from ui.information import tooltip, ui_info_popup as unit_info_popup
 from ui.bars import resource_hud, top_bar_text, ui_bars
+from screens.map_related_screens import recruit_ui
+from ui import sidebar_info
 
 def draw_map_screen(self, surface):
     # --- HOTSEAT MULTIPLAYER OVERRIDE ---
@@ -175,15 +177,13 @@ def draw_map_screen(self, surface):
         
         # Note: Sidebar info and minimap logic goes below here just like before
         if self.selected_province: 
-            from ui import sidebar_info
             sidebar_info.draw_sidebar_info(self, surface)
             sidebar_info.draw_owner_portrait(self, surface)
             unit_info_popup.draw_unit_info(self, surface)
             
-            # --- MODIFIED: Draw the queue if it's the player's province OR spectator ---
-            if self.selected_province.get("owner") == self.player_country or self.player_country == "Spectator":
-                from screens.map_related_screens import recruit_ui
-                recruit_ui.draw_map_queue_overlay(surface, self.selected_province)
+            # Always draw the queue! (Fog of War handles hiding contents)
+            # if self.selected_province.get("owner") == self.player_country or self.player_country == "Spectator":
+            recruit_ui.draw_map_queue_overlay(surface, self.selected_province, self)
 
         hide_mini = self.hide_minimap or self.selected_province
         if not hide_mini:

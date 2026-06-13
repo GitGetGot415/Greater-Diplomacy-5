@@ -49,15 +49,25 @@ def draw_recruitment_overlay(surface, target_province):
         
     return cancel_buttons
 
-def draw_map_queue_overlay(surface, target_province):
+def draw_map_queue_overlay(surface, target_province, map_screen=None):
     """Draws a read-only split queue under the construction button on the map screen."""
     b_queue = target_province.get("building_queue", [])
     u_queue = target_province.get("unit_queue", [])
     
-    if not b_queue and not u_queue: return
+    # --- FOG OF WAR VISIBILITY CHECK ---
+    is_visible = True
+    if map_screen and getattr(map_screen, 'visible_provinces', None) is not None:
+        if target_province["id"] not in map_screen.visible_provinces:
+            is_visible = False
+
+    # Removed the early return here so it doesn't vanish when the queue is empty
+    # if is_visible and not b_queue and not u_queue: return
     
     # Make the box wider to fit two columns seamlessly underneath the Production button
-    panel_rect = pygame.Rect(c.MAP_QUEUE_OVERLAY_X, c.MAP_QUEUE_OVERLAY_Y, c.MAP_QUEUE_OVERLAY_WIDTH, min(400, max(len(b_queue), len(u_queue)) * 35 + 40))
+    # If hidden by fog, fix height to just show the hidden text
+    # Wrapped the visible calculation in a max() so the panel never shrinks below 80px
+    panel_height = 80 if not is_visible else max(80, min(400, max(len(b_queue), len(u_queue)) * 35 + 40))
+    panel_rect = pygame.Rect(c.MAP_QUEUE_OVERLAY_X, c.MAP_QUEUE_OVERLAY_Y, c.MAP_QUEUE_OVERLAY_WIDTH, panel_height)
     
     panel_surf = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
     panel_surf.fill((30, 30, 50, 200))
@@ -73,7 +83,20 @@ def draw_map_queue_overlay(surface, target_province):
     surface.blit(title_b, (panel_rect.x + 10, panel_rect.y + 10))
     surface.blit(title_u, (panel_rect.centerx + 10, panel_rect.y + 10))
     
+    # If the province is hidden by fog, draw the hidden text under both columns and stop
+    if not is_visible:
+        hidden_txt = font.render("(Hidden by Fog of War)", True, (150, 150, 150))
+        surface.blit(hidden_txt, (panel_rect.x + 10, panel_rect.y + 40))
+        surface.blit(hidden_txt, (panel_rect.centerx + 10, panel_rect.y + 40))
+        return
+
     def render_map_half(queue_list, start_x):
+        # If this specific queue is empty, draw the empty text and skip rendering items
+        if not queue_list:
+            empty_txt = font.render("(Queue Empty)", True, (150, 150, 150))
+            surface.blit(empty_txt, (start_x, panel_rect.y + 40))
+            return
+
         for i, item in enumerate(queue_list):
             y_pos = panel_rect.y + 35 + (i * 35)
             if y_pos + 30 > panel_rect.bottom: 
