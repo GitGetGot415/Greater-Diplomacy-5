@@ -1531,15 +1531,11 @@ def destroy_tk_root(root):
     pygame.event.pump()
 
 # ==========================================
-# EDITOR UNDO LOGIC
+# EDITOR UNDO / REDO LOGIC
 # ==========================================
 
-def save_editor_state(map_screen):
-    """Snapshots the current map data for the undo feature."""
+def _get_current_map_state(map_screen):
     import copy
-    if not hasattr(map_screen, 'editor_history'):
-        map_screen.editor_history = []
-        
     state = {}
     for color_key, prov in map_screen.map_data.items():
         state[color_key] = {
@@ -1549,21 +1545,11 @@ def save_editor_state(map_screen):
             "resources": copy.deepcopy(prov.get("resources", {})),
             "units": copy.deepcopy(prov.get("units", []))
         }
-    map_screen.editor_history.append(state)
-    
-    if len(map_screen.editor_history) > c.MAX_EDITOR_HISTORY:
-        map_screen.editor_history.pop(0)
+    return state
 
-def restore_editor_state(map_screen):
-    """Restores the last map state from the editor history."""
+def _apply_map_state(map_screen, state):
     import copy
-    if not getattr(map_screen, 'editor_history', []):
-        map_screen.show_feedback("Nothing to undo!")
-        return
-        
-    last_state = map_screen.editor_history.pop()
-    
-    for color_key, saved_prov in last_state.items():
+    for color_key, saved_prov in state.items():
         prov = map_screen.map_data.get(color_key)
         if prov:
             prov["owner"] = saved_prov["owner"]
@@ -1573,8 +1559,49 @@ def restore_editor_state(map_screen):
             prov["units"] = copy.deepcopy(saved_prov["units"])
             
     # Apply the changes visually
-    # god this is gonna take so long
-    map_screen.show_feedback("Undo Commencing...")
-    time.sleep(0.001)
     map_screen.refresh_all_maps()
+
+def save_editor_state(map_screen):
+    """Snapshots the current map data for the undo feature, clearing redo history."""
+    if not hasattr(map_screen, 'editor_history'):
+        map_screen.editor_history = []
+    
+    # Any new physical edit destroys the active redo-timeline
+    map_screen.editor_redo_history = []
+        
+    map_screen.editor_history.append(_get_current_map_state(map_screen))
+    
+    if len(map_screen.editor_history) > c.MAX_EDITOR_HISTORY:
+        map_screen.editor_history.pop(0)
+
+def restore_editor_state(map_screen):
+    """Restores the last map state from the editor history (Undo)."""
+    if not getattr(map_screen, 'editor_history', []):
+        map_screen.show_feedback("Nothing to undo!")
+        return
+        
+    if not hasattr(map_screen, 'editor_redo_history'):
+        map_screen.editor_redo_history = []
+        
+    # Save the current state to the redo stack before replacing it
+    map_screen.editor_redo_history.append(_get_current_map_state(map_screen))
+        
+    last_state = map_screen.editor_history.pop()
+    _apply_map_state(map_screen, last_state)
     map_screen.show_feedback("Undo Successful")
+
+def redo_editor_state(map_screen):
+    """Restores the next map state from the redo history (Redo)."""
+    if not getattr(map_screen, 'editor_redo_history', []):
+        map_screen.show_feedback("Nothing to redo!")
+        return
+        
+    if not hasattr(map_screen, 'editor_history'):
+        map_screen.editor_history = []
+        
+    # Save the current state to the undo stack before replacing it
+    map_screen.editor_history.append(_get_current_map_state(map_screen))
+        
+    next_state = map_screen.editor_redo_history.pop()
+    _apply_map_state(map_screen, next_state)
+    map_screen.show_feedback("Redo Successful")

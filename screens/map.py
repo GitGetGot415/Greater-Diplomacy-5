@@ -367,6 +367,8 @@ class Map(GameState):
 
     def refresh_all_maps(self):
         """Unified method to refresh all visual map layers and text at once."""
+        # do note that for larger maps this might take over 1000 ms to complete, this is NOT instant by any means
+        # TODO: maybe add the ability to ignore certain refresh actions (example: refresh all except for faction territories)
         self.update_country_centers()
         self.refresh_political_map()
         self.refresh_relations_map()
