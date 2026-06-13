@@ -45,7 +45,7 @@ class TopBarOverlay:
         font_norm = fonts.get("normal")
         surface.blit(font_title.render("ALBUMS", True, (255, 255, 255)), (20, 80))
         
-        np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if getattr(self.controller, 'now_playing', "None") != "None" else "Now Playing: Nothing"
+        np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if self.controller.now_playing != "None" else "Now Playing: Nothing"
         surface.blit(font_norm.render(np_text, True, (255, 215, 0)), (c.MUSIC_LEFT_PANE_W + 20, 30))
 
 
@@ -379,7 +379,7 @@ class Music_Player(GameState):
 
             # Measure real time passed since last frame
             current_ticks = pygame.time.get_ticks()
-            wall_delta = (current_ticks - getattr(self, '_last_ticks', current_ticks)) / 1000.0
+            wall_delta = (current_ticks - self._last_ticks) / 1000.0
             self._last_ticks = current_ticks
 
             # FIX: If delta is huge (e.g. user was on Map screen), sync directly with SoLoud's backend!
@@ -484,7 +484,7 @@ class Music_Player(GameState):
     def set_music_volume(self, val):
         self.controller.music_volume = val
         if c.USE_SOLOUD:
-            if getattr(self.controller, 'music_handle', None) is not None:
+            if self.controller.music_handle is not None:
                 self.controller.soloud.set_volume(self.controller.music_handle, val)
         else:
             pygame.mixer.music.set_volume(val)

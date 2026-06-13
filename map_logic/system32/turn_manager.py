@@ -85,7 +85,7 @@ def trigger_ai_thread(map_screen):
     
     # --- IMPORTANT: Reset the module-level abort flag so APIs work again ---
     ai_handler.FORCE_SKIP = False
-    ai_handler.CURRENT_TURN_ID = getattr(ai_handler, 'CURRENT_TURN_ID', 0) + 1
+    ai_handler.CURRENT_TURN_ID += 1
         
     # Pre-calculate determinable totals so the UI instantly knows the workload
     map_screen.proactive_tasks_total = len(queries.get_active_ai_nations(map_screen))

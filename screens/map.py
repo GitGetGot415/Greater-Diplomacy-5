@@ -111,7 +111,7 @@ class Map(GameState):
         
         # --- 2. Data Loading ---
         if is_random and random_settings:
-            self.random_settings = random_settings  # <--- ADD THIS LINE
+            self.random_settings = random_settings
             load_map.load_map_assets(self, random_settings["map_path"])
             self.time_manager.year = random_settings["year"]
         else:
@@ -317,7 +317,7 @@ class Map(GameState):
             "RELATIONS": self.relations_map,
             "FACTIONS": self.factions_map,
             "CORES": self.cores_map,
-            "FACTION_TERRITORIES": getattr(self, 'faction_territories_map', self.political_map)
+            "FACTION_TERRITORIES": self.faction_territories_map
         }
         self.active_map = layer_map.get(layer_name, self.political_map)
         
@@ -345,7 +345,7 @@ class Map(GameState):
             owner = self.selected_province.get("owner")
             is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
             if is_foreign:
-                draft = getattr(self, "mail_draft_text", "").strip()
+                draft = self.mail_draft_text.strip()
                 if draft:
                     diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
                 else:

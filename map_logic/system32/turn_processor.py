@@ -44,7 +44,7 @@ def snapshot_history(self):
     import copy
     if not hasattr(self, 'history'):
         self.history = {}
-    turn_idx = str(getattr(self.time_manager, 'total_turns', 0))
+    turn_idx = str(self.time_manager.total_turns)
     
     snapshot = {
         "date_str": self.time_manager.get_date_string(),
