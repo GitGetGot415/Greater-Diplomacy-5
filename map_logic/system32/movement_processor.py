@@ -126,8 +126,7 @@ def process_movement(self):
 
     # Pre-cache unit library for naval checks
     if not hasattr(self, 'cached_unit_library'):
-        import json, os
-        self.cached_unit_library = queries.get_unit_library() if os.path.exists(c.UNIT_DATA_PATH) else {}
+        self.cached_unit_library = queries.get_unit_library()
 
     for step in range(max_speed):
         for unit in moving_units:

@@ -36,8 +36,8 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
             if not n_prov: continue
             
             # --- NEW CONVOY AND NAVAL BFS RULE ---
-            curr_is_water = prov.get("terrain") in c.WATER_TERRAINS
-            dest_is_water = n_prov.get("terrain") in c.WATER_TERRAINS
+            curr_is_water = queries.is_water_province(prov)
+            dest_is_water = queries.is_water_province(n_prov)
             
             if is_convoy or is_ship:
                 if not curr_is_water and not dest_is_water:

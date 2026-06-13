@@ -220,7 +220,7 @@ def process_combat(self):
 
         # Wipe queues and destroy misplaced naval units ONLY if combat is still ongoing
         if combat_occurred:
-            is_land = province.get("terrain") not in c.WATER_TERRAINS
+            is_land = not queries.is_water_province(province)
             
             # Check if there are STILL enemies present after the combat phase
             still_in_combat = queries.is_province_in_active_combat(province, self.nation_data)

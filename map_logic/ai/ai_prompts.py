@@ -24,6 +24,11 @@ AI_FALLBACK_RESPONSES = {
     "CANT_JOIN_FACTION": "We cannot join a new faction while we are already bound to our own treaties.",
     "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war.",
     "KICKED_FROM_FACTION": "We will not forget being expelled from the alliance.",
+    "REJECT_JOIN_WAR_NO_ALLIANCE": "We wanted to join your wars, but our lack of formal alliance prevents it.",
+    "REQUEST_JOIN_WARS": "We request permission to join your ongoing wars.",
+    "FOLLOW_UP_DECLARATION": "Following through on our previous declaration.",
+    "BREAK_ALLIANCE": "We have broken our alliance.",
+    
     "PROACTIVE_JOIN_WAR": "May we join you in your war?",
     "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
     "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.",

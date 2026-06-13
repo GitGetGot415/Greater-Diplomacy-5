@@ -100,7 +100,7 @@ def process_diplomacy_turn(self):
                 
                 # Inject it as a fresh action for this turn, bypassing the LLM
                 if target not in pending or (isinstance(pending[target], dict) and pending[target].get("turns", 0) == 0):
-                    pending[target] = {"action": action_type, "turns": 0, "timer": 0, "message": "Following through on our previous declaration."}
+                    pending[target] = {"action": action_type, "turns": 0, "timer": 0, "message": ai_prompts.AI_FALLBACK_RESPONSES.get("FOLLOW_UP_DECLARATION")}
             data["queued_ai_actions"] = []
 
     # --- 0. FIND ALIVE NATIONS ---
@@ -519,12 +519,12 @@ def process_diplomacy_turn(self):
                 
                 elif action == "JOIN_WARS":
                     if not queries.are_in_same_faction(country_name, target, self.nation_data):
-                        msg_text = "We wanted to join your wars, but our lack of formal alliance prevents it."
+                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_JOIN_WAR_NO_ALLIANCE")
                         send_message(self, country_name, target, msg_text, "DIPLOMACY")
                         actions_to_clear.append(target)
                     else:
                         # DO NOT execute the war join here! Just send the proposal message.
-                        msg_text = custom_msg if custom_msg else "We request permission to join your ongoing wars."
+                        msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("REQUEST_JOIN_WARS")
                         send_message(self, country_name, target, msg_text, "DIPLOMACY")
                 
                 elif action == "CALL_TO_ARMS":
@@ -533,9 +533,9 @@ def process_diplomacy_turn(self):
                 
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(self.nation_data, f"{country_name} has broken their alliance with {target}.")
-                    msg_text = custom_msg if custom_msg else "We have broken our alliance."
+                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("BREAK_ALLIANCE")
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    finalize_neutral(self.nation_data, country_name, target) 
+                    finalize_neutral(self.nation_data, country_name, target)
                     
                 elif action == "ANNEX_PUPPET":
                     finalize_annexation(self.map_data, self.nation_data, country_name, target, self)
@@ -684,7 +684,7 @@ def process_diplomacy_turn(self):
                     fac = self.nation_data[country_name].get("faction", "")
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     log_global_event(self.nation_data, f"The faction led by {country_name} has been disbanded.")
-                    msg_text = custom_msg if custom_msg else "We are dissolving our faction."
+                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED")
                     
                     for m in info["cached_members"]:
                         if m != country_name:
@@ -694,15 +694,15 @@ def process_diplomacy_turn(self):
 
                 elif action == "KICK_FACTION_MEMBER":
                     log_global_event(self.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
-                    msg_text = custom_msg if custom_msg else "You have been expelled from our faction."
+                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("KICKED_FROM_FACTION")
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    finalize_faction_kick(self.nation_data, country_name, target) 
+                    finalize_faction_kick(self.nation_data, country_name, target)
 
                 elif action == "LEAVE_FACTION":
                     fac = self.nation_data[country_name].get("faction", "")
                     info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, self.nation_data) if fac else [])
                     log_global_event(self.nation_data, f"{country_name} has abandoned their faction.")
-                    msg_text = custom_msg if custom_msg else "We are withdrawing from the faction."
+                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED")
                     
                     for m in info["cached_members"]:
                         if m != country_name:

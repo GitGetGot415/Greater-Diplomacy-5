@@ -216,16 +216,16 @@ def process_basic_proactive_ai(map_screen):
                                 potential_leaders.append(fac_leader)
 
                 if potential_leaders:
-                    # Just ask the first valid leader we found
-                    target_leader = potential_leaders[0]
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
-                        existing = pending.get(target_leader, {})
-                        turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
+                        # Just ask the first valid leader we found
+                        target_leader = potential_leaders[0]
+                        if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
+                            existing = pending.get(target_leader, {})
+                            turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
 
                         if target_leader not in pending or turns == 0:
                             # --- REFACTORED TO PULL FROM AI_PROMPTS ---
                             action_context = ai_prompts.get_proactive_action_context("JOIN_FACTION_REQ")
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_JOIN_WAR"]
+                            fallback = ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_JOIN_FACTION"]
                             pending[target_leader] = {
                                 "action": "JOIN_FACTION_REQ",
                                 "turns": 0,
@@ -443,7 +443,7 @@ def process_basic_proactive_ai(map_screen):
                                                 if cid not in claims and not any(q["prov_id"] == cid for q in queue):
                                                     queue.append({"prov_id": cid, "turns_left": c.CLAIM_TURN_CORE})
                                             
-                                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=5)
+                                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                                             break
                         
         # --- Update Progress Bar ---

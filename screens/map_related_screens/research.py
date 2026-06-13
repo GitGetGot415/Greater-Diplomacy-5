@@ -494,7 +494,7 @@ class Research_Screen(GameState):
         year_inc = days_per_turn / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query
-        while pts_accumulated < cost and actual_turns < 5000: # 5000 is a safety breaker
+        while pts_accumulated < cost and actual_turns < c.MAX_RESEARCH_TURN_SIMULATION:
             mult = queries.get_research_multiplier(sim_year, target_year)
             pts_accumulated += (base_pts_per_turn * mult)
             sim_year += year_inc

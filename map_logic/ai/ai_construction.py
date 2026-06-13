@@ -99,9 +99,9 @@ def process_ai_economy_decisions(map_screen):
         # 1.0 = keep all, 0.0 = convert all
         if force_tank and data.get("materials", 0) < tank_cost_mat:
             data["conscription_slider"] = 0.0 # Emergency: Convert 100% to save for tanks
-        elif ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > 1000:
+        elif ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
             data["conscription_slider"] = 0.5 # Convert 50%
-        elif (data.get("manpower", 0) > 10000 and data.get("materials", 0) < 1000) or data.get("manpower", 0) > 100000:
+        elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
             data["conscription_slider"] = 0.0 # Emergency: Convert 100%
         else:
             data["conscription_slider"] = 1.0 # Normal (keep 100%)
@@ -117,9 +117,9 @@ def process_ai_economy_decisions(map_screen):
             else:
                 data["mat_to_fuel_slider"] = 0.0 # Stop burning materials to save up for tanks
         elif max_conversion > 0:
-            if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > 500:
+            if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
                 data["mat_to_fuel_slider"] = max_conversion * 0.5 # Convert using 50% of their LEGAL MAXIMUM capability
-            elif data.get("materials", 0) > 5000 and data.get("fuel", 0) < 500 or data.get("materials", 0) > 50000:
+            elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
                 data["mat_to_fuel_slider"] = max_conversion # Emergency: Maximize production safely
             else:
                 data["mat_to_fuel_slider"] = 0.0
@@ -426,7 +426,7 @@ def process_ai_economy_decisions(map_screen):
 
         # --- 2. EVALUATE CONSTRUCTION LOGIC ---
         # If the AI has an excess hoard of materials, invest it back into factories
-        if data.get("materials", 0) > 15000:
+        if data.get("materials", 0) > c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
             res_levels = data.get("research", {})
             
             # Fetch the dynamic lists
