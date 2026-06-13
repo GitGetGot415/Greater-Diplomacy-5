@@ -97,13 +97,19 @@ class Settings(GameState):
 
     def clear_input(self, box_type):
         """Generic method to clear the currently visible input box."""
-        mode = self.ai_mode.lower()
         if box_type == "KEY":
-            setattr(self, f"{mode}_api_key_text", "")
-            setattr(self.controller, f"{mode}_api_key", "")
+            # Map the active AI mode directly to its controller attribute
+            # This takes more lines but is safer in case it gets changed
+            if self.ai_mode == "GEMINI": self.gemini_api_key_text = self.controller.gemini_api_key = ""
+            elif self.ai_mode == "OLLAMA": self.ollama_api_key_text = self.controller.ollama_api_key = ""
+            elif self.ai_mode == "CHATGPT": self.chatgpt_api_key_text = self.controller.chatgpt_api_key = ""
+            elif self.ai_mode == "CLAUDE": self.claude_api_key_text = self.controller.claude_api_key = ""
         elif box_type == "MOD":
-            setattr(self, f"{mode}_model_text", "")
-            setattr(self.controller, f"{mode}_model", "")
+            if self.ai_mode == "GEMINI": self.gemini_model_text = self.controller.gemini_model = ""
+            elif self.ai_mode == "OLLAMA": self.ollama_model_text = self.controller.ollama_model = ""
+            elif self.ai_mode == "CHATGPT": self.chatgpt_model_text = self.controller.chatgpt_model = ""
+            elif self.ai_mode == "CLAUDE": self.claude_model_text = self.controller.claude_model = ""
+            
         self.active_input = None
         self.refresh_ui()
 
@@ -173,19 +179,58 @@ class Settings(GameState):
             self.listening_for = None
             self.refresh_ui()
 
-        # Handle dynamic text entry mapping
+        # Handle explicit text entry mapping (No getattr/setattr!)
         elif self.active_input and self.ai_mode != "OFF":
-            mode = self.ai_mode.lower()
+            
             if self.active_input.endswith("_KEY"):
-                current_text = getattr(self, f"{mode}_api_key_text")
+                # Fetch the current text based on mode
+                current_text = ""
+                if self.ai_mode == "GEMINI": current_text = self.gemini_api_key_text
+                elif self.ai_mode == "OLLAMA": current_text = self.ollama_api_key_text
+                elif self.ai_mode == "CHATGPT": current_text = self.chatgpt_api_key_text
+                elif self.ai_mode == "CLAUDE": current_text = self.claude_api_key_text
+
                 new_text, status = ui_elements.process_text_input(event, current_text, max_length=c.MAX_API_KEY_LENGTH)
-                setattr(self, f"{mode}_api_key_text", new_text)
-                setattr(self.controller, f"{mode}_api_key", new_text.strip())
+                clean_text = new_text.strip()
+
+                # Save the new text back to the screen state and controller
+                if self.ai_mode == "GEMINI": 
+                    self.gemini_api_key_text = new_text
+                    self.controller.gemini_api_key = clean_text
+                elif self.ai_mode == "OLLAMA": 
+                    self.ollama_api_key_text = new_text
+                    self.controller.ollama_api_key = clean_text
+                elif self.ai_mode == "CHATGPT": 
+                    self.chatgpt_api_key_text = new_text
+                    self.controller.chatgpt_api_key = clean_text
+                elif self.ai_mode == "CLAUDE": 
+                    self.claude_api_key_text = new_text
+                    self.controller.claude_api_key = clean_text
+
             elif self.active_input.endswith("_MOD"):
-                current_text = getattr(self, f"{mode}_model_text")
+                # Fetch the current text based on mode
+                current_text = ""
+                if self.ai_mode == "GEMINI": current_text = self.gemini_model_text
+                elif self.ai_mode == "OLLAMA": current_text = self.ollama_model_text
+                elif self.ai_mode == "CHATGPT": current_text = self.chatgpt_model_text
+                elif self.ai_mode == "CLAUDE": current_text = self.claude_model_text
+
                 new_text, status = ui_elements.process_text_input(event, current_text, max_length=c.MAX_MODEL_NAME_LENGTH)
-                setattr(self, f"{mode}_model_text", new_text)
-                setattr(self.controller, f"{mode}_model", new_text.strip())
+                clean_text = new_text.strip()
+
+                # Save the new text back to the screen state and controller
+                if self.ai_mode == "GEMINI": 
+                    self.gemini_model_text = new_text
+                    self.controller.gemini_model = clean_text
+                elif self.ai_mode == "OLLAMA": 
+                    self.ollama_model_text = new_text
+                    self.controller.ollama_model = clean_text
+                elif self.ai_mode == "CHATGPT": 
+                    self.chatgpt_model_text = new_text
+                    self.controller.chatgpt_model = clean_text
+                elif self.ai_mode == "CLAUDE": 
+                    self.claude_model_text = new_text
+                    self.controller.claude_model = clean_text
 
     def additional_draw(self, surface):
         font = fonts.get("normal")

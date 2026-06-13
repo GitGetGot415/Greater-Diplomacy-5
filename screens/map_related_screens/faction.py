@@ -66,7 +66,7 @@ class Faction_Screen(GameState):
         self.elements.append(btn_territories)
         
         # 4. Rename Faction Button
-        if is_leader and not getattr(self, "is_renaming", False):
+        if is_leader and not self.is_renaming:
             btn_rename = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium", "blue", "Rename Faction", self.start_rename)
             self.elements.append(btn_rename)
 
@@ -116,7 +116,7 @@ class Faction_Screen(GameState):
         self.refresh_ui()
         
     def additional_events(self, event):
-        if getattr(self, "is_renaming", False):
+        if self.is_renaming:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     self.confirm_rename()
@@ -141,7 +141,7 @@ class Faction_Screen(GameState):
             surface.blit(txt, (c.SCREEN_WIDTH // 2 - txt.get_width() // 2, 100))
             return
 
-        if getattr(self, "is_renaming", False):
+        if self.is_renaming:
             title_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 200, 30, 400, 50)
             pygame.draw.rect(surface, (100, 100, 100), title_rect)
             pygame.draw.rect(surface, (255, 255, 255), title_rect, 2)
@@ -173,7 +173,7 @@ class Faction_Screen(GameState):
         self.next_state, self.done = "MAP", True
 
     def handle_back_key(self):
-        if getattr(self, "is_renaming", False):
+        if self.is_renaming:
             self.cancel_rename()
         else:
             self.exit_to_map()

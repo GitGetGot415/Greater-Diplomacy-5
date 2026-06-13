@@ -485,7 +485,7 @@ class Edit_Country_Screen(GameState):
             self.execute_draw(mx, my, is_click=True)
             
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if getattr(self, "is_drawing", False):
+            if self.is_drawing:
                 self.is_drawing = False
                 self.save_state()
 
@@ -610,7 +610,7 @@ class Edit_Country_Screen(GameState):
             surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
 
         # --- DRAW UNSAVED CONFIRMATION POPUP ---
-        if getattr(self, "show_unsaved_confirmation", False):
+        if self.show_unsaved_confirmation:
             overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 180))
             surface.blit(overlay, (0, 0))
