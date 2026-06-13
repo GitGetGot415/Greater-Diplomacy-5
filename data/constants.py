@@ -212,6 +212,8 @@ BTN_SPECTATOR_Y = SCREEN_HEIGHT - 50
 # EDIT COUNTRY
 # ==========================================
 
+MAX_EDITOR_HISTORY = 30
+
 # --- Editor UI Placement ---
 EDIT_COUNTRY_UI_X1 = 50
 EDIT_COUNTRY_UI_X2 = 450

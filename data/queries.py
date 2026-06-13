@@ -5,6 +5,7 @@ import base64
 import itertools
 import math
 import pygame
+import time
 import data.constants as c
 
 def get_imperial_family(nation, nation_data):
@@ -1528,3 +1529,52 @@ def destroy_tk_root(root):
     import pygame
     root.destroy()
     pygame.event.pump()
+
+# ==========================================
+# EDITOR UNDO LOGIC
+# ==========================================
+
+def save_editor_state(map_screen):
+    """Snapshots the current map data for the undo feature."""
+    import copy
+    if not hasattr(map_screen, 'editor_history'):
+        map_screen.editor_history = []
+        
+    state = {}
+    for color_key, prov in map_screen.map_data.items():
+        state[color_key] = {
+            "owner": prov.get("owner"),
+            "cores": copy.deepcopy(prov.get("cores", [])),
+            "buildings": copy.deepcopy(prov.get("buildings", [])),
+            "resources": copy.deepcopy(prov.get("resources", {})),
+            "units": copy.deepcopy(prov.get("units", []))
+        }
+    map_screen.editor_history.append(state)
+    
+    if len(map_screen.editor_history) > c.MAX_EDITOR_HISTORY:
+        map_screen.editor_history.pop(0)
+
+def restore_editor_state(map_screen):
+    """Restores the last map state from the editor history."""
+    import copy
+    if not getattr(map_screen, 'editor_history', []):
+        map_screen.show_feedback("Nothing to undo!")
+        return
+        
+    last_state = map_screen.editor_history.pop()
+    
+    for color_key, saved_prov in last_state.items():
+        prov = map_screen.map_data.get(color_key)
+        if prov:
+            prov["owner"] = saved_prov["owner"]
+            prov["cores"] = copy.deepcopy(saved_prov["cores"])
+            prov["buildings"] = copy.deepcopy(saved_prov["buildings"])
+            prov["resources"] = copy.deepcopy(saved_prov["resources"])
+            prov["units"] = copy.deepcopy(saved_prov["units"])
+            
+    # Apply the changes visually
+    # god this is gonna take so long
+    map_screen.show_feedback("Undo Commencing...")
+    time.sleep(0.001)
+    map_screen.refresh_all_maps()
+    map_screen.show_feedback("Undo Successful")

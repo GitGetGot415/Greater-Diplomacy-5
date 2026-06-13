@@ -106,12 +106,24 @@ def handle_map_events(self, event):
                 self.hover_glow_surf = None
         else: 
             self.hovered_province = self.hover_glow_surf = None
-    else:
-        self.hovered_province = self.hover_glow_surf = None
+    else: 
+            self.hovered_province = self.hover_glow_surf = None
+
+    # --- UNDO LOGIC (Ctrl + Z) ---
+    if event.type == pygame.KEYDOWN:
+        mods = pygame.key.get_mods()
+        if event.key == pygame.K_z and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_GUI):
+            if self.is_editor:
+                queries.restore_editor_state(self)
+                return
 
     # 4. EDITOR PAINTING LOGIC
     # We do this AFTER hover logic so we know what we are hovering over
     if self.is_editor and not on_ui:
+        # Capture the map state right before a new paint stroke begins
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
+            queries.save_editor_state(self)
+
         if pygame.mouse.get_pressed()[0]: # Left Click
             if self.hovered_province:
                 # --- NATION MODE ---
