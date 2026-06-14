@@ -220,13 +220,14 @@ def get_military_strength(nation, map_data):
                 strength += u.get("attack", 0) + u.get("defense", 0) + hp_val
     return strength
 
-def get_nations_holding_our_cores(nation, map_data):
-    """Returns a set of foreign nations that own territory where the given nation has a core."""
+def get_nations_holding_our_cores_or_claims(nation, map_data, nation_data):
+    """Returns a set of foreign nations that own territory where the given nation has a core or a claim."""
     targets = set()
+    claims = nation_data.get(nation, {}).get("claims", [])
     for prov in map_data.values():
         owner = prov.get("owner")
         if owner and owner != nation and owner not in c.UNPLAYABLE_NATIONS:
-            if nation in prov.get("cores", []):
+            if nation in prov.get("cores", []) or prov["id"] in claims:
                 targets.add(owner)
     return targets
 
@@ -1491,6 +1492,18 @@ def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_
     
     # AI needs local border superiority AND overall global viability
     return my_border_str >= (target_border_str * c.AI_WAR_STRENGTH_THRESHOLD) and my_total_power >= (target_total_power * c.AI_GLOBAL_STRENGTH_THRESHOLD)
+
+def is_weaker_neighbor(ai_nation, target_nation, map_data, nation_data):
+    """Returns True if the target nation's total power is significantly lower than the AI's."""
+    my_alliance_str = get_alliance_military_strength(ai_nation, map_data, nation_data)
+    my_econ_power = get_economic_power(ai_nation, nation_data) / 100.0
+    my_total_power = my_alliance_str + my_econ_power
+    
+    target_alliance_str = get_alliance_military_strength(target_nation, map_data, nation_data)
+    target_econ_power = get_economic_power(target_nation, nation_data) / 100.0
+    target_total_power = max(1.0, target_alliance_str + target_econ_power)
+    
+    return target_total_power < (my_total_power * c.AI_WEAK_NEIGHBOR_STRENGTH_RATIO)
 
 def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, nation_data):
     """Evaluates if the AI will accept the proposed peace deal."""

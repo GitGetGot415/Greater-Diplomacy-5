@@ -352,16 +352,16 @@ def process_basic_proactive_ai(map_screen):
                                 "action_type": "JOIN_WARS"
                             })
                             
-        # --- 4. Declare War for Cores Logic ---
-        if not is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
+        # --- 4. Declare War for Cores & Claims Logic ---
+        if not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
             current_turn = queries.get_total_turns(map_screen.time_manager)
             if current_turn >= c.TURNS_TO_WAIT_BEFORE_WAR:
-                targets_holding_cores = queries.get_nations_holding_our_cores(ai_name, map_screen.map_data)
+                valid_war_targets = queries.get_nations_holding_our_cores_or_claims(ai_name, map_screen.map_data, map_screen.nation_data)
                 
-                if targets_holding_cores:
+                if valid_war_targets:
                     # ONLY look at nations we actually share a physical border with
                     my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
-                    valid_border_targets = [t for t in targets_holding_cores if t in my_neighbors]
+                    valid_border_targets = [t for t in valid_war_targets if t in my_neighbors]
                     
                     for target in valid_border_targets:
                         if target not in active_nations: continue
@@ -430,7 +430,8 @@ def process_basic_proactive_ai(map_screen):
                                             })
                                             break
                                 else:
-                                    if not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
+                                    # Make a claim! (assuming no war is happening)
+                                    if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
                                         core_ids = []
                                         for prov in map_screen.map_data.values():
                                             if prov.get("owner") == target and ai_name in prov.get("cores", []):
@@ -445,6 +446,43 @@ def process_basic_proactive_ai(map_screen):
                                             
                                             queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                                             break
+
+        # --- 5. Fabricate Claims on Weaker Neighbors ---
+        if not is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
+            current_turn = queries.get_total_turns(map_screen.time_manager)
+            if current_turn >= c.TURNS_TO_WAIT_BEFORE_WAR:
+                my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
+                
+                for neighbor in my_neighbors:
+                    if neighbor not in active_nations: continue
+                    if neighbor in my_enemies: continue
+                    if queries.are_in_same_faction(ai_name, neighbor, map_screen.nation_data): continue
+                    if queries.has_active_truce(ai_name, neighbor, map_screen.nation_data): continue
+                    
+                    # Avoid attacking masters or puppets
+                    n_master = map_screen.nation_data.get(neighbor, {}).get("master", "")
+                    if my_master and my_master == neighbor: continue
+                    if n_master and n_master == ai_name: continue
+                    
+                    # Check if we already have claims on them or an active wargoal
+                    has_wg = queries.has_wargoal(ai_name, neighbor, map_screen.nation_data, map_screen.map_data)
+                    claims = data.get("claims", [])
+                    has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
+                    
+                    if not has_wg and not has_claims_on_them:
+                        if queries.is_weaker_neighbor(ai_name, neighbor, map_screen.map_data, map_screen.nation_data):
+                            if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
+                                
+                                valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
+                                if valid_targets:
+                                    target_prov = random.choice(valid_targets)
+                                    queue = data.setdefault("claim_queue", [])
+                                    
+                                    # Ensure it's not already in the queue
+                                    if not any(q["prov_id"] == target_prov["id"] for q in queue):
+                                        queue.append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
+                                        queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                                        break  # Limit to queueing one claim per cycle
                         
         # --- Update Progress Bar ---
         map_screen.proactive_tasks_completed += 1

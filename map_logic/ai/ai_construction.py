@@ -31,6 +31,12 @@ def process_ai_economy_decisions(map_screen):
         my_provs = nation_provs.get(ai_name, [])
         if not my_provs: continue
 
+        # --- NEW: Randomize Tile Selection ---
+        # By shuffling the array before doing any queue length sorting,
+        # the AI will organically distribute its buildings and units to random valid tiles
+        # instead of always hard-focusing the first province id it owns.
+        random.shuffle(my_provs)
+
         # --- 1. EVALUATE RECRUITMENT RATIOS ---
         at_war = len(data.get("at_war_with", [])) > 0
         war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
