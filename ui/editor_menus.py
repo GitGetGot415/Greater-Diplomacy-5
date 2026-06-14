@@ -920,6 +920,20 @@ def select_resource_brush(self):
 
     _run_editor_loop(self, root)
 
+def open_scripted_events_editor(self):
+
+    root = _create_editor_window("Scripted Events Editor", "550x700")
+    self.menu_active = True
+
+    def close_menu():
+        self.menu_active = False
+        root.destroy()
+    root.protocol("WM_DELETE_WINDOW", close_menu)
+
+    # placeholder, should be filled out later
+    
+    _run_editor_loop(self, root)
+
 def open_diplomacy_editor(self):
     """Opens a Tkinter window to edit global relations and factions."""
     active_countries = queries.get_living_nations(self.map_data)
