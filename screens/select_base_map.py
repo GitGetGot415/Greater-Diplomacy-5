@@ -281,15 +281,18 @@ class Select_Base_Map(GameState):
 
     def start_editor_with_custom_map(self, map_name):
         self.selected_save_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, map_name)
+        self.set_sub_state("CUSTOM_MAPS")
         self.next_state = "MAP"
         self.done = True
 
     def start_editor_with_map(self, map_name):
         self.selected_save_path = os.path.join(c.BASE_MAPS_DIR, map_name)
+        self.set_sub_state("CUSTOM_MAPS")
         self.next_state = "MAP"
         self.done = True
 
     def exit_to_menu(self):
+        self.set_sub_state("CUSTOM_MAPS")
         self.next_state = "MENU"
         self.done = True
 
