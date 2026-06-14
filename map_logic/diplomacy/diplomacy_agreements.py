@@ -352,7 +352,7 @@ def finalize_disband_faction(nation_data, leader):
     if "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
         del nation_data["FACTION_WAR_MAPS"][fac]
         
-    for n, d in nation_data.items():
+    for n, d in list(nation_data.items()):
         if d.get("faction") == fac:
             d["faction"] = ""
             d["is_faction_leader"] = False

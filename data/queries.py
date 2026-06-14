@@ -294,12 +294,12 @@ def are_in_same_faction(nation_a, nation_b, nation_data):
 def get_faction_members(faction_name, nation_data):
     """Returns a list of all nations currently in the specified faction."""
     if not faction_name: return []
-    return [n for n, d in nation_data.items() if d.get("faction") == faction_name]
+    return [n for n, d in list(nation_data.items()) if d.get("faction") == faction_name]
 
 def get_faction_leader(faction_name, nation_data):
     """Returns the leader of the specified faction."""
     if not faction_name: return None
-    for n, d in nation_data.items():
+    for n, d in list(nation_data.items()):
         if d.get("faction") == faction_name and d.get("is_faction_leader", False):
             return n
     return None
@@ -663,7 +663,7 @@ def calculate_all_economies(map_data, nation_data):
 
     # Initialize data structure for all active nations
     econ_data = {}
-    for name, n_data in nation_data.items():
+    for name, n_data in list(nation_data.items()):
         # Fetch Bergius bonus
         bergius_bonus = 0
         research_data = n_data.get("research", {})
@@ -942,7 +942,7 @@ def is_diplomat_busy(sender, target, nation_data):
 def get_incoming_justifications_count(nation, nation_data, id_to_province):
     """Returns the number of active claim justifications against the given nation."""
     count = 0
-    for other_nation, data in nation_data.items():
+    for other_nation, data in list(nation_data.items()):
         if other_nation == nation: continue
         queue = data.get("claim_queue", [])
         if queue:
@@ -958,13 +958,13 @@ def get_unread_message_count(nation, nation_data):
     # If the user is the spectator, count unread messages across ALL playable nations
     if nation == "Spectator":
         total_unread = 0
-        for n_name, n_data in nation_data.items():
+        for n_name, n_data in list(nation_data.items()):
             if n_data.get("is_playable", False):
                 inbox = n_data.get("inbox", [])
                 total_unread += sum(1 for msg in inbox if not msg.get("spectator_read", False))
                 
                 my_pending = n_data.get("pending_diplomacy", {})
-                for other_nation, other_data in nation_data.items():
+                for other_nation, other_data in list(nation_data.items()):
                     if other_nation == n_name: continue
                     req = other_data.get("pending_diplomacy", {}).get(n_name)
                     if isinstance(req, dict) and req.get("turns", 0) > 0 and req.get("action") in c.BILATERAL_ACTIONS:
@@ -979,7 +979,7 @@ def get_unread_message_count(nation, nation_data):
     unread_count = sum(1 for msg in inbox if not msg.get("read", False) and msg.get("sender") != nation)
     
     my_pending = nation_data.get(nation, {}).get("pending_diplomacy", {})
-    for other_nation, other_data in nation_data.items():
+    for other_nation, other_data in list(nation_data.items()):
         if other_nation == nation: continue
         req = other_data.get("pending_diplomacy", {}).get(nation)
         if isinstance(req, dict) and req.get("turns", 0) > 0 and req.get("action") in c.BILATERAL_ACTIONS:
