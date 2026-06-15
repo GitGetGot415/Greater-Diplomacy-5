@@ -487,3 +487,67 @@ def process_basic_proactive_ai(map_screen):
         # --- Update Progress Bar ---
         map_screen.proactive_tasks_completed += 1
         map_screen.loading_status_text = f"Evaluating AI Grand Strategy ({map_screen.proactive_tasks_completed}/{map_screen.proactive_tasks_total})..."
+
+def process_scripted_events(map_screen):
+    """Processes scenario-specific scripted events for AI nations."""
+    if not map_screen.scenario_settings.get("use_scripted_events", False):
+        return
+        
+    active_nations = set(queries.get_living_nations(map_screen.map_data))
+    human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
+    
+    for nation_name in active_nations:
+        if nation_name in human_players:
+            continue # Skip human players
+            
+        data = map_screen.nation_data.get(nation_name, {})
+        events = data.get("scripted_events", [])
+        if not events:
+            continue
+            
+        # Keep track of events that have already fired so they don't fire every turn
+        fired_events = data.setdefault("fired_scripted_events", [])
+        
+        for i, evt in enumerate(events):
+            if i in fired_events:
+                continue
+                
+            cond_type = evt.get("condition_type")
+            cond_val = evt.get("condition_val")
+            
+            condition_met = False
+            if cond_type == "Turn Number":
+                try:
+                    if queries.get_total_turns(map_screen.time_manager) >= int(cond_val):
+                        condition_met = True
+                except ValueError:
+                    pass
+            elif cond_type == "At War With":
+                if cond_val in active_nations and queries.are_at_war(nation_name, cond_val, map_screen.nation_data):
+                    condition_met = True
+            elif cond_type == "In Faction With":
+                if cond_val in active_nations and queries.are_in_same_faction(nation_name, cond_val, map_screen.nation_data):
+                    condition_met = True
+            elif cond_type == "At Peace With":
+                if cond_val in active_nations and not queries.are_at_war(nation_name, cond_val, map_screen.nation_data):
+                    condition_met = True
+                    
+            if condition_met:
+                action_type = evt.get("action_type")
+                action_target = evt.get("action_target")
+                
+                # Queue the action using existing AI queued actions mechanism
+                ai_queue = data.setdefault("queued_ai_actions", [])
+                
+                eng_action = ""
+                if action_type == "Declare War":
+                    eng_action = "WAR_DECLARATION"
+                elif action_type == "Join Faction":
+                    eng_action = "JOIN_FACTION_REQ"
+                elif action_type == "Create Faction":
+                    eng_action = "CREATE_FACTION"
+                    
+                if eng_action:
+                    ai_queue.append({"target": action_target, "action": eng_action})
+                
+                fired_events.append(i)

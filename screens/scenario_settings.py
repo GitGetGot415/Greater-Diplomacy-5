@@ -15,7 +15,9 @@ class Scenario_Settings(GameState):
         if not self.settings:
             self.settings = {
                 "fog_of_war": c.DEFAULT_FOG_OF_WAR,
-                "casus_belli_required": c.DEFAULT_CASUS_BELLI
+                "casus_belli_required": c.DEFAULT_CASUS_BELLI,
+                "use_scripted_events": c.DEFAULT_USE_SCRIPTED_EVENTS,
+                "ai_off": c.DEFAULT_AI_OFF
             }
         self.refresh_ui()
 
@@ -30,7 +32,7 @@ class Scenario_Settings(GameState):
         fog_text = "Fog of War: ON" if fog_val else "Fog of War: OFF"
         
         self.elements.append(
-            Button("centered", 200, "medium", fog_color, fog_text, self.toggle_fog)
+            Button("centered", 160, "medium", fog_color, fog_text, self.toggle_fog)
         )
 
         # Toggle Button - Casus Belli Required
@@ -39,27 +41,54 @@ class Scenario_Settings(GameState):
         cb_text = "Casus Belli Required: ON" if cb_val else "Casus Belli Required: OFF"
 
         self.elements.append(
-            Button("centered", 280, "medium", cb_color, cb_text, self.toggle_casus_belli)
+            Button("centered", 240, "medium", cb_color, cb_text, self.toggle_casus_belli)
+        )
+
+        # Toggle Button - Scripted Events
+        se_val = self.settings.get("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS)
+        se_color = "green" if se_val else "red"
+        se_text = "Scripted Events: ON" if se_val else "Scripted Events: OFF"
+
+        self.elements.append(
+            Button("centered", 320, "medium", se_color, se_text, self.toggle_scripted_events)
+        )
+
+        # Toggle Button - AI Off
+        ai_off_val = self.settings.get("ai_off", c.DEFAULT_AI_OFF)
+        ai_off_color = "red" if ai_off_val else "green" 
+        ai_off_text = "AI: OFF" if ai_off_val else "AI: ON"
+
+        self.elements.append(
+            Button("centered", 400, "medium", ai_off_color, ai_off_text, self.toggle_ai_off)
         )
 
         dpt_val = self.settings.get("days_per_turn", "Default")
         self.elements.append(
-            Button("centered", 360, "medium", "blue", f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn)
+            Button("centered", 480, "medium", "blue", f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn)
         )
 
         # Reset Defaults Button
         self.elements.append(
-            Button("centered", 440, "medium", "grey", "Reset to Defaults", self.reset_defaults)
+            Button("centered", 560, "medium", "grey", "Reset to Defaults", self.reset_defaults)
         )
 
     def toggle_fog(self):
         self.settings["fog_of_war"] = not self.settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)
-        # Save immediately to the cache/file
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
     def toggle_casus_belli(self):
         self.settings["casus_belli_required"] = not self.settings.get("casus_belli_required", c.DEFAULT_CASUS_BELLI)
+        queries.save_scenario_settings(self.settings)
+        self.refresh_ui()
+
+    def toggle_scripted_events(self):
+        self.settings["use_scripted_events"] = not self.settings.get("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS)
+        queries.save_scenario_settings(self.settings)
+        self.refresh_ui()
+
+    def toggle_ai_off(self):
+        self.settings["ai_off"] = not self.settings.get("ai_off", c.DEFAULT_AI_OFF)
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
@@ -79,7 +108,9 @@ class Scenario_Settings(GameState):
         self.settings = {
             "fog_of_war": c.DEFAULT_FOG_OF_WAR,
             "casus_belli_required": c.DEFAULT_CASUS_BELLI,
-            "days_per_turn": "Default"
+            "days_per_turn": "Default",
+            "use_scripted_events": c.DEFAULT_USE_SCRIPTED_EVENTS,
+            "ai_off": c.DEFAULT_AI_OFF
         }
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()

@@ -9,28 +9,42 @@ def prepare_turn(self):
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
     
-    # We explicitly DO NOT clear the proactive tracking variables here anymore
-    # so they stay frozen at 100% on the screen while the second bar fills up!
+    # --- NEW: Check if AI is turned off ---
+    ai_off = self.scenario_settings.get("ai_off", c.DEFAULT_AI_OFF)
     
-    # --- NEW: Basic Proactive AI & Grand Strategy ---
-    print("[SYSTEM] Running Proactive AI...")
-    ai_diplomacy.process_basic_proactive_ai(self)
+    # --- Process Scripted Events ---
+    print("[SYSTEM] Running Scripted Events...")
+    ai_diplomacy.process_scripted_events(self)
     
-    self.loading_status_text = "Running AI Research..."
-    print("[SYSTEM] Running AI Research...")
-    ai_research.process_ai_research(self)
-    
-    self.loading_status_text = "Running AI Economy & Construction..."
-    print("[SYSTEM] Running AI Economy & Construction...")
-    ai_construction.process_ai_economy_decisions(self)
-    
-    self.loading_status_text = "Generating AI Movement Orders..."
-    print("[SYSTEM] Generating AI Movement Orders...")
-    ai_movement.process_ai_unit_orders(self)
+    if not ai_off:
+        # --- Basic Proactive AI & Grand Strategy ---
+        print("[SYSTEM] Running Proactive AI...")
+        ai_diplomacy.process_basic_proactive_ai(self)
+        
+        self.loading_status_text = "Running AI Research..."
+        print("[SYSTEM] Running AI Research...")
+        ai_research.process_ai_research(self)
+        
+        self.loading_status_text = "Running AI Economy & Construction..."
+        print("[SYSTEM] Running AI Economy & Construction...")
+        ai_construction.process_ai_economy_decisions(self)
+        
+        self.loading_status_text = "Generating AI Movement Orders..."
+        print("[SYSTEM] Generating AI Movement Orders...")
+        ai_movement.process_ai_unit_orders(self)
 
-    self.loading_status_text = "Drafting Proactive Responses..."
-    print("[SYSTEM] Drafting Proactive Responses...")
-    ai_diplomacy.process_proactive_llm_tasks(self)
+        self.loading_status_text = "Drafting Proactive Responses..."
+        print("[SYSTEM] Drafting Proactive Responses...")
+        ai_diplomacy.process_proactive_llm_tasks(self)
+    else:
+        print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
+        
+        # Since AI is off, we still need to clear proactive tasks to avoid errors
+        self.proactive_llm_tasks = []
+        self.proactive_tasks_total = 0
+        self.proactive_tasks_completed = 0
+        self.proactive_llm_tasks_total = 0
+        self.proactive_llm_tasks_completed = 0
     
     # MOVED: Diplomacy is now processed AFTER AI movement generation.
     self.loading_status_text = "Processing Pending Diplomacy..."

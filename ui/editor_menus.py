@@ -921,8 +921,12 @@ def select_resource_brush(self):
     _run_editor_loop(self, root)
 
 def open_scripted_events_editor(self):
+    active_countries = queries.get_living_nations(self.map_data)
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
 
-    root = _create_editor_window("Scripted Events Editor", "550x700")
+    root = _create_editor_window("Scripted Events Editor", "650x550")
     self.menu_active = True
 
     def close_menu():
@@ -930,8 +934,118 @@ def open_scripted_events_editor(self):
         root.destroy()
     root.protocol("WM_DELETE_WINDOW", close_menu)
 
-    # placeholder, should be filled out later
+    # UI Layout
+    left_frame = tk.Frame(root, width=200)
+    left_frame.pack(side="left", fill="y", padx=10, pady=10)
+    right_frame = tk.Frame(root)
+    right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+
+    tk.Label(left_frame, text="Nations:", font=("Arial", 12, "bold")).pack()
+    scrollbar = tk.Scrollbar(left_frame)
+    scrollbar.pack(side="right", fill="y")
+    nation_list = tk.Listbox(left_frame, yscrollcommand=scrollbar.set, exportselection=False)
+    nation_list.pack(fill="both", expand=True)
+    scrollbar.config(command=nation_list.yview)
+
+    for i in sorted(active_countries):
+        nation_list.insert(tk.END, i)
+
+    title_lbl = tk.Label(right_frame, text="Select a nation...", font=("Arial", 14, "bold"))
+    title_lbl.pack(pady=5)
+
+    events_frame = tk.Frame(right_frame)
+    events_frame.pack(fill="both", expand=True, pady=5)
     
+    events_scroll = tk.Scrollbar(events_frame)
+    events_scroll.pack(side="right", fill="y")
+    events_listbox = tk.Listbox(events_frame, yscrollcommand=events_scroll.set)
+    events_listbox.pack(side="left", fill="both", expand=True)
+    events_scroll.config(command=events_listbox.yview)
+
+    current_target = [None]
+
+    def refresh_events_list():
+        events_listbox.delete(0, tk.END)
+        target = current_target[0]
+        if not target: return
+        events = self.nation_data.get(target, {}).get("scripted_events", [])
+        for i, evt in enumerate(events):
+            cond_str = f"If {evt['condition_type']} '{evt['condition_val']}'"
+            act_str = f"Then {evt['action_type']} '{evt['action_target']}'"
+            events_listbox.insert(tk.END, f"{i+1}. {cond_str} -> {act_str}")
+
+    def load_nation_data(event):
+        sel = nation_list.curselection()
+        if not sel: return
+        target = nation_list.get(sel[0])
+        current_target[0] = target
+        title_lbl.config(text=f"Events for: {target}")
+        refresh_events_list()
+
+    nation_list.bind("<<ListboxSelect>>", load_nation_data)
+
+    def add_event():
+        target = current_target[0]
+        if not target:
+            messagebox.showwarning("Warning", "Select a nation first.")
+            return
+
+        add_win = tk.Toplevel(root)
+        add_win.title(f"Add Event: {target}")
+        add_win.geometry("400x300")
+        add_win.attributes("-topmost", True)
+
+        tk.Label(add_win, text="Condition Type:").grid(row=0, column=0, pady=5, padx=5, sticky="e")
+        cond_type_var = tk.StringVar(value="Turn Number")
+        cond_type_menu = ttk.Combobox(add_win, textvariable=cond_type_var, values=["Turn Number", "At War With", "In Faction With", "At Peace With"], state="readonly")
+        cond_type_menu.grid(row=0, column=1, pady=5, padx=5, sticky="w")
+
+        tk.Label(add_win, text="Condition Value:").grid(row=1, column=0, pady=5, padx=5, sticky="e")
+        cond_val_var = tk.StringVar()
+        cond_val_entry = tk.Entry(add_win, textvariable=cond_val_var)
+        cond_val_entry.grid(row=1, column=1, pady=5, padx=5, sticky="w")
+
+        tk.Label(add_win, text="Action Type:").grid(row=2, column=0, pady=5, padx=5, sticky="e")
+        act_type_var = tk.StringVar(value="Declare War")
+        act_type_menu = ttk.Combobox(add_win, textvariable=act_type_var, values=["Declare War", "Join Faction", "Create Faction"], state="readonly")
+        act_type_menu.grid(row=2, column=1, pady=5, padx=5, sticky="w")
+
+        tk.Label(add_win, text="Action Target:").grid(row=3, column=0, pady=5, padx=5, sticky="e")
+        act_target_var = tk.StringVar()
+        act_target_menu = ttk.Combobox(add_win, textvariable=act_target_var, values=["None"] + sorted(active_countries))
+        act_target_menu.grid(row=3, column=1, pady=5, padx=5, sticky="w")
+
+        def save_new_event():
+            new_event = {
+                "condition_type": cond_type_var.get(),
+                "condition_val": cond_val_var.get(),
+                "action_type": act_type_var.get(),
+                "action_target": act_target_var.get()
+            }
+            data = self.nation_data.setdefault(target, {})
+            data.setdefault("scripted_events", []).append(new_event)
+            refresh_events_list()
+            add_win.destroy()
+
+        tk.Button(add_win, text="Save Event", command=save_new_event, bg="#4CAF50", fg="white").grid(row=4, column=0, columnspan=2, pady=15)
+
+    def remove_event():
+        target = current_target[0]
+        sel = events_listbox.curselection()
+        if not target or not sel: return
+        
+        idx = sel[0]
+        data = self.nation_data.get(target, {})
+        events = data.get("scripted_events", [])
+        if 0 <= idx < len(events):
+            events.pop(idx)
+            refresh_events_list()
+
+    btn_frame = tk.Frame(right_frame)
+    btn_frame.pack(fill="x", pady=5)
+    tk.Button(btn_frame, text="Add Event", command=add_event, bg="#2196F3", fg="white").pack(side="left", expand=True, fill="x", padx=5)
+    tk.Button(btn_frame, text="Remove Selected", command=remove_event, bg="#f44336", fg="white").pack(side="right", expand=True, fill="x", padx=5)
+
     _run_editor_loop(self, root)
 
 def open_diplomacy_editor(self):

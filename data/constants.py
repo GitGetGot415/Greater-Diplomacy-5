@@ -95,6 +95,10 @@ FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
 CASUS_BELLI_REQUIRED = True
 DEFAULT_CASUS_BELLI = True
 
+# --- SCRIPTED EVENTS & AI ---
+DEFAULT_USE_SCRIPTED_EVENTS = True
+DEFAULT_AI_OFF = False
+
 # ==========================================
 # DIPLOMATIC POPUPS
 # ==========================================
