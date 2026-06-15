@@ -1108,13 +1108,13 @@ def open_scripted_events_editor(self):
 
         def move_up(r_obj):
             idx = row_objects.index(r_obj)
-            if idx > 0:
+            if idx > 1: # Prevents moving above the primary IF condition
                 row_objects.insert(idx - 1, row_objects.pop(idx))
                 repack_conditions()
 
         def move_down(r_obj):
             idx = row_objects.index(r_obj)
-            if idx < len(row_objects) - 1:
+            if idx > 0 and idx < len(row_objects) - 1: # Prevents the IF condition from moving down
                 row_objects.insert(idx + 1, row_objects.pop(idx))
                 repack_conditions()
 
@@ -1157,7 +1157,6 @@ def open_scripted_events_editor(self):
                         op_var.set("==")
                     
                     if ctype == "Turn Number":
-                        # Compute expected date projection
                         d_str = get_expected_date_string(val_var.get())
                         if d_str:
                             date_lbl.config(text=f"({d_str})")
@@ -1189,12 +1188,11 @@ def open_scripted_events_editor(self):
                 else:
                     op_cb.config(values=["=="])
                     op_var.set("==")
-                    date_lbl.config(text="")
                     date_lbl.config(text="(Target Nation ID)")
             
             type_var.trace_add("write", update_row)
             val_var.trace_add("write", update_row)
-            update_row() # Initial call
+            update_row()
             
             row_obj = {
                 "frame": row_frame,
@@ -1210,9 +1208,8 @@ def open_scripted_events_editor(self):
                 
             if not is_first:
                 tk.Button(row_frame, text="X", fg="white", bg="red", command=remove_self).pack(side="right", padx=2)
-                
-            tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_down(r)).pack(side="right", padx=1)
-            tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_up(r)).pack(side="right", padx=1)
+                tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_down(r)).pack(side="right", padx=1)
+                tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_up(r)).pack(side="right", padx=1)
                 
             row_objects.append(row_obj)
             
@@ -1236,6 +1233,8 @@ def open_scripted_events_editor(self):
         act_scroll.pack(side="right", fill="y")
         act_canvas.pack(side="left", fill="both", expand=True)
 
+        act_row_objects = []
+        
         act_row_objects = []
         
         def repack_actions():
@@ -1271,9 +1270,9 @@ def open_scripted_events_editor(self):
             type_cb.pack(side="left", padx=5)
             
             target_cb = ttk.Combobox(row_frame, textvariable=target_var, values=["None"] + sorted(active_countries), width=18)
-            
             msg_ent = tk.Entry(row_frame, textvariable=msg_var, width=20)
             
+            # Create row_obj FIRST so it can be passed into the edit_app function below
             row_obj = {
                 "frame": row_frame,
                 "type_var": type_var,
@@ -1323,22 +1322,6 @@ def open_scripted_events_editor(self):
                     
             type_var.trace_add("write", update_act_row)
             update_act_row()
-            
-            def update_act_row(*args):
-                if type_var.get() == "Send Custom Message":
-                    msg_ent.pack(side="left", padx=5)
-                else:
-                    msg_ent.pack_forget()
-                    
-            type_var.trace_add("write", update_act_row)
-            update_act_row()
-            
-            row_obj = {
-                "frame": row_frame,
-                "type_var": type_var,
-                "target_var": target_var,
-                "msg_var": msg_var
-            }
             
             def remove_self():
                 row_frame.destroy()
