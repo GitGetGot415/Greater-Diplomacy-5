@@ -498,9 +498,6 @@ def process_scripted_events(map_screen):
     current_turn = queries.get_total_turns(map_screen.time_manager)
     
     for nation_name in active_nations:
-        if nation_name in human_players:
-            continue # Skip human players
-            
         data = map_screen.nation_data.get(nation_name, {})
         events = data.get("scripted_events", [])
         if not events:
@@ -510,6 +507,13 @@ def process_scripted_events(map_screen):
         
         for i, evt in enumerate(events):
             if i in fired_events and evt.get("fire_once", True):
+                continue
+                
+            # --- NEW: TRIGGER TYPE CHECK ---
+            trigger_type = evt.get("trigger_type", "AI Only")
+            if trigger_type == "AI Only" and nation_name in human_players:
+                continue
+            if trigger_type == "Player Only" and nation_name not in human_players:
                 continue
             
             # Backwards compatibility parser
@@ -589,6 +593,18 @@ def process_scripted_events(map_screen):
                     res = (pend_act == c_op and pend_turns > 0)
                 elif c_type == "Country Exists":
                     res = (c_val in active_nations)
+                elif c_type == "Country Doesn't Exist":
+                    res = (c_val not in active_nations)
+                elif c_type == "Occupying All Cores Of":
+                    res = queries.is_occupying_all_cores(nation_name, c_val, map_screen.map_data)
+                elif c_type == "Occupying Tile":
+                    res = queries.is_occupying_tiles(nation_name, c_val, map_screen.id_to_province)
+                elif c_type == "Is AI Controlled":
+                    target_check = c_val if c_val else nation_name
+                    res = (target_check not in human_players and target_check in active_nations)
+                elif c_type == "Is Player Controlled":
+                    target_check = c_val if c_val else nation_name
+                    res = (target_check in human_players and target_check in active_nations)
                 elif c_type == "Occupying Core Of":
                     res = any(p.get("owner") == nation_name and c_val in p.get("cores", []) for p in map_screen.map_data.values())
                 elif c_type == "Bordering":
@@ -613,6 +629,25 @@ def process_scripted_events(map_screen):
                 for act in actions:
                     a_type = act.get("type")
                     raw_targets = act.get("target", "None")
+                    
+                    if a_type == "Edit Appearance":
+                        app_data = act.get("appearance_data", {})
+                        if app_data.get("name"): data["name"] = app_data["name"]
+                        if app_data.get("leader_name"): data["leader_name"] = app_data["leader_name"]
+                        if app_data.get("leader_title"): data["leader_title"] = app_data["leader_title"]
+                        if app_data.get("flag_data"): data["flag_data"] = app_data["flag_data"]
+                        if app_data.get("portrait_data"): data["portrait_data"] = app_data["portrait_data"]
+                        if app_data.get("color"):
+                            try:
+                                new_col = tuple(map(int, app_data["color"].replace(" ", "").split(',')))
+                                if len(new_col) == 3:
+                                    data["color"] = list(new_col)
+                                    if hasattr(map_screen, 'nation_colors'):
+                                        map_screen.nation_colors[nation_name] = new_col
+                                    map_screen.centers_need_update = True
+                            except Exception:
+                                pass
+                        continue # End this action here, do not add to diplomacy queue
                     
                     # Supports comma-separated targets for simultaneous multi-country actions
                     target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]

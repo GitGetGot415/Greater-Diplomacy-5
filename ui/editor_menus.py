@@ -1078,6 +1078,9 @@ def open_scripted_events_editor(self):
         fire_once_var = tk.BooleanVar(value=event_data.get("fire_once", True))
         tk.Checkbutton(top_frame, text="Single-Time Event (Fire Only Once)", variable=fire_once_var).pack(anchor="w")
         
+        trigger_type_var = tk.StringVar(value=event_data.get("trigger_type", "AI Only"))
+        ttk.Combobox(top_frame, textvariable=trigger_type_var, values=["AI Only", "Player Only", "Both"], state="readonly", width=12).pack(side="left", padx=10)
+        
         # --- Conditions Frame ---
         tk.Label(edit_win, text="Conditionals:", font=("Arial", 10, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
         
@@ -1097,6 +1100,24 @@ def open_scripted_events_editor(self):
         
         row_objects = []
         
+        def repack_conditions():
+            for ro in row_objects:
+                ro["frame"].pack_forget()
+            for ro in row_objects:
+                ro["frame"].pack(fill="x", pady=2, padx=2)
+
+        def move_up(r_obj):
+            idx = row_objects.index(r_obj)
+            if idx > 0:
+                row_objects.insert(idx - 1, row_objects.pop(idx))
+                repack_conditions()
+
+        def move_down(r_obj):
+            idx = row_objects.index(r_obj)
+            if idx < len(row_objects) - 1:
+                row_objects.insert(idx + 1, row_objects.pop(idx))
+                repack_conditions()
+
         def add_condition_row(c_data=None):
             if c_data is None:
                 c_data = {"chain": "AND", "type": "Turn Number", "operator": "==", "value": ""}
@@ -1116,7 +1137,7 @@ def open_scripted_events_editor(self):
             op_var = tk.StringVar(value=c_data.get("operator", "=="))
             val_var = tk.StringVar(value=c_data.get("value", ""))
             
-            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=["Turn Number", "At War With", "In Faction With", "At Peace With", "Random (0.00 - 1.00)", "Received Action", "Country Exists", "Occupying Core Of", "Bordering"], width=18, state="readonly")
+            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=["Turn Number", "At War With", "In Faction With", "At Peace With", "Random (0.00 - 1.00)", "Received Action", "Country Exists", "Country Doesn't Exist", "Occupying Core Of", "Occupying All Cores Of", "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering"], width=18, state="readonly")
             type_cb.pack(side="left", padx=2)
             
             op_cb = ttk.Combobox(row_frame, textvariable=op_var, width=19, state="readonly")
@@ -1145,10 +1166,26 @@ def open_scripted_events_editor(self):
                     else:
                         date_lbl.config(text="")
                 elif ctype == "Received Action":
-                    op_cb.config(values=["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "PEACE_TREATY", "CEASEFIRE"])
-                    if op_var.get() not in ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "PEACE_TREATY", "CEASEFIRE"]:
+                    op_cb.config(values=["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"])
+                    if op_var.get() not in ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"]:
                         op_var.set("WAR_DECLARATION")
                     date_lbl.config(text="(Sender Nation ID)")
+                elif ctype == "Country Doesn't Exist":
+                    op_cb.config(values=["=="])
+                    op_var.set("==")
+                    date_lbl.config(text="(Target Nation ID)")
+                elif ctype == "Occupying All Cores Of":
+                    op_cb.config(values=["==", "!="])
+                    if op_var.get() not in ["==", "!="]: op_var.set("==")
+                    date_lbl.config(text="(Target Nation ID)")
+                elif ctype == "Occupying Tile":
+                    op_cb.config(values=["==", "!="])
+                    if op_var.get() not in ["==", "!="]: op_var.set("==")
+                    date_lbl.config(text="(Tile IDs, comma separated)")
+                elif ctype in ["Is AI Controlled", "Is Player Controlled"]:
+                    op_cb.config(values=["=="])
+                    op_var.set("==")
+                    date_lbl.config(text="(Target Nation ID or blank for self)")
                 else:
                     op_cb.config(values=["=="])
                     op_var.set("==")
@@ -1174,6 +1211,9 @@ def open_scripted_events_editor(self):
             if not is_first:
                 tk.Button(row_frame, text="X", fg="white", bg="red", command=remove_self).pack(side="right", padx=2)
                 
+            tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_down(r)).pack(side="right", padx=1)
+            tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_up(r)).pack(side="right", padx=1)
+                
             row_objects.append(row_obj)
             
         for c_data in conds_data:
@@ -1198,9 +1238,27 @@ def open_scripted_events_editor(self):
 
         act_row_objects = []
         
+        def repack_actions():
+            for ro in act_row_objects:
+                ro["frame"].pack_forget()
+            for ro in act_row_objects:
+                ro["frame"].pack(fill="x", pady=2, padx=2)
+
+        def move_act_up(r_obj):
+            idx = act_row_objects.index(r_obj)
+            if idx > 0:
+                act_row_objects.insert(idx - 1, act_row_objects.pop(idx))
+                repack_actions()
+
+        def move_act_down(r_obj):
+            idx = act_row_objects.index(r_obj)
+            if idx < len(act_row_objects) - 1:
+                act_row_objects.insert(idx + 1, act_row_objects.pop(idx))
+                repack_actions()
+
         def add_action_row(a_data=None):
             if a_data is None:
-                a_data = {"type": "Declare War", "target": "None", "message": ""}
+                a_data = {"type": "Declare War", "target": "None", "message": "", "appearance_data": {}}
                 
             row_frame = tk.Frame(act_frame, relief="ridge", bd=2)
             row_frame.pack(fill="x", pady=2, padx=2)
@@ -1209,13 +1267,62 @@ def open_scripted_events_editor(self):
             target_var = tk.StringVar(value=a_data.get("target", "None"))
             msg_var = tk.StringVar(value=a_data.get("message", ""))
             
-            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=["Declare War", "Join Faction", "Create Faction", "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message"], width=18, state="readonly")
+            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=["Declare War", "Join Faction", "Create Faction", "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message", "Edit Appearance"], width=18, state="readonly")
             type_cb.pack(side="left", padx=5)
             
             target_cb = ttk.Combobox(row_frame, textvariable=target_var, values=["None"] + sorted(active_countries), width=18)
-            target_cb.pack(side="left", padx=5)
             
             msg_ent = tk.Entry(row_frame, textvariable=msg_var, width=20)
+            
+            row_obj = {
+                "frame": row_frame,
+                "type_var": type_var,
+                "target_var": target_var,
+                "msg_var": msg_var,
+                "app_data": a_data.get("appearance_data", {})
+            }
+            
+            def edit_app():
+                app_win = tk.Toplevel(root)
+                app_win.title("Appearance Details")
+                app_win.geometry("300x250")
+                app_win.attributes("-topmost", True)
+                
+                fields = ["name", "leader_name", "leader_title", "color", "flag_data", "portrait_data"]
+                ents = {}
+                for i, f in enumerate(fields):
+                    tk.Label(app_win, text=f.replace("_", " ").title()+":").grid(row=i, column=0, sticky="e", padx=5, pady=5)
+                    ent = tk.Entry(app_win, width=30)
+                    ent.insert(0, row_obj["app_data"].get(f, ""))
+                    ent.grid(row=i, column=1, pady=5)
+                    ents[f] = ent
+                    
+                def save_app():
+                    for f in fields:
+                        row_obj["app_data"][f] = ents[f].get()
+                    app_win.destroy()
+                    
+                tk.Button(app_win, text="Save", command=save_app, bg="#4CAF50", fg="white").grid(row=len(fields), column=0, columnspan=2, pady=10)
+
+            app_btn = tk.Button(row_frame, text="Configure Appearance", command=edit_app)
+            
+            def update_act_row(*args):
+                t = type_var.get()
+                if t == "Send Custom Message":
+                    target_cb.pack(side="left", padx=5)
+                    msg_ent.pack(side="left", padx=5)
+                    app_btn.pack_forget()
+                elif t == "Edit Appearance":
+                    target_cb.pack_forget()
+                    msg_ent.pack_forget()
+                    app_btn.pack(side="left", padx=5)
+                else:
+                    target_cb.pack(side="left", padx=5)
+                    msg_ent.pack_forget()
+                    app_btn.pack_forget()
+                    
+            type_var.trace_add("write", update_act_row)
+            update_act_row()
             
             def update_act_row(*args):
                 if type_var.get() == "Send Custom Message":
@@ -1238,6 +1345,8 @@ def open_scripted_events_editor(self):
                 act_row_objects.remove(row_obj)
                 
             tk.Button(row_frame, text="X", fg="white", bg="red", command=remove_self).pack(side="right", padx=5)
+            tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_act_down(r)).pack(side="right", padx=1)
+            tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_act_up(r)).pack(side="right", padx=1)
             act_row_objects.append(row_obj)
 
         for a_data in acts_data:
@@ -1258,13 +1367,15 @@ def open_scripted_events_editor(self):
                 final_acts.append({
                     "type": ro["type_var"].get(),
                     "target": ro["target_var"].get(),
-                    "message": ro["msg_var"].get()
+                    "message": ro["msg_var"].get(),
+                    "appearance_data": ro.get("app_data", {})
                 })
                 
             new_event = {
                 "conditions": final_conds,
                 "actions": final_acts,
-                "fire_once": fire_once_var.get()
+                "fire_once": fire_once_var.get(),
+                "trigger_type": trigger_type_var.get()
             }
             
             target_data = self.nation_data.setdefault(target, {})

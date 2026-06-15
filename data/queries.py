@@ -864,6 +864,31 @@ def get_living_nations(map_data):
             active_nations.add(owner)
     return active_nations
 
+def is_occupying_all_cores(nation, target_nation, map_data):
+    """Returns True if 'nation' occupies ALL cores of 'target_nation'."""
+    has_cores = False
+    for prov in map_data.values():
+        if target_nation in prov.get("cores", []):
+            has_cores = True
+            if prov.get("owner") != nation:
+                return False
+    return has_cores
+
+def is_occupying_tiles(nation, tile_ids_str, id_to_province):
+    """Returns True if 'nation' occupies all of the specified tile IDs."""
+    if not tile_ids_str: return False
+    t_ids = [tid.strip() for tid in str(tile_ids_str).split(",") if tid.strip()]
+    if not t_ids: return False
+    
+    for tid in t_ids:
+        try:
+            prov_id = int(tid)
+        except ValueError:
+            continue
+        prov = id_to_province.get(prov_id)
+        if not prov or prov.get("owner") != nation:
+            return False
+    return True
 
 # ==========================================
 # TIME & RESEARCH QUERIES
