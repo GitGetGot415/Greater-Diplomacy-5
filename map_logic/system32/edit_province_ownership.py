@@ -1,10 +1,16 @@
 import pygame
+import data.constants as c
 from data.io import country_io
 from map_logic.rendering import map_utils
 
 def conquer_province(self, province, new_owner):
     """Annexes a specific province to a specific country and updates visuals."""
     if province:
+        # --- NEW: If you ever lose a territory, you immediately get a claim on it ---
+        old_owner = province.get("owner", "Unclaimed")
+        if old_owner not in c.UNPLAYABLE_NATIONS and old_owner != new_owner:
+            add_claim(self, province, old_owner)
+
         # 1. Logic Update
         province["owner"] = new_owner
         

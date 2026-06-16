@@ -1546,7 +1546,35 @@ def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, n
                 return True
         else:
             return True
+
+    if peace_type.startswith(c.PEACE_SURRENDER):
+        gains_territory = False
         
+        # Dynamically check the map data instead of relying on the UI text string.
+        # The UI evaluates this BEFORE appending the specific territory data to the string.
+        if map_data:
+            ai_claims = nation_data.get(target_nation, {}).get("claims", [])
+            for prov in map_data.values():
+                if prov.get("owner") == proposer_nation and (prov["id"] in ai_claims or target_nation in prov.get("cores", [])):
+                    gains_territory = True
+                    break
+        else:
+            # Fallback if map_data is missing
+            # This "fallback" just makes the ai always accept
+            gains_territory = "No territories surrendered" not in peace_type
+
+        # AI shouldn't accept a surrender unless they gain territory OR if they'll also accept a ceasefire
+        if gains_territory:
+            return True
+            
+        if map_data:
+            if not ai_thinks_it_can_win(target_nation, proposer_nation, map_data, nation_data):
+                return True
+        else:
+            return True
+            
+        return False
+            
     # This query acts as a centralized place to expand logic later (e.g. check war score).
     return True
 

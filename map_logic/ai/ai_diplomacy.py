@@ -447,6 +447,41 @@ def process_basic_proactive_ai(map_screen):
                                             queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                                             break
 
+        # --- 4.5. Fabricate Claims During War ---
+        if is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
+            claim_queue = data.get("claim_queue", [])
+            if not claim_queue:
+                my_claims = set(data.get("claims", []))
+                owned_and_claimed = set(my_claims)
+                for prov in map_screen.map_data.values():
+                    if prov.get("owner") == ai_name:
+                        owned_and_claimed.add(prov["id"])
+                        
+                potential_targets_adjacent = []
+                potential_targets_any = []
+                
+                for enemy in my_enemies:
+                    if enemy not in active_nations: continue
+                    if queries.is_ai_diplo_on_cooldown(ai_name, enemy, "FABRICATE_CLAIM", map_screen.nation_data):
+                        continue
+                        
+                    for prov in map_screen.map_data.values():
+                        if prov.get("owner") == enemy and prov["id"] not in my_claims:
+                            potential_targets_any.append((enemy, prov))
+                            if any(n_id in owned_and_claimed for n_id in prov.get("neighbors", [])):
+                                potential_targets_adjacent.append((enemy, prov))
+                                
+                chosen_target = None
+                if potential_targets_adjacent:
+                    chosen_target = random.choice(potential_targets_adjacent)
+                elif potential_targets_any:
+                    chosen_target = random.choice(potential_targets_any)
+                    
+                if chosen_target:
+                    target_enemy, target_prov = chosen_target
+                    data.setdefault("claim_queue", []).append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
+                    queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+
         # --- 5. Fabricate Claims on Weaker Neighbors ---
         if not is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
             current_turn = queries.get_total_turns(map_screen.time_manager)
