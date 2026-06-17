@@ -1345,6 +1345,35 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             msg_ent = tk.Entry(row_frame, textvariable=msg_var, width=20)
             ai_cb = tk.Checkbutton(row_frame, text="AI Msg", variable=ai_var)
             
+            # --- NEW: Image/Color Pickers & Previews ---
+            from tkinter import colorchooser, filedialog
+            import tempfile
+            
+            def do_pick_color():
+                color_code = colorchooser.askcolor(title="Choose color")[0]
+                if color_code:
+                    msg_var.set(f"{int(color_code[0])},{int(color_code[1])},{int(color_code[2])}")
+                    update_act_row()
+
+            def do_pick_image():
+                filepath = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+                if filepath:
+                    try:
+                        img = pygame.image.load(filepath).convert_alpha()
+                        is_port = type_var.get() == "Edit Portrait"
+                        size = c.PORTRAIT_SIZE if is_port else c.FLAG_SIZE
+                        img = pygame.transform.scale(img, size)
+                        b64_str = queries.encode_surf_to_b64(img)
+                        msg_var.set(b64_str)
+                        update_act_row()
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Could not load image: {e}")
+
+            pick_color_btn = tk.Button(row_frame, text="Pick Color", command=do_pick_color)
+            pick_img_btn = tk.Button(row_frame, text="Browse Image", command=do_pick_image)
+            preview_lbl = tk.Label(row_frame, width=4, height=1)
+            # -------------------------------------------
+
             row_obj = {
                 "frame": row_frame,
                 "type_var": type_var,
@@ -1355,24 +1384,65 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             
             def update_act_row(*args):
                 t = type_var.get()
+                
+                # Unpack everything first to clear the slate
+                target_cb.pack_forget()
+                msg_ent.pack_forget()
+                ai_cb.pack_forget()
+                pick_color_btn.pack_forget()
+                pick_img_btn.pack_forget()
+                preview_lbl.pack_forget()
+
                 if t == "Send Custom Message":
                     target_cb.pack(side="left", padx=5)
                     msg_ent.pack(side="left", padx=5)
                     ai_cb.pack(side="left", padx=5)
-                elif t in edit_options:
-                    target_cb.pack_forget()
-                    target_var.set("None") # Reset to None since it targets self
-                    msg_ent.pack(side="left", padx=5)
-                    ai_cb.pack_forget()
-                elif t in ["Queue Claims", "Revoke Claims"]:
-                    target_cb.pack_forget()
+                elif t == "Edit Color":
+                    target_var.set("None")
+                    pick_color_btn.pack(side="left", padx=5)
+                    preview_lbl.pack(side="left", padx=5)
+                    try:
+                        c_val = msg_var.get()
+                        if c_val:
+                            r,g,b = map(int, c_val.split(','))
+                            preview_lbl.config(bg=f"#{r:02x}{g:02x}{b:02x}", image='', width=4, height=1)
+                        else:
+                            preview_lbl.config(bg='gray', image='', width=4, height=1)
+                    except:
+                        preview_lbl.config(bg='gray', image='', width=4, height=1)
+                elif t in ["Edit Flag", "Edit Portrait"]:
+                    target_var.set("None")
+                    pick_img_btn.pack(side="left", padx=5)
+                    preview_lbl.pack(side="left", padx=5)
+                    
+                    b64_str = msg_var.get()
+                    if b64_str:
+                        is_port = (t == "Edit Portrait")
+                        size = c.PORTRAIT_SIZE if is_port else c.FLAG_SIZE
+                        
+                        # Utilize the queries handler to resolve default imagery and scale appropriately
+                        surf = queries.decode_b64_to_surf(b64_str, size, is_portrait=is_port, country_name=target)
+                        
+                        # Temporarily swap standard pygame bytes to disk so Tkinter can read them
+                        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".png")
+                        os.close(tmp_fd)
+                        pygame.image.save(surf, tmp_path)
+                        
+                        try:
+                            img = tk.PhotoImage(file=tmp_path)
+                            preview_lbl.config(image=img, width=size[0], height=size[1], bg='white')
+                            preview_lbl.image = img # Crucial: Save reference so garbage collector doesn't eat the image
+                        except Exception:
+                            preview_lbl.config(bg='gray', image='', width=4, height=1)
+                            
+                        os.remove(tmp_path)
+                    else:
+                        preview_lbl.config(bg='gray', image='', width=4, height=1)
+                elif t in ["Edit Name", "Edit Leader Name", "Edit Leader Title", "Queue Claims", "Revoke Claims"]:
                     target_var.set("None")
                     msg_ent.pack(side="left", padx=5)
-                    ai_cb.pack_forget()
                 elif t == "Revoke All Claims":
                     target_cb.pack(side="left", padx=5)
-                    msg_ent.pack_forget()
-                    ai_cb.pack_forget()
                 else:
                     target_cb.pack(side="left", padx=5)
                     msg_ent.pack(side="left", padx=5)
