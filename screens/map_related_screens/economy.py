@@ -18,7 +18,10 @@ class Economy_Screen(GameState):
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
-        # New Conversion Slider positioned below the resource rows
+        # Expenses button positioned in the top right corner
+        self.elements.append(Button(c.SCREEN_WIDTH - 120, 20, "small", "orange", "Expenses", self.open_expenses_table))
+        
+        # Conversion Slider positioned below the resource rows
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         
         # Fetch the max allowed conversion limit based on tech
@@ -143,3 +146,92 @@ class Economy_Screen(GameState):
 
     def exit_to_map(self):
         self.next_state, self.done = "MAP", True
+
+    def open_expenses_table(self):
+        if not self.map_screen: return
+        import tkinter as tk
+        from tkinter import ttk
+        
+        # Initialize a transient Tkinter root using your queries helper
+        root = queries.get_transient_tk_root()
+        win = tk.Toplevel(root)
+        win.title("Military Upkeep Expenses")
+        win.geometry("650x400")
+        win.attributes("-topmost", True)
+
+        def on_close():
+            win.destroy()
+
+        win.protocol("WM_DELETE_WINDOW", on_close)
+
+        style = ttk.Style(win)
+        try: style.theme_use("clam")
+        except tk.TclError: pass
+
+        columns = ("Unit", "Location (Prov ID)", "Manpower", "Materials", "Fuel")
+        tree = ttk.Treeview(win, columns=columns, show="headings")
+        
+        # State dictionary to track ascending/descending sort for each column
+        sort_dirs = {col: True for col in columns}
+
+        def sort_data(col):
+            reverse = sort_dirs[col]
+            sort_dirs[col] = not reverse
+            
+            data_list = [(tree.set(child, col), child) for child in tree.get_children("")]
+            
+            # Convert values to the appropriate type for accurate numerical sorting
+            if col in ("Manpower", "Materials", "Fuel"):
+                data_list.sort(key=lambda t: float(t[0]), reverse=reverse)
+            elif col == "Location (Prov ID)":
+                data_list.sort(key=lambda t: int(t[0]), reverse=reverse)
+            else:
+                data_list.sort(reverse=reverse)
+                
+            # Rearrange the items based on the sorted list
+            for index, (val, child) in enumerate(data_list):
+                tree.move(child, "", index)
+        
+        for col in columns:
+            # Passing col to lambda safely captures its state for the button click
+            tree.heading(col, text=col, command=lambda c=col: sort_data(c))
+            tree.column(col, width=120, anchor="center")
+
+        scrollbar = ttk.Scrollbar(win, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+
+        # Retrieve all currently owned units and the base unit stat library
+        _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
+        unit_lib = queries.get_unit_library()
+
+        for unit, prov in units:
+            # Use original_type to properly account for converted units like Convoys and Trucks
+            u_type = unit.get("original_type", unit.get("type"))
+            stats = unit_lib.get(u_type, {})
+            
+            # Apply your global upkeep modifiers
+            man_upk = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+            mat_upk = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+            fuel_upk = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+
+            tree.insert("", tk.END, values=(
+                unit.get("type"),
+                prov["id"],
+                f"{man_upk:.2f}",
+                f"{mat_upk:.2f}",
+                f"{fuel_upk:.2f}"
+            ))
+
+        # Safe loop to keep Pygame alive and ticking while the Tkinter window is active
+        while win.winfo_exists():
+            try:
+                root.update()
+                pygame.event.pump()
+                pygame.time.wait(c.CPU_LIMITER)
+            except (tk.TclError, Exception):
+                break
+                
+        # Destroy the root to prevent phantom inputs or background threads hanging
+        queries.destroy_tk_root(root)
