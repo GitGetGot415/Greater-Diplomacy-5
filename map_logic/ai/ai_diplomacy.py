@@ -380,7 +380,7 @@ def process_basic_proactive_ai(map_screen):
                             continue
                         
                         # Check localized border strength instead of global strength
-                        my_border_str, target_border_str = queries.get_border_strength(ai_name, target, map_screen.map_data, map_screen.id_to_province)
+                        my_border_str, target_border_str = queries.get_border_strength(ai_name, target, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data)
                         
                         # Prevent division by zero if they have literally no troops on the border
                         target_border_str = max(1, target_border_str)
