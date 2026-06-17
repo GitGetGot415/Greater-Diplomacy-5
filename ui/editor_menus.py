@@ -996,16 +996,8 @@ def open_scripted_events_editor(self):
     for i in sorted(active_countries):
         nation_list.insert(tk.END, i)
 
-    # --- Replaced standard title label with a header frame for the Help Button ---
-    header_frame = tk.Frame(right_frame)
-    header_frame.pack(fill="x", pady=5)
-    
-    title_lbl = tk.Label(header_frame, text="Select a nation...", font=("Arial", 14, "bold"))
-    title_lbl.pack(side="left")
-    
-    help_btn = tk.Button(header_frame, text="Help / Info", command=show_scripted_events_help, bg="#2196F3", fg="white", font=("Arial", 9, "bold"))
-    help_btn.pack(side="right", padx=5)
-    # ----------------------------------------------------------------------------
+    title_lbl = tk.Label(right_frame, text="Select a nation...", font=("Arial", 14, "bold"))
+    title_lbl.pack(pady=5)
 
     events_frame = tk.Frame(right_frame)
     events_frame.pack(fill="both", expand=True, pady=5)
@@ -1137,6 +1129,9 @@ def open_scripted_events_editor(self):
         # --- Top controls ---
         top_frame = tk.Frame(edit_win)
         top_frame.pack(fill="x", padx=10, pady=5)
+        
+        help_btn = tk.Button(top_frame, text="Help / Info", command=show_scripted_events_help, bg="#2196F3", fg="white", font=("Arial", 9, "bold"))
+        help_btn.pack(side="right", padx=10)
         
         fire_once_var = tk.BooleanVar(value=event_data.get("fire_once", True))
         tk.Checkbutton(top_frame, text="Single-Time Event (Fire Only Once)", variable=fire_once_var).pack(anchor="w")

@@ -255,7 +255,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     # 1. Check for basic aggressive acceptance
     if at_war and not in_faction:
         if action_type in ["FACTION_INVITE", "CREATE_FACTION"]:
-            accepted = True
+            if not queries.are_at_war(ai_nation, sender_nation, nation_data):
+                accepted = True
             
     # Accept calls to arms and requests to join wars if in the same faction
     if action_type in ["JOIN_WARS", "CALL_TO_ARMS"]:

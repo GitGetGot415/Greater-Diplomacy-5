@@ -470,6 +470,7 @@ def process_diplomacy_turn(self):
             log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {country_name} is preparing further diplomatic moves regarding {f_up_target}...")
 
 
+    # PASS 1: IMMEDIATE ACTIONS (Turns == 0)
     for country_name, data in list(self.nation_data.items()):
         if not isinstance(data, dict): 
             continue
@@ -477,7 +478,7 @@ def process_diplomacy_turn(self):
         pending = data.get("pending_diplomacy", {})
         actions_to_clear = []
 
-        for target, info in pending.items():
+        for target, info in list(pending.items()):
             action = info.get("action", "")
             turns = info.get("turns", 0)
             timer = info.get("timer", 0)
@@ -494,6 +495,7 @@ def process_diplomacy_turn(self):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
+                info["_processed_this_turn"] = True
                 # EXECUTE unilateral actions instantly on Turn 0
                 if action == "JUSTIFY_WARGOAL":
                     prov_ids = [int(x) for x in custom_msg.split(",") if x]
@@ -720,10 +722,6 @@ def process_diplomacy_turn(self):
                             
                     finalize_faction_leave(self.nation_data, country_name)
                     
-                elif action == "JOIN_FACTION_REQ":
-                    msg_text = custom_msg if custom_msg else "We formally request to join your faction."
-                    send_message(self, country_name, target, msg_text, "DIPLOMACY")
-
                 # Cleanup or increment
                 if target in actions_to_clear:
                     pass # It was executed entirely on turn 0, so we skip the increment
@@ -733,7 +731,30 @@ def process_diplomacy_turn(self):
                 else:
                     info["turns"] += 1
 
-            elif turns == 1:
+        for t in actions_to_clear:
+            if t in pending:
+                del pending[t]
+
+    # PASS 2: DELAYED / LLM ACTIONS (Turns >= 1)
+    for country_name, data in list(self.nation_data.items()):
+        if not isinstance(data, dict): 
+            continue
+            
+        pending = data.get("pending_diplomacy", {})
+        actions_to_clear = []
+
+        for target, info in list(pending.items()):
+            action = info.get("action", "")
+            turns = info.get("turns", 0)
+            custom_msg = info.get("message", "")
+
+            is_unilateral = action in c.UNILATERAL_ACTIONS
+
+            # Skip actions that were already handled in Pass 1
+            if info.pop("_processed_this_turn", False):
+                continue
+
+            if turns == 1:
                 is_human_target = target in self.active_players
 
                 if is_unilateral:
