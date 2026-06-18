@@ -97,7 +97,7 @@ DEFAULT_CASUS_BELLI = True
 
 # --- SCRIPTED EVENTS & AI ---
 DEFAULT_USE_SCRIPTED_EVENTS = True
-DEFAULT_AI_OFF = False
+DEFAULT_AI_DISABLED = False
 
 # ==========================================
 # DIPLOMATIC POPUPS

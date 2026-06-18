@@ -10,13 +10,13 @@ def prepare_turn(self):
     print("--- [PHASE 1] AI PREPARATION START ---")
     
     # --- NEW: Check if AI is turned off ---
-    ai_off = self.scenario_settings.get("ai_off", c.DEFAULT_AI_OFF)
+    ai_disabled = self.scenario_settings.get("ai_disabled", c.DEFAULT_AI_DISABLED)
     
     # --- Process Scripted Events ---
     print("[SYSTEM] Running Scripted Events...")
     ai_diplomacy.process_scripted_events(self)
     
-    if not ai_off:
+    if not ai_disabled:
         # --- Basic Proactive AI & Grand Strategy ---
         print("[SYSTEM] Running Proactive AI...")
         ai_diplomacy.process_basic_proactive_ai(self)

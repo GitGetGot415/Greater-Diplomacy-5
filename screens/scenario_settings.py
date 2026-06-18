@@ -17,7 +17,7 @@ class Scenario_Settings(GameState):
                 "fog_of_war": c.DEFAULT_FOG_OF_WAR,
                 "casus_belli_required": c.DEFAULT_CASUS_BELLI,
                 "use_scripted_events": c.DEFAULT_USE_SCRIPTED_EVENTS,
-                "ai_off": c.DEFAULT_AI_OFF
+                "ai_disabled": c.DEFAULT_AI_DISABLED
             }
         self.refresh_ui()
 
@@ -45,12 +45,12 @@ class Scenario_Settings(GameState):
         )
 
         # Toggle Button - AI Off
-        ai_off_val = self.settings.get("ai_off", c.DEFAULT_AI_OFF)
-        ai_off_color = "red" if ai_off_val else "green" 
-        ai_off_text = "AI: OFF" if ai_off_val else "AI: ON"
+        ai_disabled_val = self.settings.get("ai_disabled", c.DEFAULT_AI_DISABLED)
+        ai_disabled_color = "red" if ai_disabled_val else "green" 
+        ai_disabled_text = "AI: OFF" if ai_disabled_val else "AI: ON"
 
         self.elements.append(
-            Button("centered", 320, "medium", ai_off_color, ai_off_text, self.toggle_ai_off)
+            Button("centered", 320, "medium", ai_disabled_color, ai_disabled_text, self.toggle_ai_disabled)
         )
 
         dpt_val = self.settings.get("days_per_turn", "Default")
@@ -73,8 +73,8 @@ class Scenario_Settings(GameState):
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
-    def toggle_ai_off(self):
-        self.settings["ai_off"] = not self.settings.get("ai_off", c.DEFAULT_AI_OFF)
+    def toggle_ai_disabled(self):
+        self.settings["ai_disabled"] = not self.settings.get("ai_disabled", c.DEFAULT_AI_DISABLED)
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
@@ -96,7 +96,7 @@ class Scenario_Settings(GameState):
             "casus_belli_required": c.DEFAULT_CASUS_BELLI,
             "days_per_turn": "Default",
             "use_scripted_events": c.DEFAULT_USE_SCRIPTED_EVENTS,
-            "ai_off": c.DEFAULT_AI_OFF
+            "ai_disabled": c.DEFAULT_AI_DISABLED
         }
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
