@@ -6,7 +6,7 @@ import data.constants as c
 from data import queries
 from map_logic.setup import player_setup
 from map_logic.diplomacy import player_diplomacy_actions
-from ui import event_handler, spectator_menus, editor_menus
+from ui import spectator_menus, editor_menus, scripted_events_editor
 
 def render_buttons(self):
     """Initializes and registers all map screen buttons uniformly."""
@@ -55,7 +55,7 @@ def render_buttons(self):
     self.btn_ed_date = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(self), image=icons.get("clock"), show_text=False)
     self.btn_ed_edited = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(self), font_preset="normal")
     self.btn_ed_diplo = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(self))
-    self.btn_ed_scripts = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: editor_menus.open_scripted_events_editor(self), font_preset="normal")
+    self.btn_ed_scripts = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(self), font_preset="normal")
 
     # Gameplay Buttons
     self.btn_next_turn = Button(c.EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", lambda: turn_manager.advance_time(self))
