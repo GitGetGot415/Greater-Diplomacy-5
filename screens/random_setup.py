@@ -111,10 +111,11 @@ class Random_Setup(GameState):
         self.done = True
 
     def refresh_ui(self):
-        self.country_slider = Slider((c.SCREEN_WIDTH/2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries)
-        self.year_slider = Slider((c.SCREEN_WIDTH/2) - 100, 360, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year)
-        self.island_slider = Slider((c.SCREEN_WIDTH/2) - 100, 420, 200, f"Island Filter Size: {self.current_island_size}", self.island_size_slider_val, self.update_island_size)
-        self.resource_slider = Slider((c.SCREEN_WIDTH/2) - 100, 480, 200, f"Resource Spawn: {int(self.resource_chance * 100)}%", self.resource_slider_val, self.update_resource_chance)
+        # Use // to prevent floating point UI rendering errors
+        self.country_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 300, 200, f"Countries: {self.current_countries}", self.country_slider_val, self.update_countries)
+        self.year_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 360, 200, f"Start Year: {self.current_year}", self.year_slider_val, self.update_year)
+        self.island_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 420, 200, f"Island Filter Size: {self.current_island_size}", self.island_size_slider_val, self.update_island_size)
+        self.resource_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 480, 200, f"Resource Spawn: {int(self.resource_chance * 100)}%", self.resource_slider_val, self.update_resource_chance)
         
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.go_back),

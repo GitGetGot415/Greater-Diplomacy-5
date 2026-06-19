@@ -44,8 +44,8 @@ def process_pinning(self):
         if not friendly_defenders: continue
         
         # Only top attackers deal damage
-        top_friendly_defenders = sorted(friendly_defenders, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-        total_defender_atk = sum(u.get("attack", 5) for u in top_friendly_defenders)
+        top_friendly_defenders = sorted(friendly_defenders, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+        total_defender_atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_friendly_defenders)
         
         hostile_attackers = [
             info for info in attackers_info
@@ -66,8 +66,8 @@ def process_pinning(self):
         if not attackers_survive:
             # 1. Attackers are obliterated. Apply their pitiful damage to the defenders.
             attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
-            top_suicide_attackers = sorted(attacker_units_only, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-            total_attacker_atk = sum(a_unit.get("attack", 5) for a_unit in top_suicide_attackers)
+            top_suicide_attackers = sorted(attacker_units_only, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+            total_attacker_atk = sum(a_unit.get("attack", c.DEFAULT_UNIT_ATK) for a_unit in top_suicide_attackers)
             apply_group_damage(total_attacker_atk, friendly_defenders)
             
             # 2. Kill the attackers and remove them from incoming_attacks
@@ -143,11 +143,11 @@ def process_meeting_engagements(self):
                                 queries.revert_transport(u)
                     
                     # Sort and cap attackers
-                    top_units1 = sorted(units1, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-                    top_units2 = sorted(units2, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+                    top_units1 = sorted(units1, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+                    top_units2 = sorted(units2, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
                     
-                    atk1 = sum(u.get("attack", 5) for u in top_units1)
-                    atk2 = sum(u.get("attack", 5) for u in top_units2)
+                    atk1 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_units1)
+                    atk2 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_units2)
                     
                     apply_group_damage(atk2, units1)
                     apply_group_damage(atk1, units2)
@@ -193,9 +193,9 @@ def process_combat(self):
         
         # Sort and cap attackers for each side
         for owner in owners:
-            owner_units = sorted(sides[owner]["units"], key=lambda x: x.get("attack", 5), reverse=True)
+            owner_units = sorted(sides[owner]["units"], key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)
             top_attackers = owner_units[:c.MAX_COMBAT_ATTACKERS]
-            sides[owner]["total_atk"] = sum(u.get("attack", 5) for u in top_attackers)
+            sides[owner]["total_atk"] = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_attackers)
 
         combat_occurred = False
         

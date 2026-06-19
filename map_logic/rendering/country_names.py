@@ -53,9 +53,6 @@ def draw_country_names(map_screen, surface):
             # Sort largest spatial spread to smallest so mainlands are always processed first!
             sorted_blobs = sorted(active_blobs, key=lambda b: b["spread"], reverse=True)
             
-            min_to_show = 3         # when to ignore showing islands
-            abs_min_to_show = 2     # if a country only has this many tiles
-            
             for blob in sorted_blobs:
                 country = blob["owner"]
                 
@@ -70,19 +67,19 @@ def draw_country_names(map_screen, surface):
                     # This allows the faction name to appear on EVERY country in the faction, 
                     # rather than just once for the whole faction!
 
-                    if blob["count"] <= min_to_show:
+                    if blob["count"] <= c.NAME_MIN_TILES_TO_SHOW:
                         if country in drawn_countries:
                             continue
-                        if blob["count"] < abs_min_to_show and not c.SHOW_SMALL_TERRITORY_NAMES:
+                        if blob["count"] < c.NAME_ABS_MIN_TILES_TO_SHOW and not c.SHOW_SMALL_TERRITORY_NAMES:
                             continue
                         
                     surf, shadow = map_screen.faction_name_surfs.get(country, (None, None))
                 else:
                     # Skip small island groups based on the toggle and if the country already has a name
-                    if blob["count"] <= min_to_show:
+                    if blob["count"] <= c.NAME_MIN_TILES_TO_SHOW:
                         if country in drawn_countries:
                             continue
-                        if blob["count"] < abs_min_to_show and not c.SHOW_SMALL_TERRITORY_NAMES:
+                        if blob["count"] < c.NAME_ABS_MIN_TILES_TO_SHOW and not c.SHOW_SMALL_TERRITORY_NAMES:
                             continue
                     
                     surf, shadow = map_screen.country_name_surfs.get(country, (None, None))

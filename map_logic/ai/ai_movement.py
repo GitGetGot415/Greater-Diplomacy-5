@@ -135,7 +135,7 @@ def process_ai_unit_orders(map_screen):
         unsafe_waters = {}
         for p in map_screen.map_data.values():
             if p.get("terrain") in c.WATER_TERRAINS:
-                enemy_str = sum(u.get("attack", 5) + u.get("defense", 0) for u in p.get("units", []) 
+                enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in p.get("units", []) 
                                 if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data) 
                                 and queries.is_naval_unit(u.get("type", "")))
                 if enemy_str > 0:
@@ -385,8 +385,8 @@ def process_ai_unit_orders(map_screen):
             # If the AI is currently engaged in active combat on its tile...
             if in_combat:
                 # Check if we are hopelessly outmatched and should pull our ships/convoys out
-                my_str = sum(u.get("attack", 5) + u.get("defense", 0) for u in prov.get("units", []) if u.get("owner") in friendly_nations)
-                enemy_str = sum(u.get("attack", 5) + u.get("defense", 0) for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data))
+                my_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in prov.get("units", []) if u.get("owner") in friendly_nations)
+                enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data))
                 
                 # If Navy is outnumbered 1.5-to-1, or if a Convoy is literally fighting ANY warship
                 if (is_naval_combatant and enemy_str > my_str * 1.5) or (is_convoy and enemy_str > 0):

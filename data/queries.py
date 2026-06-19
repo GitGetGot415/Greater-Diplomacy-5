@@ -45,8 +45,7 @@ def get_visible_provinces(player_country, map_data, nation_data):
         # If we own it, or a friendly unit is on it, it (and its neighbors) are visible
         if owner in friendly_nations or has_friendly_unit:
             visible_set.add(prov["id"])
-            for n_id in prov.get("neighbors", []):
-                visible_set.add(n_id)
+            visible_set.update(prov.get("neighbors", []))
                 
     return visible_set
 
@@ -336,7 +335,7 @@ def is_nation_in_combat_here(nation, province, nation_data):
 
 def is_hostile_territory(moving_nation, target_owner, nation_data):
     """Checks if a nation is actively at war with the target territory."""
-    if target_owner in ["None", "Unclaimed", "Ocean", "Lakes"]:
+    if target_owner in c.UNPLAYABLE_NATIONS:
         return False
     return are_at_war(moving_nation, target_owner, nation_data)
 
@@ -1252,7 +1251,7 @@ def get_units_in_province(nation, province):
 
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""
-    return len(get_units_in_province(nation, province)) > 0
+    return any(u.get("owner") == nation for u in province.get("units", []))
 
 def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""

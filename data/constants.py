@@ -409,6 +409,59 @@ COLOR_SLIDER_HANDLE = (200, 200, 200)
 
 COLOR_CHROMA_PINK = (255, 0, 255)
 
+# https://smilebasic.com/en/e-manual/manual28/
+EDITOR_COLOR_PALETTE = [
+    (0,0,0),            # Black
+    (32,32,32),         # Very Dark Grey
+    (64,64,64),         # Dark Grey
+    (96,96,96),         # Darkish Grey
+    (128,128,128),      # Grey
+    (196,196,196),      # Light Grey
+    (220,220,220),      # Very Light Grey
+    (255,255,255),      # White
+    
+    (255,96,96),        # Light Red
+    (255,200,20),       # Light Orange
+    (255,255,128),      # Light Yellow
+    (96,255,128),       # Lime
+    (128,255,255),      # Light Indigo
+    (64,64,255),        # Light Blue
+    (200,64,255),       # Light Purple
+    (255,128,255),      # Light Pink
+
+    (255,0,0),          # Red
+    (255,160,16),       # Orange
+    (255,255,32),       # Yellow
+    (0,192,0),          # Green
+    (80,200,255),       # Indigo
+    (0,0,255),          # Blue
+    (160,32,255),       # Purple
+    (255,96,208),       # Pink
+    
+    (196,0,0),          # Dark Red
+    (200,120,12),       # Dark Orange
+    (200,200,0),        # Dark Yellow
+    (0,128,0),          # Dark Green
+    (60,160,200),       # Dark Indigo
+    (0,0,196),          # Dark Blue
+    (120,16,200),       # Dark Purple
+    (200,80,160),       # Dark Pink
+
+    # (160,128,96),       # Oak Tree
+    # (255,208,160),      # White Skin
+
+    (128,0,0),          # Very Dark Red
+    (160,80,10),        # Brown
+    (128,128,0),        # Very Dark Yellow
+    (0,64,0),           # Very Dark Green
+    (32,128,160),       # Very Dark Indigo
+    (0,0,128),          # Very Dark Blue
+    (80,12,160),        # Very Dark Purple
+    (160,60,120),       # Very Dark Pink
+
+    # (128,0,128),        # Austria-Hungary
+]
+
 # ==========================================
 # MESSAGING APP UI
 # ==========================================
@@ -443,10 +496,17 @@ OCEAN_DARK_BLUE = (10, 20, 40)
 # OCEAN_DARK_BLUE = (5, 10, 20)
 OCEAN_LIGHT_BLUE = (40, 100, 180)
 # OCEAN_LIGHT_BLUE = (20, 40, 80)
+
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
 NAME_FADE_START = 4.0
 NAME_FADE_WINDOW = 1.5
+
+NAME_MIN_TILES_TO_SHOW = 3      # when to ignore showing islands
+NAME_ABS_MIN_TILES_TO_SHOW = 2  # if a country only has this many tiles
+
+# Added from minimap.py
+MINIMAP_WIDTH = 240
 
 # ==========================================
 # DEFAULT UNIT STATS (Fallbacks)

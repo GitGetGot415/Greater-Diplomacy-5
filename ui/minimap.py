@@ -3,7 +3,7 @@ import data.constants as c
 
 def draw_minimap(self, surface, screen_width, screen_height):
     map_aspect = self.map_h / self.map_w
-    mini_w = 240
+    mini_w = c.MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
     
     # Position of the minimap background

@@ -40,8 +40,8 @@ def draw_combat_bubbles(self_map, surface):
             side2 = pred["side2"]
             
             # Incorporate combat scaling rules here too
-            atk1 = sum(u.get("attack", 5) for u in sorted(side1, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
-            atk2 = sum(u.get("attack", 5) for u in sorted(side2, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
+            atk1 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(side1, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
+            atk2 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(side2, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
             
             s1_owner = side1[0]["owner"] if side1 else ""
             s2_owner = side2[0]["owner"] if side2 else ""
@@ -64,7 +64,7 @@ def draw_combat_bubbles(self_map, surface):
                 involved = True
                 for owner, units in forces.items():
                     # Incorporate combat scaling rules
-                    atk = sum(u.get("attack", 5) for u in sorted(units, key=lambda x: x.get("attack", 5), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
+                    atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(units, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
                     if owner in friendly_present:
                         friendly_atk += atk
                     else:
