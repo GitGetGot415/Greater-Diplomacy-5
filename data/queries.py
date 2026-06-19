@@ -4,8 +4,10 @@ import re
 import base64
 import itertools
 import math
-import pygame
 import threading
+
+import pygame
+
 import data.constants as c
 
 def get_imperial_family(nation, nation_data):
@@ -884,6 +886,27 @@ def get_minimum_tank_count(material_income):
 # ==========================================
 # MAP & ENTITY QUERIES
 # ==========================================
+
+def get_clicked_province(mouse_pos, map_screen):
+    """Resolves the province dictionary corresponding to a screen click."""
+    mx, my = mouse_pos
+    cam = map_screen.camera
+    wx = ((mx / cam.zoom) + cam.pos.x) % map_screen.map_w
+    wy = ((my - map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
+    
+    if 0 <= wy < map_screen.map_h:
+        safe_x = max(0, min(int(wx), map_screen.map_w - 1))
+        safe_y = max(0, min(int(wy), map_screen.map_h - 1))
+        color = map_screen.id_map.get_at((safe_x, safe_y))
+        return map_screen.map_data.get((color.r, color.g, color.b))
+    return None
+
+def world_to_screen(world_pos, map_screen, offset=0):
+    """Converts world map coordinates to screen pixel coordinates."""
+    cam = map_screen.camera
+    sx = (world_pos[0] + offset - cam.pos.x) * cam.zoom
+    sy = (world_pos[1] - cam.pos.y) * cam.zoom * cam.tilt_factor + map_screen.top_ui_height
+    return sx, sy
 
 def get_neighboring_nations(nation, map_data, id_to_province):
     """Scans the map and returns a set of all nations bordering the specified nation."""

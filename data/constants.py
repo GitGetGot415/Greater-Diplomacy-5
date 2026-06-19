@@ -187,6 +187,11 @@ DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default pl
 
 UI_LEFT_OFFSET = 160
 
+# --- UI Component Heights ---
+TOP_UI_HEIGHT = 60
+BOT_UI_HEIGHT = 60
+TOTAL_UI_HEIGHT = 120
+
 # --- Resource HUD UI Layout ---
 RESOURCE_HUD_START_X = 300
 RESOURCE_HUD_SPACING = 200

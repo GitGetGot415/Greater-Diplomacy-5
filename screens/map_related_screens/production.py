@@ -163,7 +163,7 @@ class Production_Screen(GameState):
                         highest_unlocked = f"{group_name} {year}"
                 else:
                     # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
-                    group_units = [(n, s) for n, s in self.unit_library.items() if self.get_group_name(n) == group_name]
+                    group_units = [(n, s) for n, s in self.unit_library.items() if queries.get_base_unit_name(n) == group_name]
                     highest_lvl = -1
                     for name, stats in group_units:
                         lvl_str = name.replace(group_name, "").strip()

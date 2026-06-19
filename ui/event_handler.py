@@ -7,6 +7,7 @@ from map_logic.setup import player_setup
 from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
+from map_logic.rendering import map_utils
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
@@ -81,33 +82,22 @@ def handle_map_events(self, event):
 
     # 3. HOVER LOGIC (CRITICAL: Must run before painting)
     if not on_ui:
-        wx = ((mx / self.camera.zoom) + self.camera.pos.x) % self.map_w
-        wy = ((my - self.top_ui_height) / (self.camera.zoom * self.camera.tilt_factor)) + self.camera.pos.y
+        # FIX: Pass the pre-calculated (mx, my) tuple instead of event.pos!
+        self.hovered_province = queries.get_clicked_province((mx, my), self)
         
-        # --- ADD THIS: Safety clamping ---
-        # Ensure wx/wy stay within valid bounds even if math is slightly off
-        safe_x = max(0, min(int(wx), self.map_w - 1))
-        safe_y = max(0, min(int(wy), self.map_h - 1))
-        
-        if 0 <= wy < self.map_h:
-            # Use the clamped values
-            color = self.id_map.get_at((safe_x, safe_y))
-            self.hovered_province = self.map_data.get((color.r, color.g, color.b))
-            
-            if self.hovered_province:
-                curr_id = self.hovered_province["id"]
-                if curr_id != self.last_hovered_id:
-                    self.hover_glow_surf, self.hover_glow_rect = map_utils.create_glow_surface(
-                        self.id_map, self.hovered_province["map_color"]
-                    )
-                    self.last_hovered_id = curr_id
-            else:
-                self.last_hovered_id = None
-                self.hover_glow_surf = None
-        else: 
-            self.hovered_province = self.hover_glow_surf = None
+        if self.hovered_province:
+            curr_id = self.hovered_province["id"]
+            if curr_id != self.last_hovered_id:
+                from map_logic.rendering import map_utils
+                self.hover_glow_surf, self.hover_glow_rect = map_utils.create_glow_surface(
+                    self.id_map, self.hovered_province["map_color"]
+                )
+                self.last_hovered_id = curr_id
+        else:
+            self.last_hovered_id = None
+            self.hover_glow_surf = None
     else: 
-            self.hovered_province = self.hover_glow_surf = None
+        self.hovered_province = self.hover_glow_surf = None
 
     # --- UNDO / REDO LOGIC (Ctrl + Z / Ctrl + Y) ---
     if event.type == pygame.KEYDOWN:

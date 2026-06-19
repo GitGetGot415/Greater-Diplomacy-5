@@ -135,13 +135,14 @@ class Map(GameState):
         self.font = fonts.get("normal") 
         self.small_font = fonts.get("tiny") 
         
-        self.top_ui_height = self.bot_ui_height = 60
-        self.total_ui_h = 120
+        self.top_ui_height = c.TOP_UI_HEIGHT
+        self.bot_ui_height = c.BOT_UI_HEIGHT
+        self.total_ui_h = c.TOTAL_UI_HEIGHT
         
-        self.top_bar_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, 60)
-        self.bot_bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
+        self.top_bar_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, self.top_ui_height)
+        self.bot_bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - self.bot_ui_height, c.SCREEN_WIDTH, self.bot_ui_height)
         self.raised_rect = pygame.Rect(0, 0, c.UI_LEFT_OFFSET, c.SCREEN_HEIGHT)
-        self.ui_background_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 120, 270, 120)
+        self.ui_background_rect = pygame.Rect(0, c.SCREEN_HEIGHT - self.total_ui_h, 270, self.total_ui_h)
         
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.map_h
@@ -188,6 +189,31 @@ class Map(GameState):
         if self.time_manager.total_turns == 0:
             from map_logic.system32 import economy_processor
             economy_processor.process_economy(self)
+
+    def draw_clean_map_background(self, surface):
+        """Temporarily hides UI elements and province selection to draw a clean map background."""
+        temp_prov = self.selected_province
+        self.selected_province = None
+        
+        # Save previous states to be completely safe
+        prev_raised = self.hide_raised_rect
+        prev_tooltip = self.hide_tooltip
+        prev_hud = self.hide_resource_hud
+        prev_mini = self.hide_minimap
+        
+        self.hide_raised_rect = True
+        self.hide_tooltip = True
+        self.hide_resource_hud = True
+        self.hide_minimap = True
+        
+        self.additional_draw(surface)
+        
+        # Restore original states
+        self.hide_raised_rect = prev_raised
+        self.hide_tooltip = prev_tooltip
+        self.hide_resource_hud = prev_hud
+        self.hide_minimap = prev_mini
+        self.selected_province = temp_prov
 
     # --- Properties ---
     @property

@@ -8,6 +8,8 @@ from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.rendering import symbol_loader
+from map_logic.rendering import province_select
+from map_logic.rendering import overlay_renderer
 
 class Orders_Screen(GameState):
     PANEL_X = 80
@@ -369,37 +371,28 @@ class Orders_Screen(GameState):
             if panel_rect.collidepoint(event.pos):
                 return
 
-            dest = self.get_clicked_province(event.pos)
+            dest = queries.get_clicked_province(event.pos, self.map_screen)
             if not dest: return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
-            cam = self.map_screen.camera
-            wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-            wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
+            self.map_screen.hovered_province = queries.get_clicked_province(event.pos, self.map_screen)
             
-            if 0 <= wy < self.map_screen.map_h:
-                color = self.map_screen.id_map.get_at((int(wx), int(wy)))
-                self.map_screen.hovered_province = self.map_screen.map_data.get((color.r, color.g, color.b))
-                
-                if self.map_screen.hovered_province:
-                    curr_id = self.map_screen.hovered_province["id"]
-                    if curr_id != self.map_screen.last_hovered_id:
-                        from map_logic.rendering import map_utils
-                        self.map_screen.hover_glow_surf, self.map_screen.hover_glow_rect = map_utils.create_glow_surface(
-                            self.map_screen.id_map, self.map_screen.hovered_province["map_color"]
-                        )
-                        self.map_screen.last_hovered_id = curr_id
-                else:
-                    self.map_screen.last_hovered_id = None
-                    self.map_screen.hover_glow_surf = None
+            if self.map_screen.hovered_province:
+                curr_id = self.map_screen.hovered_province["id"]
+                if curr_id != self.map_screen.last_hovered_id:
+                    from map_logic.rendering import map_utils
+                    self.map_screen.hover_glow_surf, self.map_screen.hover_glow_rect = map_utils.create_glow_surface(
+                        self.map_screen.id_map, self.map_screen.hovered_province["map_color"]
+                    )
+                    self.map_screen.last_hovered_id = curr_id
             else:
-                self.map_screen.hovered_province = None
+                self.map_screen.last_hovered_id = None
                 self.map_screen.hover_glow_surf = None
 
         # --- Standard Order Placement Click ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
-            dest = self.get_clicked_province(event.pos)
+            dest = queries.get_clicked_province(event.pos, self.map_screen)
             if not dest: return
 
             units = self.target_province.get("units", [])
@@ -508,45 +501,16 @@ class Orders_Screen(GameState):
             
         return True
 
-    def get_clicked_province(self, mouse_pos):
-        cam = self.map_screen.camera
-        mx, my = mouse_pos
-        wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
-        if 0 <= wy < self.map_screen.map_h:
-            color = self.map_screen.id_map.get_at((int(wx), int(wy)))
-            return self.map_screen.map_data.get((color.r, color.g, color.b))
-        return None
-
     def additional_draw(self, surface):
         if not self.map_screen or not self.target_province: 
             return
 
-        temp_province = self.map_screen.selected_province
-        self.map_screen.selected_province = None
-        
-        # Add flags to temporarily disable UI noise
-        self.map_screen.hide_raised_rect = True
-        self.map_screen.hide_top_info = True
-        self.map_screen.hide_tooltip = True
-        self.map_screen.hide_resource_hud = True
-        self.map_screen.hide_minimap = True
+        # Use our new DRY helper!
+        self.map_screen.draw_clean_map_background(surface)
 
-        self.map_screen.additional_draw(surface)
-
-        # Restore original map states
-        self.map_screen.hide_raised_rect = False
-        self.map_screen.hide_top_info = False
-        self.map_screen.hide_tooltip = False
-        self.map_screen.hide_resource_hud = False
-        self.map_screen.hide_minimap = False
-        self.map_screen.selected_province = temp_province
-
-        from map_logic.rendering import province_select
         province_select.draw_province_select(self.map_screen, surface)
 
         self.cancel_rects = []
-        from map_logic.rendering import overlay_renderer
         
         font = fonts.get("heading1")
         small_font = fonts.get("normal")
@@ -685,7 +649,7 @@ class Orders_Screen(GameState):
                                     pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
 
                     mouse_pos = pygame.mouse.get_pos()
-                    hovered = self.get_clicked_province(mouse_pos)
+                    hovered = queries.get_clicked_province(mouse_pos, self.map_screen)
                     if hovered and hovered["id"] in last_node["neighbors"]:
                         
                         # Calculate speed limit based on group or individual selection
