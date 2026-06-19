@@ -5,7 +5,7 @@ import base64
 import itertools
 import math
 import pygame
-import time
+import threading
 import data.constants as c
 
 def get_imperial_family(nation, nation_data):
@@ -1844,3 +1844,52 @@ def redo_editor_state(map_screen):
     next_state = map_screen.editor_redo_history.pop()
     _apply_map_state(map_screen, next_state)
     map_screen.show_feedback("Redo Successful")
+
+# ==========================================
+# UI ABSTRACTION QUERIES
+# ==========================================
+
+def get_ordered_unit_groups(unit_library):
+    """Categorizes and sorts units into Infantry, Tanks, and Navy groups."""
+    infantry_groups, tank_groups, navy_groups = [], [], []
+    for name, stats in unit_library.items():
+        base = get_base_unit_name(name)
+        if stats.get("naval_unit", False):
+            if base not in navy_groups: navy_groups.append(base)
+        elif "Tank" in base or "Armored Car" in base:
+            if base not in tank_groups: tank_groups.append(base)
+        else:
+            if base not in infantry_groups: infantry_groups.append(base)
+    return infantry_groups, tank_groups, navy_groups
+
+def get_projected_owner(prov, peace_type, proposer, target, nation_data):
+    """Simulates the execution of a peace treaty to find who gets what territory."""
+    curr = prov.get("owner")
+    proj = curr
+
+    def was_original_owner(prov, nation):
+        fac = nation_data.get(nation, {}).get("faction", "")
+        if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
+            pre_war = nation_data["FACTION_WAR_MAPS"][fac]
+            if str(prov["id"]) in pre_war:
+                return pre_war[str(prov["id"])] == nation
+        return nation in prov.get("cores", [])
+
+    # Extract frozen_ids safely using regex to support pre-formatted strings
+    frozen_ids = []
+    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)', peace_type)
+    if match:
+        frozen_ids = [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
+
+    if peace_type.startswith(c.PEACE_WHITE_PEACE):
+        pass
+    elif peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
+        claims = nation_data.get(proposer, {}).get("claims", [])
+        if (prov["id"] in frozen_ids and curr == target) or (curr == target and (prov["id"] in claims or was_original_owner(prov, proposer))):
+            proj = proposer
+    elif peace_type.startswith(c.PEACE_SURRENDER):
+        claims = nation_data.get(target, {}).get("claims", [])
+        if (prov["id"] in frozen_ids and curr == proposer) or (curr == proposer and (prov["id"] in claims or was_original_owner(prov, target))):
+            proj = target
+            
+    return proj

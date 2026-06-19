@@ -4,7 +4,6 @@ from gameState import GameState
 from ui_elements import Button, draw_resource_string, draw_combat_stats
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
-from map_logic.rendering import symbol_loader
 from data import queries
 
 section_spacing = 60
@@ -21,28 +20,14 @@ class Production_Screen(GameState):
         self.building_library = queries.get_building_library()
         self.tech_tree = queries.get_tech_tree()
         
-        self.infantry_groups, self.tank_groups, self.navy_groups = self.get_ordered_groups()
+        # Use the centralized query
+        self.infantry_groups, self.tank_groups, self.navy_groups = queries.get_ordered_unit_groups(self.unit_library)
         self.active_bars = []
         
         # Scroll variables
         self.scroll_y = 0
         self.target_scroll_y = 0
         self.max_scroll = 0
-
-    def get_group_name(self, name):
-        return queries.get_base_unit_name(name)
-
-    def get_ordered_groups(self):
-        infantry_groups, tank_groups, navy_groups = [], [], []
-        for name, stats in self.unit_library.items():
-            base = self.get_group_name(name)
-            if stats.get("naval_unit", False):
-                if base not in navy_groups: navy_groups.append(base)
-            elif "Tank" in base or "Armored Car" in base:
-                if base not in tank_groups: tank_groups.append(base)
-            else:
-                if base not in infantry_groups: infantry_groups.append(base)
-        return infantry_groups, tank_groups, navy_groups
 
     def start_with_province(self, province, map_ref):
         self.target_province = province

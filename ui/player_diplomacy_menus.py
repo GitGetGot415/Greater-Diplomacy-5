@@ -864,10 +864,9 @@ class Peace_Screen(GameState):
         
         for prov in self.map_screen.map_data.values():
             curr = prov.get("owner")
-            # Only highlight provinces currently involved in the conflict between these two
             if curr in [proposer, target]:
-                proj = self.get_projected_owner(prov, peace_type)
-                # Only highlight tiles that are ACTUALLY changing ownership
+                # Use the centralized query
+                proj = queries.get_projected_owner(prov, peace_type, proposer, target, self.map_screen.nation_data)
                 if proj != curr:
                     if proj == proposer:
                         self.draw_highlight(surface, prov["id"], p_color)
@@ -925,41 +924,6 @@ class View_Peace_Treaty_Screen(GameState):
         super().update()
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
-    def get_projected_owner(self, prov, peace_type):
-        import re
-        curr = prov.get("owner")
-        proj = curr
-        proposer = self.proposer
-        target = self.target
-
-        # Same parsing logic used by 'execute_peace_treaty'
-        frozen_ids = []
-        match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)', peace_type)
-        if match:
-            frozen_ids = [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
-
-        def was_original_owner(prov, nation):
-            fac = self.map_screen.nation_data.get(nation, {}).get("faction", "")
-            if fac and "FACTION_WAR_MAPS" in self.map_screen.nation_data and fac in self.map_screen.nation_data["FACTION_WAR_MAPS"]:
-                pre_war = self.map_screen.nation_data["FACTION_WAR_MAPS"][fac]
-                if str(prov["id"]) in pre_war:
-                    return pre_war[str(prov["id"])] == nation
-            return nation in prov.get("cores", [])
-
-        if peace_type.startswith(c.PEACE_WHITE_PEACE):
-            pass
-        elif peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
-            if prov["id"] in frozen_ids and curr == target:
-                proj = proposer
-            elif curr == target and was_original_owner(prov, proposer):
-                proj = proposer
-        elif peace_type.startswith(c.PEACE_SURRENDER):
-            if prov["id"] in frozen_ids and curr == proposer:
-                proj = target
-            elif curr == proposer and was_original_owner(prov, target):
-                proj = target
-        return proj
-
     def draw_highlight(self, surface, pid, color):
         prov = self.map_screen.id_to_province.get(pid)
         if not prov: return
@@ -1000,7 +964,8 @@ class View_Peace_Treaty_Screen(GameState):
         for prov in self.map_screen.map_data.values():
             curr = prov.get("owner")
             if curr in [self.proposer, self.target]:
-                proj = self.get_projected_owner(prov, self.peace_type)
+                # Use the centralized query
+                proj = queries.get_projected_owner(prov, self.peace_type, self.proposer, self.target, self.map_screen.nation_data)
                 if proj != curr:
                     if proj == self.proposer:
                         self.draw_highlight(surface, prov["id"], p_color)
