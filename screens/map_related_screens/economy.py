@@ -39,40 +39,51 @@ class Economy_Screen(GameState):
         self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONVERT_BTN_Y, 400, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
 
     def set_conscription(self, val):
-        if not self.map_screen: return
+        if not self.map_screen or getattr(self.map_screen, 'tactical_mode', False): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["conscription_slider"] = val
 
     def set_conversion(self, val):
-        if not self.map_screen: return
-        if not self.map_screen: return
+        if not self.map_screen or getattr(self.map_screen, 'tactical_mode', False): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val
 
     def additional_draw(self, surface):
         if not self.map_screen: return
         
-        # Title
         font_title = fonts.get("title")
-        title = font_title.render("National Economy", True, (255, 255, 255))
+        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
+        title = font_title.render(title_text, True, (255, 255, 255))
         surface.blit(title, (c.SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
         
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
 
-        # Cache the economy to prevent 60 FPS global recalculations
-        current_sliders = (p_data.get("conscription_slider", 1.0), p_data.get("mat_to_fuel_slider", 0.0))
-        if not hasattr(self, 'last_econ_state') or self.last_econ_state != current_sliders or self.map_screen.time_manager.total_turns != getattr(self, 'last_econ_turn', -1):
-            self.econ_cache = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
-            self.last_econ_state = current_sliders
-            self.last_econ_turn = self.map_screen.time_manager.total_turns
-        
-        econ_tuple = self.econ_cache
+        if is_tactical and self.map_screen.player_unit:
+            u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
+            stats = queries.get_unit_library().get(u_type, {})
+            
+            inc_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+            inc_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+            inc_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
 
-        if len(econ_tuple) == 3:
-            total_inc, upkeep, breakdown = econ_tuple
-        else:
-            total_inc, upkeep = econ_tuple
+            total_inc = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
+            upkeep = {"manpower": 0, "materials": 0, "fuel": 0} 
             breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
+        else:
+            # Cache the economy to prevent 60 FPS global recalculations
+            current_sliders = (p_data.get("conscription_slider", 1.0), p_data.get("mat_to_fuel_slider", 0.0))
+            if not hasattr(self, 'last_econ_state') or self.last_econ_state != current_sliders or self.map_screen.time_manager.total_turns != getattr(self, 'last_econ_turn', -1):
+                self.econ_cache = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
+                self.last_econ_state = current_sliders
+                self.last_econ_turn = self.map_screen.time_manager.total_turns
+            
+            econ_tuple = self.econ_cache
+            if len(econ_tuple) == 3:
+                total_inc, upkeep, breakdown = econ_tuple
+            else:
+                total_inc, upkeep = econ_tuple
+                breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
             
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         

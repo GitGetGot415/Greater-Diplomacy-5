@@ -82,6 +82,10 @@ CREDITS_DATA = [
 
 SHOW_FPS = True
 
+# --- TACTICAL MODE CONSTANTS ---
+TACTICAL_MAX_MANPOWER = 1000
+TACTICAL_DEFAULT_YEAR = 1910
+
 # ==========================================
 # SCENARIO SETTINGS
 # ==========================================

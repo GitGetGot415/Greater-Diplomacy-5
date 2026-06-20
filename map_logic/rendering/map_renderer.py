@@ -193,9 +193,17 @@ def draw_map_screen(self, surface):
     else:
         if self.pending_selection:
             disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
-            prompt_txt = f"Play as {disp_name}?"
+            
+            # Contextual prompt formatting for Tactical Mode
+            if getattr(self, 'tactical_mode', False) and getattr(self, 'pending_unit', None):
+                prompt_txt = f"Play as {self.pending_unit.get('type')} ({disp_name})?"
+            else:
+                prompt_txt = f"Play as {disp_name}?"
         else:
-            prompt_txt = "Select a Country to Play As"
+            if getattr(self, 'tactical_mode', False):
+                prompt_txt = "Select a Unit to Control"
+            else:
+                prompt_txt = "Select a Country to Play As"
             
         big_font = fonts.get("title")
         txt = big_font.render(prompt_txt, True, (255, 255, 255))
@@ -247,7 +255,14 @@ def draw_map_screen(self, surface):
             
             confirm_font = fonts.get("heading2")
             disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
-            instr = confirm_font.render(f"Start Game as {disp_name}?", True, (255, 255, 255))
+            
+            # Contextual instructions for Tactical Mode
+            if getattr(self, 'tactical_mode', False) and getattr(self, 'pending_unit', None):
+                instr_txt = f"Start Game as {self.pending_unit.get('type')}?"
+            else:
+                instr_txt = f"Start Game as {disp_name}?"
+                
+            instr = confirm_font.render(instr_txt, True, (255, 255, 255))
             surface.blit(instr, instr.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
             
             self.confirm_rect = pygame.Rect(box_rect.x + 50, box_rect.bottom - 70, 120, 40)

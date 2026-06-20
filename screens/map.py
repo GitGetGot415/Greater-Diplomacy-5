@@ -52,6 +52,11 @@ class Map(GameState):
         self.is_refreshing = False
         self.thread_error = None
         self.force_skip_llm = False
+
+        # --- TACTICAL MODE STATE ---
+        self.tactical_mode = False
+        self.player_unit = None
+        self.unit_economy = {"manpower": 0, "materials": 0, "fuel": 0, "fuel_inc": 0}
         
         # --- MULTI-TURN FLAGS ---
         self.multi_turn_processing_complete = False
@@ -217,16 +222,23 @@ class Map(GameState):
 
     # --- Properties ---
     @property
-    def player_manpower(self): return self.nation_data.get(self.player_country, {}).get("manpower", 0)
+    def player_manpower(self): 
+        if self.tactical_mode: return self.unit_economy.get("manpower", 0)
+        return self.nation_data.get(self.player_country, {}).get("manpower", 0)
     @player_manpower.setter
     def player_manpower(self, value): 
-        if self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
+        if self.tactical_mode: self.unit_economy["manpower"] = value
+        elif self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
 
     @property
-    def player_materials(self): return self.nation_data.get(self.player_country, {}).get("materials", 0)
+    def player_materials(self): 
+        if self.tactical_mode: return self.unit_economy.get("materials", 0)
+        return self.nation_data.get(self.player_country, {}).get("materials", 0)
     
     @property
-    def player_fuel(self): return self.nation_data.get(self.player_country, {}).get("fuel", 0)
+    def player_fuel(self): 
+        if self.tactical_mode: return self.unit_economy.get("fuel", 0)
+        return self.nation_data.get(self.player_country, {}).get("fuel", 0)
 
     def set_camera_tilt(self, val):
         """Callback for the manual camera tilt slider."""

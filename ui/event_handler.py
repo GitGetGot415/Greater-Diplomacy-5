@@ -255,10 +255,15 @@ def handle_map_events(self, event):
                     self.refresh_fog_map()
                 elif hasattr(self, 'cancel_rect') and self.cancel_rect.collidepoint(mx, my):
                     player_setup.cancel_selection(self)
-                return 
+                return  # <--- CRITICAL FIX: Stops any clicks on the map behind the popup
+                
             if self.hovered_province:
-                player_setup.select_player_country(self, self.hovered_province)
-        return 
+                # --- TACTICAL SELECTION ROUTING ---
+                if getattr(self, 'tactical_mode', False):
+                    player_setup.select_tactical_unit(self, self.hovered_province)
+                else:
+                    player_setup.select_player_country(self, self.hovered_province)
+        return
 
     # --- Direct Map Message Editing ---
     # Moved ABOVE the "STANDARD GAME SELECTION" return block!
@@ -303,7 +308,6 @@ def handle_map_events(self, event):
         if self.hovered_province:
             self.selected_province = self.hovered_province
             camera_handler.center_camera_on_province(self.camera, self.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, self.total_ui_h)
-            
-            # Load draft if one exists so the box isn't empty if you return
+
             owner = self.selected_province.get("owner")
             self.mail_draft_text = queries.get_message_draft(self.player_country, owner, self.nation_data)

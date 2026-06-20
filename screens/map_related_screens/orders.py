@@ -39,20 +39,32 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
-        self.scroll_y = 0 # Reset scroll
+        self.scroll_y = 0 
         
         # --- Auto-select logic ---
-        # Gather the exact list indices of the units you own on this tile
         units = self.target_province.get("units", [])
-        player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.player_country]
         
-        if len(player_unit_indices) > 1:
-            self.selected_unit_index = "ALL"
-        elif len(player_unit_indices) == 1:
-            self.selected_unit_index = player_unit_indices[0]
+        if getattr(self.map_screen, 'tactical_mode', False):
+            # TACTICAL MODE: Lock to player unit
+            player_unit_indices = [i for i, u in enumerate(units) if u is self.map_screen.player_unit]
+            self.selected_unit_index = player_unit_indices[0] if player_unit_indices else None
         else:
-            self.selected_unit_index = None
+            player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.player_country]
             
+            if len(player_unit_indices) > 1:
+                self.selected_unit_index = "ALL"
+            elif len(player_unit_indices) == 1:
+                self.selected_unit_index = player_unit_indices[0]
+            else:
+                self.selected_unit_index = None
+            
+        self.refresh_ui()
+
+    def select_unit(self, index):
+        if getattr(self.map_screen, 'tactical_mode', False):
+            self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
+            return
+        self.selected_unit_index = index
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -270,10 +282,6 @@ class Orders_Screen(GameState):
             
             self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
             self.refresh_ui()
-
-    def select_unit(self, index):
-        self.selected_unit_index = index
-        self.refresh_ui()
 
     def cancel_unit_order(self, index):
         units = self.target_province.get("units", [])
@@ -652,7 +660,15 @@ class Orders_Screen(GameState):
                     if hovered and hovered["id"] in last_node["neighbors"]:
                         
                         # Calculate speed limit based on group or individual selection
-                        speed_limit = min(u.get("speed", 1) for u in player_units) if self.selected_unit_index == "ALL" else active_unit.get("speed", 1)
+                        if self.selected_unit_index == "ALL":
+                            speed_limit = min(u.get("speed", 1) for u in player_units)
+                        else:
+                            speed_limit = active_unit.get("speed", 1)
+                            
+                            if getattr(self.map_screen, 'tactical_mode', False):
+                                u_type = active_unit.get("original_type", active_unit.get("type"))
+                                uses_oil = self.unit_library.get(u_type, {}).get("cost_fuel", 0) > 0
+                                if uses_oil: speed_limit += 1
                         
                         # Determine styling based on if this specific hover step exceeds the speed
                         is_queued = len(active_path) >= speed_limit

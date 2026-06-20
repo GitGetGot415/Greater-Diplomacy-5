@@ -513,11 +513,23 @@ def draw_unit_icon(self, surface, sx, sy, province):
             
         # Create unscaled, high-res subsurface to preserve crispness
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
-        box_surf.fill(c.UNIT_BOX_BG_COLOR)
-        pygame.draw.rect(box_surf, owner_color, box_surf.get_rect(), 4)
         
-        # Grab symbol
-        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=owner_color)
+        # --- TACTICAL MODE INVERSION ---
+        is_player_tactical = getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None) is best_unit
+        
+        if is_player_tactical:
+            box_surf.fill((255, 255, 255))
+            pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
+            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
+            text_color = (0, 0, 0)
+            shadow_color = (255, 255, 255)
+        else:
+            box_surf.fill(c.UNIT_BOX_BG_COLOR)
+            pygame.draw.rect(box_surf, owner_color, box_surf.get_rect(), 4)
+            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=owner_color)
+            text_color = c.UNIT_BOX_TEXT_COLOR
+            shadow_color = (0, 0, 0)
+        
         text_x = 10
         if symbol:
             # Constrain the symbol itself if it's too wide
@@ -526,8 +538,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
                 ratio = max_sym_w / symbol.get_width()
                 new_h = max(1, int(symbol.get_height() * ratio))
                 symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
-            # -------------------------------------------------------------
-                
+            
             sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
             box_surf.blit(symbol, sym_rect)
             text_x = sym_rect.right + 8
@@ -535,8 +546,8 @@ def draw_unit_icon(self, surface, sx, sy, province):
         # Draw Unit Count Text
         font = fonts.get("button")
         count_str = str(unit_count)
-        count_txt = font.render(count_str, True, c.UNIT_BOX_TEXT_COLOR)
-        shadow_txt = font.render(count_str, True, (0, 0, 0))
+        count_txt = font.render(count_str, True, text_color)
+        shadow_txt = font.render(count_str, True, shadow_color)
 
         # --- TEXT COMPRESSION FIX (UNIFORM SCALE) ---
         # Ensure we never pass a 0 or negative width to smoothscale

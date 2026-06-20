@@ -29,6 +29,17 @@ class Production_Screen(GameState):
         self.target_scroll_y = 0
         self.max_scroll = 0
 
+    def handle_events(self, events):
+        # Override to block all interaction
+        if getattr(self.map_screen, 'tactical_mode', False):
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.elements and self.elements[0].rect.collidepoint(event.pos):
+                        self.exit_to_map() # Allow back button explicitly
+                    else:
+                        self.map_screen.show_feedback("Tactical Mode: Cannot interact with national production.")
+            return
+
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref

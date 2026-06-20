@@ -1259,6 +1259,11 @@ def get_active_ai_nations(map_screen):
     # Account for potential hotseat active_players lists or standard player_country setups
     human_players = map_screen.active_players if map_screen.active_players else [map_screen.player_country]
     
+    # --- TACTICAL OVERRIDE ---
+    # Give the AI full command of the country's macro strategy
+    if getattr(map_screen, 'tactical_mode', False):
+        human_players = []
+    
     # Cross-reference with nations that actually own territory
     living_nations = get_living_nations(map_screen.map_data)
     

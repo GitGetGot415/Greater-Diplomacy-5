@@ -263,6 +263,10 @@ class Claims_Screen(GameState):
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if not on_ui:
+                    if getattr(self.map_screen, 'tactical_mode', False):
+                        self.map_screen.show_feedback("Tactical Mode: Cannot modify claims.")
+                        continue
+                        
                     dest = self.get_clicked_province(event.pos)
                     if dest and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
                         if self.view_mode == "YOURS":

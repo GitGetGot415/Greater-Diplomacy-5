@@ -31,7 +31,18 @@ def prepare_turn(self):
         
         self.loading_status_text = "Generating AI Movement Orders..."
         print("[SYSTEM] Generating AI Movement Orders...")
+        
+        # --- TACTICAL HIDE ---
+        # Mask the player unit so the AI handler doesn't touch it
+        is_tactical = getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None)
+        if is_tactical:
+            self.player_unit["owner"] = "TACTICAL_HIDDEN"
+            
         ai_movement.process_ai_unit_orders(self)
+        
+        # --- TACTICAL RESTORE ---
+        if is_tactical:
+            self.player_unit["owner"] = self.player_country
 
         self.loading_status_text = "Drafting Proactive Responses..."
         print("[SYSTEM] Drafting Proactive Responses...")

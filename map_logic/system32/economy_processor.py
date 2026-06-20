@@ -3,6 +3,22 @@ from data import queries
 
 def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
+    
+    # --- TACTICAL ECONOMY OVERRIDE ---
+    if getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None):
+        u_type = self.player_unit.get("original_type", self.player_unit.get("type"))
+        stats = queries.get_unit_library().get(u_type, {})
+        
+        inc_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+        inc_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+        inc_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+        
+        self.unit_economy["fuel_inc"] = inc_fuel # Stored cleanly for movement calcs
+        
+        self.unit_economy["manpower"] = min(self.unit_economy.get("manpower", 0) + inc_man, c.TACTICAL_MAX_MANPOWER)
+        self.unit_economy["materials"] = min(self.unit_economy.get("materials", 0) + inc_mat, stats.get("cost_materials", 9999))
+        self.unit_economy["fuel"] = min(self.unit_economy.get("fuel", 0) + inc_fuel, inc_fuel * 2)
+
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
     for name, stats in self.nation_data.items():

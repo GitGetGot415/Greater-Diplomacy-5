@@ -28,6 +28,21 @@ class Research_Screen(GameState):
 
         self.setup_nodes()
 
+    def handle_events(self, events):
+        if getattr(self.map_screen, 'tactical_mode', False):
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # Let them exit or change tabs, but block modal interactions
+                    clicked_back = self.elements and self.elements[0].rect.collidepoint(event.pos)
+                    if clicked_back:
+                        self.exit_to_map()
+                    elif self.active_modal:
+                        self.map_screen.show_feedback("Tactical Mode: Cannot alter national research.")
+                        self.close_modal()
+            # Allow pure scrolling logic to pass through
+            self.additional_events(events[0]) if events else None
+            return
+
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
         

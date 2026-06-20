@@ -115,23 +115,33 @@ def process_movement(self):
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 unit["_current_province_id"] = province["id"]
-                unit["_skip_remaining_steps"] = False # Track halted movement
+                unit["_skip_remaining_steps"] = False
                 moving_units.append(unit)
             else:
                 units_to_keep.append(unit)
         province["units"] = units_to_keep
 
     if not moving_units: return
-    max_speed = max(unit.get("speed", 1) for unit in moving_units)
-
-    # Pre-cache unit library for naval checks
+    
     if not hasattr(self, 'cached_unit_library'):
         self.cached_unit_library = queries.get_unit_library()
+
+    # --- NEW HELPER FOR TACTICAL SPEED ---
+    def get_eff_speed(u):
+        spd = u.get("speed", 1)
+        if getattr(self, 'tactical_mode', False) and u is getattr(self, 'player_unit', None):
+            u_type = u.get("original_type", u.get("type"))
+            uses_oil = self.cached_unit_library.get(u_type, {}).get("cost_fuel", 0) > 0
+            if uses_oil: spd += 1
+        return spd
+
+    # Calculate max turns loop using the new helper
+    max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
         for unit in moving_units:
             # Explicitly check if this individual unit has run out of moves or is skipping
-            if unit.get("_skip_remaining_steps", False) or step >= unit.get("speed", 1):
+            if unit.get("_skip_remaining_steps", False) or step >= get_eff_speed(unit):
                 continue
                 
             order = unit.get("order")
@@ -145,15 +155,11 @@ def process_movement(self):
             dest_owner = target_prov.get("owner", "Unclaimed")
             
             # --- Combat Lock (Execution Check) ---
-            # If the unit gets intercepted in a province during its move, 
-            # it loses all remaining speed and its queue is wiped.
             curr_prov = self.id_to_province.get(unit["_current_province_id"])
             if curr_prov:
                 in_combat = queries.is_nation_in_combat_here(unit["owner"], curr_prov, self.nation_data)
                 
                 if in_combat:
-                    # If it already moved this turn (step > 0) and entered combat, stop immediately.
-                    # Or, if it started in combat and is trying to advance deeper into enemy territory, stop.
                     if step > 0 or queries.is_hostile_territory(unit["owner"], dest_owner, self.nation_data):
                         # Stop advancing for this turn, but DO NOT wipe the queue!
                         unit["_skip_remaining_steps"] = True 
@@ -200,6 +206,20 @@ def process_movement(self):
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
+                # --- TACTICAL MOVEMENT ECONOMY ---
+                if getattr(self, 'tactical_mode', False) and unit is getattr(self, 'player_unit', None):
+                    calc_speed = get_eff_speed(unit)
+                    fuel_inc = self.unit_economy.get("fuel_inc", 0)
+                    
+                    cost_per_tile = fuel_inc / calc_speed if calc_speed > 0 else 0
+                    
+                    if self.unit_economy["fuel"] >= cost_per_tile:
+                        self.unit_economy["fuel"] -= cost_per_tile
+                    else:
+                        unit["_skip_remaining_steps"] = True
+                        continue
+                # ---------------------------------
+
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
                     queries.revert_transport(unit)
@@ -225,14 +245,12 @@ def process_movement(self):
         # Sync units back to provinces so units moving later in the same sub-step "see" each other
         for unit in moving_units:
             prov = self.id_to_province.get(unit["_current_province_id"])
-            
             if not any(u is unit for u in prov["units"]): 
                 prov["units"].append(unit)
                 
         if step < max_speed - 1:
             # Create a set of memory IDs for ultra-fast lookup
             moving_ids = {id(m) for m in moving_units} 
-            
             for province in self.map_data.values():
                 province["units"] = [u for u in province["units"] if id(u) not in moving_ids]
 

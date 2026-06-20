@@ -126,8 +126,20 @@ def render_buttons(self):
     def start_spectator_action():
         player_setup.start_spectator(self)
         self.refresh_fog_map()
+        
+    def toggle_tactical_action():
+        self.tactical_mode = not getattr(self, 'tactical_mode', False)
+        
+        # Auto-swap the view mode so the player can actually see the units
+        if self.tactical_mode:
+            self.set_view_mode("UNITS")
+        else:
+            self.set_view_mode("BLANK")
+            
+        self.show_feedback(f"Mode: {'TACTICAL' if self.tactical_mode else 'STRATEGIC'}")
 
     self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
+    self.btn_tactical = Button(c.LEFT_UI_BAR_X + 160, c.BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
     self.btn_close_info = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
     self.btn_exit_to_menu = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
 
@@ -145,7 +157,7 @@ def render_buttons(self):
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create,
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
         self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, self.btn_spec_leave_fac,
-        self.btn_spec_disband_fac, self.btn_spectator, self.btn_close_info, self.btn_exit_to_menu,
+        self.btn_spec_disband_fac, self.btn_spectator, self.btn_tactical, self.btn_close_info, self.btn_exit_to_menu,
         self.slider_camera_tilt
     ])
 
@@ -168,6 +180,7 @@ def update_button_states(map_screen):
     if map_screen.selection_mode:
         map_screen.btn_exit_to_menu.visible = True
         map_screen.btn_spectator.visible = True
+        map_screen.btn_tactical.visible = True
         return
 
     # Helper function to override dynamically updated button values
@@ -266,6 +279,11 @@ def update_button_states(map_screen):
         # GREY OUT THE FACTION BUTTON
         my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
         map_screen.btn_gp_faction.disabled = not bool(my_faction)
+        
+        # --- TACTICAL MODE LOCKDOWNS ---
+        if getattr(map_screen, 'tactical_mode', False):
+            map_screen.btn_gp_faction.disabled = True
+            map_screen.btn_gp_puppets.disabled = True
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
@@ -313,6 +331,17 @@ def update_button_states(map_screen):
 
             elif queries.is_playable(owner, map_screen.nation_data):
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
+                
+                if getattr(map_screen, 'tactical_mode', False):
+                    # Disable all foreign interactions
+                    set_btn(map_screen.btn_declare_war, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_join_wars, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_call_to_arms, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_fac_create, True, False, "Tactical: Disabled", "grey")
+                    return
 
                 incoming_action, incoming_turns = queries.get_diplomatic_status(owner, map_screen.player_country, map_screen.nation_data)
                 at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)

@@ -119,7 +119,7 @@ files_to_skip_but_list = [
     "gameState.py",
     "main.py",
     "ui_elements.py",
-    #"data\constants.py",
+    "data\constants.py",
     #"data\queries.py",
     "context\context_generator.py",
     "map_tools\**",
@@ -130,10 +130,10 @@ files_to_skip_but_list = [
 
     "map_logic/ai\**",
     "map_logic/camera\**",
-    "map_logic/diplomacy\**",
+    #"map_logic/diplomacy\**",
     "map_logic/random_map\**",
     #"map_logic/rendering\**",
-    "map_logic/setup\**",
+    # "map_logic/setup\**",
     #"map_logic/system32\**",
 ]
 
