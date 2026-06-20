@@ -30,19 +30,8 @@ def select_tactical_unit(map_screen, province):
         if unit_type == f"Infantry Type {c.START_YEAR}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
             
-        unit_stats = queries.get_unit_library().get(unit_type, {})
-        new_unit = {
-            "type": unit_type,
-            "owner": owner,
-            "health": unit_stats.get("health", 100),
-            "max_health": unit_stats.get("health", 100),
-            "speed": unit_stats.get("speed", 1),
-            "attack": unit_stats.get("attack", 10),
-            "defense": unit_stats.get("defense", 10),
-            "level": 0,
-            "order": {"type": "MOVE", "path": []},
-            "_is_tactical_ghost": True # Tag it so we can delete it if they cancel
-        }
+        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library())
+        new_unit["_is_tactical_ghost"] = True # Tag it so we can delete it if they cancel
         
         active_counters = queries.build_active_unit_counters(map_screen.map_data)
         new_unit["custom_name"] = queries.generate_unit_custom_name(new_unit, active_counters)

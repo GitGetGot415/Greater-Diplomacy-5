@@ -1,6 +1,7 @@
 import pygame
 import math
 import data.constants as c
+from data import queries
 from map_logic.rendering.font_manager import fonts
 
 def clear_country_name_cache(map_screen):
@@ -91,8 +92,7 @@ def draw_country_names(map_screen, surface):
                 # Wrap logic for looped maps
                 offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
                 for offset in offsets:
-                    sx = (cx + offset - map_screen.camera.pos.x) * map_screen.camera.zoom
-                    sy = (cy - map_screen.camera.pos.y) * map_screen.camera.zoom * map_screen.camera.tilt_factor + map_screen.top_ui_height
+                    sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
 
                     # Frustum Culling: Only draw if it's actually on the screen
                     if -200 < sx < surface.get_width() + 200 and 0 < sy < surface.get_height():

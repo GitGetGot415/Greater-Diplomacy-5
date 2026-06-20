@@ -90,8 +90,8 @@ def draw_combat_bubbles(self_map, surface):
             
         offsets = [0, -self_map.map_w, self_map.map_w] if self_map.loop_map else [0]
         for offset in offsets:
-            sx = int((cx + offset - cam.pos.x) * cam.zoom)
-            sy = int((cy - cam.pos.y) * cam.zoom * cam.tilt_factor) + self_map.top_ui_height
+            sx, sy = queries.world_to_screen((cx, cy), self_map, offset)
+            sx, sy = int(sx), int(sy)
             
             if -50 < sx < surface.get_width() + 50 and 0 < sy < surface.get_height():
                 radius_x = int(12 * cam.zoom) # Bubble size
@@ -309,8 +309,8 @@ def draw_overlay_content(self, surface):
         offsets = [0, -self.map_w, self.map_w] if self.loop_map else [0]
         
         for offset in offsets:
-            sx = int((cx + offset - self.camera.pos.x) * self.camera.zoom)
-            sy = int((cy - self.camera.pos.y) * self.camera.zoom * self.camera.tilt_factor) + self.top_ui_height
+            sx, sy = queries.world_to_screen((cx, cy), self, offset)
+            sx, sy = int(sx), int(sy)
             
             # Culling: only draw if within screen width
             if -50 < sx < surface.get_width() + 50:

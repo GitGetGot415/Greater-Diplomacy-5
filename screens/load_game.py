@@ -234,13 +234,7 @@ class Load_Game(GameState):
         tk.Button(root, text="Load Selected Turn", command=on_select, bg="#9C27B0", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
         lb.bind('<Double-1>', on_select)
         
-        while self.menu_active and not self.done:
-            try:
-                root.update()
-                pygame.event.pump()
-                pygame.time.wait(c.CPU_LIMITER)
-            except:
-                break
+        queries.run_tk_loop(self, root)
 
     # --- File System Methods (Unchanged logic, just used by UI) ---
     def export_save_zip(self, folder_name):

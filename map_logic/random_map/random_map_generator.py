@@ -294,18 +294,7 @@ def randomize_all_provinces(map_screen, settings):
 
         # Helper to generate a fresh unit dictionary so pointers aren't shared across provinces
         def generate_unit(nation, u_name):
-            stats = unit_library.get(u_name, {})
-            return {
-                "type": u_name,
-                "owner": nation,
-                "health": stats.get("health", c.DEFAULT_UNIT_HP),
-                "max_health": stats.get("health", c.DEFAULT_UNIT_HP),
-                "speed": stats.get("speed", c.DEFAULT_UNIT_SPD),
-                "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
-                "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
-                "level": 0,
-                "order": {"type": "MOVE", "path": []}
-            }
+            return queries.create_unit_dict(u_name, nation, unit_library)
 
         for nation in active_nations:
             owned_provs = [p for p in valid_land_provinces if p["owner"] == nation]

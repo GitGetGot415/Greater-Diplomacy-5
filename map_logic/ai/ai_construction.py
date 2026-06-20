@@ -178,16 +178,10 @@ def process_ai_economy_decisions(map_screen):
             if in_combat:
                 while prov.get("unit_queue"):
                     item = prov["unit_queue"].pop(0)
-                    if "refund" in item:
-                        data["materials"] += item["refund"].get("materials", 0)
-                        data["manpower"] += item["refund"].get("manpower", 0)
-                        data["fuel"] += item["refund"].get("fuel", 0)
+                    if "refund" in item: queries.refund_resources(data, item["refund"])
                 while prov.get("building_queue"):
                     item = prov["building_queue"].pop(0)
-                    if "refund" in item:
-                        data["materials"] += item["refund"].get("materials", 0)
-                        data["manpower"] += item["refund"].get("manpower", 0)
-                        data["fuel"] += item["refund"].get("fuel", 0)
+                    if "refund" in item: queries.refund_resources(data, item["refund"])
                 continue # Skip panic militia check since it's already in combat and can't build anyway
                 
             # 2. Panic Militia
@@ -220,10 +214,7 @@ def process_ai_economy_decisions(map_screen):
                         # Cancel existing queue
                         while queue:
                             item = queue.pop(0)
-                            if "refund" in item:
-                                data["materials"] += item["refund"].get("materials", 0)
-                                data["manpower"] += item["refund"].get("manpower", 0)
-                                data["fuel"] += item["refund"].get("fuel", 0)
+                            if "refund" in item: queries.refund_resources(data, item["refund"])
                         
                         # Queue Militia
                         militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"]) or "Militia I"
@@ -246,7 +237,7 @@ def process_ai_economy_decisions(map_screen):
                             order = {
                                 "unit_type": militia_name,
                                 "turns_remaining": max(1, militia_stats.get("production_time", 1)),
-                                "refund": {"materials": c_mat, "manpower": c_man, "fuel": c_fuel}
+                                "refund": {"cost_materials": c_mat, "cost_manpower": c_man, "cost_fuel": c_fuel}
                             }
                             prov.setdefault("unit_queue", []).append(order)
 
@@ -424,7 +415,7 @@ def process_ai_economy_decisions(map_screen):
                 order = {
                     "unit_type": unit_name_to_build,
                     "turns_remaining": max(1, unit_stats.get("production_time", 1)),
-                    "refund": {"materials": cost_mat, "manpower": cost_man, "fuel": cost_fuel}
+                    "refund": {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
                 }
                 target_prov.setdefault("unit_queue", []).append(order)
             else:
@@ -496,7 +487,7 @@ def process_ai_economy_decisions(map_screen):
                             "item_name": target_bldg,
                             "turns_remaining": max(1, b_stats.get("time", 1)),
                             "group": b_stats["group"],
-                            "refund": {"materials": c_mat, "manpower": 0, "fuel": c_fuel}
+                            "refund": {"cost_materials": c_mat, "cost_manpower": 0, "cost_fuel": c_fuel}
                         }
                         prov.setdefault("building_queue", []).append(order)
                         

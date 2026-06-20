@@ -203,7 +203,7 @@ def handle_map_events(self, event):
                         self.brush_nation = self.hovered_province.get("owner", "Unclaimed")
                         self.show_feedback(f"Picked: {self.brush_nation}")
 
-        # --- UNIT PLACEMENT LOGIC ---
+        # Unit placement logic
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.hovered_province and self.editor_mode == "UNIT":
                 if self.brush_unit == "None":
@@ -214,22 +214,9 @@ def handle_map_events(self, event):
                     if owner in c.UNPLAYABLE_NATIONS:
                         self.show_feedback("Cannot place units in unowned territory!")
                     else:
-                        unit_stats = queries.get_unit_library().get(self.brush_unit, {})
-                        
-                        new_unit = {
-                            "type": self.brush_unit,
-                            "owner": owner,
-                            "health": unit_stats.get("health", c.DEFAULT_UNIT_HP),
-                            "max_health": unit_stats.get("health", c.DEFAULT_UNIT_HP),
-                            "speed": unit_stats.get("speed", c.DEFAULT_UNIT_SPD),
-                            "attack": unit_stats.get("attack", c.DEFAULT_UNIT_ATK),
-                            "defense": unit_stats.get("defense", c.DEFAULT_UNIT_DEF),
-                            "level": 0,
-                            "order": {"type": "MOVE", "path": []}
-                        }
+                        new_unit = queries.create_unit_dict(self.brush_unit, owner, queries.get_unit_library())
                         self.hovered_province.setdefault("units", []).append(new_unit)
                         self.show_feedback(f"Placed {self.brush_unit} for {owner}")
-        # --------------------------------
         
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return

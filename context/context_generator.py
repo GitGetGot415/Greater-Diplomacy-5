@@ -128,12 +128,12 @@ files_to_skip_but_list = [
     #"ui\**",
     #"screens\**",
 
-    "map_logic/ai\**",
-    "map_logic/camera\**",
+    #"map_logic/ai\**",
+    #"map_logic/camera\**",
     #"map_logic/diplomacy\**",
-    #"map_logic/random_map\**",
+    "map_logic/random_map\**",
     #"map_logic/rendering\**",
-    #"map_logic/setup\**",
+    "map_logic/setup\**",
     #"map_logic/system32\**",
 ]
 

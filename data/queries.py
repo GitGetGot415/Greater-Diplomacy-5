@@ -990,6 +990,55 @@ def get_minimum_tank_count(material_income):
 # MAP & ENTITY QUERIES
 # ==========================================
 
+def create_unit_dict(unit_type, owner, unit_library):
+    """Generates a standard base unit dictionary to avoid redundant stat parsing."""
+    stats = unit_library.get(unit_type, {})
+    hp = stats.get("health", c.DEFAULT_UNIT_HP)
+    return {
+        "type": unit_type,
+        "owner": owner,
+        "health": hp,
+        "max_health": hp,
+        "speed": stats.get("speed", c.DEFAULT_UNIT_SPD),
+        "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
+        "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
+        "level": 0,
+        "order": {"type": "MOVE", "path": []}
+    }
+
+def build_save_dict(map_screen):
+    """Standardizes the construction of the map save state dictionary."""
+    save_dict = {
+        "date": {
+            "day": map_screen.time_manager.day,
+            "month": map_screen.time_manager.month_index,
+            "year": map_screen.time_manager.year,
+            "total_turns": map_screen.time_manager.total_turns
+        },
+        "loop_map": getattr(map_screen, 'loop_map', False),
+        "player_country": getattr(map_screen, 'player_country', "None"),
+        "active_players": getattr(map_screen, 'active_players', []),
+        "current_player_index": getattr(map_screen, 'current_player_index', 0),
+        "scenario_settings": getattr(map_screen, 'scenario_settings', {}),
+        "default_research": getattr(map_screen, 'default_research', None),
+        "nation_data": map_screen.nation_data,
+        "provinces": {}
+    }
+    
+    for data in map_screen.map_data.values():
+        save_dict["provinces"][data["json_key"]] = {
+            "owner": data["owner"],
+            "cores": data.get("cores", []),
+            "is_coastal": data.get("is_coastal", False),
+            "units": data.get("units", []),
+            "building_queue": data.get("building_queue", []),
+            "unit_queue": data.get("unit_queue", []),
+            "orders": data.get("orders", []),
+            "resources": data.get("resources", []),
+            "buildings": data.get("buildings", [])
+        }
+    return save_dict
+
 def get_clicked_province(mouse_pos, map_screen):
     """Resolves the province dictionary corresponding to a screen click."""
     mx, my = mouse_pos
@@ -1846,35 +1895,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 scrub_default_images(temp_map_context.nation_data)
 
                 # 4. Reconstruct the exact structural configuration payload
-                save_dict = {
-                    "date": {
-                        "day": temp_map_context.time_manager.day,
-                        "month": temp_map_context.time_manager.month_index,
-                        "year": temp_map_context.time_manager.year,
-                        "total_turns": temp_map_context.time_manager.total_turns
-                    },
-                    "loop_map": temp_map_context.loop_map,
-                    "player_country": temp_map_context.player_country,
-                    "active_players": temp_map_context.active_players,
-                    "current_player_index": temp_map_context.current_player_index,
-                    "scenario_settings": temp_map_context.scenario_settings,
-                    "default_research": temp_map_context.default_research,
-                    "nation_data": temp_map_context.nation_data,
-                    "provinces": {}
-                }
-
-                for data in temp_map_context.map_data.values():
-                    save_dict["provinces"][data["json_key"]] = {
-                        "owner": data["owner"],
-                        "cores": data.get("cores", []),
-                        "is_coastal": data.get("is_coastal", False),
-                        "units": data.get("units", []),
-                        "building_queue": data.get("building_queue", []),
-                        "unit_queue": data.get("unit_queue", []),
-                        "orders": data.get("orders", []),
-                        "resources": data.get("resources", []),
-                        "buildings": data.get("buildings", [])
-                    }
+                save_dict = build_save_dict(temp_map_context)
 
                 # 5. Perform the manual write operations in-place
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:

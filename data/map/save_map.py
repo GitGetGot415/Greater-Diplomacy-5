@@ -26,36 +26,7 @@ def save_map_data(self, save_name=None):
         os.makedirs(save_path)
 
     # 1. Consolidated Data Structure
-    save_dict = {
-        "date": {
-            "day": self.time_manager.day,
-            "month": self.time_manager.month_index,
-            "year": self.time_manager.year,
-            "total_turns": self.time_manager.total_turns
-        },
-        "loop_map": self.loop_map,
-        "player_country": self.player_country,
-        "active_players": self.active_players,
-        "current_player_index": self.current_player_index,
-        "default_research": self.default_research,
-        "nation_data": self.nation_data,
-        "provinces": {},
-        "scenario_settings": self.scenario_settings
-    }
-    
-    for data in self.map_data.values():
-        # Store all associated lists and variables inside one key per province
-        save_dict["provinces"][data["json_key"]] = {
-            "owner": data["owner"],
-            "cores": data.get("cores", []),
-            "is_coastal": data.get("is_coastal", False),
-            "units": data.get("units", []),
-            "unit_queue": data.get("unit_queue", []),
-            "building_queue": data.get("building_queue", []),
-            "orders": data.get("orders", []),
-            "resources": data.get("resources", []),
-            "buildings": data.get("buildings", [])
-        }
+    save_dict = queries.build_save_dict(self)
 
     # Actual map data
     with open(os.path.join(save_path, "meta.json"), "w") as f:

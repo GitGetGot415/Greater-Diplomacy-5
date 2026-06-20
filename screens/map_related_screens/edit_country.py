@@ -169,15 +169,12 @@ class Edit_Country_Screen(GameState):
                 self.map_screen.show_feedback("Failed to import flag.")
 
     def import_portrait(self):
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
+        root = queries.get_transient_tk_root()
         file_path = filedialog.askopenfilename(
             title="Select Portrait Image",
             filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
         )
-        root.destroy()
-        pygame.event.pump()
+        queries.destroy_tk_root(root)
 
         if file_path:
             try:
