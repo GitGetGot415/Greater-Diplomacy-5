@@ -6,6 +6,7 @@ from gameState import GameState
 from ui_elements import Button, Slider, process_text_input
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
+from ui.bars import ui_bars
 
 song_y = 32
 
@@ -518,21 +519,11 @@ class Music_Player(GameState):
 
     # --- SCROLL BAR SNAPPING HELPERS ---
     def _snap_album_scroll(self, my):
-        view_h = c.SCREEN_HEIGHT - 120
-        handle_h = max(30, int(view_h * (view_h / (view_h - self.max_album_scroll))))
-        rel_y = my - 120 - (handle_h / 2)
-        max_y = view_h - handle_h
-        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
-        self.album_scroll_y = ratio * self.max_album_scroll
+        self.album_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_album_scroll, 120, c.SCREEN_HEIGHT - 120)
         self.refresh_ui()
 
     def _snap_track_scroll(self, my):
-        view_h = c.SCREEN_HEIGHT - 200
-        handle_h = max(30, int(view_h * (view_h / (view_h - self.max_track_scroll))))
-        rel_y = my - 200 - (handle_h / 2)
-        max_y = view_h - handle_h
-        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
-        self.track_scroll_y = ratio * self.max_track_scroll
+        self.track_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_track_scroll, 200, c.SCREEN_HEIGHT - 200)
         self.refresh_ui()
 
     def handle_events(self, events):
@@ -588,44 +579,13 @@ class Music_Player(GameState):
         pygame.draw.rect(surface, (35, 35, 45), left_pane)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
+        self.album_track_rect, self.album_handle_rect = ui_bars.draw_standard_scrollbar(
+            surface, self.album_scroll_y, self.max_album_scroll, c.MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120, width=10
+        )
         
-        # 1. Album Scrollbar
-        album_view_h = c.SCREEN_HEIGHT - 120
-        if self.max_album_scroll < 0:
-            track_bg = pygame.Rect(c.MUSIC_LEFT_PANE_W - 15, 120, 10, album_view_h)
-            pygame.draw.rect(surface, (50, 50, 60), track_bg)
-            
-            ratio = self.album_scroll_y / self.max_album_scroll
-            handle_h = max(30, int(album_view_h * (album_view_h / (album_view_h - self.max_album_scroll))))
-            handle_y = 120 + ratio * (album_view_h - handle_h)
-            
-            handle_rect = pygame.Rect(c.MUSIC_LEFT_PANE_W - 15, handle_y, 10, handle_h)
-            pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
-            
-            self.album_track_rect = track_bg
-            self.album_handle_rect = handle_rect
-        else:
-            self.album_track_rect = None
-            self.album_handle_rect = None
-
-        # 2. Track Scrollbar
-        track_view_h = c.SCREEN_HEIGHT - 200
-        if self.max_track_scroll < 0:
-            track_bg = pygame.Rect(c.SCREEN_WIDTH - 280, 200, 10, track_view_h)
-            pygame.draw.rect(surface, (50, 50, 60), track_bg)
-            
-            ratio = self.track_scroll_y / self.max_track_scroll
-            handle_h = max(30, int(track_view_h * (track_view_h / (track_view_h - self.max_track_scroll))))
-            handle_y = 200 + ratio * (track_view_h - handle_h)
-            
-            handle_rect = pygame.Rect(c.SCREEN_WIDTH - 280, handle_y, 10, handle_h)
-            pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
-            
-            self.track_track_rect = track_bg
-            self.track_handle_rect = handle_rect
-        else:
-            self.track_track_rect = None
-            self.track_handle_rect = None
+        self.track_track_rect, self.track_handle_rect = ui_bars.draw_standard_scrollbar(
+            surface, self.track_scroll_y, self.max_track_scroll, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200, width=10
+        )
 
     def handle_back_key(self):
         self.next_state = self.return_state

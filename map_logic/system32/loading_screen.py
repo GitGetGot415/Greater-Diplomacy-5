@@ -2,6 +2,33 @@ import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
+def draw_simple_refresh_bar(surface, status_text, completed, total):
+    """Unified data refresh overlay to prevent duplication on base menu screens."""
+    overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 200))
+    surface.blit(overlay, (0, 0))
+
+    center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
+    
+    font_title = fonts.get("title")
+    txt = font_title.render(status_text, True, (255, 255, 255))
+    surface.blit(txt, txt.get_rect(center=(center_x, center_y - 40)))
+
+    bar_w, bar_h = 400, 30
+    bar_x = center_x - (bar_w // 2)
+    
+    pygame.draw.rect(surface, (40, 40, 60), (bar_x, center_y, bar_w, bar_h), border_radius=5)
+    
+    progress_ratio = (completed / float(total)) if total > 0 else 0.0
+    fill_w = int(bar_w * progress_ratio)
+    if fill_w > 0:
+        pygame.draw.rect(surface, (100, 200, 100), (bar_x, center_y, fill_w, bar_h), border_radius=5)
+        
+    pygame.draw.rect(surface, (200, 200, 200), (bar_x, center_y, bar_w, bar_h), 2, border_radius=5)
+    
+    pct_txt = fonts.get("tiny").render(f"{completed} / {total}", True, (255, 255, 255))
+    surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, center_y + bar_h // 2)))
+
 def draw_turn_loading_screen(map_screen, surface):
     """Draws 4 dynamic progress bars for turn processing and a skip button."""
     overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)

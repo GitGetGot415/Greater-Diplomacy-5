@@ -13,6 +13,12 @@ def break_puppet_link(nation_data, master, puppet):
         nation_data[puppet]["master"] = ""
         nation_data[puppet]["puppet_type"] = ""
 
+def apply_to_puppets_recursively(master, nation_data, action_func):
+    """Generic helper to recursively apply diplomatic states down a puppet hierarchy."""
+    for puppet in nation_data.get(master, {}).get("puppets", []):
+        action_func(puppet)
+        apply_to_puppets_recursively(puppet, nation_data, action_func)
+
 def pull_master_into_war(puppet, target, map_data, nation_data):
     master = nation_data.get(puppet, {}).get("master", "")
     if master and master != target:
@@ -60,34 +66,34 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
         finalize_neutral(nation_data, master, puppet)
 
 def pull_puppets_into_war(master, target, map_data, nation_data):
-    for puppet in nation_data.get(master, {}).get("puppets", []):
-        if target not in nation_data.get(puppet, {}).get("at_war_with", []):
-            nation_data.setdefault(puppet, {}).setdefault("at_war_with", []).append(target)
-        if puppet not in nation_data.get(target, {}).get("at_war_with", []):
-            nation_data.setdefault(target, {}).setdefault("at_war_with", []).append(puppet)
-        pull_puppets_into_war(puppet, target, map_data, nation_data)
+    def _add_war(p):
+        if target not in nation_data.get(p, {}).get("at_war_with", []):
+            nation_data.setdefault(p, {}).setdefault("at_war_with", []).append(target)
+        if p not in nation_data.get(target, {}).get("at_war_with", []):
+            nation_data.setdefault(target, {}).setdefault("at_war_with", []).append(p)
+    apply_to_puppets_recursively(master, nation_data, _add_war)
 
 def pull_puppets_into_peace(master, target, nation_data):
-    for puppet in nation_data.get(master, {}).get("puppets", []):
-        if target in nation_data.get(puppet, {}).get("at_war_with", []):
-            nation_data[puppet]["at_war_with"].remove(target)
-        if puppet in nation_data.get(target, {}).get("at_war_with", []):
-            nation_data[target]["at_war_with"].remove(puppet)
-        nation_data[puppet].setdefault("relations", {})[target] = 0
-        nation_data[puppet].setdefault("truces", {})[target] = c.TRUCE_TURNS
-        pull_puppets_into_peace(puppet, target, nation_data)
+    def _remove_war(p):
+        if target in nation_data.get(p, {}).get("at_war_with", []):
+            nation_data[p]["at_war_with"].remove(target)
+        if p in nation_data.get(target, {}).get("at_war_with", []):
+            nation_data[target]["at_war_with"].remove(p)
+        nation_data[p].setdefault("relations", {})[target] = 0
+        nation_data[p].setdefault("truces", {})[target] = c.TRUCE_TURNS
+    apply_to_puppets_recursively(master, nation_data, _remove_war)
 
 def pull_puppets_into_faction(master, fac, map_data, nation_data):
-    for puppet in nation_data.get(master, {}).get("puppets", []):
-        nation_data[puppet]["faction"] = fac
-        nation_data[puppet]["is_faction_leader"] = False
-        pull_puppets_into_faction(puppet, fac, map_data, nation_data)
+    def _set_fac(p):
+        nation_data[p]["faction"] = fac
+        nation_data[p]["is_faction_leader"] = False
+    apply_to_puppets_recursively(master, nation_data, _set_fac)
 
 def pull_puppets_out_of_faction(master, nation_data):
-    for puppet in nation_data.get(master, {}).get("puppets", []):
-        nation_data[puppet]["faction"] = ""
-        nation_data[puppet]["is_faction_leader"] = False
-        pull_puppets_out_of_faction(puppet, nation_data)
+    def _clear_fac(p):
+        nation_data[p]["faction"] = ""
+        nation_data[p]["is_faction_leader"] = False
+    apply_to_puppets_recursively(master, nation_data, _clear_fac)
 
 def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
     puppets_to_transfer = nation_data.get(puppet, {}).get("puppets", []).copy()

@@ -6,6 +6,7 @@ from gameState import GameState
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
+from ui.bars import ui_bars
 
 def _run_pygame_sub_screen(map_screen, screen_obj):
     """Runs a blocking PyGame loop that acts like a GameState to bypass the main state machine."""
@@ -607,15 +608,9 @@ class Claims_Screen(GameState):
         surface.set_clip(old_clip)
 
         # Draw a custom scrollbar if the content exceeds the box height
-        if self.max_scroll < 0:
-            track_rect = pygame.Rect(self.panel_rect.right - 15, self.panel_rect.y + 90, 10, viewport_h)
-            pygame.draw.rect(surface, (50, 50, 70), track_rect)
-            
-            ratio = self.scroll_y / self.max_scroll
-            handle_h = max(20, viewport_h * (viewport_h / (viewport_h - self.max_scroll)))
-            handle_y = track_rect.y + ratio * (track_rect.height - handle_h)
-            
-            pygame.draw.rect(surface, (150, 150, 150), pygame.Rect(track_rect.x, handle_y, 10, handle_h), border_radius=5)
+        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+            surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 90, viewport_h, width=10
+        )
 
         for el in self.elements:
             if el.visible:
@@ -1517,12 +1512,9 @@ class Create_Integrated_Puppet_Screen(GameState):
 
         if self.max_scroll < 0:
             viewport_h = self.panel_rect.height - 110
-            track_rect = pygame.Rect(self.panel_rect.right - 15, self.panel_rect.y + 100, 10, viewport_h)
-            pygame.draw.rect(surface, (50, 50, 70), track_rect)
-            ratio = self.scroll_y / self.max_scroll
-            handle_h = max(20, viewport_h * (viewport_h / (viewport_h - self.max_scroll)))
-            handle_y = track_rect.y + ratio * (track_rect.height - handle_h)
-            pygame.draw.rect(surface, (150, 150, 150), pygame.Rect(track_rect.x, handle_y, 10, handle_h), border_radius=5)
+            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+                surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 100, viewport_h, width=10
+            )
 
         for el in self.elements:
             if el.visible:

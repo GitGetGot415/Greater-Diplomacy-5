@@ -10,6 +10,7 @@ from gameState import GameState
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
+from ui.bars import ui_bars
 
 class Load_Game(GameState):
     def __init__(self):
@@ -74,12 +75,7 @@ class Load_Game(GameState):
 
     def _snap_scroll(self, my):
         """Helper to map mouse Y to scroll position."""
-        view_h = c.SCREEN_HEIGHT - 200
-        handle_h = max(30, int(view_h * (view_h / max(1, view_h - self.max_save_scroll))))
-        rel_y = my - 120 - (handle_h / 2)
-        max_y = view_h - handle_h
-        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
-        self.save_scroll_y = ratio * self.max_save_scroll
+        self.save_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_save_scroll, 120, c.SCREEN_HEIGHT - 200)
         self.refresh_save_list()
 
     def additional_events(self, event):
@@ -156,23 +152,9 @@ class Load_Game(GameState):
             surface.blit(sub_msg, sub_rect)
 
         # --- Draw Scrollbar ---
-        if self.max_save_scroll < 0:
-            view_h = c.SCREEN_HEIGHT - 200
-            track_rect = pygame.Rect(c.SCREEN_WIDTH - 40, 120, 15, view_h)
-            pygame.draw.rect(surface, (50, 50, 60), track_rect)
-            
-            ratio = self.save_scroll_y / self.max_save_scroll
-            handle_h = max(30, int(view_h * (view_h / (view_h - self.max_save_scroll))))
-            handle_y = 120 + ratio * (view_h - handle_h)
-            
-            handle_rect = pygame.Rect(c.SCREEN_WIDTH - 40, handle_y, 15, handle_h)
-            pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
-            
-            self.scroll_track_rect = track_rect
-            self.scroll_handle_rect = handle_rect
-        else:
-            self.scroll_track_rect = None
-            self.scroll_handle_rect = None
+        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+            surface, self.save_scroll_y, self.max_save_scroll, c.SCREEN_WIDTH - 40, 120, c.SCREEN_HEIGHT - 200
+        )
 
     def trigger_delete_conf(self, folder_name):
         """Activates the delete confirmation state."""

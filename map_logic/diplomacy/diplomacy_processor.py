@@ -117,6 +117,15 @@ def process_diplomacy_turn(self):
 
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---
     nations = list(self.nation_data.keys())
+    
+    def _resolve_cross_action(nation_a, nation_b, a_data, b_data, msg_key):
+        """Helper to cleanly resolve contradictory simultaneous requests and strip them from the queue."""
+        msg = ai_prompts.AI_FALLBACK_RESPONSES[msg_key]
+        send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
+        send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
+        if a_data and nation_b in a_data: del a_data[nation_b]
+        if b_data and nation_a in b_data: del b_data[nation_a]
+        
     for i in range(len(nations)):
         for j in range(i + 1, len(nations)):
             nation_a = nations[i]
@@ -137,48 +146,28 @@ def process_diplomacy_turn(self):
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
                     finalize_faction_join(self.map_data, self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                    
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
-                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
-                    
-                    del a_data[nation_b]
-                    del b_data[nation_a]
+                    _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
                     
                 elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
                     finalize_faction_join(self.map_data, self.nation_data, nation_a, nation_b)
-                    
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_FACTION_JOIN"]
-                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
-                    
-                    del a_data[nation_b]
-                    del b_data[nation_a]
+                    _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
                     
                 elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY"]:
                     action_name = b_action.split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                    
                     send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
                     del b_data[nation_a] 
                     
                 elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY"]:
                     action_name = a_action.split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                    
                     send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
                     del a_data[nation_b]
                     
                 elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                     finalize_neutral(self.nation_data, nation_a, nation_b)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
-                    
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_CEASEFIRE"]
-                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
-                    
-                    del a_data[nation_b]
-                    del b_data[nation_a]
+                    _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
                     
                 elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
                      (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
@@ -186,13 +175,7 @@ def process_diplomacy_turn(self):
                     join_faction_wars(self.map_data, self.nation_data, nation_a, nation_b)
                     join_faction_wars(self.map_data, self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
-                    
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_CALL_TO_ARMS"]
-                    send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
-                    send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
-                    
-                    del a_data[nation_b]
-                    del b_data[nation_a]
+                    _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
 
     # --- 2. GATHER AI TASKS ---
     ai_tasks = []
@@ -230,6 +213,26 @@ def process_diplomacy_turn(self):
 
     # --- 3. EXECUTE AI THREADS ---
     ai_results = {}
+    
+    def _get_fallback_ai_result(task):
+        """Unified helper to gracefully fail into standard canned responses if the LLM skips or is offline."""
+        action = task["action"]
+        if action == "CUSTOM_MSG":
+            msg = ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"]
+        elif action in c.UNILATERAL_ACTIONS:
+            fallback_map = {
+                "WAR_DECLARATION": "BETRAYAL", "LEAVE_FACTION": "FACTION_ABANDONED",
+                "DISBAND_FACTION": "FACTION_DISBANDED", "JOIN_WARS": "ACCEPTED_HELP",
+                "BREAK_ALLIANCE": "ALLIANCE_BROKEN", "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
+            }
+            msg = ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_map.get(action, "GENERIC_MESSAGE"), "Message received.")
+        else:
+            msg = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.")
+            
+        return {
+            "accepted": True, "message": msg, "action": "NONE", "action_target": "NONE", 
+            "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
+        }
     
     if not ai_tasks:
         self.responsive_tasks_total = 0
@@ -269,34 +272,7 @@ def process_diplomacy_turn(self):
         if self.force_skip_llm:
             for task in ai_tasks:
                 target_ai, sender = task["target"], task["sender"]
-                if task["action"] == "CUSTOM_MSG":
-                    ai_results[(sender, target_ai, task["action"])] = {
-                        "message": ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
-                        "action": "NONE", "action_target": "NONE", 
-                        "follow_up_action": "NONE", "follow_up_target": "NONE",
-                        "opinion_change": 0
-                    }
-                elif task["action"] in c.UNILATERAL_ACTIONS:
-                    fallback_map = {
-                        "WAR_DECLARATION": "BETRAYAL",
-                        "LEAVE_FACTION": "FACTION_ABANDONED",
-                        "DISBAND_FACTION": "FACTION_DISBANDED",
-                        "JOIN_WARS": "ACCEPTED_HELP",
-                        "BREAK_ALLIANCE": "ALLIANCE_BROKEN",
-                        "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
-                    }
-                    fb_key = fallback_map.get(task["action"], "GENERIC_MESSAGE")
-                    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(fb_key, "Message received.")
-                    ai_results[(sender, target_ai, task["action"])] = {
-                        "accepted": True, "message": fallback, "action": "NONE", "action_target": "NONE", 
-                        "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
-                    }
-                else:
-                    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.")
-                    ai_results[(sender, target_ai, task["action"])] = {
-                        "accepted": True, "message": fallback, "action": "NONE", "action_target": "NONE", 
-                        "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
-                    }
+                ai_results[(sender, target_ai, task["action"])] = _get_fallback_ai_result(task)
         else:
             max_threads = queries.get_ai_threads()
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
@@ -323,36 +299,8 @@ def process_diplomacy_turn(self):
                             except:
                                 pass
                         else:
-                            # Fallback Logic Dictionary
-                            if task["action"] == "CUSTOM_MSG":
-                                ai_results[(task["sender"], task["target"], task["action"])] = {
-                                    "message": ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
-                                    "action": "NONE", "action_target": "NONE", 
-                                    "follow_up_action": "NONE", "follow_up_target": "NONE",
-                                    "opinion_change": 0
-                                }
-                            elif task["action"] in c.UNILATERAL_ACTIONS:
-                                fallback_map = {
-                                    "WAR_DECLARATION": "BETRAYAL",
-                                    "LEAVE_FACTION": "FACTION_ABANDONED",
-                                    "DISBAND_FACTION": "FACTION_DISBANDED",
-                                    "JOIN_WARS": "ACCEPTED_HELP",
-                                    "BREAK_ALLIANCE": "ALLIANCE_BROKEN",
-                                    "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
-                                }
-                                fb_key = fallback_map.get(task["action"], "GENERIC_MESSAGE")
-                                fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(fb_key, "Message received.")
-                                ai_results[(task["sender"], task["target"], task["action"])] = {
-                                    "accepted": True, "message": fallback, "action": "NONE", "action_target": "NONE", 
-                                    "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
-                                }
-                            else:
-                                fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.")
-                                ai_results[(task["sender"], task["target"], task["action"])] = {
-                                    "accepted": True, "message": fallback, "action": "NONE", "action_target": "NONE", 
-                                    "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
-                                }
-                                
+                            ai_results[(task["sender"], task["target"], task["action"])] = _get_fallback_ai_result(task)
+                            
                         # Incremental Progress logic
                         is_human_related = (task["sender"] in human_players or task["target"] in human_players)
                         if mode != "OFF":

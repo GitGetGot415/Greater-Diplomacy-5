@@ -8,6 +8,8 @@ from ui_elements import Button, process_text_input
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from ui.bars import ui_bars
+from map_logic.system32 import loading_screen
 
 class Select_Base_Map(GameState):
     def __init__(self):
@@ -192,12 +194,7 @@ class Select_Base_Map(GameState):
         self.refresh_maps()
 
     def _snap_scroll(self, my):
-        view_h = c.SCREEN_HEIGHT - 200
-        handle_h = max(30, int(view_h * (view_h / max(1, view_h - self.max_scroll))))
-        rel_y = my - 150 - (handle_h / 2)
-        max_y = view_h - handle_h
-        ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
-        self.scroll_y = ratio * self.max_scroll
+        self.scroll_y = ui_bars.calculate_scroll_snap(my, self.max_scroll, 150, c.SCREEN_HEIGHT - 200)
         self.refresh_maps()
 
     def start_editor_with_custom_map(self, map_name):
@@ -277,23 +274,9 @@ class Select_Base_Map(GameState):
 
         if self.sub_state == "CUSTOM_MAPS":
             # Draw Scrollbar
-            if self.max_scroll < 0:
-                view_h = c.SCREEN_HEIGHT - 200
-                track_rect = pygame.Rect(c.SCREEN_WIDTH - 40, 150, 15, view_h)
-                pygame.draw.rect(surface, (50, 50, 60), track_rect)
-                
-                ratio = self.scroll_y / self.max_scroll
-                handle_h = max(30, int(view_h * (view_h / (view_h - self.max_scroll))))
-                handle_y = 150 + ratio * (view_h - handle_h)
-                
-                handle_rect = pygame.Rect(c.SCREEN_WIDTH - 40, handle_y, 15, handle_h)
-                pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
-                
-                self.scroll_track_rect = track_rect
-                self.scroll_handle_rect = handle_rect
-            else:
-                self.scroll_track_rect = None
-                self.scroll_handle_rect = None
+            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+                surface, self.scroll_y, self.max_scroll, c.SCREEN_WIDTH - 40, 150, c.SCREEN_HEIGHT - 200
+            )
 
             # Rename Box
             if self.renaming_scenario:
@@ -339,27 +322,4 @@ class Select_Base_Map(GameState):
 
         # --- Draw Progress Bar Overlay ---
         if getattr(self, 'is_refreshing', False):
-            overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            surface.blit(overlay, (0, 0))
-
-            center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
-            
-            font_title = fonts.get("title")
-            txt = font_title.render(self.refresh_status, True, (255, 255, 255))
-            surface.blit(txt, txt.get_rect(center=(center_x, center_y - 40)))
-
-            bar_w, bar_h = 400, 30
-            bar_x = center_x - (bar_w // 2)
-            
-            pygame.draw.rect(surface, (40, 40, 60), (bar_x, center_y, bar_w, bar_h), border_radius=5)
-            
-            progress_ratio = (self.refresh_completed / float(self.refresh_total)) if self.refresh_total > 0 else 0.0
-            fill_w = int(bar_w * progress_ratio)
-            if fill_w > 0:
-                pygame.draw.rect(surface, (100, 200, 100), (bar_x, center_y, fill_w, bar_h), border_radius=5)
-                
-            pygame.draw.rect(surface, (200, 200, 200), (bar_x, center_y, bar_w, bar_h), 2, border_radius=5)
-            
-            pct_txt = fonts.get("tiny").render(f"{self.refresh_completed} / {self.refresh_total}", True, (255, 255, 255))
-            surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, center_y + bar_h // 2)))
+            loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)

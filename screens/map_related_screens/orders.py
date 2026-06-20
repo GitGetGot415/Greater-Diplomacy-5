@@ -10,6 +10,7 @@ from data import queries
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
+from ui.bars import ui_bars
 
 class Orders_Screen(GameState):
     PANEL_X = 80
@@ -601,15 +602,9 @@ class Orders_Screen(GameState):
             pygame.draw.rect(surface, (100, 100, 250), bg_rect, 2)
             
             # --- NEW: Scroll Bar Rendering ---
-            total_content_h = len(player_units) * self.row_height
-            if total_content_h > self.panel_max_h:
-                track_rect = pygame.Rect(70, self.panel_top, 10, self.panel_max_h)
-                pygame.draw.rect(surface, (20, 20, 30), track_rect)
-                
-                ratio = self.panel_max_h / total_content_h
-                bar_h = max(20, self.panel_max_h * ratio)
-                bar_y = self.panel_top + (abs(self.scroll_y) / (total_content_h - self.panel_max_h)) * (self.panel_max_h - bar_h)
-                pygame.draw.rect(surface, (100, 100, 150), (70, bar_y, 10, bar_h))
+            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+                surface, self.scroll_y, self.max_scroll_y, 70, self.panel_top, self.panel_max_h, width=10
+            )
         
         # --- Helper for Split Path Drawing ---
         def draw_split_path(start_prov, path, speed, base_color):
