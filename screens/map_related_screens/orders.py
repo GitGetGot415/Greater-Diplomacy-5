@@ -461,6 +461,20 @@ class Orders_Screen(GameState):
             if dest["id"] in start_node["neighbors"]:
                 if all(self.can_unit_enter(u, dest) for u in target_units):
                     
+                    # --- TACTICAL FUEL LIMIT CHECK ---
+                    if getattr(self.map_screen, 'tactical_mode', False) and self.selected_unit_index != "ALL":
+                        unit = target_units[0]
+                        if unit is getattr(self.map_screen, 'player_unit', None):
+                            speed = queries.get_tactical_speed(unit, self.unit_library)
+                            # If this step would execute this turn
+                            if len(current_path) < speed:
+                                fuel_inc = self.map_screen.unit_economy.get("fuel_inc", 0)
+                                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc, self.unit_library)
+                                if self.map_screen.player_fuel < cost_per_tile:
+                                    self.map_screen.show_feedback("Not enough fuel!")
+                                    return
+                    # ---------------------------------
+                    
                     # Generate a single new path baseline so Python doesn't cross-contaminate lists in memory
                     new_path = current_path.copy()
                     new_path.append(dest["id"])

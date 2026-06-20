@@ -11,34 +11,6 @@ def select_player_country(map_screen, province):
     else:
         map_screen.show_feedback("Cannot select unowned or non-playable territory")
 
-def confirm_player_country(map_screen):
-    if map_screen.pending_selection:
-        map_screen.active_players.append(map_screen.pending_selection)
-        
-        # --- TACTICAL UNIT LOCK-IN ---
-        if getattr(map_screen, 'tactical_mode', False) and hasattr(map_screen, 'pending_unit'):
-            map_screen.player_unit = map_screen.pending_unit
-        
-        map_screen.selected_province = None 
-        map_screen.hovered_province = None
-        map_screen.hover_glow_surf = None
-        
-        if len(map_screen.active_players) < map_screen.num_players:
-            map_screen.show_feedback(f"Player {len(map_screen.active_players) + 1}, pick a country!")
-            map_screen.pending_selection = None
-            map_screen.pending_unit = None
-        else:
-            # Everyone picked, start with Player 1
-            map_screen.current_player_index = 0
-            map_screen.player_country = map_screen.active_players[0]
-            map_screen.selection_mode = False
-            map_screen.pending_selection = None
-            map_screen.pending_unit = None
-            
-            map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
-            buttons.render_buttons(map_screen)
-            map_screen.refresh_relations_map()
-
 def select_tactical_unit(map_screen, province):
     owner = province.get("owner", "Unclaimed")
     import data.constants as c
@@ -127,7 +99,8 @@ def confirm_player_country(map_screen):
             from data import queries
             stats = queries.get_unit_library().get(u_type, {})
             map_screen.unit_economy["fuel"] = stats.get("cost_fuel", 0) / 2.0
-        
+            map_screen.unit_economy["fuel_inc"] = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+            
         map_screen.selected_province = None 
         map_screen.hovered_province = None
         map_screen.hover_glow_surf = None

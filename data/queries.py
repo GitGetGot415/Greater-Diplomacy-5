@@ -506,7 +506,7 @@ def get_tactical_speed(unit, unit_library):
 def get_tactical_fuel_cost_per_tile(unit, fuel_inc, unit_library):
     """Calculates the fuel cost per tile moved in tactical mode."""
     calc_speed = get_tactical_speed(unit, unit_library)
-    return math.ceil(fuel_inc / (calc_speed * 0.66)) if calc_speed > 0 else 0
+    return math.ceil(fuel_inc / (calc_speed * 0.33)) if calc_speed > 0 else 0
 
 # ==========================================
 # PROVINCE & TECH QUERIES
