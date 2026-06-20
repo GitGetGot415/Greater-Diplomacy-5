@@ -130,6 +130,9 @@ def process_queues(self):
                     "order": {"type": "MOVE", "path": []}
                 }
                 
+                # Apply dynamic custom name for standard unit recruitment
+                new_unit_data["custom_name"] = queries.generate_unit_custom_name(new_unit_data, active_unit_counters)
+                
                 province["units"].append(new_unit_data)
                 if current_owner == self.player_country:
                     self.show_feedback(f"DEPLOYED: {unit_type}")
