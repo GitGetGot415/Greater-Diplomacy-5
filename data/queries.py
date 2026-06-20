@@ -432,6 +432,13 @@ def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
     return nation_data.get(nation, {}).get("is_faction_leader", False)
 
+def get_historical_owner(province, faction_name, nation_data):
+    """Returns the pre-war owner of a tile if a faction war is active, otherwise the primary core."""
+    if faction_name and "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+        pre_war = nation_data["FACTION_WAR_MAPS"][faction_name]
+        return pre_war.get(str(province["id"])) or pre_war.get(province["id"])
+    return province.get("cores", [None])[0] if province.get("cores") else None
+
 def get_faction_core_transfer_target(capturer, province, nation_data):
     """
     Determines if a captured territory should be transferred to a faction member
@@ -445,28 +452,20 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
     if not faction_name:
         return capturer
 
-    # --- NEW: Check Pre-War Faction Map First ---
-    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
-        pre_war_map = nation_data["FACTION_WAR_MAPS"][faction_name]
-        original_owner = pre_war_map.get(str(province["id"])) or pre_war_map.get(province["id"])
-        
-        # If the original owner is still in the faction, they get it back!
-        if original_owner and original_owner != capturer:
-            if original_owner in get_faction_members(faction_name, nation_data):
-                return original_owner
-
-    # Fallback to standard core logic
+    original_owner = get_historical_owner(province, faction_name, nation_data)
     faction_members = get_faction_members(faction_name, nation_data)
+
+    # 1. Check Pre-War Faction Map First
+    if original_owner and original_owner != capturer and original_owner in faction_members:
+        return original_owner
+
+    # 2. Fallback to standard core logic
     tile_cores = province.get("cores", [])
+    faction_cores_on_tile = [m for m in faction_members if m in tile_cores]
 
-    # Find how many active faction members have a core on this specific tile
-    faction_cores_on_tile = [member for member in faction_members if member in tile_cores]
-
-    # Only transfer if EXACTLY ONE faction member has a core on this territory
     if len(faction_cores_on_tile) == 1:
         return faction_cores_on_tile[0]
     
-    # If 2 or more faction members have a core, or nobody does, the capturer keeps the tile
     return capturer
 
 # --- NEW FACTION WAR BORDER TRACKING QUERIES ---
@@ -489,20 +488,26 @@ def save_faction_pre_war_map(faction_name, map_data, nation_data):
 
     nation_data["FACTION_WAR_MAPS"][faction_name] = pre_war_map
 
+def _modify_pre_war_map(faction_name, nation_data, modify_func):
+    """Helper to safely access and modify the pre-war map."""
+    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+        modify_func(nation_data["FACTION_WAR_MAPS"][faction_name])
+
 def add_member_to_pre_war_map(member_name, faction_name, map_data, nation_data):
     """Adds a newly joined member's territory to the active pre-war map."""
-    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
+    def _add(pre_war_map):
         for prov in map_data.values():
             if prov.get("owner") == member_name:
-                nation_data["FACTION_WAR_MAPS"][faction_name][str(prov["id"])] = member_name
+                pre_war_map[str(prov["id"])] = member_name
+    _modify_pre_war_map(faction_name, nation_data, _add)
 
 def remove_member_from_pre_war_map(member_name, faction_name, nation_data):
     """Removes a leaving member's territory from the active pre-war map."""
-    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
-        pre_war_map = nation_data["FACTION_WAR_MAPS"][faction_name]
+    def _remove(pre_war_map):
         keys_to_remove = [prov_id for prov_id, owner in pre_war_map.items() if owner == member_name]
         for k in keys_to_remove:
             del pre_war_map[k]
+    _modify_pre_war_map(faction_name, nation_data, _remove)
 
 def clear_faction_pre_war_map_if_peace(faction_name, nation_data):
     """Clears the pre-war map if the faction is no longer at war."""
@@ -657,34 +662,23 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
     """Finds the highest level infantry unit the nation has researched, prioritizing mechanized/motorized upgrades."""
     res_levels = nation_data_block.get("research", {})
     
-    if allow_fuel_units:
-        mech_lvl = res_levels.get("mechanized_infantry", 0)
-        if mech_lvl > 0:
-            mech_years = tech_tree.get("mechanized_infantry", {}).get("years", [c.START_YEAR])
-            target_index = max(0, min(mech_lvl - 1, len(mech_years) - 1))
-            year_val = mech_years[target_index]
-            u_name = f"Mechanized Infantry Type {year_val}"
+    def check_upgrade(tech_key, name_fmt):
+        lvl = res_levels.get(tech_key, 0)
+        if lvl > 0:
+            years = tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
+            year_val = years[max(0, min(lvl - 1, len(years) - 1))]
+            u_name = name_fmt.format(year_val)
             if u_name in unit_library: return u_name
+        return None
 
-        mot_lvl = res_levels.get("motorized_infantry", 0)
-        if mot_lvl > 0:
-            mot_years = tech_tree.get("motorized_infantry", {}).get("years", [c.START_YEAR])
-            target_index = max(0, min(mot_lvl - 1, len(mot_years) - 1))
-            year_val = mot_years[target_index]
-            u_name = f"Motorized Infantry Type {year_val}"
-            if u_name in unit_library: return u_name
+    if allow_fuel_units:
+        for tech, fmt in [("mechanized_infantry", "Mechanized Infantry Type {}"), 
+                          ("motorized_infantry", "Motorized Infantry Type {}")]:
+            found = check_upgrade(tech, fmt)
+            if found: return found
 
     # Fallback to standard (fuel-free) infantry
-    res_lvl = res_levels.get("infantry_type", 1)
-    inf_years = tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
-    
-    target_index = max(0, min(res_lvl - 1, len(inf_years) - 1))
-    year_val = inf_years[target_index]
-    u_name = f"Infantry Type {year_val}"
-    
-    if u_name in unit_library:
-        return u_name
-    return f"Infantry Type {c.START_YEAR}"
+    return check_upgrade("infantry_type", "Infantry Type {}") or f"Infantry Type {c.START_YEAR}"
 
 def get_best_preferred_unit(player_research, unit_library, preference_list):
     """Generic helper to find the highest preference unit unlocked."""
@@ -762,26 +756,23 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
         stats["time"] = c.BASIC_FACTORY_TURNS
     return stats
 
-def get_nation_manpower(nation, nation_data):
-    return nation_data.get(nation, {}).get("manpower", 0)
+def get_nation_resource(nation, res_type, nation_data): return nation_data.get(nation, {}).get(res_type, 0)
 
-def get_nation_materials(nation, nation_data):
-    return nation_data.get(nation, {}).get("materials", 0)
+def get_nation_manpower(nation, nation_data): return get_nation_resource(nation, "manpower", nation_data)
+def get_nation_materials(nation, nation_data): return get_nation_resource(nation, "materials", nation_data)
+def get_nation_fuel(nation, nation_data): return get_nation_resource(nation, "fuel", nation_data)
 
-def get_nation_fuel(nation, nation_data):
-    return nation_data.get(nation, {}).get("fuel", 0)
+def _modify_resources(nation_data_block, costs_dict, is_refund=False):
+    """Unified helper to add or subtract resources from a nation."""
+    modifier = 1 if is_refund else -1
+    for res in ["materials", "manpower", "fuel"]:
+        cost_key = f"cost_{res}"
+        new_val = nation_data_block.get(res, 0) + (costs_dict.get(cost_key, 0) * modifier)
+        nation_data_block[res] = max(0, new_val) if not is_refund else new_val
 
-def refund_resources(nation_data_block, costs_dict):
-    """Adds refunded costs back to a nation's resource pools safely."""
-    nation_data_block["materials"] = nation_data_block.get("materials", 0) + costs_dict.get("cost_materials", 0)
-    nation_data_block["manpower"] = nation_data_block.get("manpower", 0) + costs_dict.get("cost_manpower", 0)
-    nation_data_block["fuel"] = nation_data_block.get("fuel", 0) + costs_dict.get("cost_fuel", 0)
+def refund_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=True)
 
-def deduct_resources(nation_data_block, costs_dict):
-    """Subtracts costs from a nation's resource pools, preventing negative values."""
-    nation_data_block["materials"] = max(0, nation_data_block.get("materials", 0) - costs_dict.get("cost_materials", 0))
-    nation_data_block["manpower"] = max(0, nation_data_block.get("manpower", 0) - costs_dict.get("cost_manpower", 0))
-    nation_data_block["fuel"] = max(0, nation_data_block.get("fuel", 0) - costs_dict.get("cost_fuel", 0))
+def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=False)
 
 def can_afford(nation_data_block, costs_dict):
     """Returns True if the nation has enough resources to cover the costs."""
@@ -1478,28 +1469,18 @@ def is_unit_obsolete(group_name, player_research):
     obsoleting_techs = c.OBSOLESCENCE_RULES.get(group_name, [])
     return any(player_research.get(tech, 0) >= 1 for tech in obsoleting_techs)
 
-def get_best_unit_by_defense_then_attack_then_speed(units):
-    """Finds the unit with the highest defense stat, tiebreaking with attack, then speed."""
+def get_best_unit(units, sort_keys):
+    """Generic helper to find the unit with the highest combination of given stats."""
     if not units:
         return None
-    # Tuple sorting: (Primary Sort, Secondary Sort, Tertiary Sort)
-    return max(units, key=lambda u: (
-        u.get("defense", c.DEFAULT_UNIT_DEF), 
-        u.get("attack", c.DEFAULT_UNIT_ATK),
-        u.get("speed", c.DEFAULT_UNIT_SPD)
-    ))
-def get_best_unit_by_attack_then_defense(units):
-    """Finds the unit with the highest attack stat, tiebreaking with defense."""
-    if not units:
-        return None
-    return max(units, key=lambda u: (u.get("attack", 0), u.get("defense", 0)))
+    # Tuple sorting automatically evaluates primary, secondary, and tertiary keys dynamically
+    return max(units, key=lambda u: tuple(u.get(key, 0) for key in sort_keys))
 
-def get_best_unit_by_attack_then_speed(units):
-    """Finds the unit with the highest attack stat, tiebreaking with speed."""
-    if not units:
-        return None
-    # Tuple sorting: (Primary Sort: Attack, Secondary Sort: Speed)
-    return max(units, key=lambda u: (u.get("attack", 0), u.get("speed", 0)))
+def get_best_unit_by_defense_then_attack_then_speed(units): return get_best_unit(units, ["defense", "attack", "speed"])
+
+def get_best_unit_by_attack_then_defense(units): return get_best_unit(units, ["attack", "defense"])
+
+def get_best_unit_by_attack_then_speed(units): return get_best_unit(units, ["attack", "speed"])
 
 # ==========================================
 # PREDICTION QUERIES (UI & RENDERING)
@@ -1575,26 +1556,31 @@ def clear_image_cache():
     global _dynamic_image_cache
     _dynamic_image_cache.clear()
 
+def _load_and_scale_local_image(file_path, size):
+    """Helper to safely load and scale a local image file."""
+    if os.path.exists(file_path):
+        try:
+            img = pygame.image.load(file_path).convert_alpha()
+            return pygame.transform.scale(img, size)
+        except:
+            pass
+    return None
+
 def get_default_b64(is_portrait=False):
     global _default_flag_b64, _default_port_b64
-    if is_portrait:
-        if _default_port_b64 is None:
-            try:
-                img = pygame.image.load(c.DEFAULT_PORTRAIT_PATH).convert_alpha()
-                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                _default_port_b64 = encode_surf_to_b64(img)
-            except:
-                _default_port_b64 = "ERROR"
-        return _default_port_b64
-    else:
-        if _default_flag_b64 is None:
-            try:
-                img = pygame.image.load(c.DEFAULT_FLAG_PATH).convert_alpha()
-                img = pygame.transform.scale(img, c.FLAG_SIZE)
-                _default_flag_b64 = encode_surf_to_b64(img)
-            except:
-                _default_flag_b64 = "ERROR"
-        return _default_flag_b64
+    cached = _default_port_b64 if is_portrait else _default_flag_b64
+    
+    if cached is None:
+        path = c.DEFAULT_PORTRAIT_PATH if is_portrait else c.DEFAULT_FLAG_PATH
+        size = c.PORTRAIT_SIZE if is_portrait else c.FLAG_SIZE
+        img = _load_and_scale_local_image(path, size)
+        
+        cached = encode_surf_to_b64(img) if img else "ERROR"
+        
+        if is_portrait: _default_port_b64 = cached
+        else: _default_flag_b64 = cached
+        
+    return cached
 
 def scrub_default_images(nation_data_block):
     """Replaces large Base64 strings with 'DEFAULT' if they match the default images or local files."""
@@ -1602,29 +1588,17 @@ def scrub_default_images(nation_data_block):
     def_port = get_default_b64(is_portrait=True)
     
     for country, data in nation_data_block.items():
-        if data.get("flag_data") == def_flag:
+        if data.get("flag_data") == def_flag: data["flag_data"] = "DEFAULT"
+        if data.get("portrait_data") == def_port: data["portrait_data"] = "DEFAULT"
+            
+        # Check against local country-specific files
+        f_img = _load_and_scale_local_image(os.path.join(c.FLAGS_DIR, f"{country}.png"), c.FLAG_SIZE)
+        if f_img and data.get("flag_data") == encode_surf_to_b64(f_img):
             data["flag_data"] = "DEFAULT"
-        if data.get("portrait_data") == def_port:
+            
+        p_img = _load_and_scale_local_image(os.path.join(c.PORTRAITS_DIR, f"{country}.png"), c.PORTRAIT_SIZE)
+        if p_img and data.get("portrait_data") == encode_surf_to_b64(p_img):
             data["portrait_data"] = "DEFAULT"
-            
-        # Check against local country-specific files to scrub custom imports that are already on disk
-        f_path = os.path.join(c.FLAGS_DIR, f"{country}.png")
-        if data.get("flag_data") != "DEFAULT" and os.path.exists(f_path):
-            try:
-                img = pygame.image.load(f_path).convert_alpha()
-                img = pygame.transform.scale(img, c.FLAG_SIZE)
-                if data["flag_data"] == encode_surf_to_b64(img):
-                    data["flag_data"] = "DEFAULT"
-            except: pass
-            
-        p_path = os.path.join(c.PORTRAITS_DIR, f"{country}.png")
-        if data.get("portrait_data") != "DEFAULT" and os.path.exists(p_path):
-            try:
-                img = pygame.image.load(p_path).convert_alpha()
-                img = pygame.transform.scale(img, c.PORTRAIT_SIZE)
-                if data["portrait_data"] == encode_surf_to_b64(img):
-                    data["portrait_data"] = "DEFAULT"
-            except: pass
 
 def encode_surf_to_b64(surf, fmt="RGBA"):
     """Encodes a pygame surface to a Base64 string."""
@@ -1637,48 +1611,36 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
     
     cache_key = (b64_str, size, is_portrait, country_name)
     if cache_key in _dynamic_image_cache:
-        return _dynamic_image_cache[cache_key] # Optimized: Removed .copy()
+        return _dynamic_image_cache[cache_key]
 
+    scaled = None
     if not b64_str or b64_str == "DEFAULT":
         # --- Check for country-specific local file first ---
         if country_name:
             base_dir = c.PORTRAITS_DIR if is_portrait else c.FLAGS_DIR
-            file_path = os.path.join(base_dir, f"{country_name}.png")
-            if os.path.exists(file_path):
-                try:
-                    img = pygame.image.load(file_path).convert_alpha()
-                    scaled = pygame.transform.scale(img, size)
-                    _dynamic_image_cache[cache_key] = scaled
-                    return scaled # Optimized: Removed .copy()
-                except:
-                    pass # Fallback to absolute default
-        
+            scaled = _load_and_scale_local_image(os.path.join(base_dir, f"{country_name}.png"), size)
+            
         # --- Fallback to absolute default ---
-        path = c.DEFAULT_PORTRAIT_PATH if is_portrait else c.DEFAULT_FLAG_PATH
+        if not scaled:
+            path = c.DEFAULT_PORTRAIT_PATH if is_portrait else c.DEFAULT_FLAG_PATH
+            scaled = _load_and_scale_local_image(path, size)
+            
+        if not scaled: # Failsafe
+            scaled = pygame.Surface(size, pygame.SRCALPHA)
+            scaled.fill((200, 200, 200, 255))
+    else:
         try:
-            img = pygame.image.load(path).convert_alpha()
-            scaled = pygame.transform.scale(img, size)
-            _dynamic_image_cache[cache_key] = scaled
-            return scaled # Optimized: Removed .copy()
+            img_bytes = base64.b64decode(b64_str)
+            if len(img_bytes) == size[0] * size[1] * 4:
+                scaled = pygame.image.fromstring(img_bytes, size, "RGBA")
+            else:
+                scaled = pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
         except:
-            surf = pygame.Surface(size, pygame.SRCALPHA)
-            surf.fill((200, 200, 200, 255))
-            _dynamic_image_cache[cache_key] = surf
-            return surf # Optimized: Removed .copy()
+            scaled = pygame.Surface(size, pygame.SRCALPHA)
+            scaled.fill((255, 255, 255, 255))
 
-    try:
-        img_bytes = base64.b64decode(b64_str)
-        if len(img_bytes) == size[0] * size[1] * 4:
-            scaled = pygame.image.fromstring(img_bytes, size, "RGBA")
-        else:
-            scaled = pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
-        _dynamic_image_cache[cache_key] = scaled
-        return scaled # Optimized: Removed .copy()
-    except:
-        surf = pygame.Surface(size, pygame.SRCALPHA)
-        surf.fill((255, 255, 255, 255))
-        _dynamic_image_cache[cache_key] = surf
-        return surf # Optimized: Removed .copy()
+    _dynamic_image_cache[cache_key] = scaled
+    return scaled
 
 # ==========================================
 # DIPLOMATIC SPAM/REACHABILITY QUERIES
@@ -2125,12 +2087,8 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
     proj = curr
 
     def was_original_owner(prov, nation):
-        fac = nation_data.get(nation, {}).get("faction", "")
-        if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
-            pre_war = nation_data["FACTION_WAR_MAPS"][fac]
-            if str(prov["id"]) in pre_war:
-                return pre_war[str(prov["id"])] == nation
-        return nation in prov.get("cores", [])
+        faction = nation_data.get(nation, {}).get("faction", "")
+        return get_historical_owner(prov, faction, nation_data) == nation
 
     # Extract frozen_ids safely using regex to support pre-formatted strings
     frozen_ids = []
