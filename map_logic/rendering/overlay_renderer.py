@@ -491,7 +491,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
     player_unit = getattr(self, 'player_unit', None)
     
     def get_owner_sort_weight(o):
-        if is_tactical and player_unit in units_by_owner[o]:
+        if is_tactical and any(u is player_unit for u in units_by_owner[o]):
             return (1, 0)
         return (0, sum(u.get("health", 0) for u in units_by_owner[o]))
 
@@ -504,7 +504,7 @@ def draw_unit_icon(self, surface, sx, sy, province):
     for owner in sorted_owners:
         owner_units = units_by_owner[owner]
         
-        if is_tactical and player_unit in owner_units:
+        if is_tactical and any(u is player_unit for u in owner_units):
             best_unit = player_unit
         else:
             best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(owner_units)

@@ -17,7 +17,7 @@ def process_economy(self):
         
         self.unit_economy["manpower"] = min(self.unit_economy.get("manpower", 0) + inc_man, c.TACTICAL_MAX_MANPOWER)
         self.unit_economy["materials"] = min(self.unit_economy.get("materials", 0) + inc_mat, stats.get("cost_materials", 9999))
-        self.unit_economy["fuel"] = min(self.unit_economy.get("fuel", 0) + inc_fuel, inc_fuel * 2)
+        self.unit_economy["fuel"] = min(self.unit_economy.get("fuel", 0) + inc_fuel, stats.get("cost_fuel", 0))
 
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 

@@ -129,8 +129,9 @@ def process_movement(self):
 
     # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
-        spd = u.get("speed", 1)
-        return spd
+        if getattr(self, 'tactical_mode', False) and u is getattr(self, 'player_unit', None):
+            return queries.get_tactical_speed(u, self.cached_unit_library)
+        return u.get("speed", 1)
 
     # Calculate max turns loop using the new helper
     max_speed = max(get_eff_speed(u) for u in moving_units)
@@ -200,22 +201,20 @@ def process_movement(self):
                 can_enter = queries.can_land_units_enter(unit["owner"], target_prov, self.nation_data)
 
             if can_enter:
-                unit["_current_province_id"] = target_id
-                order["path"].pop(0)
-
                 # --- TACTICAL MOVEMENT ECONOMY ---
                 if getattr(self, 'tactical_mode', False) and unit is getattr(self, 'player_unit', None):
-                    calc_speed = get_eff_speed(unit)
                     fuel_inc = self.unit_economy.get("fuel_inc", 0)
+                    cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc, self.cached_unit_library)
                     
-                    cost_per_tile = math.ceil(fuel_inc / (calc_speed * 0.66)) if calc_speed > 0 else 0
-                    
-                    if self.unit_economy["fuel"] >= cost_per_tile:
+                    if self.unit_economy.get("fuel", 0) >= cost_per_tile:
                         self.unit_economy["fuel"] -= cost_per_tile
                     else:
                         unit["_skip_remaining_steps"] = True
                         continue
                 # ---------------------------------
+
+                unit["_current_province_id"] = target_id
+                order["path"].pop(0)
 
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:

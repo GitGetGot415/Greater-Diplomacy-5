@@ -243,14 +243,12 @@ class Map(GameState):
             order = u.get("order")
             path = order.get("path", []) if isinstance(order, dict) else []
             if path:
-                u_type = u.get("original_type", u.get("type"))
                 from data import queries
-                import math
-                uses_oil = queries.get_unit_library().get(u_type, {}).get("cost_fuel", 0) > 0
-                calc_speed = u.get("speed", 1) + (1 if uses_oil else 0)
-                immediate_steps = min(len(path), calc_speed)
+                unit_lib = queries.get_unit_library()
                 fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                cost_per_tile = math.ceil(fuel_inc / (calc_speed * 0.66)) if calc_speed > 0 else 0
+                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(u, fuel_inc, unit_lib)
+                calc_speed = queries.get_tactical_speed(u, unit_lib)
+                immediate_steps = min(len(path), calc_speed)
                 return max(0, base_fuel - (cost_per_tile * immediate_steps))
             return base_fuel
         return self.nation_data.get(self.player_country, {}).get("fuel", 0)

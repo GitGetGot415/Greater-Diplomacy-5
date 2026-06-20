@@ -121,6 +121,12 @@ def confirm_player_country(map_screen):
             if map_screen.pending_unit:
                 map_screen.pending_unit.pop("_is_tactical_ghost", None) # Remove the tag, it's a real unit now
             map_screen.player_unit = map_screen.pending_unit
+            
+            # Start the game with half of max fuel
+            u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+            from data import queries
+            stats = queries.get_unit_library().get(u_type, {})
+            map_screen.unit_economy["fuel"] = stats.get("cost_fuel", 0) / 2.0
         
         map_screen.selected_province = None 
         map_screen.hovered_province = None

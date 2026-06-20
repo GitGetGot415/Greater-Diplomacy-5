@@ -73,10 +73,8 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         is_tactical = getattr(self.map_screen, 'tactical_mode', False)
         
-        if is_tactical:
-            player_units = [u for u in units if u is self.map_screen.player_unit]
-        else:
-            player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+        # Display all units owned by the player, regardless of mode
+        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         
         total_content_h = len(player_units) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
@@ -84,8 +82,9 @@ class Orders_Screen(GameState):
         # --- Select All & Clear Orders Buttons ---
         if player_units:
             if len(player_units) > 1:
-                all_color = "blue" if self.selected_unit_index == "ALL" else "grey"
+                all_color = "grey" if is_tactical else ("blue" if self.selected_unit_index == "ALL" else "grey")
                 btn_all = Button(100, 90, "top_orders_panel_button", all_color, "Select All", lambda: self.select_unit("ALL"), font_preset="normal")
+                if is_tactical: btn_all.disabled = True
                 self.elements.append(btn_all)
                 
                 btn_clear = Button(200, 90, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
@@ -100,8 +99,7 @@ class Orders_Screen(GameState):
             if unit.get("owner") != self.map_screen.player_country:
                 continue
                 
-            if is_tactical and unit is not self.map_screen.player_unit:
-                continue
+            is_tactical_other = is_tactical and unit is not self.map_screen.player_unit
                 
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
             
@@ -197,6 +195,11 @@ class Orders_Screen(GameState):
                     btn_rename = Button(x_pos + 235, y_pos, "orders_panel_button_2", "blue", "Rename", lambda idx=i: self.start_renaming(idx), font_preset="normal")
 
                 self.elements.append(btn_rename)
+
+            if is_tactical_other:
+                for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename]:
+                    b.disabled = True
+                    b.color = b.hover_color = c.UI_COLORS["grey"]
             
             display_index += 1
 

@@ -497,6 +497,17 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
     return True
 
+def get_tactical_speed(unit, unit_library):
+    """Calculates the effective speed of a unit in tactical mode."""
+    u_type = unit.get("original_type", unit.get("type"))
+    uses_oil = unit_library.get(u_type, {}).get("cost_fuel", 0) > 0
+    return unit.get("speed", 1) + (1 if uses_oil else 0)
+
+def get_tactical_fuel_cost_per_tile(unit, fuel_inc, unit_library):
+    """Calculates the fuel cost per tile moved in tactical mode."""
+    calc_speed = get_tactical_speed(unit, unit_library)
+    return math.ceil(fuel_inc / (calc_speed * 0.66)) if calc_speed > 0 else 0
+
 # ==========================================
 # PROVINCE & TECH QUERIES
 # ==========================================
@@ -912,7 +923,7 @@ def get_resource_hud_strings(map_screen, include_net=False):
         stats = get_unit_library().get(u_type, {})
         max_man = c.TACTICAL_MAX_MANPOWER
         max_mat = stats.get("cost_materials", 9999)
-        max_fuel = (stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]) * 2
+        max_fuel = stats.get("cost_fuel", 0)
         
         return [
             (f"Manpower: {p_man}/{int(max_man)}{str_man}", man_color),
