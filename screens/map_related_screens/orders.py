@@ -13,7 +13,7 @@ from map_logic.rendering import overlay_renderer
 
 class Orders_Screen(GameState):
     PANEL_X = 80
-    PANEL_WIDTH = 380
+    PANEL_WIDTH = 540
     PANEL_TRANSPARENCY = 255
     bottom_vanish_y = 20
 
