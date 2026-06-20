@@ -183,7 +183,6 @@ class Declare_War_Screen(GameState):
     def additional_draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -379,7 +378,6 @@ class Claims_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
 
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         # Draw territorial highlights
@@ -808,7 +806,6 @@ class Peace_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         # --- DRAW MAP PREVIEW HIGHLIGHTS ---
@@ -883,7 +880,6 @@ class View_Peace_Treaty_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         p_color = self.map_screen.nation_colors.get(self.proposer, (0, 255, 0))
@@ -1099,7 +1095,6 @@ class Trade_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1283,7 +1278,6 @@ class Puppets_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
         
         overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1473,7 +1467,6 @@ class Create_Integrated_Puppet_Screen(GameState):
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         # Highlight queued core provinces

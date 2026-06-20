@@ -211,7 +211,6 @@ class Faction_Territories_Screen(GameState):
         self.map_screen.base_layer = "FACTION_TERRITORIES"
         self.map_screen.active_map = self.map_screen.faction_territories_map
         
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
         
         self.map_screen.base_layer = prev_layer

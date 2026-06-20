@@ -570,7 +570,6 @@ class Orders_Screen(GameState):
         if not self.map_screen or not self.target_province: 
             return
 
-        # Use our new DRY helper!
         self.map_screen.draw_clean_map_background(surface)
 
         province_select.draw_province_select(self.map_screen, surface)
