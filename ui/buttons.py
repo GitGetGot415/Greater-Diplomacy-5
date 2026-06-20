@@ -284,6 +284,16 @@ def update_button_states(map_screen):
         if getattr(map_screen, 'tactical_mode', False):
             map_screen.btn_gp_faction.disabled = True
             map_screen.btn_gp_puppets.disabled = True
+            map_screen.btn_gp_edit.disabled = True
+            
+            map_screen.btn_gp_faction.color = map_screen.btn_gp_faction.hover_color = c.UI_COLORS["grey"]
+            map_screen.btn_gp_puppets.color = map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["grey"]
+            map_screen.btn_gp_edit.color = map_screen.btn_gp_edit.hover_color = c.UI_COLORS["grey"]
+        else:
+            if bool(my_faction):
+                map_screen.btn_gp_faction.color = map_screen.btn_gp_faction.hover_color = c.UI_COLORS["pink"]
+            map_screen.btn_gp_puppets.color = map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["pink"]
+            map_screen.btn_gp_edit.color = map_screen.btn_gp_edit.hover_color = c.UI_COLORS["pink"]
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
@@ -324,15 +334,20 @@ def update_button_states(map_screen):
             has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
             terrain = map_screen.selected_province.get("terrain", "")
             is_land = terrain not in c.WATER_TERRAINS
+            is_tactical = getattr(map_screen, 'tactical_mode', False)
 
             if owner == map_screen.player_country:
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
-                set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
+                
+                if is_tactical:
+                    set_btn(map_screen.btn_go_production, True, False, "Tactical: Disabled", "grey")
+                else:
+                    set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
 
             elif queries.is_playable(owner, map_screen.nation_data):
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
                 
-                if getattr(map_screen, 'tactical_mode', False):
+                if is_tactical:
                     # Disable all foreign interactions
                     set_btn(map_screen.btn_declare_war, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_join_wars, True, False, "Tactical: Disabled", "grey")

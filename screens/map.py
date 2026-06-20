@@ -237,7 +237,21 @@ class Map(GameState):
     
     @property
     def player_fuel(self): 
-        if self.tactical_mode: return self.unit_economy.get("fuel", 0)
+        if getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None):
+            base_fuel = self.unit_economy.get("fuel", 0)
+            u = self.player_unit
+            order = u.get("order")
+            path = order.get("path", []) if isinstance(order, dict) else []
+            if path:
+                u_type = u.get("original_type", u.get("type"))
+                from data import queries
+                uses_oil = queries.get_unit_library().get(u_type, {}).get("cost_fuel", 0) > 0
+                calc_speed = u.get("speed", 1) + (1 if uses_oil else 0)
+                immediate_steps = min(len(path), calc_speed)
+                fuel_inc = self.unit_economy.get("fuel_inc", 0)
+                cost_per_tile = fuel_inc / calc_speed if calc_speed > 0 else 0
+                return max(0, base_fuel - (cost_per_tile * immediate_steps))
+            return base_fuel
         return self.nation_data.get(self.player_country, {}).get("fuel", 0)
 
     def set_camera_tilt(self, val):

@@ -29,19 +29,10 @@ class Research_Screen(GameState):
         self.setup_nodes()
 
     def handle_events(self, events):
-        if getattr(self.map_screen, 'tactical_mode', False):
-            for event in events:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Let them exit or change tabs, but block modal interactions
-                    clicked_back = self.elements and self.elements[0].rect.collidepoint(event.pos)
-                    if clicked_back:
-                        self.exit_to_map()
-                    elif self.active_modal:
-                        self.map_screen.show_feedback("Tactical Mode: Cannot alter national research.")
-                        self.close_modal()
-            # Allow pure scrolling logic to pass through
-            self.additional_events(events[0]) if events else None
-            return
+        for event in events:
+            for el in self.elements:
+                el.handle_event(event)
+            self.additional_events(event)
 
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
@@ -181,6 +172,8 @@ class Research_Screen(GameState):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
         res_levels = player_data.setdefault("research", {})
         queue = player_data.setdefault("research_queue", [])
+        
+        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
 
         if self.active_modal:
             st = self.active_modal["status"]
@@ -188,17 +181,20 @@ class Research_Screen(GameState):
             
             self.elements.append(Button(panel_x + 650, panel_y + 430, "small", "red", "Cancel", self.close_modal))
             
-            if st == "AVAILABLE":
-                if len(queue) >= 2:
-                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Slots Full", lambda: None))
-                else:
-                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "blue", "Start Research", self.modal_start_research))
-            elif st == "RESEARCHING":
-                self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "orange", "Pause", self.modal_pause_research))
-            elif st == "LOCKED":
-                self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "red", "Missing Reqs", lambda: None))
-            elif st == "COMPLETED":
-                self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "green", "Researched", lambda: None))
+            if is_tactical:
+                self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Tactical: Read Only", lambda: None))
+            else:
+                if st == "AVAILABLE":
+                    if len(queue) >= 2:
+                        self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Slots Full", lambda: None))
+                    else:
+                        self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "blue", "Start Research", self.modal_start_research))
+                elif st == "RESEARCHING":
+                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "orange", "Pause", self.modal_pause_research))
+                elif st == "LOCKED":
+                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "red", "Missing Reqs", lambda: None))
+                elif st == "COMPLETED":
+                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "green", "Researched", lambda: None))
             return
         
         self.elements.append(Button(20, 10, "small", "red", "Exit", self.exit_to_map))

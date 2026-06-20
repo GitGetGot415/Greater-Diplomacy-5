@@ -12,17 +12,29 @@ def draw_bottom_text(map_screen, surface):
 
     hud_y = c.SCREEN_HEIGHT - c.RESOURCE_HUD_HEIGHT_OFFSET
     
-    # Cache logic to prevent calculating economy 60 times a second
-    if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
-        map_screen.econ_cache = queries.get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
-        map_screen.econ_cache_time = pygame.time.get_ticks()
+    # --- TACTICAL ECONOMY OVERRIDE ---
+    if getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None):
+        u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+        stats = queries.get_unit_library().get(u_type, {})
         
-    cached_data = map_screen.econ_cache
-    if cached_data and len(cached_data) == 3:
-        total_inc, total_upkeep, _ = cached_data
-    else:
-        total_inc = {"manpower": 0, "materials": 0, "fuel": 0}
+        total_inc = {
+            "manpower": stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"],
+            "materials": stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"],
+            "fuel": stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+        }
         total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
+    else:
+        # Cache logic to prevent calculating economy 60 times a second
+        if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
+            map_screen.econ_cache = queries.get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
+            map_screen.econ_cache_time = pygame.time.get_ticks()
+            
+        cached_data = map_screen.econ_cache
+        if cached_data and len(cached_data) == 3:
+            total_inc, total_upkeep, _ = cached_data
+        else:
+            total_inc = {"manpower": 0, "materials": 0, "fuel": 0}
+            total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
 
     def fmt_net(inc, exp):
         net = int(inc - exp)

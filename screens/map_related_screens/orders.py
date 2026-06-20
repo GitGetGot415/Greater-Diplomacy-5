@@ -71,7 +71,12 @@ class Orders_Screen(GameState):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
         
         units = self.target_province.get("units", [])
-        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        
+        if is_tactical:
+            player_units = [u for u in units if u is self.map_screen.player_unit]
+        else:
+            player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         
         total_content_h = len(player_units) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
@@ -93,6 +98,9 @@ class Orders_Screen(GameState):
         display_index = 0
         for i, unit in enumerate(units):
             if unit.get("owner") != self.map_screen.player_country:
+                continue
+                
+            if is_tactical and unit is not self.map_screen.player_unit:
                 continue
                 
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
@@ -158,7 +166,10 @@ class Orders_Screen(GameState):
                 if order_type == "DISBAND":
                     btn_disband = Button(x_pos + 85, y_pos, "orders_panel_button_2", "red", "Cancel Disband", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
                 else:
-                    btn_disband = Button(x_pos + 85, y_pos, "orders_panel_button_2", "red", "Disband", lambda idx=i: self.disband_unit(idx), font_preset="normal")
+                    if is_tactical and unit is self.map_screen.player_unit:
+                        btn_disband = Button(x_pos + 85, y_pos, "orders_panel_button_2", "grey", "Cannot Disband", lambda: None, font_preset="normal")
+                    else:
+                        btn_disband = Button(x_pos + 85, y_pos, "orders_panel_button_2", "red", "Disband", lambda idx=i: self.disband_unit(idx), font_preset="normal")
                 
                 self.elements.append(btn_disband)
 
@@ -336,7 +347,11 @@ class Orders_Screen(GameState):
                 # Only scroll if mouse is over the orders panel
                 mx, my = pygame.mouse.get_pos()
                 units = self.target_province.get("units", [])
-                player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+                
+                if getattr(self.map_screen, 'tactical_mode', False):
+                    player_units = [u for u in units if u is self.map_screen.player_unit]
+                else:
+                    player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
                 
                 # Check for collision if units exist
                 if player_units:
@@ -359,7 +374,12 @@ class Orders_Screen(GameState):
         # Camera Controls (Zooming and Panning) 
         on_ui = False
         units = self.target_province.get("units", [])
-        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+        
+        if getattr(self.map_screen, 'tactical_mode', False):
+            player_units = [u for u in units if u is self.map_screen.player_unit]
+        else:
+            player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+            
         if player_units:
             bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
             if bg_rect.collidepoint(mx, my):
@@ -688,12 +708,11 @@ class Orders_Screen(GameState):
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         res_font = fonts.get("production_hud")
         resources = [
-            (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
-            (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),
-            (f"Fuel: {p_data.get('fuel', 0)}", (200, 100, 255))
+            (f"Manpower: {int(self.map_screen.player_manpower)}", (100, 200, 255)),
+            (f"Materials: {int(self.map_screen.player_materials)}", (180, 180, 180)),
+            (f"Fuel: {int(self.map_screen.player_fuel)}", (200, 100, 255))
         ]
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))

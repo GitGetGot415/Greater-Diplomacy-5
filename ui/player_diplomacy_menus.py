@@ -1187,12 +1187,11 @@ class Trade_Screen(GameState):
         pygame.draw.rect(surface, (30, 30, 30), hud_rect)
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         res_font = fonts.get("production_hud")
         resources = [
-            (f"Manpower: {p_data.get('manpower', 0)}", (100, 200, 255)),
-            (f"Materials: {p_data.get('materials', 0)}", (180, 180, 180)),
-            (f"Fuel: {p_data.get('fuel', 0)}", (200, 100, 255))
+            (f"Manpower: {int(self.map_screen.player_manpower)}", (100, 200, 255)),
+            (f"Materials: {int(self.map_screen.player_materials)}", (180, 180, 180)),
+            (f"Fuel: {int(self.map_screen.player_fuel)}", (200, 100, 255))
         ]
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
