@@ -44,8 +44,7 @@ def process_pinning(self):
         if not friendly_defenders: continue
         
         # Only top attackers deal damage
-        top_friendly_defenders = sorted(friendly_defenders, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-        total_defender_atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_friendly_defenders)
+        total_defender_atk = queries.get_group_attack_sum(friendly_defenders)
         
         hostile_attackers = [
             info for info in attackers_info
@@ -66,8 +65,7 @@ def process_pinning(self):
         if not attackers_survive:
             # 1. Attackers are obliterated. Apply their pitiful damage to the defenders.
             attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
-            top_suicide_attackers = sorted(attacker_units_only, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-            total_attacker_atk = sum(a_unit.get("attack", c.DEFAULT_UNIT_ATK) for a_unit in top_suicide_attackers)
+            total_attacker_atk = queries.get_group_attack_sum(attacker_units_only)
             apply_group_damage(total_attacker_atk, friendly_defenders)
             
             # 2. Kill the attackers and remove them from incoming_attacks
@@ -143,11 +141,8 @@ def process_meeting_engagements(self):
                                 queries.revert_transport(u)
                     
                     # Sort and cap attackers
-                    top_units1 = sorted(units1, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-                    top_units2 = sorted(units2, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS]
-                    
-                    atk1 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_units1)
-                    atk2 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_units2)
+                    atk1 = queries.get_group_attack_sum(units1)
+                    atk2 = queries.get_group_attack_sum(units2)
                     
                     apply_group_damage(atk2, units1)
                     apply_group_damage(atk1, units2)
@@ -193,9 +188,7 @@ def process_combat(self):
         
         # Sort and cap attackers for each side
         for owner in owners:
-            owner_units = sorted(sides[owner]["units"], key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)
-            top_attackers = owner_units[:c.MAX_COMBAT_ATTACKERS]
-            sides[owner]["total_atk"] = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in top_attackers)
+            sides[owner]["total_atk"] = queries.get_group_attack_sum(sides[owner]["units"])
 
         combat_occurred = False
         
@@ -231,7 +224,7 @@ def process_combat(self):
                         u["order"]["path"] = []
                 
                 # Immediately destroy warships caught in land combat
-                if is_land and queries.is_naval_unit(u.get("type", "")) and not u.get("type", "").startswith("Convoy"):
+                if is_land and queries.is_warship(u.get("type", "")):
                     u["health"] = 0
             
             # Filter dead ships out
@@ -323,7 +316,7 @@ def check_for_post_combat_captures(self):
             is_land = province.get("terrain") not in c.WATER_TERRAINS
             if is_land:
                 for u in units:
-                    if queries.is_naval_unit(u.get("type", "")) and not u.get("type", "").startswith("Convoy"):
+                    if queries.is_warship(u.get("type", "")):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
                         if queries.is_hostile_territory(capturer, u["owner"], self.nation_data):
                             u["health"] = 0

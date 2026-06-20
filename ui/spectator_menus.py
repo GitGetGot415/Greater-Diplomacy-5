@@ -45,74 +45,36 @@ def open_spectator_action_menu(map_screen, action_type):
     source_nation = map_screen.selected_province.get("owner")
     if source_nation in c.UNPLAYABLE_NATIONS: return
     
-    root, close_menu = queries.create_managed_tk_window(map_screen, f"{action_type} for {source_nation}", "300x450")
-
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            target_nation = lb.get(selection[0])
-            from map_logic.diplomacy import diplomacy_logic
-            from data import queries
-            
-            if action_type == "WAR":
-                diplomacy_logic.finalize_war(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Forced War: {source_nation} vs {target_nation}")
-            elif action_type == "PEACE":
-                diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
-            elif action_type == "JOIN_FACTION":
-                diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, target_nation, source_nation)
-                map_screen.show_feedback(f"Forced Join: {source_nation} joined {target_nation}")
-            elif action_type == "INVITE_FACTION":
-                diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
-                map_screen.show_feedback(f"Forced Invite: {target_nation} joined {source_nation}")
-                
-            map_screen.refresh_relations_map()
-            map_screen.refresh_factions_map()
-        close_menu()
-
-    import tkinter as tk
-    tk.Label(root, text=f"Select Target for {action_type}:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    # --- Dynamic filtering based on action type ---
     living_nations = queries.get_living_nations(map_screen.map_data)
-    
     if action_type == "JOIN_FACTION":
-        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_faction_leader") and n != source_nation])
+        items = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_faction_leader") and n != source_nation])
     elif action_type == "INVITE_FACTION":
-        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and not d.get("faction") and n != source_nation])
+        items = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and not d.get("faction") and n != source_nation])
     elif action_type == "WAR":
-        # Only show alive nations not currently at war with the source
         source_enemies = map_screen.nation_data[source_nation].get("at_war_with", [])
-        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation and n in living_nations and n not in source_enemies])
+        items = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation and n in living_nations and n not in source_enemies])
     elif action_type == "PEACE":
-        # Only show alive nations that are currently at war with the source
         source_enemies = map_screen.nation_data[source_nation].get("at_war_with", [])
-        nations = sorted([n for n in source_enemies if n in living_nations])
+        items = sorted([n for n in source_enemies if n in living_nations])
     else:
-        nations = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation])
+        items = sorted([n for n, d in map_screen.nation_data.items() if d.get("is_playable") and n != source_nation])
 
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    for n in nations:
-        lb.insert(tk.END, n)
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    tk.Button(root, text="Confirm", command=on_select, bg="#4CAF50", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
-    lb.bind('<Double-1>', on_select)
+    def cb(target_nation):
+        from map_logic.diplomacy import diplomacy_logic
+        if action_type == "WAR":
+            diplomacy_logic.finalize_war(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
+            map_screen.show_feedback(f"Forced War: {source_nation} vs {target_nation}")
+        elif action_type == "PEACE":
+            diplomacy_logic.finalize_neutral(map_screen.nation_data, source_nation, target_nation)
+            map_screen.show_feedback(f"Forced Peace: {source_nation} & {target_nation}")
+        elif action_type == "JOIN_FACTION":
+            diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, target_nation, source_nation)
+            map_screen.show_feedback(f"Forced Join: {source_nation} joined {target_nation}")
+        elif action_type == "INVITE_FACTION":
+            diplomacy_logic.finalize_faction_join(map_screen.map_data, map_screen.nation_data, source_nation, target_nation)
+            map_screen.show_feedback(f"Forced Invite: {target_nation} joined {source_nation}")
+            
+        map_screen.refresh_relations_map()
+        map_screen.refresh_factions_map()
 
-    queries.run_tk_loop(map_screen, root)
-
-    import pygame
-    while map_screen.menu_active:
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(c.CPU_LIMITER) # --- CPU LIMITER FIX ---
-        except:
-            break
+    queries.open_listbox_selector(map_screen, f"{action_type} for {source_nation}", f"Select Target for {action_type}:", items, cb)

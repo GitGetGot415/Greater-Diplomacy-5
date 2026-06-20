@@ -732,6 +732,31 @@ def is_constructing_building(province):
     return any(q.get("order_type") == "BUILDING" for q in province.get("building_queue", []))
 
 # ==========================================
+# UNIFIED COMBAT & RENDERING HELPERS
+# ==========================================
+
+def get_top_attackers(units, count=None):
+    """Returns the highest attack units in a list, capped at the provided limit."""
+    if count is None: count = c.MAX_COMBAT_ATTACKERS
+    return sorted(units, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:count]
+
+def get_group_attack_sum(units, count=None):
+    """Returns the total combined attack of the top units."""
+    return sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in get_top_attackers(units, count))
+
+def is_warship(unit_type):
+    """Returns True if the unit is a combat naval vessel."""
+    return is_naval_unit(unit_type) and not unit_type.startswith("Convoy")
+
+def get_wrapped_x(x1, x2, map_w, loop_map):
+    """Returns the modified x2 to account for shortest map wrap distance."""
+    if loop_map:
+        dx = x2 - x1
+        if dx > map_w / 2: return x2 - map_w
+        elif dx < -map_w / 2: return x2 + map_w
+    return x2
+
+# ==========================================
 # ECONOMY QUERIES
 # ==========================================
 
@@ -1885,6 +1910,36 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
 # ==========================================
 # TKINTER DIALOG HELPERS
 # ==========================================
+
+def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback, window_size="300x450"):
+    """Unified Tkinter listbox selection dialog for editor tools and spectators."""
+    import tkinter as tk
+    root, close_menu = create_managed_tk_window(game_state, title, window_size)
+    tk.Label(root, text=prompt, font=("Arial", 12)).pack(pady=10)
+    
+    frame = tk.Frame(root)
+    frame.pack(fill="both", expand=True, padx=10)
+    scrollbar = tk.Scrollbar(frame)
+    scrollbar.pack(side="right", fill="y")
+    
+    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
+    for item in items:
+        lb.insert(tk.END, item)
+    lb.pack(side="left", fill="both", expand=True)
+    scrollbar.config(command=lb.yview)
+    
+    def _on_select(event=None):
+        selection = lb.curselection()
+        if selection:
+            selected_val = lb.get(selection[0])
+            if selected_val != "----------":
+                on_confirm_callback(selected_val)
+        close_menu()
+        
+    tk.Button(root, text="Confirm Selection", command=_on_select, 
+              bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+    lb.bind('<Double-1>', _on_select)
+    run_tk_loop(game_state, root)
 
 def create_tk_window(title, geometry):
     """Standardizes the creation of floating editor tool windows."""

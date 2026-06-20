@@ -43,8 +43,8 @@ def draw_combat_bubbles(self_map, surface):
             side2 = pred["side2"]
             
             # Incorporate combat scaling rules here too
-            atk1 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(side1, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
-            atk2 = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(side2, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
+            atk1 = queries.get_group_attack_sum(side1)
+            atk2 = queries.get_group_attack_sum(side2)
             
             s1_owner = side1[0]["owner"] if side1 else ""
             s2_owner = side2[0]["owner"] if side2 else ""
@@ -67,7 +67,7 @@ def draw_combat_bubbles(self_map, surface):
                 involved = True
                 for owner, units in forces.items():
                     # Incorporate combat scaling rules
-                    atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in sorted(units, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:c.MAX_COMBAT_ATTACKERS])
+                    atk = queries.get_group_attack_sum(units)
                     if owner in friendly_present:
                         friendly_atk += atk
                     else:
@@ -178,12 +178,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
         p2 = list(n2["center"])
 
         # Account for map wrap to get the shortest continuous distance
-        if map_screen.loop_map:
-            world_dx = p2[0] - p1[0]
-            if world_dx > map_screen.map_w / 2:
-                p2[0] -= map_screen.map_w
-            elif world_dx < -map_screen.map_w / 2:
-                p2[0] += map_screen.map_w
+        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
 
         for offset in offsets:
             # 1. Get the actual tilted screen coordinates for final placement
@@ -247,12 +242,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
         is_last = (i == len(nodes) - 1)
 
         # Apply the exact same map wrap logic to the endpoints
-        if map_screen.loop_map:
-            world_dx = p2[0] - p1[0]
-            if world_dx > map_screen.map_w / 2:
-                p2[0] -= map_screen.map_w
-            elif world_dx < -map_screen.map_w / 2:
-                p2[0] += map_screen.map_w
+        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
 
         for offset in offsets:
             start_pos = queries.world_to_screen(p1, map_screen, offset)

@@ -23,142 +23,33 @@ def editor_load_map(self):
 
 def select_brush_nation(self):
     """Opens a Tkinter selection window and sets mode to NATION."""
-    root, close_menu = queries.create_managed_tk_window(self, "Select Nation", "300x450")
-    
-    tk.Label(root, text="Select Paint Nation:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
     nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    
-    lb.insert(tk.END, "Unclaimed")
-    lb.insert(tk.END, "The Rot")
-    lb.insert(tk.END, "----------")
-
-    for n in nations:
-        if n in ["Unclaimed", "The Rot"]:
-            continue
-        if n not in c.UNPLAYABLE_NATIONS or n in ["None"]:
-            lb.insert(tk.END, n)
-            
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            selected_val = lb.get(selection[0])
-            
-            if selected_val == "----------":
-                lb.selection_clear(selection[0])
-                return
-                
-            self.brush_nation = selected_val
-            self.editor_mode = "NATION" 
-            self.show_feedback(f"Brush: {self.brush_nation}")
-        close_menu()
-
-    tk.Button(root, text="Confirm Selection", command=on_select, 
-              bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-    queries.run_tk_loop(self, root)
+    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+    def cb(val):
+        self.brush_nation = val
+        self.editor_mode = "NATION" 
+        self.show_feedback(f"Brush: {self.brush_nation}")
+    queries.open_listbox_selector(self, "Select Nation", "Select Paint Nation:", items, cb)
 
 def select_core_brush(self):
     """Opens a Tkinter selection window and sets mode to CORE."""
-    root, close_menu = queries.create_managed_tk_window(self, "Select Core Nation", "300x450")
-    tk.Label(root, text="Select Nation to Add Cores:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
     nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    
-    lb.insert(tk.END, "Unclaimed")
-    lb.insert(tk.END, "The Rot")
-    lb.insert(tk.END, "----------")
-
-    for n in nations:
-        if n in ["Unclaimed", "The Rot"]:
-            continue
-        if n not in c.UNPLAYABLE_NATIONS or n in ["None"]:
-            lb.insert(tk.END, n)
-            
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            selected_val = lb.get(selection[0])
-            if selected_val == "----------":
-                lb.selection_clear(selection[0])
-                return
-                
-            self.brush_nation = selected_val
-            self.editor_mode = "CORE" 
-            self.show_feedback(f"Core Brush: {self.brush_nation}")
-        close_menu()
-
-    tk.Button(root, text="Confirm Selection", command=on_select, 
-              bg="#FF69B4", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-    queries.run_tk_loop(self, root)
-
+    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+    def cb(val):
+        self.brush_nation = val
+        self.editor_mode = "CORE" 
+        self.show_feedback(f"Core Brush: {self.brush_nation}")
+    queries.open_listbox_selector(self, "Select Core Nation", "Select Nation to Add Cores:", items, cb)
 
 def select_claim_brush(self):
     """Opens a Tkinter selection window and sets mode to CLAIM."""
-    root, close_menu = queries.create_managed_tk_window(self, "Select Claim Nation", "300x450")
-    tk.Label(root, text="Select Nation to Add Claims:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
     nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    
-    lb.insert(tk.END, "Unclaimed")
-    lb.insert(tk.END, "The Rot")
-    lb.insert(tk.END, "----------")
-
-    for n in nations:
-        if n in ["Unclaimed", "The Rot"]:
-            continue
-        if n not in c.UNPLAYABLE_NATIONS or n in ["None"]:
-            lb.insert(tk.END, n)
-            
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            selected_val = lb.get(selection[0])
-            if selected_val == "----------":
-                lb.selection_clear(selection[0])
-                return
-                
-            self.brush_nation = selected_val
-            self.editor_mode = "CLAIM" 
-            self.show_feedback(f"Claim Brush: {self.brush_nation}")
-        close_menu()
-
-    tk.Button(root, text="Confirm Selection", command=on_select, 
-              bg="#FF8800", fg="black", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-    queries.run_tk_loop(self, root)
-
+    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+    def cb(val):
+        self.brush_nation = val
+        self.editor_mode = "CLAIM" 
+        self.show_feedback(f"Claim Brush: {self.brush_nation}")
+    queries.open_listbox_selector(self, "Select Claim Nation", "Select Nation to Add Claims:", items, cb)
 
 def open_editor_claims(self):
     """Opens a Tkinter window listing every claim on the map."""
@@ -210,71 +101,24 @@ def open_editor_claims(self):
 
 def select_building_brush(self):
     """Opens a selection window for building types and sets mode to BUILDING."""
-    root, close_menu = queries.create_managed_tk_window(self, "Select Building", "300x400")
-
     bldg_lib = queries.get_building_library()
-    buildings = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
-
-    tk.Label(root, text="Select Building to Place:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    for b in buildings:
-        lb.insert(tk.END, b)
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.brush_building = lb.get(selection[0])
-            self.editor_mode = "BUILDING"
-            self.show_feedback(f"Brush: {self.brush_building}")
-        close_menu()
-
-    tk.Button(root, text="Confirm Selection", command=on_select, 
-              bg="#2196F3", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-    queries.run_tk_loop(self, root)
+    items = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
+    def cb(val):
+        self.brush_building = val
+        self.editor_mode = "BUILDING"
+        self.show_feedback(f"Brush: {self.brush_building}")
+    queries.open_listbox_selector(self, "Select Building", "Select Building to Place:", items, cb)
 
 def spec_select_edit_country(self):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
-    active_countries = queries.get_living_nations(self.map_data)
-    if not active_countries:
+    items = sorted(queries.get_living_nations(self.map_data))
+    if not items:
         self.show_feedback("No active countries on map!")
         return
-
-    root, close_menu = queries.create_managed_tk_window(self, "Select Nation to Edit", "300x450")
-    tk.Label(root, text="Select Nation to Edit:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    for n in sorted(active_countries):
-        lb.insert(tk.END, n)
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.editing_country = lb.get(selection[0])
-            self.next_state, self.done = "EDIT_COUNTRY", True
-        close_menu()
-
-    tk.Button(root, text="Edit Country", command=on_select, 
-              bg="#FF9800", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-
-    lb.bind('<Double-1>', on_select)
-    queries.run_tk_loop(self, root)
+    def cb(val):
+        self.editing_country = val
+        self.next_state, self.done = "EDIT_COUNTRY", True
+    queries.open_listbox_selector(self, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
 
 def open_editor_date(self):
     """Opens a Tkinter window to edit the game's starting date."""
@@ -706,35 +550,12 @@ def open_map_research_editor(self):
 
 def select_unit_brush(self):
     """Opens a selection window for unit types and sets mode to UNIT."""
-    root, close_menu = queries.create_managed_tk_window(self, "Select Unit", "300x400")
-
-    units = list(queries.get_unit_library().keys())
-
-    tk.Label(root, text="Select Unit to Place:", font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    for u in ["None"] + units:
-        lb.insert(tk.END, u)
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            self.brush_unit = lb.get(selection[0])
-            self.editor_mode = "UNIT"
-            self.show_feedback(f"Brush: {self.brush_unit}")
-        close_menu()
-
-    tk.Button(root, text="Confirm Selection", command=on_select, bg="#f44336", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
-    lb.bind('<Double-1>', on_select)
-
-    queries.run_tk_loop(self, root)
+    items = ["None"] + list(queries.get_unit_library().keys())
+    def cb(val):
+        self.brush_unit = val
+        self.editor_mode = "UNIT"
+        self.show_feedback(f"Brush: {self.brush_unit}")
+    queries.open_listbox_selector(self, "Select Unit", "Select Unit to Place:", items, cb)
 
 def select_resource_brush(self):
     """Opens a selection window for resource types and amounts."""

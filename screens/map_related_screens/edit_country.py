@@ -244,55 +244,20 @@ class Edit_Country_Screen(GameState):
 
     def open_switch_appearance_menu(self):
         """Opens a floating Tkinter tree configuration list to copy assets from another nation."""
-        import tkinter as tk
-
-        root = queries.create_tk_window("Switch Appearance Profile", "300x450")
-        self.menu_active = True
-
-        def close_menu():
-            self.menu_active = False
-            root.destroy()
-
-        root.protocol("WM_DELETE_WINDOW", close_menu)
-        tk.Label(root, text="Select Target Country look:", font=("Arial", 12)).pack(pady=10)
-        
-        frame = tk.Frame(root)
-        frame.pack(fill="both", expand=True, padx=10)
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill="y")
-        
-        countries = sorted(list(self.map_screen.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower()) # <-- Modified line
-        lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-        for country in countries:
-            if country not in c.UNPLAYABLE_NATIONS:
-                lb.insert(tk.END, country)
-        lb.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=lb.yview)
-        
-        def on_select(event=None):
-            selection = lb.curselection()
-            if selection:
-                chosen_country = lb.get(selection[0])
-                src_data = self.map_screen.nation_data[chosen_country]
-                
-                # Transfer textural profile definitions
-                self.country_name = src_data.get("name", chosen_country)
-                self.leader_name = src_data.get("leader_name", "")
-                self.leader_title = src_data.get("leader_title", "")
-                self.new_map_color = list(src_data.get("color", [150, 150, 150]))
-                
-                # Fetch asset matrices safely into local storage caches
-                self.flag_surf = queries.decode_b64_to_surf(src_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=chosen_country)
-                self.portrait_surf = queries.decode_b64_to_surf(src_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=chosen_country)
-                
-                self.save_state()
-                self.map_screen.show_feedback(f"Appearance copied from {chosen_country}!")
-            close_menu()
-
-        tk.Button(root, text="Apply Configuration", command=on_select, bg="#FF9800", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-        lb.bind('<Double-1>', on_select)
-
-        queries.run_tk_loop(self, root)
+        items = [n for n in sorted(list(self.map_screen.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower()) if n not in c.UNPLAYABLE_NATIONS]
+        def cb(chosen_country):
+            src_data = self.map_screen.nation_data[chosen_country]
+            self.country_name = src_data.get("name", chosen_country)
+            self.leader_name = src_data.get("leader_name", "")
+            self.leader_title = src_data.get("leader_title", "")
+            self.new_map_color = list(src_data.get("color", [150, 150, 150]))
+            
+            self.flag_surf = queries.decode_b64_to_surf(src_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=chosen_country)
+            self.portrait_surf = queries.decode_b64_to_surf(src_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=chosen_country)
+            
+            self.save_state()
+            self.map_screen.show_feedback(f"Appearance copied from {chosen_country}!")
+        queries.open_listbox_selector(self, "Switch Appearance Profile", "Select Target Country look:", items, cb)
 
     def save_and_exit(self):
         p_data = self.map_screen.nation_data[self.editing_country]
@@ -447,15 +412,39 @@ class Edit_Country_Screen(GameState):
                     elif self.active_input == "TITLE":
                         self.leader_title, _ = process_text_input(event, self.leader_title, max_length=50)
 
+    def _draw_popup(self, surface, title_text, sub_text, yes_text, no_text):
+        overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        box_rect = pygame.Rect(0, 0, 450, 200)
+        box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
+        pygame.draw.rect(surface, (60, 20, 20), box_rect)
+        pygame.draw.rect(surface, (255, 50, 50), box_rect, 3)
+
+        msg = fonts.get("heading2").render(title_text, True, (255, 255, 255))
+        surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
+
+        sub_msg = fonts.get("normal").render(sub_text, True, (200, 200, 200))
+        surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
+
+        yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
+        no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 140, 100, 40)
+
+        mx, my = pygame.mouse.get_pos()
+        pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
+        pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
+
+        btn_font = fonts.get("button")
+        surface.blit(btn_font.render(yes_text, True, (255, 255, 255)), yes_font := btn_font.render(yes_text, True, (255, 255, 255)).get_rect(center=yes_rect.center))
+        surface.blit(btn_font.render(no_text, True, (255, 255, 255)), no_font := btn_font.render(no_text, True, (255, 255, 255)).get_rect(center=no_rect.center))
+
     def additional_draw(self, surface):
         title_font = fonts.get("title")
         heading_font = fonts.get("heading2")
         normal_font = fonts.get("normal")
 
         surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), (c.EDIT_COUNTRY_TITLE_X, c.EDIT_COUNTRY_TITLE_Y))
-
-        # Render Scaled Canvases
-        scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))
 
         # Render Scaled Canvases
         scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))
@@ -513,67 +502,10 @@ class Edit_Country_Screen(GameState):
         draw_input_box(575, "Leader Name:", "NAME", self.leader_name)
         draw_input_box(650, "Leader Title:", "TITLE", self.leader_title)
 
-        # --- DRAW RESET CONFIRMATION POPUP ---
         if self.resetting_type:
-            overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 180))
-            surface.blit(overlay, (0, 0))
-
-            box_rect = pygame.Rect(0, 0, 450, 200)
-            box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
-            pygame.draw.rect(surface, (60, 20, 20), box_rect)
-            pygame.draw.rect(surface, (255, 50, 50), box_rect, 3)
-
-            msg = heading_font.render(f"Reset {self.resetting_type.title()} to Default?", True, (255, 255, 255))
-            surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
-
-            sub_msg = normal_font.render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
-            surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
-
-            yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
-            no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 140, 100, 40)
-
-            mx, my = pygame.mouse.get_pos()
-            pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
-            pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
-
-            btn_font = fonts.get("button")
-            yes_txt = btn_font.render("YES", True, (255, 255, 255))
-            no_txt = btn_font.render("NO", True, (255, 255, 255))
-            
-            surface.blit(yes_txt, yes_txt.get_rect(center=yes_rect.center))
-            surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
-
-        # --- DRAW UNSAVED CONFIRMATION POPUP ---
+            self._draw_popup(surface, f"Reset {self.resetting_type.title()} to Default?", "Press Enter to Confirm or Esc to Cancel", "YES", "NO")
         if self.show_unsaved_confirmation:
-            overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 180))
-            surface.blit(overlay, (0, 0))
-
-            box_rect = pygame.Rect(0, 0, 450, 200)
-            box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
-            pygame.draw.rect(surface, (60, 20, 20), box_rect)
-            pygame.draw.rect(surface, (255, 50, 50), box_rect, 3)
-
-            msg = heading_font.render("Discard Unsaved Changes?", True, (255, 255, 255))
-            surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
-
-            sub_msg = normal_font.render("Press Enter to Discard or Esc to Cancel", True, (200, 200, 200))
-            surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
-
-            yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
-            no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 140, 100, 40)
-
-            mx, my = pygame.mouse.get_pos()
-            pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
-            pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
-
-            btn_font = fonts.get("button")
-            yes_txt = btn_font.render("DISCARD", True, (255, 255, 255))
-            no_txt = btn_font.render("CANCEL", True, (255, 255, 255))
-            
-            surface.blit(yes_txt, yes_txt.get_rect(center=yes_rect.center))
-            surface.blit(no_txt, no_txt.get_rect(center=no_rect.center))
+            self._draw_popup(surface, "Discard Unsaved Changes?", "Press Enter to Discard or Esc to Cancel", "DISCARD", "CANCEL")
 
         # --- Draw Original Key Country ID block ---
         id_display_x = c.EDIT_COUNTRY_ID_DISPLAY_X
