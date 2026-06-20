@@ -486,15 +486,28 @@ def draw_unit_icon(self, surface, sx, sy, province):
     # Start drawing from the top of the stack and move down
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
-    # --- NEW: Sort owners by Total HP descending ---
+    # --- NEW: Sort owners by Total HP descending, but keep Player Tactical Unit on top ---
+    is_tactical = getattr(self, 'tactical_mode', False)
+    player_unit = getattr(self, 'player_unit', None)
+    
+    def get_owner_sort_weight(o):
+        if is_tactical and player_unit in units_by_owner[o]:
+            return (1, 0)
+        return (0, sum(u.get("health", 0) for u in units_by_owner[o]))
+
     sorted_owners = sorted(
         units_by_owner.keys(), 
-        key=lambda o: (-sum(u.get("health", 0) for u in units_by_owner[o]), o)
+        key=lambda o: get_owner_sort_weight(o),
+        reverse=True
     )
 
     for owner in sorted_owners:
         owner_units = units_by_owner[owner]
-        best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(owner_units)
+        
+        if is_tactical and player_unit in owner_units:
+            best_unit = player_unit
+        else:
+            best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(owner_units)
         
         if not best_unit:
             continue

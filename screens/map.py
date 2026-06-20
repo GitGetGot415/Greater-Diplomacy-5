@@ -234,7 +234,7 @@ class Map(GameState):
     def player_materials(self): 
         if self.tactical_mode: return self.unit_economy.get("materials", 0)
         return self.nation_data.get(self.player_country, {}).get("materials", 0)
-    
+
     @property
     def player_fuel(self): 
         if getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None):
@@ -245,11 +245,12 @@ class Map(GameState):
             if path:
                 u_type = u.get("original_type", u.get("type"))
                 from data import queries
+                import math
                 uses_oil = queries.get_unit_library().get(u_type, {}).get("cost_fuel", 0) > 0
                 calc_speed = u.get("speed", 1) + (1 if uses_oil else 0)
                 immediate_steps = min(len(path), calc_speed)
                 fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                cost_per_tile = fuel_inc / calc_speed if calc_speed > 0 else 0
+                cost_per_tile = math.ceil(fuel_inc / (calc_speed * 0.66)) if calc_speed > 0 else 0
                 return max(0, base_fuel - (cost_per_tile * immediate_steps))
             return base_fuel
         return self.nation_data.get(self.player_country, {}).get("fuel", 0)

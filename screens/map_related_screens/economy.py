@@ -70,6 +70,12 @@ class Economy_Screen(GameState):
             total_inc = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
             upkeep = {"manpower": 0, "materials": 0, "fuel": 0} 
             breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
+            
+            max_res = {
+                "manpower": c.TACTICAL_MAX_MANPOWER,
+                "materials": stats.get("cost_materials", 9999),
+                "fuel": inc_fuel * 2
+            }
         else:
             # Cache the economy to prevent 60 FPS global recalculations
             current_sliders = (p_data.get("conscription_slider", 1.0), p_data.get("mat_to_fuel_slider", 0.0))
@@ -109,7 +115,11 @@ class Economy_Screen(GameState):
             pygame.draw.rect(surface, (100, 100, 100), row_rect, 1)
             
             # Current Resource Amount
-            surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
+            if is_tactical:
+                max_val = max_res.get(res_key, 0)
+                surface.blit(font_large.render(f"{name}: {int(current)}/{int(max_val)}", True, color), (row_rect.x + 20, row_rect.y + 15))
+            else:
+                surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
             
             if is_tactical:
                 main_breakdown = f"Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"

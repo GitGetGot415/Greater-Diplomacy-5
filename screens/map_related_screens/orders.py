@@ -709,11 +709,8 @@ class Orders_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         res_font = fonts.get("production_hud")
-        resources = [
-            (f"Manpower: {int(self.map_screen.player_manpower)}", (100, 200, 255)),
-            (f"Materials: {int(self.map_screen.player_materials)}", (180, 180, 180)),
-            (f"Fuel: {int(self.map_screen.player_fuel)}", (200, 100, 255))
-        ]
+        
+        resources = queries.get_resource_hud_strings(self.map_screen, include_net=False)
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
 

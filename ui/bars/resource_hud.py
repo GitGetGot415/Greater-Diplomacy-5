@@ -11,40 +11,8 @@ def draw_bottom_text(map_screen, surface):
         return
 
     hud_y = c.SCREEN_HEIGHT - c.RESOURCE_HUD_HEIGHT_OFFSET
-    
-    # --- TACTICAL ECONOMY OVERRIDE ---
-    if getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None):
-        u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
-        stats = queries.get_unit_library().get(u_type, {})
-        
-        total_inc = {
-            "manpower": stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"],
-            "materials": stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"],
-            "fuel": stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
-        }
-        total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
-    else:
-        # Cache logic to prevent calculating economy 60 times a second
-        if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
-            map_screen.econ_cache = queries.get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
-            map_screen.econ_cache_time = pygame.time.get_ticks()
-            
-        cached_data = map_screen.econ_cache
-        if cached_data and len(cached_data) == 3:
-            total_inc, total_upkeep, _ = cached_data
-        else:
-            total_inc = {"manpower": 0, "materials": 0, "fuel": 0}
-            total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
 
-    def fmt_net(inc, exp):
-        net = int(inc - exp)
-        return f"+{net}" if net >= 0 else str(net)
-
-    resources = [
-        (f"Manpower: {int(map_screen.player_manpower)} ({fmt_net(total_inc['manpower'], total_upkeep['manpower'])})", (100, 200, 255)),
-        (f"Materials: {int(map_screen.player_materials)} ({fmt_net(total_inc['materials'], total_upkeep['materials'])})", (180, 180, 180)),
-        (f"Fuel: {int(map_screen.player_fuel)} ({fmt_net(total_inc['fuel'], total_upkeep['fuel'])})", (200, 100, 255))
-    ]
+    resources = queries.get_resource_hud_strings(map_screen, include_net=True)
     
     # Draw Background Box
     bg_width = (len(resources) * c.RESOURCE_HUD_SPACING) - 40

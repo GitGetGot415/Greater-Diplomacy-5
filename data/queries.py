@@ -863,6 +863,69 @@ def calculate_all_economies(map_data, nation_data):
 
     return econ_data
 
+def get_resource_hud_strings(map_screen, include_net=False):
+    """Generates unified resource tracking strings and colors for all UI HUDs."""
+    is_tactical = getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None)
+    
+    man_color = (100, 200, 255)
+    mat_color = (180, 180, 180)
+    fuel_color = (200, 100, 255)
+    
+    p_man = int(map_screen.player_manpower)
+    p_mat = int(map_screen.player_materials)
+    p_fuel = int(map_screen.player_fuel)
+    
+    str_man = str_mat = str_fuel = ""
+    
+    if include_net:
+        def fmt_net(inc, exp):
+            net = int(inc - exp)
+            return f"+{net}" if net >= 0 else str(net)
+            
+        if is_tactical:
+            u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+            stats = get_unit_library().get(u_type, {})
+            inc_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
+            inc_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
+            inc_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+            
+            total_inc = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
+            total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
+        else:
+            if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
+                map_screen.econ_cache = get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
+                map_screen.econ_cache_time = pygame.time.get_ticks()
+                
+            cached_data = map_screen.econ_cache
+            if cached_data and len(cached_data) == 3:
+                total_inc, total_upkeep, _ = cached_data
+            else:
+                total_inc = {"manpower": 0, "materials": 0, "fuel": 0}
+                total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
+
+        str_man = f" ({fmt_net(total_inc['manpower'], total_upkeep['manpower'])})"
+        str_mat = f" ({fmt_net(total_inc['materials'], total_upkeep['materials'])})"
+        str_fuel = f" ({fmt_net(total_inc['fuel'], total_upkeep['fuel'])})"
+
+    if is_tactical:
+        u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+        stats = get_unit_library().get(u_type, {})
+        max_man = c.TACTICAL_MAX_MANPOWER
+        max_mat = stats.get("cost_materials", 9999)
+        max_fuel = (stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]) * 2
+        
+        return [
+            (f"Manpower: {p_man}/{int(max_man)}{str_man}", man_color),
+            (f"Materials: {p_mat}/{int(max_mat)}{str_mat}", mat_color),
+            (f"Fuel: {p_fuel}/{int(max_fuel)}{str_fuel}", fuel_color)
+        ]
+    else:
+        return [
+            (f"Manpower: {p_man}{str_man}", man_color),
+            (f"Materials: {p_mat}{str_mat}", mat_color),
+            (f"Fuel: {p_fuel}{str_fuel}", fuel_color)
+        ]
+
 def get_economy_projections(target_nation, map_data, nation_data):
     """Pulls a specific nation's UI data from the unified calculator."""
     all_econ = calculate_all_economies(map_data, nation_data)
