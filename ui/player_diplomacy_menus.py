@@ -1034,10 +1034,9 @@ class Trade_Screen(GameState):
         self.done = True
 
     def cancel_trade(self):
-        # Refund any held resources
+        # Refund any held resources cleanly
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        p_data["materials"] = p_data.get("materials", 0) + self.escrow_mats
-        p_data["fuel"] = p_data.get("fuel", 0) + self.escrow_fuel
+        queries.cancel_trade_escrow(p_data, {"give_materials": self.escrow_mats, "give_fuel": self.escrow_fuel})
         self.done = True
 
     def handle_events(self, events):

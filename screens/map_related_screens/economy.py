@@ -68,11 +68,7 @@ class Economy_Screen(GameState):
             u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
             stats = queries.get_unit_library().get(u_type, {})
             
-            inc_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-            inc_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-            inc_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
-
-            total_inc = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
+            total_inc = queries.get_unit_upkeep(stats)
             upkeep = {"manpower": 0, "materials": 0, "fuel": 0} 
             breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
             

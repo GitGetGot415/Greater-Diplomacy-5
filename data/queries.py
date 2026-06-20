@@ -79,7 +79,9 @@ def get_visible_provinces(map_screen):
                 
                 while queue:
                     curr_id = queue.pop(0)
-                    partial_set.add(curr_id)
+                    # partial_visible_provinces
+                    # partial_set.add(curr_id)
+                    visible_set.add(curr_id)
                     curr_prov = id_to_province.get(curr_id)
                     if curr_prov:
                         for n_id in curr_prov.get("neighbors", []):
@@ -756,12 +758,6 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
         stats["time"] = c.BASIC_FACTORY_TURNS
     return stats
 
-def get_nation_resource(nation, res_type, nation_data): return nation_data.get(nation, {}).get(res_type, 0)
-
-def get_nation_manpower(nation, nation_data): return get_nation_resource(nation, "manpower", nation_data)
-def get_nation_materials(nation, nation_data): return get_nation_resource(nation, "materials", nation_data)
-def get_nation_fuel(nation, nation_data): return get_nation_resource(nation, "fuel", nation_data)
-
 def _modify_resources(nation_data_block, costs_dict, is_refund=False):
     """Unified helper to add or subtract resources from a nation."""
     modifier = 1 if is_refund else -1
@@ -771,7 +767,6 @@ def _modify_resources(nation_data_block, costs_dict, is_refund=False):
         nation_data_block[res] = max(0, new_val) if not is_refund else new_val
 
 def refund_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=True)
-
 def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=False)
 
 def can_afford(nation_data_block, costs_dict):
@@ -779,6 +774,32 @@ def can_afford(nation_data_block, costs_dict):
     return (nation_data_block.get("materials", 0) >= costs_dict.get("cost_materials", 0) and
             nation_data_block.get("manpower", 0) >= costs_dict.get("cost_manpower", 0) and
             nation_data_block.get("fuel", 0) >= costs_dict.get("cost_fuel", 0))
+
+def execute_trade_transfer(proposer_data, target_data, params):
+    """Executes a trade transfer between two nations, exchanging escrowed and requested resources."""
+    p_mats = params.get("give_materials", 0)
+    p_fuel = params.get("give_fuel", 0)
+    t_mats = params.get("take_materials", 0)
+    t_fuel = params.get("take_fuel", 0)
+
+    # Target gains proposer's escrow
+    target_data["materials"] = target_data.get("materials", 0) + p_mats
+    target_data["fuel"] = target_data.get("fuel", 0) + p_fuel
+
+    # Target pays their side
+    actual_t_mats = min(t_mats, target_data.get("materials", 0))
+    target_data["materials"] -= actual_t_mats
+    actual_t_fuel = min(t_fuel, target_data.get("fuel", 0))
+    target_data["fuel"] -= actual_t_fuel
+
+    # Proposer receives their side
+    proposer_data["materials"] = proposer_data.get("materials", 0) + actual_t_mats
+    proposer_data["fuel"] = proposer_data.get("fuel", 0) + actual_t_fuel
+
+def cancel_trade_escrow(proposer_data, params):
+    """Refunds escrowed resources from a pending trade proposal."""
+    proposer_data["materials"] = proposer_data.get("materials", 0) + params.get("give_materials", 0)
+    proposer_data["fuel"] = proposer_data.get("fuel", 0) + params.get("give_fuel", 0)
 
 def calculate_all_economies(map_data, nation_data):
     """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
@@ -868,9 +889,10 @@ def calculate_all_economies(map_data, nation_data):
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
                 u_type = unit.get("original_type", unit.get("type"))
                 stats = unit_lib.get(u_type, {})
-                econ_data[u_owner]["upkeep"]["manpower"] += stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-                econ_data[u_owner]["upkeep"]["materials"] += stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-                econ_data[u_owner]["upkeep"]["fuel"] += stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+                upkeep = get_unit_upkeep(stats)
+                econ_data[u_owner]["upkeep"]["manpower"] += upkeep["manpower"]
+                econ_data[u_owner]["upkeep"]["materials"] += upkeep["materials"]
+                econ_data[u_owner]["upkeep"]["fuel"] += upkeep["fuel"]
 
     # Finalize totals and calculate conversions
     for name, data in econ_data.items():
@@ -955,11 +977,8 @@ def get_resource_hud_strings(map_screen, include_net=False):
         if is_tactical:
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
             stats = get_unit_library().get(u_type, {})
-            inc_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-            inc_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-            inc_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
             
-            total_inc = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
+            total_inc = get_unit_upkeep(stats)
             total_upkeep = {"manpower": 0, "materials": 0, "fuel": 0}
         else:
             if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:

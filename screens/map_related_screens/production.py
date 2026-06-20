@@ -250,9 +250,9 @@ class Production_Screen(GameState):
                 "turns_remaining": max(1, data.get("time", 1)),
                 "group": data["group"],
                 "refund": {
-                    "materials": data.get("cost_materials", 0),
-                    "manpower": data.get("cost_manpower", 0),
-                    "fuel": data.get("cost_fuel", 0)
+                    "cost_materials": data.get("cost_materials", 0),
+                    "cost_manpower": data.get("cost_manpower", 0),
+                    "cost_fuel": data.get("cost_fuel", 0)
                 }
             }
             self.target_province.setdefault("building_queue", []).append(order)
@@ -283,9 +283,9 @@ class Production_Screen(GameState):
                 "unit_type": unit_name,
                 "turns_remaining": max(1, stats.get("production_time", 1)),
                 "refund": {
-                    "materials": stats.get("cost_materials", 0),
-                    "manpower": stats.get("cost_manpower", 0),
-                    "fuel": stats.get("cost_fuel", 0)
+                    "cost_materials": stats.get("cost_materials", 0),
+                    "cost_manpower": stats.get("cost_manpower", 0),
+                    "cost_fuel": stats.get("cost_fuel", 0)
                 }
             }
             self.target_province.setdefault("unit_queue", []).append(order)
@@ -305,8 +305,7 @@ class Production_Screen(GameState):
             p_data = self.map_screen.nation_data.get(owner, {})
             
             if "refund" in item:
-                for res, amount in item["refund"].items():
-                    p_data[res] = p_data.get(res, 0) + amount
+                queries.refund_resources(p_data, item["refund"])
             else:
                 stats = {}
                 if item.get("order_type") == "BUILDING":
