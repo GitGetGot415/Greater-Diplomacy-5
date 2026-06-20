@@ -499,9 +499,7 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
 def get_tactical_speed(unit, unit_library):
     """Calculates the effective speed of a unit in tactical mode."""
-    u_type = unit.get("original_type", unit.get("type"))
-    uses_oil = unit_library.get(u_type, {}).get("cost_fuel", 0) > 0
-    return unit.get("speed", 1) + (1 if uses_oil else 0)
+    return unit.get("speed", 1)
 
 def get_tactical_fuel_cost_per_tile(unit, fuel_inc, unit_library):
     """Calculates the fuel cost per tile moved in tactical mode."""

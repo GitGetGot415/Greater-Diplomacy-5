@@ -701,11 +701,6 @@ class Orders_Screen(GameState):
                             speed_limit = min(u.get("speed", 1) for u in player_units)
                         else:
                             speed_limit = active_unit.get("speed", 1)
-                            
-                            if getattr(self.map_screen, 'tactical_mode', False):
-                                u_type = active_unit.get("original_type", active_unit.get("type"))
-                                uses_oil = self.unit_library.get(u_type, {}).get("cost_fuel", 0) > 0
-                                if uses_oil: speed_limit += 1
                         
                         # Determine styling based on if this specific hover step exceeds the speed
                         is_queued = len(active_path) >= speed_limit
