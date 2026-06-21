@@ -125,8 +125,7 @@ class New_Game(GameState):
         if getattr(self, 'is_refreshing', False):
             return
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
             self.additional_events(event)
 
     def additional_draw(self, surface):
@@ -167,8 +166,21 @@ class New_Game(GameState):
 
     def trigger_global_data_refresh(self):
         """Calls the unified data refresh query for playable scenarios."""
-        dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR, c.SCENARIOS_CUSTOM_DIR]
-        queries.refresh_map_directories(self, dirs_to_check, success_message="Synced scenarios successfully.")
+        import tkinter as tk
+        from tkinter import messagebox
+        from data import queries
+        
+        root = queries.get_transient_tk_root()
+        confirm = messagebox.askyesno(
+            "Confirm Data Refresh",
+            "Are you sure you want to refresh all scenarios?\nThis process may take a while.",
+            parent=root
+        )
+        queries.destroy_tk_root(root)
+        
+        if confirm:
+            dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR, c.SCENARIOS_CUSTOM_DIR]
+            queries.refresh_map_directories(self, dirs_to_check, success_message="Synced scenarios successfully.")
 
     def map_selected(self):
         self.next_state = "MAP"

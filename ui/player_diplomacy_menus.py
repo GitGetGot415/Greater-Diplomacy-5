@@ -176,10 +176,19 @@ class Declare_War_Screen(GameState):
     def exit_screen(self):
         self.done = True
 
+    def handle_back_key(self):
+        self.exit_screen()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
+            
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
 
     def additional_draw(self, surface):
         surface.fill(self.map_screen.bg_color)
@@ -237,11 +246,20 @@ class Claims_Screen(GameState):
     def exit_screen(self):
         self.done = True
 
+    def handle_back_key(self):
+        self.exit_screen()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
 
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
+            
             on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -754,14 +772,20 @@ class Peace_Screen(GameState):
         self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
         self.done = True
 
-    def exit_screen(self):
-        self.done = True
+    def handle_back_key(self):
+        self.exit_screen()
 
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
-                
+            super().handle_events([event])
+            
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
+            
             on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
             if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
                 self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
@@ -846,10 +870,19 @@ class View_Peace_Treaty_Screen(GameState):
     def exit_screen(self):
         self.done = True
 
+    def handle_back_key(self):
+        self.exit_screen()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
+            
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
             
             on_ui = self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
             if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
@@ -1023,12 +1056,14 @@ class Trade_Screen(GameState):
         queries.cancel_trade_escrow(p_data, {"give_materials": self.escrow_mats, "give_fuel": self.escrow_fuel})
         self.done = True
 
+    def handle_back_key(self):
+        self.cancel_trade()
+
     def handle_events(self, events):
         from ui_elements import process_text_input
         
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
 
             on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos())
             if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
@@ -1051,20 +1086,30 @@ class Trade_Screen(GameState):
                     self.active_input = None
 
             elif event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+
                 if event.key == pygame.K_RETURN:
                     self.evaluate_input()
                     self.active_input = None
                 elif self.active_input:
                     # Input routing
                     val_func = lambda c: c.isdigit() or c == "-"
+                    status = "NONE"
                     if self.active_input == "GIVE_MATS":
-                        self.give_mats_str, _ = process_text_input(event, self.give_mats_str, validation_func=val_func)
+                        self.give_mats_str, status = process_text_input(event, self.give_mats_str, validation_func=val_func)
                     elif self.active_input == "GIVE_FUEL":
-                        self.give_fuel_str, _ = process_text_input(event, self.give_fuel_str, validation_func=val_func)
+                        self.give_fuel_str, status = process_text_input(event, self.give_fuel_str, validation_func=val_func)
                     elif self.active_input == "TAKE_MATS":
-                        self.take_mats_str, _ = process_text_input(event, self.take_mats_str, validation_func=val_func)
+                        self.take_mats_str, status = process_text_input(event, self.take_mats_str, validation_func=val_func)
                     elif self.active_input == "TAKE_FUEL":
-                        self.take_fuel_str, _ = process_text_input(event, self.take_fuel_str, validation_func=val_func)
+                        self.take_fuel_str, status = process_text_input(event, self.take_fuel_str, validation_func=val_func)
+                    
+                    if status == "CANCEL" or event.key == back_key:
+                        self.active_input = None
+                elif event.key == back_key:
+                    self.handle_back_key()
 
     def update(self):
         super().update()
@@ -1236,10 +1281,20 @@ class Puppets_Screen(GameState):
         super().update()
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
+    def handle_back_key(self):
+        self.exit_screen()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
+            
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
+            
             if event.type == pygame.MOUSEWHEEL:
                 self.scroll_y += event.y * 30
                 self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
@@ -1416,10 +1471,20 @@ class Create_Integrated_Puppet_Screen(GameState):
     def exit_screen(self):
         self.done = True
 
+    def handle_back_key(self):
+        self.exit_screen()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
+            
+            if event.type == pygame.KEYDOWN:
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                if event.key == back_key:
+                    self.handle_back_key()
+            
             on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
             if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
                 self.map_screen.camera.handle_input(event, self.map_screen, on_ui)

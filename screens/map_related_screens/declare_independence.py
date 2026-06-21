@@ -131,19 +131,31 @@ class Declare_Independence_Screen(GameState):
     def exit_to_map(self):
         self.done = True
 
+    def handle_back_key(self):
+        self.exit_to_map()
+
     def handle_events(self, events):
         for event in events:
-            for el in self.elements:
-                el.handle_event(event)
-                
+            super().handle_events([event])
+            
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 input_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 150, c.SCREEN_HEIGHT // 2 + self.input_y, 150, 40)
                 self.active_input = input_rect.collidepoint(event.pos)
                 
-            if event.type == pygame.KEYDOWN and self.active_input:
-                self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=25)
-                if status == "SUBMIT":
-                    self.confirm_independence()
+            if event.type == pygame.KEYDOWN:
+                # Dynamically fetch the keybind, fallback to escape
+                back_key = pygame.K_ESCAPE
+                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
+                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+                
+                if self.active_input:
+                    self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=25)
+                    if status == "SUBMIT":
+                        self.confirm_independence()
+                    elif status == "CANCEL" or event.key == back_key:
+                        self.active_input = False
+                elif event.key == back_key:
+                    self.handle_back_key()
 
     def draw(self, surface):
         surface.fill(self.map_screen.bg_color)

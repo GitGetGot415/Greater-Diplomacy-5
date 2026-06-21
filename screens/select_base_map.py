@@ -126,8 +126,21 @@ class Select_Base_Map(GameState):
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""
-        dirs_to_check = [c.BASE_MAPS_DIR]
-        queries.refresh_map_directories(self, dirs_to_check, success_message="Synced base maps successfully.")
+        import tkinter as tk
+        from tkinter import messagebox
+        from data import queries
+        
+        root = queries.get_transient_tk_root()
+        confirm = messagebox.askyesno(
+            "Confirm Data Refresh",
+            "Are you sure you want to refresh base map data?\nThis process may take a while.",
+            parent=root
+        )
+        queries.destroy_tk_root(root)
+        
+        if confirm:
+            dirs_to_check = [c.BASE_MAPS_DIR]
+            queries.refresh_map_directories(self, dirs_to_check, success_message="Synced base maps successfully.")
 
     # --- FILE MANAGEMENT LOGIC ---
     def import_scenario_zip(self):
@@ -261,8 +274,7 @@ class Select_Base_Map(GameState):
                 elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
                     self._snap_scroll(event.pos[1])
 
-            for el in self.elements:
-                el.handle_event(event)
+            super().handle_events([event])
 
     def draw(self, surface):
         import pygame
