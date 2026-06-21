@@ -69,7 +69,7 @@ def render_buttons(self):
         screen.start_screen(self)
         _run_pygame_sub_screen(self, screen)
         
-    self.btn_declare_indep = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "red", "Declare Indep.", open_declare_independence)
+    self.btn_declare_indep = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Independence!", open_declare_independence, font_preset="normal")
 
     def open_edit_country_action():
         if self.player_country == "Spectator" or self.is_editor:
