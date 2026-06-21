@@ -1842,6 +1842,18 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # 1. Instantiate Map with standard singleplayer configurations to pull existing meta/map data into memory
                 temp_map_context = Map(load_path=scenario_path, is_scenario=True)
 
+                # --- BUG FIX: Restore scenario settings wiped by selection_mode ---
+                meta_path = os.path.join(scenario_path, "meta.json")
+                if os.path.exists(meta_path):
+                    try:
+                        with open(meta_path, "r", encoding="utf-8") as f:
+                            old_meta = json.load(f)
+                            if "scenario_settings" in old_meta:
+                                temp_map_context.scenario_settings = old_meta["scenario_settings"]
+                    except Exception as e:
+                        print(f"Error reading meta.json for settings restoration: {e}")
+                # ------------------------------------------------------------------
+
                 # 2. Execute the official resync pipeline
                 temp_map_context.refresh_nation_data()
                 print(f"refreshed {name}")
@@ -1855,6 +1867,27 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
 
                 # 3. Clean country flags/portraits inside memory before serializing
                 scrub_default_images(temp_map_context.nation_data)
+
+                # --- BUG FIX: Fix lowercase unit types and custom names ---
+                unit_lib = get_unit_library()
+                for prov in temp_map_context.map_data.values():
+                    for unit in prov.get("units", []):
+                        u_type = unit.get("type", "")
+                        if u_type:
+                            # Match exact casing from unit library if possible
+                            for correct_name in unit_lib.keys():
+                                if correct_name.lower() == u_type.lower():
+                                    unit["type"] = correct_name
+                                    break
+                            else:
+                                words = unit["type"].split()
+                                unit["type"] = " ".join(w.capitalize() if w.islower() else w for w in words)
+                        
+                        c_name = unit.get("custom_name", "")
+                        if c_name:
+                            words = c_name.split()
+                            unit["custom_name"] = " ".join(w.capitalize() if w.islower() else w for w in words)
+                # ----------------------------------------------------------
 
                 # 4. Reconstruct the exact structural configuration payload
                 save_dict = build_save_dict(temp_map_context)
