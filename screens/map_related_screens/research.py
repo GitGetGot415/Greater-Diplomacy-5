@@ -21,6 +21,9 @@ class Research_Screen(GameState):
         
         self.active_modal = None
 
+        self.complete_panel_x = 250
+        self.complete_panel_y = 125
+
         # --- Timeline Variables ---
         self.scroll_x = 0
         self.target_scroll_x = 0
@@ -182,7 +185,7 @@ class Research_Screen(GameState):
 
         if self.active_modal:
             st = self.active_modal["status"]
-            panel_x, panel_y = 400, 200
+            panel_x, panel_y = self.complete_panel_x, self.complete_panel_y
             
             self.elements.append(Button(panel_x + 650, panel_y + 430, "small", "red", "Cancel", self.close_modal))
             
@@ -465,7 +468,7 @@ class Research_Screen(GameState):
         overlay.fill((0, 0, 0, 180))
         surface.blit(overlay, (0, 0))
 
-        panel_rect = pygame.Rect(400, 200, 800, 500)
+        panel_rect = pygame.Rect(self.complete_panel_x, self.complete_panel_y, 800, 500)
         pygame.draw.rect(surface, (30, 30, 40), panel_rect)
         pygame.draw.rect(surface, (200, 200, 200), panel_rect, 2)
 
