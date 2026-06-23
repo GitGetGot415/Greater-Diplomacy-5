@@ -151,7 +151,7 @@ class New_Game(GameState):
             loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
 
     def scenario_settings(self):
-        from screens.scenario_settings import Scenario_Settings
+        from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.return_screen = "NEW_GAME"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True

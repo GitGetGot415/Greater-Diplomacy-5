@@ -106,7 +106,7 @@ class Random_Setup(GameState):
         self.refresh_ui()
 
     def scenario_settings(self):
-        from screens.scenario_settings import Scenario_Settings
+        from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.return_screen = "RANDOM_SETUP"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True

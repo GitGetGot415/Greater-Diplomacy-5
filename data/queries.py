@@ -1853,7 +1853,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
     screen.refresh_status = "Initializing..."
 
     def _refresh_thread():
-        from screens.map import Map
+        from screens.menu_screens.map import Map
         maps_processed = 0
 
         for scenario_dir, name, scenario_path, map_json_path in valid_scenarios:

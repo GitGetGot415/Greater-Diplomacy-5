@@ -19,13 +19,13 @@ from map_logic.rendering.font_manager import fonts
 import ui_elements
 import data.constants as c
 from data import queries
-from screens.load_game import Load_Game
-from screens.map import Map
-from screens.menu import Menu
-from screens.new_game import New_Game
-from screens.settings import Settings
-from screens.credits import Credits
-from screens.music_player import Music_Player
+from screens.menu_screens.load_game import Load_Game
+from screens.menu_screens.map import Map
+from screens.menu_screens.menu import Menu
+from screens.menu_screens.new_game import New_Game
+from screens.menu_screens.settings import Settings
+from screens.menu_screens.credits import Credits
+from screens.menu_screens.music_player import Music_Player
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
@@ -34,9 +34,9 @@ from screens.map_related_screens.economy import Economy_Screen
 from screens.map_related_screens.edit_country import Edit_Country_Screen
 from screens.map_related_screens.production import Production_Screen
 from screens.map_related_screens.faction import Faction_Screen, Faction_Territories_Screen
-from screens.select_base_map import Select_Base_Map
-from screens.random_setup import Random_Setup
-from screens.scenario_settings import Scenario_Settings
+from screens.menu_screens.select_base_map import Select_Base_Map
+from screens.menu_screens.random_setup import Random_Setup
+from screens.menu_screens.scenario_settings import Scenario_Settings
 
 pygame.display.set_caption("Greater Diplomacy 5 Prototype")
 
