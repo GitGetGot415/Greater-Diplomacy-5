@@ -725,6 +725,21 @@ def get_factory_count(nation, map_data):
                 if "Factory" in q.get("item_name", ""): count += 1
     return count
 
+def get_core_cost(nation, map_data):
+    """Calculates the cost to core a territory dynamically."""
+    core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
+    
+    base_cost = getattr(c, 'CORE_BASE_COST_MANPOWER', 1000)
+    scaling_cost = getattr(c, 'CORE_SCALING_COST_MANPOWER', 500)
+    
+    return {
+        "cost_manpower": base_cost + (scaling_cost * core_count),
+        "cost_materials": 0,
+        "cost_fuel": 0,
+        "time": getattr(c, 'CORE_CONSTRUCTION_TURNS', 24),
+        "group": "administration"
+    }
+
 def get_building_cost(b_name, nation, map_data, bldg_lib):
     """Dynamically scales the building cost, bypassing the JSON for Basic Factories."""
     stats = bldg_lib.get(b_name, {}).copy()
@@ -817,17 +832,18 @@ def calculate_all_economies(map_data, nation_data):
                 bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"])
 
             # Buildings
+            building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
             for b_name in province.get("buildings", []):
                 stats = bldg_lib.get(b_name, {})
                 for res in _ECON_RESOURCES:
-                    bd[res]["buildings"] += stats.get(f"prod_{res}", 0) 
+                    bd[res]["buildings"] += int(stats.get(f"prod_{res}", 0) * building_mult)
 
             # Basic Factory transitional construction yields
             for q in province.get("building_queue", []):
                 if q.get("item_name") == "Basic Factory":
                     rem = q.get("turns_remaining", c.BASIC_FACTORY_TURNS)
                     yield_mat = 400 if rem < 5 else (320 if rem < 9 else (240 if rem < 13 else (160 if rem < 17 else 80)))
-                    bd["materials"]["buildings"] += yield_mat
+                    bd["materials"]["buildings"] += int(yield_mat * building_mult)
 
         # --- UPKEEP LOGIC ---
         for unit in province.get("units", []):

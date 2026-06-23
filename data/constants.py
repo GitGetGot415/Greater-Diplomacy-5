@@ -75,6 +75,8 @@ NON_CORE_MULTIPLIERS = {
     "fuel": 1.0
 }
 
+NON_CORE_BUILDING_MULTIPLIER = 0.5
+
 CREDITS_DATA = [
     {"main_text": "Lead Developer: ", "link_text": "GitGetGot415", "url": "https://github.com/GitGetGot415"},
     {"main_text": "Contributors: ", "link_text": "litbrb", "url": "https://github.com/litbrb"},
@@ -225,7 +227,7 @@ VIEW_BTN_ROW2_Y = SCREEN_HEIGHT - 100
 # --- Left UI Bar Placement ---
 LEFT_UI_BAR_X = 20
 LEFT_UI_BAR_STEP_Y = 40
-BTN_SPECTATOR_Y = SCREEN_HEIGHT - 50
+BTN_SPECTATOR_Y = SCREEN_HEIGHT - 55
 
 # ==========================================
 # EDIT COUNTRY

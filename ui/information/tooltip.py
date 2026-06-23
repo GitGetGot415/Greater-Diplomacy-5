@@ -118,12 +118,13 @@ def draw_tooltip(self, surface):
             buildings = prov.get("buildings", [])
             if buildings:
                 bldg_lib = queries.get_building_library()
+                building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
                 for b in buildings:
                     # Determine production text dynamically based on building stats
                     stats = bldg_lib.get(b, {})
-                    p_mat = stats.get('prod_materials', 0)
-                    p_man = stats.get('prod_manpower', 0)
-                    p_fuel = stats.get('prod_fuel', 0)
+                    p_mat = int(stats.get('prod_materials', 0) * building_mult)
+                    p_man = int(stats.get('prod_manpower', 0) * building_mult)
+                    p_fuel = int(stats.get('prod_fuel', 0) * building_mult)
                     
                     yields = []
                     if p_man > 0: yields.append(f"+{p_man}Man")

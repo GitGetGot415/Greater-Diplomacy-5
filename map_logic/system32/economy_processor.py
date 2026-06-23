@@ -69,11 +69,17 @@ def process_queues(self):
             item["turns_remaining"] -= 1
             
             if item["turns_remaining"] <= 0:
-                b_name = item.get("item_name")
-                if b_name:
-                    province.setdefault("buildings", []).append(b_name)
+                if item.get("order_type") == "CORE":
+                    if current_owner not in province.get("cores", []):
+                        province.setdefault("cores", []).append(current_owner)
                     if current_owner == self.player_country:
-                        self.show_feedback(f"CONSTRUCTED: {b_name}")
+                        self.show_feedback(f"CORED: Province {province.get('id')}")
+                else:
+                    b_name = item.get("item_name")
+                    if b_name:
+                        province.setdefault("buildings", []).append(b_name)
+                        if current_owner == self.player_country:
+                            self.show_feedback(f"CONSTRUCTED: {b_name}")
             
                 b_queue.pop(0)
 

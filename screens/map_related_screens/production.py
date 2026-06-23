@@ -90,6 +90,41 @@ class Production_Screen(GameState):
         # --- BUILDING LOGIC ---
         bldg_groups = {"Other": ["industry"], "Recruitment": ["recruitment"]}
         
+        is_core = owner_nation in self.target_province.get("cores", [])
+        
+        if not is_core:
+            is_coring = any(q.get("order_type") == "CORE" for q in building_queue)
+            core_data = queries.get_core_cost(owner_nation, self.map_screen.map_data)
+            
+            if is_coring:
+                btn_txt = "Coring..."
+                btn_color = "grey"
+                cb = lambda: None
+            elif is_spectator and not can_spectator_edit:
+                btn_txt = "Core Territory"
+                btn_color = "grey"
+                cb = lambda: None
+            else:
+                btn_txt = "Core Territory"
+                btn_color = "purple"
+                cb = lambda: self.start_coring()
+
+            btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color, btn_txt, cb)
+            btn.base_y = y_offset
+            btn.is_scrollable = True
+            self.elements.append(btn)
+
+            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+            mock_stats = {
+                "time": core_data["time"],
+                "cost_manpower": core_data["cost_manpower"],
+                "cost_materials": core_data["cost_materials"],
+                "cost_fuel": core_data["cost_fuel"],
+                "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
+            }
+            self.active_bars.append((bar_rect, mock_stats, y_offset, "BUILDING"))
+            y_offset += 60
+
         def process_building_categories(cat_groups):
             nonlocal y_offset
             for group_id in cat_groups:
@@ -237,8 +272,36 @@ class Production_Screen(GameState):
         # Calculate maximum scroll distance
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
 
+    def start_coring(self):
+        owner = self.target_province.get("owner")
+        data = queries.get_core_cost(owner, self.map_screen.map_data)
+        p_data = self.map_screen.nation_data.get(owner, {})
+
+        if queries.can_afford(p_data, data):
+            queries.deduct_resources(p_data, data)
+            order = {
+                "order_type": "CORE",
+                "item_name": "Core Territory",
+                "turns_remaining": max(1, data.get("time", 24)),
+                "group": "administration",
+                "refund": {
+                    "cost_materials": data.get("cost_materials", 0),
+                    "cost_manpower": data.get("cost_manpower", 0),
+                    "cost_fuel": data.get("cost_fuel", 0)
+                }
+            }
+            self.target_province.setdefault("building_queue", []).append(order)
+            self.map_screen.show_feedback("Started Coring Territory")
+            self.refresh_ui()
+        else:
+            self.map_screen.show_feedback("Insufficient resources!")
+
     def start_construction(self, b_name):
         owner = self.target_province.get("owner")
+        if owner not in self.target_province.get("cores", []):
+            self.map_screen.show_feedback("Must core territory before producing!")
+            return
+
         data = queries.get_building_cost(b_name, owner, self.map_screen.map_data, self.building_library)
         p_data = self.map_screen.nation_data.get(owner, {})
 
@@ -262,6 +325,11 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def buy_unit(self, unit_name):
+        owner = self.target_province.get("owner")
+        if owner not in self.target_province.get("cores", []):
+            self.map_screen.show_feedback("Must core territory before recruiting!")
+            return
+
         stats = self.unit_library.get(unit_name)
         if not stats or not self.map_screen: return
 

@@ -148,7 +148,7 @@ def render_buttons(self):
         self.show_feedback(f"Mode: {'TACTICAL' if self.tactical_mode else 'STRATEGIC'}")
 
     self.btn_spectator = Button(c.LEFT_UI_BAR_X, c.BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
-    self.btn_tactical = Button(c.LEFT_UI_BAR_X + 160, c.BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
+    self.btn_tactical = Button(c.LEFT_UI_BAR_X + 240, c.BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
     self.btn_close_info = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
     self.btn_exit_to_menu = Button(c.SCREEN_WIDTH - 120, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
 
@@ -187,10 +187,25 @@ def update_button_states(map_screen):
     is_sel = bool(map_screen.selected_province)
 
     if map_screen.selection_mode:
-        map_screen.btn_exit_to_menu.visible = True
-        map_screen.btn_spectator.visible = True
-        map_screen.btn_tactical.visible = True
-        return
+            map_screen.btn_exit_to_menu.visible = True
+            map_screen.btn_spectator.visible = True
+            map_screen.btn_tactical.visible = True
+
+            is_multiplayer = getattr(map_screen, 'num_players', 1) > 1
+
+            if is_multiplayer:
+                map_screen.btn_tactical.disabled = True
+                map_screen.btn_tactical.text = "Tactical mode disabled for multiplayer"
+                map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["grey"]
+            else:
+                map_screen.btn_tactical.disabled = False
+                if getattr(map_screen, 'tactical_mode', False):
+                    map_screen.btn_tactical.text = "STRATEGIC"
+                    map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["green"]
+                else:
+                    map_screen.btn_tactical.text = "TACTICAL"
+                    map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["orange"]
+            return
 
     # Helper function to override dynamically updated button values
     def set_btn(btn, visible, enabled, text, color="green"):
