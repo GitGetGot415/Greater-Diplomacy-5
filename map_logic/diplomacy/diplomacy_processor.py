@@ -349,7 +349,7 @@ def process_diplomacy_turn(self):
     # --- 4. STANDARD RESOLUTION (APPLY AI RESULTS) ---
     delayed_responses = [] # Store AI actions here to queue them for the next turn
 
-    def process_ai_retaliation(country_name, reply_dict):
+    def process_ai_retaliation(country_name, reply_dict, default_target=None):
         """Processes reactive diplomatic actions appended by the LLM."""
         ai_action = reply_dict.get("action", "NONE")
         follow_up = reply_dict.get("follow_up_action", "NONE")
@@ -357,23 +357,26 @@ def process_diplomacy_turn(self):
         raw_f_up_target = reply_dict.get("follow_up_target", "NONE")
         
         def get_valid_target(raw_target):
-            if not raw_target or raw_target == "NONE": return "NONE"
+            if not raw_target or raw_target == "NONE": return default_target if default_target else "NONE"
             clean_target = raw_target.strip().lower()
             for n in active_nations_list:
                 if n.lower() == clean_target: return n
                 if self.nation_data.get(n, {}).get("name", "").lower() == clean_target: return n
-            return "NONE"
+            return default_target if default_target else "NONE"
             
         act_target = get_valid_target(raw_act_target)
         f_up_target = get_valid_target(raw_f_up_target)
         
+        # Modify the original dictionary so calling functions know if the action was aborted
         if ai_action != "NONE" and act_target == "NONE":
             print(f"[AI GUARDRAIL] Aborting {ai_action}: Target '{raw_act_target}' not found.")
             ai_action = "NONE"
+            reply_dict["action"] = "NONE"
             
         if follow_up != "NONE" and f_up_target == "NONE":
             print(f"[AI GUARDRAIL] Aborting follow-up {follow_up}: Target '{raw_f_up_target}' not found.")
             follow_up = "NONE"
+            reply_dict["follow_up_action"] = "NONE"
 
         # Check cooldown and truces
         if ai_action != "NONE":
@@ -711,8 +714,8 @@ def process_diplomacy_turn(self):
                                 if op_val != 0:
                                     queries.add_temporary_modifier(m, country_name, "general", op_val, self.nation_data)
                                     
+                                process_ai_retaliation(m, reply_dict, default_target=country_name)
                                 send_message(self, m, country_name, msg_text, "DIPLOMACY")
-                                process_ai_retaliation(m, reply_dict)
                                 
                     elif not is_human_target:
                         reply_dict = ai_results.get((country_name, target, action), {})
@@ -723,8 +726,8 @@ def process_diplomacy_turn(self):
                         if op_val != 0:
                             queries.add_temporary_modifier(target, country_name, "general", op_val, self.nation_data)
                             
+                        process_ai_retaliation(target, reply_dict, default_target=country_name)
                         send_message(self, target, country_name, message, "DIPLOMACY")
-                        process_ai_retaliation(target, reply_dict)
                         
                     actions_to_clear.append(target)
 
@@ -738,7 +741,7 @@ def process_diplomacy_turn(self):
                         if op_val != 0:
                             queries.add_temporary_modifier(target, country_name, "general", op_val, self.nation_data)
                             
-                        process_ai_retaliation(target, reply_dict)
+                        process_ai_retaliation(target, reply_dict, default_target=country_name)
                         
                         msg_type = "TEXT" if reply_dict.get("action", "NONE") == "NONE" else "DIPLOMACY"
                         send_message(self, target, country_name, message, msg_type)
@@ -768,7 +771,7 @@ def process_diplomacy_turn(self):
                         if op_val != 0:
                             queries.add_temporary_modifier(target, country_name, "general", op_val, self.nation_data)
 
-                        process_ai_retaliation(target, reply_dict)
+                        process_ai_retaliation(target, reply_dict, default_target=country_name)
                         
                         if accepted:
                             if action == "FACTION_INVITE":

@@ -463,6 +463,17 @@ class Messages_Screen(GameState):
                         "is_diplo": True,
                         "date": ""
                     })
+
+        # --- INJECT TEXT DRAFTS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
+        for idx, draft_text in enumerate(self.drafts):
+            display_thread.append({
+                "content": draft_text,
+                "is_player": True,
+                "is_draft": True,
+                "draft_idx": idx,
+                "is_diplo": False,
+                "date": ""
+            })
         
         input_rect = pygame.Rect(c.MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - c.MSG_INPUT_H, c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W, c.MSG_INPUT_H)
         pygame.draw.rect(surface, c.MSG_BG_LIGHT, input_rect)
