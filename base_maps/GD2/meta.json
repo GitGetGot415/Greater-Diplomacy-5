@@ -62,7 +62,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Lakes": {
             "name": "Lakes",
@@ -108,7 +109,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Unclaimed": {
             "name": "Unclaimed",
@@ -154,7 +156,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rome": {
             "name": "Rome",
@@ -200,7 +203,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Carthage": {
             "name": "Carthage",
@@ -246,7 +250,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gaul": {
             "name": "Gaul",
@@ -292,7 +297,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Germany": {
             "name": "Germany",
@@ -338,7 +344,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "France": {
             "name": "France",
@@ -384,7 +391,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vichy France": {
             "name": "Vichy France",
@@ -430,7 +438,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United States of America": {
             "name": "United States of America",
@@ -476,7 +485,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "German Reich": {
             "name": "German Reich",
@@ -522,7 +532,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Austria-Hungary": {
             "name": "Austria-Hungary",
@@ -568,7 +579,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Austria": {
             "name": "Austria",
@@ -614,7 +626,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "German Empire": {
             "name": "German Empire",
@@ -660,7 +673,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Weimar Republic": {
             "name": "Weimar Republic",
@@ -706,7 +720,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Canada": {
             "name": "Canada",
@@ -752,7 +767,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Soviet Union": {
             "name": "Soviet Union",
@@ -798,7 +814,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Hungary": {
             "name": "Hungary",
@@ -844,7 +861,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Italy": {
             "name": "Italy",
@@ -890,7 +908,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bulgaria": {
             "name": "Bulgaria",
@@ -936,7 +955,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Romania": {
             "name": "Romania",
@@ -982,7 +1002,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Spain": {
             "name": "Spain",
@@ -1028,7 +1049,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Belgium": {
             "name": "Belgium",
@@ -1074,7 +1096,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Netherlands": {
             "name": "Netherlands",
@@ -1120,7 +1143,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Luxembourg": {
             "name": "Luxembourg",
@@ -1166,7 +1190,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ukraine": {
             "name": "Ukraine",
@@ -1212,7 +1237,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Russia": {
             "name": "Russia",
@@ -1258,7 +1284,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sweden": {
             "name": "Sweden",
@@ -1304,7 +1331,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Czechoslovakia": {
             "name": "Czechoslovakia",
@@ -1350,7 +1378,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Czechia": {
             "name": "Czechia",
@@ -1396,7 +1425,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Slovakia": {
             "name": "Slovakia",
@@ -1442,7 +1472,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Turkey": {
             "name": "Turkey",
@@ -1488,7 +1519,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ottoman Empire": {
             "name": "Ottoman Empire",
@@ -1534,7 +1566,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Serbia": {
             "name": "Serbia",
@@ -1580,7 +1613,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Norway": {
             "name": "Norway",
@@ -1626,7 +1660,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Portugal": {
             "name": "Portugal",
@@ -1672,7 +1707,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United Kingdom": {
             "name": "United Kingdom",
@@ -1718,7 +1754,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Japan": {
             "name": "Japan",
@@ -1764,7 +1801,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mexico": {
             "name": "Mexico",
@@ -1810,7 +1848,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Argentina": {
             "name": "Argentina",
@@ -1856,7 +1895,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Chile": {
             "name": "Chile",
@@ -1902,7 +1942,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yugoslavia": {
             "name": "Yugoslavia",
@@ -1948,7 +1989,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "India": {
             "name": "India",
@@ -1994,7 +2036,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nationalist China": {
             "name": "Nationalist China",
@@ -2040,7 +2083,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Communist China": {
             "name": "Communist China",
@@ -2086,7 +2130,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Australia": {
             "name": "Australia",
@@ -2132,7 +2177,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New Zealand": {
             "name": "New Zealand",
@@ -2178,7 +2224,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Denmark": {
             "name": "Denmark",
@@ -2224,7 +2271,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Finland": {
             "name": "Finland",
@@ -2270,7 +2318,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Estonia": {
             "name": "Estonia",
@@ -2316,7 +2365,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Latvia": {
             "name": "Latvia",
@@ -2362,7 +2412,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Lithuania": {
             "name": "Lithuania",
@@ -2408,7 +2459,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Switzerland": {
             "name": "Switzerland",
@@ -2454,7 +2506,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iran": {
             "name": "Iran",
@@ -2500,7 +2553,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iraq": {
             "name": "Iraq",
@@ -2546,7 +2600,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Saudi Arabia": {
             "name": "Saudi Arabia",
@@ -2592,7 +2647,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oman": {
             "name": "Oman",
@@ -2638,7 +2694,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yemen": {
             "name": "Yemen",
@@ -2684,7 +2741,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mongolia": {
             "name": "Mongolia",
@@ -2730,7 +2788,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Venezuela": {
             "name": "Venezuela",
@@ -2776,7 +2835,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Peru": {
             "name": "Peru",
@@ -2822,7 +2882,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bolivia": {
             "name": "Bolivia",
@@ -2868,7 +2929,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Paraguay": {
             "name": "Paraguay",
@@ -2914,7 +2976,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ecuador": {
             "name": "Ecuador",
@@ -2960,7 +3023,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Algeria": {
             "name": "Algeria",
@@ -3006,7 +3070,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tunisia": {
             "name": "Tunisia",
@@ -3052,7 +3117,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Poland": {
             "name": "Poland",
@@ -3098,7 +3164,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Belarus": {
             "name": "Belarus",
@@ -3144,7 +3211,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ireland": {
             "name": "Ireland",
@@ -3190,7 +3258,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Greece": {
             "name": "Greece",
@@ -3236,7 +3305,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Albania": {
             "name": "Albania",
@@ -3282,7 +3352,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Brazil": {
             "name": "Brazil",
@@ -3328,7 +3399,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cuba": {
             "name": "Cuba",
@@ -3374,7 +3446,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tibet": {
             "name": "Tibet",
@@ -3420,7 +3493,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Thailand": {
             "name": "Thailand",
@@ -3466,7 +3540,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nepal": {
             "name": "Nepal",
@@ -3512,7 +3587,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bhutan": {
             "name": "Bhutan",
@@ -3558,7 +3634,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Uruguay": {
             "name": "Uruguay",
@@ -3604,7 +3681,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Colombia": {
             "name": "Colombia",
@@ -3650,7 +3728,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Panama": {
             "name": "Panama",
@@ -3696,7 +3775,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Guatemala": {
             "name": "Guatemala",
@@ -3742,7 +3822,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Honduras": {
             "name": "Honduras",
@@ -3788,7 +3869,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "El Salvador": {
             "name": "El Salvador",
@@ -3834,7 +3916,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nicaragua": {
             "name": "Nicaragua",
@@ -3880,7 +3963,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Costa Rica": {
             "name": "Costa Rica",
@@ -3926,7 +4010,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Guangxi Clique": {
             "name": "Guangxi Clique",
@@ -3972,7 +4057,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yunnan": {
             "name": "Yunnan",
@@ -4018,7 +4104,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Xibei San Ma": {
             "name": "Xibei San Ma",
@@ -4064,7 +4151,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Xinjiang": {
             "name": "Xinjiang",
@@ -4110,7 +4198,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ethiopia": {
             "name": "Ethiopia",
@@ -4156,7 +4245,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Liberia": {
             "name": "Liberia",
@@ -4202,7 +4292,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Haiti": {
             "name": "Haiti",
@@ -4248,7 +4339,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Dominican Republic": {
             "name": "Dominican Republic",
@@ -4294,7 +4386,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Qing Dynasty": {
             "name": "Qing Dynasty",
@@ -4340,7 +4433,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tannu Tuva": {
             "name": "Tannu Tuva",
@@ -4386,7 +4480,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "British Raj": {
             "name": "British Raj",
@@ -4432,7 +4527,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Libya": {
             "name": "Libya",
@@ -4478,7 +4574,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Egypt": {
             "name": "Egypt",
@@ -4524,7 +4621,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Jordan": {
             "name": "Jordan",
@@ -4570,7 +4668,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Palestine": {
             "name": "Palestine",
@@ -4616,7 +4715,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Israel": {
             "name": "Israel",
@@ -4662,7 +4762,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Syria": {
             "name": "Syria",
@@ -4708,7 +4809,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Lebanon": {
             "name": "Lebanon",
@@ -4754,7 +4856,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Azerbaijan": {
             "name": "Azerbaijan",
@@ -4800,7 +4903,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Armenia": {
             "name": "Armenia",
@@ -4846,7 +4950,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Georgia": {
             "name": "Georgia",
@@ -4892,7 +4997,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Manchukuo": {
             "name": "Manchukuo",
@@ -4938,7 +5044,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Afghanistan": {
             "name": "Afghanistan",
@@ -4984,7 +5091,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Morocco": {
             "name": "Morocco",
@@ -5030,7 +5138,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Scotland": {
             "name": "Scotland",
@@ -5076,7 +5185,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Japanese Empire": {
             "name": "Japanese Empire",
@@ -5122,7 +5232,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Brittany": {
             "name": "Brittany",
@@ -5168,7 +5279,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kuwait": {
             "name": "Kuwait",
@@ -5214,7 +5326,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Somalia": {
             "name": "Somalia",
@@ -5260,7 +5373,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sudan": {
             "name": "Sudan",
@@ -5306,7 +5420,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vietnam": {
             "name": "Vietnam",
@@ -5352,7 +5467,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gigachad": {
             "name": "Gigachad",
@@ -5398,7 +5514,8 @@
             "leader_title": "Gigachad",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Angola": {
             "name": "Angola",
@@ -5444,7 +5561,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Indonesia": {
             "name": "Indonesia",
@@ -5490,7 +5608,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zakytaishchyna": {
             "name": "Zakytaishchyna",
@@ -5536,7 +5655,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Siberia": {
             "name": "Siberia",
@@ -5582,7 +5702,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Chokwe": {
             "name": "Chokwe",
@@ -5628,7 +5749,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Wallachia": {
             "name": "Wallachia",
@@ -5674,7 +5796,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zulu": {
             "name": "Zulu",
@@ -5720,7 +5843,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zapatistas": {
             "name": "Zapatistas",
@@ -5766,7 +5890,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Taliban": {
             "name": "Taliban",
@@ -5812,7 +5937,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "South Sudan": {
             "name": "South Sudan",
@@ -5858,7 +5984,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mozambique": {
             "name": "Mozambique",
@@ -5904,7 +6031,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "East African Federation": {
             "name": "East African Federation",
@@ -5950,7 +6078,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Byzantine Empire": {
             "name": "Byzantine Empire",
@@ -5996,7 +6125,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alabama": {
             "name": "Alabama",
@@ -6042,7 +6172,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Australia-Hungary": {
             "name": "Australia-Hungary",
@@ -6088,7 +6219,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Polish-Lithuanian Commonwealth": {
             "name": "Polish-Lithuanian Commonwealth",
@@ -6134,7 +6266,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kosovo": {
             "name": "Kosovo",
@@ -6180,7 +6313,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Montenegro": {
             "name": "Montenegro",
@@ -6226,7 +6360,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bahamas": {
             "name": "Bahamas",
@@ -6272,7 +6407,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Belize": {
             "name": "Belize",
@@ -6318,7 +6454,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Puerto Rico": {
             "name": "Puerto Rico",
@@ -6364,7 +6501,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rwanda": {
             "name": "Rwanda",
@@ -6410,7 +6548,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Qatar": {
             "name": "Qatar",
@@ -6456,7 +6595,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Jamaica": {
             "name": "Jamaica",
@@ -6502,7 +6642,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Quebec": {
             "name": "Quebec",
@@ -6548,7 +6689,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Hawaii": {
             "name": "Hawaii",
@@ -6594,7 +6736,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Corsica": {
             "name": "Corsica",
@@ -6640,7 +6783,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Occitania": {
             "name": "Occitania",
@@ -6686,7 +6830,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pocatello": {
             "name": "Pocatello",
@@ -6732,7 +6877,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zlatoust": {
             "name": "Zlatoust",
@@ -6778,7 +6924,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zilkhstan": {
             "name": "Zilkhstan",
@@ -6824,7 +6971,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Maranh\u00e3o": {
             "name": "Maranh\u00e3o",
@@ -6870,7 +7018,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Commune of France": {
             "name": "Commune of France",
@@ -6916,7 +7065,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Combined Syndicates of America": {
             "name": "Combined Syndicates of America",
@@ -6962,7 +7112,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Eritrea": {
             "name": "Eritrea",
@@ -7008,7 +7159,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Louisiana": {
             "name": "Louisiana",
@@ -7054,7 +7206,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Malaysia": {
             "name": "Malaysia",
@@ -7100,7 +7253,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Senegal": {
             "name": "Senegal",
@@ -7146,7 +7300,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Naples": {
             "name": "Naples",
@@ -7192,7 +7347,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Papua New Guinea": {
             "name": "Papua New Guinea",
@@ -7238,7 +7394,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Omsk": {
             "name": "Omsk",
@@ -7284,7 +7441,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iberia": {
             "name": "Iberia",
@@ -7330,7 +7488,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Holy Britannian Empire": {
             "name": "Holy Britannian Empire",
@@ -7376,7 +7535,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Holy Roman Empire": {
             "name": "Holy Roman Empire",
@@ -7422,7 +7582,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iceland": {
             "name": "Iceland",
@@ -7468,7 +7629,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Deseret": {
             "name": "Deseret",
@@ -7514,7 +7676,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Philippines": {
             "name": "Philippines",
@@ -7560,7 +7723,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "White Kaganate": {
             "name": "White Kaganate",
@@ -7606,7 +7770,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United Nations": {
             "name": "United Nations",
@@ -7652,7 +7817,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United Baltic Dutchy": {
             "name": "United Baltic Dutchy",
@@ -7698,7 +7864,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tomsk": {
             "name": "Tomsk",
@@ -7744,7 +7911,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sokoto": {
             "name": "Sokoto",
@@ -7790,7 +7958,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Orange Free State": {
             "name": "Orange Free State",
@@ -7836,7 +8005,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Napoleonic France": {
             "name": "Napoleonic France",
@@ -7882,7 +8052,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "French Sudan": {
             "name": "French Sudan",
@@ -7928,7 +8099,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iowa": {
             "name": "Iowa",
@@ -7974,7 +8146,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mali Empire": {
             "name": "Mali Empire",
@@ -8020,7 +8193,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Crimea": {
             "name": "Crimea",
@@ -8066,7 +8240,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Catalonia": {
             "name": "Catalonia",
@@ -8112,7 +8287,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "California": {
             "name": "California",
@@ -8158,7 +8334,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Danzig": {
             "name": "Danzig",
@@ -8204,7 +8381,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Aragon": {
             "name": "Aragon",
@@ -8250,7 +8428,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Arizona": {
             "name": "Arizona",
@@ -8296,7 +8475,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "British Columbia": {
             "name": "British Columbia",
@@ -8342,7 +8522,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kyrgyzstan": {
             "name": "Kyrgyzstan",
@@ -8388,7 +8569,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kazakhstan": {
             "name": "Kazakhstan",
@@ -8434,7 +8616,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kenya": {
             "name": "Kenya",
@@ -8480,7 +8663,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Greenland": {
             "name": "Greenland",
@@ -8526,7 +8710,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kurdistan": {
             "name": "Kurdistan",
@@ -8572,7 +8757,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alaska": {
             "name": "Alaska",
@@ -8618,7 +8804,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Amap\u00e1": {
             "name": "Amap\u00e1",
@@ -8664,7 +8851,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Atyrau": {
             "name": "Atyrau",
@@ -8710,7 +8898,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Guyana": {
             "name": "Guyana",
@@ -8756,7 +8945,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kazembe": {
             "name": "Kazembe",
@@ -8802,7 +8992,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of France": {
             "name": "Kingdom of France",
@@ -8848,7 +9039,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Lithuania": {
             "name": "Kingdom of Lithuania",
@@ -8894,7 +9086,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kokand": {
             "name": "Kokand",
@@ -8940,7 +9133,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Liangguang Clique": {
             "name": "Liangguang Clique",
@@ -8986,7 +9180,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Sardinia": {
             "name": "Kingdom of Sardinia",
@@ -9032,7 +9227,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Par\u00e1": {
             "name": "Par\u00e1",
@@ -9078,7 +9274,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New England": {
             "name": "New England",
@@ -9124,7 +9321,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mende": {
             "name": "Mende",
@@ -9170,7 +9368,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pacific Islands Forum": {
             "name": "Pacific Islands Forum",
@@ -9216,7 +9415,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Punjab": {
             "name": "Punjab",
@@ -9262,7 +9462,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Roraima": {
             "name": "Roraima",
@@ -9308,7 +9509,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sicily": {
             "name": "Sicily",
@@ -9354,7 +9556,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sinaloa Cartel": {
             "name": "Sinaloa Cartel",
@@ -9400,7 +9603,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "S\u00e1mi": {
             "name": "S\u00e1mi",
@@ -9446,7 +9650,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tyumen": {
             "name": "Tyumen",
@@ -9492,7 +9697,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Suriname": {
             "name": "Suriname",
@@ -9538,7 +9744,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tatar Khanate": {
             "name": "Tatar Khanate",
@@ -9584,7 +9791,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mengjiang": {
             "name": "Mengjiang",
@@ -9630,7 +9838,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Merina": {
             "name": "Merina",
@@ -9676,7 +9885,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Khmer Rouge": {
             "name": "Khmer Rouge",
@@ -9722,7 +9932,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Khoisan": {
             "name": "Khoisan",
@@ -9768,7 +9979,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kyushu": {
             "name": "Kyushu",
@@ -9814,7 +10026,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Herero": {
             "name": "Herero",
@@ -9860,7 +10073,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Henan": {
             "name": "Henan",
@@ -9906,7 +10120,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iqutios": {
             "name": "Iqutios",
@@ -9952,7 +10167,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kamchatka": {
             "name": "Kamchatka",
@@ -9998,7 +10214,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Khalistan": {
             "name": "Khalistan",
@@ -10044,7 +10261,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Hunan Clique": {
             "name": "Hunan Clique",
@@ -10090,7 +10308,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "South Korea": {
             "name": "South Korea",
@@ -10136,7 +10355,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "North Korea": {
             "name": "North Korea",
@@ -10182,7 +10402,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Northern Territory": {
             "name": "Northern Territory",
@@ -10228,7 +10449,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Ostland": {
             "name": "Reichskommissariat Ostland",
@@ -10274,7 +10496,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Norwegen": {
             "name": "Reichskommissariat Norwegen",
@@ -10320,7 +10543,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Moskowien": {
             "name": "Reichskommissariat Moskowien",
@@ -10366,7 +10590,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Ukraine": {
             "name": "Reichskommissariat Ukraine",
@@ -10412,7 +10637,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sudwestafrika": {
             "name": "Sudwestafrika",
@@ -10458,7 +10684,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zentralafrika": {
             "name": "Zentralafrika",
@@ -10504,7 +10731,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rhodesia": {
             "name": "Rhodesia",
@@ -10550,7 +10778,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rahanweyn": {
             "name": "Rahanweyn",
@@ -10596,7 +10825,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Marshall Islands": {
             "name": "Marshall Islands",
@@ -10642,7 +10872,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mato Grosso": {
             "name": "Mato Grosso",
@@ -10688,7 +10919,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mecklenburg": {
             "name": "Mecklenburg",
@@ -10734,7 +10966,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kashmir": {
             "name": "Kashmir",
@@ -10780,7 +11013,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Great Lakes Republic": {
             "name": "Great Lakes Republic",
@@ -10826,7 +11060,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Great Hwan Empire": {
             "name": "Great Hwan Empire",
@@ -10872,7 +11107,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Futa Jallon": {
             "name": "Futa Jallon",
@@ -10918,7 +11154,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Wyoming": {
             "name": "Wyoming",
@@ -10964,7 +11201,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Uganda": {
             "name": "Uganda",
@@ -11010,7 +11248,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yucatan": {
             "name": "Yucatan",
@@ -11056,7 +11295,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Transylvania": {
             "name": "Transylvania",
@@ -11102,7 +11342,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Wales": {
             "name": "Wales",
@@ -11148,7 +11389,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Washington": {
             "name": "Washington",
@@ -11194,7 +11436,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Wisconsin": {
             "name": "Wisconsin",
@@ -11240,7 +11483,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zimbabwe": {
             "name": "Zimbabwe",
@@ -11286,7 +11530,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zambia": {
             "name": "Zambia",
@@ -11332,7 +11577,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kalmar Union": {
             "name": "Kalmar Union",
@@ -11378,7 +11624,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Basque Country": {
             "name": "Basque Country",
@@ -11424,7 +11671,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Texas": {
             "name": "Texas",
@@ -11470,7 +11718,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Silesia": {
             "name": "Silesia",
@@ -11516,7 +11765,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Prussia": {
             "name": "Prussia",
@@ -11562,7 +11812,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ohio": {
             "name": "Ohio",
@@ -11608,7 +11859,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pennsylvania": {
             "name": "Pennsylvania",
@@ -11654,7 +11906,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oklahoma": {
             "name": "Oklahoma",
@@ -11700,7 +11953,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Utah": {
             "name": "Utah",
@@ -11746,7 +12000,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Solomon Islands": {
             "name": "Solomon Islands",
@@ -11792,7 +12047,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Maine": {
             "name": "Maine",
@@ -11838,7 +12094,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Iroquois Confederacy": {
             "name": "Iroquois Confederacy",
@@ -11884,7 +12141,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tennessee": {
             "name": "Tennessee",
@@ -11930,7 +12188,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Valencia": {
             "name": "Valencia",
@@ -11976,7 +12235,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Khiva": {
             "name": "Khiva",
@@ -12022,7 +12282,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Central African Republic": {
             "name": "Central African Republic",
@@ -12068,7 +12329,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bangladesh": {
             "name": "Bangladesh",
@@ -12114,7 +12376,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Montana": {
             "name": "Montana",
@@ -12160,7 +12423,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nevada": {
             "name": "Nevada",
@@ -12206,7 +12470,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New Jersey": {
             "name": "New Jersey",
@@ -12252,7 +12517,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New Mexico": {
             "name": "New Mexico",
@@ -12298,7 +12564,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Manitoba": {
             "name": "Manitoba",
@@ -12344,7 +12611,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Laos": {
             "name": "Laos",
@@ -12390,7 +12658,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ontario": {
             "name": "Ontario",
@@ -12436,7 +12705,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Michigan": {
             "name": "Michigan",
@@ -12482,7 +12752,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oregon": {
             "name": "Oregon",
@@ -12528,7 +12799,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nunavut": {
             "name": "Nunavut",
@@ -12574,7 +12846,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oaxaca": {
             "name": "Oaxaca",
@@ -12620,7 +12893,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Newfoundland": {
             "name": "Newfoundland",
@@ -12666,7 +12940,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rojava": {
             "name": "Rojava",
@@ -12712,7 +12987,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tuareg": {
             "name": "Tuareg",
@@ -12758,7 +13034,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sakhalin": {
             "name": "Sakhalin",
@@ -12804,7 +13081,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Safavid Empire": {
             "name": "Safavid Empire",
@@ -12850,7 +13128,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ptolemaic Empire": {
             "name": "Ptolemaic Empire",
@@ -12896,7 +13175,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Parthian Empire": {
             "name": "Parthian Empire",
@@ -12942,7 +13222,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Princely Federation": {
             "name": "Princely Federation",
@@ -12988,7 +13269,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Socialist Republic of Italy": {
             "name": "Socialist Republic of Italy",
@@ -13034,7 +13316,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yakutia": {
             "name": "Yakutia",
@@ -13080,7 +13363,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Illinois": {
             "name": "Illinois",
@@ -13126,7 +13410,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Florida": {
             "name": "Florida",
@@ -13172,7 +13457,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Durango": {
             "name": "Durango",
@@ -13218,7 +13504,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cambodia": {
             "name": "Cambodia",
@@ -13264,7 +13551,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bavaria": {
             "name": "Bavaria",
@@ -13310,7 +13598,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Colorado": {
             "name": "Colorado",
@@ -13356,7 +13645,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Circassia": {
             "name": "Circassia",
@@ -13402,7 +13692,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Benin": {
             "name": "Benin",
@@ -13448,7 +13739,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Botswana": {
             "name": "Botswana",
@@ -13494,7 +13786,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Czechochechnyaslovenoslovakia": {
             "name": "Czechochechnyaslovenoslovakia",
@@ -13540,7 +13833,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Danubia": {
             "name": "Danubia",
@@ -13586,7 +13880,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Buganda": {
             "name": "Buganda",
@@ -13632,7 +13927,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Aztec Empire": {
             "name": "Aztec Empire",
@@ -13678,7 +13974,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Dutch East India Company": {
             "name": "Dutch East India Company",
@@ -13724,7 +14021,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Darfur": {
             "name": "Darfur",
@@ -13770,7 +14068,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nebraska": {
             "name": "Nebraska",
@@ -13816,7 +14115,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Northwest Territories": {
             "name": "Northwest Territories",
@@ -13862,7 +14162,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rio Grande": {
             "name": "Rio Grande",
@@ -13908,7 +14209,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pacific States of America": {
             "name": "Pacific States of America",
@@ -13954,7 +14256,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Orsk": {
             "name": "Orsk",
@@ -14000,7 +14303,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "American Union State": {
             "name": "American Union State",
@@ -14046,7 +14350,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Azande": {
             "name": "Azande",
@@ -14092,7 +14397,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Barotseland": {
             "name": "Barotseland",
@@ -14138,7 +14444,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ayutthaya Kingdom": {
             "name": "Ayutthaya Kingdom",
@@ -14184,7 +14491,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bharatiya Commune": {
             "name": "Bharatiya Commune",
@@ -14230,7 +14538,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Brunei": {
             "name": "Brunei",
@@ -14276,7 +14585,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Aktobe": {
             "name": "Aktobe",
@@ -14322,7 +14632,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Burkina Faso": {
             "name": "Burkina Faso",
@@ -14368,7 +14679,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cameroon": {
             "name": "Cameroon",
@@ -14414,7 +14726,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cossacks": {
             "name": "Cossacks",
@@ -14460,7 +14773,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ivory Coast": {
             "name": "Ivory Coast",
@@ -14506,7 +14820,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bukhara": {
             "name": "Bukhara",
@@ -14552,7 +14867,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Equatorial Guinea": {
             "name": "Equatorial Guinea",
@@ -14598,7 +14914,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Fiji": {
             "name": "Fiji",
@@ -14644,7 +14961,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kansas": {
             "name": "Kansas",
@@ -14690,7 +15008,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Karelia": {
             "name": "Karelia",
@@ -14736,7 +15055,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kaliningrad": {
             "name": "Kaliningrad",
@@ -14782,7 +15102,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Queensland": {
             "name": "Queensland",
@@ -14828,7 +15149,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ilkhanate": {
             "name": "Ilkhanate",
@@ -14874,7 +15196,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Katanga": {
             "name": "Katanga",
@@ -14920,7 +15243,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mauryan Empire": {
             "name": "Mauryan Empire",
@@ -14966,7 +15290,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Majapahit": {
             "name": "Majapahit",
@@ -15012,7 +15337,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Livonian Order": {
             "name": "Livonian Order",
@@ -15058,7 +15384,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Luang Phrabang": {
             "name": "Luang Phrabang",
@@ -15104,7 +15431,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Teutonic Order": {
             "name": "Teutonic Order",
@@ -15150,7 +15478,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Lunda": {
             "name": "Lunda",
@@ -15196,7 +15525,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Scary Russian Empire": {
             "name": "Scary Russian Empire",
@@ -15242,7 +15572,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vikramaditya": {
             "name": "Vikramaditya",
@@ -15288,7 +15619,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vorkuta": {
             "name": "Vorkuta",
@@ -15334,7 +15666,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Russian Empire": {
             "name": "Russian Empire",
@@ -15380,7 +15713,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New York": {
             "name": "New York",
@@ -15426,7 +15760,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Piedmont": {
             "name": "Piedmont",
@@ -15472,7 +15807,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sri Lanka": {
             "name": "Sri Lanka",
@@ -15518,7 +15854,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alsace-Lorraine": {
             "name": "Alsace-Lorraine",
@@ -15564,7 +15901,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Galicia": {
             "name": "Galicia",
@@ -15610,7 +15948,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alto Rio Negro": {
             "name": "Alto Rio Negro",
@@ -15656,7 +15995,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Atlantis": {
             "name": "Atlantis",
@@ -15702,7 +16042,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Antofagasta": {
             "name": "Antofagasta",
@@ -15748,7 +16089,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Maracaibo": {
             "name": "Maracaibo",
@@ -15794,7 +16136,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Arkhangelsk Governorate": {
             "name": "Arkhangelsk Governorate",
@@ -15840,7 +16183,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Chihuahua": {
             "name": "Chihuahua",
@@ -15886,7 +16230,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ordensstaat Burgund": {
             "name": "Ordensstaat Burgund",
@@ -15932,7 +16277,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Chongqing": {
             "name": "Chongqing",
@@ -15978,7 +16324,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Commune of Spain": {
             "name": "Commune of Spain",
@@ -16024,7 +16371,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cyprus": {
             "name": "Cyprus",
@@ -16070,7 +16418,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sinaloa": {
             "name": "Sinaloa",
@@ -16116,7 +16465,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sonora": {
             "name": "Sonora",
@@ -16162,7 +16512,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nowa Polska": {
             "name": "Nowa Polska",
@@ -16208,7 +16559,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Muscogee": {
             "name": "Muscogee",
@@ -16254,7 +16606,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Hokkaido": {
             "name": "Hokkaido",
@@ -16300,7 +16653,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Russia": {
             "name": "Kingdom of Russia",
@@ -16346,7 +16700,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Portugal": {
             "name": "Kingdom of Portugal",
@@ -16392,7 +16747,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Two Sicilies": {
             "name": "Kingdom of Two Sicilies",
@@ -16438,7 +16794,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Magadan": {
             "name": "Magadan",
@@ -16484,7 +16841,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sokoto Caliphate": {
             "name": "Sokoto Caliphate",
@@ -16530,7 +16888,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Spanish Empire": {
             "name": "Spanish Empire",
@@ -16576,7 +16935,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sparta": {
             "name": "Sparta",
@@ -16622,7 +16982,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sulawesi": {
             "name": "Sulawesi",
@@ -16668,7 +17029,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sverdlovsk": {
             "name": "Sverdlovsk",
@@ -16714,7 +17076,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tanzania": {
             "name": "Tanzania",
@@ -16760,7 +17123,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Siberian Black Army": {
             "name": "Siberian Black Army",
@@ -16806,7 +17170,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sichuan Clique": {
             "name": "Sichuan Clique",
@@ -16852,7 +17217,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sikh Empire": {
             "name": "Sikh Empire",
@@ -16898,7 +17264,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Shangdong Clique": {
             "name": "Shangdong Clique",
@@ -16944,7 +17311,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Maratha Empire": {
             "name": "Maratha Empire",
@@ -16990,7 +17358,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Proto-Finnish Holy Roman Khaganate": {
             "name": "Proto-Finnish Holy Roman Khaganate",
@@ -17036,7 +17405,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Turkmenistan": {
             "name": "Turkmenistan",
@@ -17082,7 +17452,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Omani Empire": {
             "name": "Omani Empire",
@@ -17128,7 +17499,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kalat": {
             "name": "Kalat",
@@ -17174,7 +17546,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Saskatchewan": {
             "name": "Saskatchewan",
@@ -17220,7 +17593,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cherokee": {
             "name": "Cherokee",
@@ -17266,7 +17640,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sardinia": {
             "name": "Sardinia",
@@ -17312,7 +17687,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sarawak": {
             "name": "Sarawak",
@@ -17358,7 +17734,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rhineland": {
             "name": "Rhineland",
@@ -17404,7 +17781,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Commune of Lemuria": {
             "name": "Commune of Lemuria",
@@ -17450,7 +17828,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bornu": {
             "name": "Bornu",
@@ -17496,7 +17875,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Champa": {
             "name": "Champa",
@@ -17542,7 +17922,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Azad Hind": {
             "name": "Azad Hind",
@@ -17588,7 +17969,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Union of Britain": {
             "name": "Union of Britain",
@@ -17634,7 +18016,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Western Command Center": {
             "name": "Western Command Center",
@@ -17680,7 +18063,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Armenia": {
             "name": "Kingdom of Armenia",
@@ -17726,7 +18110,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Fatmid Caliphate": {
             "name": "Fatmid Caliphate",
@@ -17772,7 +18157,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Empire of Brazil": {
             "name": "Empire of Brazil",
@@ -17818,7 +18204,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "England": {
             "name": "England",
@@ -17864,7 +18251,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Emirate of Cyrenaica": {
             "name": "Emirate of Cyrenaica",
@@ -17910,7 +18298,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Emirate of Bukhara": {
             "name": "Emirate of Bukhara",
@@ -17956,7 +18345,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "East Germany": {
             "name": "East Germany",
@@ -18002,7 +18392,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "West Germany": {
             "name": "West Germany",
@@ -18048,7 +18439,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Dutch America": {
             "name": "Dutch America",
@@ -18094,7 +18486,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Xinjiang Clique": {
             "name": "Xinjiang Clique",
@@ -18140,7 +18533,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "White Ruthenia": {
             "name": "White Ruthenia",
@@ -18186,7 +18580,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tasmania": {
             "name": "Tasmania",
@@ -18232,7 +18627,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Saxony": {
             "name": "Saxony",
@@ -18278,7 +18674,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gran Colombia": {
             "name": "Gran Colombia",
@@ -18324,7 +18721,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Dominion of Canada": {
             "name": "Dominion of Canada",
@@ -18370,7 +18768,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Emirate of Afghsnistan": {
             "name": "Emirate of Afghsnistan",
@@ -18416,7 +18815,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Emirate of Jabal Shammar": {
             "name": "Emirate of Jabal Shammar",
@@ -18462,7 +18862,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Emirate of Nedj and Hasa": {
             "name": "Emirate of Nedj and Hasa",
@@ -18508,7 +18909,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Communist Party of India": {
             "name": "Communist Party of India",
@@ -18554,7 +18956,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "British-Japanese Empire": {
             "name": "British-Japanese Empire",
@@ -18600,7 +19003,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Batavian Commune": {
             "name": "Batavian Commune",
@@ -18646,7 +19050,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "National France": {
             "name": "National France",
@@ -18692,7 +19097,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "League of Eight Provinces": {
             "name": "League of Eight Provinces",
@@ -18738,7 +19144,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Argentina": {
             "name": "Kingdom of Argentina",
@@ -18784,7 +19191,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Toubou": {
             "name": "Toubou",
@@ -18830,7 +19238,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bohemia": {
             "name": "Bohemia",
@@ -18876,7 +19285,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alash Autonomy": {
             "name": "Alash Autonomy",
@@ -18922,7 +19332,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Achaemenid Empire": {
             "name": "Achaemenid Empire",
@@ -18968,7 +19379,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ural League": {
             "name": "Ural League",
@@ -19014,7 +19426,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Turkestan Republic": {
             "name": "Turkestan Republic",
@@ -19060,7 +19473,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Totalist Italy": {
             "name": "Totalist Italy",
@@ -19106,7 +19520,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Japanese Pacific States": {
             "name": "Japanese Pacific States",
@@ -19152,7 +19567,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Irkutsk": {
             "name": "Irkutsk",
@@ -19198,7 +19614,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vanuatu": {
             "name": "Vanuatu",
@@ -19244,7 +19661,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Uzbekistan": {
             "name": "Uzbekistan",
@@ -19290,7 +19708,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kazakh Khanate": {
             "name": "Kazakh Khanate",
@@ -19336,7 +19755,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Anarchist Commune of America": {
             "name": "Anarchist Commune of America",
@@ -19382,7 +19802,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Aboriginals": {
             "name": "Aboriginals",
@@ -19428,7 +19849,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Stanistan": {
             "name": "Stanistan",
@@ -19474,7 +19896,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Xikang Clique": {
             "name": "Xikang Clique",
@@ -19520,7 +19943,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yunnan Clique": {
             "name": "Yunnan Clique",
@@ -19566,7 +19990,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Yuan": {
             "name": "Yuan",
@@ -19612,7 +20037,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zhili": {
             "name": "Zhili",
@@ -19658,7 +20084,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ostafrika": {
             "name": "Ostafrika",
@@ -19704,7 +20131,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Croatia": {
             "name": "Croatia",
@@ -19750,7 +20178,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Kaukasien": {
             "name": "Reichskommissariat Kaukasien",
@@ -19796,7 +20225,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reno": {
             "name": "Reno",
@@ -19842,7 +20272,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "49ers": {
             "name": "49ers",
@@ -19888,7 +20319,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "San Francisco": {
             "name": "San Francisco",
@@ -19934,7 +20366,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Los Angeles": {
             "name": "Los Angeles",
@@ -19980,7 +20413,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Las Vegas": {
             "name": "Las Vegas",
@@ -20026,7 +20460,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Christmas Island": {
             "name": "Christmas Island",
@@ -20072,7 +20507,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New Caledonia": {
             "name": "New Caledonia",
@@ -20118,7 +20554,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nigeria": {
             "name": "Nigeria",
@@ -20164,7 +20601,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Nigerian Commune": {
             "name": "Nigerian Commune",
@@ -20210,7 +20648,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Kingdom of Flanders-Wallonia": {
             "name": "Kingdom of Flanders-Wallonia",
@@ -20256,7 +20695,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Afrika Korps": {
             "name": "Afrika Korps",
@@ -20302,7 +20742,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Alberta": {
             "name": "Alberta",
@@ -20348,7 +20789,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Buryatia": {
             "name": "Buryatia",
@@ -20394,7 +20836,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Cameroon African State": {
             "name": "Cameroon African State",
@@ -20440,7 +20883,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Commune of Japan": {
             "name": "Commune of Japan",
@@ -20486,7 +20930,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "East Asia": {
             "name": "East Asia",
@@ -20532,7 +20977,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mega City One": {
             "name": "Mega City One",
@@ -20578,7 +21024,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mississippi": {
             "name": "Mississippi",
@@ -20624,7 +21071,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Missouri": {
             "name": "Missouri",
@@ -20670,7 +21118,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Moldova": {
             "name": "Moldova",
@@ -20716,7 +21165,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Niger": {
             "name": "Niger",
@@ -20762,7 +21212,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oceania": {
             "name": "Oceania",
@@ -20808,7 +21259,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oceanian Federation": {
             "name": "Oceanian Federation",
@@ -20854,7 +21306,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Union of South Africa": {
             "name": "Union of South Africa",
@@ -20900,7 +21353,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Confederate States of America": {
             "name": "Confederate States of America",
@@ -20946,7 +21400,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Democratic Republic of the Congo": {
             "name": "Democratic Republic of the Congo",
@@ -20992,7 +21447,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Republic of the Congo": {
             "name": "Republic of the Congo",
@@ -21038,7 +21494,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ayumu Kasuga": {
             "name": "Ayumu Kasuga",
@@ -21084,7 +21541,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "British America": {
             "name": "British America",
@@ -21130,7 +21588,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Free France": {
             "name": "Free France",
@@ -21176,7 +21635,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Croissant Republic": {
             "name": "Croissant Republic",
@@ -21222,7 +21682,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mongol Empire": {
             "name": "Mongol Empire",
@@ -21268,7 +21729,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Republic of South Africa": {
             "name": "Republic of South Africa",
@@ -21314,7 +21776,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bosnia and Herzegovina": {
             "name": "Bosnia and Herzegovina",
@@ -21360,7 +21823,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Amur": {
             "name": "Amur",
@@ -21406,7 +21870,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Andalusia": {
             "name": "Andalusia",
@@ -21452,7 +21917,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United Colonies": {
             "name": "United Colonies",
@@ -21498,7 +21964,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Thirteen Colonies": {
             "name": "Thirteen Colonies",
@@ -21544,7 +22011,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Chad": {
             "name": "Chad",
@@ -21590,7 +22058,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mauritania": {
             "name": "Mauritania",
@@ -21636,7 +22105,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Madagascar": {
             "name": "Madagascar",
@@ -21682,7 +22152,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pakistan": {
             "name": "Pakistan",
@@ -21728,7 +22199,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Myanmar": {
             "name": "Myanmar",
@@ -21774,7 +22246,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Namibia": {
             "name": "Namibia",
@@ -21820,7 +22293,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Midway": {
             "name": "Midway",
@@ -21866,7 +22340,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mali": {
             "name": "Mali",
@@ -21912,7 +22387,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "United Arab Emirates": {
             "name": "United Arab Emirates",
@@ -21958,7 +22434,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Arkhangelsk": {
             "name": "Arkhangelsk",
@@ -22004,7 +22481,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Telangana": {
             "name": "Telangana",
@@ -22050,7 +22528,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Orkhon": {
             "name": "Orkhon",
@@ -22096,7 +22575,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Novosibirsk": {
             "name": "Novosibirsk",
@@ -22142,7 +22622,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Zabaykalsky": {
             "name": "Zabaykalsky",
@@ -22188,7 +22669,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tatarstan": {
             "name": "Tatarstan",
@@ -22234,7 +22716,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Caucasus": {
             "name": "Caucasus",
@@ -22280,7 +22763,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Almaty": {
             "name": "Almaty",
@@ -22326,7 +22810,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Baja California": {
             "name": "Baja California",
@@ -22372,7 +22857,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Shanghai": {
             "name": "Shanghai",
@@ -22418,7 +22904,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Beijing": {
             "name": "Beijing",
@@ -22464,7 +22951,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Volgograd": {
             "name": "Volgograd",
@@ -22510,7 +22998,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Moscow": {
             "name": "Moscow",
@@ -22556,7 +23045,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "West Bengal": {
             "name": "West Bengal",
@@ -22602,7 +23092,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Mountainous Republic of the Northern Caucasus": {
             "name": "Mountainous Republic of the Northern Caucasus",
@@ -22648,7 +23139,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Korea": {
             "name": "Korea",
@@ -22694,7 +23186,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Joseon": {
             "name": "Joseon",
@@ -22740,7 +23233,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Taiwan": {
             "name": "Taiwan",
@@ -22786,7 +23280,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Java": {
             "name": "Java",
@@ -22832,7 +23327,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sumatra": {
             "name": "Sumatra",
@@ -22878,7 +23374,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Delhi": {
             "name": "Delhi",
@@ -22924,7 +23421,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "New South Wales": {
             "name": "New South Wales",
@@ -22970,7 +23468,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Perth": {
             "name": "Perth",
@@ -23016,7 +23515,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pilbara": {
             "name": "Pilbara",
@@ -23062,7 +23562,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "South Australia": {
             "name": "South Australia",
@@ -23108,7 +23609,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tierra del Fuego": {
             "name": "Tierra del Fuego",
@@ -23154,7 +23656,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Western Australia": {
             "name": "Western Australia",
@@ -23200,7 +23703,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Victoria": {
             "name": "Victoria",
@@ -23246,7 +23750,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Buenos Aires": {
             "name": "Buenos Aires",
@@ -23292,7 +23797,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Salta": {
             "name": "Salta",
@@ -23338,7 +23844,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Santiago": {
             "name": "Santiago",
@@ -23384,7 +23891,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bahia": {
             "name": "Bahia",
@@ -23430,7 +23938,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rio de Janeiro": {
             "name": "Rio de Janeiro",
@@ -23476,7 +23985,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "American Territory of Canada": {
             "name": "American Territory of Canada",
@@ -23522,7 +24032,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "The Rot": {
             "name": "The Rot",
@@ -23568,7 +24079,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Voroniya": {
             "name": "Voroniya",
@@ -23614,7 +24126,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vinland": {
             "name": "Vinland",
@@ -23660,7 +24173,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Timbuktu": {
             "name": "Timbuktu",
@@ -23706,7 +24220,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Songhai": {
             "name": "Songhai",
@@ -23752,7 +24267,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Songhai Empire": {
             "name": "Songhai Empire",
@@ -23798,7 +24314,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Rondon": {
             "name": "Rondon",
@@ -23844,7 +24361,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Oldeg\u00e5rd": {
             "name": "Oldeg\u00e5rd",
@@ -23890,7 +24408,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gotia": {
             "name": "Gotia",
@@ -23936,7 +24455,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Eastern Sanctuaries": {
             "name": "Eastern Sanctuaries",
@@ -23982,7 +24502,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Bremen": {
             "name": "Bremen",
@@ -24028,7 +24549,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Abyssonia": {
             "name": "Abyssonia",
@@ -24074,7 +24596,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sulawesi Separatists": {
             "name": "Sulawesi Separatists",
@@ -24120,7 +24643,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Vatican": {
             "name": "Vatican",
@@ -24166,7 +24690,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Papal States": {
             "name": "Papal States",
@@ -24212,7 +24737,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Western Sahara": {
             "name": "Western Sahara",
@@ -24258,7 +24784,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Eswatini": {
             "name": "Eswatini",
@@ -24304,7 +24831,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Lesotho": {
             "name": "Lesotho",
@@ -24350,7 +24878,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Djibouti": {
             "name": "Djibouti",
@@ -24396,7 +24925,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Gabon": {
             "name": "Gabon",
@@ -24442,7 +24972,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Guinea-Bissau": {
             "name": "Guinea-Bissau",
@@ -24488,7 +25019,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Guinea": {
             "name": "Guinea",
@@ -24534,7 +25066,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Malawi": {
             "name": "Malawi",
@@ -24580,7 +25113,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Shanxi": {
             "name": "Shanxi",
@@ -24626,7 +25160,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Sierra Leone": {
             "name": "Sierra Leone",
@@ -24672,7 +25207,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Tajikistan": {
             "name": "Tajikistan",
@@ -24718,7 +25254,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "The Gambia": {
             "name": "The Gambia",
@@ -24764,7 +25301,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Togo": {
             "name": "Togo",
@@ -24810,7 +25348,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Burundi": {
             "name": "Burundi",
@@ -24856,7 +25395,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Ghana": {
             "name": "Ghana",
@@ -24902,7 +25442,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "British Malaya": {
             "name": "British Malaya",
@@ -24948,7 +25489,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "French Indochina": {
             "name": "French Indochina",
@@ -24994,7 +25536,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "French Madagascar": {
             "name": "French Madagascar",
@@ -25040,7 +25583,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Italian East Africa": {
             "name": "Italian East Africa",
@@ -25086,7 +25630,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Malagasy Protectorate": {
             "name": "Malagasy Protectorate",
@@ -25132,7 +25677,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Protectorate of Bohemia and Moravia": {
             "name": "Protectorate of Bohemia and Moravia",
@@ -25178,7 +25724,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Belgian Congo": {
             "name": "Belgian Congo",
@@ -25224,7 +25771,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Dutch East Indies": {
             "name": "Dutch East Indies",
@@ -25270,7 +25818,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "European Union": {
             "name": "European Union",
@@ -25316,7 +25865,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Trucial States": {
             "name": "Trucial States",
@@ -25362,7 +25912,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Sweden": {
             "name": "Reichskommissariat Sweden",
@@ -25408,7 +25959,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Reichskommissariat Ungarn": {
             "name": "Reichskommissariat Ungarn",
@@ -25454,7 +26006,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "Pomerania": {
             "name": "Pomerania",
@@ -25500,7 +26053,8 @@
             "leader_title": "",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
-            "pending_diplomacy": {}
+            "pending_diplomacy": {},
+            "relations": {}
         },
         "FACTION_WAR_MAPS": {
             "at_war_with": [],
