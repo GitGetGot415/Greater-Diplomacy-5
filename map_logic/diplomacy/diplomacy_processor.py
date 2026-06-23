@@ -162,14 +162,14 @@ def process_diplomacy_turn(self):
                     finalize_faction_join(self.map_data, self.nation_data, nation_a, nation_b)
                     _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
                     
-                elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY"]:
-                    action_name = b_action.split('_')[0].lower()
+                elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "ACCEPT_FACTION_INVITE", "ACCEPT_JOIN_FACTION_REQ", "ACCEPT_CREATE_FACTION", "CREATE_FACTION"]:
+                    action_name = b_action.replace("ACCEPT_", "").split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                     send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
                     del b_data[nation_a] 
                     
-                elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY"]:
-                    action_name = a_action.split('_')[0].lower()
+                elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "ACCEPT_FACTION_INVITE", "ACCEPT_JOIN_FACTION_REQ", "ACCEPT_CREATE_FACTION", "CREATE_FACTION"]:
+                    action_name = a_action.replace("ACCEPT_", "").split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                     send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
                     del a_data[nation_b]

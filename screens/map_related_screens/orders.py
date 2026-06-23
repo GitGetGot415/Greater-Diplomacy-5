@@ -203,10 +203,10 @@ class Orders_Screen(GameState):
 
                 self.elements.append(btn_rename)
 
-            if is_tactical_other:
-                for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename]:
-                    b.disabled = True
-                    b.color = b.hover_color = c.UI_COLORS["grey"]
+                if is_tactical_other:
+                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename]:
+                        b.disabled = True
+                        b.color = b.hover_color = c.UI_COLORS["grey"]
             
             display_index += 1
 
