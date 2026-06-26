@@ -17,20 +17,54 @@ class Declare_Independence_Screen(GameState):
         self.new_country_name = ""
         self.new_country_color = [200, 50, 50]
         self.active_input = False
-        self.input_y = 90
+        self.selected_core = None
+        self.available_cores = []
 
     def start_screen(self, map_ref):
         self.map_screen = map_ref
         self.new_country_name = "Free Republic"
         self.new_country_color = [200, 50, 50]
         self.active_input = False
+        self.selected_core = None
+        self.available_cores = []
+        
+        if self.map_screen and getattr(self.map_screen, 'player_unit', None):
+            for prov in self.map_screen.map_data.values():
+                if self.map_screen.player_unit in prov.get("units", []):
+                    self.available_cores = [core for core in prov.get("cores", []) if core not in c.UNPLAYABLE_NATIONS]
+                    break
+                    
+        self.refresh_ui()
+
+    def select_core(self, core_tag):
+        self.selected_core = core_tag
+        if core_tag is None:
+            self.new_country_name = "Free Republic"
+        else:
+            core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
+            self.new_country_name = f"Free {core_name}"
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
         
-        self.elements.append(Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT // 2 + 150, "medium", "green", "Confirm", self.confirm_independence))
-        self.elements.append(Button(c.SCREEN_WIDTH // 2 + 20, c.SCREEN_HEIGHT // 2 + 90, "small", "orange", "Pick Color", self.pick_color))
+        panel_x = c.SCREEN_WIDTH // 2 - 350
+        panel_y = c.SCREEN_HEIGHT // 2 - 200
+        
+        self.elements.append(Button(c.SCREEN_WIDTH // 2 - 100, panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
+        self.elements.append(Button(panel_x + 250, panel_y + 280, "small", "orange", "Pick Color", self.pick_color))
+        
+        btn_x = panel_x + 450
+        btn_y = panel_y + 80
+        
+        color_none = "green" if self.selected_core is None else "blue"
+        self.elements.append(Button(btn_x, btn_y, "medium", color_none, "None", lambda: self.select_core(None)))
+        
+        for i, core_tag in enumerate(self.available_cores):
+            core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
+            display_name = core_name if len(core_name) <= 15 else core_name[:12] + "..."
+            color_core = "green" if self.selected_core == core_tag else "blue"
+            self.elements.append(Button(btn_x, btn_y + 45 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
 
     def pick_color(self):
         root = queries.get_transient_tk_root()
@@ -102,6 +136,12 @@ class Declare_Independence_Screen(GameState):
             if old_tag not in c.UNPLAYABLE_NATIONS:
                 edit_province_ownership.add_claim(self.map_screen, unit_prov, old_tag)
                 
+            if self.selected_core:
+                for prov in self.map_screen.map_data.values():
+                    if self.selected_core in prov.get("cores", []) and prov != unit_prov:
+                        if new_tag not in prov.setdefault("cores", []):
+                            prov["cores"].insert(0, new_tag)
+                
         # 3. Reassign ownership
         unit["owner"] = new_tag
         
@@ -139,7 +179,9 @@ class Declare_Independence_Screen(GameState):
             super().handle_events([event])
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                input_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 150, c.SCREEN_HEIGHT // 2 + self.input_y, 150, 40)
+                panel_x = c.SCREEN_WIDTH // 2 - 350
+                panel_y = c.SCREEN_HEIGHT // 2 - 200
+                input_rect = pygame.Rect(panel_x + 30, panel_y + 280, 200, 40)
                 self.active_input = input_rect.collidepoint(event.pos)
                 
             if event.type == pygame.KEYDOWN:
@@ -163,7 +205,9 @@ class Declare_Independence_Screen(GameState):
         
         ui_bars.draw_fullscreen_overlay(surface, 200)
         
-        panel_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 300, c.SCREEN_HEIGHT // 2 - 200, 600, 420)
+        panel_x = c.SCREEN_WIDTH // 2 - 350
+        panel_y = c.SCREEN_HEIGHT // 2 - 200
+        panel_rect = pygame.Rect(panel_x, panel_y, 700, 420)
         ui_bars.draw_modal_box(surface, panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
         ui_bars.draw_centered_title(surface, "Declare Independence", panel_rect.y + 20)
         
@@ -181,19 +225,20 @@ class Declare_Independence_Screen(GameState):
         y_off = panel_rect.y + 80
         for line in desc:
             txt = font.render(line, True, (200, 200, 200))
-            surface.blit(txt, (panel_rect.centerx - txt.get_width()//2, y_off))
+            surface.blit(txt, (panel_rect.x + 30, y_off))
             y_off += 25
             
-        surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + 300))
+        surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + 250))
+        surface.blit(font.render("Claim Heritage:", True, (255, 215, 0)), (panel_rect.x + 450, panel_rect.y + 50))
         
-        input_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 150, c.SCREEN_HEIGHT // 2 + self.input_y, 150, 40)
+        input_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + 280, 200, 40)
         pygame.draw.rect(surface, (60, 60, 80) if self.active_input else (30, 30, 40), input_rect)
         pygame.draw.rect(surface, (200, 200, 200), input_rect, 2)
         
         name_surf = font.render(self.new_country_name + ("|" if self.active_input else ""), True, (255, 255, 255))
         surface.blit(name_surf, (input_rect.x + 10, input_rect.y + 10))
         
-        color_rect = pygame.Rect(c.SCREEN_WIDTH // 2 + 130, c.SCREEN_HEIGHT // 2 + 90, 40, 40)
+        color_rect = pygame.Rect(panel_rect.x + 250, panel_rect.y + 280, 40, 40)
         pygame.draw.rect(surface, self.new_country_color, color_rect)
         pygame.draw.rect(surface, (255, 255, 255), color_rect, 2)
         
