@@ -66,7 +66,6 @@ def prepare_turn(self):
     print("--- [PHASE 1] COMPLETE ---")
 
 def snapshot_history(self):
-    queries.scrub_default_images(self.nation_data)
     if not hasattr(self, 'history'):
         self.history = {}
     turn_idx = str(self.time_manager.total_turns)

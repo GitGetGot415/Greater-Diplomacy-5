@@ -38,6 +38,11 @@ def save_map_data(self, save_name=None):
     
     # History
     if hasattr(self, 'history'):
+        # Scrub images from history snapshots before writing (they were skipped at snapshot time for speed)
+        for turn_snap in self.history.values():
+            nd = turn_snap.get("nation_data")
+            if nd:
+                queries.scrub_default_images(nd)
         with open(os.path.join(save_path, "history.json"), "w") as f:
             json.dump(self.history, f, indent=c.HISTORY_INDENT)
             
