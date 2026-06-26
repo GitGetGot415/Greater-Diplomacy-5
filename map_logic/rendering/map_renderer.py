@@ -28,6 +28,12 @@ def draw_map_screen(self, surface):
         surface.blit(btn_txt, self.ready_btn_rect)
         
         return # Skip drawing the map and UI completely!
+
+    # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
+    if getattr(self, 'multi_turns_total', 0) > 0 and getattr(self, 'multi_turns_completed', 0) < getattr(self, 'multi_turns_total', 0):
+        surface.fill((10, 10, 15))
+        loading_screen.draw_turn_loading_screen(self, surface)
+        return
         
     # --- LAYER 1: THE BASE MAP ---
     current_base = self.active_map
@@ -97,6 +103,19 @@ def draw_map_screen(self, surface):
                 f_view = self.fog_map.subsurface(clipped)
                 surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, self.top_ui_height + int(render_y_offset)))
 
+    # --- CPU BOTTLENECK OPTIMIZATION ---
+    # Pygame's transform functions (scale, rotate, tilt) are extremely heavy.
+    # If we render thousands of units, arrows, and buildings at 60 FPS while the AI is thinking,
+    # the Python GIL chokes the background thread and makes turn processing take forever!
+    # By short-circuiting the render loop here, we save massive amounts of CPU time.
+    if self.ai_is_thinking or self.is_refreshing:
+        loading_screen.draw_turn_loading_screen(self, surface)
+        ui_bars.draw_ui_bars(self, surface)
+        if not self.selection_mode:
+            flag_renderer.draw_flag(self, surface)
+            top_bar_text.draw_top_text(self, surface)
+        return
+
     # --- LAYER 2: SELECTION & HOVER ---
     if not self.selected_province:
         hover_renderer.draw_hover_glow(self, surface)
@@ -154,10 +173,6 @@ def draw_map_screen(self, surface):
             surface.blit(province_bg, (0, 0))
             
         province_select.draw_province_select(self, surface)
-            
-    # --- LAYER 3.9: TURN LOADING SCREEN ---
-    if self.ai_is_thinking or self.is_refreshing:
-        loading_screen.draw_turn_loading_screen(self, surface)
 
     # --- LAYER 4: UI BARS & HUD ---
     ui_bars.draw_ui_bars(self, surface)

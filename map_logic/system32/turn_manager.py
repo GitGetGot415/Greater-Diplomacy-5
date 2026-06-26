@@ -17,13 +17,17 @@ def advance_time(map_screen):
     if map_screen.viewing_ai_moves:
         map_screen.is_refreshing = True
         map_screen.loading_status_text = "Resolving Orders & Map Refreshes..."
-        
+
         # Force a frame update so the loading screen appears BEFORE the heavy logic freezes the thread
         map_screen.draw(pygame.display.get_surface())
         pygame.display.flip()
         
         # 1. Run the heavy logic (Combat, Movement, etc.)
         turn_processor.resolve_turn_logic(map_screen)
+        
+        # --- MULTI-TURN OPTIMIZATION ---
+        is_multi = getattr(map_screen, 'multi_turns_total', 0) > 0
+        is_last_multi = not is_multi or (getattr(map_screen, 'multi_turns_completed', 0) >= getattr(map_screen, 'multi_turns_total', 0) - 1)
         
         # 2. Define Refresh Tasks
         refresh_steps = [
@@ -42,10 +46,21 @@ def advance_time(map_screen):
         # 3. Process each refresh step and flip the display to animate the bar
         for label, func in refresh_steps:
             map_screen.loading_status_text = label
+            
+            if is_multi and not is_last_multi:
+                # Skip heavy Numpy visual rebuilds until the final turn
+                map_screen.refresh_tasks_completed += 1
+                continue
+                
             func() # Execute the refresh
             map_screen.refresh_tasks_completed += 1
             
             # Re-draw the full screen so UI bars stay on top
+            map_screen.draw(pygame.display.get_surface())
+            pygame.display.flip()
+            
+        if is_multi and not is_last_multi:
+            # We skipped the inner loop drawing, so draw once per turn to update the multi-turn progress bar
             map_screen.draw(pygame.display.get_surface())
             pygame.display.flip()
             

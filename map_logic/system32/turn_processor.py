@@ -142,8 +142,15 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     research_processor.process_national_research(self)
     
     if c.RECORD_HISTORY:
-        print("[SYSTEM] Saving Turn History Snapshot...")
-        snapshot_history(self)
+        # --- MULTI-TURN OPTIMIZATION ---
+        is_multi = getattr(self, 'multi_turns_total', 0) > 0
+        is_last_multi = not is_multi or (getattr(self, 'multi_turns_completed', 0) >= getattr(self, 'multi_turns_total', 0) - 1)
+        
+        if is_multi and not is_last_multi:
+            pass # Skip deepcopying thousands of dictionaries on skipped turns
+        else:
+            print("[SYSTEM] Saving Turn History Snapshot...")
+            snapshot_history(self)
     else:
         print("[SYSTEM] History Recording Disabled. Skipping Snapshot...")
     
