@@ -2782,7 +2782,7 @@
             100,
             77
         ],
-        "owner": "Soviet Union",
+        "owner": "Azerbaijan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -2792,6 +2792,7 @@
         ],
         "resources": {},
         "cores": [
+            "Azerbaijan",
             "Soviet Union"
         ],
         "json_key": "(83, 0, 0)",
