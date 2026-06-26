@@ -145,6 +145,50 @@ class Production_Screen(GameState):
             self.active_bars.append((bar_rect, mock_stats, y_offset, "BUILDING"))
             y_offset += 60
 
+        # --- REMOVE CORES BUTTON ---
+        foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
+        has_unit = any(u.get("owner") == owner_nation for u in self.target_province.get("units", []))
+        
+        is_removing_cores = any(q.get("order_type") == "REMOVE_CORE" for q in building_queue)
+        remove_data = queries.get_remove_core_cost()
+        
+        if is_removing_cores:
+            btn_txt2 = "Removing Cores..."
+            btn_color2 = "grey"
+            cb2 = lambda: None
+        elif not foreign_cores:
+            btn_txt2 = "No Foreign Cores"
+            btn_color2 = "grey"
+            cb2 = lambda: None
+        elif not has_unit:
+            btn_txt2 = "Needs Garrison"
+            btn_color2 = "grey"
+            cb2 = lambda: None
+        elif is_spectator and not can_spectator_edit:
+            btn_txt2 = "Remove Cores"
+            btn_color2 = "grey"
+            cb2 = lambda: None
+        else:
+            btn_txt2 = "Remove Cores"
+            btn_color2 = "red"
+            cb2 = lambda: self.start_remove_cores()
+
+        btn2 = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color2, btn_txt2, cb2)
+        btn2.base_y = y_offset
+        btn2.is_scrollable = True
+        self.elements.append(btn2)
+
+        bar_rect2 = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+        mock_stats2 = {
+            "time": remove_data["time"],
+            "cost_manpower": remove_data["cost_manpower"],
+            "cost_materials": remove_data["cost_materials"],
+            "cost_fuel": remove_data["cost_fuel"],
+            "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
+        }
+        self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
+        y_offset += 60
+
         self.admin_end_y = y_offset
 
         y_offset += section_spacing
@@ -318,6 +362,30 @@ class Production_Screen(GameState):
             }
             self.target_province.setdefault("building_queue", []).append(order)
             self.map_screen.show_feedback("Started Coring Territory")
+            self.refresh_ui()
+        else:
+            self.map_screen.show_feedback("Insufficient resources!")
+
+    def start_remove_cores(self):
+        owner = self.target_province.get("owner")
+        data = queries.get_remove_core_cost()
+        p_data = self.map_screen.nation_data.get(owner, {})
+
+        if queries.can_afford(p_data, data):
+            queries.deduct_resources(p_data, data)
+            order = {
+                "order_type": "REMOVE_CORE",
+                "item_name": "Remove Cores",
+                "turns_remaining": max(1, data.get("time", 1)),
+                "group": "administration",
+                "refund": {
+                    "cost_materials": data.get("cost_materials", 0),
+                    "cost_manpower": data.get("cost_manpower", 0),
+                    "cost_fuel": data.get("cost_fuel", 0)
+                }
+            }
+            self.target_province.setdefault("building_queue", []).append(order)
+            self.map_screen.show_feedback("Started Core Removal")
             self.refresh_ui()
         else:
             self.map_screen.show_feedback("Insufficient resources!")

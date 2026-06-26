@@ -74,6 +74,84 @@ def process_queues(self):
                         province.setdefault("cores", []).append(current_owner)
                     if current_owner == self.player_country:
                         self.show_feedback(f"CORED: Province {province.get('id')}")
+                        
+                elif item.get("order_type") == "REMOVE_CORE":
+                    # Remove all foreign cores, solidify player core
+                    province["cores"] = [current_owner]
+                    
+                    # Create the new rebellion tag
+                    r_idx = 1
+                    while f"rebellion {r_idx}" in self.nation_data:
+                        r_idx += 1
+                    reb_id = f"rebellion {r_idx}"
+                    
+                    reb_data = {
+                        "name": f"Rebellion {r_idx}",
+                        "color": [200, 30, 30],
+                        "is_playable": True,
+                        "research": {},
+                        "at_war_with": [current_owner],
+                        "allied_with": [],
+                        "pending_diplomacy": {},
+                        "claims": [],
+                        "claim_queue": [],
+                        "revoke_queue": [],
+                        "return_queue": [],
+                        "puppets": [],
+                        "master": "",
+                        "puppet_type": "",
+                        "faction": "",
+                        "is_faction_leader": False,
+                        "manpower": 0,
+                        "materials": 0,
+                        "fuel": 0
+                    }
+                    self.nation_data[reb_id] = reb_data
+                    if reb_id not in self.nation_data[current_owner].get("at_war_with", []):
+                        self.nation_data[current_owner].setdefault("at_war_with", []).append(reb_id)
+                        
+                    if hasattr(self, 'nation_colors'):
+                        self.nation_colors[reb_id] = (200, 30, 30)
+
+                    # Determine Militia Level natively
+                    current_year = self.time_manager.year
+                    tech_tree = queries.get_tech_tree()
+                    militia_years = tech_tree.get("militia", {}).get("years", [1910, 1915, 1920, 1925, 1930, 1935])
+                    
+                    militia_lvl = 1
+                    for i, y in enumerate(militia_years):
+                        if current_year >= y:
+                            militia_lvl = i + 1
+                    
+                    reb_data["research"]["militia"] = militia_lvl
+                    militia_name = queries.get_best_preferred_unit(reb_data["research"], unit_library, ["Militia"]) or "Militia I"
+                    
+                    # Transfer ownership
+                    from map_logic.system32 import edit_province_ownership
+                    edit_province_ownership.conquer_province(self, province, reb_id)
+                    
+                    # CRITICAL FIX: Override the turn start owner so it doesn't instantly auto-revert to the player!
+                    province["_turn_start_owner"] = reb_id
+                    
+                    # Spawn 5 Militia
+                    for _ in range(5):
+                        u_dict = queries.create_unit_dict(militia_name, reb_id, unit_library)
+                        u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters)
+                        province.setdefault("units", []).append(u_dict)
+                        
+                    # Queue a core for the rebellion so they solidify the tile if not crushed
+                    core_order = {
+                        "order_type": "CORE",
+                        "item_name": "Core Territory",
+                        "turns_remaining": 1,
+                        "group": "administration",
+                        "refund": {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+                    }
+                    province.setdefault("building_queue", []).append(core_order)
+                    
+                    if current_owner == self.player_country:
+                        self.show_feedback(f"CORES REMOVED: Rebellion Sparked in {province.get('id')}!")
+                        
                 else:
                     b_name = item.get("item_name")
                     if b_name:
@@ -100,8 +178,12 @@ def process_queues(self):
                         
                         if current_owner == self.player_country:
                             self.show_feedback(f"CONSTRUCTED: {b_name}")
-            
-                b_queue.pop(0)
+        
+                # --- CRITICAL FIX: Safely remove the item, accounting for list replacement ---
+                if item in b_queue:
+                    b_queue.remove(item)
+                if item in province.get("building_queue", []):
+                    province["building_queue"].remove(item)
 
         # --- UNIT QUEUE ---
         u_queue = province.get("unit_queue", [])
@@ -122,5 +204,9 @@ def process_queues(self):
                 province["units"].append(new_unit_data)
                 if current_owner == self.player_country:
                     self.show_feedback(f"DEPLOYED: {unit_type}")
-            
-                u_queue.pop(0)
+        
+                # --- CRITICAL FIX: Safely remove the item, accounting for list replacement ---
+                if item in u_queue:
+                    u_queue.remove(item)
+                if item in province.get("unit_queue", []):
+                    province["unit_queue"].remove(item)

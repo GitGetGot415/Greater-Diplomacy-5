@@ -768,14 +768,24 @@ def get_core_cost(nation, map_data):
     """Calculates the cost to core a territory dynamically."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
     
-    base_cost = getattr(c, 'CORE_BASE_COST_MANPOWER', 1000)
-    scaling_cost = getattr(c, 'CORE_SCALING_COST_MANPOWER', 500)
+    base_cost = c.CORE_BASE_COST_MANPOWER
+    scaling_cost = c.CORE_SCALING_COST_MANPOWER
     
     return {
         "cost_manpower": base_cost + (scaling_cost * core_count),
         "cost_materials": 0,
         "cost_fuel": 0,
-        "time": getattr(c, 'CORE_CONSTRUCTION_TURNS', 24),
+        "time": c.CORE_CONSTRUCTION_TURNS,
+        "group": "administration"
+    }
+
+def get_remove_core_cost():
+    """Returns the cost dictionary for removing foreign cores."""
+    return {
+        "cost_manpower": c.REMOVE_CORE_COST_MANPOWER,
+        "cost_materials": 0,
+        "cost_fuel": 0,
+        "time": c.REMOVE_CORE_TURNS,
         "group": "administration"
     }
 
