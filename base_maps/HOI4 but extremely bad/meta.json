@@ -25534,7 +25534,7 @@
             "buildings": []
         },
         "(3, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25545,7 +25545,7 @@
             "buildings": []
         },
         "(4, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25569,7 +25569,7 @@
         "(6, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25580,7 +25580,7 @@
         "(7, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25591,7 +25591,7 @@
         "(8, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25602,7 +25602,7 @@
         "(9, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25611,17 +25611,6 @@
             "buildings": []
         },
         "(10, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(11, 0, 0)": {
             "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
@@ -25632,8 +25621,19 @@
             "resources": {},
             "buildings": []
         },
-        "(12, 0, 0)": {
+        "(11, 0, 0)": {
             "owner": "Unclaimed",
+            "cores": [],
+            "is_coastal": true,
+            "units": [],
+            "building_queue": [],
+            "unit_queue": [],
+            "orders": [],
+            "resources": {},
+            "buildings": []
+        },
+        "(12, 0, 0)": {
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25646,7 +25646,7 @@
         "(13, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25668,7 +25668,7 @@
         "(15, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25688,7 +25688,7 @@
             "buildings": []
         },
         "(17, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25701,7 +25701,7 @@
         "(18, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25723,7 +25723,7 @@
         "(20, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25732,9 +25732,9 @@
             "buildings": []
         },
         "(21, 0, 0)": {
-            "owner": "Ocean",
+            "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25743,7 +25743,7 @@
             "buildings": []
         },
         "(22, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25765,7 +25765,7 @@
             "buildings": []
         },
         "(24, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25778,7 +25778,7 @@
         "(25, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25789,7 +25789,7 @@
         "(26, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25798,7 +25798,7 @@
             "buildings": []
         },
         "(27, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25811,7 +25811,7 @@
         "(28, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25820,7 +25820,7 @@
             "buildings": []
         },
         "(29, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25831,7 +25831,7 @@
             "buildings": []
         },
         "(30, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25842,7 +25842,7 @@
             "buildings": []
         },
         "(31, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25864,7 +25864,7 @@
             "buildings": []
         },
         "(33, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25877,7 +25877,7 @@
         "(34, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25886,7 +25886,7 @@
             "buildings": []
         },
         "(35, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25897,9 +25897,9 @@
             "buildings": []
         },
         "(36, 0, 0)": {
-            "owner": "Ocean",
+            "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25910,7 +25910,7 @@
         "(37, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25919,17 +25919,6 @@
             "buildings": []
         },
         "(38, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(39, 0, 0)": {
             "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
@@ -25940,8 +25929,19 @@
             "resources": {},
             "buildings": []
         },
-        "(40, 0, 0)": {
+        "(39, 0, 0)": {
             "owner": "Unclaimed",
+            "cores": [],
+            "is_coastal": true,
+            "units": [],
+            "building_queue": [],
+            "unit_queue": [],
+            "orders": [],
+            "resources": {},
+            "buildings": []
+        },
+        "(40, 0, 0)": {
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25952,7 +25952,7 @@
             "buildings": []
         },
         "(41, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25963,7 +25963,7 @@
             "buildings": []
         },
         "(42, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25976,7 +25976,7 @@
         "(43, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -25985,7 +25985,7 @@
             "buildings": []
         },
         "(44, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -25998,7 +25998,7 @@
         "(45, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -26009,7 +26009,7 @@
         "(46, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -26018,7 +26018,7 @@
             "buildings": []
         },
         "(47, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26031,7 +26031,7 @@
         "(48, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -26042,7 +26042,7 @@
         "(49, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -26051,28 +26051,6 @@
             "buildings": []
         },
         "(50, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(51, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(52, 0, 0)": {
             "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
@@ -26083,8 +26061,30 @@
             "resources": {},
             "buildings": []
         },
-        "(53, 0, 0)": {
+        "(51, 0, 0)": {
+            "owner": "Ocean",
+            "cores": [],
+            "is_coastal": false,
+            "units": [],
+            "building_queue": [],
+            "unit_queue": [],
+            "orders": [],
+            "resources": {},
+            "buildings": []
+        },
+        "(52, 0, 0)": {
             "owner": "Unclaimed",
+            "cores": [],
+            "is_coastal": true,
+            "units": [],
+            "building_queue": [],
+            "unit_queue": [],
+            "orders": [],
+            "resources": {},
+            "buildings": []
+        },
+        "(53, 0, 0)": {
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26095,7 +26095,7 @@
             "buildings": []
         },
         "(54, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26108,7 +26108,7 @@
         "(55, 0, 0)": {
             "owner": "Unclaimed",
             "cores": [],
-            "is_coastal": false,
+            "is_coastal": true,
             "units": [],
             "building_queue": [],
             "unit_queue": [],
@@ -26117,7 +26117,7 @@
             "buildings": []
         },
         "(56, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26128,7 +26128,7 @@
             "buildings": []
         },
         "(57, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26150,7 +26150,7 @@
             "buildings": []
         },
         "(59, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26161,7 +26161,7 @@
             "buildings": []
         },
         "(60, 0, 0)": {
-            "owner": "Unclaimed",
+            "owner": "Ocean",
             "cores": [],
             "is_coastal": false,
             "units": [],
@@ -26172,656 +26172,7 @@
             "buildings": []
         },
         "(61, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(62, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(63, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(64, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(65, 0, 0)": {
             "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(66, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(67, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(68, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(69, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(70, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(71, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(72, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(73, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(74, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(75, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(76, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(77, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(78, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(79, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(80, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(81, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(82, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(83, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(84, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(85, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(86, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(87, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(88, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(89, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(90, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(91, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(92, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(93, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(94, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(95, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(96, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(97, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(98, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(99, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(100, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(101, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(102, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(103, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(104, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(105, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(106, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(107, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(108, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(109, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(110, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(111, 0, 0)": {
-            "owner": "Ocean",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(112, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(113, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(114, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(115, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(116, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(117, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(118, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(119, 0, 0)": {
-            "owner": "Unclaimed",
-            "cores": [],
-            "is_coastal": false,
-            "units": [],
-            "building_queue": [],
-            "unit_queue": [],
-            "orders": [],
-            "resources": {},
-            "buildings": []
-        },
-        "(120, 0, 0)": {
-            "owner": "Lakes",
             "cores": [],
             "is_coastal": false,
             "units": [],
