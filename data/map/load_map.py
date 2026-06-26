@@ -60,6 +60,12 @@ def load_map_assets(self, load_path):
         self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
         return
         
+    # --- ZIP FILE INTERCEPT ---
+    if load_path and str(load_path).lower().endswith(".zip"):
+        extract_target = str(load_path)[:-4] # Strip the .zip extension
+        queries.extract_and_flatten_zip(load_path, extract_target)
+        load_path = extract_target
+        
     # --- DEFAULT FALLBACK LOGIC ---
     # If no path is provided (e.g., on main menu boot), default to the first available base map
     if not load_path:

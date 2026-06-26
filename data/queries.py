@@ -5,6 +5,8 @@ import base64
 import itertools
 import math
 import threading
+import shutil
+import zipfile
 
 import pygame
 
@@ -2223,3 +2225,33 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
         return winner
         
     return curr
+
+# ==========================================
+# FILE & ZIP IMPORT QUERIES
+# ==========================================
+
+def extract_and_flatten_zip(zip_path, extract_target_dir):
+    """
+    Extracts a zip file and flattens it if the archiver created a redundant root directory.
+    This fixes the issue where importing a map/mod creates folder/folder/data.json.
+    """
+    # Ensure the target directory exists before unpacking
+    os.makedirs(extract_target_dir, exist_ok=True)
+
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_target_dir)
+
+    # Filter out OS junk files (like .DS_Store on Mac) to see if there's only one REAL item
+    valid_items = [item for item in os.listdir(extract_target_dir) if not item.startswith('.')]
+
+    # If the only valid item extracted is a single directory, it's been nested. Let's flatten it.
+    if len(valid_items) == 1:
+        single_folder_path = os.path.join(extract_target_dir, valid_items[0])
+        
+        if os.path.isdir(single_folder_path):
+            # Move all internal contents up one level into the target directory
+            for item in os.listdir(single_folder_path):
+                shutil.move(os.path.join(single_folder_path, item), extract_target_dir)
+            
+            # Clean up the now-empty redundant folder
+            os.rmdir(single_folder_path)
