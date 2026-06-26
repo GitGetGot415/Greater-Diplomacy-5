@@ -2241,6 +2241,11 @@ def extract_and_flatten_zip(zip_path, extract_target_dir):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_target_dir)
 
+    # Remove macOS junk folder which often breaks the single directory check
+    macosx_path = os.path.join(extract_target_dir, "__MACOSX")
+    if os.path.exists(macosx_path):
+        shutil.rmtree(macosx_path)
+
     # Filter out OS junk files (like .DS_Store on Mac) to see if there's only one REAL item
     valid_items = [item for item in os.listdir(extract_target_dir) if not item.startswith('.')]
 
@@ -2254,4 +2259,22 @@ def extract_and_flatten_zip(zip_path, extract_target_dir):
                 shutil.move(os.path.join(single_folder_path, item), extract_target_dir)
             
             # Clean up the now-empty redundant folder
-            os.rmdir(single_folder_path)
+            try:
+                os.rmdir(single_folder_path)
+            except OSError:
+                shutil.rmtree(single_folder_path)
+    else:
+        # Fallback: If there are multiple items but map_data.json is hiding inside a subdirectory
+        if not os.path.exists(os.path.join(extract_target_dir, "map_data.json")):
+            for item in valid_items:
+                potential_path = os.path.join(extract_target_dir, item)
+                if os.path.isdir(potential_path) and os.path.exists(os.path.join(potential_path, "map_data.json")):
+                    # Found the true map folder, flatten it!
+                    for sub_item in os.listdir(potential_path):
+                        shutil.move(os.path.join(potential_path, sub_item), extract_target_dir)
+                    
+                    try:
+                        os.rmdir(potential_path)
+                    except OSError:
+                        shutil.rmtree(potential_path) # Fallback if hidden files got left behind
+                    break
