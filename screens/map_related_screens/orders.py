@@ -14,7 +14,7 @@ from ui.bars import ui_bars
 
 class Orders_Screen(GameState):
     PANEL_X = 80
-    PANEL_WIDTH = 540
+    PANEL_WIDTH = 600
     PANEL_TRANSPARENCY = 255
     bottom_vanish_y = 20
 
@@ -202,6 +202,21 @@ class Orders_Screen(GameState):
                     btn_rename = Button(x_pos + 235, y_pos, "orders_panel_button_2", "blue", "Rename", lambda idx=i: self.start_renaming(idx), font_preset="normal")
 
                 self.elements.append(btn_rename)
+
+                # some boilerplate stuff i copied from the repair button (should prolly be updated)
+                if order_type == "UPGRADE":
+                    btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "red", "Cancel Upgrade", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
+                elif hp < m_hp:
+                    if in_combat:
+                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "In Combat", lambda: None, font_preset="normal")
+                    elif is_factory:
+                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "orange", "Upgrade", lambda idx=i: self.repair_unit(idx), font_preset="normal")
+                    else:
+                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Needs Factory", lambda: None, font_preset="normal")
+                else:
+                    btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Max Level", lambda: None, font_preset="normal")
+
+                self.elements.append(btn_upgrade)
 
                 if is_tactical_other:
                     for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename]:
