@@ -12,13 +12,20 @@
             14,
             15
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(1, 0, 0)",
+        "map_color": [
+            1,
+            0,
+            0
+        ]
     },
     "(2, 0, 0)": {
         "id": 2,
@@ -33,13 +40,20 @@
             3,
             14
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(2, 0, 0)",
+        "map_color": [
+            2,
+            0,
+            0
+        ]
     },
     "(3, 0, 0)": {
         "id": 3,
@@ -56,13 +70,20 @@
             18,
             19
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(3, 0, 0)",
+        "map_color": [
+            3,
+            0,
+            0
+        ]
     },
     "(4, 0, 0)": {
         "id": 4,
@@ -85,7 +106,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(4, 0, 0)",
+        "map_color": [
+            4,
+            0,
+            0
+        ]
     },
     "(5, 0, 0)": {
         "id": 5,
@@ -107,7 +135,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(5, 0, 0)",
+        "map_color": [
+            5,
+            0,
+            0
+        ]
     },
     "(6, 0, 0)": {
         "id": 6,
@@ -125,13 +160,20 @@
             20,
             27
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(6, 0, 0)",
+        "map_color": [
+            6,
+            0,
+            0
+        ]
     },
     "(7, 0, 0)": {
         "id": 7,
@@ -152,7 +194,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(7, 0, 0)",
+        "map_color": [
+            7,
+            0,
+            0
+        ]
     },
     "(8, 0, 0)": {
         "id": 8,
@@ -174,7 +223,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(8, 0, 0)",
+        "map_color": [
+            8,
+            0,
+            0
+        ]
     },
     "(9, 0, 0)": {
         "id": 9,
@@ -196,7 +252,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(9, 0, 0)",
+        "map_color": [
+            9,
+            0,
+            0
+        ]
     },
     "(10, 0, 0)": {
         "id": 10,
@@ -218,7 +281,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(10, 0, 0)",
+        "map_color": [
+            10,
+            0,
+            0
+        ]
     },
     "(11, 0, 0)": {
         "id": 11,
@@ -241,7 +311,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(11, 0, 0)",
+        "map_color": [
+            11,
+            0,
+            0
+        ]
     },
     "(12, 0, 0)": {
         "id": 12,
@@ -267,7 +344,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(12, 0, 0)",
+        "map_color": [
+            12,
+            0,
+            0
+        ]
     },
     "(13, 0, 0)": {
         "id": 13,
@@ -291,7 +375,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(13, 0, 0)",
+        "map_color": [
+            13,
+            0,
+            0
+        ]
     },
     "(14, 0, 0)": {
         "id": 14,
@@ -311,13 +402,20 @@
             25,
             29
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(14, 0, 0)",
+        "map_color": [
+            14,
+            0,
+            0
+        ]
     },
     "(15, 0, 0)": {
         "id": 15,
@@ -333,13 +431,20 @@
             14,
             23
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(15, 0, 0)",
+        "map_color": [
+            15,
+            0,
+            0
+        ]
     },
     "(16, 0, 0)": {
         "id": 16,
@@ -361,7 +466,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(16, 0, 0)",
+        "map_color": [
+            16,
+            0,
+            0
+        ]
     },
     "(17, 0, 0)": {
         "id": 17,
@@ -382,7 +494,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(17, 0, 0)",
+        "map_color": [
+            17,
+            0,
+            0
+        ]
     },
     "(18, 0, 0)": {
         "id": 18,
@@ -405,7 +524,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(18, 0, 0)",
+        "map_color": [
+            18,
+            0,
+            0
+        ]
     },
     "(19, 0, 0)": {
         "id": 19,
@@ -426,13 +552,20 @@
             26,
             31
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(19, 0, 0)",
+        "map_color": [
+            19,
+            0,
+            0
+        ]
     },
     "(20, 0, 0)": {
         "id": 20,
@@ -452,13 +585,20 @@
             22,
             27
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(20, 0, 0)",
+        "map_color": [
+            20,
+            0,
+            0
+        ]
     },
     "(21, 0, 0)": {
         "id": 21,
@@ -481,7 +621,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(21, 0, 0)",
+        "map_color": [
+            21,
+            0,
+            0
+        ]
     },
     "(22, 0, 0)": {
         "id": 22,
@@ -500,13 +647,20 @@
             20,
             26
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(22, 0, 0)",
+        "map_color": [
+            22,
+            0,
+            0
+        ]
     },
     "(23, 0, 0)": {
         "id": 23,
@@ -523,13 +677,20 @@
             15,
             29
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(23, 0, 0)",
+        "map_color": [
+            23,
+            0,
+            0
+        ]
     },
     "(24, 0, 0)": {
         "id": 24,
@@ -551,7 +712,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(24, 0, 0)",
+        "map_color": [
+            24,
+            0,
+            0
+        ]
     },
     "(25, 0, 0)": {
         "id": 25,
@@ -569,13 +737,20 @@
             29,
             31
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(25, 0, 0)",
+        "map_color": [
+            25,
+            0,
+            0
+        ]
     },
     "(26, 0, 0)": {
         "id": 26,
@@ -596,7 +771,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(26, 0, 0)",
+        "map_color": [
+            26,
+            0,
+            0
+        ]
     },
     "(27, 0, 0)": {
         "id": 27,
@@ -621,7 +803,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(27, 0, 0)",
+        "map_color": [
+            27,
+            0,
+            0
+        ]
     },
     "(28, 0, 0)": {
         "id": 28,
@@ -645,7 +834,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(28, 0, 0)",
+        "map_color": [
+            28,
+            0,
+            0
+        ]
     },
     "(29, 0, 0)": {
         "id": 29,
@@ -667,7 +863,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(29, 0, 0)",
+        "map_color": [
+            29,
+            0,
+            0
+        ]
     },
     "(30, 0, 0)": {
         "id": 30,
@@ -691,7 +894,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(30, 0, 0)",
+        "map_color": [
+            30,
+            0,
+            0
+        ]
     },
     "(31, 0, 0)": {
         "id": 31,
@@ -714,7 +924,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(31, 0, 0)",
+        "map_color": [
+            31,
+            0,
+            0
+        ]
     },
     "(32, 0, 0)": {
         "id": 32,
@@ -738,7 +955,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(32, 0, 0)",
+        "map_color": [
+            32,
+            0,
+            0
+        ]
     },
     "(33, 0, 0)": {
         "id": 33,
@@ -760,7 +984,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(33, 0, 0)",
+        "map_color": [
+            33,
+            0,
+            0
+        ]
     },
     "(34, 0, 0)": {
         "id": 34,
@@ -779,13 +1010,20 @@
             55,
             31
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(34, 0, 0)",
+        "map_color": [
+            34,
+            0,
+            0
+        ]
     },
     "(35, 0, 0)": {
         "id": 35,
@@ -810,7 +1048,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(35, 0, 0)",
+        "map_color": [
+            35,
+            0,
+            0
+        ]
     },
     "(36, 0, 0)": {
         "id": 36,
@@ -833,7 +1078,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(36, 0, 0)",
+        "map_color": [
+            36,
+            0,
+            0
+        ]
     },
     "(37, 0, 0)": {
         "id": 37,
@@ -857,7 +1109,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(37, 0, 0)",
+        "map_color": [
+            37,
+            0,
+            0
+        ]
     },
     "(38, 0, 0)": {
         "id": 38,
@@ -878,13 +1137,20 @@
             25,
             29
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(38, 0, 0)",
+        "map_color": [
+            38,
+            0,
+            0
+        ]
     },
     "(39, 0, 0)": {
         "id": 39,
@@ -909,7 +1175,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(39, 0, 0)",
+        "map_color": [
+            39,
+            0,
+            0
+        ]
     },
     "(40, 0, 0)": {
         "id": 40,
@@ -931,7 +1204,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(40, 0, 0)",
+        "map_color": [
+            40,
+            0,
+            0
+        ]
     },
     "(41, 0, 0)": {
         "id": 41,
@@ -948,13 +1228,20 @@
             54,
             23
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(41, 0, 0)",
+        "map_color": [
+            41,
+            0,
+            0
+        ]
     },
     "(42, 0, 0)": {
         "id": 42,
@@ -979,7 +1266,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(42, 0, 0)",
+        "map_color": [
+            42,
+            0,
+            0
+        ]
     },
     "(43, 0, 0)": {
         "id": 43,
@@ -1004,7 +1298,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(43, 0, 0)",
+        "map_color": [
+            43,
+            0,
+            0
+        ]
     },
     "(44, 0, 0)": {
         "id": 44,
@@ -1027,7 +1328,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(44, 0, 0)",
+        "map_color": [
+            44,
+            0,
+            0
+        ]
     },
     "(45, 0, 0)": {
         "id": 45,
@@ -1051,7 +1359,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(45, 0, 0)",
+        "map_color": [
+            45,
+            0,
+            0
+        ]
     },
     "(46, 0, 0)": {
         "id": 46,
@@ -1073,7 +1388,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(46, 0, 0)",
+        "map_color": [
+            46,
+            0,
+            0
+        ]
     },
     "(47, 0, 0)": {
         "id": 47,
@@ -1098,7 +1420,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(47, 0, 0)",
+        "map_color": [
+            47,
+            0,
+            0
+        ]
     },
     "(48, 0, 0)": {
         "id": 48,
@@ -1122,7 +1451,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(48, 0, 0)",
+        "map_color": [
+            48,
+            0,
+            0
+        ]
     },
     "(49, 0, 0)": {
         "id": 49,
@@ -1146,7 +1482,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(49, 0, 0)",
+        "map_color": [
+            49,
+            0,
+            0
+        ]
     },
     "(50, 0, 0)": {
         "id": 50,
@@ -1171,7 +1514,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(50, 0, 0)",
+        "map_color": [
+            50,
+            0,
+            0
+        ]
     },
     "(51, 0, 0)": {
         "id": 51,
@@ -1195,7 +1545,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(51, 0, 0)",
+        "map_color": [
+            51,
+            0,
+            0
+        ]
     },
     "(52, 0, 0)": {
         "id": 52,
@@ -1218,7 +1575,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(52, 0, 0)",
+        "map_color": [
+            52,
+            0,
+            0
+        ]
     },
     "(53, 0, 0)": {
         "id": 53,
@@ -1240,7 +1604,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(53, 0, 0)",
+        "map_color": [
+            53,
+            0,
+            0
+        ]
     },
     "(54, 0, 0)": {
         "id": 54,
@@ -1257,13 +1628,20 @@
             41,
             61
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(54, 0, 0)",
+        "map_color": [
+            54,
+            0,
+            0
+        ]
     },
     "(55, 0, 0)": {
         "id": 55,
@@ -1286,7 +1664,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(55, 0, 0)",
+        "map_color": [
+            55,
+            0,
+            0
+        ]
     },
     "(56, 0, 0)": {
         "id": 56,
@@ -1310,7 +1695,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(56, 0, 0)",
+        "map_color": [
+            56,
+            0,
+            0
+        ]
     },
     "(57, 0, 0)": {
         "id": 57,
@@ -1333,7 +1725,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(57, 0, 0)",
+        "map_color": [
+            57,
+            0,
+            0
+        ]
     },
     "(58, 0, 0)": {
         "id": 58,
@@ -1355,7 +1754,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(58, 0, 0)",
+        "map_color": [
+            58,
+            0,
+            0
+        ]
     },
     "(59, 0, 0)": {
         "id": 59,
@@ -1379,7 +1785,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(59, 0, 0)",
+        "map_color": [
+            59,
+            0,
+            0
+        ]
     },
     "(60, 0, 0)": {
         "id": 60,
@@ -1398,13 +1811,20 @@
             53,
             57
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(60, 0, 0)",
+        "map_color": [
+            60,
+            0,
+            0
+        ]
     },
     "(61, 0, 0)": {
         "id": 61,
@@ -1422,13 +1842,20 @@
             55,
             63
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(61, 0, 0)",
+        "map_color": [
+            61,
+            0,
+            0
+        ]
     },
     "(62, 0, 0)": {
         "id": 62,
@@ -1452,7 +1879,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(62, 0, 0)",
+        "map_color": [
+            62,
+            0,
+            0
+        ]
     },
     "(63, 0, 0)": {
         "id": 63,
@@ -1476,7 +1910,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(63, 0, 0)",
+        "map_color": [
+            63,
+            0,
+            0
+        ]
     },
     "(64, 0, 0)": {
         "id": 64,
@@ -1500,7 +1941,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(64, 0, 0)",
+        "map_color": [
+            64,
+            0,
+            0
+        ]
     },
     "(65, 0, 0)": {
         "id": 65,
@@ -1525,7 +1973,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(65, 0, 0)",
+        "map_color": [
+            65,
+            0,
+            0
+        ]
     },
     "(66, 0, 0)": {
         "id": 66,
@@ -1547,7 +2002,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(66, 0, 0)",
+        "map_color": [
+            66,
+            0,
+            0
+        ]
     },
     "(67, 0, 0)": {
         "id": 67,
@@ -1569,7 +2031,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(67, 0, 0)",
+        "map_color": [
+            67,
+            0,
+            0
+        ]
     },
     "(68, 0, 0)": {
         "id": 68,
@@ -1586,13 +2055,20 @@
             76,
             54
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(68, 0, 0)",
+        "map_color": [
+            68,
+            0,
+            0
+        ]
     },
     "(69, 0, 0)": {
         "id": 69,
@@ -1617,7 +2093,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(69, 0, 0)",
+        "map_color": [
+            69,
+            0,
+            0
+        ]
     },
     "(70, 0, 0)": {
         "id": 70,
@@ -1641,7 +2124,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(70, 0, 0)",
+        "map_color": [
+            70,
+            0,
+            0
+        ]
     },
     "(71, 0, 0)": {
         "id": 71,
@@ -1664,7 +2154,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(71, 0, 0)",
+        "map_color": [
+            71,
+            0,
+            0
+        ]
     },
     "(72, 0, 0)": {
         "id": 72,
@@ -1688,7 +2185,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(72, 0, 0)",
+        "map_color": [
+            72,
+            0,
+            0
+        ]
     },
     "(73, 0, 0)": {
         "id": 73,
@@ -1706,13 +2210,20 @@
             52,
             60
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(73, 0, 0)",
+        "map_color": [
+            73,
+            0,
+            0
+        ]
     },
     "(74, 0, 0)": {
         "id": 74,
@@ -1737,7 +2248,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(74, 0, 0)",
+        "map_color": [
+            74,
+            0,
+            0
+        ]
     },
     "(75, 0, 0)": {
         "id": 75,
@@ -1755,13 +2273,20 @@
             85,
             93
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(75, 0, 0)",
+        "map_color": [
+            75,
+            0,
+            0
+        ]
     },
     "(76, 0, 0)": {
         "id": 76,
@@ -1784,7 +2309,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(76, 0, 0)",
+        "map_color": [
+            76,
+            0,
+            0
+        ]
     },
     "(77, 0, 0)": {
         "id": 77,
@@ -1810,7 +2342,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(77, 0, 0)",
+        "map_color": [
+            77,
+            0,
+            0
+        ]
     },
     "(78, 0, 0)": {
         "id": 78,
@@ -1830,13 +2369,20 @@
             88,
             60
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(78, 0, 0)",
+        "map_color": [
+            78,
+            0,
+            0
+        ]
     },
     "(79, 0, 0)": {
         "id": 79,
@@ -1858,7 +2404,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(79, 0, 0)",
+        "map_color": [
+            79,
+            0,
+            0
+        ]
     },
     "(80, 0, 0)": {
         "id": 80,
@@ -1883,7 +2436,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(80, 0, 0)",
+        "map_color": [
+            80,
+            0,
+            0
+        ]
     },
     "(81, 0, 0)": {
         "id": 81,
@@ -1904,13 +2464,20 @@
             94,
             95
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(81, 0, 0)",
+        "map_color": [
+            81,
+            0,
+            0
+        ]
     },
     "(82, 0, 0)": {
         "id": 82,
@@ -1933,7 +2500,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(82, 0, 0)",
+        "map_color": [
+            82,
+            0,
+            0
+        ]
     },
     "(83, 0, 0)": {
         "id": 83,
@@ -1957,7 +2531,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(83, 0, 0)",
+        "map_color": [
+            83,
+            0,
+            0
+        ]
     },
     "(84, 0, 0)": {
         "id": 84,
@@ -1979,7 +2560,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(84, 0, 0)",
+        "map_color": [
+            84,
+            0,
+            0
+        ]
     },
     "(85, 0, 0)": {
         "id": 85,
@@ -2002,7 +2590,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(85, 0, 0)",
+        "map_color": [
+            85,
+            0,
+            0
+        ]
     },
     "(86, 0, 0)": {
         "id": 86,
@@ -2024,7 +2619,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(86, 0, 0)",
+        "map_color": [
+            86,
+            0,
+            0
+        ]
     },
     "(87, 0, 0)": {
         "id": 87,
@@ -2043,7 +2645,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(87, 0, 0)",
+        "map_color": [
+            87,
+            0,
+            0
+        ]
     },
     "(88, 0, 0)": {
         "id": 88,
@@ -2065,7 +2674,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(88, 0, 0)",
+        "map_color": [
+            88,
+            0,
+            0
+        ]
     },
     "(89, 0, 0)": {
         "id": 89,
@@ -2088,7 +2704,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(89, 0, 0)",
+        "map_color": [
+            89,
+            0,
+            0
+        ]
     },
     "(90, 0, 0)": {
         "id": 90,
@@ -2106,13 +2729,20 @@
             81,
             95
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(90, 0, 0)",
+        "map_color": [
+            90,
+            0,
+            0
+        ]
     },
     "(91, 0, 0)": {
         "id": 91,
@@ -2130,13 +2760,20 @@
             93,
             95
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(91, 0, 0)",
+        "map_color": [
+            91,
+            0,
+            0
+        ]
     },
     "(92, 0, 0)": {
         "id": 92,
@@ -2161,7 +2798,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(92, 0, 0)",
+        "map_color": [
+            92,
+            0,
+            0
+        ]
     },
     "(93, 0, 0)": {
         "id": 93,
@@ -2183,7 +2827,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(93, 0, 0)",
+        "map_color": [
+            93,
+            0,
+            0
+        ]
     },
     "(94, 0, 0)": {
         "id": 94,
@@ -2203,7 +2854,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(94, 0, 0)",
+        "map_color": [
+            94,
+            0,
+            0
+        ]
     },
     "(95, 0, 0)": {
         "id": 95,
@@ -2225,13 +2883,20 @@
             91,
             94
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(95, 0, 0)",
+        "map_color": [
+            95,
+            0,
+            0
+        ]
     },
     "(96, 0, 0)": {
         "id": 96,
@@ -2255,7 +2920,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(96, 0, 0)",
+        "map_color": [
+            96,
+            0,
+            0
+        ]
     },
     "(97, 0, 0)": {
         "id": 97,
@@ -2275,13 +2947,20 @@
             88,
             92
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(97, 0, 0)",
+        "map_color": [
+            97,
+            0,
+            0
+        ]
     },
     "(98, 0, 0)": {
         "id": 98,
@@ -2305,7 +2984,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(98, 0, 0)",
+        "map_color": [
+            98,
+            0,
+            0
+        ]
     },
     "(99, 0, 0)": {
         "id": 99,
@@ -2323,13 +3009,20 @@
             76,
             112
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(99, 0, 0)",
+        "map_color": [
+            99,
+            0,
+            0
+        ]
     },
     "(100, 0, 0)": {
         "id": 100,
@@ -2350,13 +3043,20 @@
             92,
             93
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(100, 0, 0)",
+        "map_color": [
+            100,
+            0,
+            0
+        ]
     },
     "(101, 0, 0)": {
         "id": 101,
@@ -2373,13 +3073,20 @@
             109,
             90
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(101, 0, 0)",
+        "map_color": [
+            101,
+            0,
+            0
+        ]
     },
     "(102, 0, 0)": {
         "id": 102,
@@ -2401,7 +3108,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(102, 0, 0)",
+        "map_color": [
+            102,
+            0,
+            0
+        ]
     },
     "(103, 0, 0)": {
         "id": 103,
@@ -2425,7 +3139,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(103, 0, 0)",
+        "map_color": [
+            103,
+            0,
+            0
+        ]
     },
     "(104, 0, 0)": {
         "id": 104,
@@ -2447,7 +3168,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(104, 0, 0)",
+        "map_color": [
+            104,
+            0,
+            0
+        ]
     },
     "(105, 0, 0)": {
         "id": 105,
@@ -2466,13 +3194,20 @@
             89,
             122
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(105, 0, 0)",
+        "map_color": [
+            105,
+            0,
+            0
+        ]
     },
     "(106, 0, 0)": {
         "id": 106,
@@ -2488,13 +3223,20 @@
             114,
             105
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(106, 0, 0)",
+        "map_color": [
+            106,
+            0,
+            0
+        ]
     },
     "(107, 0, 0)": {
         "id": 107,
@@ -2517,7 +3259,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(107, 0, 0)",
+        "map_color": [
+            107,
+            0,
+            0
+        ]
     },
     "(108, 0, 0)": {
         "id": 108,
@@ -2539,7 +3288,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(108, 0, 0)",
+        "map_color": [
+            108,
+            0,
+            0
+        ]
     },
     "(109, 0, 0)": {
         "id": 109,
@@ -2564,7 +3320,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(109, 0, 0)",
+        "map_color": [
+            109,
+            0,
+            0
+        ]
     },
     "(110, 0, 0)": {
         "id": 110,
@@ -2585,7 +3348,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(110, 0, 0)",
+        "map_color": [
+            110,
+            0,
+            0
+        ]
     },
     "(111, 0, 0)": {
         "id": 111,
@@ -2604,13 +3374,20 @@
             119,
             120
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(111, 0, 0)",
+        "map_color": [
+            111,
+            0,
+            0
+        ]
     },
     "(112, 0, 0)": {
         "id": 112,
@@ -2631,7 +3408,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(112, 0, 0)",
+        "map_color": [
+            112,
+            0,
+            0
+        ]
     },
     "(113, 0, 0)": {
         "id": 113,
@@ -2649,13 +3433,20 @@
             119,
             95
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(113, 0, 0)",
+        "map_color": [
+            113,
+            0,
+            0
+        ]
     },
     "(114, 0, 0)": {
         "id": 114,
@@ -2673,13 +3464,20 @@
             120,
             122
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(114, 0, 0)",
+        "map_color": [
+            114,
+            0,
+            0
+        ]
     },
     "(115, 0, 0)": {
         "id": 115,
@@ -2702,7 +3500,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(115, 0, 0)",
+        "map_color": [
+            115,
+            0,
+            0
+        ]
     },
     "(116, 0, 0)": {
         "id": 116,
@@ -2724,7 +3529,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(116, 0, 0)",
+        "map_color": [
+            116,
+            0,
+            0
+        ]
     },
     "(117, 0, 0)": {
         "id": 117,
@@ -2748,7 +3560,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(117, 0, 0)",
+        "map_color": [
+            117,
+            0,
+            0
+        ]
     },
     "(118, 0, 0)": {
         "id": 118,
@@ -2770,7 +3589,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(118, 0, 0)",
+        "map_color": [
+            118,
+            0,
+            0
+        ]
     },
     "(119, 0, 0)": {
         "id": 119,
@@ -2792,7 +3618,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(119, 0, 0)",
+        "map_color": [
+            119,
+            0,
+            0
+        ]
     },
     "(120, 0, 0)": {
         "id": 120,
@@ -2814,7 +3647,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(120, 0, 0)",
+        "map_color": [
+            120,
+            0,
+            0
+        ]
     },
     "(121, 0, 0)": {
         "id": 121,
@@ -2835,7 +3675,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(121, 0, 0)",
+        "map_color": [
+            121,
+            0,
+            0
+        ]
     },
     "(122, 0, 0)": {
         "id": 122,
@@ -2858,7 +3705,14 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(122, 0, 0)",
+        "map_color": [
+            122,
+            0,
+            0
+        ]
     },
     "(123, 0, 0)": {
         "id": 123,
@@ -2873,12 +3727,19 @@
             122,
             117
         ],
-        "owner": "Unclaimed",
+        "owner": "Lakes",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": []
+        "resources": {},
+        "cores": [],
+        "json_key": "(123, 0, 0)",
+        "map_color": [
+            123,
+            0,
+            0
+        ]
     }
 }
