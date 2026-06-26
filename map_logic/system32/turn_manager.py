@@ -68,9 +68,10 @@ def advance_time(map_screen):
         map_screen.is_refreshing = False
 
         if hasattr(map_screen, 'active_players') and len(map_screen.active_players) > 1:
+            map_screen.player_country = map_screen.active_players[map_screen.current_player_index]
             map_screen.show_player_ready_screen = True
 
-        buttons.render_buttons(map_screen) 
+        buttons.render_buttons(map_screen)
         
         elapsed_seconds = (pygame.time.get_ticks() - map_screen.turn_start_time) / 1000.0
         map_screen.show_feedback(f"Turn resolved in {elapsed_seconds:.2f}s")
@@ -87,7 +88,7 @@ def advance_time(map_screen):
         else:
             # All players have gone, loop back to player 1 and PREPARE the turn!
             map_screen.current_player_index = 0
-            map_screen.player_country = map_screen.active_players[0]
+            map_screen.player_country = "n/a"
             trigger_ai_thread(map_screen)
     else:
         trigger_ai_thread(map_screen)
