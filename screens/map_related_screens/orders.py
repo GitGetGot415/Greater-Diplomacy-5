@@ -203,18 +203,20 @@ class Orders_Screen(GameState):
 
                 self.elements.append(btn_rename)
 
-                # some boilerplate stuff i copied from the repair button (should prolly be updated)
+                # Upgrade Button Logic
                 if order_type == "UPGRADE":
                     btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "red", "Cancel Upgrade", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                elif hp < m_hp:
-                    if in_combat:
-                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "In Combat", lambda: None, font_preset="normal")
-                    elif is_factory:
-                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "orange", "Upgrade", lambda idx=i: self.repair_unit(idx), font_preset="normal")
-                    else:
-                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Needs Factory", lambda: None, font_preset="normal")
                 else:
-                    btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Max Level", lambda: None, font_preset="normal")
+                    upgrade_target = queries.get_upgrade_target(unit_name, self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {}), self.unit_library, queries.get_tech_tree())
+                    if upgrade_target:
+                        if in_combat:
+                            btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "In Combat", lambda: None, font_preset="normal")
+                        elif is_factory:
+                            btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "orange", "Upgrade", lambda idx=i, tgt=upgrade_target: self.upgrade_unit(idx, tgt), font_preset="normal")
+                        else:
+                            btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Needs Factory", lambda: None, font_preset="normal")
+                    else:
+                        btn_upgrade = Button(x_pos + 310, y_pos, "orders_panel_button_2", "grey", "Max Level", lambda: None, font_preset="normal")
 
                 self.elements.append(btn_upgrade)
 
@@ -283,6 +285,25 @@ class Orders_Screen(GameState):
             self.refresh_ui()
         else:
             self.map_screen.show_feedback("Cannot afford repair!")
+
+    def upgrade_unit(self, index, target_type):
+        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, self.target_province, self.map_screen.nation_data)
+        if in_combat:
+            self.map_screen.show_feedback("Cannot upgrade during combat!")
+            return
+
+        units = self.target_province.get("units", [])
+        if not (0 <= index < len(units)): return
+
+        unit = units[index]
+        unit["order"] = {
+            "type": "UPGRADE",
+            "turns_left": 1,
+            "target_type": target_type,
+            "refund": {}
+        }
+        self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
+        self.refresh_ui()
 
     def disband_unit(self, index):
         units = self.target_province.get("units", [])

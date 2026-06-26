@@ -120,6 +120,7 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     movement_processor.process_conversions(self)
     movement_processor.process_disbands(self)
     movement_processor.process_repairs(self)
+    movement_processor.process_upgrades(self)
     
     # Process Queues (Deployments) so new units can defend
     print("[SYSTEM] Processing Queues (Deployments)...")

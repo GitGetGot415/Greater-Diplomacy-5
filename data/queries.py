@@ -630,6 +630,43 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
     # Fallback to standard (fuel-free) infantry
     return check_upgrade("infantry_type", "Infantry Type {}") or f"Infantry Type {c.START_YEAR}"
 
+def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
+    """Determines if a higher level of the current unit type is unlocked and returns its name."""
+    base_name = get_base_unit_name(unit_type)
+    
+    # Strip "Type" to get the pure class ("Infantry", "Motorized Infantry") so string formatting doesn't duplicate it
+    clean_base = re.sub(r'(?i)\s+type', '', base_name).strip() 
+    tech_key = clean_base.lower().replace(" ", "_")
+
+    if clean_base == "Infantry": 
+        tech_key = "infantry_type"
+
+    res_lvl = player_research.get(tech_key, 0)
+    if res_lvl <= 0:
+        return None
+
+    # Handle Year-based units
+    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry"]:
+        years = tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
+        year_val = years[max(0, min(res_lvl - 1, len(years) - 1))]
+        
+        target_name = f"{clean_base} Type {year_val}"
+
+        if target_name in unit_library and target_name != unit_type:
+            curr_year_match = re.search(r'\b(\d{4})\b', unit_type)
+            if curr_year_match and int(year_val) > int(curr_year_match.group(1)):
+                return target_name
+        return None
+
+    # Handle Roman Numeral units
+    target_name = f"{clean_base} {c.ROMAN_NUMERALS.get(res_lvl, str(res_lvl))}"
+    if target_name in unit_library and target_name != unit_type:
+        curr_lvl = roman_to_int(unit_type.replace(base_name, "").strip())
+        if res_lvl > curr_lvl:
+            return target_name
+
+    return None
+
 def get_best_preferred_unit(player_research, unit_library, preference_list):
     """Generic helper to find the highest preference unit unlocked."""
     for base_pref in reversed(preference_list):

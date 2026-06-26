@@ -62,6 +62,34 @@ def process_disbands(self):
         # Overwrite with the surviving units
         province["units"] = units_to_keep
 
+def process_upgrades(self):
+    """Processes the 1-turn timer for upgrading units to a new type."""
+    unit_library = queries.get_unit_library()
+
+    for province in self.map_data.values():
+        for unit in province.get("units", []):
+            order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") == "UPGRADE":
+                order["turns_left"] -= 1
+                
+                if order["turns_left"] <= 0:
+                    target_type = order.get("target_type")
+                    if target_type and target_type in unit_library:
+                        stats = unit_library[target_type]
+                        hp_pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
+                        
+                        unit["type"] = target_type
+                        unit["max_health"] = stats.get("health", c.DEFAULT_UNIT_HP)
+                        unit["attack"] = stats.get("attack", c.DEFAULT_UNIT_ATK)
+                        unit["defense"] = stats.get("defense", c.DEFAULT_UNIT_DEF)
+                        unit["speed"] = stats.get("speed", c.DEFAULT_UNIT_SPD)
+                        
+                        # Maintain percentage health upon upgrading
+                        unit["health"] = unit["max_health"] * hp_pct
+                        
+                    # Reset back to a blank move order
+                    unit["order"] = {"type": "MOVE", "path": []}
+
 def process_repairs(self):
     """Processes the 1-turn timer for repairing units to full health."""
     for province in self.map_data.values():
