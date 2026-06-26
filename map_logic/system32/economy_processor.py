@@ -77,7 +77,27 @@ def process_queues(self):
                 else:
                     b_name = item.get("item_name")
                     if b_name:
-                        province.setdefault("buildings", []).append(b_name)
+                        # Ensure higher levels overwrite lower levels of the same type
+                        is_industrial = "Workshop" in b_name or "Factory" in b_name
+                        is_refinery = "Refinery" in b_name
+                        is_recruitment = "Recruitment" in b_name
+                        
+                        new_buildings = []
+                        for b in province.get("buildings", []):
+                            keep = True
+                            if is_industrial and ("Workshop" in b or "Factory" in b):
+                                keep = False
+                            if is_refinery and "Refinery" in b:
+                                keep = False
+                            if is_recruitment and "Recruitment" in b:
+                                keep = False
+                            
+                            if keep:
+                                new_buildings.append(b)
+                                
+                        province["buildings"] = new_buildings
+                        province["buildings"].append(b_name)
+                        
                         if current_owner == self.player_country:
                             self.show_feedback(f"CONSTRUCTED: {b_name}")
             

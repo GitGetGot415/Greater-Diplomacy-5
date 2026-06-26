@@ -891,28 +891,42 @@ def calculate_all_economies(map_data, nation_data):
 
     return econ_data
 
-def get_resource_hud_strings(map_screen, include_net=False):
+def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
     is_tactical = getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None)
     
+    if target_nation is None:
+        target_nation = map_screen.player_country
+        
+    if is_tactical and target_nation == map_screen.player_country:
+        manpower = int(map_screen.player_manpower)
+        materials = int(map_screen.player_materials)
+        fuel = int(map_screen.player_fuel)
+    else:
+        n_data = map_screen.nation_data.get(target_nation, {})
+        manpower = int(n_data.get("manpower", 0))
+        materials = int(n_data.get("materials", 0))
+        fuel = int(n_data.get("fuel", 0))
+
     res_order = [
-        ("manpower", "Manpower", (100, 200, 255), int(map_screen.player_manpower)),
-        ("materials", "Materials", (180, 180, 180), int(map_screen.player_materials)),
-        ("fuel", "Fuel", (200, 100, 255), int(map_screen.player_fuel))
+        ("manpower", "Manpower", (100, 200, 255), manpower),
+        ("materials", "Materials", (180, 180, 180), materials),
+        ("fuel", "Fuel", (200, 100, 255), fuel)
     ]
     
     total_inc = {r: 0 for r in _ECON_RESOURCES}
     total_upkeep = {r: 0 for r in _ECON_RESOURCES}
 
     if include_net:
-        if is_tactical:
+        if is_tactical and target_nation == map_screen.player_country:
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
             stats = get_unit_library().get(u_type, {})
             total_inc = get_unit_upkeep(stats)
         else:
-            if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000:
-                map_screen.econ_cache = get_economy_projections(map_screen.player_country, map_screen.map_data, map_screen.nation_data)
+            if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000 or getattr(map_screen, 'econ_cache_target', None) != target_nation:
+                map_screen.econ_cache = get_economy_projections(target_nation, map_screen.map_data, map_screen.nation_data)
                 map_screen.econ_cache_time = pygame.time.get_ticks()
+                map_screen.econ_cache_target = target_nation
                 
             cached = map_screen.econ_cache
             if cached and len(cached) == 3:
@@ -926,7 +940,7 @@ def get_resource_hud_strings(map_screen, include_net=False):
     for res_key, name, color, p_val in res_order:
         net_str = fmt_net(total_inc.get(res_key, 0), total_upkeep.get(res_key, 0)) if include_net else ""
         
-        if is_tactical:
+        if is_tactical and target_nation == map_screen.player_country:
             if res_key == "manpower":
                 max_val = c.TACTICAL_MAX_MANPOWER
             elif res_key == "materials":

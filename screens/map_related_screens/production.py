@@ -519,7 +519,9 @@ class Production_Screen(GameState):
 
         res_font = fonts.get("production_hud")
         
-        resources = queries.get_resource_hud_strings(self.map_screen, include_net=False)
+        owner_nation = self.target_province.get("owner", "Unclaimed")
+        
+        resources = queries.get_resource_hud_strings(self.map_screen, include_net=False, target_nation=owner_nation)
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
 
