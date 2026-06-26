@@ -174,14 +174,23 @@ def process_ai_economy_decisions(map_screen):
             in_combat = queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
             has_factory = queries.has_industry(prov)
             
-            # 1. Clear queues on tiles in active combat
+            # 1. Clear queues on tiles in active combat if we are losing
             if in_combat:
-                while prov.get("unit_queue"):
-                    item = prov["unit_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
-                while prov.get("building_queue"):
-                    item = prov["building_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
+                friendly_nations = queries.get_all_friendly_nations(ai_name, map_screen.nation_data)
+                my_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
+                enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)]
+                
+                my_str = sum(queries.calculate_unit_strength(u) for u in my_units)
+                enemy_str = sum(queries.calculate_unit_strength(u) for u in enemy_units)
+                
+                if enemy_str > my_str:
+                    while prov.get("unit_queue"):
+                        item = prov["unit_queue"].pop(0)
+                        if "refund" in item: queries.refund_resources(data, item["refund"])
+                    while prov.get("building_queue"):
+                        item = prov["building_queue"].pop(0)
+                        if "refund" in item: queries.refund_resources(data, item["refund"])
+                
                 continue # Skip panic militia check since it's already in combat and can't build anyway
                 
             # 2. Panic Militia
