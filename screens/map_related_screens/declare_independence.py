@@ -19,6 +19,8 @@ class Declare_Independence_Screen(GameState):
         self.active_input = False
         self.selected_core = None
         self.available_cores = []
+        self.input_y = 200
+        self.input_rect_x = 400
 
     def start_screen(self, map_ref):
         self.map_screen = map_ref
@@ -51,8 +53,8 @@ class Declare_Independence_Screen(GameState):
         panel_x = c.SCREEN_WIDTH // 2 - 350
         panel_y = c.SCREEN_HEIGHT // 2 - 200
         
-        self.elements.append(Button(c.SCREEN_WIDTH // 2 - 100, panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
-        self.elements.append(Button(panel_x + 250, panel_y + 280, "small", "orange", "Pick Color", self.pick_color))
+        self.elements.append(Button(c.SCREEN_WIDTH // 2 - 120, panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
+        self.elements.append(Button(panel_x + 80, panel_y + self.input_y + 150, "small", "orange", "Pick Color", self.pick_color))
         
         btn_x = panel_x + 450
         btn_y = panel_y + 80
@@ -64,7 +66,7 @@ class Declare_Independence_Screen(GameState):
             core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
             display_name = core_name if len(core_name) <= 15 else core_name[:12] + "..."
             color_core = "green" if self.selected_core == core_tag else "blue"
-            self.elements.append(Button(btn_x, btn_y + 45 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
+            self.elements.append(Button(btn_x, btn_y + 60 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
 
     def pick_color(self):
         root = queries.get_transient_tk_root()
@@ -180,8 +182,8 @@ class Declare_Independence_Screen(GameState):
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 panel_x = c.SCREEN_WIDTH // 2 - 350
-                panel_y = c.SCREEN_HEIGHT // 2 - 200
-                input_rect = pygame.Rect(panel_x + 30, panel_y + 280, 200, 40)
+                panel_y = c.SCREEN_HEIGHT // 2 - self.input_y
+                input_rect = pygame.Rect(panel_x + 30, panel_y + 280, self.input_rect_x, 40)
                 self.active_input = input_rect.collidepoint(event.pos)
                 
             if event.type == pygame.KEYDOWN:
@@ -206,7 +208,7 @@ class Declare_Independence_Screen(GameState):
         ui_bars.draw_fullscreen_overlay(surface, 200)
         
         panel_x = c.SCREEN_WIDTH // 2 - 350
-        panel_y = c.SCREEN_HEIGHT // 2 - 200
+        panel_y = c.SCREEN_HEIGHT // 2 - self.input_y
         panel_rect = pygame.Rect(panel_x, panel_y, 700, 420)
         ui_bars.draw_modal_box(surface, panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
         ui_bars.draw_centered_title(surface, "Declare Independence", panel_rect.y + 20)
@@ -226,19 +228,19 @@ class Declare_Independence_Screen(GameState):
         for line in desc:
             txt = font.render(line, True, (200, 200, 200))
             surface.blit(txt, (panel_rect.x + 30, y_off))
-            y_off += 25
+            y_off += 20
             
-        surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + 250))
-        surface.blit(font.render("Claim Heritage:", True, (255, 215, 0)), (panel_rect.x + 450, panel_rect.y + 50))
+        surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + self.input_y + 60))
+        surface.blit(font.render("Claim Heritage (Cores):", True, (255, 215, 0)), (panel_rect.x + 450, panel_rect.y + 60))
         
-        input_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + 280, 200, 40)
+        input_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 80, self.input_rect_x, 40)
         pygame.draw.rect(surface, (60, 60, 80) if self.active_input else (30, 30, 40), input_rect)
         pygame.draw.rect(surface, (200, 200, 200), input_rect, 2)
         
         name_surf = font.render(self.new_country_name + ("|" if self.active_input else ""), True, (255, 255, 255))
         surface.blit(name_surf, (input_rect.x + 10, input_rect.y + 10))
         
-        color_rect = pygame.Rect(panel_rect.x + 250, panel_rect.y + 280, 40, 40)
+        color_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 150, 40, 40)
         pygame.draw.rect(surface, self.new_country_color, color_rect)
         pygame.draw.rect(surface, (255, 255, 255), color_rect, 2)
         
