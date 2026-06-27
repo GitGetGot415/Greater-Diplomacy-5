@@ -971,6 +971,9 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
             stats = get_unit_library().get(u_type, {})
             total_inc = get_unit_upkeep(stats)
+            morale = map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+            desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
+            total_upkeep["manpower"] = desertion_cost
         else:
             if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000 or getattr(map_screen, 'econ_cache_target', None) != target_nation:
                 map_screen.econ_cache = get_economy_projections(target_nation, map_screen.map_data, map_screen.nation_data)
@@ -1035,6 +1038,7 @@ def create_unit_dict(unit_type, owner, unit_library):
         "owner": owner,
         "health": hp,
         "max_health": hp,
+        "morale": stats.get("morale", c.DEFAULT_UNIT_MORALE),
         "speed": stats.get("speed", c.DEFAULT_UNIT_SPD),
         "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
         "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),

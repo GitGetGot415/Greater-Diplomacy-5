@@ -12,6 +12,12 @@ def apply_group_damage(total_atk, target_units):
     for u in target_units:
         defense = u.get("defense", 0)
         actual_dmg = max(0, damage_per_unit - defense)
+        
+        if actual_dmg > 0:
+            max_hp = u.get("max_health", 1)
+            percent_lost = (actual_dmg / max_hp) * 100.0
+            u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - percent_lost)
+            
         u["health"] -= actual_dmg
 
 def process_pinning(self):
@@ -67,6 +73,11 @@ def process_pinning(self):
             attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
             total_attacker_atk = queries.get_group_attack_sum(attacker_units_only)
             apply_group_damage(total_attacker_atk, friendly_defenders)
+            
+            for d_unit in friendly_defenders:
+                d_unit["_in_combat_this_turn"] = True
+            for a_unit in attacker_units_only:
+                a_unit["_in_combat_this_turn"] = True
             
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
@@ -147,6 +158,9 @@ def process_meeting_engagements(self):
                     apply_group_damage(atk2, units1)
                     apply_group_damage(atk1, units2)
                     
+                    for u in units1 + units2:
+                        u["_in_combat_this_turn"] = True
+                    
                     # Only lock them in combat if the enemy survived!
                     surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
                     surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
@@ -206,6 +220,9 @@ def process_combat(self):
                     apply_group_damage(sides[nation_a]["total_atk"], sides[nation_b]["units"])
                     # Side B attacks Side A
                     apply_group_damage(sides[nation_b]["total_atk"], sides[nation_a]["units"])
+                    
+                    for u in sides[nation_a]["units"] + sides[nation_b]["units"]:
+                        u["_in_combat_this_turn"] = True
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]

@@ -75,8 +75,15 @@ class Economy_Screen(GameState):
             stats = queries.get_unit_library().get(u_type, {})
             
             total_inc = queries.get_unit_upkeep(stats)
-            upkeep = {"manpower": 0, "materials": 0, "fuel": 0} 
+            
+            morale = self.map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+            desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
+            
+            upkeep = {"manpower": desertion_cost, "materials": 0, "fuel": 0} 
             breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
+            
+            breakdown["manpower"]["morale"] = morale
+            breakdown["manpower"]["desertion"] = desertion_cost
             
             max_res = {
                 "manpower": c.TACTICAL_MAX_MANPOWER,
@@ -131,6 +138,10 @@ class Economy_Screen(GameState):
             if is_tactical:
                 main_breakdown = f"Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
                 detail_breakdown = "Tactical Unit Subsistence (Income is supplied directly by HQ)"
+                if res_key == "manpower":
+                    morale_val = bd.get("morale", c.DEFAULT_UNIT_MORALE)
+                    desertion_val = bd.get("desertion", 0.0)
+                    detail_breakdown += f"  |  Morale: {int(morale_val)}%  |  Desertion Cost: -{int(desertion_val)}"
             else:
                 main_breakdown = f"Total Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
                 detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"

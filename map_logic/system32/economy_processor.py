@@ -11,9 +11,12 @@ def process_economy(self):
         
         upkeep = queries.get_unit_upkeep(stats)
         
+        morale = self.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+        desertion_cost = upkeep["manpower"] * ((100.0 - float(morale)) / 100.0)
+        
         self.unit_economy["fuel_inc"] = upkeep["fuel"] # Stored cleanly for movement calcs
         
-        self.unit_economy["manpower"] = min(self.unit_economy.get("manpower", 0) + upkeep["manpower"], c.TACTICAL_MAX_MANPOWER)
+        self.unit_economy["manpower"] = max(0, min(self.unit_economy.get("manpower", 0) + upkeep["manpower"] - desertion_cost, c.TACTICAL_MAX_MANPOWER))
         self.unit_economy["materials"] = min(self.unit_economy.get("materials", 0) + upkeep["materials"], c.TACTICAL_MAX_MATERIALS)
         self.unit_economy["fuel"] = min(self.unit_economy.get("fuel", 0) + upkeep["fuel"], c.TACTICAL_MAX_FUEL)
 

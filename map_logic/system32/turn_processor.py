@@ -152,6 +152,15 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     # Kill orphaned units and ghost wars
     movement_processor.process_dead_nations(self)
     
+    # Process Morale updates
+    for prov in self.map_data.values():
+        for u in prov.get("units", []):
+            if u.get("_in_combat_this_turn"):
+                u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - 5.0)
+                u.pop("_in_combat_this_turn", None)
+            else:
+                u["morale"] = min(100.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) + 5.0)
+                
     print("[SYSTEM] Calculating Economy...")
     economy_processor.process_economy(self)
     
