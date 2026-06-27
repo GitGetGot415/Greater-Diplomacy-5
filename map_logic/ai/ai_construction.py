@@ -194,7 +194,7 @@ def process_ai_economy_decisions(map_screen):
                 continue # Skip panic militia check since it's already in combat and can't build anyway
                 
             # 2. Panic Militia
-            if has_factory:
+            if has_factory and ai_name in prov.get("cores", []):
                 enemy_adjacent = False
                 for n_id in prov.get("neighbors", []):
                     n_prov = map_screen.id_to_province.get(n_id)
