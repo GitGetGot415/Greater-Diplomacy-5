@@ -52,4 +52,4 @@ def save_map_data(self, save_name=None):
     pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
     pygame.image.save(self.cores_map, os.path.join(save_path, "cores.png"))
     
-    self.show_feedback(f"Exported: {save_name}" if self.is_editor else f"Saved: {save_name}")
+    self.show_feedback(f"Exported: {save_name} to {save_path}" if self.is_editor else f"Saved: {save_name} to {save_path}")
