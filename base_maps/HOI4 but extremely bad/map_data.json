@@ -712,8 +712,8 @@
             10,
             12,
             13,
+            46,
             44,
-            47,
             19,
             26,
             31
@@ -871,10 +871,10 @@
             34,
             40,
             17,
-            51,
+            50,
             23,
-            58,
-            60
+            57,
+            59
         ],
         "owner": "Ocean",
         "units": [],
@@ -933,7 +933,7 @@
             39,
             43,
             12,
-            47,
+            46,
             22,
             24
         ],
@@ -963,9 +963,9 @@
         "neighbors": [
             34,
             41,
-            48,
+            47,
             17,
-            51,
+            50,
             27
         ],
         "owner": "Ocean",
@@ -996,7 +996,6 @@
             36,
             41,
             45,
-            46,
             16,
             20,
             27
@@ -1027,7 +1026,7 @@
         "neighbors": [
             32,
             17,
-            51,
+            50,
             29
         ],
         "owner": "Unclaimed",
@@ -1056,8 +1055,8 @@
         "neighbors": [
             33,
             42,
-            46,
-            50,
+            45,
+            49,
             20,
             25,
             30
@@ -1116,7 +1115,7 @@
         "neighbors": [
             42,
             44,
-            49,
+            48,
             26,
             30
         ],
@@ -1146,7 +1145,7 @@
         "neighbors": [
             39,
             40,
-            53,
+            52,
             23,
             28
         ],
@@ -1176,9 +1175,9 @@
         "neighbors": [
             38,
             43,
-            53,
+            52,
             22,
-            55,
+            54,
             28,
             31
         ],
@@ -1207,9 +1206,9 @@
         ],
         "neighbors": [
             38,
-            53,
+            52,
             23,
-            60,
+            59,
             29
         ],
         "owner": "Ocean",
@@ -1232,19 +1231,18 @@
         "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
-            763,
-            269
+            764,
+            268
         ],
         "neighbors": [
             32,
             33,
             36,
             45,
-            46,
-            48,
+            47,
+            49,
             50,
             51,
-            52,
             27
         ],
         "owner": "Ocean",
@@ -1273,10 +1271,10 @@
         "neighbors": [
             35,
             37,
+            48,
             49,
-            50,
-            54,
-            59,
+            53,
+            58,
             30
         ],
         "owner": "Ocean",
@@ -1303,9 +1301,9 @@
             287
         ],
         "neighbors": [
-            55,
-            47,
+            46,
             39,
+            54,
             31
         ],
         "owner": "Unclaimed",
@@ -1332,10 +1330,10 @@
             287
         ],
         "neighbors": [
-            56,
             37,
-            47,
-            49,
+            46,
+            48,
+            55,
             24,
             26
         ],
@@ -1359,11 +1357,13 @@
         "terrain": "jungle",
         "is_coastal": true,
         "center": [
-            730,
-            252
+            719,
+            256
         ],
         "neighbors": [
             33,
+            35,
+            49,
             41
         ],
         "owner": "Unclaimed",
@@ -1383,19 +1383,22 @@
     },
     "(46, 0, 0)": {
         "id": 46,
-        "terrain": "jungle",
-        "is_coastal": true,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
         "center": [
-            697,
-            262
+            315,
+            312
         ],
         "neighbors": [
-            33,
-            50,
-            35,
-            41
+            43,
+            44,
+            54,
+            55,
+            24,
+            56,
+            31
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1412,22 +1415,18 @@
     },
     "(47, 0, 0)": {
         "id": 47,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
+        "terrain": "jungle",
+        "is_coastal": true,
         "center": [
-            315,
-            312
+            801,
+            269
         ],
         "neighbors": [
-            43,
-            44,
-            55,
-            24,
-            57,
-            56,
-            31
+            32,
+            41,
+            50
         ],
-        "owner": "Ocean",
+        "owner": "Unclaimed",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1444,16 +1443,18 @@
     },
     "(48, 0, 0)": {
         "id": 48,
-        "terrain": "jungle",
+        "terrain": "forest",
         "is_coastal": true,
         "center": [
-            801,
-            269
+            460,
+            313
         ],
         "neighbors": [
-            32,
-            41,
-            51
+            37,
+            42,
+            44,
+            53,
+            55
         ],
         "owner": "Unclaimed",
         "units": [],
@@ -1472,20 +1473,22 @@
     },
     "(49, 0, 0)": {
         "id": 49,
-        "terrain": "forest",
-        "is_coastal": true,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
         "center": [
-            460,
-            313
+            682,
+            325
         ],
         "neighbors": [
-            37,
+            35,
+            41,
             42,
-            44,
-            54,
-            56
+            45,
+            51,
+            58,
+            60
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1502,20 +1505,21 @@
     },
     "(50, 0, 0)": {
         "id": 50,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
-            682,
-            325
+            851,
+            333
         ],
         "neighbors": [
-            35,
+            32,
+            34,
             41,
-            42,
-            46,
-            52,
-            59,
-            61
+            47,
+            51,
+            57,
+            60,
+            29
         ],
         "owner": "Ocean",
         "units": [],
@@ -1534,23 +1538,19 @@
     },
     "(51, 0, 0)": {
         "id": 51,
-        "terrain": "ocean",
-        "is_coastal": false,
+        "terrain": "plains",
+        "is_coastal": true,
         "center": [
-            851,
-            333
+            772,
+            337
         ],
         "neighbors": [
-            32,
-            34,
             41,
-            48,
-            61,
-            52,
-            58,
-            29
+            50,
+            60,
+            49
         ],
-        "owner": "Ocean",
+        "owner": "Unclaimed",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1567,19 +1567,21 @@
     },
     "(52, 0, 0)": {
         "id": 52,
-        "terrain": "plains",
-        "is_coastal": true,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
         "center": [
-            772,
-            337
+            162,
+            374
         ],
         "neighbors": [
-            41,
-            50,
-            51,
-            61
+            38,
+            39,
+            40,
+            54,
+            56,
+            59
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1599,16 +1601,14 @@
         "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
-            162,
-            374
+            530,
+            356
         ],
         "neighbors": [
-            38,
-            39,
-            40,
-            55,
-            57,
-            60
+            48,
+            42,
+            58,
+            55
         ],
         "owner": "Ocean",
         "units": [],
@@ -1627,19 +1627,20 @@
     },
     "(54, 0, 0)": {
         "id": 54,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
+        "terrain": "mountain",
+        "is_coastal": true,
         "center": [
-            530,
-            356
+            213,
+            369
         ],
         "neighbors": [
-            56,
-            49,
-            42,
-            59
+            39,
+            43,
+            46,
+            52,
+            56
         ],
-        "owner": "Ocean",
+        "owner": "Unclaimed",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1656,20 +1657,21 @@
     },
     "(55, 0, 0)": {
         "id": 55,
-        "terrain": "mountain",
-        "is_coastal": true,
+        "terrain": "coastal_sea",
+        "is_coastal": false,
         "center": [
-            213,
-            369
+            427,
+            395
         ],
         "neighbors": [
-            39,
-            43,
-            47,
+            44,
+            46,
+            48,
             53,
-            57
+            56,
+            58
         ],
-        "owner": "Unclaimed",
+        "owner": "Ocean",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -1689,16 +1691,14 @@
         "terrain": "coastal_sea",
         "is_coastal": false,
         "center": [
-            427,
-            395
+            305,
+            402
         ],
         "neighbors": [
-            44,
-            47,
-            49,
             54,
-            57,
-            59
+            52,
+            46,
+            55
         ],
         "owner": "Ocean",
         "units": [],
@@ -1717,17 +1717,17 @@
     },
     "(57, 0, 0)": {
         "id": 57,
-        "terrain": "coastal_sea",
+        "terrain": "ocean",
         "is_coastal": false,
         "center": [
-            305,
-            402
+            894,
+            404
         ],
         "neighbors": [
-            56,
-            53,
-            55,
-            47
+            50,
+            59,
+            60,
+            29
         ],
         "owner": "Ocean",
         "units": [],
@@ -1749,14 +1749,15 @@
         "terrain": "ocean",
         "is_coastal": false,
         "center": [
-            894,
-            404
+            589,
+            405
         ],
         "neighbors": [
-            61,
-            51,
-            60,
-            29
+            42,
+            49,
+            53,
+            55,
+            60
         ],
         "owner": "Ocean",
         "units": [],
@@ -1778,15 +1779,14 @@
         "terrain": "ocean",
         "is_coastal": false,
         "center": [
-            589,
-            405
+            64,
+            404
         ],
         "neighbors": [
-            42,
-            50,
-            54,
-            56,
-            61
+            40,
+            57,
+            52,
+            29
         ],
         "owner": "Ocean",
         "units": [],
@@ -1808,14 +1808,15 @@
         "terrain": "ocean",
         "is_coastal": false,
         "center": [
-            64,
-            404
+            735,
+            408
         ],
         "neighbors": [
-            40,
-            58,
-            53,
-            29
+            49,
+            50,
+            51,
+            57,
+            58
         ],
         "owner": "Ocean",
         "units": [],
@@ -1828,36 +1829,6 @@
         "json_key": "(60, 0, 0)",
         "map_color": [
             60,
-            0,
-            0
-        ]
-    },
-    "(61, 0, 0)": {
-        "id": 61,
-        "terrain": "ocean",
-        "is_coastal": false,
-        "center": [
-            735,
-            408
-        ],
-        "neighbors": [
-            50,
-            51,
-            52,
-            58,
-            59
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(61, 0, 0)",
-        "map_color": [
-            61,
             0,
             0
         ]
