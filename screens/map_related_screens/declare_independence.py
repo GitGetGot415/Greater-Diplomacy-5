@@ -193,7 +193,7 @@ class Declare_Independence_Screen(GameState):
                     back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
                 
                 if self.active_input:
-                    self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=50)
+                    self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
                     if status == "SUBMIT":
                         self.confirm_independence()
                     elif status == "CANCEL" or event.key == back_key:
