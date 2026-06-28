@@ -29,6 +29,7 @@ TERRAIN_LOOKUP = {
 
 # while 2 is pretty good, 3 is what's needed to fully get those real annoying corner borders
 # use 10 for Budget HOI4, it has very thick borders
+# use 5 for GD1, it has kinda thick borders
 dist = 3
 
 def get_neighbors(x, y, width, height):
