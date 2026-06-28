@@ -154,7 +154,7 @@
     },
     "(6, 0, 0)": {
         "id": 6,
-        "terrain": "plains",
+        "terrain": "mountain",
         "is_coastal": true,
         "center": [
             316,
