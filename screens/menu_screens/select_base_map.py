@@ -117,8 +117,14 @@ class Select_Base_Map(GameState):
                 os.makedirs(base_dir)
                 
             maps = os.listdir(base_dir)
+            total_content_height = len(maps) * 60
+            self.max_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height - 20)
+            
             for i, name in enumerate(maps):
-                btn_y = 150 + (i * 60)
+                btn_y = 150 + (i * 60) + self.scroll_y
+                if not (100 < btn_y < c.SCREEN_HEIGHT - 120):
+                    continue
+                
                 self.elements.append(
                     Button("centered", btn_y, "new_game", "blue", name, 
                            lambda n=name: self.start_editor_with_map(n))
@@ -253,7 +259,7 @@ class Select_Base_Map(GameState):
                     elif event.key == pygame.K_ESCAPE: self.cancel_delete()
                 continue
 
-            if self.sub_state == "CUSTOM_MAPS":
+            if self.sub_state in ("CUSTOM_MAPS", "BASE_MAPS"):
                 if event.type == pygame.MOUSEWHEEL:
                     self.scroll_y += event.y * 40
                     self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
@@ -282,12 +288,12 @@ class Select_Base_Map(GameState):
         title_text = "EDIT EXISTING MAP" if self.sub_state == "CUSTOM_MAPS" else "CREATE NEW MAP FROM BASE"
         ui_bars.draw_centered_title(surface, title_text, 40)
 
-        if self.sub_state == "CUSTOM_MAPS":
-            # Draw Scrollbar
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll, c.SCREEN_WIDTH - 40, 150, c.SCREEN_HEIGHT - 200
-            )
+        # Draw Scrollbar
+        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
+            surface, self.scroll_y, self.max_scroll, c.SCREEN_WIDTH - 40, 150, c.SCREEN_HEIGHT - 200
+        )
 
+        if self.sub_state == "CUSTOM_MAPS":
             # Rename Box
             if self.renaming_scenario:
                 scenario_dir = c.SCENARIOS_CUSTOM_DIR
