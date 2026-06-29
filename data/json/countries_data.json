@@ -273,7 +273,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Gaulish"
     },
     "Germany": {
         "name": "Germany",
@@ -1653,7 +1653,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Portuguese"
     },
     "United Kingdom": {
         "name": "United Kingdom",
@@ -1929,7 +1929,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Yugoslavian"
     },
     "India": {
         "name": "India",
@@ -2711,7 +2711,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mongolian"
     },
     "Venezuela": {
         "name": "Venezuela",
@@ -2757,7 +2757,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Venezuelan"
     },
     "Peru": {
         "name": "Peru",
@@ -2895,7 +2895,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Paraguese"
     },
     "Ecuador": {
         "name": "Ecuador",
@@ -3585,7 +3585,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Uruguayan"
     },
     "Colombia": {
         "name": "Colombia",
@@ -3861,7 +3861,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nicaraguan"
     },
     "Costa Rica": {
         "name": "Costa Rica",
@@ -4091,7 +4091,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Xinjiang"
     },
     "Ethiopia": {
         "name": "Ethiopia",
@@ -4321,7 +4321,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Qing"
     },
     "Tannu Tuva": {
         "name": "Tannu Tuva",
@@ -5379,7 +5379,7 @@
         "leader_title": "Gigachad",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Gigachad"
     },
     "Angola": {
         "name": "Angola",
@@ -5701,7 +5701,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zuluan"
     },
     "Zapatistas": {
         "name": "Zapatistas",
@@ -5747,7 +5747,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zapatistan"
     },
     "Taliban": {
         "name": "Taliban",
@@ -5885,7 +5885,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mozambiquian"
     },
     "East African Federation": {
         "name": "East African Federation",
@@ -5931,7 +5931,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "East African"
     },
     "Byzantine Empire": {
         "name": "Byzantine Empire",
@@ -6069,7 +6069,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Australia-Hungarian"
     },
     "Polish-Lithuanian Commonwealth": {
         "name": "Polish-Lithuanian Commonwealth",
@@ -6207,7 +6207,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Montenegran"
     },
     "Bahamas": {
         "name": "Bahamas",
@@ -6299,7 +6299,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Belizian"
     },
     "Puerto Rico": {
         "name": "Puerto Rico",
@@ -6621,7 +6621,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Corsican"
     },
     "Occitania": {
         "name": "Occitania",
@@ -6759,7 +6759,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zlatoustian"
     },
     "Zilkhstan": {
         "name": "Zilkhstan",
@@ -6805,7 +6805,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zilkhstanian"
     },
     "Maranh\u00e3o": {
         "name": "Maranh\u00e3o",
@@ -6943,7 +6943,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "Eritrea": {
         "name": "Eritrea",
@@ -7357,7 +7357,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Holy Britannian"
     },
     "Holy Roman Empire": {
         "name": "Holy Roman Empire",
@@ -7587,7 +7587,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "White"
     },
     "United Nations": {
         "name": "United Nations",
@@ -7817,7 +7817,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Orange"
     },
     "Napoleonic France": {
         "name": "Napoleonic France",
@@ -7909,7 +7909,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": "French Sudanese"
+        "adjective": "Sudanese"
     },
     "Iowa": {
         "name": "Iowa",
@@ -8139,7 +8139,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Californian"
     },
     "Danzig": {
         "name": "Danzig",
@@ -8185,7 +8185,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Danzigian"
     },
     "Aragon": {
         "name": "Aragon",
@@ -8231,7 +8231,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Aragonese"
     },
     "Arizona": {
         "name": "Arizona",
@@ -8369,7 +8369,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Kyrgyzstanian"
     },
     "Kazakhstan": {
         "name": "Kazakhstan",
@@ -8415,7 +8415,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Kazakhstanian"
     },
     "Kenya": {
         "name": "Kenya",
@@ -8553,7 +8553,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Kurdistanian"
     },
     "Alaska": {
         "name": "Alaska",
@@ -8783,7 +8783,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Kazembian"
     },
     "Kingdom of France": {
         "name": "Kingdom of France",
@@ -8875,7 +8875,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Lithuanian"
     },
     "Kokand": {
         "name": "Kokand",
@@ -8967,7 +8967,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Liangguangian"
     },
     "Kingdom of Sardinia": {
         "name": "Kingdom of Sardinia",
@@ -9013,7 +9013,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sardinian"
     },
     "Par\u00e1": {
         "name": "Par\u00e1",
@@ -9335,7 +9335,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sicilian"
     },
     "Sinaloa Cartel": {
         "name": "Sinaloa Cartel",
@@ -9611,7 +9611,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mengjiangian"
     },
     "Merina": {
         "name": "Merina",
@@ -10025,7 +10025,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Khalistanian"
     },
     "Hunan Clique": {
         "name": "Hunan Clique",
@@ -10439,7 +10439,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sudwestafrikan"
     },
     "Zentralafrika": {
         "name": "Zentralafrika",
@@ -10669,7 +10669,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mato Grossan"
     },
     "Mecklenburg": {
         "name": "Mecklenburg",
@@ -10715,7 +10715,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mecklenburgian"
     },
     "Kashmir": {
         "name": "Kashmir",
@@ -10945,7 +10945,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Wyomingian"
     },
     "Uganda": {
         "name": "Uganda",
@@ -10991,7 +10991,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ugandan"
     },
     "Yucatan": {
         "name": "Yucatan",
@@ -11175,7 +11175,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Washingtonian"
     },
     "Wisconsin": {
         "name": "Wisconsin",
@@ -11267,7 +11267,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zimbabwean"
     },
     "Zambia": {
         "name": "Zambia",
@@ -11313,7 +11313,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zambian"
     },
     "Kalmar Union": {
         "name": "Kalmar Union",
@@ -11865,7 +11865,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Iroquois"
     },
     "Tennessee": {
         "name": "Tennessee",
@@ -12049,7 +12049,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Central African"
     },
     "Bangladesh": {
         "name": "Bangladesh",
@@ -12095,7 +12095,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bangladeshian"
     },
     "Montana": {
         "name": "Montana",
@@ -12509,7 +12509,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Oregonese"
     },
     "Nunavut": {
         "name": "Nunavut",
@@ -12647,7 +12647,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Newfoundish"
     },
     "Rojava": {
         "name": "Rojava",
@@ -12739,7 +12739,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tuareg"
     },
     "Sakhalin": {
         "name": "Sakhalin",
@@ -12831,7 +12831,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Safavid"
     },
     "Ptolemaic Empire": {
         "name": "Ptolemaic Empire",
@@ -12969,7 +12969,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Princely"
     },
     "Socialist Republic of Italy": {
         "name": "Socialist Republic of Italy",
@@ -13015,7 +13015,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Italian"
     },
     "Yakutia": {
         "name": "Yakutia",
@@ -13153,7 +13153,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Floridian"
     },
     "Durango": {
         "name": "Durango",
@@ -13199,7 +13199,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Durangan"
     },
     "Cambodia": {
         "name": "Cambodia",
@@ -13613,7 +13613,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bugandan"
     },
     "Aztec Empire": {
         "name": "Aztec Empire",
@@ -13751,7 +13751,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Darfurian"
     },
     "Nebraska": {
         "name": "Nebraska",
@@ -13889,7 +13889,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Rio Grandian"
     },
     "Pacific States of America": {
         "name": "Pacific States of America",
@@ -13935,7 +13935,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "Orsk": {
         "name": "Orsk",
@@ -14027,7 +14027,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "Azande": {
         "name": "Azande",
@@ -14073,7 +14073,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Azandian"
     },
     "Barotseland": {
         "name": "Barotseland",
@@ -14165,7 +14165,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ayutthayan"
     },
     "Bharatiya Commune": {
         "name": "Bharatiya Commune",
@@ -14349,7 +14349,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Burkina Fasoan"
     },
     "Cameroon": {
         "name": "Cameroon",
@@ -14579,7 +14579,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Equatorial Guinean"
     },
     "Fiji": {
         "name": "Fiji",
@@ -14625,7 +14625,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Fijian"
     },
     "Kansas": {
         "name": "Kansas",
@@ -15591,7 +15591,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Galician"
     },
     "Alto Rio Negro": {
         "name": "Alto Rio Negro",
@@ -15637,7 +15637,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Alto Rio Negran"
     },
     "Atlantis": {
         "name": "Atlantis",
@@ -15729,7 +15729,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Antofagastan"
     },
     "Maracaibo": {
         "name": "Maracaibo",
@@ -15821,7 +15821,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Arkhangelskian"
     },
     "Chihuahua": {
         "name": "Chihuahua",
@@ -15913,7 +15913,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Burgundian"
     },
     "Chongqing": {
         "name": "Chongqing",
@@ -15959,7 +15959,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Chongqingian"
     },
     "Commune of Spain": {
         "name": "Commune of Spain",
@@ -16235,7 +16235,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Muscogian"
     },
     "Hokkaido": {
         "name": "Hokkaido",
@@ -16373,7 +16373,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Portuguese"
     },
     "Kingdom of Two Sicilies": {
         "name": "Kingdom of Two Sicilies",
@@ -16419,7 +16419,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sicilian"
     },
     "Magadan": {
         "name": "Magadan",
@@ -16465,7 +16465,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Magadanese"
     },
     "Sokoto Caliphate": {
         "name": "Sokoto Caliphate",
@@ -16741,7 +16741,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tanzanian"
     },
     "Siberian Black Army": {
         "name": "Siberian Black Army",
@@ -16833,7 +16833,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sichuanian"
     },
     "Sikh Empire": {
         "name": "Sikh Empire",
@@ -16925,7 +16925,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Shangdongian"
     },
     "Maratha Empire": {
         "name": "Maratha Empire",
@@ -17063,7 +17063,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Turkmenistanian"
     },
     "Omani Empire": {
         "name": "Omani Empire",
@@ -17431,7 +17431,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Lemurian"
     },
     "Bornu": {
         "name": "Bornu",
@@ -17615,7 +17615,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "British"
     },
     "Western Command Center": {
         "name": "Western Command Center",
@@ -17707,7 +17707,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Armenian"
     },
     "Fatmid Caliphate": {
         "name": "Fatmid Caliphate",
@@ -17891,7 +17891,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Cyrenaican"
     },
     "Emirate of Bukhara": {
         "name": "Emirate of Bukhara",
@@ -17937,7 +17937,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bukharan"
     },
     "East Germany": {
         "name": "East Germany",
@@ -18121,7 +18121,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Xinjiang"
     },
     "White Ruthenia": {
         "name": "White Ruthenia",
@@ -18351,53 +18351,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
-    },
-    "Emirate of Afghsnistan": {
-        "name": "Emirate of Afghsnistan",
-        "color": [
-            0,
-            64,
-            64
-        ],
-        "research": {
-            "infantry_type": 1,
-            "cavalry": 1,
-            "militia": 0,
-            "motorized_infantry": 0,
-            "mechanized_infantry": 0,
-            "civilian_car": 0,
-            "ww1_armored_car": 0,
-            "ww1_tank": 0,
-            "armored_car": 0,
-            "light_tank": 0,
-            "medium_tank": 0,
-            "heavy_tank": 0,
-            "main_battle_tank": 0,
-            "destroyer": 0,
-            "dreadnought": 0,
-            "battleship": 0,
-            "aircraft_carrier": 0,
-            "submarine": 0,
-            "basic_factory": 0,
-            "factory": 0,
-            "bergius_process": 0,
-            "fuel_refining": 0,
-            "general_recruitment": 0,
-            "recruitment_buildings": 0,
-            "basic_recruitment": 0
-        },
-        "manpower": 0,
-        "materials": 0,
-        "fuel": 0,
-        "is_playable": true,
-        "at_war_with": [],
-        "allied_with": [],
-        "leader_name": "",
-        "leader_title": "",
-        "flag_data": "",
-        "portrait_data": "",
-        "adjective": ""
+        "adjective": "Canadian"
     },
     "Emirate of Jabal Shammar": {
         "name": "Emirate of Jabal Shammar",
@@ -18443,7 +18397,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Jabal Shammarian"
     },
     "Emirate of Nedj and Hasa": {
         "name": "Emirate of Nedj and Hasa",
@@ -18489,7 +18443,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nedj and Hasanian"
     },
     "Communist Party of India": {
         "name": "Communist Party of India",
@@ -18535,7 +18489,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Indian"
     },
     "British-Japanese Empire": {
         "name": "British-Japanese Empire",
@@ -18719,7 +18673,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Eight Provincian"
     },
     "Kingdom of Argentina": {
         "name": "Kingdom of Argentina",
@@ -18995,7 +18949,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Uralic"
     },
     "Turkestan Republic": {
         "name": "Turkestan Republic",
@@ -19041,7 +18995,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Turkestanian"
     },
     "Totalist Italy": {
         "name": "Totalist Italy",
@@ -19087,7 +19041,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Italian"
     },
     "Japanese Pacific States": {
         "name": "Japanese Pacific States",
@@ -19271,7 +19225,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Uzbekistanian"
     },
     "Kazakh Khanate": {
         "name": "Kazakh Khanate",
@@ -19317,7 +19271,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Kazakhstanian"
     },
     "Anarchist Commune of America": {
         "name": "Anarchist Commune of America",
@@ -19363,7 +19317,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "Aboriginals": {
         "name": "Aboriginals",
@@ -19455,7 +19409,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Stanistanian"
     },
     "Xikang Clique": {
         "name": "Xikang Clique",
@@ -19501,7 +19455,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Xikang"
     },
     "Yunnan Clique": {
         "name": "Yunnan Clique",
@@ -19639,7 +19593,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zhilian"
     },
     "Ostafrika": {
         "name": "Ostafrika",
@@ -19685,7 +19639,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ostafrikan"
     },
     "Croatia": {
         "name": "Croatia",
@@ -19961,7 +19915,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Los Angelian"
     },
     "Las Vegas": {
         "name": "Las Vegas",
@@ -20007,7 +19961,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Las Vegan"
     },
     "Christmas Island": {
         "name": "Christmas Island",
@@ -20145,7 +20099,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nigerian"
     },
     "Nigerian Commune": {
         "name": "Nigerian Commune",
@@ -20191,7 +20145,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nigerian"
     },
     "Kingdom of Flanders-Wallonia": {
         "name": "Kingdom of Flanders-Wallonia",
@@ -20237,7 +20191,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Flanders-Wallonian"
     },
     "Afrika Korps": {
         "name": "Afrika Korps",
@@ -20375,7 +20329,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Buryatian"
     },
     "Cameroon African State": {
         "name": "Cameroon African State",
@@ -20467,7 +20421,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Japanese"
     },
     "East Asia": {
         "name": "East Asia",
@@ -20743,7 +20697,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nigerian"
     },
     "Oceania": {
         "name": "Oceania",
@@ -20835,7 +20789,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Oceanian"
     },
     "Union of South Africa": {
         "name": "Union of South Africa",
@@ -20881,7 +20835,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "South African"
     },
     "Confederate States of America": {
         "name": "Confederate States of America",
@@ -20927,7 +20881,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "Democratic Republic of the Congo": {
         "name": "Democratic Republic of the Congo",
@@ -20973,7 +20927,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Congolese"
     },
     "Republic of the Congo": {
         "name": "Republic of the Congo",
@@ -21019,7 +20973,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Congolese"
     },
     "Ayumu Kasuga": {
         "name": "Ayumu Kasuga",
@@ -21061,7 +21015,7 @@
         "is_playable": true,
         "at_war_with": [],
         "allied_with": [],
-        "leader_name": "",
+        "leader_name": "Ayumu Kasuga",
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
@@ -21249,7 +21203,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mongolian"
     },
     "Republic of South Africa": {
         "name": "Republic of South Africa",
@@ -21295,7 +21249,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "South African"
     },
     "Bosnia and Herzegovina": {
         "name": "Bosnia and Herzegovina",
@@ -21341,7 +21295,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bosnia and Herzegovinan"
     },
     "Amur": {
         "name": "Amur",
@@ -21387,7 +21341,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Amurian"
     },
     "Andalusia": {
         "name": "Andalusia",
@@ -21433,7 +21387,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Andalusian"
     },
     "United Colonies": {
         "name": "United Colonies",
@@ -21985,7 +21939,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Arkhangelskian"
     },
     "Telangana": {
         "name": "Telangana",
@@ -22031,7 +21985,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Telanganan"
     },
     "Orkhon": {
         "name": "Orkhon",
@@ -22169,7 +22123,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Zabaykalskian"
     },
     "Tatarstan": {
         "name": "Tatarstan",
@@ -22215,7 +22169,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tatarstanian"
     },
     "Caucasus": {
         "name": "Caucasus",
@@ -22353,7 +22307,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Californian"
     },
     "Shanghai": {
         "name": "Shanghai",
@@ -22399,7 +22353,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Shanghaian"
     },
     "Beijing": {
         "name": "Beijing",
@@ -22445,7 +22399,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Beijingian"
     },
     "Volgograd": {
         "name": "Volgograd",
@@ -22491,7 +22445,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Volgogradian"
     },
     "Moscow": {
         "name": "Moscow",
@@ -22583,7 +22537,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "West Bengalese"
     },
     "Mountainous Republic of the Northern Caucasus": {
         "name": "Mountainous Republic of the Northern Caucasus",
@@ -22629,7 +22583,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Caucasian"
     },
     "Korea": {
         "name": "Korea",
@@ -23135,7 +23089,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tierra del Fuegan"
     },
     "Western Australia": {
         "name": "Western Australia",
@@ -23365,7 +23319,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Santiagan"
     },
     "Bahia": {
         "name": "Bahia",
@@ -23503,7 +23457,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American Canadian"
     },
     "The Rot": {
         "name": "The Rot",
@@ -23733,7 +23687,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Songhaian"
     },
     "Songhai Empire": {
         "name": "Songhai Empire",
@@ -23779,7 +23733,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Songhaian"
     },
     "Rondon": {
         "name": "Rondon",
@@ -23871,7 +23825,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Oldeg\u00e5rdian"
     },
     "Gotia": {
         "name": "Gotia",
@@ -24423,7 +24377,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Gabonese"
     },
     "Guinea-Bissau": {
         "name": "Guinea-Bissau",
@@ -24699,7 +24653,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tajikistanian"
     },
     "The Gambia": {
         "name": "The Gambia",
@@ -24745,7 +24699,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "The Gambian"
     },
     "Togo": {
         "name": "Togo",
@@ -24791,7 +24745,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Togan"
     },
     "Burundi": {
         "name": "Burundi",
@@ -24837,7 +24791,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Burundian"
     },
     "Ghana": {
         "name": "Ghana",
@@ -24883,7 +24837,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ghanan"
     },
     "British Malaya": {
         "name": "British Malaya",
@@ -24975,7 +24929,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Indochinese"
     },
     "French Madagascar": {
         "name": "French Madagascar",
@@ -25067,7 +25021,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Italian East African"
     },
     "Malagasy Protectorate": {
         "name": "Malagasy Protectorate",
@@ -25159,7 +25113,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bohemian and Moravian"
     },
     "Belgian Congo": {
         "name": "Belgian Congo",
@@ -25205,7 +25159,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Congolese"
     },
     "Dutch East Indies": {
         "name": "Dutch East Indies",
@@ -25482,5 +25436,51 @@
         "flag_data": "",
         "portrait_data": "",
         "adjective": "Pomeranian"
+    },
+    "Emirate of Afghanistan": {
+        "name": "Emirate of Afghanistan",
+        "color": [
+            0,
+            64,
+            64
+        ],
+        "research": {
+            "infantry_type": 1,
+            "cavalry": 1,
+            "militia": 0,
+            "motorized_infantry": 0,
+            "mechanized_infantry": 0,
+            "civilian_car": 0,
+            "ww1_armored_car": 0,
+            "armored_car": 0,
+            "ww1_tank": 0,
+            "light_tank": 0,
+            "medium_tank": 0,
+            "heavy_tank": 0,
+            "main_battle_tank": 0,
+            "dreadnought": 0,
+            "battleship": 0,
+            "destroyer": 0,
+            "aircraft_carrier": 0,
+            "submarine": 0,
+            "basic_factory": 0,
+            "factory": 0,
+            "bergius_process": 0,
+            "fuel_refining": 0,
+            "basic_recruitment": 0,
+            "recruitment_buildings": 0,
+            "general_recruitment": 0
+        },
+        "manpower": 0,
+        "materials": 0,
+        "fuel": 0,
+        "is_playable": true,
+        "at_war_with": [],
+        "allied_with": [],
+        "adjective": "Afghanistanian",
+        "leader_name": "",
+        "leader_title": "",
+        "flag_data": "",
+        "portrait_data": ""
     }
 }
