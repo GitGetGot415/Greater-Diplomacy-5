@@ -319,7 +319,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "German"
     },
     "France": {
         "name": "France",
@@ -457,7 +457,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "American"
     },
     "German Reich": {
         "name": "German Reich",
@@ -503,7 +503,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "German"
     },
     "Austria-Hungary": {
         "name": "Austria-Hungary",
@@ -549,7 +549,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Austro-Hungarian"
     },
     "Austria": {
         "name": "Austria",
@@ -595,7 +595,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Austrian"
     },
     "German Empire": {
         "name": "German Empire",
@@ -641,7 +641,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "German"
     },
     "Weimar Republic": {
         "name": "Weimar Republic",
@@ -733,7 +733,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Canadian"
     },
     "Soviet Union": {
         "name": "Soviet Union",
@@ -1055,7 +1055,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Belgian"
     },
     "Netherlands": {
         "name": "Netherlands",
@@ -1837,7 +1837,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Argentinian"
     },
     "Chile": {
         "name": "Chile",
@@ -2113,7 +2113,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Australian"
     },
     "New Zealand": {
         "name": "New Zealand",
@@ -2389,7 +2389,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Lithuanian"
     },
     "Switzerland": {
         "name": "Switzerland",
@@ -2987,7 +2987,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Algerian"
     },
     "Tunisia": {
         "name": "Tunisia",
@@ -3263,7 +3263,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Albanian"
     },
     "Brazil": {
         "name": "Brazil",
@@ -4781,7 +4781,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Azerbaijanian"
     },
     "Armenia": {
         "name": "Armenia",
@@ -4827,7 +4827,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Armenian"
     },
     "Georgia": {
         "name": "Georgia",
@@ -5057,7 +5057,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Scottish"
     },
     "Japanese Empire": {
         "name": "Japanese Empire",
@@ -5425,7 +5425,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Angolan"
     },
     "Indonesia": {
         "name": "Indonesia",
@@ -8599,7 +8599,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Alaskan"
     },
     "Amap\u00e1": {
         "name": "Amap\u00e1",
@@ -13291,7 +13291,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bavarian"
     },
     "Colorado": {
         "name": "Colorado",
@@ -17845,7 +17845,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "English"
     },
     "Emirate of Cyrenaica": {
         "name": "Emirate of Cyrenaica",
@@ -17983,7 +17983,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "East German"
     },
     "West Germany": {
         "name": "West Germany",
@@ -18029,7 +18029,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "West German"
     },
     "Dutch America": {
         "name": "Dutch America",
@@ -20283,7 +20283,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Afrikan"
     },
     "Alberta": {
         "name": "Alberta",
@@ -20329,7 +20329,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Albertan"
     },
     "Buryatia": {
         "name": "Buryatia",
