@@ -367,11 +367,11 @@ class Edit_Country_Screen(GameState):
         # 1. Text Input Selection Logic
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            if pygame.Rect(input_box_x, 500, 300, 40).collidepoint(mx, my):
+            if pygame.Rect(input_box_x, 480, 300, 40).collidepoint(mx, my):
                 self.active_input = "COUNTRY_NAME"
-            elif pygame.Rect(input_box_x, 575, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 600, 300, 40).collidepoint(mx, my):
                 self.active_input = "NAME"
-            elif pygame.Rect(input_box_x, 650, 300, 40).collidepoint(mx, my):
+            elif pygame.Rect(input_box_x, 660, 300, 40).collidepoint(mx, my):
                 self.active_input = "TITLE"
             else:
                 self.active_input = None
@@ -493,9 +493,10 @@ class Edit_Country_Screen(GameState):
             pygame.draw.rect(surface, color, rect, 2)
             surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (input_box_x + 10, y_pos + 10))
 
-        draw_input_box(500, "Country Name:", "COUNTRY_NAME", self.country_name)
-        draw_input_box(575, "Leader Name:", "NAME", self.leader_name)
-        draw_input_box(650, "Leader Title:", "TITLE", self.leader_title)
+        draw_input_box(480, "Country Name:", "COUNTRY_NAME", self.country_name)
+        draw_input_box(540, "Adjective:", "ADJECTIVE", self.leader_title)
+        draw_input_box(600, "Leader Name:", "NAME", self.leader_name)
+        draw_input_box(660, "Leader Title:", "TITLE", self.leader_title)
 
         if self.resetting_type:
             self._draw_popup(surface, f"Reset {self.resetting_type.title()} to Default?", "Press Enter to Confirm or Esc to Cancel", "YES", "NO")

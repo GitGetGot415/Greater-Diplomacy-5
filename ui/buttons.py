@@ -501,9 +501,9 @@ def render_edit_country_buttons(edit_screen):
         edit_screen.open_switch_appearance_menu
     )
     
-    edit_screen.btn_exp_flag = Button(c.EDIT_COUNTRY_UI_X1, 420, "small_square", "blue", "Export Flag", edit_screen.export_flag, image=icons.get("export"), show_text=False)
-    edit_screen.btn_imp_flag = Button(c.EDIT_COUNTRY_UI_X1 + 50, 420, "small_square", "green", "Import Flag", edit_screen.import_flag, image=icons.get("import"), show_text=False)
-    edit_screen.btn_reset_flag = Button(c.EDIT_COUNTRY_UI_X1 + 100, 420, "small", "red", "Reset", lambda: edit_screen.trigger_reset("FLAG"))
+    edit_screen.btn_exp_flag = Button(c.EDIT_COUNTRY_UI_X1, 400, "small_square", "blue", "Export Flag", edit_screen.export_flag, image=icons.get("export"), show_text=False)
+    edit_screen.btn_imp_flag = Button(c.EDIT_COUNTRY_UI_X1 + 50, 400, "small_square", "green", "Import Flag", edit_screen.import_flag, image=icons.get("import"), show_text=False)
+    edit_screen.btn_reset_flag = Button(c.EDIT_COUNTRY_UI_X1 + 100, 400, "small", "red", "Reset", lambda: edit_screen.trigger_reset("FLAG"))
     
     edit_screen.btn_exp_port = Button(c.EDIT_COUNTRY_UI_X2, 520, "small_square", "blue", "Export Portrait", edit_screen.export_portrait, image=icons.get("export"), show_text=False)
     edit_screen.btn_imp_port = Button(c.EDIT_COUNTRY_UI_X2 + 50, 520, "small_square", "green", "Import Portrait", edit_screen.import_portrait, image=icons.get("import"), show_text=False)
