@@ -46781,7 +46781,7 @@
             1339,
             1355
         ],
-        "owner": "Bahamas",
+        "owner": "The Bahamas",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -46789,7 +46789,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Bahamas"
+            "The Bahamas"
         ],
         "json_key": "(150, 5, 0)",
         "map_color": [
@@ -49253,7 +49253,7 @@
             1489,
             1339
         ],
-        "owner": "Bahamas",
+        "owner": "The Bahamas",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -49263,7 +49263,7 @@
         ],
         "resources": {},
         "cores": [
-            "Bahamas"
+            "The Bahamas"
         ],
         "json_key": "(226, 5, 0)",
         "map_color": [

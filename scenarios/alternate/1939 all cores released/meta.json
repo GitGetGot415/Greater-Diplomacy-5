@@ -6600,8 +6600,8 @@
             "pending_diplomacy": {},
             "relations": {}
         },
-        "Bahamas": {
-            "name": "Bahamas",
+        "The Bahamas": {
+            "name": "The Bahamas",
             "color": [
                 0,
                 255,
@@ -44742,9 +44742,9 @@
             "buildings": []
         },
         "(150, 5, 0)": {
-            "owner": "Bahamas",
+            "owner": "The Bahamas",
             "cores": [
-                "Bahamas"
+                "The Bahamas"
             ],
             "is_coastal": true,
             "units": [],
@@ -45714,9 +45714,9 @@
             "buildings": []
         },
         "(226, 5, 0)": {
-            "owner": "Bahamas",
+            "owner": "The Bahamas",
             "cores": [
-                "Bahamas"
+                "The Bahamas"
             ],
             "is_coastal": true,
             "units": [],

@@ -6792,8 +6792,8 @@
             "pending_diplomacy": {},
             "relations": {}
         },
-        "Bahamas": {
-            "name": "Bahamas",
+        "The Bahamas": {
+            "name": "The Bahamas",
             "color": [
                 0,
                 255,
@@ -51418,7 +51418,7 @@
         "(150, 5, 0)": {
             "owner": "United Kingdom",
             "cores": [
-                "Bahamas"
+                "The Bahamas"
             ],
             "is_coastal": true,
             "units": [],
@@ -52617,7 +52617,7 @@
         "(226, 5, 0)": {
             "owner": "United Kingdom",
             "cores": [
-                "Bahamas"
+                "The Bahamas"
             ],
             "is_coastal": true,
             "units": [],

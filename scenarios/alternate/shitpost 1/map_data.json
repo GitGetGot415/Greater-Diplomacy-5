@@ -844,7 +844,7 @@
             29,
             31
         ],
-        "owner": "Bahamas",
+        "owner": "The Bahamas",
         "units": [],
         "orders": [],
         "buildings": [
@@ -852,7 +852,7 @@
         ],
         "resources": {},
         "cores": [
-            "Bahamas"
+            "The Bahamas"
         ],
         "json_key": "(27, 0, 0)",
         "map_color": [
@@ -909,13 +909,13 @@
             27,
             31
         ],
-        "owner": "Bahamas",
+        "owner": "The Bahamas",
         "units": [],
         "orders": [],
         "buildings": [],
         "resources": {},
         "cores": [
-            "Bahamas"
+            "The Bahamas"
         ],
         "json_key": "(29, 0, 0)",
         "map_color": [
