@@ -779,7 +779,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Soviet"
     },
     "Hungary": {
         "name": "Hungary",
@@ -825,7 +825,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Hungarian"
     },
     "Italy": {
         "name": "Italy",
@@ -1515,7 +1515,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ottoman"
     },
     "Serbia": {
         "name": "Serbia",
@@ -2481,7 +2481,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Iranian"
     },
     "Iraq": {
         "name": "Iraq",
@@ -2527,7 +2527,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Iraqi"
     },
     "Saudi Arabia": {
         "name": "Saudi Arabia",
@@ -3217,7 +3217,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Greek"
     },
     "Albania": {
         "name": "Albania",
@@ -3401,7 +3401,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tibetian"
     },
     "Thailand": {
         "name": "Thailand",
@@ -3539,7 +3539,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bhutanese"
     },
     "Uruguay": {
         "name": "Uruguay",
@@ -3769,7 +3769,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Honduran"
     },
     "El Salvador": {
         "name": "El Salvador",
@@ -3999,7 +3999,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Yunnanian"
     },
     "Xibei San Ma": {
         "name": "Xibei San Ma",
@@ -4045,7 +4045,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Xibeian"
     },
     "Xinjiang": {
         "name": "Xinjiang",
@@ -4229,7 +4229,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Haitian"
     },
     "Dominican Republic": {
         "name": "Dominican Republic",
@@ -4551,7 +4551,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Jordinian"
     },
     "Palestine": {
         "name": "Palestine",
@@ -5149,7 +5149,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Brittanian"
     },
     "Kuwait": {
         "name": "Kuwait",
@@ -6391,7 +6391,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Qatari"
     },
     "Jamaica": {
         "name": "Jamaica",
@@ -6483,7 +6483,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Quebecois"
     },
     "Hawaii": {
         "name": "Hawaii",
@@ -6529,7 +6529,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Hawaiian"
     },
     "Corsica": {
         "name": "Corsica",
@@ -7403,7 +7403,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ice"
     },
     "Deseret": {
         "name": "Deseret",
@@ -7909,7 +7909,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Iowan"
     },
     "Mali Empire": {
         "name": "Mali Empire",
@@ -8231,7 +8231,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Arizonan"
     },
     "British Columbia": {
         "name": "British Columbia",
@@ -8461,7 +8461,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Green"
     },
     "Kurdistan": {
         "name": "Kurdistan",
@@ -8691,7 +8691,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Guyanan"
     },
     "Kazembe": {
         "name": "Kazembe",
@@ -9427,7 +9427,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Tyumenian"
     },
     "Suriname": {
         "name": "Suriname",
@@ -9841,7 +9841,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Henanean"
     },
     "Iqutios": {
         "name": "Iqutios",
@@ -10577,7 +10577,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Marshallian"
     },
     "Mato Grosso": {
         "name": "Mato Grosso",
@@ -10669,7 +10669,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": "Mecklenburgian"
+        "adjective": "Mecklenburgean"
     },
     "Kashmir": {
         "name": "Kashmir",
@@ -11175,7 +11175,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Wisconsinean"
     },
     "Zimbabwe": {
         "name": "Zimbabwe",
@@ -11727,7 +11727,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": "Solomonish"
+        "adjective": "Solomonian"
     },
     "Maine": {
         "name": "Maine",
@@ -11773,7 +11773,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mainean"
     },
     "Iroquois Confederacy": {
         "name": "Iroquois Confederacy",
@@ -12187,7 +12187,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "New Jerseyan"
     },
     "New Mexico": {
         "name": "New Mexico",
@@ -12509,7 +12509,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Nunavutian"
     },
     "Oaxaca": {
         "name": "Oaxaca",
@@ -12647,7 +12647,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Rojavan"
     },
     "Tuareg": {
         "name": "Tuareg",
@@ -13061,7 +13061,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Illinoisean"
     },
     "Florida": {
         "name": "Florida",
@@ -14211,7 +14211,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Bruneian"
     },
     "Aktobe": {
         "name": "Aktobe",
@@ -14395,7 +14395,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": "Cossackian"
+        "adjective": "Cossackean"
     },
     "Ivory Coast": {
         "name": "Ivory Coast",
@@ -14441,7 +14441,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Ivorian"
     },
     "Bukhara": {
         "name": "Bukhara",
@@ -16051,7 +16051,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sinaloan"
     },
     "Sonora": {
         "name": "Sonora",
@@ -16097,7 +16097,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Sonoran"
     },
     "Nowa Polska": {
         "name": "Nowa Polska",
@@ -18029,7 +18029,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Dutch American"
     },
     "Xinjiang Clique": {
         "name": "Xinjiang Clique",
@@ -18213,7 +18213,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Saxonian"
     },
     "Gran Colombia": {
         "name": "Gran Colombia",
@@ -18719,7 +18719,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Toubouian"
     },
     "Bohemia": {
         "name": "Bohemia",
@@ -18811,7 +18811,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Alash"
     },
     "Achaemenid Empire": {
         "name": "Achaemenid Empire",
@@ -19133,7 +19133,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Vanuatuan"
     },
     "Uzbekistan": {
         "name": "Uzbekistan",
@@ -19455,7 +19455,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Yunnanian"
     },
     "Yuan": {
         "name": "Yuan",
@@ -19731,7 +19731,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Renoean"
     },
     "49ers": {
         "name": "49ers",
@@ -19961,7 +19961,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Christmasian"
     },
     "New Caledonia": {
         "name": "New Caledonia",
@@ -20513,7 +20513,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Mississippian"
     },
     "Missouri": {
         "name": "Missouri",
@@ -20559,7 +20559,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Missourian"
     },
     "Moldova": {
         "name": "Moldova",
@@ -21479,7 +21479,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Chadean"
     },
     "Mauritania": {
         "name": "Mauritania",
@@ -21755,7 +21755,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Midwayean"
     },
     "Mali": {
         "name": "Mali",
@@ -22445,7 +22445,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Moscowian"
     },
     "West Bengal": {
         "name": "West Bengal",
@@ -22629,7 +22629,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Joseonean"
     },
     "Taiwan": {
         "name": "Taiwan",
@@ -22721,7 +22721,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Javan"
     },
     "Sumatra": {
         "name": "Sumatra",
@@ -23181,7 +23181,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Buenos Airean"
     },
     "Salta": {
         "name": "Salta",
@@ -23227,7 +23227,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Saltan"
     },
     "Santiago": {
         "name": "Santiago",
@@ -23365,7 +23365,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Rio de Janeiran"
     },
     "American Territory of Canada": {
         "name": "American Territory of Canada",
@@ -23595,7 +23595,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": "Timbuktuian"
+        "adjective": "Timbuktuean"
     },
     "Songhai": {
         "name": "Songhai",
@@ -25159,7 +25159,7 @@
         "leader_title": "",
         "flag_data": "",
         "portrait_data": "",
-        "adjective": ""
+        "adjective": "Dutch East Indian"
     },
     "European Union": {
         "name": "European Union",
