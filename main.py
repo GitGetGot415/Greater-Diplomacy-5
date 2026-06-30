@@ -1,14 +1,23 @@
-import pygame
 import os
+import sys
+
+# py2app bundle fix: set working directory to Resources folder
+if getattr(sys, 'frozen', False):
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+import pygame
 
 # macOS Tkinter/Pygame NSApplication Clash Fix
 import platform
-import tkinter as tk
-if platform.system() == "Darwin":
-    # Initialize Tkinter FIRST so it claims the macOS NSApplication.
-    # Pygame is polite enough to share, but Tkinter is not.
-    _mac_tk_fix = tk.Tk()
-    _mac_tk_fix.withdraw()
+try:
+    import tkinter as tk
+    if platform.system() == "Darwin":
+        # Initialize Tkinter FIRST so it claims the macOS NSApplication.
+        # Pygame is polite enough to share, but Tkinter is not.
+        _mac_tk_fix = tk.Tk()
+        _mac_tk_fix.withdraw()
+except Exception:
+    pass  # tkinter not available in bundle — pygame will handle NSApplication
 
 # Tell Python 3.8+ to trust the current folder for DLLs
 if os.name == 'nt':
@@ -461,18 +470,24 @@ class Controller:
             pygame.display.flip()
 
 if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    # Mod Handler
-    for filename in os.listdir(os.getcwd()):
-        if filename.endswith(".GD5MOD"):
-            with open(os.path.join(BASE_DIR, filename), "r") as mod:
-                lines = mod.readlines()
-                target = os.path.join(BASE_DIR, lines[0].strip())
-                content = "".join(lines[1:])
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
+        # Mod Handler
+        for filename in os.listdir(os.getcwd()):
+            if filename.endswith(".GD5MOD"):
+                with open(os.path.join(BASE_DIR, filename), "r") as mod:
+                    lines = mod.readlines()
+                    target = os.path.join(BASE_DIR, lines[0].strip())
+                    content = "".join(lines[1:])
 
-                with open(target, "w") as target_file: # Cut off the last character from the file name (\n)
-                    target_file.write(content) # We only want everything after the first line (filename)
+                    with open(target, "w") as target_file: # Cut off the last character from the file name (\n)
+                        target_file.write(content) # We only want everything after the first line (filename)
 
-    game = Controller()
-    game.run()
+        game = Controller()
+        game.run()
+    except Exception:
+        import traceback
+        with open(os.path.expanduser("~/GD5_crash.log"), "w") as f:
+            traceback.print_exc(file=f)
+        raise
