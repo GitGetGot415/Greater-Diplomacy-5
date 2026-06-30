@@ -162,14 +162,18 @@ def process_queues(self):
                             target_prov.setdefault("units", []).append(u_dict)
                         
                         # Queue a core so they solidify the tile if not crushed
-                        core_order = {
+                        """core_order = {
                             "order_type": "CORE",
                             "item_name": "Core Territory",
                             "turns_remaining": 1,
                             "group": "administration",
                             "refund": {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
                         }
-                        target_prov.setdefault("building_queue", []).append(core_order)
+                        target_prov.setdefault("building_queue", []).append(core_order)"""
+
+                        # Give the rebellion a core immediately
+                        if reb_id not in target_prov.get("cores", []):
+                            target_prov.setdefault("cores", []).append(reb_id)
                         
                         return reb_id
                     
