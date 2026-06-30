@@ -66,6 +66,10 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
     if master_fac:
         pull_puppets_into_faction(master, master_fac, map_data, nation_data)
         
+    # Auto-pull puppet into master's wars
+    for enemy in m_data.get("at_war_with", []):
+        pull_puppets_into_war(master, enemy, map_data, nation_data)
+        
     # Force peace between them if they were at war
     if queries.are_at_war(master, puppet, nation_data) or queries.are_at_war(puppet, master, nation_data):
         finalize_neutral(nation_data, master, puppet)
