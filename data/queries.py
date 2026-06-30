@@ -846,6 +846,9 @@ def generate_rebellion_name(cores_on_tile, nation_data):
     adjectives = []
     for core in cores_on_tile:
         core_data = nation_data.get(core, {})
+        if core_data.get("is_rebellion", False):
+            continue
+            
         adj = core_data.get("adjective", "")
         if not adj:
             # Fallback: try loading from disk

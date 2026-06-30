@@ -113,6 +113,14 @@ def process_queues(self):
                             reb_color = list(core_data["color"])
                         if core_data.get("flag_data"):
                             reb_flag_data = core_data["flag_data"]
+                            
+                        # Bake the actual image into base64 so the rendering system doesn't
+                        # mistakenly try to load a local file named after the rebellion.
+                        try:
+                            surf = queries.decode_b64_to_surf(reb_flag_data, c.FLAG_SIZE, country_name=primary_core)
+                            reb_flag_data = queries.encode_surf_to_b64(surf)
+                        except Exception:
+                            pass
                     
                     # --- Helper to create a rebellion country and spawn militia ---
                     def _spawn_rebellion(target_prov, cores_for_naming, militia_count):
@@ -161,17 +169,13 @@ def process_queues(self):
                             u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters)
                             target_prov.setdefault("units", []).append(u_dict)
                         
-                        # Queue a core so they solidify the tile if not crushed
-                        """core_order = {
-                            "order_type": "CORE",
-                            "item_name": "Core Territory",
-                            "turns_remaining": 1,
-                            "group": "administration",
-                            "refund": {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-                        }
-                        target_prov.setdefault("building_queue", []).append(core_order)"""
-
-                        # Give the rebellion a core immediately
+                        # Give the rebellion cores globally on all territories that share its founding cores
+                        for map_prov in self.map_data.values():
+                            if any(core in map_prov.get("cores", []) for core in cores_for_naming):
+                                if reb_id not in map_prov.get("cores", []):
+                                    map_prov.setdefault("cores", []).append(reb_id)
+                        
+                        # Fallback for the target province itself just in case
                         if reb_id not in target_prov.get("cores", []):
                             target_prov.setdefault("cores", []).append(reb_id)
                         
