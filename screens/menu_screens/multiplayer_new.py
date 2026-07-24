@@ -64,8 +64,19 @@ class Multiplayer_New(GameState):
         root = tk.Tk()
         root.withdraw()
         
+        tour_name = simpledialog.askstring("Tournament Name", "Enter a name for this tournament:", parent=root)
+        if not tour_name or not tour_name.strip(): return
+        
         master_key = simpledialog.askstring("Host Key", "Enter a Master Key for this tournament:", parent=root)
         if not master_key: return
+        
+        import re
+        safe_tour_name = re.sub(r'[\\/*?:"<>|]', '', tour_name).strip()
+        if not safe_tour_name:
+            safe_tour_name = "Tournament"
+            
+        tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
+        os.makedirs(tournament_dir, exist_ok=True)
         
         from data import queries
         map_settings = queries.get_scenario_settings()
@@ -73,6 +84,8 @@ class Multiplayer_New(GameState):
         temp_map = Map(load_path=os.path.join(directory, scenario_name), is_scenario=True, map_settings=map_settings)
         temp_map.multiplayer_host_mode = True
         temp_map.multiplayer_master_key = master_key
+        temp_map.multiplayer_tournament_name = safe_tour_name
+        temp_map.multiplayer_tournament_dir = tournament_dir
         
         keys_dict = {}
         for cid, data in temp_map.nation_data.items():
@@ -80,10 +93,10 @@ class Multiplayer_New(GameState):
                 keys_dict[cid] = secrets.token_hex(4)
                 
         turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
-        export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, f"Turn_{turn}_Host.gd5tour")
+        export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
         keys_path, all_keys_path = multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
         
-        messagebox.showinfo("Success", f"Tournament created!\nKeys saved to:\n{keys_path}\nand\n{all_keys_path}\n\nFile saved to:\n{export_path}\n\nSend the .gd5tour file and the keys to your players. When they send you their .gd5move files, use 'Load Existing Tournament' to play.")
+        messagebox.showinfo("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
         
         self.next_state = "MULTIPLAYER_HOST"
         self.done = True

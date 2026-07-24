@@ -23,7 +23,15 @@ def load_multiplayer_moves(map_ref):
 
 def export_next_turn(map_ref):
     turn = map_ref.time_manager.total_turns
-    export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, f"Turn_{turn}_Host.gd5tour")
+    
+    tour_dir = getattr(map_ref, 'multiplayer_tournament_dir', None)
+    if not tour_dir and hasattr(map_ref, 'loaded_tournament_path') and map_ref.loaded_tournament_path:
+        tour_dir = os.path.dirname(map_ref.loaded_tournament_path)
+    if not tour_dir:
+        tour_dir = c.TOURNAMENT_SAVES_DIR
+        
+    os.makedirs(tour_dir, exist_ok=True)
+    export_path = os.path.join(tour_dir, f"Turn_{turn}_Host.gd5tour")
     master_key = getattr(map_ref, 'multiplayer_master_key', '')
     keys_dict = getattr(map_ref, 'multiplayer_keys_dict', {})
     

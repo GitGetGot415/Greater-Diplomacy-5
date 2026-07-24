@@ -316,6 +316,8 @@ class Controller:
                 success, role, cid, temp_dir, keys_dict, msg = multiplayer_io.load_tournament(path, key)
                 if success:
                     self.states["MAP"] = Map(load_path=temp_dir, is_scenario=False, force_editor=False, num_players=self.num_players)
+                    self.states["MAP"].loaded_tournament_path = path
+                    self.states["MAP"].multiplayer_tournament_dir = os.path.dirname(path)
                     if role == "HOST":
                         self.states["MAP"].multiplayer_host_mode = True
                         self.states["MAP"].player_country = "Spectator"
@@ -325,6 +327,9 @@ class Controller:
                         self.states["MAP"].multiplayer_player_key = key
                         multiplayer_io.strip_sensitive_data_for_player(self.states["MAP"], cid)
                         
+                    import shutil
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    
                     self.states["MAP"].refresh_all_maps()
                     import ui.buttons as buttons
                     buttons.render_buttons(self.states["MAP"])

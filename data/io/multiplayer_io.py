@@ -63,10 +63,13 @@ def strip_sensitive_data_for_player(map_ref, country_id):
             country["current_research"] = None
             country["research_queue"] = []
 
-def write_host_keys(map_ref, keys_dict):
-    all_keys_path = os.path.join(c.TOURNAMENT_SAVES_DIR, "ALL_Host_Keys.txt")
-    keys_path = os.path.join(c.TOURNAMENT_SAVES_DIR, "Host_Keys.txt")
-    os.makedirs(c.TOURNAMENT_SAVES_DIR, exist_ok=True)
+def write_host_keys(map_ref, keys_dict, output_dir=None):
+    if output_dir is None:
+        output_dir = c.TOURNAMENT_SAVES_DIR
+    os.makedirs(output_dir, exist_ok=True)
+    
+    all_keys_path = os.path.join(output_dir, "ALL_Host_Keys.txt")
+    keys_path = os.path.join(output_dir, "Host_Keys.txt")
     
     active_owners = set()
     if hasattr(map_ref, 'map_data') and map_ref.map_data:
@@ -93,7 +96,11 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     """
     keys_dict maps Country_ID -> Country_Key
     """
-    keys_path, all_keys_path = write_host_keys(map_ref, keys_dict)
+    import shutil
+    output_dir = os.path.dirname(file_path)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    keys_path, all_keys_path = write_host_keys(map_ref, keys_dict, output_dir=output_dir)
     
     from data import queries
     queries.scrub_default_images(map_ref.nation_data)
@@ -108,19 +115,23 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     os.makedirs(temp_img_dir, exist_ok=True)
     images = {}
     
-    img_names = {
-        "terrain.png": getattr(map_ref, 'terrain_map', None),
-        "id_map.png": getattr(map_ref, 'id_map', None),
-        "political.png": getattr(map_ref, 'political_map', None),
-        "cores.png": getattr(map_ref, 'cores_map', None)
-    }
-    
-    for name, surf in img_names.items():
-        if surf:
-            img_path = os.path.join(temp_img_dir, name)
-            pygame.image.save(surf, img_path)
-            with open(img_path, "rb") as f:
-                images[name] = base64.b64encode(f.read()).decode('utf-8')
+    try:
+        img_names = {
+            "terrain.png": getattr(map_ref, 'terrain_map', None),
+            "id_map.png": getattr(map_ref, 'id_map', None),
+            "political.png": getattr(map_ref, 'political_map', None),
+            "cores.png": getattr(map_ref, 'cores_map', None)
+        }
+        
+        for name, surf in img_names.items():
+            if surf:
+                img_path = os.path.join(temp_img_dir, name)
+                pygame.image.save(surf, img_path)
+                with open(img_path, "rb") as f:
+                    images[name] = base64.b64encode(f.read()).decode('utf-8')
+    finally:
+        if os.path.exists(temp_img_dir):
+            shutil.rmtree(temp_img_dir, ignore_errors=True)
     
     save_dict["_images"] = images
     
