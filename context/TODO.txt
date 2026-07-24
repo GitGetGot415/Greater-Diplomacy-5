@@ -47,6 +47,8 @@ Vague content ideas NOT THAT IMPORTANT BUT COULD PROBABLY BE LOOKED AT:
 
 - opinion modifier should maybe do more than just affect ai attitudes? (more likely to declare war, less likely to accept peace for example?)
 
+- focus trees????? (created with scripted events?)
+
 for random scenarios:
 add how valuable the resources are (rn this is between 20 - 80)
 so there could be 1 slider for minimum and 1 slider for maximum
