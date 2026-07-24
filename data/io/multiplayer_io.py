@@ -443,9 +443,5 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             map_ref.submitted_moves = set()
         map_ref.submitted_moves.add(cid)
         
-        if not hasattr(map_ref, 'multiplayer_protected_countries'):
-            map_ref.multiplayer_protected_countries = set()
-        map_ref.multiplayer_protected_countries.add(cid)
-        
     if move_file_paths and hasattr(map_ref, 'sync_units_to_data'):
         map_ref.sync_units_to_data()

@@ -140,12 +140,21 @@ def manage_players_panel(map_ref):
         
     def on_confirm():
         map_ref.multiplayer_protected_countries.clear()
-        count = 0
+        skipped_ai_count = 0
         for cid, var in check_vars.items():
             if var.get():
                 map_ref.multiplayer_protected_countries.add(cid)
-                count += 1
-        map_ref.show_feedback(f"{count} countries will give no moves this turn.")
+                skipped_ai_count += 1
+                
+        submitted_count = len(getattr(map_ref, 'submitted_moves', set()))
+        if submitted_count > 0 and skipped_ai_count > 0:
+            map_ref.show_feedback(f"{submitted_count} player move(s) loaded; {skipped_ai_count} country/countries set to skip AI.")
+        elif skipped_ai_count > 0:
+            map_ref.show_feedback(f"{skipped_ai_count} country/countries set to skip AI this turn.")
+        elif submitted_count > 0:
+            map_ref.show_feedback(f"{submitted_count} player move(s) loaded.")
+        else:
+            map_ref.show_feedback("All unsubmitted countries will be controlled by AI this turn.")
         
         canvas.unbind_all("<MouseWheel>")
         root.quit()
