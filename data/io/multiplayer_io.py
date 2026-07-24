@@ -116,19 +116,13 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
     keys_path, all_keys_path = write_host_keys(map_ref, keys_dict, output_dir=output_dir)
     
-    regen_keys_path = os.path.join(output_dir, "Regenerated_Keys.txt")
     if regenerated_keys:
         turn = map_ref.time_manager.total_turns if hasattr(map_ref, 'time_manager') else 0
+        regen_keys_path = os.path.join(output_dir, f"Turn_{turn}_Regenerated_Keys.txt")
         with open(regen_keys_path, 'w') as f:
             f.write(f"Regenerated keys for Turn {turn}:\n\n")
             for cid, (name, new_key) in regenerated_keys.items():
                 f.write(f"{name} (ID {cid}): {new_key}\n")
-    else:
-        if os.path.exists(regen_keys_path):
-            try:
-                os.remove(regen_keys_path)
-            except Exception:
-                pass
 
     from data import queries
     queries.scrub_default_images(map_ref.nation_data)
