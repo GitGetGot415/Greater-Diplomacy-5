@@ -234,7 +234,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     map_ref.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key)
-    history_enc = encrypt_dict(map_ref.history, session_key) if c.RECORD_HISTORY else None
+    history_enc = None # History omitted for tournament saves to reduce file size
     
     payload = {
         "verification_table": verification_table,
