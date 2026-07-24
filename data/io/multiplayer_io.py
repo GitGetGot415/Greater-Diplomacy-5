@@ -63,10 +63,38 @@ def strip_sensitive_data_for_player(map_ref, country_id):
             country["current_research"] = None
             country["research_queue"] = []
 
+def write_host_keys(map_ref, keys_dict):
+    all_keys_path = os.path.join(c.TOURNAMENT_SAVES_DIR, "ALL_Host_Keys.txt")
+    keys_path = os.path.join(c.TOURNAMENT_SAVES_DIR, "Host_Keys.txt")
+    os.makedirs(c.TOURNAMENT_SAVES_DIR, exist_ok=True)
+    
+    active_owners = set()
+    if hasattr(map_ref, 'map_data') and map_ref.map_data:
+        active_owners = set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
+        
+    nation_data = getattr(map_ref, 'nation_data', {})
+    
+    with open(all_keys_path, 'w') as f:
+        f.write("Every key for every possible country:\n\n")
+        for cid, key in keys_dict.items():
+            name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+            f.write(f"{name} (ID {cid}): {key}\n")
+            
+    with open(keys_path, 'w') as f:
+        f.write("Distribute these keys to your players:\n\n")
+        for cid, key in keys_dict.items():
+            if cid in active_owners:
+                name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+                f.write(f"{name} (ID {cid}): {key}\n")
+                
+    return keys_path, all_keys_path
+
 def export_tournament(map_ref, file_path, master_key, keys_dict):
     """
     keys_dict maps Country_ID -> Country_Key
     """
+    keys_path, all_keys_path = write_host_keys(map_ref, keys_dict)
+    
     from data import queries
     queries.scrub_default_images(map_ref.nation_data)
     save_dict = queries.build_save_dict(map_ref)
@@ -151,6 +179,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         json.dump(payload, f, indent=4)
         
     print(f"Tournament file exported to {file_path}")
+    return keys_path, all_keys_path
 
 def load_tournament(file_path, key):
     """

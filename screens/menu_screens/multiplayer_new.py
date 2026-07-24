@@ -79,19 +79,11 @@ class Multiplayer_New(GameState):
             if data.get("is_playable"):
                 keys_dict[cid] = secrets.token_hex(4)
                 
-        keys_path = os.path.join(c.TOURNAMENT_SAVES_DIR, "Host_Keys.txt")
-        os.makedirs(os.path.dirname(keys_path), exist_ok=True)
-        with open(keys_path, 'w') as f:
-            f.write("Distribute these keys to your players:\n\n")
-            for cid, key in keys_dict.items():
-                name = temp_map.nation_data[cid].get("name", cid)
-                f.write(f"{name} (ID {cid}): {key}\n")
-                
         turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
         export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, f"Turn_{turn}_Host.gd5tour")
-        multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
+        keys_path, all_keys_path = multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
         
-        messagebox.showinfo("Success", f"Tournament created!\nKeys saved to:\n{keys_path}\n\nFile saved to:\n{export_path}\n\nSend the .gd5tour file and the keys to your players. When they send you their .gd5move files, use 'Load Existing Tournament' to play.")
+        messagebox.showinfo("Success", f"Tournament created!\nKeys saved to:\n{keys_path}\nand\n{all_keys_path}\n\nFile saved to:\n{export_path}\n\nSend the .gd5tour file and the keys to your players. When they send you their .gd5move files, use 'Load Existing Tournament' to play.")
         
         self.next_state = "MULTIPLAYER_HOST"
         self.done = True

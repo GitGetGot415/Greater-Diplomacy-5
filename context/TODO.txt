@@ -6,6 +6,8 @@ Immediate concerns:
 - enable building factories on puppet territory? (note that there could be a meta where you make a puppet, build a factory on it, and then annex it to build said factory cheaply) (unless the cost to build is based on your factory count and not that of your pupets)
 - maybe factory count is only counted for factories on core territory
 
+- specific starting music you can choose for when you first load in the game
+
 - add in a seperate queue for naval units specifically
 
 - check if countries having custom names is implemented correctly, especially for puppet names
@@ -97,5 +99,4 @@ Difficult to implement content ideas:
     - Generals
     - Field Marshals
 - Implementation of actual tank battles for tactical mode (highfleet esque)
-- Tournaments (yknow, the stuff from GD4)
 - make political power a thing? (ok what would you even use it for)
