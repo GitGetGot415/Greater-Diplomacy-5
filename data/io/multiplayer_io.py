@@ -100,8 +100,36 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     output_dir = os.path.dirname(file_path)
     os.makedirs(output_dir, exist_ok=True)
     
+    # Process pending key regenerations if any
+    pending_regen = getattr(map_ref, 'multiplayer_pending_key_regen', set())
+    regenerated_keys = {}
+    if pending_regen:
+        for cid in list(pending_regen):
+            new_key = secrets.token_hex(4)
+            keys_dict[cid] = new_key
+            if hasattr(map_ref, 'multiplayer_keys_dict'):
+                map_ref.multiplayer_keys_dict[cid] = new_key
+            nation_data = getattr(map_ref, 'nation_data', {})
+            name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+            regenerated_keys[cid] = (name, new_key)
+        map_ref.multiplayer_pending_key_regen.clear()
+
     keys_path, all_keys_path = write_host_keys(map_ref, keys_dict, output_dir=output_dir)
     
+    regen_keys_path = os.path.join(output_dir, "Regenerated_Keys.txt")
+    if regenerated_keys:
+        turn = map_ref.time_manager.total_turns if hasattr(map_ref, 'time_manager') else 0
+        with open(regen_keys_path, 'w') as f:
+            f.write(f"Regenerated keys for Turn {turn}:\n\n")
+            for cid, (name, new_key) in regenerated_keys.items():
+                f.write(f"{name} (ID {cid}): {new_key}\n")
+    else:
+        if os.path.exists(regen_keys_path):
+            try:
+                os.remove(regen_keys_path)
+            except Exception:
+                pass
+
     from data import queries
     queries.scrub_default_images(map_ref.nation_data)
     save_dict = queries.build_save_dict(map_ref)

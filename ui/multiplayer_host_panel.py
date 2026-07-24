@@ -168,3 +168,102 @@ def manage_players_panel(map_ref):
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.eval('tk::PlaceWindow . center')
     root.mainloop()
+
+def manage_keys_panel(map_ref):
+    root = tk.Tk()
+    root.title("Regenerate Player Keys")
+    root.geometry("450x600")
+    root.attributes("-topmost", True)
+    root.focus_force()
+
+    if not hasattr(map_ref, 'multiplayer_pending_key_regen'):
+        map_ref.multiplayer_pending_key_regen = set()
+
+    top_frame = tk.Frame(root)
+    top_frame.pack(fill=tk.X, padx=10, pady=10)
+
+    lbl = tk.Label(top_frame, text="Select countries whose keys should be regenerated upon exporting the turn/map:", wraplength=430)
+    lbl.pack(pady=(0, 10))
+
+    frame = tk.Frame(root)
+    frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+    
+    canvas = tk.Canvas(frame)
+    scrollbar = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+    scrollable_frame = tk.Frame(canvas)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    
+    def configure_canvas(event):
+        canvas.itemconfig(canvas_window, width=event.width)
+    canvas.bind("<Configure>", configure_canvas)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    canvas.pack(side="left", fill="both", expand=True)
+    
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    
+    check_vars = {}
+    
+    def refresh_list():
+        for widget in scrollable_frame.winfo_children():
+            widget.destroy()
+        check_vars.clear()
+        
+        active_owners = set(p.get("owner") for p in map_ref.map_data.values()) if hasattr(map_ref, 'map_data') and map_ref.map_data else set()
+        countries = [cid for cid, data in map_ref.nation_data.items() if data.get("is_playable") and cid in active_owners]
+        countries.sort(key=lambda c: map_ref.nation_data[c].get("name", c))
+        
+        for cid in countries:
+            var = tk.BooleanVar(master=root, value=(cid in map_ref.multiplayer_pending_key_regen))
+            check_vars[cid] = var
+            name = map_ref.nation_data[cid].get("name", cid)
+            
+            row_frame = tk.Frame(scrollable_frame)
+            row_frame.pack(fill=tk.X, anchor="w", pady=2)
+            
+            cb = tk.Checkbutton(row_frame, text=f"{name} ({cid})", variable=var)
+            cb.pack(side=tk.LEFT, padx=5)
+            
+    refresh_list()
+        
+    def on_confirm():
+        map_ref.multiplayer_pending_key_regen.clear()
+        count = 0
+        for cid, var in check_vars.items():
+            if var.get():
+                map_ref.multiplayer_pending_key_regen.add(cid)
+                count += 1
+        map_ref.show_feedback(f"{count} country key(s) queued for regeneration upon export.")
+        
+        canvas.unbind_all("<MouseWheel>")
+        root.quit()
+        root.destroy()
+        
+    def on_closing():
+        canvas.unbind_all("<MouseWheel>")
+        root.quit()
+        root.destroy()
+
+    btn_frame = tk.Frame(root)
+    btn_frame.pack(fill=tk.X, pady=10)
+    
+    confirm_btn = tk.Button(btn_frame, text="Confirm", command=on_confirm, width=15)
+    confirm_btn.pack(side=tk.LEFT, padx=30)
+    
+    cancel_btn = tk.Button(btn_frame, text="Cancel", command=on_closing, width=15)
+    cancel_btn.pack(side=tk.RIGHT, padx=30)
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    root.eval('tk::PlaceWindow . center')
+    root.mainloop()

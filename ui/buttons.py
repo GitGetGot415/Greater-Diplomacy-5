@@ -196,8 +196,13 @@ def render_buttons(self):
         from ui.multiplayer_host_panel import export_next_turn
         export_next_turn(self)
         
+    def host_manage_keys():
+        from ui.multiplayer_host_panel import manage_keys_panel
+        manage_keys_panel(self)
+        
     self.btn_spec_mp_manage = Button(380, 15, "diplomatic", "blue", "Manage Players", host_manage_players)
     self.btn_spec_mp_export = Button(600, 15, "diplomatic", "green", "Export Turn", host_export_turn)
+    self.btn_spec_mp_keys = Button(820, 15, "diplomatic", "purple", "Keys", host_manage_keys)
 
     # General Controls
     def start_spectator_action():
@@ -236,7 +241,7 @@ def render_buttons(self):
         self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
         self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, self.btn_spec_leave_fac,
         self.btn_spec_disband_fac, self.btn_spectator, self.btn_tactical, self.btn_close_info, self.btn_exit_to_menu,
-        self.btn_spec_mp_manage, self.btn_spec_mp_export,
+        self.btn_spec_mp_manage, self.btn_spec_mp_export, self.btn_spec_mp_keys,
         self.slider_camera_tilt
     ])
 
@@ -379,6 +384,7 @@ def update_button_states(map_screen):
         if is_spec:
             map_screen.btn_spec_mp_manage.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
             map_screen.btn_spec_mp_export.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
+            map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
         map_screen.btn_declare_indep.visible = getattr(map_screen, 'tactical_mode', False) and not is_sel and not is_thinking
 
         gp_btns = [
