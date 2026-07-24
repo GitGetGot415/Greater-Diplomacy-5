@@ -25,7 +25,7 @@ def main():
     os.makedirs(dist_dir, exist_ok=True)
     
     # 2. Copy directories
-    dirs_to_copy = ["assets", "base_maps", "data", "saves", "scenarios"]
+    dirs_to_copy = ["assets", "base_maps", "data", "saves", "scenarios", "tournament_saves"]
     
     def data_ignore_func(dir_name, contents):
         ignored = []
@@ -62,7 +62,10 @@ def main():
         dst = os.path.join(dist_dir, d)
         
         if not os.path.exists(src):
-            print(f"Source directory {src} does not exist, skipping.")
+            if d == "tournament_saves" or d == "saves":
+                os.makedirs(dst, exist_ok=True)
+            else:
+                print(f"Source directory {src} does not exist, skipping.")
             continue
             
         print(f"Copying {src} to {dst}...")
@@ -78,7 +81,7 @@ def main():
                     os.rmdir(dirpath)
         elif d == "assets":
             shutil.copytree(src, dst, ignore=assets_ignore_func)
-        elif d == "saves":
+        elif d == "saves" or d == "tournament_saves":
             shutil.copytree(src, dst, ignore=saves_ignore_func)
         elif d == "scenarios":
             shutil.copytree(src, dst, ignore=scenarios_ignore_func)
