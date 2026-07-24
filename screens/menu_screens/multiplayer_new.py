@@ -64,18 +64,24 @@ class Multiplayer_New(GameState):
         root = tk.Tk()
         root.withdraw()
         
-        tour_name = simpledialog.askstring("Tournament Name", "Enter a name for this tournament:", parent=root)
-        if not tour_name or not tour_name.strip(): return
-        
+        import re
+        while True:
+            tour_name = simpledialog.askstring("Tournament Name", "Enter a name for this tournament:", parent=root)
+            if not tour_name or not tour_name.strip(): return
+            
+            safe_tour_name = re.sub(r'[\\/*?:"<>|]', '', tour_name).strip()
+            if not safe_tour_name:
+                safe_tour_name = "Tournament"
+                
+            tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
+            if os.path.exists(tournament_dir):
+                messagebox.showerror("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
+                continue
+            break
+            
         master_key = simpledialog.askstring("Host Key", "Enter a Master Key for this tournament:", parent=root)
         if not master_key: return
         
-        import re
-        safe_tour_name = re.sub(r'[\\/*?:"<>|]', '', tour_name).strip()
-        if not safe_tour_name:
-            safe_tour_name = "Tournament"
-            
-        tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
         os.makedirs(tournament_dir, exist_ok=True)
         
         from data import queries
