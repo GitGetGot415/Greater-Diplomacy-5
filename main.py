@@ -313,11 +313,28 @@ class Controller:
                 key = previous_state.selected_tournament_key
                 
                 from data.io import multiplayer_io
-                success, role, cid, temp_dir, keys_dict, msg = multiplayer_io.load_tournament(path, key)
+                res = multiplayer_io.load_tournament(path, key)
+                if len(res) >= 8:
+                    success, role, cid, temp_dir, keys_dict, msg, session_key, ver_table = res[:8]
+                else:
+                    success, role, cid, temp_dir, keys_dict, msg = res[:6]
+                    session_key, ver_table = None, {}
+
                 if success:
                     self.states["MAP"] = Map(load_path=temp_dir, is_scenario=False, force_editor=False, num_players=self.num_players)
                     self.states["MAP"].loaded_tournament_path = path
                     self.states["MAP"].multiplayer_tournament_dir = os.path.dirname(path)
+                    self.states["MAP"].multiplayer_session_key = session_key
+                    
+                    player_enc_cache = {}
+                    if ver_table:
+                        for h, v_entry in ver_table.items():
+                            if v_entry.get("role") == "PLAYER":
+                                r_cid = v_entry.get("country_id")
+                                if r_cid and r_cid in keys_dict:
+                                    player_enc_cache[r_cid] = (keys_dict[r_cid], h, v_entry["enc_session"])
+                    self.states["MAP"].multiplayer_player_enc_cache = player_enc_cache
+
                     if role == "HOST":
                         self.states["MAP"].multiplayer_host_mode = True
                         self.states["MAP"].player_country = "Spectator"

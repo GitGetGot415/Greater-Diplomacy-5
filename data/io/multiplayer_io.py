@@ -163,46 +163,75 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     save_dict["_images"] = images
     
-    session_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
+    session_key = getattr(map_ref, 'multiplayer_session_key', None)
+    if not session_key:
+        session_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
+        map_ref.multiplayer_session_key = session_key
+
+    player_enc_cache = getattr(map_ref, 'multiplayer_player_enc_cache', {})
     
-    verification_table = {}
-    
-    # Master key hash
+    active_owners = set()
+    if hasattr(map_ref, 'map_data') and map_ref.map_data:
+        active_owners = set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
+
+    tasks_to_encrypt = []
+    for cid, ckey in keys_dict.items():
+        if not ckey:
+            continue
+        if active_owners and cid not in active_owners:
+            continue
+        cached = player_enc_cache.get(cid)
+        if not cached or cached[0] != ckey:
+            tasks_to_encrypt.append((cid, ckey))
+
     m_hash = hash_key(master_key)
-    verification_table[m_hash] = {
-        "role": "HOST",
-        "enc_session": encrypt_dict({"sk": session_key, "keys_dict": keys_dict}, master_key)
+    verification_table = {
+        m_hash: {
+            "role": "HOST",
+            "enc_session": encrypt_dict({"sk": session_key, "keys_dict": keys_dict}, master_key)
+        }
     }
-    
-    import concurrent.futures
-    import pygame
-    from map_logic.system32 import loading_screen
-    
-    def _encrypt_player(cid, ckey):
-        if not ckey: return None
-        return cid, hash_key(ckey), encrypt_dict({"sk": session_key}, ckey)
+
+    for cid, (cached_ckey, r_hash, r_enc) in list(player_enc_cache.items()):
+        if cid in keys_dict and keys_dict[cid] == cached_ckey and (not active_owners or cid in active_owners):
+            verification_table[r_hash] = {
+                "role": "PLAYER",
+                "country_id": cid,
+                "enc_session": r_enc
+            }
+
+    if tasks_to_encrypt:
+        import concurrent.futures
+        import pygame
+        from map_logic.system32 import loading_screen
         
-    surface = pygame.display.get_surface()
-    valid_tasks = [(cid, ckey) for cid, ckey in keys_dict.items() if ckey]
-    total_tasks = len(valid_tasks)
-    completed_tasks = 0
-        
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(_encrypt_player, cid, ckey) for cid, ckey in valid_tasks]
-        for future in concurrent.futures.as_completed(futures):
-            pygame.event.pump()
-            res = future.result()
-            if res:
-                r_cid, r_hash, r_enc = res
-                verification_table[r_hash] = {
-                    "role": "PLAYER",
-                    "country_id": r_cid,
-                    "enc_session": r_enc
-                }
-            completed_tasks += 1
-            if surface:
-                loading_screen.draw_simple_refresh_bar(surface, "Encrypting Player Keys...", completed_tasks, total_tasks)
-                pygame.display.flip()
+        def _encrypt_player(cid, ckey):
+            if not ckey: return None
+            return cid, hash_key(ckey), encrypt_dict({"sk": session_key}, ckey)
+            
+        surface = pygame.display.get_surface()
+        total_tasks = len(tasks_to_encrypt)
+        completed_tasks = 0
+            
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(_encrypt_player, cid, ckey) for cid, ckey in tasks_to_encrypt]
+            for future in concurrent.futures.as_completed(futures):
+                pygame.event.pump()
+                res = future.result()
+                if res:
+                    r_cid, r_hash, r_enc = res
+                    verification_table[r_hash] = {
+                        "role": "PLAYER",
+                        "country_id": r_cid,
+                        "enc_session": r_enc
+                    }
+                    player_enc_cache[r_cid] = (keys_dict[r_cid], r_hash, r_enc)
+                completed_tasks += 1
+                if surface and total_tasks > 0:
+                    loading_screen.draw_simple_refresh_bar(surface, "Encrypting Player Keys...", completed_tasks, total_tasks)
+                    pygame.display.flip()
+
+    map_ref.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key)
     history_enc = encrypt_dict(map_ref.history, session_key) if c.RECORD_HISTORY else None
@@ -281,7 +310,7 @@ def load_tournament(file_path, key):
     cid = entry.get("country_id")
     keys_dict = decrypted_session.get("keys_dict", {})
     
-    return True, role, cid, temp_dir, keys_dict, "Loaded successfully"
+    return True, role, cid, temp_dir, keys_dict, "Loaded successfully", session_key, ver_table
 
 def export_move_file(map_ref, file_path, player_key):
     """
