@@ -1,3999 +1,3999 @@
 {
-    "(1, 0, 0)": {
-        "id": 1,
-        "terrain": "ocean",
-        "is_coastal": false,
-        "center": [
-            448,
-            53
-        ],
-        "neighbors": [
-            2,
-            11,
-            14,
-            18,
-            23,
-            27
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(1, 0, 0)",
-        "map_color": [
-            1,
-            0,
-            0
-        ]
-    },
-    "(2, 0, 0)": {
-        "id": 2,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            614,
-            29
-        ],
-        "neighbors": [
-            16,
-            1,
-            3,
-            14
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(2, 0, 0)",
-        "map_color": [
-            2,
-            0,
-            0
-        ]
-    },
-    "(3, 0, 0)": {
-        "id": 3,
-        "terrain": "mountain",
-        "is_coastal": true,
-        "center": [
-            691,
-            53
-        ],
-        "neighbors": [
-            2,
-            4,
-            15,
-            16,
-            21
-        ],
-        "owner": "Norway",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Norway"
-        ],
-        "json_key": "(3, 0, 0)",
-        "map_color": [
-            3,
-            0,
-            0
-        ]
-    },
-    "(4, 0, 0)": {
-        "id": 4,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            758,
-            45
-        ],
-        "neighbors": [
-            19,
-            3,
-            5,
-            15
-        ],
-        "owner": "Sweden",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Sweden"
-        ],
-        "json_key": "(4, 0, 0)",
-        "map_color": [
-            4,
-            0,
-            0
-        ]
-    },
-    "(5, 0, 0)": {
-        "id": 5,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            818,
-            57
-        ],
-        "neighbors": [
-            4,
-            6,
-            12,
-            17,
-            19
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(5, 0, 0)",
-        "map_color": [
-            5,
-            0,
-            0
-        ]
-    },
-    "(6, 0, 0)": {
-        "id": 6,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            866,
-            34
-        ],
-        "neighbors": [
-            12,
-            5,
-            7
-        ],
-        "owner": "Finland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Finland"
-        ],
-        "json_key": "(6, 0, 0)",
-        "map_color": [
-            6,
-            0,
-            0
-        ]
-    },
-    "(7, 0, 0)": {
-        "id": 7,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            974,
-            20
-        ],
-        "neighbors": [
-            8,
-            10,
-            12,
-            6
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(7, 0, 0)",
-        "map_color": [
-            7,
-            0,
-            0
-        ]
-    },
-    "(8, 0, 0)": {
-        "id": 8,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1114,
-            23
-        ],
-        "neighbors": [
-            9,
-            10,
-            13,
-            7
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(8, 0, 0)",
-        "map_color": [
-            8,
-            0,
-            0
-        ]
-    },
-    "(9, 0, 0)": {
-        "id": 9,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1206,
-            72
-        ],
-        "neighbors": [
-            8,
-            26,
-            13,
-            22
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(9, 0, 0)",
-        "map_color": [
-            9,
-            0,
-            0
-        ]
-    },
-    "(10, 0, 0)": {
-        "id": 10,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1016,
-            66
-        ],
-        "neighbors": [
-            7,
-            8,
-            12,
-            13,
-            20
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(10, 0, 0)",
-        "map_color": [
-            10,
-            0,
-            0
-        ]
-    },
-    "(11, 0, 0)": {
-        "id": 11,
-        "terrain": "ocean",
-        "is_coastal": false,
-        "center": [
-            377,
-            145
-        ],
-        "neighbors": [
-            1,
-            27,
-            36,
-            39
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(11, 0, 0)",
-        "map_color": [
-            11,
-            0,
-            0
-        ]
-    },
-    "(12, 0, 0)": {
-        "id": 12,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            926,
-            96
-        ],
-        "neighbors": [
-            5,
-            6,
-            7,
-            10,
-            17,
-            20,
-            25,
-            30
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(12, 0, 0)",
-        "map_color": [
-            12,
-            0,
-            0
-        ]
-    },
-    "(13, 0, 0)": {
-        "id": 13,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1084,
-            102
-        ],
-        "neighbors": [
-            8,
-            9,
-            10,
-            20,
-            26,
-            28
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(13, 0, 0)",
-        "map_color": [
-            13,
-            0,
-            0
-        ]
-    },
-    "(14, 0, 0)": {
-        "id": 14,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            584,
-            112
-        ],
-        "neighbors": [
-            32,
-            1,
-            2,
-            16,
-            18,
-            29
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(14, 0, 0)",
-        "map_color": [
-            14,
-            0,
-            0
-        ]
-    },
-    "(15, 0, 0)": {
-        "id": 15,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            741,
-            117
-        ],
-        "neighbors": [
-            19,
-            3,
-            4,
-            21
-        ],
-        "owner": "Sweden",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Sweden"
-        ],
-        "json_key": "(15, 0, 0)",
-        "map_color": [
-            15,
-            0,
-            0
-        ]
-    },
-    "(16, 0, 0)": {
-        "id": 16,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            639,
-            153
-        ],
-        "neighbors": [
-            32,
-            2,
-            3,
-            37,
-            42,
-            14,
-            21,
-            24
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(16, 0, 0)",
-        "map_color": [
-            16,
-            0,
-            0
-        ]
-    },
-    "(17, 0, 0)": {
-        "id": 17,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            875,
-            110
-        ],
-        "neighbors": [
-            25,
-            19,
-            12,
-            5
-        ],
-        "owner": "Estonia",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Estonia"
-        ],
-        "json_key": "(17, 0, 0)",
-        "map_color": [
-            17,
-            0,
-            0
-        ]
-    },
-    "(18, 0, 0)": {
-        "id": 18,
-        "terrain": "mountain",
-        "is_coastal": true,
-        "center": [
-            539,
-            118
-        ],
-        "neighbors": [
-            1,
-            29,
-            14,
-            23
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "United Kingdom"
-        ],
-        "json_key": "(18, 0, 0)",
-        "map_color": [
-            18,
-            0,
-            0
-        ]
-    },
-    "(19, 0, 0)": {
-        "id": 19,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            802,
-            139
-        ],
-        "neighbors": [
-            34,
-            35,
-            4,
-            5,
-            15,
-            17,
-            21,
-            25,
-            31
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(19, 0, 0)",
-        "map_color": [
-            19,
-            0,
-            0
-        ]
-    },
-    "(20, 0, 0)": {
-        "id": 20,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            984,
-            129
-        ],
-        "neighbors": [
-            10,
-            12,
-            13,
-            28,
-            30
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(20, 0, 0)",
-        "map_color": [
-            20,
-            0,
-            0
-        ]
-    },
-    "(21, 0, 0)": {
-        "id": 21,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            720,
-            160
-        ],
-        "neighbors": [
-            34,
-            3,
-            37,
-            15,
-            16,
-            19,
-            24
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(21, 0, 0)",
-        "map_color": [
-            21,
-            0,
-            0
-        ]
-    },
-    "(22, 0, 0)": {
-        "id": 22,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1235,
-            178
-        ],
-        "neighbors": [
-            9,
-            26,
-            43,
-            44
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(22, 0, 0)",
-        "map_color": [
-            22,
-            0,
-            0
-        ]
-    },
-    "(23, 0, 0)": {
-        "id": 23,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            511,
-            169
-        ],
-        "neighbors": [
-            1,
-            36,
-            38,
-            18,
-            27,
-            29
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(23, 0, 0)",
-        "map_color": [
-            23,
-            0,
-            0
-        ]
-    },
-    "(24, 0, 0)": {
-        "id": 24,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            690,
-            161
-        ],
-        "neighbors": [
-            16,
-            37,
-            21
-        ],
-        "owner": "Denmark",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Denmark"
-        ],
-        "json_key": "(24, 0, 0)",
-        "map_color": [
-            24,
-            0,
-            0
-        ]
-    },
-    "(25, 0, 0)": {
-        "id": 25,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            864,
-            164
-        ],
-        "neighbors": [
-            33,
-            12,
-            17,
-            19,
-            30,
-            31
-        ],
-        "owner": "Lithuania",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Lithuania"
-        ],
-        "json_key": "(25, 0, 0)",
-        "map_color": [
-            25,
-            0,
-            0
-        ]
-    },
-    "(26, 0, 0)": {
-        "id": 26,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1121,
-            182
-        ],
-        "neighbors": [
-            9,
-            41,
-            43,
-            13,
-            22,
-            28
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(26, 0, 0)",
-        "map_color": [
-            26,
-            0,
-            0
-        ]
-    },
-    "(27, 0, 0)": {
-        "id": 27,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            476,
-            166
-        ],
-        "neighbors": [
-            1,
-            11,
-            36,
-            23
-        ],
-        "owner": "Ireland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Ireland"
-        ],
-        "json_key": "(27, 0, 0)",
-        "map_color": [
-            27,
-            0,
-            0
-        ]
-    },
-    "(28, 0, 0)": {
-        "id": 28,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            1021,
-            182
-        ],
-        "neighbors": [
-            40,
-            41,
-            13,
-            20,
-            26,
-            30
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(28, 0, 0)",
-        "map_color": [
-            28,
-            0,
-            0
-        ]
-    },
-    "(29, 0, 0)": {
-        "id": 29,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            546,
-            183
-        ],
-        "neighbors": [
-            32,
-            38,
-            14,
-            18,
-            23
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "United Kingdom"
-        ],
-        "json_key": "(29, 0, 0)",
-        "map_color": [
-            29,
-            0,
-            0
-        ]
-    },
-    "(30, 0, 0)": {
-        "id": 30,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            936,
-            197
-        ],
-        "neighbors": [
-            33,
-            40,
-            12,
-            20,
-            25,
-            28
-        ],
-        "owner": "Belarus",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Belarus",
-            "Soviet Union"
-        ],
-        "json_key": "(30, 0, 0)",
-        "map_color": [
-            30,
-            0,
-            0
-        ]
-    },
-    "(31, 0, 0)": {
-        "id": 31,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            831,
-            197
-        ],
-        "neighbors": [
-            25,
-            19,
-            35,
-            33
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(31, 0, 0)",
-        "map_color": [
-            31,
-            0,
-            0
-        ]
-    },
-    "(32, 0, 0)": {
-        "id": 32,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            581,
-            226
-        ],
-        "neighbors": [
-            36,
-            38,
-            42,
-            14,
-            16,
-            49,
-            53,
-            29
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(32, 0, 0)",
-        "map_color": [
-            32,
-            0,
-            0
-        ]
-    },
-    "(33, 0, 0)": {
-        "id": 33,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            877,
-            224
-        ],
-        "neighbors": [
-            35,
-            40,
-            46,
-            48,
-            25,
-            30,
-            31
-        ],
-        "owner": "Poland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Poland"
-        ],
-        "json_key": "(33, 0, 0)",
-        "map_color": [
-            33,
-            0,
-            0
-        ]
-    },
-    "(34, 0, 0)": {
-        "id": 34,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            747,
-            218
-        ],
-        "neighbors": [
-            35,
-            37,
-            45,
-            19,
-            21
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(34, 0, 0)",
-        "map_color": [
-            34,
-            0,
-            0
-        ]
-    },
-    "(35, 0, 0)": {
-        "id": 35,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            800,
-            236
-        ],
-        "neighbors": [
-            33,
-            34,
-            45,
-            46,
-            19,
-            31
-        ],
-        "owner": "Poland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich",
-            "Poland"
-        ],
-        "json_key": "(35, 0, 0)",
-        "map_color": [
-            35,
-            0,
-            0
-        ]
-    },
-    "(36, 0, 0)": {
-        "id": 36,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            471,
-            243
-        ],
-        "neighbors": [
-            32,
-            38,
-            39,
-            11,
-            52,
-            53,
-            23,
-            27
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(36, 0, 0)",
-        "map_color": [
-            36,
-            0,
-            0
-        ]
-    },
-    "(37, 0, 0)": {
-        "id": 37,
-        "terrain": "swamp",
-        "is_coastal": true,
-        "center": [
-            675,
-            224
-        ],
-        "neighbors": [
-            34,
-            42,
-            45,
-            47,
-            16,
-            21,
-            24
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(37, 0, 0)",
-        "map_color": [
-            37,
-            0,
-            0
-        ]
-    },
-    "(38, 0, 0)": {
-        "id": 38,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            537,
-            226
-        ],
-        "neighbors": [
-            32,
-            36,
-            29,
-            23
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 6"
-        ],
-        "resources": {},
-        "cores": [
-            "United Kingdom"
-        ],
-        "json_key": "(38, 0, 0)",
-        "map_color": [
-            38,
-            0,
-            0
-        ]
-    },
-    "(39, 0, 0)": {
-        "id": 39,
-        "terrain": "ocean",
-        "is_coastal": false,
-        "center": [
-            359,
-            271
-        ],
-        "neighbors": [
-            65,
-            11,
-            36,
-            52
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(39, 0, 0)",
-        "map_color": [
-            39,
-            0,
-            0
-        ]
-    },
-    "(40, 0, 0)": {
-        "id": 40,
-        "terrain": "swamp",
-        "is_coastal": false,
-        "center": [
-            949,
-            251
-        ],
-        "neighbors": [
-            33,
-            41,
-            48,
-            51,
-            55,
-            28,
-            30
-        ],
-        "owner": "Ukraine",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Ukraine",
-            "Soviet Union"
-        ],
-        "json_key": "(40, 0, 0)",
-        "map_color": [
-            40,
-            0,
-            0
-        ]
-    },
-    "(41, 0, 0)": {
-        "id": 41,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1043,
-            250
-        ],
-        "neighbors": [
-            58,
-            40,
-            43,
-            50,
-            51,
-            26,
-            28
-        ],
-        "owner": "Ukraine",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Ukraine",
-            "Soviet Union"
-        ],
-        "json_key": "(41, 0, 0)",
-        "map_color": [
-            41,
-            0,
-            0
-        ]
-    },
-    "(42, 0, 0)": {
-        "id": 42,
-        "terrain": "swamp",
-        "is_coastal": true,
-        "center": [
-            620,
-            245
-        ],
-        "neighbors": [
-            32,
-            37,
-            47,
-            16,
-            49
-        ],
-        "owner": "Netherlands",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "Netherlands"
-        ],
-        "json_key": "(42, 0, 0)",
-        "map_color": [
-            42,
-            0,
-            0
-        ]
-    },
-    "(43, 0, 0)": {
-        "id": 43,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            1160,
-            259
-        ],
-        "neighbors": [
-            41,
-            44,
-            50,
-            22,
-            26,
-            61
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(43, 0, 0)",
-        "map_color": [
-            43,
-            0,
-            0
-        ]
-    },
-    "(44, 0, 0)": {
-        "id": 44,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            1237,
-            286
-        ],
-        "neighbors": [
-            64,
-            43,
-            61,
-            22
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(44, 0, 0)",
-        "map_color": [
-            44,
-            0,
-            0
-        ]
-    },
-    "(45, 0, 0)": {
-        "id": 45,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            729,
-            260
-        ],
-        "neighbors": [
-            34,
-            35,
-            37,
-            46,
-            47,
-            54,
-            56
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(45, 0, 0)",
-        "map_color": [
-            45,
-            0,
-            0
-        ]
-    },
-    "(46, 0, 0)": {
-        "id": 46,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            825,
-            274
-        ],
-        "neighbors": [
-            33,
-            35,
-            45,
-            48,
-            54,
-            59
-        ],
-        "owner": "Poland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Poland"
-        ],
-        "json_key": "(46, 0, 0)",
-        "map_color": [
-            46,
-            0,
-            0
-        ]
-    },
-    "(47, 0, 0)": {
-        "id": 47,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            651,
-            270
-        ],
-        "neighbors": [
-            37,
-            42,
-            45,
-            49,
-            56,
-            57
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(47, 0, 0)",
-        "map_color": [
-            47,
-            0,
-            0
-        ]
-    },
-    "(48, 0, 0)": {
-        "id": 48,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            872,
-            287
-        ],
-        "neighbors": [
-            33,
-            40,
-            46,
-            55,
-            59,
-            62,
-            63
-        ],
-        "owner": "Poland",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Poland"
-        ],
-        "json_key": "(48, 0, 0)",
-        "map_color": [
-            48,
-            0,
-            0
-        ]
-    },
-    "(49, 0, 0)": {
-        "id": 49,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            583,
-            287
-        ],
-        "neighbors": [
-            32,
-            42,
-            47,
-            53,
-            57,
-            60
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(49, 0, 0)",
-        "map_color": [
-            49,
-            0,
-            0
-        ]
-    },
-    "(50, 0, 0)": {
-        "id": 50,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1102,
-            314
-        ],
-        "neighbors": [
-            70,
-            41,
-            43,
-            58,
-            61
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(50, 0, 0)",
-        "map_color": [
-            50,
-            0,
-            0
-        ]
-    },
-    "(51, 0, 0)": {
-        "id": 51,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1012,
-            306
-        ],
-        "neighbors": [
-            40,
-            41,
-            58,
-            55
-        ],
-        "owner": "Ukraine",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Ukraine",
-            "Soviet Union"
-        ],
-        "json_key": "(51, 0, 0)",
-        "map_color": [
-            51,
-            0,
-            0
-        ]
-    },
-    "(52, 0, 0)": {
-        "id": 52,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            444,
-            326
-        ],
-        "neighbors": [
-            65,
-            36,
-            69,
-            39,
-            74,
-            53,
-            60
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(52, 0, 0)",
-        "map_color": [
-            52,
-            0,
-            0
-        ]
-    },
-    "(53, 0, 0)": {
-        "id": 53,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            518,
-            295
-        ],
-        "neighbors": [
-            32,
-            36,
-            49,
-            52,
-            60
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(53, 0, 0)",
-        "map_color": [
-            53,
-            0,
-            0
-        ]
-    },
-    "(54, 0, 0)": {
-        "id": 54,
-        "terrain": "mountain",
-        "is_coastal": false,
-        "center": [
-            743,
-            314
-        ],
-        "neighbors": [
-            66,
-            67,
-            45,
-            46,
-            56,
-            59
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich",
-            "Austria"
-        ],
-        "json_key": "(54, 0, 0)",
-        "map_color": [
-            54,
-            0,
-            0
-        ]
-    },
-    "(55, 0, 0)": {
-        "id": 55,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            944,
-            306
-        ],
-        "neighbors": [
-            40,
-            48,
-            51,
-            58,
-            62
-        ],
-        "owner": "Ukraine",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Ukraine",
-            "Soviet Union"
-        ],
-        "json_key": "(55, 0, 0)",
-        "map_color": [
-            55,
-            0,
-            0
-        ]
-    },
-    "(56, 0, 0)": {
-        "id": 56,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            684,
-            308
-        ],
-        "neighbors": [
-            57,
-            45,
-            54,
-            47
-        ],
-        "owner": "German Reich",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "German Reich"
-        ],
-        "json_key": "(56, 0, 0)",
-        "map_color": [
-            56,
-            0,
-            0
-        ]
-    },
-    "(57, 0, 0)": {
-        "id": 57,
-        "terrain": "forest",
-        "is_coastal": false,
-        "center": [
-            602,
-            330
-        ],
-        "neighbors": [
-            66,
-            68,
-            47,
-            49,
-            56,
-            60
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(57, 0, 0)",
-        "map_color": [
-            57,
-            0,
-            0
-        ]
-    },
-    "(58, 0, 0)": {
-        "id": 58,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            1019,
-            364
-        ],
-        "neighbors": [
-            70,
-            41,
-            75,
-            50,
-            51,
-            55,
-            62
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(58, 0, 0)",
-        "map_color": [
-            58,
-            0,
-            0
-        ]
-    },
-    "(59, 0, 0)": {
-        "id": 59,
-        "terrain": "plains",
-        "is_coastal": false,
-        "center": [
-            810,
-            333
-        ],
-        "neighbors": [
-            67,
-            71,
-            46,
-            48,
-            54,
-            63
-        ],
-        "owner": "Hungary",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Hungary"
-        ],
-        "json_key": "(59, 0, 0)",
-        "map_color": [
-            59,
-            0,
-            0
-        ]
-    },
-    "(60, 0, 0)": {
-        "id": 60,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            538,
-            353
-        ],
-        "neighbors": [
-            68,
-            74,
-            49,
-            52,
-            53,
-            57
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(60, 0, 0)",
-        "map_color": [
-            60,
-            0,
-            0
-        ]
-    },
-    "(61, 0, 0)": {
-        "id": 61,
-        "terrain": "mountain",
-        "is_coastal": true,
-        "center": [
-            1168,
-            361
-        ],
-        "neighbors": [
-            64,
-            70,
-            43,
-            44,
-            77,
-            50
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(61, 0, 0)",
-        "map_color": [
-            61,
-            0,
-            0
-        ]
-    },
-    "(62, 0, 0)": {
-        "id": 62,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            909,
-            369
-        ],
-        "neighbors": [
-            71,
-            75,
-            76,
-            48,
-            55,
-            58,
-            63
-        ],
-        "owner": "Romania",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Romania"
-        ],
-        "json_key": "(62, 0, 0)",
-        "map_color": [
-            62,
-            0,
-            0
-        ]
-    },
-    "(63, 0, 0)": {
-        "id": 63,
-        "terrain": "mountain",
-        "is_coastal": false,
-        "center": [
-            866,
-            354
-        ],
-        "neighbors": [
-            48,
-            59,
-            62,
-            71
-        ],
-        "owner": "Romania",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Hungary",
-            "Romania"
-        ],
-        "json_key": "(63, 0, 0)",
-        "map_color": [
-            63,
-            0,
-            0
-        ]
-    },
-    "(64, 0, 0)": {
-        "id": 64,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            1240,
-            382
-        ],
-        "neighbors": [
-            77,
-            83,
-            44,
-            61
-        ],
-        "owner": "Soviet Union",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Soviet Union"
-        ],
-        "json_key": "(64, 0, 0)",
-        "map_color": [
-            64,
-            0,
-            0
-        ]
-    },
-    "(65, 0, 0)": {
-        "id": 65,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            346,
-            405
-        ],
-        "neighbors": [
-            96,
-            69,
-            39,
-            73,
-            52
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(65, 0, 0)",
-        "map_color": [
-            65,
-            0,
-            0
-        ]
-    },
-    "(66, 0, 0)": {
-        "id": 66,
-        "terrain": "mountain",
-        "is_coastal": true,
-        "center": [
-            679,
-            379
-        ],
-        "neighbors": [
-            67,
-            68,
-            72,
-            78,
-            79,
-            54,
-            57
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "Italy"
-        ],
-        "json_key": "(66, 0, 0)",
-        "map_color": [
-            66,
-            0,
-            0
-        ]
-    },
-    "(67, 0, 0)": {
-        "id": 67,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            770,
-            386
-        ],
-        "neighbors": [
-            66,
-            71,
-            72,
-            82,
-            54,
-            59
-        ],
-        "owner": "Yugoslavia",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Yugoslavia"
-        ],
-        "json_key": "(67, 0, 0)",
-        "map_color": [
-            67,
-            0,
-            0
-        ]
-    },
-    "(68, 0, 0)": {
-        "id": 68,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            588,
-            386
-        ],
-        "neighbors": [
-            66,
-            74,
-            78,
-            57,
-            60
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(68, 0, 0)",
-        "map_color": [
-            68,
-            0,
-            0
-        ]
-    },
-    "(69, 0, 0)": {
-        "id": 69,
-        "terrain": "forest",
-        "is_coastal": true,
-        "center": [
-            437,
-            390
-        ],
-        "neighbors": [
-            65,
-            73,
-            74,
-            81,
-            52
-        ],
-        "owner": "Spain",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Spain"
-        ],
-        "json_key": "(69, 0, 0)",
-        "map_color": [
-            69,
-            0,
-            0
-        ]
-    },
-    "(70, 0, 0)": {
-        "id": 70,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            1097,
-            391
-        ],
-        "neighbors": [
-            75,
-            77,
-            80,
-            50,
-            58,
-            61
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(70, 0, 0)",
-        "map_color": [
-            70,
-            0,
-            0
-        ]
-    },
-    "(71, 0, 0)": {
-        "id": 71,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            829,
-            412
-        ],
-        "neighbors": [
-            67,
-            76,
-            82,
-            89,
-            59,
-            62,
-            63
-        ],
-        "owner": "Yugoslavia",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Yugoslavia"
-        ],
-        "json_key": "(71, 0, 0)",
-        "map_color": [
-            71,
-            0,
-            0
-        ]
-    },
-    "(72, 0, 0)": {
-        "id": 72,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            760,
-            430
-        ],
-        "neighbors": [
-            97,
-            66,
-            67,
-            79,
-            82,
-            90
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(72, 0, 0)",
-        "map_color": [
-            72,
-            0,
-            0
-        ]
-    },
-    "(73, 0, 0)": {
-        "id": 73,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            389,
-            440
-        ],
-        "neighbors": [
-            96,
-            65,
-            69,
-            81,
-            95
-        ],
-        "owner": "Portugal",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Portugal"
-        ],
-        "json_key": "(73, 0, 0)",
-        "map_color": [
-            73,
-            0,
-            0
-        ]
-    },
-    "(74, 0, 0)": {
-        "id": 74,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            515,
-            425
-        ],
-        "neighbors": [
-            68,
-            69,
-            78,
-            81,
-            52,
-            87,
-            60,
-            95
-        ],
-        "owner": "Spain",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Spain"
-        ],
-        "json_key": "(74, 0, 0)",
-        "map_color": [
-            74,
-            0,
-            0
-        ]
-    },
-    "(75, 0, 0)": {
-        "id": 75,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            978,
-            421
-        ],
-        "neighbors": [
-            70,
-            76,
-            80,
-            85,
-            94,
-            89,
-            58,
-            62
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(75, 0, 0)",
-        "map_color": [
-            75,
-            0,
-            0
-        ]
-    },
-    "(76, 0, 0)": {
-        "id": 76,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            903,
-            430
-        ],
-        "neighbors": [
-            89,
-            75,
-            62,
-            71
-        ],
-        "owner": "Bulgaria",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Bulgaria"
-        ],
-        "json_key": "(76, 0, 0)",
-        "map_color": [
-            76,
-            0,
-            0
-        ]
-    },
-    "(77, 0, 0)": {
-        "id": 77,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            1163,
-            458
-        ],
-        "neighbors": [
-            64,
-            100,
-            70,
-            80,
-            83,
-            86,
-            61
-        ],
-        "owner": "Turkey",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Turkey"
-        ],
-        "json_key": "(77, 0, 0)",
-        "map_color": [
-            77,
-            0,
-            0
-        ]
-    },
-    "(78, 0, 0)": {
-        "id": 78,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            634,
-            442
-        ],
-        "neighbors": [
-            66,
-            68,
-            74,
-            79,
-            84,
-            87,
-            88,
-            91,
-            92
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(78, 0, 0)",
-        "map_color": [
-            78,
-            0,
-            0
-        ]
-    },
-    "(79, 0, 0)": {
-        "id": 79,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            721,
-            443
-        ],
-        "neighbors": [
-            66,
-            72,
-            78,
-            88,
-            90
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Italy"
-        ],
-        "json_key": "(79, 0, 0)",
-        "map_color": [
-            79,
-            0,
-            0
-        ]
-    },
-    "(80, 0, 0)": {
-        "id": 80,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            1065,
-            442
-        ],
-        "neighbors": [
-            70,
-            75,
-            77,
-            85,
-            86,
-            93
-        ],
-        "owner": "Turkey",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Turkey"
-        ],
-        "json_key": "(80, 0, 0)",
-        "map_color": [
-            80,
-            0,
-            0
-        ]
-    },
-    "(81, 0, 0)": {
-        "id": 81,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            448,
-            451
-        ],
-        "neighbors": [
-            73,
-            74,
-            69,
-            95
-        ],
-        "owner": "Spain",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Spain"
-        ],
-        "json_key": "(81, 0, 0)",
-        "map_color": [
-            81,
-            0,
-            0
-        ]
-    },
-    "(82, 0, 0)": {
-        "id": 82,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            820,
-            452
-        ],
-        "neighbors": [
-            97,
-            67,
-            71,
-            72,
-            89
-        ],
-        "owner": "Albania",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Albania"
-        ],
-        "json_key": "(82, 0, 0)",
-        "map_color": [
-            82,
-            0,
-            0
-        ]
-    },
-    "(83, 0, 0)": {
-        "id": 83,
-        "terrain": "mountain",
-        "is_coastal": false,
-        "center": [
-            1240,
-            479
-        ],
-        "neighbors": [
-            64,
-            101,
-            100,
-            77
-        ],
-        "owner": "Azerbaijan",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Azerbaijan",
-            "Soviet Union"
-        ],
-        "json_key": "(83, 0, 0)",
-        "map_color": [
-            83,
-            0,
-            0
-        ]
-    },
-    "(84, 0, 0)": {
-        "id": 84,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            658,
-            439
-        ],
-        "neighbors": [
-            78
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "France"
-        ],
-        "json_key": "(84, 0, 0)",
-        "map_color": [
-            84,
-            0,
-            0
-        ]
-    },
-    "(85, 0, 0)": {
-        "id": 85,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            975,
-            476
-        ],
-        "neighbors": [
-            80,
-            75,
-            93,
-            94
-        ],
-        "owner": "Turkey",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 5"
-        ],
-        "resources": {},
-        "cores": [
-            "Turkey"
-        ],
-        "json_key": "(85, 0, 0)",
-        "map_color": [
-            85,
-            0,
-            0
-        ]
-    },
-    "(86, 0, 0)": {
-        "id": 86,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            1106,
-            492
-        ],
-        "neighbors": [
-            100,
-            102,
-            77,
-            80,
-            93
-        ],
-        "owner": "Turkey",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Turkey"
-        ],
-        "json_key": "(86, 0, 0)",
-        "map_color": [
-            86,
-            0,
-            0
-        ]
-    },
-    "(87, 0, 0)": {
-        "id": 87,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            555,
-            488
-        ],
-        "neighbors": [
-            98,
-            74,
-            106,
-            78,
-            92,
-            95
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(87, 0, 0)",
-        "map_color": [
-            87,
-            0,
-            0
-        ]
-    },
-    "(88, 0, 0)": {
-        "id": 88,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            720,
-            501
-        ],
-        "neighbors": [
-            97,
-            105,
-            78,
-            79,
-            90,
-            92
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(88, 0, 0)",
-        "map_color": [
-            88,
-            0,
-            0
-        ]
-    },
-    "(89, 0, 0)": {
-        "id": 89,
-        "terrain": "mountain",
-        "is_coastal": true,
-        "center": [
-            864,
-            487
-        ],
-        "neighbors": [
-            97,
-            99,
-            71,
-            75,
-            76,
-            82,
-            94
-        ],
-        "owner": "Greece",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Greece"
-        ],
-        "json_key": "(89, 0, 0)",
-        "map_color": [
-            89,
-            0,
-            0
-        ]
-    },
-    "(90, 0, 0)": {
-        "id": 90,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            774,
-            487
-        ],
-        "neighbors": [
-            72,
-            97,
-            88,
-            79
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 3"
-        ],
-        "resources": {},
-        "cores": [
-            "Italy"
-        ],
-        "json_key": "(90, 0, 0)",
-        "map_color": [
-            90,
-            0,
-            0
-        ]
-    },
-    "(91, 0, 0)": {
-        "id": 91,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            653,
-            481
-        ],
-        "neighbors": [
-            92,
-            78
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Italy"
-        ],
-        "json_key": "(91, 0, 0)",
-        "map_color": [
-            91,
-            0,
-            0
-        ]
-    },
-    "(92, 0, 0)": {
-        "id": 92,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            653,
-            530
-        ],
-        "neighbors": [
-            105,
-            106,
-            107,
-            78,
-            110,
-            112,
-            115,
-            87,
-            88,
-            91
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(92, 0, 0)",
-        "map_color": [
-            92,
-            0,
-            0
-        ]
-    },
-    "(93, 0, 0)": {
-        "id": 93,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1020,
-            506
-        ],
-        "neighbors": [
-            102,
-            103,
-            80,
-            85,
-            86,
-            94
-        ],
-        "owner": "Turkey",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 4"
-        ],
-        "resources": {},
-        "cores": [
-            "Turkey"
-        ],
-        "json_key": "(93, 0, 0)",
-        "map_color": [
-            93,
-            0,
-            0
-        ]
-    },
-    "(94, 0, 0)": {
-        "id": 94,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            907,
-            519
-        ],
-        "neighbors": [
-            99,
-            103,
-            75,
-            108,
-            111,
-            85,
-            89,
-            93
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(94, 0, 0)",
-        "map_color": [
-            94,
-            0,
-            0
-        ]
-    },
-    "(95, 0, 0)": {
-        "id": 95,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            444,
-            494
-        ],
-        "neighbors": [
-            96,
-            98,
-            73,
-            74,
-            81,
-            87
-        ],
-        "owner": "Spain",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Spain"
-        ],
-        "json_key": "(95, 0, 0)",
-        "map_color": [
-            95,
-            0,
-            0
-        ]
-    },
-    "(96, 0, 0)": {
-        "id": 96,
-        "terrain": "coastal_sea",
-        "is_coastal": false,
-        "center": [
-            351,
-            520
-        ],
-        "neighbors": [
-            65,
-            98,
-            104,
-            73,
-            109,
-            95
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(96, 0, 0)",
-        "map_color": [
-            96,
-            0,
-            0
-        ]
-    },
-    "(97, 0, 0)": {
-        "id": 97,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            804,
-            532
-        ],
-        "neighbors": [
-            99,
-            72,
-            105,
-            108,
-            110,
-            82,
-            88,
-            89,
-            90
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(97, 0, 0)",
-        "map_color": [
-            97,
-            0,
-            0
-        ]
-    },
-    "(98, 0, 0)": {
-        "id": 98,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            472,
-            528
-        ],
-        "neighbors": [
-            96,
-            104,
-            106,
-            87,
-            95
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(98, 0, 0)",
-        "map_color": [
-            98,
-            0,
-            0
-        ]
-    },
-    "(99, 0, 0)": {
-        "id": 99,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            866,
-            540
-        ],
-        "neighbors": [
-            89,
-            108,
-            94,
-            97
-        ],
-        "owner": "Greece",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Greece"
-        ],
-        "json_key": "(99, 0, 0)",
-        "map_color": [
-            99,
-            0,
-            0
-        ]
-    },
-    "(100, 0, 0)": {
-        "id": 100,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1137,
-            561
-        ],
-        "neighbors": [
-            101,
-            102,
-            77,
-            114,
-            83,
-            86
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Syria"
-        ],
-        "json_key": "(100, 0, 0)",
-        "map_color": [
-            100,
-            0,
-            0
-        ]
-    },
-    "(101, 0, 0)": {
-        "id": 101,
-        "terrain": "hills",
-        "is_coastal": false,
-        "center": [
-            1231,
-            579
-        ],
-        "neighbors": [
-            114,
-            83,
-            100,
-            118
-        ],
-        "owner": "Iraq",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Iraq"
-        ],
-        "json_key": "(101, 0, 0)",
-        "map_color": [
-            101,
-            0,
-            0
-        ]
-    },
-    "(102, 0, 0)": {
-        "id": 102,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            1059,
-            579
-        ],
-        "neighbors": [
-            100,
-            103,
-            111,
-            114,
-            86,
-            119,
-            93
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(102, 0, 0)",
-        "map_color": [
-            102,
-            0,
-            0
-        ]
-    },
-    "(103, 0, 0)": {
-        "id": 103,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            989,
-            555
-        ],
-        "neighbors": [
-            102,
-            93,
-            94,
-            111
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(103, 0, 0)",
-        "map_color": [
-            103,
-            0,
-            0
-        ]
-    },
-    "(104, 0, 0)": {
-        "id": 104,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            437,
-            555
-        ],
-        "neighbors": [
-            96,
-            98,
-            106,
-            109,
-            113
-        ],
-        "owner": "Spain",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Spain"
-        ],
-        "json_key": "(104, 0, 0)",
-        "map_color": [
-            104,
-            0,
-            0
-        ]
-    },
-    "(105, 0, 0)": {
-        "id": 105,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            746,
-            544
-        ],
-        "neighbors": [
-            88,
-            97,
-            92,
-            110
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Italy"
-        ],
-        "json_key": "(105, 0, 0)",
-        "map_color": [
-            105,
-            0,
-            0
-        ]
-    },
-    "(106, 0, 0)": {
-        "id": 106,
-        "terrain": "hills",
-        "is_coastal": true,
-        "center": [
-            546,
-            560
-        ],
-        "neighbors": [
-            98,
-            104,
-            107,
-            112,
-            113,
-            87,
-            92
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Algeria"
-        ],
-        "json_key": "(106, 0, 0)",
-        "map_color": [
-            106,
-            0,
-            0
-        ]
-    },
-    "(107, 0, 0)": {
-        "id": 107,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            646,
-            565
-        ],
-        "neighbors": [
-            112,
-            106,
-            92
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Tunisia"
-        ],
-        "json_key": "(107, 0, 0)",
-        "map_color": [
-            107,
-            0,
-            0
-        ]
-    },
-    "(108, 0, 0)": {
-        "id": 108,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            848,
-            594
-        ],
-        "neighbors": [
-            97,
-            99,
-            110,
-            111,
-            116,
-            117,
-            94
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(108, 0, 0)",
-        "map_color": [
-            108,
-            0,
-            0
-        ]
-    },
-    "(109, 0, 0)": {
-        "id": 109,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            373,
-            594
-        ],
-        "neighbors": [
-            96,
-            113,
-            104
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Morocco"
-        ],
-        "json_key": "(109, 0, 0)",
-        "map_color": [
-            109,
-            0,
-            0
-        ]
-    },
-    "(110, 0, 0)": {
-        "id": 110,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            762,
-            597
-        ],
-        "neighbors": [
-            97,
-            105,
-            108,
-            115,
-            116,
-            92
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(110, 0, 0)",
-        "map_color": [
-            110,
-            0,
-            0
-        ]
-    },
-    "(111, 0, 0)": {
-        "id": 111,
-        "terrain": "inland_sea",
-        "is_coastal": false,
-        "center": [
-            965,
-            600
-        ],
-        "neighbors": [
-            102,
-            103,
-            108,
-            117,
-            119,
-            94
-        ],
-        "owner": "Ocean",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(111, 0, 0)",
-        "map_color": [
-            111,
-            0,
-            0
-        ]
-    },
-    "(112, 0, 0)": {
-        "id": 112,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            623,
-            605
-        ],
-        "neighbors": [
-            106,
-            107,
-            113,
-            115,
-            92
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Algeria"
-        ],
-        "json_key": "(112, 0, 0)",
-        "map_color": [
-            112,
-            0,
-            0
-        ]
-    },
-    "(113, 0, 0)": {
-        "id": 113,
-        "terrain": "desert",
-        "is_coastal": false,
-        "center": [
-            495,
-            589
-        ],
-        "neighbors": [
-            104,
-            106,
-            112,
-            109
-        ],
-        "owner": "France",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Algeria"
-        ],
-        "json_key": "(113, 0, 0)",
-        "map_color": [
-            113,
-            0,
-            0
-        ]
-    },
-    "(114, 0, 0)": {
-        "id": 114,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            1127,
-            639
-        ],
-        "neighbors": [
-            100,
-            101,
-            102,
-            118,
-            119,
-            120
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Jordan"
-        ],
-        "json_key": "(114, 0, 0)",
-        "map_color": [
-            114,
-            0,
-            0
-        ]
-    },
-    "(115, 0, 0)": {
-        "id": 115,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            722,
-            638
-        ],
-        "neighbors": [
-            112,
-            116,
-            92,
-            110
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Libya"
-        ],
-        "json_key": "(115, 0, 0)",
-        "map_color": [
-            115,
-            0,
-            0
-        ]
-    },
-    "(116, 0, 0)": {
-        "id": 116,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            838,
-            646
-        ],
-        "neighbors": [
-            115,
-            108,
-            117,
-            110
-        ],
-        "owner": "Italy",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Libya"
-        ],
-        "json_key": "(116, 0, 0)",
-        "map_color": [
-            116,
-            0,
-            0
-        ]
-    },
-    "(117, 0, 0)": {
-        "id": 117,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            926,
-            641
-        ],
-        "neighbors": [
-            116,
-            108,
-            119,
-            111
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [
-            "Egypt"
-        ],
-        "json_key": "(117, 0, 0)",
-        "map_color": [
-            117,
-            0,
-            0
-        ]
-    },
-    "(118, 0, 0)": {
-        "id": 118,
-        "terrain": "desert",
-        "is_coastal": true,
-        "center": [
-            1204,
-            681
-        ],
-        "neighbors": [
-            120,
-            114,
-            101
-        ],
-        "owner": "Saudi Arabia",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 2"
-        ],
-        "resources": {},
-        "cores": [
-            "Saudi Arabia"
-        ],
-        "json_key": "(118, 0, 0)",
-        "map_color": [
-            118,
-            0,
-            0
-        ]
-    },
-    "(119, 0, 0)": {
-        "id": 119,
-        "terrain": "plains",
-        "is_coastal": true,
-        "center": [
-            1028,
-            672
-        ],
-        "neighbors": [
-            102,
-            111,
-            114,
-            117,
-            120
-        ],
-        "owner": "United Kingdom",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [
-            "Factory Lvl 1"
-        ],
-        "resources": {},
-        "cores": [
-            "Egypt"
-        ],
-        "json_key": "(119, 0, 0)",
-        "map_color": [
-            119,
-            0,
-            0
-        ]
-    },
-    "(120, 0, 0)": {
-        "id": 120,
-        "terrain": "lakes",
-        "is_coastal": false,
-        "center": [
-            1074,
-            702
-        ],
-        "neighbors": [
-            114,
-            118,
-            119
-        ],
-        "owner": "Lakes",
-        "units": [],
-        "building_queue": [],
-        "unit_queue": [],
-        "orders": [],
-        "buildings": [],
-        "resources": {},
-        "cores": [],
-        "json_key": "(120, 0, 0)",
-        "map_color": [
-            120,
-            0,
-            0
-        ]
-    }
+"(1,0,0)":{
+"id":1,
+"terrain":"ocean",
+"is_coastal":false,
+"center":[
+448,
+53
+],
+"neighbors":[
+2,
+11,
+14,
+18,
+23,
+27
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(1,0,0)",
+"map_color":[
+1,
+0,
+0
+]
+},
+"(2,0,0)":{
+"id":2,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+614,
+29
+],
+"neighbors":[
+16,
+1,
+3,
+14
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(2,0,0)",
+"map_color":[
+2,
+0,
+0
+]
+},
+"(3,0,0)":{
+"id":3,
+"terrain":"mountain",
+"is_coastal":true,
+"center":[
+691,
+53
+],
+"neighbors":[
+2,
+4,
+15,
+16,
+21
+],
+"owner":"Norway",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Norway"
+],
+"json_key":"(3,0,0)",
+"map_color":[
+3,
+0,
+0
+]
+},
+"(4,0,0)":{
+"id":4,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+758,
+45
+],
+"neighbors":[
+19,
+3,
+5,
+15
+],
+"owner":"Sweden",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Sweden"
+],
+"json_key":"(4,0,0)",
+"map_color":[
+4,
+0,
+0
+]
+},
+"(5,0,0)":{
+"id":5,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+818,
+57
+],
+"neighbors":[
+4,
+6,
+12,
+17,
+19
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(5,0,0)",
+"map_color":[
+5,
+0,
+0
+]
+},
+"(6,0,0)":{
+"id":6,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+866,
+34
+],
+"neighbors":[
+12,
+5,
+7
+],
+"owner":"Finland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Finland"
+],
+"json_key":"(6,0,0)",
+"map_color":[
+6,
+0,
+0
+]
+},
+"(7,0,0)":{
+"id":7,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+974,
+20
+],
+"neighbors":[
+8,
+10,
+12,
+6
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(7,0,0)",
+"map_color":[
+7,
+0,
+0
+]
+},
+"(8,0,0)":{
+"id":8,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1114,
+23
+],
+"neighbors":[
+9,
+10,
+13,
+7
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(8,0,0)",
+"map_color":[
+8,
+0,
+0
+]
+},
+"(9,0,0)":{
+"id":9,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1206,
+72
+],
+"neighbors":[
+8,
+26,
+13,
+22
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(9,0,0)",
+"map_color":[
+9,
+0,
+0
+]
+},
+"(10,0,0)":{
+"id":10,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1016,
+66
+],
+"neighbors":[
+7,
+8,
+12,
+13,
+20
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(10,0,0)",
+"map_color":[
+10,
+0,
+0
+]
+},
+"(11,0,0)":{
+"id":11,
+"terrain":"ocean",
+"is_coastal":false,
+"center":[
+377,
+145
+],
+"neighbors":[
+1,
+27,
+36,
+39
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(11,0,0)",
+"map_color":[
+11,
+0,
+0
+]
+},
+"(12,0,0)":{
+"id":12,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+926,
+96
+],
+"neighbors":[
+5,
+6,
+7,
+10,
+17,
+20,
+25,
+30
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(12,0,0)",
+"map_color":[
+12,
+0,
+0
+]
+},
+"(13,0,0)":{
+"id":13,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1084,
+102
+],
+"neighbors":[
+8,
+9,
+10,
+20,
+26,
+28
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(13,0,0)",
+"map_color":[
+13,
+0,
+0
+]
+},
+"(14,0,0)":{
+"id":14,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+584,
+112
+],
+"neighbors":[
+32,
+1,
+2,
+16,
+18,
+29
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(14,0,0)",
+"map_color":[
+14,
+0,
+0
+]
+},
+"(15,0,0)":{
+"id":15,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+741,
+117
+],
+"neighbors":[
+19,
+3,
+4,
+21
+],
+"owner":"Sweden",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Sweden"
+],
+"json_key":"(15,0,0)",
+"map_color":[
+15,
+0,
+0
+]
+},
+"(16,0,0)":{
+"id":16,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+639,
+153
+],
+"neighbors":[
+32,
+2,
+3,
+37,
+42,
+14,
+21,
+24
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(16,0,0)",
+"map_color":[
+16,
+0,
+0
+]
+},
+"(17,0,0)":{
+"id":17,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+875,
+110
+],
+"neighbors":[
+25,
+19,
+12,
+5
+],
+"owner":"Estonia",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Estonia"
+],
+"json_key":"(17,0,0)",
+"map_color":[
+17,
+0,
+0
+]
+},
+"(18,0,0)":{
+"id":18,
+"terrain":"mountain",
+"is_coastal":true,
+"center":[
+539,
+118
+],
+"neighbors":[
+1,
+29,
+14,
+23
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"UnitedKingdom"
+],
+"json_key":"(18,0,0)",
+"map_color":[
+18,
+0,
+0
+]
+},
+"(19,0,0)":{
+"id":19,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+802,
+139
+],
+"neighbors":[
+34,
+35,
+4,
+5,
+15,
+17,
+21,
+25,
+31
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(19,0,0)",
+"map_color":[
+19,
+0,
+0
+]
+},
+"(20,0,0)":{
+"id":20,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+984,
+129
+],
+"neighbors":[
+10,
+12,
+13,
+28,
+30
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(20,0,0)",
+"map_color":[
+20,
+0,
+0
+]
+},
+"(21,0,0)":{
+"id":21,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+720,
+160
+],
+"neighbors":[
+34,
+3,
+37,
+15,
+16,
+19,
+24
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(21,0,0)",
+"map_color":[
+21,
+0,
+0
+]
+},
+"(22,0,0)":{
+"id":22,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1235,
+178
+],
+"neighbors":[
+9,
+26,
+43,
+44
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(22,0,0)",
+"map_color":[
+22,
+0,
+0
+]
+},
+"(23,0,0)":{
+"id":23,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+511,
+169
+],
+"neighbors":[
+1,
+36,
+38,
+18,
+27,
+29
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(23,0,0)",
+"map_color":[
+23,
+0,
+0
+]
+},
+"(24,0,0)":{
+"id":24,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+690,
+161
+],
+"neighbors":[
+16,
+37,
+21
+],
+"owner":"Denmark",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Denmark"
+],
+"json_key":"(24,0,0)",
+"map_color":[
+24,
+0,
+0
+]
+},
+"(25,0,0)":{
+"id":25,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+864,
+164
+],
+"neighbors":[
+33,
+12,
+17,
+19,
+30,
+31
+],
+"owner":"Lithuania",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Lithuania"
+],
+"json_key":"(25,0,0)",
+"map_color":[
+25,
+0,
+0
+]
+},
+"(26,0,0)":{
+"id":26,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1121,
+182
+],
+"neighbors":[
+9,
+41,
+43,
+13,
+22,
+28
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(26,0,0)",
+"map_color":[
+26,
+0,
+0
+]
+},
+"(27,0,0)":{
+"id":27,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+476,
+166
+],
+"neighbors":[
+1,
+11,
+36,
+23
+],
+"owner":"Ireland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Ireland"
+],
+"json_key":"(27,0,0)",
+"map_color":[
+27,
+0,
+0
+]
+},
+"(28,0,0)":{
+"id":28,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+1021,
+182
+],
+"neighbors":[
+40,
+41,
+13,
+20,
+26,
+30
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(28,0,0)",
+"map_color":[
+28,
+0,
+0
+]
+},
+"(29,0,0)":{
+"id":29,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+546,
+183
+],
+"neighbors":[
+32,
+38,
+14,
+18,
+23
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"UnitedKingdom"
+],
+"json_key":"(29,0,0)",
+"map_color":[
+29,
+0,
+0
+]
+},
+"(30,0,0)":{
+"id":30,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+936,
+197
+],
+"neighbors":[
+33,
+40,
+12,
+20,
+25,
+28
+],
+"owner":"Belarus",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Belarus",
+"SovietUnion"
+],
+"json_key":"(30,0,0)",
+"map_color":[
+30,
+0,
+0
+]
+},
+"(31,0,0)":{
+"id":31,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+831,
+197
+],
+"neighbors":[
+25,
+19,
+35,
+33
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(31,0,0)",
+"map_color":[
+31,
+0,
+0
+]
+},
+"(32,0,0)":{
+"id":32,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+581,
+226
+],
+"neighbors":[
+36,
+38,
+42,
+14,
+16,
+49,
+53,
+29
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(32,0,0)",
+"map_color":[
+32,
+0,
+0
+]
+},
+"(33,0,0)":{
+"id":33,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+877,
+224
+],
+"neighbors":[
+35,
+40,
+46,
+48,
+25,
+30,
+31
+],
+"owner":"Poland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Poland"
+],
+"json_key":"(33,0,0)",
+"map_color":[
+33,
+0,
+0
+]
+},
+"(34,0,0)":{
+"id":34,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+747,
+218
+],
+"neighbors":[
+35,
+37,
+45,
+19,
+21
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(34,0,0)",
+"map_color":[
+34,
+0,
+0
+]
+},
+"(35,0,0)":{
+"id":35,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+800,
+236
+],
+"neighbors":[
+33,
+34,
+45,
+46,
+19,
+31
+],
+"owner":"Poland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"GermanReich",
+"Poland"
+],
+"json_key":"(35,0,0)",
+"map_color":[
+35,
+0,
+0
+]
+},
+"(36,0,0)":{
+"id":36,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+471,
+243
+],
+"neighbors":[
+32,
+38,
+39,
+11,
+52,
+53,
+23,
+27
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(36,0,0)",
+"map_color":[
+36,
+0,
+0
+]
+},
+"(37,0,0)":{
+"id":37,
+"terrain":"swamp",
+"is_coastal":true,
+"center":[
+675,
+224
+],
+"neighbors":[
+34,
+42,
+45,
+47,
+16,
+21,
+24
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(37,0,0)",
+"map_color":[
+37,
+0,
+0
+]
+},
+"(38,0,0)":{
+"id":38,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+537,
+226
+],
+"neighbors":[
+32,
+36,
+29,
+23
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl6"
+],
+"resources":{},
+"cores":[
+"UnitedKingdom"
+],
+"json_key":"(38,0,0)",
+"map_color":[
+38,
+0,
+0
+]
+},
+"(39,0,0)":{
+"id":39,
+"terrain":"ocean",
+"is_coastal":false,
+"center":[
+359,
+271
+],
+"neighbors":[
+65,
+11,
+36,
+52
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(39,0,0)",
+"map_color":[
+39,
+0,
+0
+]
+},
+"(40,0,0)":{
+"id":40,
+"terrain":"swamp",
+"is_coastal":false,
+"center":[
+949,
+251
+],
+"neighbors":[
+33,
+41,
+48,
+51,
+55,
+28,
+30
+],
+"owner":"Ukraine",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Ukraine",
+"SovietUnion"
+],
+"json_key":"(40,0,0)",
+"map_color":[
+40,
+0,
+0
+]
+},
+"(41,0,0)":{
+"id":41,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1043,
+250
+],
+"neighbors":[
+58,
+40,
+43,
+50,
+51,
+26,
+28
+],
+"owner":"Ukraine",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Ukraine",
+"SovietUnion"
+],
+"json_key":"(41,0,0)",
+"map_color":[
+41,
+0,
+0
+]
+},
+"(42,0,0)":{
+"id":42,
+"terrain":"swamp",
+"is_coastal":true,
+"center":[
+620,
+245
+],
+"neighbors":[
+32,
+37,
+47,
+16,
+49
+],
+"owner":"Netherlands",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"Netherlands"
+],
+"json_key":"(42,0,0)",
+"map_color":[
+42,
+0,
+0
+]
+},
+"(43,0,0)":{
+"id":43,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+1160,
+259
+],
+"neighbors":[
+41,
+44,
+50,
+22,
+26,
+61
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(43,0,0)",
+"map_color":[
+43,
+0,
+0
+]
+},
+"(44,0,0)":{
+"id":44,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+1237,
+286
+],
+"neighbors":[
+64,
+43,
+61,
+22
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(44,0,0)",
+"map_color":[
+44,
+0,
+0
+]
+},
+"(45,0,0)":{
+"id":45,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+729,
+260
+],
+"neighbors":[
+34,
+35,
+37,
+46,
+47,
+54,
+56
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(45,0,0)",
+"map_color":[
+45,
+0,
+0
+]
+},
+"(46,0,0)":{
+"id":46,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+825,
+274
+],
+"neighbors":[
+33,
+35,
+45,
+48,
+54,
+59
+],
+"owner":"Poland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Poland"
+],
+"json_key":"(46,0,0)",
+"map_color":[
+46,
+0,
+0
+]
+},
+"(47,0,0)":{
+"id":47,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+651,
+270
+],
+"neighbors":[
+37,
+42,
+45,
+49,
+56,
+57
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(47,0,0)",
+"map_color":[
+47,
+0,
+0
+]
+},
+"(48,0,0)":{
+"id":48,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+872,
+287
+],
+"neighbors":[
+33,
+40,
+46,
+55,
+59,
+62,
+63
+],
+"owner":"Poland",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Poland"
+],
+"json_key":"(48,0,0)",
+"map_color":[
+48,
+0,
+0
+]
+},
+"(49,0,0)":{
+"id":49,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+583,
+287
+],
+"neighbors":[
+32,
+42,
+47,
+53,
+57,
+60
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(49,0,0)",
+"map_color":[
+49,
+0,
+0
+]
+},
+"(50,0,0)":{
+"id":50,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1102,
+314
+],
+"neighbors":[
+70,
+41,
+43,
+58,
+61
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(50,0,0)",
+"map_color":[
+50,
+0,
+0
+]
+},
+"(51,0,0)":{
+"id":51,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1012,
+306
+],
+"neighbors":[
+40,
+41,
+58,
+55
+],
+"owner":"Ukraine",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Ukraine",
+"SovietUnion"
+],
+"json_key":"(51,0,0)",
+"map_color":[
+51,
+0,
+0
+]
+},
+"(52,0,0)":{
+"id":52,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+444,
+326
+],
+"neighbors":[
+65,
+36,
+69,
+39,
+74,
+53,
+60
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(52,0,0)",
+"map_color":[
+52,
+0,
+0
+]
+},
+"(53,0,0)":{
+"id":53,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+518,
+295
+],
+"neighbors":[
+32,
+36,
+49,
+52,
+60
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(53,0,0)",
+"map_color":[
+53,
+0,
+0
+]
+},
+"(54,0,0)":{
+"id":54,
+"terrain":"mountain",
+"is_coastal":false,
+"center":[
+743,
+314
+],
+"neighbors":[
+66,
+67,
+45,
+46,
+56,
+59
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"GermanReich",
+"Austria"
+],
+"json_key":"(54,0,0)",
+"map_color":[
+54,
+0,
+0
+]
+},
+"(55,0,0)":{
+"id":55,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+944,
+306
+],
+"neighbors":[
+40,
+48,
+51,
+58,
+62
+],
+"owner":"Ukraine",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Ukraine",
+"SovietUnion"
+],
+"json_key":"(55,0,0)",
+"map_color":[
+55,
+0,
+0
+]
+},
+"(56,0,0)":{
+"id":56,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+684,
+308
+],
+"neighbors":[
+57,
+45,
+54,
+47
+],
+"owner":"GermanReich",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"GermanReich"
+],
+"json_key":"(56,0,0)",
+"map_color":[
+56,
+0,
+0
+]
+},
+"(57,0,0)":{
+"id":57,
+"terrain":"forest",
+"is_coastal":false,
+"center":[
+602,
+330
+],
+"neighbors":[
+66,
+68,
+47,
+49,
+56,
+60
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(57,0,0)",
+"map_color":[
+57,
+0,
+0
+]
+},
+"(58,0,0)":{
+"id":58,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+1019,
+364
+],
+"neighbors":[
+70,
+41,
+75,
+50,
+51,
+55,
+62
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(58,0,0)",
+"map_color":[
+58,
+0,
+0
+]
+},
+"(59,0,0)":{
+"id":59,
+"terrain":"plains",
+"is_coastal":false,
+"center":[
+810,
+333
+],
+"neighbors":[
+67,
+71,
+46,
+48,
+54,
+63
+],
+"owner":"Hungary",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Hungary"
+],
+"json_key":"(59,0,0)",
+"map_color":[
+59,
+0,
+0
+]
+},
+"(60,0,0)":{
+"id":60,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+538,
+353
+],
+"neighbors":[
+68,
+74,
+49,
+52,
+53,
+57
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(60,0,0)",
+"map_color":[
+60,
+0,
+0
+]
+},
+"(61,0,0)":{
+"id":61,
+"terrain":"mountain",
+"is_coastal":true,
+"center":[
+1168,
+361
+],
+"neighbors":[
+64,
+70,
+43,
+44,
+77,
+50
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(61,0,0)",
+"map_color":[
+61,
+0,
+0
+]
+},
+"(62,0,0)":{
+"id":62,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+909,
+369
+],
+"neighbors":[
+71,
+75,
+76,
+48,
+55,
+58,
+63
+],
+"owner":"Romania",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Romania"
+],
+"json_key":"(62,0,0)",
+"map_color":[
+62,
+0,
+0
+]
+},
+"(63,0,0)":{
+"id":63,
+"terrain":"mountain",
+"is_coastal":false,
+"center":[
+866,
+354
+],
+"neighbors":[
+48,
+59,
+62,
+71
+],
+"owner":"Romania",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Hungary",
+"Romania"
+],
+"json_key":"(63,0,0)",
+"map_color":[
+63,
+0,
+0
+]
+},
+"(64,0,0)":{
+"id":64,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+1240,
+382
+],
+"neighbors":[
+77,
+83,
+44,
+61
+],
+"owner":"SovietUnion",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SovietUnion"
+],
+"json_key":"(64,0,0)",
+"map_color":[
+64,
+0,
+0
+]
+},
+"(65,0,0)":{
+"id":65,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+346,
+405
+],
+"neighbors":[
+96,
+69,
+39,
+73,
+52
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(65,0,0)",
+"map_color":[
+65,
+0,
+0
+]
+},
+"(66,0,0)":{
+"id":66,
+"terrain":"mountain",
+"is_coastal":true,
+"center":[
+679,
+379
+],
+"neighbors":[
+67,
+68,
+72,
+78,
+79,
+54,
+57
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"Italy"
+],
+"json_key":"(66,0,0)",
+"map_color":[
+66,
+0,
+0
+]
+},
+"(67,0,0)":{
+"id":67,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+770,
+386
+],
+"neighbors":[
+66,
+71,
+72,
+82,
+54,
+59
+],
+"owner":"Yugoslavia",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Yugoslavia"
+],
+"json_key":"(67,0,0)",
+"map_color":[
+67,
+0,
+0
+]
+},
+"(68,0,0)":{
+"id":68,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+588,
+386
+],
+"neighbors":[
+66,
+74,
+78,
+57,
+60
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(68,0,0)",
+"map_color":[
+68,
+0,
+0
+]
+},
+"(69,0,0)":{
+"id":69,
+"terrain":"forest",
+"is_coastal":true,
+"center":[
+437,
+390
+],
+"neighbors":[
+65,
+73,
+74,
+81,
+52
+],
+"owner":"Spain",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Spain"
+],
+"json_key":"(69,0,0)",
+"map_color":[
+69,
+0,
+0
+]
+},
+"(70,0,0)":{
+"id":70,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+1097,
+391
+],
+"neighbors":[
+75,
+77,
+80,
+50,
+58,
+61
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(70,0,0)",
+"map_color":[
+70,
+0,
+0
+]
+},
+"(71,0,0)":{
+"id":71,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+829,
+412
+],
+"neighbors":[
+67,
+76,
+82,
+89,
+59,
+62,
+63
+],
+"owner":"Yugoslavia",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Yugoslavia"
+],
+"json_key":"(71,0,0)",
+"map_color":[
+71,
+0,
+0
+]
+},
+"(72,0,0)":{
+"id":72,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+760,
+430
+],
+"neighbors":[
+97,
+66,
+67,
+79,
+82,
+90
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(72,0,0)",
+"map_color":[
+72,
+0,
+0
+]
+},
+"(73,0,0)":{
+"id":73,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+389,
+440
+],
+"neighbors":[
+96,
+65,
+69,
+81,
+95
+],
+"owner":"Portugal",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Portugal"
+],
+"json_key":"(73,0,0)",
+"map_color":[
+73,
+0,
+0
+]
+},
+"(74,0,0)":{
+"id":74,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+515,
+425
+],
+"neighbors":[
+68,
+69,
+78,
+81,
+52,
+87,
+60,
+95
+],
+"owner":"Spain",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Spain"
+],
+"json_key":"(74,0,0)",
+"map_color":[
+74,
+0,
+0
+]
+},
+"(75,0,0)":{
+"id":75,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+978,
+421
+],
+"neighbors":[
+70,
+76,
+80,
+85,
+94,
+89,
+58,
+62
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(75,0,0)",
+"map_color":[
+75,
+0,
+0
+]
+},
+"(76,0,0)":{
+"id":76,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+903,
+430
+],
+"neighbors":[
+89,
+75,
+62,
+71
+],
+"owner":"Bulgaria",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Bulgaria"
+],
+"json_key":"(76,0,0)",
+"map_color":[
+76,
+0,
+0
+]
+},
+"(77,0,0)":{
+"id":77,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+1163,
+458
+],
+"neighbors":[
+64,
+100,
+70,
+80,
+83,
+86,
+61
+],
+"owner":"Turkey",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Turkey"
+],
+"json_key":"(77,0,0)",
+"map_color":[
+77,
+0,
+0
+]
+},
+"(78,0,0)":{
+"id":78,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+634,
+442
+],
+"neighbors":[
+66,
+68,
+74,
+79,
+84,
+87,
+88,
+91,
+92
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(78,0,0)",
+"map_color":[
+78,
+0,
+0
+]
+},
+"(79,0,0)":{
+"id":79,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+721,
+443
+],
+"neighbors":[
+66,
+72,
+78,
+88,
+90
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Italy"
+],
+"json_key":"(79,0,0)",
+"map_color":[
+79,
+0,
+0
+]
+},
+"(80,0,0)":{
+"id":80,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+1065,
+442
+],
+"neighbors":[
+70,
+75,
+77,
+85,
+86,
+93
+],
+"owner":"Turkey",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Turkey"
+],
+"json_key":"(80,0,0)",
+"map_color":[
+80,
+0,
+0
+]
+},
+"(81,0,0)":{
+"id":81,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+448,
+451
+],
+"neighbors":[
+73,
+74,
+69,
+95
+],
+"owner":"Spain",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Spain"
+],
+"json_key":"(81,0,0)",
+"map_color":[
+81,
+0,
+0
+]
+},
+"(82,0,0)":{
+"id":82,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+820,
+452
+],
+"neighbors":[
+97,
+67,
+71,
+72,
+89
+],
+"owner":"Albania",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Albania"
+],
+"json_key":"(82,0,0)",
+"map_color":[
+82,
+0,
+0
+]
+},
+"(83,0,0)":{
+"id":83,
+"terrain":"mountain",
+"is_coastal":false,
+"center":[
+1240,
+479
+],
+"neighbors":[
+64,
+101,
+100,
+77
+],
+"owner":"Azerbaijan",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Azerbaijan",
+"SovietUnion"
+],
+"json_key":"(83,0,0)",
+"map_color":[
+83,
+0,
+0
+]
+},
+"(84,0,0)":{
+"id":84,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+658,
+439
+],
+"neighbors":[
+78
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"France"
+],
+"json_key":"(84,0,0)",
+"map_color":[
+84,
+0,
+0
+]
+},
+"(85,0,0)":{
+"id":85,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+975,
+476
+],
+"neighbors":[
+80,
+75,
+93,
+94
+],
+"owner":"Turkey",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl5"
+],
+"resources":{},
+"cores":[
+"Turkey"
+],
+"json_key":"(85,0,0)",
+"map_color":[
+85,
+0,
+0
+]
+},
+"(86,0,0)":{
+"id":86,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+1106,
+492
+],
+"neighbors":[
+100,
+102,
+77,
+80,
+93
+],
+"owner":"Turkey",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Turkey"
+],
+"json_key":"(86,0,0)",
+"map_color":[
+86,
+0,
+0
+]
+},
+"(87,0,0)":{
+"id":87,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+555,
+488
+],
+"neighbors":[
+98,
+74,
+106,
+78,
+92,
+95
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(87,0,0)",
+"map_color":[
+87,
+0,
+0
+]
+},
+"(88,0,0)":{
+"id":88,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+720,
+501
+],
+"neighbors":[
+97,
+105,
+78,
+79,
+90,
+92
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(88,0,0)",
+"map_color":[
+88,
+0,
+0
+]
+},
+"(89,0,0)":{
+"id":89,
+"terrain":"mountain",
+"is_coastal":true,
+"center":[
+864,
+487
+],
+"neighbors":[
+97,
+99,
+71,
+75,
+76,
+82,
+94
+],
+"owner":"Greece",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Greece"
+],
+"json_key":"(89,0,0)",
+"map_color":[
+89,
+0,
+0
+]
+},
+"(90,0,0)":{
+"id":90,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+774,
+487
+],
+"neighbors":[
+72,
+97,
+88,
+79
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl3"
+],
+"resources":{},
+"cores":[
+"Italy"
+],
+"json_key":"(90,0,0)",
+"map_color":[
+90,
+0,
+0
+]
+},
+"(91,0,0)":{
+"id":91,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+653,
+481
+],
+"neighbors":[
+92,
+78
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Italy"
+],
+"json_key":"(91,0,0)",
+"map_color":[
+91,
+0,
+0
+]
+},
+"(92,0,0)":{
+"id":92,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+653,
+530
+],
+"neighbors":[
+105,
+106,
+107,
+78,
+110,
+112,
+115,
+87,
+88,
+91
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(92,0,0)",
+"map_color":[
+92,
+0,
+0
+]
+},
+"(93,0,0)":{
+"id":93,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1020,
+506
+],
+"neighbors":[
+102,
+103,
+80,
+85,
+86,
+94
+],
+"owner":"Turkey",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl4"
+],
+"resources":{},
+"cores":[
+"Turkey"
+],
+"json_key":"(93,0,0)",
+"map_color":[
+93,
+0,
+0
+]
+},
+"(94,0,0)":{
+"id":94,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+907,
+519
+],
+"neighbors":[
+99,
+103,
+75,
+108,
+111,
+85,
+89,
+93
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(94,0,0)",
+"map_color":[
+94,
+0,
+0
+]
+},
+"(95,0,0)":{
+"id":95,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+444,
+494
+],
+"neighbors":[
+96,
+98,
+73,
+74,
+81,
+87
+],
+"owner":"Spain",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Spain"
+],
+"json_key":"(95,0,0)",
+"map_color":[
+95,
+0,
+0
+]
+},
+"(96,0,0)":{
+"id":96,
+"terrain":"coastal_sea",
+"is_coastal":false,
+"center":[
+351,
+520
+],
+"neighbors":[
+65,
+98,
+104,
+73,
+109,
+95
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(96,0,0)",
+"map_color":[
+96,
+0,
+0
+]
+},
+"(97,0,0)":{
+"id":97,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+804,
+532
+],
+"neighbors":[
+99,
+72,
+105,
+108,
+110,
+82,
+88,
+89,
+90
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(97,0,0)",
+"map_color":[
+97,
+0,
+0
+]
+},
+"(98,0,0)":{
+"id":98,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+472,
+528
+],
+"neighbors":[
+96,
+104,
+106,
+87,
+95
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(98,0,0)",
+"map_color":[
+98,
+0,
+0
+]
+},
+"(99,0,0)":{
+"id":99,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+866,
+540
+],
+"neighbors":[
+89,
+108,
+94,
+97
+],
+"owner":"Greece",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Greece"
+],
+"json_key":"(99,0,0)",
+"map_color":[
+99,
+0,
+0
+]
+},
+"(100,0,0)":{
+"id":100,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1137,
+561
+],
+"neighbors":[
+101,
+102,
+77,
+114,
+83,
+86
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Syria"
+],
+"json_key":"(100,0,0)",
+"map_color":[
+100,
+0,
+0
+]
+},
+"(101,0,0)":{
+"id":101,
+"terrain":"hills",
+"is_coastal":false,
+"center":[
+1231,
+579
+],
+"neighbors":[
+114,
+83,
+100,
+118
+],
+"owner":"Iraq",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"Iraq"
+],
+"json_key":"(101,0,0)",
+"map_color":[
+101,
+0,
+0
+]
+},
+"(102,0,0)":{
+"id":102,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+1059,
+579
+],
+"neighbors":[
+100,
+103,
+111,
+114,
+86,
+119,
+93
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(102,0,0)",
+"map_color":[
+102,
+0,
+0
+]
+},
+"(103,0,0)":{
+"id":103,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+989,
+555
+],
+"neighbors":[
+102,
+93,
+94,
+111
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(103,0,0)",
+"map_color":[
+103,
+0,
+0
+]
+},
+"(104,0,0)":{
+"id":104,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+437,
+555
+],
+"neighbors":[
+96,
+98,
+106,
+109,
+113
+],
+"owner":"Spain",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Spain"
+],
+"json_key":"(104,0,0)",
+"map_color":[
+104,
+0,
+0
+]
+},
+"(105,0,0)":{
+"id":105,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+746,
+544
+],
+"neighbors":[
+88,
+97,
+92,
+110
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Italy"
+],
+"json_key":"(105,0,0)",
+"map_color":[
+105,
+0,
+0
+]
+},
+"(106,0,0)":{
+"id":106,
+"terrain":"hills",
+"is_coastal":true,
+"center":[
+546,
+560
+],
+"neighbors":[
+98,
+104,
+107,
+112,
+113,
+87,
+92
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Algeria"
+],
+"json_key":"(106,0,0)",
+"map_color":[
+106,
+0,
+0
+]
+},
+"(107,0,0)":{
+"id":107,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+646,
+565
+],
+"neighbors":[
+112,
+106,
+92
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Tunisia"
+],
+"json_key":"(107,0,0)",
+"map_color":[
+107,
+0,
+0
+]
+},
+"(108,0,0)":{
+"id":108,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+848,
+594
+],
+"neighbors":[
+97,
+99,
+110,
+111,
+116,
+117,
+94
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(108,0,0)",
+"map_color":[
+108,
+0,
+0
+]
+},
+"(109,0,0)":{
+"id":109,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+373,
+594
+],
+"neighbors":[
+96,
+113,
+104
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Morocco"
+],
+"json_key":"(109,0,0)",
+"map_color":[
+109,
+0,
+0
+]
+},
+"(110,0,0)":{
+"id":110,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+762,
+597
+],
+"neighbors":[
+97,
+105,
+108,
+115,
+116,
+92
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(110,0,0)",
+"map_color":[
+110,
+0,
+0
+]
+},
+"(111,0,0)":{
+"id":111,
+"terrain":"inland_sea",
+"is_coastal":false,
+"center":[
+965,
+600
+],
+"neighbors":[
+102,
+103,
+108,
+117,
+119,
+94
+],
+"owner":"Ocean",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(111,0,0)",
+"map_color":[
+111,
+0,
+0
+]
+},
+"(112,0,0)":{
+"id":112,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+623,
+605
+],
+"neighbors":[
+106,
+107,
+113,
+115,
+92
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Algeria"
+],
+"json_key":"(112,0,0)",
+"map_color":[
+112,
+0,
+0
+]
+},
+"(113,0,0)":{
+"id":113,
+"terrain":"desert",
+"is_coastal":false,
+"center":[
+495,
+589
+],
+"neighbors":[
+104,
+106,
+112,
+109
+],
+"owner":"France",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Algeria"
+],
+"json_key":"(113,0,0)",
+"map_color":[
+113,
+0,
+0
+]
+},
+"(114,0,0)":{
+"id":114,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+1127,
+639
+],
+"neighbors":[
+100,
+101,
+102,
+118,
+119,
+120
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Jordan"
+],
+"json_key":"(114,0,0)",
+"map_color":[
+114,
+0,
+0
+]
+},
+"(115,0,0)":{
+"id":115,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+722,
+638
+],
+"neighbors":[
+112,
+116,
+92,
+110
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Libya"
+],
+"json_key":"(115,0,0)",
+"map_color":[
+115,
+0,
+0
+]
+},
+"(116,0,0)":{
+"id":116,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+838,
+646
+],
+"neighbors":[
+115,
+108,
+117,
+110
+],
+"owner":"Italy",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Libya"
+],
+"json_key":"(116,0,0)",
+"map_color":[
+116,
+0,
+0
+]
+},
+"(117,0,0)":{
+"id":117,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+926,
+641
+],
+"neighbors":[
+116,
+108,
+119,
+111
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[
+"Egypt"
+],
+"json_key":"(117,0,0)",
+"map_color":[
+117,
+0,
+0
+]
+},
+"(118,0,0)":{
+"id":118,
+"terrain":"desert",
+"is_coastal":true,
+"center":[
+1204,
+681
+],
+"neighbors":[
+120,
+114,
+101
+],
+"owner":"SaudiArabia",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl2"
+],
+"resources":{},
+"cores":[
+"SaudiArabia"
+],
+"json_key":"(118,0,0)",
+"map_color":[
+118,
+0,
+0
+]
+},
+"(119,0,0)":{
+"id":119,
+"terrain":"plains",
+"is_coastal":true,
+"center":[
+1028,
+672
+],
+"neighbors":[
+102,
+111,
+114,
+117,
+120
+],
+"owner":"UnitedKingdom",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[
+"FactoryLvl1"
+],
+"resources":{},
+"cores":[
+"Egypt"
+],
+"json_key":"(119,0,0)",
+"map_color":[
+119,
+0,
+0
+]
+},
+"(120,0,0)":{
+"id":120,
+"terrain":"lakes",
+"is_coastal":false,
+"center":[
+1074,
+702
+],
+"neighbors":[
+114,
+118,
+119
+],
+"owner":"Lakes",
+"units":[],
+"building_queue":[],
+"unit_queue":[],
+"orders":[],
+"buildings":[],
+"resources":{},
+"cores":[],
+"json_key":"(120,0,0)",
+"map_color":[
+120,
+0,
+0
+]
+}
 }
