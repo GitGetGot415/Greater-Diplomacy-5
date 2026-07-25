@@ -6,6 +6,18 @@ Immediate concerns:
 - enable building factories on puppet territory? (note that there could be a meta where you make a puppet, build a factory on it, and then annex it to build said factory cheaply) (unless the cost to build is based on your factory count and not that of your pupets)
 - maybe factory count is only counted for factories on core territory
 
+!!!!!!!!!!
+- fix map glitch where resources sometimes get suprisingly high without forcing a reset
+- or maybe allow a reset but don't update portraits n such?
+!!!!!!!!!!
+
+- ai seems really likely to just accept peacedeals...
+
+- option to make ai never accept peacedeals?
+
+- fullscreen keybind (f11 by default)
+- automation to the point where you can just talk to other countries as a country instead of having to do anything
+
 - specific starting music you can choose for when you first load in the game
 
 - add in a seperate queue for naval units specifically
