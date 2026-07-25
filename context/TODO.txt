@@ -12,7 +12,7 @@ Immediate concerns:
 
 - maybe allow a reset but don't update portraits n such?
 
-- tech up to 2000s
+- automatic research leveling option (no need to manually set it)
 
 - allow editing of default prompt the ai is given
 
