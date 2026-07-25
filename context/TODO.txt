@@ -11,6 +11,7 @@ Immediate concerns:
 - or maybe allow a reset but don't update portraits n such?
 !!!!!!!!!!
 
+- fullscreen keybind (f11 by default)
 - automation to the point where you can just talk to other countries as a country instead of having to do anything
 
 - specific starting music you can choose for when you first load in the game
