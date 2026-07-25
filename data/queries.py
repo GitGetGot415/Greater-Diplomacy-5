@@ -1805,7 +1805,6 @@ _default_port_b64 = None
 _dynamic_image_cache = {}
 
 def clear_image_cache():
-    global _dynamic_image_cache
     _dynamic_image_cache.clear()
 
 def _load_and_scale_local_image(file_path, size):
@@ -1859,8 +1858,6 @@ def encode_surf_to_b64(surf, fmt="RGBA"):
 
 def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
     """Decodes a Base64 string back into a pygame surface."""
-    global _dynamic_image_cache
-    
     cache_key = (b64_str, size, is_portrait, country_name)
     if cache_key in _dynamic_image_cache:
         return _dynamic_image_cache[cache_key]

@@ -64,7 +64,6 @@ def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255
 # ==========================================
 
 def get_ui_image(filename, scale=1.0, directory=c.ASSETS_DIR):
-    global _ui_images_cache
     cache_key = (filename, scale, directory)
     
     if cache_key not in _ui_images_cache:
