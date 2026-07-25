@@ -1,0 +1,6 @@
+WINDOWS:
+run.bat
+
+MACOS/LINUX:
+chmod +x run.sh
+./run.sh
