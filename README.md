@@ -16,7 +16,7 @@ if you have decided to download the raw source from here (Code > Download ZIP > 
 
 **Cons:** its harder to setup (requiring git installed), although i've tried to make it as simple as it can be for you in this guide.
 
-first, install git from https://git-scm.com/install/windows. the installer has a lot of options just click "next" through them, they aren't necessary.
+first, install git from https://git-scm.com/install/. the installer has a lot of options just click "next" through them, they aren't necessary.
 *(p.s dont choose to download any of the extra apps & gui, just the base.)*
 
 second, now go into your downloaded gd5 folder and run `pip install -r requirements.txt` to install all dependencies.
