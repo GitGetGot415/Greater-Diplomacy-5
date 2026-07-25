@@ -57,7 +57,7 @@ class Research_Screen(GameState):
             "motorized_infantry": 350,
             "mechanized_infantry": 450,
             "cavalry": 350,
-            "militia": 450,
+            "militia": 550,
             "ww1_armored_car": 250, "armored_car": 250, "civilian_car": 250,
             "ww1_tank": 350, "light_tank": 350,
             "medium_tank": 450, "main_battle_tank": 450,
@@ -133,7 +133,7 @@ class Research_Screen(GameState):
             year = mech_years[min(lvl - 1, len(mech_years)-1)]
             return f"Mechanized Infantry Type {year}"
 
-        romans = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+        romans = c.ROMAN_NUMERALS
 
         if tech_key == "civilian_car": return "Civilian Car"
         if tech_key == "ww1_armored_car": return "WW1 Armored Car"

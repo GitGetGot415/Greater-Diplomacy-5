@@ -340,7 +340,7 @@ CPU_LIMITER = 10
 # ==========================================
 
 START_YEAR = 1910
-END_YEAR = 2000
+END_YEAR = 2010
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
 RESEARCH_TIMELINE_SPACING = 100 # Width between years on the research timeline
 
@@ -568,7 +568,19 @@ DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 DEFAULT_UNIT_MORALE = 100.0
 
-ROMAN_NUMERALS = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+def _gen_roman(n):
+    val = [100, 90, 50, 40, 10, 9, 5, 4, 1]
+    syb = ["C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+    res, i = "", 0
+    while n > 0:
+        for _ in range(n // val[i]):
+            res += syb[i]
+            n -= val[i]
+        i += 1
+    return res
+
+ROMAN_NUMERALS = {i: _gen_roman(i) for i in range(1, 101)}
+
 
 # ==========================================
 # CALCULATIONS & Weights

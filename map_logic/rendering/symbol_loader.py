@@ -110,7 +110,7 @@ def get_symbol(name, zoom, color=None):
 
     # Original fallback for Roman Numerals (Tanks & Navy)
     if base_name not in SYMBOLS:
-        base_name = re.sub(r'\s+(X{0,1}V{0,1}I{0,3}|X{0,2}|I[VX]|VI{0,3})$', '', name).strip()
+        base_name = re.sub(r'\s+[IVXLCDM]+$', '', name, flags=re.IGNORECASE).strip()
         
     # Fallback for Lvl # (Research, Buildings, etc.)
     if base_name not in SYMBOLS:
