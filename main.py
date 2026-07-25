@@ -186,7 +186,8 @@ class Controller:
         # 1. Define Hardcoded Defaults
         default_keys = {
             "BACK": pygame.K_ESCAPE,
-            "ORDERS": pygame.K_q
+            "ORDERS": pygame.K_q,
+            "FULLSCREEN": pygame.K_F11
         }
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
@@ -497,6 +498,27 @@ class Controller:
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
 
+    def toggle_fullscreen(self):
+        current_time = pygame.time.get_ticks()
+        # Debounce: prevent toggling if less than 500ms has elapsed since the last toggle finished
+        if hasattr(self, 'last_toggle_time') and current_time - self.last_toggle_time < 500:
+            return
+            
+        self.is_fullscreen = not getattr(self, 'is_fullscreen', False)
+        if self.is_fullscreen:
+            try:
+                self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN)
+            except pygame.error:
+                info = pygame.display.Info()
+                self.screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.NOFRAME)
+        else:
+            self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+            
+        # Update toggle time AFTER transition, so cooldown starts when screen is ready
+        self.last_toggle_time = pygame.time.get_ticks()
+        # Clear any accumulated KEYDOWN events (like F11 being held) that queued up while display was resetting
+        pygame.event.clear(pygame.KEYDOWN)
+
     def run(self):
         while True:
             # --- THE MAGIC CPU FIX ---
@@ -531,7 +553,9 @@ class Controller:
                     is_listening = getattr(self.active_state, "listening_for", None)
                     
                     if not is_listening:
-                        if event.key == self.keybinds.get("BACK", pygame.K_ESCAPE):
+                        if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
+                            self.toggle_fullscreen()
+                        elif event.key == self.keybinds.get("BACK", pygame.K_ESCAPE):
                             if hasattr(self.active_state, "handle_back_key"):
                                 self.active_state.handle_back_key()
                         elif event.key == self.keybinds.get("ORDERS", pygame.K_q):

@@ -140,7 +140,7 @@ class Settings(GameState):
         self.refresh_ui()
 
     def reset_defaults(self):
-        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q}
+        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11}
         self.controller.keybinds = default_keys
         self.controller.target_fps = c.TARGET_FPS
         
@@ -458,8 +458,8 @@ class Settings(GameState):
         self.save_and_go_back()
 
     def toggle_full(self):
-        self.fullscreen = not self.fullscreen
-        pygame.display.toggle_fullscreen()
+        self.controller.toggle_fullscreen()
+        self.fullscreen = getattr(self.controller, 'is_fullscreen', False)
 
     def set_volume(self, val):
         self.sfx_volume = val

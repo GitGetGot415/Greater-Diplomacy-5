@@ -681,6 +681,11 @@ def render_settings_buttons(settings_screen):
     keybind_x = c.SCREEN_WIDTH - 250
 
     """Renders the buttons and sliders for the Settings screen."""
+    fullscreen_key_name = pygame.key.name(settings_screen.controller.keybinds.get("FULLSCREEN", pygame.K_F11)).upper()
+    fullscreen_btn_text = f"Fullscreen Key: {fullscreen_key_name}"
+    if settings_screen.listening_for == "FULLSCREEN":
+        fullscreen_btn_text = "Press any key..."
+
     back_key_name = pygame.key.name(settings_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)).upper()
     back_btn_text = f"Back Key: {back_key_name}"
     if settings_screen.listening_for == "BACK":
@@ -742,13 +747,13 @@ def render_settings_buttons(settings_screen):
         settings_screen.elements.append(Button(c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10, c.SETTINGS_MOD_BOX_Y, "small_square", "red", "X", lambda: settings_screen.clear_input("MOD")))
 
     # Sliders
-    settings_screen.player_slider = Slider(keybind_x, 400, 200, f"Players: {settings_screen.num_players}", (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
+    settings_screen.player_slider = Slider(keybind_x, 340, 200, f"Players: {settings_screen.num_players}", (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
     fps_val = (settings_screen.controller.target_fps - 10) / 50.0
-    settings_screen.fps_slider = Slider(keybind_x, 460, 200, f"Max FPS: {settings_screen.controller.target_fps}", fps_val, settings_screen.set_fps)
+    settings_screen.fps_slider = Slider(keybind_x, 400, 200, f"Max FPS: {settings_screen.controller.target_fps}", fps_val, settings_screen.set_fps)
 
     # Render above the player count
     thread_val = (settings_screen.ai_threads - 1) / 7.0
-    settings_screen.ai_thread_slider = Slider(60, 400, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
+    settings_screen.ai_thread_slider = Slider(60, 340, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
     
     # Only show the slider if an AI mode is active
     settings_screen.ai_thread_slider.visible = (settings_screen.ai_mode != "OFF")
@@ -759,6 +764,7 @@ def render_settings_buttons(settings_screen):
     settings_screen.elements.extend([
         settings_screen.player_slider,
         settings_screen.fps_slider,
+        Button(keybind_x, 470, "medium", "grey", fullscreen_btn_text, lambda: settings_screen.start_listening("FULLSCREEN")),
         Button(keybind_x, 530, "medium", "grey", back_btn_text, lambda: settings_screen.start_listening("BACK")),
         Button(keybind_x, 590, "medium", "grey", orders_btn_text, lambda: settings_screen.start_listening("ORDERS")),
         Button(keybind_x, 650, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),

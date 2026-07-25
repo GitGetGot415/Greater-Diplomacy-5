@@ -179,7 +179,8 @@ ICON_PATH = 'assets/icon/icon.png'
 DEFAULT_KEYS = {
     "BACK": pygame.K_ESCAPE,
     "NEXT_TURN": pygame.K_SPACE,
-    "ORDERS": pygame.K_q
+    "ORDERS": pygame.K_q,
+    "FULLSCREEN": pygame.K_F11
 }
 
 # AI Default Models
