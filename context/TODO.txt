@@ -1,3 +1,7 @@
+Recent additions:
+Fullscreeen button
+you can now edit the resources a country starts out with
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
@@ -15,7 +19,6 @@ Immediate concerns:
 
 - option to make ai never accept peacedeals?
 
-- fullscreen keybind (f11 by default)
 - automation to the point where you can just talk to other countries as a country instead of having to do anything
 
 - specific starting music you can choose for when you first load in the game

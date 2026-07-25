@@ -17,6 +17,7 @@ def render_buttons(self):
     #                        MAP VIEW TOGGLES                              #
     # ==================================================================== #
     self.btn_refresh_all = Button(c.SCREEN_WIDTH - 240, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", self.refresh_all_maps, font_preset="normal")
+    self.btn_global_econ_overview = Button(c.SCREEN_WIDTH - 380, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(self), font_preset="normal")
 
     self.btn_view_terrain = Button(c.VIEW_BTN_START_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", lambda: self.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
     self.btn_view_political = Button(c.VIEW_BTN_START_X + c.VIEW_BTN_STEP_X, c.VIEW_BTN_ROW1_Y, "small_square", "green", "Political", lambda: self.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
@@ -36,7 +37,7 @@ def render_buttons(self):
     is_spec = self.player_country == "Spectator"
     is_ed = self.is_editor
 
-    econ_callback = (lambda: editor_menus.open_editor_economy(self)) if (is_ed or is_spec) else (lambda: self.change_state("ECONOMY"))
+    econ_callback = (lambda: editor_menus.open_starting_economy_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("ECONOMY"))
     research_callback = (lambda: editor_menus.open_map_research_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("RESEARCH"))
     msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if (is_ed or is_spec) else (lambda: self.change_state("MESSAGES"))
 
@@ -133,7 +134,7 @@ def render_buttons(self):
             self.change_state("EDIT_COUNTRY")
 
     # FIX: Defer the conditional checks to execution time to prevent initialization sequence bugs!
-    econ_callback = lambda: editor_menus.open_editor_economy(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("ECONOMY")
+    econ_callback = lambda: editor_menus.open_starting_economy_editor(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("ECONOMY")
     research_callback = lambda: editor_menus.open_map_research_editor(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("RESEARCH")
     msgs_callback = lambda: editor_menus.open_spectator_messages(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("MESSAGES")
 
@@ -227,7 +228,7 @@ def render_buttons(self):
 
     # --- Append all explicitly defined buttons into the elements list ---
     self.elements.extend([
-        self.btn_refresh_all,
+        self.btn_refresh_all, self.btn_global_econ_overview,
         self.btn_view_terrain, self.btn_view_political, self.btn_view_relations, self.btn_view_cores, self.btn_view_factions,
         self.btn_view_resources, self.btn_view_blank, self.btn_view_units, self.btn_view_economy, self.btn_toggle_names,
         self.btn_ed_load, self.btn_ed_nation,
@@ -312,6 +313,7 @@ def update_button_states(map_screen):
     #                        VIEW TOGGLES SELECTION                        #
     # ==================================================================== #
     map_screen.btn_refresh_all.visible = True
+    map_screen.btn_global_econ_overview.visible = map_screen.is_editor or map_screen.player_country == "Spectator"
 
     toggles = [
         (map_screen.btn_view_terrain, map_screen.base_layer == "TERRAIN"),

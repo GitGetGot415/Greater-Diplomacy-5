@@ -299,6 +299,91 @@ def open_editor_economy(self):
     tree.pack(fill="both", expand=True)
 
     queries.run_tk_loop(self, root)
+
+def open_starting_economy_editor(self):
+    """Opens a UI to edit starting resources for countries currently existing on the map."""
+    active_countries = queries.get_living_nations(self.map_data)
+
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    root, close_menu = queries.create_managed_tk_window(self, "Map Economy Editor", "350x500")
+
+    tk.Label(root, text="Select Country to Edit:", font=("Arial", 12)).pack(pady=5)
+    
+    lb = tk.Listbox(root, font=("Arial", 11))
+    
+    def populate_listbox():
+        lb.delete(0, tk.END)
+        for c in sorted(active_countries):
+            c_data = self.nation_data.get(c, {})
+            is_modified = c_data.get("manpower", 0) != 0 or c_data.get("materials", 0) != 0 or c_data.get("fuel", 0) != 0
+            prefix = "[MODIFIED] " if is_modified else ""
+            lb.insert(tk.END, f"{prefix}{c}")
+
+    populate_listbox()
+    lb.pack(fill="both", expand=True, padx=10, pady=5)
+
+    def open_edit_window(target_country):
+        actual_name = target_country.replace("[MODIFIED] ", "")
+        base_data = {
+            "manpower": self.nation_data.get(actual_name, {}).get("manpower", 0),
+            "materials": self.nation_data.get(actual_name, {}).get("materials", 0),
+            "fuel": self.nation_data.get(actual_name, {}).get("fuel", 0)
+        }
+        
+        edit_win = tk.Toplevel(root)
+        edit_win.title(f"{actual_name} Starting Economy")
+        edit_win.geometry("250x250")
+        edit_win.attributes("-topmost", True)
+        
+        entries = {}
+        for i, res in enumerate(["manpower", "materials", "fuel"]):
+            tk.Label(edit_win, text=res.capitalize()).grid(row=i, column=0, sticky="e", padx=5, pady=5)
+            ent = tk.Entry(edit_win, width=10)
+            ent.insert(0, str(int(base_data[res])))
+            ent.grid(row=i, column=1, pady=5)
+            entries[res] = ent
+            
+        def save_econ():
+            new_data = {}
+            for res, ent in entries.items():
+                try:
+                    new_data[res] = int(ent.get())
+                except ValueError: 
+                    new_data[res] = base_data[res]
+            
+            if actual_name in self.nation_data:
+                for res, val in new_data.items():
+                    self.nation_data[actual_name][res] = val
+                self.show_feedback(f"Saved economy for {actual_name}")
+            
+            populate_listbox()
+            edit_win.destroy()
+            
+        tk.Button(edit_win, text="Save Economy", command=save_econ, bg="#4CAF50", fg="white").grid(row=3, column=0, columnspan=2, pady=15)
+
+    def edit_selected():
+        sel = lb.curselection()
+        if not sel: return
+        open_edit_window(lb.get(sel[0]))
+
+    def reset_all():
+        if messagebox.askyesno("Confirm Reset", "Are you sure you want to reset every starting economy to 0?"):
+            for c in active_countries:
+                if c in self.nation_data:
+                    self.nation_data[c]["manpower"] = 0
+                    self.nation_data[c]["materials"] = 0
+                    self.nation_data[c]["fuel"] = 0
+            self.show_feedback("Reset starting economy for all nations!")
+            populate_listbox()
+            close_menu()
+
+    tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
+    tk.Button(root, text="Reset All to 0", command=reset_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
+
+    queries.run_tk_loop(self, root)
         
 def open_spectator_messages(self):
     """Opens a Tkinter window listing all messages sent between active countries."""
