@@ -11,6 +11,10 @@ Immediate concerns:
 - or maybe allow a reset but don't update portraits n such?
 !!!!!!!!!!
 
+- ai seems really likely to just accept peacedeals...
+
+- option to make ai never accept peacedeals?
+
 - fullscreen keybind (f11 by default)
 - automation to the point where you can just talk to other countries as a country instead of having to do anything
 
