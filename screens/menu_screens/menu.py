@@ -134,7 +134,7 @@ class Menu(GameState):
             self.version_color = (255, 200, 100) # Orange
         except Exception:
             self.version_status = f"Version: {c.GAME_VERSION} (Error checking)"
-            self.version_color = (255, 100, 100) # Red
+            self.version_color = (150, 0, 150) # Purple
 
     def additional_events(self, event):
         # We hook into mouse clicks here to make the hyperlinks functional
