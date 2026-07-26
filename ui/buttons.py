@@ -41,7 +41,7 @@ def render_buttons(self):
     research_callback = (lambda: editor_menus.open_map_research_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("RESEARCH"))
     msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if (is_ed or is_spec) else (lambda: self.change_state("MESSAGES"))
 
-    start_y_val = 65
+    start_y_val = 75
 
    # Editor Buttons
     self.btn_ed_load = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X *(-0.5), c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(self), font_preset="normal")

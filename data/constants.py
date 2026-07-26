@@ -263,7 +263,7 @@ VIEW_BTN_ROW2_Y = SCREEN_HEIGHT - 100
 
 # --- Left UI Bar Placement ---
 LEFT_UI_BAR_X = 20
-LEFT_UI_BAR_STEP_Y = 40
+LEFT_UI_BAR_STEP_Y = 35
 BTN_SPECTATOR_Y = SCREEN_HEIGHT - 55
 
 # ==========================================
@@ -431,7 +431,7 @@ SIZES = {
     "tech_square_wide": (160, 80),
     "tech_square_ultra_wide": (300, 80),
     "album_square": (200, 200),
-    "left_ui_button": (120, 35),
+    "left_ui_button": (120, 30),
     "new_game": (300, 50),
     "orders": (100, 50),
     "small": (100, 40),

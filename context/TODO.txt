@@ -14,6 +14,10 @@ Immediate concerns:
 
 - maybe allow a reset but don't update portraits n such?
 
+- add territory trade offer mechanic?
+- you can offer territories to give / ask for
+- ai will always reject unless they're an integrated puppet
+
 - automatic research leveling option (no need to manually set it)
 
 - allow editing of default prompt the ai is given
