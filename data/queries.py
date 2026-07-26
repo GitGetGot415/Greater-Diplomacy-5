@@ -1383,6 +1383,10 @@ def get_diplomatic_status(sender, target, nation_data):
 
 def get_message_draft(sender, target, nation_data):
     """Returns the draft text if one exists and hasn't been sent."""
+    draft_list = nation_data.get(sender, {}).get("draft_lists", {}).get(target, [])
+    if draft_list:
+        return "\n".join(draft_list)
+
     pending = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(target, {})
     if isinstance(pending, dict) and pending.get("turns", 0) == 0:
         action = pending.get("action", "")

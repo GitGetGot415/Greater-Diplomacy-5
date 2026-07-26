@@ -739,6 +739,15 @@ def process_diplomacy_turn(self):
             if t in pending:
                 del pending[t]
 
+        # DELIVER and clear text drafts stored in draft_lists for Turn 0
+        draft_lists = data.get("draft_lists", {})
+        if draft_lists:
+            for d_target, d_messages in list(draft_lists.items()):
+                if d_messages:
+                    combined_msg = "\n".join(d_messages)
+                    send_message(self, country_name, d_target, combined_msg, "TEXT")
+            data["draft_lists"] = {}
+
     # PASS 2: DELAYED / LLM ACTIONS (Turns >= 1)
     for country_name, data in list(self.nation_data.items()):
         if not isinstance(data, dict): 

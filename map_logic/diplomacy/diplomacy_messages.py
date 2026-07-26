@@ -11,16 +11,20 @@ def queue_text_message(nation_data, player_name, target_name, content):
     if player_name not in nation_data:
         return "Cannot send messages as this entity."
         
-    pending = nation_data[player_name].setdefault("pending_diplomacy", {})
+    p_data = nation_data[player_name]
+    pending = p_data.setdefault("pending_diplomacy", {})
+    draft_lists = p_data.setdefault("draft_lists", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
     
-    if current_action is not None and not current_action.startswith("MSG:"):
-        # NEW: If a formal action is already pending, attach the typed message to it!
-        if isinstance(pending.get(target_name), dict):
-            pending[target_name]["message"] = content
-        return "Message attached to pending action."
+    cur_list = draft_lists.setdefault(target_name, [])
+    if content and content not in cur_list:
+        cur_list.append(content)
         
-    pending[target_name] = {"action": f"MSG:{content}", "turns": 0, "message": content}
+    if current_action is not None and not current_action.startswith("MSG:"):
+        return "Message draft saved alongside formal action."
+        
+    combined = "\n".join(cur_list) if cur_list else content
+    pending[target_name] = {"action": f"MSG:{combined}", "turns": 0, "message": combined}
     return "Message draft saved. Will send at end of turn."
 
 def cancel_text_message(nation_data, player_name, target_name):

@@ -139,12 +139,11 @@ class Messages_Screen(GameState):
                 msg["read"] = True
                 
         # Load drafts and sync with the map screen
-        draft_str = queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
         draft_lists = p_data.get("draft_lists", {})
         saved_list = draft_lists.get(target, [])
+        draft_str = queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
         
-        # Check if we have a saved draft list AND it matches the current text to prevent desyncs
-        if saved_list and "\n".join(saved_list) == draft_str.strip():
+        if saved_list:
             self.drafts = saved_list.copy()
         elif draft_str.strip():
             # Automatically separate out external drafts that use newlines
