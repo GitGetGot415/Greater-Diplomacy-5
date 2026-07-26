@@ -259,6 +259,36 @@ def get_tech_tree(): return _load_cached_json("tech_tree")
 def get_country_data(): return _load_cached_json("country_data")
 def get_active_albums(): return _load_cached_json("active_albums")
 
+def get_time_appropriate_research(start_year):
+    """Calculates time-appropriate research level mapping for a given start year."""
+    struct = get_tech_tree()
+    if not struct:
+        return {}
+
+    res_template = {tech: (1800 if data.get("max_lvl") == 9999 else 0) for tech, data in struct.items()}
+    if "infantry_type" in res_template: res_template["infantry_type"] = 0
+    if "cavalry" in res_template: res_template["cavalry"] = 0
+
+    tech_timeline = {tech: data.get("years", [1850]) for tech, data in struct.items()}
+    
+    if start_year == 1910:
+        baseline_tech = getattr(c, 'DEFAULT_1910_TECH', {}).copy()
+    else:
+        baseline_tech = {}
+        for tech, years in tech_timeline.items():
+            is_infantry = struct.get(tech, {}).get("category") == "INFANTRY"
+            if is_infantry:
+                lvl = sum(1 for y in years if y <= start_year)
+            else:
+                lvl = sum(1 for y in years if y < start_year)
+            if lvl > 0:
+                baseline_tech[tech] = lvl
+
+    res = res_template.copy()
+    res.update(baseline_tech)
+    return res
+
+
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
 # ==========================================

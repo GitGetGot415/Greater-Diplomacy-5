@@ -529,7 +529,7 @@ def open_map_research_editor(self):
 
     default_res = get_default_research()
 
-    root, close_menu = queries.create_managed_tk_window(self, "Map Tech Editor", "350x500")
+    root, close_menu = queries.create_managed_tk_window(self, "Map Tech Editor", "350x560")
 
     tk.Label(root, text="Select Country to Edit:", font=("Arial", 12)).pack(pady=5)
     
@@ -537,15 +537,15 @@ def open_map_research_editor(self):
     
     def populate_listbox():
         lb.delete(0, tk.END)
-        for c in sorted(active_countries):
-            c_res = self.nation_data.get(c, {}).get("research", {})
+        for c_name in sorted(active_countries):
+            c_res = self.nation_data.get(c_name, {}).get("research", {})
             is_diff = False
             for k, v in default_res.items():
                 if c_res.get(k, v) != v:
                     is_diff = True
                     break
             prefix = "[MODIFIED] " if is_diff else ""
-            lb.insert(tk.END, f"{prefix}{c}")
+            lb.insert(tk.END, f"{prefix}{c_name}")
 
     populate_listbox()
     lb.pack(fill="both", expand=True, padx=10, pady=5)
@@ -600,10 +600,10 @@ def open_map_research_editor(self):
             elif is_bulk:
                 self.default_research = new_data.copy()
                 default_res = new_data.copy()
-                for c in active_countries:
-                    if "research" not in self.nation_data[c]:
-                        self.nation_data[c]["research"] = {}
-                    self.nation_data[c]["research"].update(new_data)
+                for c_name in active_countries:
+                    if "research" not in self.nation_data[c_name]:
+                        self.nation_data[c_name]["research"] = {}
+                    self.nation_data[c_name]["research"].update(new_data)
                 self.show_feedback("Saved research for ALL & Set Default")
             else:
                 if "research" not in self.nation_data[actual_name]:
@@ -627,9 +627,34 @@ def open_map_research_editor(self):
     def edit_default_only():
         open_edit_window(None, is_default_only=True)
 
+    def force_time_appropriate_research():
+        nonlocal default_res
+        current_year = getattr(self.time_manager, "year", c.START_YEAR)
+        msg = (
+            f"This will reset and edit the research of ALL nations on the map to match "
+            f"the time-appropriate research levels for year {current_year} (the current year of this map), "
+            f"exactly as if a random scenario was created in {current_year}.\n\n"
+            f"Are you sure you want to force time-appropriate research for all nations?"
+        )
+        if not messagebox.askyesno("Force Time Appropriate Research", msg, parent=root):
+            return
+
+        time_app_res = queries.get_time_appropriate_research(current_year)
+        self.default_research = time_app_res.copy()
+        default_res = time_app_res.copy()
+
+        for c_name in active_countries:
+            if "research" not in self.nation_data[c_name]:
+                self.nation_data[c_name]["research"] = {}
+            self.nation_data[c_name]["research"] = time_app_res.copy()
+
+        populate_listbox()
+        self.show_feedback(f"Forced Time Appropriate Research for {current_year}")
+
     tk.Button(root, text="Edit Selected Nation", command=edit_selected, bg="#2196F3", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
     tk.Button(root, text="Edit ALL Nations (Bulk)", command=edit_all, bg="#f44336", fg="white", pady=5).pack(fill="x", padx=10, pady=2)
     tk.Button(root, text="Edit Map Default Tech", command=edit_default_only, bg="#FF9800", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
+    tk.Button(root, text="Force Time Appropriate Research", command=force_time_appropriate_research, bg="#4CAF50", fg="white", pady=5).pack(fill="x", padx=10, pady=5)
 
     queries.run_tk_loop(self, root)
 
