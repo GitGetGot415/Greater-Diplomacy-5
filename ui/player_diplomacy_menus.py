@@ -158,6 +158,15 @@ class Declare_War_Screen(GameState):
             pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
             if self.target_nation in pending and pending[self.target_nation].get("action") == "WAR_DECLARATION":
                 del pending[self.target_nation]
+            
+            p_data = self.map_screen.nation_data[self.map_screen.player_country]
+            draft_lists = p_data.get("draft_lists", {})
+            if self.target_nation in draft_lists:
+                wg_labels = [opt["label"] for opt in self.wargoal_options]
+                draft_lists[self.target_nation] = [d for d in draft_lists[self.target_nation] if d not in wg_labels]
+                if not draft_lists[self.target_nation]:
+                    del draft_lists[self.target_nation]
+
             self.map_screen.show_feedback("War Declaration Cancelled.")
             self.done = True
         else:

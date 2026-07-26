@@ -1385,12 +1385,11 @@ def get_message_draft(sender, target, nation_data):
     """Returns the draft text if one exists and hasn't been sent."""
     pending = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(target, {})
     if isinstance(pending, dict) and pending.get("turns", 0) == 0:
-        if "message" in pending:
-            return pending["message"]
-        # Legacy fallback
         action = pending.get("action", "")
         if isinstance(action, str) and action.startswith("MSG:"):
             return action[4:]
+        if not action and "message" in pending:
+            return pending["message"]
     return ""
 
 def is_diplomat_busy(sender, target, nation_data):

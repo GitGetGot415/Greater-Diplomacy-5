@@ -99,7 +99,7 @@ class Messages_Screen(GameState):
                 pending_dict[self.selected_recipient] = {
                     "action": action_str,
                     "turns": turns_val,
-                    "message": combined_text
+                    "message": combined_text if not action_str or action_str.startswith("MSG:") else existing_msg
                 }
                 if existing_params is not None:
                     pending_dict[self.selected_recipient]["parameters"] = existing_params
@@ -200,14 +200,26 @@ class Messages_Screen(GameState):
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
                         
-                        # HANDLE TRADE UNDO CLICKS
+                        # HANDLE DIPLOMATIC ACTION UNDO CLICKS
                         if idx == "TRADE_OFFER":
                             # Passing it to the toggle logic safely refunds the escrow!
                             diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
+                        elif idx == "WAR_DECLARATION":
+                            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
+                            if self.selected_recipient in pending:
+                                del pending[self.selected_recipient]
+                            self.map_screen.show_feedback("War Declaration Cancelled.")
+                        elif isinstance(idx, str) and idx.startswith("FORMAL_"):
+                            act_name = idx[7:]
+                            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
+                            if self.selected_recipient in pending:
+                                del pending[self.selected_recipient]
+                            self.map_screen.show_feedback(f"{act_name.replace('_', ' ').title()} Cancelled.")
                         else:
-                            self.drafts.pop(idx)
-                            self.save_current_draft()
+                            if isinstance(idx, int) and 0 <= idx < len(self.drafts):
+                                self.drafts.pop(idx)
+                                self.save_current_draft()
                             
                         self.refresh_ui()
                         return
@@ -281,10 +293,11 @@ class Messages_Screen(GameState):
                 history_contacts.add(sender)
 
         pending = p_data.get("pending_diplomacy", {})
-        for target in pending.keys():
-            if target in playable:
-                if queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
-                    history_contacts.add(target)
+        for target, p_info in pending.items():
+            if target in playable and isinstance(p_info, dict) and p_info.get("action"):
+                history_contacts.add(target)
+            elif target in playable and queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
+                history_contacts.add(target)
 
         if self.selected_recipient:
             history_contacts.add(self.selected_recipient)
@@ -470,13 +483,25 @@ class Messages_Screen(GameState):
             if act_str and not act_str.startswith("MSG:"):
                 is_diplo_action = True
                 
-                # --- INJECT PENDING TRADES AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
-                if act_str == "TRADE" and pending.get("turns", 0) == 0:
+                # --- INJECT PENDING FORMAL ACTIONS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
+                if pending.get("turns", 0) == 0:
+                    if act_str == "TRADE":
+                        content_str = pending.get("message", "Proposed Trade")
+                        d_idx = "TRADE_OFFER"
+                    elif act_str == "WAR_DECLARATION":
+                        content_str = f"War Declaration ({pending.get('message', 'Declare War')})"
+                        d_idx = "WAR_DECLARATION"
+                    else:
+                        act_lbl = act_str.replace("_", " ").title()
+                        msg_param = pending.get("message", "")
+                        content_str = f"Pending {act_lbl}: {msg_param}" if msg_param else f"Pending {act_lbl}"
+                        d_idx = f"FORMAL_{act_str}"
+
                     display_thread.append({
-                        "content": pending.get("message", "Proposed Trade"),
+                        "content": content_str,
                         "is_player": True,
                         "is_draft": True,
-                        "draft_idx": "TRADE_OFFER", # Setup the flag for the event listener below
+                        "draft_idx": d_idx,
                         "is_diplo": True,
                         "date": ""
                     })
