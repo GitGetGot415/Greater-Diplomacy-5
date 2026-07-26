@@ -423,25 +423,46 @@ def draw_overlay_content(self, surface):
                     
                     resources = province.get("resources", {})
                     if isinstance(resources, dict) and resources:
-                        offset_x = 0
-                        for res_type, amount in resources.items():
-                            if amount > 0:
+                        resource_items = [(res_type, amount) for res_type, amount in resources.items() if amount > 0]
+                        if resource_items:
+                            icon_spacing = max(1, int(20 * self.camera.zoom))
+                            icons = []
+                            for res_type, amount in resource_items:
                                 sym = symbol_loader.get_symbol(res_type, self.camera.zoom * 0.8)
                                 if sym:
                                     sym = map_utils.apply_tilt(sym, self.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
-                                    surface.blit(sym, (sx + offset_x, sy))
+                                    icons.append((sym, res_type))
                                 else:
-                                    # Fallback colored square
                                     c_col = (200, 200, 200)
                                     if res_type == "Iron": c_col = (180, 180, 180)
                                     if res_type == "Coal": c_col = (50, 50, 50)
                                     if res_type == "Oil": c_col = (30, 30, 30)
                                     if res_type == "Wheat": c_col = (220, 200, 60)
+                                    w_scaled = int(15 * self.camera.zoom)
                                     h_scaled = int(15 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
-                                    pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), h_scaled))
-                                
-                                # Shift right so multiple icons stack side-by-side
-                                offset_x += 20 * self.camera.zoom
+                                    icons.append((None, res_type, c_col, w_scaled, h_scaled))
+
+                            total_width = 0
+                            for icon in icons:
+                                if icon[0] is not None:
+                                    total_width += icon[0].get_width()
+                                else:
+                                    total_width += icon[3]
+                            total_width += icon_spacing * (len(icons) - 1)
+
+                            current_x = sx - (total_width // 2)
+                            for icon in icons:
+                                if icon[0] is not None:
+                                    sym = icon[0]
+                                    rect = sym.get_rect(center=(current_x + sym.get_width() // 2, sy))
+                                    surface.blit(sym, rect)
+                                    current_x += sym.get_width() + icon_spacing
+                                else:
+                                    c_col, w_scaled, h_scaled = icon[2], icon[3], icon[4]
+                                    rect = pygame.Rect(current_x, sy - (h_scaled // 2), w_scaled, h_scaled)
+                                    pygame.draw.rect(surface, c_col, rect)
+                                    pygame.draw.rect(surface, (255, 255, 255), rect, 1)
+                                    current_x += w_scaled + icon_spacing
 
 def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
     units = province.get("units", [])
