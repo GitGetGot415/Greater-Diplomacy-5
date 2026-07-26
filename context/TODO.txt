@@ -16,6 +16,9 @@ Immediate concerns:
 - resources (and maybe buildings?) seem offcenter
 - resource multiplier???
 
+- integrated puppets transfer everything to their master unless they capture territories they have a core on, and their master doesn't have a core on it
+- or maybe it could be that if a country captures territory that one of their integrated puppets has a core on, that land is automatically transferred to them
+
 - maybe allow a reset but don't update portraits n such?
 
 - add territory trade offer mechanic?

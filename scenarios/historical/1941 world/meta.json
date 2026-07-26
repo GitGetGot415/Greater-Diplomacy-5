@@ -593,6 +593,35 @@
                     ],
                     "fire_once": true,
                     "trigger_type": "AI Only"
+                },
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Turn Number",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "12"
+                        },
+                        {
+                            "chain": "AND",
+                            "type": "At Peace With",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "Japanese Empire"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Declare War",
+                            "target": "Japanese Empire",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "this was inevitable",
+                            "ai_generate": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
                 }
             ]
         },
@@ -2278,6 +2307,28 @@
                     ],
                     "fire_once": true,
                     "trigger_type": "AI Only"
+                },
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Received Action",
+                            "variable": "",
+                            "operator": "JOIN_FACTION_REQ",
+                            "value": "Mexico"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Accept Proposal",
+                            "target": "Mexico",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "sure why not",
+                            "ai_generate": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
                 }
             ]
         },
@@ -2375,7 +2426,31 @@
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
             "relations": {},
-            "adjective": "Mexican"
+            "adjective": "Mexican",
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Turn Number",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "14"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Join Faction",
+                            "target": "United Kingdom",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "is it alright if we join",
+                            "ai_generate": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ]
         },
         "Argentina": {
             "name": "Argentina",
