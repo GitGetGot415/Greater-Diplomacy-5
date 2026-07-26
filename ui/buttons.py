@@ -439,10 +439,13 @@ def update_button_states(map_screen):
             map_screen.btn_gp_puppets.color, map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["pink"]
             
             # --- Update Automation Bubble ---
-            p_data = map_screen.nation_data.get(map_screen.player_country, {})
-            auto = p_data.get("automation", {})
-            active_count = sum(1 for val in auto.values() if val)
-            map_screen.btn_gp_automation.notification_count = active_count
+            if map_screen.player_country in map_screen.nation_data and map_screen.player_country not in ["Spectator", "None", "Editor"]:
+                p_data = map_screen.nation_data.get(map_screen.player_country, {})
+                auto = p_data.get("automation", {})
+                active_count = sum(1 for val in auto.values() if val)
+                map_screen.btn_gp_automation.notification_count = active_count
+            else:
+                map_screen.btn_gp_automation.notification_count = 0
             map_screen.btn_gp_edit.color, map_screen.btn_gp_edit.hover_color = c.UI_COLORS["pink"]
 
     map_screen.btn_exit_to_menu.visible = not is_sel

@@ -18,10 +18,13 @@ class Automation_Screen(GameState):
         self.player = map_screen.player_country
         self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200)
         
+        self.is_valid_player = self.player in self.map_screen.nation_data and self.player not in ["Spectator", "None", "Editor"]
+        
         # Initialize automation state if not exists
-        p_data = self.map_screen.nation_data.get(self.player, {})
-        if "automation" not in p_data:
-            p_data["automation"] = {"construction": False, "movement": False, "research": False}
+        if self.is_valid_player:
+            p_data = self.map_screen.nation_data[self.player]
+            if "automation" not in p_data:
+                p_data["automation"] = {"construction": False, "movement": False, "research": False}
             
         self.confirm_action = None
         self.confirm_text = ""
@@ -30,6 +33,9 @@ class Automation_Screen(GameState):
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
         
+        if not self.is_valid_player:
+            return
+
         y_pos = self.panel_rect.y + 100
         row_spacing = 150
         
@@ -62,7 +68,7 @@ class Automation_Screen(GameState):
             self.elements.append(Button(c.SCREEN_WIDTH//2 + 50, c_y, "puppet_option", "green", "Confirm", self.execute_confirmation, font_preset="normal"))
 
     def toggle_automation(self, key):
-        if not self.confirm_action:
+        if not self.confirm_action and self.is_valid_player:
             val = self.map_screen.nation_data[self.player]["automation"].get(key, False)
             self.map_screen.nation_data[self.player]["automation"][key] = not val
             self.refresh_ui()
@@ -78,7 +84,7 @@ class Automation_Screen(GameState):
         self.refresh_ui()
         
     def execute_confirmation(self):
-        if self.confirm_action:
+        if self.confirm_action and self.is_valid_player:
             self.confirm_action(self.map_screen)
         self.confirm_action = None
         self.confirm_text = ""
@@ -105,6 +111,14 @@ class Automation_Screen(GameState):
         title_surf = title_font.render("Automation Settings", True, (255, 215, 0))
         surface.blit(title_surf, (self.panel_rect.centerx - title_surf.get_width()//2, self.panel_rect.y + 20))
         
+        if not self.is_valid_player:
+            msg_font = fonts.get("normal")
+            msg_surf = msg_font.render("Automation is not available in Spectator Mode.", True, (255, 150, 150))
+            surface.blit(msg_surf, (self.panel_rect.centerx - msg_surf.get_width()//2, self.panel_rect.centery))
+            for element in self.elements:
+                element.draw(surface)
+            return
+
         normal_font = fonts.get("normal")
         options = ["Construction", "Troop Movement", "Research"]
         y_pos = self.panel_rect.y + 70
