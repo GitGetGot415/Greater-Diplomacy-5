@@ -342,10 +342,11 @@ class Research_Screen(GameState):
 
     def pause_research(self, tech_name):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
-        queue = player_data["research_queue"]
+        queue = player_data.get("research_queue", [])
+        progress_cache = player_data.setdefault("research_progress", {})
         for i, project in enumerate(queue):
             if project["tech_name"] == tech_name:
-                player_data["research_progress"][tech_name] = project["points_remaining"]
+                progress_cache[tech_name] = project["points_remaining"]
                 queue.pop(i)
                 break
         self.refresh_ui()

@@ -1,5 +1,5 @@
 from map_logic.diplomacy import diplomacy_logic
-from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy
+from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, automation_logic
 from map_logic.system32 import combat_processor, movement_processor, economy_processor, research_processor
 import data.constants as c
 from data import queries
@@ -185,3 +185,14 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     
     print("--- [PHASE 2] COMPLETE ---")
     print("="*40 + "\n")
+    
+    # --- PROCESS PLAYER AUTOMATION FOR NEXT TURN ---
+    player = getattr(self, "player_country", None)
+    if player and player != "Spectator":
+        auto = self.nation_data.get(player, {}).get("automation", {})
+        if auto.get("construction"):
+            automation_logic.automate_player_construction(self)
+        if auto.get("movement"):
+            automation_logic.automate_player_movement(self)
+        if auto.get("research"):
+            automation_logic.automate_player_research(self)

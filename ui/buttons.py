@@ -151,9 +151,18 @@ def render_buttons(self):
     self.btn_gp_claims = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "pink", "Claims", lambda: player_diplomacy_actions.open_claims_menu(self), image=icons.get("paper"), show_text=True)
     
     self.btn_gp_puppets = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "pink", "Puppets", lambda: player_diplomacy_actions.open_puppets_menu(self), image=icons.get("faction"), show_text=True)
+    
+    # NEW: Automation Button
+    def open_automation_screen():
+        from ui.automation_screen import Automation_Screen
+        from ui.player_diplomacy_menus import _run_pygame_sub_screen
+        screen = Automation_Screen(self)
+        _run_pygame_sub_screen(self, screen)
+        
+    self.btn_gp_automation = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "pink", "Automation", open_automation_screen, image=icons.get("settings"), show_text=True)
 
-    # Register the Slider below the Faction button
-    slider_y = int(start_y_val + c.LEFT_UI_BAR_STEP_Y * 12)
+    # Register the Slider below the new Automation button
+    slider_y = int(start_y_val + c.LEFT_UI_BAR_STEP_Y * 13)
     self.slider_camera_tilt = Slider(c.LEFT_UI_BAR_X, slider_y, 120, "Camera Tilt", self.camera_tilt_slider_val, self.set_camera_tilt)
 
     # ======================================================================== #
@@ -235,7 +244,7 @@ def render_buttons(self):
         self.btn_ed_core, self.btn_ed_claim, self.btn_ed_autocore, self.btn_ed_clear, self.btn_ed_resource, self.btn_ed_building,
         self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_edited, self.btn_ed_date, self.btn_ed_diplo, self.btn_ed_scripts,
         self.btn_next_turn, self.btn_import_turn, self.btn_skip_ai, self.btn_multi_turn, self.btn_declare_indep, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
-        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_gp_faction, self.btn_gp_claims, self.btn_gp_puppets, self.btn_go_orders, self.btn_go_production,
+        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_gp_faction, self.btn_gp_claims, self.btn_gp_puppets, self.btn_gp_automation, self.btn_go_orders, self.btn_go_production,
         self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
         self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create,
         self.btn_req_mil_access, self.btn_cancel_mil_access, self.btn_revoke_mil_access,
@@ -393,7 +402,7 @@ def update_button_states(map_screen):
             map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
             map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
             map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
-            map_screen.btn_gp_puppets, map_screen.slider_camera_tilt
+            map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.slider_camera_tilt
         ]
         
         always_visible_btns = [map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt]
@@ -428,6 +437,12 @@ def update_button_states(map_screen):
             if bool(my_faction):
                 map_screen.btn_gp_faction.color, map_screen.btn_gp_faction.hover_color = c.UI_COLORS["pink"]
             map_screen.btn_gp_puppets.color, map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["pink"]
+            
+            # --- Update Automation Bubble ---
+            p_data = map_screen.nation_data.get(map_screen.player_country, {})
+            auto = p_data.get("automation", {})
+            active_count = sum(1 for val in auto.values() if val)
+            map_screen.btn_gp_automation.notification_count = active_count
             map_screen.btn_gp_edit.color, map_screen.btn_gp_edit.hover_color = c.UI_COLORS["pink"]
 
     map_screen.btn_exit_to_menu.visible = not is_sel

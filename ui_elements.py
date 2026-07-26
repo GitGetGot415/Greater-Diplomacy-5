@@ -50,6 +50,7 @@ class Button:
         
         self.is_selected = False
         self.disabled = False
+        self.notification_count = 0
 
     def draw(self, surface):
         if not self.visible: return
@@ -111,6 +112,18 @@ class Button:
             shadow = self.font.render(self.text, True, (0, 0, 0))
             surface.blit(shadow, (text_rect.x + 1, text_rect.y + 1))
             surface.blit(text_surf, text_rect)
+
+        if getattr(self, 'notification_count', 0) > 0:
+            count_str = str(self.notification_count)
+            bubble_radius = max(10, 8 + len(count_str) * 3)
+            bubble_center = (self.rect.right - 5, self.rect.top + 5)
+            pygame.draw.circle(surface, (220, 20, 20), bubble_center, bubble_radius)
+            pygame.draw.circle(surface, (255, 255, 255), bubble_center, bubble_radius, 1)
+            
+            notif_font = fonts.get("small")
+            count_surf = notif_font.render(count_str, True, (255, 255, 255))
+            count_rect = count_surf.get_rect(center=bubble_center)
+            surface.blit(count_surf, count_rect)
 
     def draw_gradient_rect(self, surface, color, rect):
         hi = 30

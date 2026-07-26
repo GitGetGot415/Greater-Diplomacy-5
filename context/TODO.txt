@@ -18,15 +18,20 @@ Immediate concerns:
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
 
-- automatic research leveling option (no need to manually set it)
+- gurella units? (kaiserin's suggestion)
 
-- allow editing of default prompt the ai is given
+could you add in a automation button:
+- below the puppets button on the left ui bar there should be another button called "Automation" with the gear icon that the settings button also has
+- the camera tilt slider should also be moved down to accomodate this button
+- when you click this button it should take you to a seperate screen with a dark red background
+- there you should see options for what to automate, which includes construction, troop movement, and research
+- to the left of those options there should be 2 buttons (automate this turn, clear) and 1 checkbox (automate next turn)
+- automate this turn just lets the ai make moves for that specific option on that specific turn
+- clear just removes all moves for that option (for example, clicking clear on moves clears all orders, clear on buildings refunds everything being built, clear on research pauses all research, freeing up the slots it was being used on)
+- clicking those two buttons should have a confirmation pop up asking if you're sure you want to do this and that it might overwrite any moves you made / things you want to build
+- automate next turn lets the ai make moves for that specific option when the next turn rolls around (the checkmark should remain checked, so you can keep spamming moves and the ai will keep automating those moves for you until you uncheck it)
+- if the checkbox (automate next turn) is turned on for one of the 3 options, then there should be a (1) bubble on the top right of the automation button on the left ui bar. if 2 are chosen, then the bubble should be (2), etc
 
-- ai seems really likely to just accept peacedeals...
-
-- option to make ai never accept peacedeals?
-
-- automation to the point where you can just talk to other countries as a country instead of having to do anything
 
 - specific starting music you can choose for when you first load in the game
 
@@ -37,6 +42,8 @@ Immediate concerns:
 - make terrain ACTUALLY DO STUFF when in combat / moving troops across
 - option to allow construction in non-core territories (non-core construction)
 
+- ai seems really likely to just accept peacedeals...
+- option to make ai never accept peacedeals?
 - option to prevent core removal
 - option to disable revolts from spawning when removing cores
 - setting to make the ai more difficult (how so?)
