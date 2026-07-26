@@ -13,6 +13,7 @@ Immediate concerns:
 - maybe factory count is only counted for factories on core territory
 
 - fix glitch where trying to declare war (for example to take claims), then undoing war declaration by switching it to not declaring war on the same turn causes you to send a custom message (in this instance it was just "Take Claims")
+- resources (and maybe buildings?) seem offcenter
 
 - maybe allow a reset but don't update portraits n such?
 
