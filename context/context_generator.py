@@ -133,7 +133,7 @@ files_to_skip_but_list = [
     "map_logic/camera\**",
     #"map_logic/diplomacy\**",
     "map_logic/random_map\**",
-    #"map_logic/rendering\**",
+    "map_logic/rendering\**",
     "map_logic/setup\**",
     #"map_logic/system32\**",
 ]
@@ -158,7 +158,11 @@ files_to_silently_ignore = [
     "**/.env",            # Prevents accidentally leaking your environment variables!
     "dist/**",
     "build/**",
-    "**/__init__.py"
+    "**/__init__.py",
+    "venv/**",
+    "macos_compilation.py",
+    "windows_compilation.py",
+    "temp_multiplayer_io.py",
 ]
 
 combine_files(
