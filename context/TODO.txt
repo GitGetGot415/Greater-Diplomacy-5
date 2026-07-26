@@ -1,6 +1,8 @@
 Recent additions:
 Fullscreeen button
 you can now edit the resources a country starts out with
+you can now Force Time Appropriate Research to automatically set research when editing a map
+wheat resource added (gives manpower)
 
 Immediate concerns:
 - newspaper events???

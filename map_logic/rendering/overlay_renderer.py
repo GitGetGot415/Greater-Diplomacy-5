@@ -436,6 +436,7 @@ def draw_overlay_content(self, surface):
                                     if res_type == "Iron": c_col = (180, 180, 180)
                                     if res_type == "Coal": c_col = (50, 50, 50)
                                     if res_type == "Oil": c_col = (30, 30, 30)
+                                    if res_type == "Wheat": c_col = (220, 200, 60)
                                     h_scaled = int(15 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                                     pygame.draw.rect(surface, c_col, (sx + offset_x, sy, int(15 * self.camera.zoom), h_scaled))
                                 

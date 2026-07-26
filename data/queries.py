@@ -1054,6 +1054,7 @@ def calculate_all_economies(map_data, nation_data):
             if isinstance(res, dict):
                 bd["materials"]["resources"] += int(res.get("Iron", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"])
                 bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"])
+                bd["manpower"]["resources"] += int(res.get("Wheat", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"])
 
             # Buildings
             building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER

@@ -754,7 +754,7 @@ def select_resource_brush(self):
 
     tk.Label(root, text="Select Resource Type:", font=("Arial", 12)).pack(pady=10)
     
-    dropdown = ttk.Combobox(root, values=["Iron", "Coal", "Oil", "None"], state="readonly", font=("Arial", 11))
+    dropdown = ttk.Combobox(root, values=["Iron", "Coal", "Oil", "Wheat", "None"], state="readonly", font=("Arial", 11))
     dropdown.set("Iron") 
     dropdown.pack(pady=5)
 
@@ -1064,7 +1064,7 @@ def open_clear_menu(self):
     unit_cb = ttk.Combobox(param_frame, textvariable=unit_type_var, values=unit_types, state="readonly", width=25)
     
     resource_lbl = tk.Label(param_frame, text="Resource:")
-    resource_types = ["Iron", "Coal", "Oil"]
+    resource_types = ["Iron", "Coal", "Oil", "Wheat"]
     resource_cb = ttk.Combobox(param_frame, textvariable=resource_type_var, values=resource_types, state="readonly", width=25)
     
     def update_visibility(*args):
@@ -1150,9 +1150,12 @@ def open_clear_menu(self):
                 
             if "resources" in opt:
                 if opt in ["all resources", "all resources on (x) countries territory"]:
+                    prov_data["resources"] = {}
                     if "resource" in prov_data:
                         del prov_data["resource"]
                 elif opt in ["all (x) resources", "all (x) resources on (x) countries territory"]:
+                    if isinstance(prov_data.get("resources"), dict) and r_val in prov_data["resources"]:
+                        del prov_data["resources"][r_val]
                     if prov_data.get("resource", {}).get("type") == r_val:
                         del prov_data["resource"]
                         
