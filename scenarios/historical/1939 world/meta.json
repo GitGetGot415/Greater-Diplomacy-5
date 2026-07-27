@@ -43118,7 +43118,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -43740,7 +43740,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -43755,7 +43755,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -43770,7 +43770,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -45498,7 +45498,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -49941,7 +49941,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -50422,7 +50422,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -50577,7 +50577,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -57190,7 +57190,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -57480,7 +57480,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -58980,7 +58980,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
@@ -60623,7 +60623,7 @@
                     "health": 2400,
                     "max_health": 2400,
                     "speed": 3,
-                    "attack": 2100,
+                    "attack": 1800,
                     "defense": 110,
                     "level": 0,
                     "order": {
