@@ -1,5 +1,3 @@
-import pygame
-
 # Used for logical ownership assignment
 WATER_MAPPING = {
     "ocean": "Ocean", 
@@ -131,7 +129,6 @@ CASUS_BELLI_REQUIRED = True
 DEFAULT_CASUS_BELLI = True
 
 # --- SURPRISE ATTACK ---
-SURPRISE_ATTACK = False
 DEFAULT_SURPRISE_ATTACK = False
 
 # --- SCRIPTED EVENTS & AI ---
@@ -177,14 +174,6 @@ MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
 
 
 DEFAULT_BG_COLOR = (30, 30, 30)
-ICON_PATH = 'assets/icon/icon.png'
-
-DEFAULT_KEYS = {
-    "BACK": pygame.K_ESCAPE,
-    "NEXT_TURN": pygame.K_SPACE,
-    "ORDERS": pygame.K_q,
-    "FULLSCREEN": pygame.K_F11
-}
 
 # AI Default Models
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
@@ -211,8 +200,6 @@ BASIC_FACTORY_TURNS = 20
 # --- Economy Screen Placement ---
 ECON_CONSCRIPTION_BTN_Y = 530
 ECON_CONVERT_BTN_Y = 600
-ECON_CONVERT_BTN_X1 = SCREEN_WIDTH // 2 - 250
-ECON_CONVERT_BTN_X2 = SCREEN_WIDTH // 2 + 50
 
 FUEL_REFINING_CONVERSION_PER_LVL = 0.01
 
@@ -319,8 +306,6 @@ ACTION_BTN_X = 200
 ACTION_BTN_START_Y = 300
 ACTION_BTN_STEP_Y = 33
 
-ORDER_BTN_X = SCREEN_WIDTH - 250
-
 # ==========================================
 # SETTINGS
 # ==========================================
@@ -344,7 +329,6 @@ CPU_LIMITER = 10
 
 START_YEAR = 1910
 END_YEAR = 2010
-AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
 RESEARCH_TIMELINE_SPACING = 90 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10 
@@ -452,12 +436,16 @@ SIZES = {
 }
 
 COLOR_GOLD_HIGHLIGHT = (255, 215, 0)
+COLOR_SUCCESS_GREEN = (100, 255, 100)
 COLOR_DIM_BORDER = (100, 100, 100)
+
+COLOR_RESOURCE_MANPOWER = (100, 200, 255)
+COLOR_RESOURCE_MATERIALS = (180, 180, 180)
+COLOR_RESOURCE_FUEL = (200, 100, 255)
 COLOR_SLIDER_TRACK = (100, 100, 100)
 COLOR_SLIDER_HANDLE = (200, 200, 200)
 
 COLOR_CHROMA_PINK = (255, 0, 255)
-COLOR_CHROMA_PINK_REPLACEMENT = (254, 0, 255)
 
 # https://smilebasic.com/en/e-manual/manual28/
 EDITOR_COLOR_PALETTE = [
@@ -532,7 +520,6 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 # ==========================================
 
 MAX_CAMERA_ZOOM = 10.0
-TILT_START_ZOOM = 6.0   # Zoom level where the 3D tilt effect starts
 MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
 APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
@@ -729,6 +716,8 @@ AI_TANK_MIN_DIVISOR = 2000
 
 AI_MIN_MATERIALS_FOR_CONSTRUCTION = 15000
 
+AI_SURPLUS_MANPOWER_FOR_CORING = 2000 # Manpower above this triggers AI to prioritize coring uncored provinces
+
 AI_CONSCRIPTION_MIN_MANPOWER = 5000
 AI_CONSCRIPTION_PANIC_MANPOWER = 10000
 AI_CONSCRIPTION_PANIC_MATERIALS = 1000
@@ -840,7 +829,6 @@ PORTRAITS_DIR = "assets/portraits"
 MUSIC_DIR = "assets/music"
 SAVES_DIR = "saves"
 TOURNAMENT_SAVES_DIR = "tournament_saves"
-SCENARIOS_DIR = "scenarios"
 SCENARIOS_HISTORICAL_DIR = "scenarios/historical"
 SCENARIOS_ALTERNATE_DIR = "scenarios/alternate"
 SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
@@ -874,7 +862,6 @@ COUNTRIES_DATA_PATH = "data/json/countries_data.json"
 RESEARCH_TEMPLATE_PATH = "data/json/research_template.json"
 BUILDING_DATA_PATH = "data/json/building_data.json"
 SETTINGS_CONFIG_PATH = "data/json/settings_config.json"
-ALBUMS_DATA_PATH = "data/json/albums.json"
 ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
 
 # ==========================================

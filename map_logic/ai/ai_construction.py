@@ -18,7 +18,7 @@ def process_ai_economy_decisions(map_screen):
     for prov in map_screen.map_data.values():
         owner = prov.get("owner")
         # Prevent AI from treating bugged water tiles as valid build sites
-        if owner and prov.get("terrain") not in c.WATER_TERRAINS:
+        if owner and not queries.is_water_province(prov):
             nation_provs.setdefault(owner, []).append(prov)
 
     ai_nations = queries.get_active_ai_nations(map_screen)
@@ -433,7 +433,7 @@ def process_ai_economy_decisions(map_screen):
                     break # Can't afford it or out of valid factories. Exit recruitment loop.
 
         # --- AI CORING PRIORITY ---
-        surplus_manpower = getattr(c, 'AI_SURPLUS_MANPOWER_FOR_CORING', 2000)
+        surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
         if data.get("manpower", 0) > surplus_manpower:
             uncored_provs = [p for p in my_provs if ai_name not in p.get("cores", []) and not any(q.get("order_type") == "CORE" for q in p.get("building_queue", []))]
             if uncored_provs:

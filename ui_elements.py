@@ -1,6 +1,7 @@
 import pygame
 import pygame.scrap
 import data.constants as c
+from data import queries
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 
@@ -133,9 +134,7 @@ class Button:
         
         for i in range(rect.height):
             lerp = i / rect.height
-            r = int(c1[0] + (c2[0] - c1[0]) * lerp)
-            g = int(c1[1] + (c2[1] - c1[1]) * lerp)
-            b = int(c1[2] + (c2[2] - c1[2]) * lerp)
+            r, g, b = queries.lerp_color(c1, c2, lerp)
             pygame.draw.line(surface, (r, g, b), (rect.x, rect.y + i), (rect.right - 1, rect.y + i))
 
     def handle_event(self, event):

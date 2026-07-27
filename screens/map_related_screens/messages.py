@@ -618,7 +618,7 @@ class Messages_Screen(GameState):
             pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
             
             if is_draft:
-                pygame.draw.rect(surface, (255, 215, 0), bubble_rect, 2, border_radius=10)
+                pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 2, border_radius=10)
             
             ly = draw_y + 10
             for l in lines:

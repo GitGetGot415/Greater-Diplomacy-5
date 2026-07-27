@@ -145,7 +145,7 @@ def process_meeting_engagements(self):
                     units2 = [u for u in prov2.get("units", []) if u.get("order", {}).get("path") and u["order"]["path"][0] == pair[0]]
                     
                     # Unpack Convoys Caught in Land Engagements
-                    is_land_engagement = (prov1.get("terrain") not in c.WATER_TERRAINS) or (prov2.get("terrain") not in c.WATER_TERRAINS)
+                    is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
                     if is_land_engagement:
                         for u in units1 + units2:
                             if u.get("type", "").startswith("Convoy"):
@@ -182,8 +182,8 @@ def process_combat(self):
         if len(units) < 2:
             continue
             
-        is_land = province.get("terrain") not in c.WATER_TERRAINS
-        
+        is_land = not queries.is_water_province(province)
+
         # Unpack Convoys Caught on Land
         if is_land and queries.is_province_in_active_combat(province, self.nation_data):
             for u in units:
@@ -250,7 +250,7 @@ def process_combat(self):
 def check_for_post_combat_captures(self):
     """Assigns province ownership to units standing in an undefended enemy province."""
     for province in self.map_data.values():
-        if province.get("terrain") in c.WATER_TERRAINS:
+        if queries.is_water_province(province):
             continue
 
         units = province.get("units", [])
@@ -351,7 +351,7 @@ def check_for_post_combat_captures(self):
                 edit_province_ownership.conquer_province(self, province, true_owner)
             
             # Scuttle ships if an enemy takes the tile they are on
-            is_land = province.get("terrain") not in c.WATER_TERRAINS
+            is_land = not queries.is_water_province(province)
             if is_land:
                 for u in units:
                     if queries.is_warship(u.get("type", "")):

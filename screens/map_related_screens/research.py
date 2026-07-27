@@ -467,7 +467,7 @@ class Research_Screen(GameState):
                 progress_pct = int((1 - (pts_left / total_cost)) * 100)
                 
                 txt = f"Slot {i+1}: {tech_name} ({pts_left} pts left | {progress_pct}%)"
-                surface.blit(hud_font.render(txt, True, (100, 255, 100)), (40, y_off))
+                surface.blit(hud_font.render(txt, True, c.COLOR_SUCCESS_GREEN), (40, y_off))
             else:
                 surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (40, y_off))
 
@@ -506,7 +506,7 @@ class Research_Screen(GameState):
         pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
         
         base_time = max(1, cost // max(1, pts_per_turn)) 
-        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({int(base_time)} turns)", True, (255, 215, 0))
+        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({int(base_time)} turns)", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
         # --- AHEAD OF TIME SIMULATION ---
@@ -573,7 +573,7 @@ class Research_Screen(GameState):
         for entity in entities_to_show:
             # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
             if entity != display_name or len(entities_to_show) > 1:
-                surface.blit(font_small.render(f"Stats for {entity}:", True, (255, 215, 0)), (panel_rect.x + 200, y_off))
+                surface.blit(font_small.render(f"Stats for {entity}:", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 200, y_off))
                 y_off += 25
                 
             if entity in self.unit_library:
@@ -643,7 +643,7 @@ class Research_Screen(GameState):
             curr_x = 30 + (i * column_width)
             curr_y = start_y
             
-            head = label_font.render(cat_name, True, (255, 215, 0))
+            head = label_font.render(cat_name, True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(head, (curr_x, curr_y))
             curr_y += 40
             

@@ -108,7 +108,7 @@ class Automation_Screen(GameState):
         pygame.draw.rect(surface, c.COLOR_DIM_BORDER, self.panel_rect, 3)
 
         title_font = fonts.get("title")
-        title_surf = title_font.render("Automation Settings", True, (255, 215, 0))
+        title_surf = title_font.render("Automation Settings", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(title_surf, (self.panel_rect.centerx - title_surf.get_width()//2, self.panel_rect.y + 20))
         
         if not self.is_valid_player:

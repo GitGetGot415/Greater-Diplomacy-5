@@ -159,7 +159,7 @@ class Faction_Screen(GameState):
         members = queries.get_faction_members(my_faction, nation_data)
         leader = queries.get_faction_leader(my_faction, nation_data)
 
-        leader_txt = font_heading.render(f"Leader: {nation_data.get(leader, {}).get('name', leader)}", True, (255, 215, 0))
+        leader_txt = font_heading.render(f"Leader: {nation_data.get(leader, {}).get('name', leader)}", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(leader_txt, (c.SCREEN_WIDTH // 2 - leader_txt.get_width() // 2, 120))
 
         list_start_y = 200

@@ -466,7 +466,7 @@ class Claims_Screen(GameState):
                 if pid in revoke_ids:
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, (255, 50, 50), base_radius=4)
                 else:
-                    overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, (255, 215, 0), base_radius=4)
+                    overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, c.COLOR_GOLD_HIGHLIGHT, base_radius=4)
                 
             for i, q in enumerate(queue):
                 if i == 0:
@@ -480,7 +480,7 @@ class Claims_Screen(GameState):
                     is_just = (claim_info["type"] == "QUEUE")
                     
                     if pid in return_ids:
-                        color = (100, 255, 100) # Green highlight for returning tiles
+                        color = c.COLOR_SUCCESS_GREEN # Green highlight for returning tiles
                         
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, color, base_radius=4, inset=i, is_justifying=is_just)
         
@@ -517,7 +517,7 @@ class Claims_Screen(GameState):
         y_off = self.panel_rect.y + 100 + self.scroll_y
         
         if self.view_mode == "GLOBAL":
-            surface.blit(sub_font.render("All Map Claims:", True, (255, 215, 0)), (self.panel_rect.x + 20, y_off))
+            surface.blit(sub_font.render("All Map Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
             y_off += 30
             
             if not global_claims_list:
@@ -532,7 +532,7 @@ class Claims_Screen(GameState):
                     y_off += 25
 
         elif self.view_mode == "YOURS":
-            surface.blit(sub_font.render("Queued Claims:", True, (150, 200, 255)), (self.panel_rect.x + 20, y_off))
+            surface.blit(sub_font.render("Queued Claims:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
             y_off += 30
             
             if not queue:
@@ -549,7 +549,7 @@ class Claims_Screen(GameState):
                     
             y_off += 10
             
-            surface.blit(sub_font.render("Active Claims:", True, (255, 215, 0)), (self.panel_rect.x + 20, y_off))
+            surface.blit(sub_font.render("Active Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
             y_off += 30
             
             if not display_claims:
@@ -580,7 +580,7 @@ class Claims_Screen(GameState):
             queued_foreign = [item for item in foreign_claims_list if item["type"] == "QUEUE"]
             active_foreign = [item for item in foreign_claims_list if item["type"] != "QUEUE"]
             
-            surface.blit(sub_font.render("Actively Justifying:", True, (150, 200, 255)), (self.panel_rect.x + 20, y_off))
+            surface.blit(sub_font.render("Actively Justifying:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
             y_off += 30
             
             if not queued_foreign:
@@ -594,7 +594,7 @@ class Claims_Screen(GameState):
                     txt_str = f"- Prov {item['prov_id']} ({nation_name}): Actively Justifying ({item['turns']}t)"
                     if item["prov_id"] in return_ids:
                         txt_str += f" (Returning in 1 turn)"
-                        color = (100, 255, 100)
+                        color = c.COLOR_SUCCESS_GREEN
                         
                     txt = tiny_font.render(txt_str, True, color)
                     surface.blit(txt, (self.panel_rect.x + 30, y_off))
@@ -619,7 +619,7 @@ class Claims_Screen(GameState):
                         
                     if item["prov_id"] in return_ids:
                         txt_str += f" (Returning in 1 turn)"
-                        color = (100, 255, 100)
+                        color = c.COLOR_SUCCESS_GREEN
                         
                     txt = tiny_font.render(txt_str, True, color)
                     surface.blit(txt, (self.panel_rect.x + 30, y_off))
@@ -696,7 +696,7 @@ class Peace_Screen(GameState):
             will_accept = queries.will_ai_accept_peace(self.target_nation, self.map_screen.player_country, term, self.map_screen.map_data, self.map_screen.nation_data)
             if will_accept:
                 self.acceptance_text = "The AI will accept this peace deal."
-                self.acceptance_color = (100, 255, 100)
+                self.acceptance_color = c.COLOR_SUCCESS_GREEN
             else:
                 self.acceptance_text = "The AI will REJECT this peace deal."
                 self.acceptance_color = (255, 100, 100)
@@ -1145,12 +1145,12 @@ class Trade_Screen(GameState):
         surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.x + 30, self.panel_rect.y + 155))
 
         # They Give Section
-        surface.blit(font_med.render("They Give:", True, (100, 255, 100)), (self.panel_rect.centerx + 30, self.panel_rect.y + 60))
+        surface.blit(font_med.render("They Give:", True, c.COLOR_SUCCESS_GREEN), (self.panel_rect.centerx + 30, self.panel_rect.y + 60))
         surface.blit(font_small.render("Materials:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 105))
         surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 155))
 
         # Puppet Header
-        surface.blit(font_med.render("Puppeting Terms:", True, (255, 215, 0)), (self.panel_rect.centerx - 80, self.panel_rect.y + 190))
+        surface.blit(font_med.render("Puppeting Terms:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.centerx - 80, self.panel_rect.y + 190))
 
         # Draw Input Boxes
         def draw_box(x, y, text, is_active):
@@ -1348,7 +1348,7 @@ class Puppets_Screen(GameState):
                 
                 # Formatted Puppet Sub-text
                 name_txt = font_body.render(p_name, True, (255, 255, 255))
-                type_txt = fonts.get("normal").render(f"({p_type})", True, (255, 215, 0) if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
+                type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
                 
                 surface.blit(name_txt, (self.panel_rect.x + 20, y_pos))
                 surface.blit(type_txt, (self.panel_rect.x + 20, y_pos + 30))
@@ -1550,7 +1550,7 @@ class Create_Integrated_Puppet_Screen(GameState):
                     subject_name = subject
 
                 is_queued = subject in queued_cores
-                color = (255, 215, 0) if is_queued else (200, 200, 200)
+                color = c.COLOR_GOLD_HIGHLIGHT if is_queued else (200, 200, 200)
                 status = " (Queued)" if is_queued else ""
                 txt = tiny_font.render(f"- {subject_name}{status}", True, color)
                 surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))

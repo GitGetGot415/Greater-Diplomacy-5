@@ -122,15 +122,8 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
         
     # Ghost War Cleanup
     living_nations = queries.get_living_nations(self.map_data)
-    for nation, data in self.nation_data.items():
-        if "at_war_with" in data:
-            if nation not in living_nations:
-                # The nation is dead, wipe its entire war list
-                data["at_war_with"] = []
-            else:
-                # The nation is alive, only keep living enemies
-                data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in living_nations]
-    
+    queries.cleanup_ghost_wars(self.nation_data, living_nations)
+
     days_to_advance = queries.get_days_per_turn(self.scenario_settings)
     self.time_manager.process_time(days_to_advance)
     

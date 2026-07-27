@@ -30,7 +30,7 @@ def draw_unit_info(self, surface):
             surface.blit(self.small_font.render("No Faction", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
             y_offset += 30
         else:
-            surface.blit(self.small_font.render(faction_name, True, (100, 255, 100)), (dip_rect.x + 10, y_offset))
+            surface.blit(self.small_font.render(faction_name, True, c.COLOR_SUCCESS_GREEN), (dip_rect.x + 10, y_offset))
             y_offset += 20
             
             members = queries.get_faction_members(faction_name, self.nation_data)
@@ -52,7 +52,7 @@ def draw_unit_info(self, surface):
             
         puppets = self.nation_data.get(owner, {}).get("puppets", [])
         if puppets:
-            surface.blit(self.small_font.render("Puppets:", True, (255, 215, 0)), (dip_rect.x + 10, y_offset))
+            surface.blit(self.small_font.render("Puppets:", True, c.COLOR_GOLD_HIGHLIGHT), (dip_rect.x + 10, y_offset))
             y_offset += 20
             for p in puppets[:c.MAX_DIPLOMACY_DISPLAY]:
                 p_disp = self.nation_data.get(p, {}).get("name", p)

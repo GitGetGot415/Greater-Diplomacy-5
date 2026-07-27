@@ -388,7 +388,7 @@ class Map(GameState):
             owner = self.selected_province.get("owner")
             # Allow the spectator to bypass ownership checks
             if owner == self.player_country or self.player_country == "Spectator":
-                if requires_land and self.selected_province.get("terrain") in c.WATER_TERRAINS:
+                if requires_land and queries.is_water_province(self.selected_province):
                     return
                 self.change_state(next_state)
 
@@ -605,7 +605,7 @@ class Map(GameState):
             
             # Show "Copied!" feedback text above the button
             if self.error_copied:
-                copied_txt = fonts.get("small").render("Copied!", True, (100, 255, 100))
+                copied_txt = fonts.get("small").render("Copied!", True, c.COLOR_SUCCESS_GREEN)
                 surface.blit(copied_txt, (btn_rect.centerx - copied_txt.get_width()//2, btn_rect.y - 25))
                 
             return

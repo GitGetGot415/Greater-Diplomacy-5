@@ -4,6 +4,7 @@ import secrets
 import tkinter as tk
 from tkinter import simpledialog, filedialog
 from data.io import multiplayer_io
+from data import queries
 import data.constants as c
 
 
@@ -114,10 +115,9 @@ def manage_players_panel(map_ref):
             widget.destroy()
         check_vars.clear()
         
-        active_owners = set(p.get("owner") for p in map_ref.map_data.values())
-        countries = [cid for cid, data in map_ref.nation_data.items() if data.get("is_playable") and cid in active_owners]
+        countries = queries.get_active_playable_nations(map_ref.map_data, map_ref.nation_data)
         countries.sort(key=lambda c: map_ref.nation_data[c].get("name", c))
-        
+
         for cid in countries:
             var = tk.BooleanVar(master=root, value=(cid in map_ref.multiplayer_protected_countries))
             check_vars[cid] = var
@@ -229,10 +229,10 @@ def manage_keys_panel(map_ref):
             widget.destroy()
         check_vars.clear()
         
-        active_owners = set(p.get("owner") for p in map_ref.map_data.values()) if hasattr(map_ref, 'map_data') and map_ref.map_data else set()
-        countries = [cid for cid, data in map_ref.nation_data.items() if data.get("is_playable") and cid in active_owners]
+        map_data = map_ref.map_data if hasattr(map_ref, 'map_data') else None
+        countries = queries.get_active_playable_nations(map_data, map_ref.nation_data)
         countries.sort(key=lambda c: map_ref.nation_data[c].get("name", c))
-        
+
         for cid in countries:
             var = tk.BooleanVar(master=root, value=(cid in map_ref.multiplayer_pending_key_regen))
             check_vars[cid] = var

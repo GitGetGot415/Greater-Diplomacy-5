@@ -533,7 +533,7 @@ class Production_Screen(GameState):
             inf_rect = pygame.Rect(30, self.infantry_start_y + scroll - 15, 840, self.infantry_end_y - self.infantry_start_y + 15)
             pygame.draw.rect(surface, (30, 60, 30), inf_rect)
             pygame.draw.rect(surface, (50, 150, 50), inf_rect, 2)
-            lbl = fonts.get("heading2").render("INFANTRY", True, (100, 255, 100))
+            lbl = fonts.get("heading2").render("INFANTRY", True, c.COLOR_SUCCESS_GREEN)
             surface.blit(lbl, (40, self.infantry_start_y + scroll - 45))
 
         # Tanks (Dark Green)
@@ -561,11 +561,11 @@ class Production_Screen(GameState):
             
             if bar_type == "BUILDING":
                 t = max(1, stats.get('time', 1))
-                draw_resource_string(surface, bar_font, f"Build Time: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, (255, 215, 0))
+                draw_resource_string(surface, bar_font, f"Build Time: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, c.COLOR_GOLD_HIGHLIGHT)
                 draw_resource_string(surface, bar_font, f"Yield (Per Turn):   ", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), bar_rect.x + 15, bar_rect.y + 26, (150, 255, 150), is_yield=True)
             else:
                 t = max(1, stats.get('production_time', 1))
-                draw_resource_string(surface, bar_font, f"Deploy: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, (255, 215, 0))
+                draw_resource_string(surface, bar_font, f"Deploy: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, c.COLOR_GOLD_HIGHLIGHT)
                 
                 # --- MODIFIED COMBAT STATS STRING ---
                 draw_combat_stats(

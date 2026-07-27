@@ -478,15 +478,13 @@ def update_button_states(map_screen):
                         set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
 
             # Allow Spectator to view production lines
-            terrain = map_screen.selected_province.get("terrain", "")
-            is_land = terrain not in c.WATER_TERRAINS
+            is_land = not queries.is_water_province(map_screen.selected_province)
             set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")
 
         # --- PLAYER ---
         else:
             has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
-            terrain = map_screen.selected_province.get("terrain", "")
-            is_land = terrain not in c.WATER_TERRAINS
+            is_land = not queries.is_water_province(map_screen.selected_province)
             is_tactical = getattr(map_screen, 'tactical_mode', False)
 
             if owner == map_screen.player_country:

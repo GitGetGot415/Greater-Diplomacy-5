@@ -15,7 +15,7 @@ def randomize_all_provinces(map_screen, settings):
         if queries.is_playable(name, map_screen.nation_data)
     ]
     
-    land_provinces = [p for p in map_screen.map_data.values() if p.get("terrain", "") not in c.WATER_TERRAINS]
+    land_provinces = [p for p in map_screen.map_data.values() if not queries.is_water_province(p)]
     
     if not land_provinces or not playable_nations: return
 
@@ -114,7 +114,7 @@ def randomize_all_provinces(map_screen, settings):
                 
                 if n_prov:
                     # Ignore water tiles
-                    if n_prov.get("terrain", "") in c.WATER_TERRAINS:
+                    if queries.is_water_province(n_prov):
                         continue
                     
                     # If this neighbor belongs to someone else (or is unclaimed)
@@ -285,7 +285,7 @@ def randomize_all_provinces(map_screen, settings):
                 # Check if it touches anything not owned by this nation
                 for n_id in prov.get("neighbors", []):
                     n_prov = map_screen.id_to_province.get(n_id)
-                    if n_prov and n_prov.get("owner") != nation and n_prov.get("terrain") not in c.WATER_TERRAINS:
+                    if n_prov and n_prov.get("owner") != nation and not queries.is_water_province(n_prov):
                         border_provs.append(prov)
                         break # Already flagged as a border, move to next province
 

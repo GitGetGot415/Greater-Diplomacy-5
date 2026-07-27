@@ -1,7 +1,6 @@
 import copy
 from map_logic.system32 import edit_province_ownership
 from data import queries
-from map_logic.system32 import edit_province_ownership
 from map_logic.diplomacy.diplomacy_events import log_global_event
 import data.constants as c
 

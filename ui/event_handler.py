@@ -7,7 +7,6 @@ from map_logic.setup import player_setup
 from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
-from map_logic.rendering import map_utils
 
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()

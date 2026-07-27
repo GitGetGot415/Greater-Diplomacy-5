@@ -83,7 +83,7 @@ def get_visible_provinces(map_screen):
             _apply_vision_radius(tactical_location, id_to_province, visible_set, partial_set)
                     
             # 2. Contiguous landmass check
-            if tactical_location.get("terrain") not in c.WATER_TERRAINS:
+            if not is_water_province(tactical_location):
                 queue = [tactical_location["id"]]
                 visited = set([tactical_location["id"]])
                 
@@ -98,7 +98,7 @@ def get_visible_provinces(map_screen):
                             if n_id not in visited:
                                 n_prov = id_to_province.get(n_id)
                                 # Must be owned by friendly nations and be land
-                                if n_prov and n_prov.get("terrain") not in c.WATER_TERRAINS and n_prov.get("owner") in friendly_nations:
+                                if n_prov and not is_water_province(n_prov) and n_prov.get("owner") in friendly_nations:
                                     visited.add(n_id)
                                     queue.append(n_id)
     else:
@@ -563,7 +563,7 @@ def is_water_province(province):
 
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
-    if target_province.get("terrain") in c.WATER_TERRAINS: return True
+    if is_water_province(target_province): return True
     if not target_province.get("is_coastal", False): return False
         
     target_owner = target_province.get("owner", "Unclaimed")
@@ -588,7 +588,7 @@ def can_ships_enter(moving_nation, target_province, nation_data):
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
     """Centralized rules for land movement."""
-    if target_province.get("terrain") in c.WATER_TERRAINS: return False
+    if is_water_province(target_province): return False
 
     target_owner = target_province.get("owner", "Unclaimed")
     turn_start_owner = target_province.get("_turn_start_owner", target_owner)
@@ -911,7 +911,7 @@ def find_nearby_matching_core_tiles(origin_id, core_nation, current_owner, map_d
                 continue
             
             # Skip water tiles
-            if n_prov.get("terrain") in c.WATER_TERRAINS:
+            if is_water_province(n_prov):
                 continue
                 
             next_dist = dist + 1
@@ -1148,9 +1148,9 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
         fuel = int(n_data.get("fuel", 0))
 
     res_order = [
-        ("manpower", "Manpower", (100, 200, 255), manpower),
-        ("materials", "Materials", (180, 180, 180), materials),
-        ("fuel", "Fuel", (200, 100, 255), fuel)
+        ("manpower", "Manpower", c.COLOR_RESOURCE_MANPOWER, manpower),
+        ("materials", "Materials", c.COLOR_RESOURCE_MATERIALS, materials),
+        ("fuel", "Fuel", c.COLOR_RESOURCE_FUEL, fuel)
     ]
     
     total_inc = {r: 0 for r in _ECON_RESOURCES}
@@ -1315,13 +1315,29 @@ def get_nation_provinces_and_units(nation, map_data):
     return owned_provs, owned_units
 
 def get_living_nations(map_data):
-    """Scans the map and returns a set of all nations that currently own at least one province."""   
+    """Scans the map and returns a set of all nations that currently own at least one province."""
     active_nations = set()
     for prov in map_data.values():
         owner = prov.get("owner")
         if owner and owner not in c.UNPLAYABLE_NATIONS:
             active_nations.add(owner)
     return active_nations
+
+def get_active_playable_nations(map_data, nation_data):
+    """Returns the sorted-by-id list of playable nations that currently own at least one province."""
+    if not map_data:
+        return []
+    active_owners = set(p.get("owner") for p in map_data.values())
+    return [cid for cid, data in nation_data.items() if data.get("is_playable") and cid in active_owners]
+
+def cleanup_ghost_wars(nation_data, living_nations):
+    """Wipes at_war_with lists for dead nations and strips dead enemies from living nations' lists."""
+    for nation, data in nation_data.items():
+        if "at_war_with" in data:
+            if nation not in living_nations:
+                data["at_war_with"] = []
+            else:
+                data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in living_nations]
 
 def is_occupying_all_cores(nation, target_nation, map_data):
     """Returns True if 'nation' occupies ALL cores of 'target_nation'."""
@@ -1377,9 +1393,6 @@ def is_playable(nation, nation_data):
 
 def get_enemies(nation, nation_data):
     return nation_data.get(nation, {}).get("at_war_with", [])
-
-def get_allies(nation, nation_data):
-    return nation_data.get(nation, {}).get("allied_with", [])
 
 def get_diplomatic_status(sender, target, nation_data):
     """Safely unpacks the pending diplomacy dictionary. Returns (action_string, turns_int)."""
@@ -1581,15 +1594,16 @@ def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data):
     else:
         mods[mod_name] = value
 
+def lerp_color(c1, c2, t):
+    """Linearly interpolates between two RGB color tuples by factor t (0.0-1.0)."""
+    return (int(c1[0] + (c2[0] - c1[0]) * t),
+            int(c1[1] + (c2[1] - c1[1]) * t),
+            int(c1[2] + (c2[2] - c1[2]) * t))
+
 def get_relation_color(score):
     """Returns a dynamic color mapped to the relation score (-200 to 200)."""
     score = max(-200, min(200, score))
-    
-    def lerp_color(c1, c2, t):
-        return (int(c1[0] + (c2[0] - c1[0]) * t),
-                int(c1[1] + (c2[1] - c1[1]) * t),
-                int(c1[2] + (c2[2] - c1[2]) * t))
-                
+
     if score > 100:
         return lerp_color(c.COLOR_REL_POS, c.COLOR_REL_MAX_POS, (score - 100) / 100.0)
     elif score > 0:
@@ -1712,10 +1726,6 @@ def revert_transport(unit):
     for key in ["original_type", "original_speed", "original_max_health", "original_attack"]:
         if key in unit: del unit[key]
 
-def get_units_in_province(nation, province):
-    """Returns a list of units the given nation has in the target province."""
-    return [u for u in province.get("units", []) if u.get("owner") == nation]
-
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""
     return any(u.get("owner") == nation for u in province.get("units", []))
@@ -1761,10 +1771,6 @@ def get_best_unit(units, sort_keys):
     return max(units, key=lambda u: tuple(u.get(key, 0) for key in sort_keys))
 
 def get_best_unit_by_defense_then_attack_then_speed(units): return get_best_unit(units, ["defense", "attack", "speed"])
-
-def get_best_unit_by_attack_then_defense(units): return get_best_unit(units, ["attack", "defense"])
-
-def get_best_unit_by_attack_then_speed(units): return get_best_unit(units, ["attack", "speed"])
 
 # ==========================================
 # PREDICTION QUERIES (UI & RENDERING)
@@ -1965,7 +1971,7 @@ def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, natio
         borders[v].add(u)
         
     for prov_id, prov in map_data.items():
-        is_water = prov.get("terrain") in c.WATER_TERRAINS
+        is_water = is_water_province(prov)
         owner = prov.get("owner")
         
         node_u = f"WATER_{prov_id}" if is_water else owner
@@ -1975,7 +1981,7 @@ def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, natio
             n_prov = id_to_province.get(n_id)
             if not n_prov: continue
             
-            n_is_water = n_prov.get("terrain") in c.WATER_TERRAINS
+            n_is_water = is_water_province(n_prov)
             n_owner = n_prov.get("owner")
             
             node_v = f"WATER_{n_id}" if n_is_water else n_owner
@@ -2030,15 +2036,6 @@ def get_valid_claim_targets(nation, target_nation, map_data):
         if prov.get("owner") == target_nation:
             targets.append(prov)
     return targets
-
-def calculate_justification_time(nation, target_prov_ids, id_to_province):
-    """Calculates the time needed to justify a wargoal. 1 turn + non-cores."""
-    time = 1
-    for pid in target_prov_ids:
-        prov = id_to_province.get(pid)
-        if prov and nation not in prov.get("cores", []):
-            time += 1
-    return time
 
 def has_wargoal(nation, target_nation, nation_data, map_data=None):
     """Returns True if the nation has active claims on the target, or a justified wargoal."""
@@ -2150,7 +2147,6 @@ def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, n
 # ==========================================
 # DATA SYNC & REFRESH
 # ==========================================
-import threading
 
 def refresh_map_directories(screen, dirs_to_check, success_message="Data refreshed successfully!", options=None):
     """Headlessly instantiates maps on a background thread to prevent UI freezing."""

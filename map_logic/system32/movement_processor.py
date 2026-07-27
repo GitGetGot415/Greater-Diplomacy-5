@@ -21,15 +21,9 @@ def process_dead_nations(self):
 
     # 2. Instantly clean up ghost wars so surviving nations stop treating them as active threats
     # (We run this again here because check_for_post_combat_captures just changed who is alive)
+    queries.cleanup_ghost_wars(self.nation_data, living_nations)
+
     for nation, data in list(self.nation_data.items()):
-        if "at_war_with" in data:
-            if nation not in living_nations:
-                # If the nation itself is dead, wipe its entire war list
-                data["at_war_with"] = []
-            else:
-                # If the nation is alive, only keep living enemies
-                data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in living_nations]
-                
         # --- NEW: Master Independence on Death ---
         master = data.get("master", "")
         if master and master not in living_nations:
@@ -204,7 +198,7 @@ def process_movement(self):
             # ------------------------------------------
 
             # --- SHIP RULES EVALUATION ---
-            dest_is_water = target_prov.get("terrain") in c.WATER_TERRAINS
+            dest_is_water = queries.is_water_province(target_prov)
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
             
@@ -265,7 +259,7 @@ def process_movement(self):
                 if not defenders:
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         # Prevent capturing water tiles via movement
-                        if target_prov.get("terrain") not in c.WATER_TERRAINS:
+                        if not queries.is_water_province(target_prov):
                             capturer = unit["owner"]
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, self.nation_data)

@@ -130,7 +130,7 @@ class Orders_Screen(GameState):
                 # Combat / Location checks
                 player_country = self.map_screen.player_country
                 in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
-                is_water = self.target_province.get("terrain") in c.WATER_TERRAINS
+                is_water = queries.is_water_province(self.target_province)
                 is_coastal = self.target_province.get("is_coastal", False)
                 
                 is_convoy = unit_name.startswith("Convoy")
@@ -545,8 +545,7 @@ class Orders_Screen(GameState):
                     self.refresh_ui()
 
     def can_unit_enter(self, unit, dest):
-        # Use the constant imported from data.constants
-        dest_is_water = dest.get("terrain") in c.WATER_TERRAINS
+        dest_is_water = queries.is_water_province(dest)
         
         # Look up the actual unit stats using its type name
         u_type = unit.get("type", "")

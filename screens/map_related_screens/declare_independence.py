@@ -231,7 +231,7 @@ class Declare_Independence_Screen(GameState):
             y_off += 20
             
         surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + self.input_y + 60))
-        surface.blit(font.render("Claim Heritage (Cores):", True, (255, 215, 0)), (panel_rect.x + 450, panel_rect.y + 60))
+        surface.blit(font.render("Claim Heritage (Cores):", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 450, panel_rect.y + 60))
         
         input_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 80, self.input_rect_x, 40)
         pygame.draw.rect(surface, (60, 60, 80) if self.active_input else (30, 30, 40), input_rect)

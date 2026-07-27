@@ -17,7 +17,7 @@ def draw_tooltip(self, surface):
     
     # Coastal Sea and Inland Sea display
     terrain = prov.get('terrain', 'Unknown')
-    if terrain in c.WATER_TERRAINS:
+    if queries.is_water_province(prov):
         owner_display = terrain.replace('_', ' ').title()
     
     # 1. Start with the basic header info based on the primary map mode

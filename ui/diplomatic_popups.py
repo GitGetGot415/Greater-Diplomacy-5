@@ -65,7 +65,7 @@ class DiplomaticPopup:
         surface.blit(x_surf, (self.x_rect.x + 8, self.x_rect.y + 3))
 
         # Draw Title
-        title_surf = self.font_title.render(f"Diplomatic Alert: {self.sender}", True, (255, 215, 0))
+        title_surf = self.font_title.render(f"Diplomatic Alert: {self.sender}", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(title_surf, (self.rect.x + 10, self.rect.y + 10))
 
         # Word wrap logic to prevent text from overflowing the rectangle

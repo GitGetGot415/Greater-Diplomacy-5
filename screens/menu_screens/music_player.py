@@ -53,7 +53,7 @@ class TopBarOverlay:
         surface.blit(font_title.render("ALBUMS", True, (255, 255, 255)), (20, 80))
         
         np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if self.controller.now_playing != "None" else "Now Playing: Nothing"
-        surface.blit(font_norm.render(np_text, True, (255, 215, 0)), (c.MUSIC_LEFT_PANE_W + 20, 30))
+        surface.blit(font_norm.render(np_text, True, c.COLOR_GOLD_HIGHLIGHT), (c.MUSIC_LEFT_PANE_W + 20, 30))
 
 
 class MusicScrubber:

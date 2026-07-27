@@ -100,7 +100,7 @@ def process_ai_unit_orders(map_screen):
     # --- NEW: Pre-calculate allowed pathing IDs to include water for convoys ---
     allowed_prov_ids_cache = set()
     for prov in map_screen.map_data.values():
-        if prov.get("terrain") in c.WATER_TERRAINS:
+        if queries.is_water_province(prov):
             allowed_prov_ids_cache.add(prov["id"])
 
     for ai_name in ai_nations:
@@ -148,8 +148,8 @@ def process_ai_unit_orders(map_screen):
         # Pre-calculates areas heavily patrolled by enemies so Convoys and weak ships don't suicide
         unsafe_waters = {}
         for p in map_screen.map_data.values():
-            if p.get("terrain") in c.WATER_TERRAINS:
-                enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in p.get("units", []) 
+            if queries.is_water_province(p):
+                enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in p.get("units", [])
                                 if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data) 
                                 and queries.is_naval_unit(u.get("type", "")))
                 if enemy_str > 0:
@@ -157,11 +157,7 @@ def process_ai_unit_orders(map_screen):
         # ------------------------------------------------------
 
         # --- Identify Friendly Nations for Expedition Logic ---
-        friendly_nations = {ai_name}
-        my_faction = map_screen.nation_data[ai_name].get("faction", "")
-        if my_faction:
-            friendly_nations.update(queries.get_faction_members(my_faction, map_screen.nation_data))
-        friendly_nations.update(map_screen.nation_data[ai_name].get("allied_with", []))
+        friendly_nations = queries.get_all_friendly_nations(ai_name, map_screen.nation_data)
 
         war_borders = set()
         peace_borders = set()
@@ -185,7 +181,7 @@ def process_ai_unit_orders(map_screen):
                     # Find adjacent water tiles for ships to blockade from
                     for n_id in prov.get("neighbors", []):
                         n_prov = map_screen.id_to_province.get(n_id)
-                        if n_prov and n_prov.get("terrain") in c.WATER_TERRAINS:
+                        if n_prov and queries.is_water_province(n_prov):
                             enemy_coastal_waters.add(n_id)
                             
                 # Identify unclaimed islands globally
@@ -216,7 +212,7 @@ def process_ai_unit_orders(map_screen):
             for n_id in prov.get("neighbors", []):
                 n_prov = map_screen.id_to_province.get(n_id)
                 if not n_prov: continue
-                if n_prov.get("terrain") in c.WATER_TERRAINS: continue 
+                if queries.is_water_province(n_prov): continue
 
                 n_owner = n_prov.get("owner", "Unclaimed") 
                 if n_owner in enemies:
@@ -385,7 +381,7 @@ def process_ai_unit_orders(map_screen):
                 if n_prov:
                     can_retreat = False
                     if is_convoy and queries.can_convoy_enter(prov, n_prov): can_retreat = True
-                    elif is_naval_combatant and (n_prov.get("terrain") in c.WATER_TERRAINS or queries.can_ships_enter(ai_name, n_prov, map_screen.nation_data)): can_retreat = True
+                    elif is_naval_combatant and (queries.is_water_province(n_prov) or queries.can_ships_enter(ai_name, n_prov, map_screen.nation_data)): can_retreat = True
                     elif not is_naval_combatant and not is_convoy and queries.can_land_units_enter(unit["owner"], n_prov, map_screen.nation_data): can_retreat = True
                     
                     if can_retreat:
@@ -412,7 +408,7 @@ def process_ai_unit_orders(map_screen):
                         
                         if is_convoy and queries.can_convoy_enter(prov, n_prov):
                             safe_retreats.append(n_id)
-                        elif is_naval_combatant and (n_prov.get("terrain") in c.WATER_TERRAINS or queries.can_ships_enter(ai_name, n_prov, map_screen.nation_data)):
+                        elif is_naval_combatant and (queries.is_water_province(n_prov) or queries.can_ships_enter(ai_name, n_prov, map_screen.nation_data)):
                             safe_retreats.append(n_id)
                     
                     if safe_retreats:
@@ -467,7 +463,7 @@ def process_ai_unit_orders(map_screen):
                                 if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
                                     continue
                             else:
-                                if n_prov.get("terrain") in c.WATER_TERRAINS:
+                                if queries.is_water_province(n_prov):
                                     continue
                                     
                             # Check if it's a valid tile to push into
@@ -527,7 +523,7 @@ def process_ai_unit_orders(map_screen):
                                     if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
                                         continue
                                 else:
-                                    if n_prov.get("terrain") in c.WATER_TERRAINS:
+                                    if queries.is_water_province(n_prov):
                                         continue
                                 
                                 # Check if it's a valid tile to push into
@@ -584,7 +580,7 @@ def process_ai_unit_orders(map_screen):
             if path:
                 # Convoy Conversion Check
                 next_prov = map_screen.id_to_province.get(path[0])
-                next_is_water = next_prov.get("terrain") in c.WATER_TERRAINS
+                next_is_water = queries.is_water_province(next_prov)
                 
                 if next_is_water and not is_convoy and not is_naval_combatant:
                     # Cannot step onto water, must explicitly convert first
@@ -597,8 +593,8 @@ def process_ai_unit_orders(map_screen):
                     final_path = []
                     for step_id in path[:speed]:
                         step_prov = map_screen.id_to_province.get(step_id)
-                        if not is_convoy and not is_naval_combatant and step_prov and step_prov.get("terrain") in c.WATER_TERRAINS:
-                            break 
+                        if not is_convoy and not is_naval_combatant and step_prov and queries.is_water_province(step_prov):
+                            break
                         final_path.append(step_id)
 
                     unit["order"]["path"] = final_path

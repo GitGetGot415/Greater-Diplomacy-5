@@ -111,9 +111,9 @@ class Economy_Screen(GameState):
         
         y_offset = 120
         resources = [
-            ("manpower", "Manpower", self.map_screen.player_manpower, (100, 200, 255)),
-            ("materials", "Materials", self.map_screen.player_materials, (180, 180, 180)),
-            ("fuel", "Fuel", self.map_screen.player_fuel, (200, 100, 255))
+            ("manpower", "Manpower", self.map_screen.player_manpower, c.COLOR_RESOURCE_MANPOWER),
+            ("materials", "Materials", self.map_screen.player_materials, c.COLOR_RESOURCE_MATERIALS),
+            ("fuel", "Fuel", self.map_screen.player_fuel, c.COLOR_RESOURCE_FUEL)
         ]
         
         for res_key, name, current, color in resources:
@@ -174,13 +174,13 @@ class Economy_Screen(GameState):
             man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
             mat_gained = breakdown.get("materials", {}).get("conscription", 0)
             if man_lost > 0:
-                cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, (255, 215, 0))
+                cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
                 surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2, c.ECON_CONSCRIPTION_BTN_Y + 25))
 
             mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
             fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
             if mat_lost > 0:
-                conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, (255, 215, 0))
+                conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
                 surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, c.ECON_CONVERT_BTN_Y + 25))
 
     def handle_back_key(self):
