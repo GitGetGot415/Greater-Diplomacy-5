@@ -48,6 +48,8 @@ BASE_YIELDS = {
 
 GENERAL_RECRUITMENT_BONUS = 5 # Add this
 
+RESOURCE_REFINING_BONUS_PER_LVL = 0.1 # +10% natural resource income per level
+
 # Shared resource ordering used across economy and UI calculations
 ECON_RESOURCE_KEYS = ("manpower", "materials", "fuel")
 

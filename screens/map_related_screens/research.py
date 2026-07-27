@@ -75,9 +75,10 @@ class Research_Screen(GameState):
             "aircraft_carrier": y2,
             "submarine": y3,
             "workshop": y1, "basic_factory": y1, "factory": y1,
-            "bergius_process": y2, "fuel_refining": y2,
-            "basic_recruitment": y3, "recruitment_buildings": y3,
-            "general_recruitment": y4
+            "bergius_process": y4, "fuel_refining": y4,
+            "basic_recruitment": y2, "recruitment_buildings": y2,
+            "general_recruitment": y3,
+            "resource_refining": y5
         }
 
         self.nodes = {"INFANTRY": [], "TANKS": [], "NAVY": [], "INDUSTRY": []}
@@ -155,6 +156,7 @@ class Research_Screen(GameState):
         if tech_key == "basic_recruitment": return "Basic Recruitment Center"
         if tech_key == "recruitment_buildings": return f"Recruitment Building Lvl {lvl}"
         if tech_key == "general_recruitment": return f"General Recruitment Lvl {lvl}"
+        if tech_key == "resource_refining": return f"Resource Refining Lvl {lvl}"
         
         base_name = tech_key.replace('_', ' ').title()
         
@@ -284,7 +286,8 @@ class Research_Screen(GameState):
             
             icon_scale = 4.0 if is_large else 2.0
 
-            icon = symbol_loader.get_symbol(display_name, icon_scale)
+            icon_name = "Iron" if tech_key == "resource_refining" else display_name
+            icon = symbol_loader.get_symbol(icon_name, icon_scale)
             
             node_info = {
                 "tech_key": tech_key,

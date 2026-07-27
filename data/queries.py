@@ -702,7 +702,11 @@ def get_tech_unlocks(tech_key, level):
     if tech_key == "general_recruitment":
         bonus = c.GENERAL_RECRUITMENT_BONUS
         unlocks.append(f"+{bonus} Base Manpower/Tile")
-        
+
+    if tech_key == "resource_refining":
+        mult = 1.0 + level * c.RESOURCE_REFINING_BONUS_PER_LVL
+        unlocks.append(f"Resource Income x{mult:.1f}")
+
     return unlocks
 
 def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True):
@@ -1031,6 +1035,7 @@ def calculate_all_economies(map_data, nation_data):
         res_data = n_data.get("research", {})
         bergius_bonus = c.BERGIUS_FUEL_BONUS if res_data.get("bergius_process", 0) > 0 else 0
         manpower_bonus = res_data.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS
+        resource_refining_mult = 1.0 + res_data.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL
 
         dyn_yields = {
             "manpower": c.BASE_YIELDS["manpower"] + manpower_bonus,
@@ -1045,7 +1050,7 @@ def calculate_all_economies(map_data, nation_data):
             for res in _ECON_RESOURCES
         }
 
-        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in _ECON_RESOURCES}, "total_inc": {r: 0 for r in _ECON_RESOURCES}}
+        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in _ECON_RESOURCES}, "total_inc": {r: 0 for r in _ECON_RESOURCES}, "resource_mult": resource_refining_mult}
 
     # Single efficient pass over the map
     for province in map_data.values():
@@ -1066,9 +1071,10 @@ def calculate_all_economies(map_data, nation_data):
             # Natural Resources
             res = province.get("resources", {})
             if isinstance(res, dict):
-                bd["materials"]["resources"] += int(res.get("Iron", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"])
-                bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"])
-                bd["manpower"]["resources"] += int(res.get("Wheat", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"])
+                refining_mult = econ_data[owner]["resource_mult"]
+                bd["materials"]["resources"] += int(res.get("Iron", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]) * refining_mult
+                bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]) * refining_mult
+                bd["manpower"]["resources"] += int(res.get("Wheat", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]) * refining_mult
 
             # Buildings
             building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
