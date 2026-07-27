@@ -36,7 +36,7 @@ class Production_Screen(GameState):
 
     def handle_events(self, events):
         # Override to block all interaction
-        if getattr(self.map_screen, 'tactical_mode', False):
+        if self.map_screen.tactical_mode:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.elements and self.elements[0].rect.collidepoint(event.pos):

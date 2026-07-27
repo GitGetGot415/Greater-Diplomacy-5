@@ -17,7 +17,7 @@ def prepare_turn(self):
     if not ai_disabled:
         # --- TACTICAL HIDE ---
         # Mask the player unit so the AI handler doesn't touch it during ANY phase
-        is_tactical = getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None)
+        is_tactical = self.tactical_mode and self.player_unit
         if is_tactical:
             self.player_unit["owner"] = "TACTICAL_HIDDEN"
 
@@ -164,9 +164,9 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = getattr(self, 'multi_turns_total', 0) > 0
-        is_last_multi = not is_multi or (getattr(self, 'multi_turns_completed', 0) >= getattr(self, 'multi_turns_total', 0) - 1)
-        is_spectator = getattr(self, "player_country", None) == "Spectator"
+        is_multi = self.multi_turns_total > 0
+        is_last_multi = not is_multi or (self.multi_turns_completed >= self.multi_turns_total - 1)
+        is_spectator = self.player_country == "Spectator"
         
         if is_multi and not is_last_multi and not is_spectator:
             pass # Skip deepcopying thousands of dictionaries on skipped turns
@@ -180,7 +180,7 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     print("="*40 + "\n")
     
     # --- PROCESS PLAYER AUTOMATION FOR NEXT TURN ---
-    player = getattr(self, "player_country", None)
+    player = self.player_country
     if player and player != "Spectator":
         auto = self.nation_data.get(player, {}).get("automation", {})
         if auto.get("construction"):

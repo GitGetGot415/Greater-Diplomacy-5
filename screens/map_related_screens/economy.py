@@ -29,7 +29,7 @@ class Economy_Screen(GameState):
         
         # Expenses button positioned in the top right corner
         btn_expenses = Button(c.SCREEN_WIDTH - 120, 20, "small", "orange", "Expenses", self.open_expenses_table)
-        if getattr(self.map_screen, 'tactical_mode', False):
+        if self.map_screen.tactical_mode:
             btn_expenses.disabled = True
             btn_expenses.color, btn_expenses.hover_color = c.UI_COLORS["grey"]
         self.elements.append(btn_expenses)
@@ -47,24 +47,24 @@ class Economy_Screen(GameState):
         conscript_val = p_data.get("conscription_slider", 1.0)
         p_data["conscription_slider"] = conscript_val
         
-        if not getattr(self.map_screen, 'tactical_mode', False):
+        if not self.map_screen.tactical_mode:
             self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONSCRIPTION_BTN_Y, 400, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0))
             self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONVERT_BTN_Y, 400, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
 
     def set_conscription(self, val):
-        if not self.map_screen or getattr(self.map_screen, 'tactical_mode', False): return
+        if not self.map_screen or self.map_screen.tactical_mode: return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["conscription_slider"] = val
 
     def set_conversion(self, val):
-        if not self.map_screen or getattr(self.map_screen, 'tactical_mode', False): return
+        if not self.map_screen or self.map_screen.tactical_mode: return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val
 
     def additional_draw(self, surface):
         if not self.map_screen: return
         
-        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        is_tactical = self.map_screen.tactical_mode
         title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
         ui_bars.draw_centered_title(surface, title_text, 40)
         

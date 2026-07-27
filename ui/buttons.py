@@ -67,7 +67,7 @@ def render_buttons(self):
             from data.io.multiplayer_io import export_move_file
             import os
             turn = self.time_manager.total_turns if hasattr(self, 'time_manager') else 1
-            cid = getattr(self, 'player_country', 'Unknown')
+            cid = self.player_country
             save_name = f"Turn_{turn}_{cid}.gd5move"
             export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
             player_key = getattr(self, 'multiplayer_player_key', '')
@@ -93,7 +93,7 @@ def render_buttons(self):
             root.destroy()
             
             if file_path:
-                cid = getattr(self, 'player_country', 'Unknown')
+                cid = self.player_country
                 player_key = getattr(self, 'multiplayer_player_key', '')
                 keys_dict = {cid: player_key}
                 
@@ -220,7 +220,7 @@ def render_buttons(self):
         self.refresh_fog_map()
         
     def toggle_tactical_action():
-        self.tactical_mode = not getattr(self, 'tactical_mode', False)
+        self.tactical_mode = not self.tactical_mode
         
         # Auto-swap the view mode so the player can actually see the units
         if self.tactical_mode:
@@ -287,7 +287,7 @@ def update_button_states(map_screen):
             map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["grey"]
         else:
             map_screen.btn_tactical.disabled = False
-            if getattr(map_screen, 'tactical_mode', False):
+            if map_screen.tactical_mode:
                 map_screen.btn_tactical.text = "TACTICAL"
                 map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["orange"]
             else:
@@ -295,7 +295,7 @@ def update_button_states(map_screen):
                 map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["green"]
 
         # --- BUGFIX: Disable Spectator Mode while in Tactical Mode ---
-        if getattr(map_screen, 'tactical_mode', False):
+        if map_screen.tactical_mode:
             map_screen.btn_spectator.disabled = True
             map_screen.btn_spectator.text = "Disabled in Tactical"
             map_screen.btn_spectator.color, map_screen.btn_spectator.hover_color = c.UI_COLORS["grey"]
@@ -396,7 +396,7 @@ def update_button_states(map_screen):
             map_screen.btn_spec_mp_manage.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
             map_screen.btn_spec_mp_export.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
             map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-        map_screen.btn_declare_indep.visible = getattr(map_screen, 'tactical_mode', False) and not is_sel and not is_thinking
+        map_screen.btn_declare_indep.visible = map_screen.tactical_mode and not is_sel and not is_thinking
 
         gp_btns = [
             map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
@@ -425,7 +425,7 @@ def update_button_states(map_screen):
             map_screen.btn_gp_claims.disabled = True
         
         # --- TACTICAL MODE LOCKDOWNS ---
-        if getattr(map_screen, 'tactical_mode', False):
+        if map_screen.tactical_mode:
             map_screen.btn_gp_faction.disabled = True
             map_screen.btn_gp_puppets.disabled = True
             map_screen.btn_gp_edit.disabled = True
@@ -485,7 +485,7 @@ def update_button_states(map_screen):
         else:
             has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
             is_land = not queries.is_water_province(map_screen.selected_province)
-            is_tactical = getattr(map_screen, 'tactical_mode', False)
+            is_tactical = map_screen.tactical_mode
 
             if owner == map_screen.player_country:
                 set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")

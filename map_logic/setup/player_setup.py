@@ -82,7 +82,7 @@ def confirm_player_country(map_screen):
         map_screen.active_players.append(map_screen.pending_selection)
         
         # --- TACTICAL UNIT LOCK-IN ---
-        if getattr(map_screen, 'tactical_mode', False) and hasattr(map_screen, 'pending_unit'):
+        if map_screen.tactical_mode and hasattr(map_screen, 'pending_unit'):
             if map_screen.pending_unit:
                 map_screen.pending_unit.pop("_is_tactical_ghost", None) # Remove the tag, it's a real unit now
             map_screen.player_unit = map_screen.pending_unit
@@ -116,7 +116,7 @@ def confirm_player_country(map_screen):
 
 def cancel_selection(map_screen):
     # Clean up ghost units
-    if getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'pending_unit', None):
+    if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
         if map_screen.pending_unit.get("_is_tactical_ghost"):
             if map_screen.selected_province:
                 units = map_screen.selected_province.get("units", [])

@@ -60,7 +60,7 @@ class Select_Base_Map(GameState):
             self.refresh_maps()
 
         # Forcefully hide all UI buttons while the loading screen is active
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             for el in self.elements:
                 el.visible = False
         else:
@@ -240,9 +240,9 @@ class Select_Base_Map(GameState):
             
     def handle_events(self, events):
         import pygame
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             return
-            
+
         for event in events:
             if self.renaming_scenario:
                 is_valid_char = lambda ch: ch.isalnum() or ch in " _-"
@@ -334,5 +334,5 @@ class Select_Base_Map(GameState):
                 el.draw(surface)
 
         # --- Draw Progress Bar Overlay ---
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)

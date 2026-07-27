@@ -190,7 +190,7 @@ class Research_Screen(GameState):
         res_levels = player_data.setdefault("research", {})
         queue = player_data.setdefault("research_queue", [])
         
-        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        is_tactical = self.map_screen.tactical_mode
 
         if self.active_modal:
             st = self.active_modal["status"]

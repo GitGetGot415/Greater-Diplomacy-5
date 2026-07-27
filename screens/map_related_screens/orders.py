@@ -50,7 +50,7 @@ class Orders_Screen(GameState):
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
         
-        if getattr(self.map_screen, 'tactical_mode', False):
+        if self.map_screen.tactical_mode:
             # TACTICAL MODE: Lock to player unit
             player_unit_indices = [i for i, u in enumerate(units) if u is self.map_screen.player_unit]
             self.selected_unit_index = player_unit_indices[0] if player_unit_indices else None
@@ -67,7 +67,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def select_unit(self, index):
-        if getattr(self.map_screen, 'tactical_mode', False):
+        if self.map_screen.tactical_mode:
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
             return
         self.selected_unit_index = index
@@ -77,7 +77,7 @@ class Orders_Screen(GameState):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
         
         units = self.target_province.get("units", [])
-        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        is_tactical = self.map_screen.tactical_mode
         
         # Display all units owned by the player, regardless of mode
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -268,7 +268,7 @@ class Orders_Screen(GameState):
 
         costs = {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
         
-        is_tactical = getattr(self.map_screen, 'tactical_mode', False) and unit is getattr(self.map_screen, 'player_unit', None)
+        is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
         if is_tactical:
             p_data = self.map_screen.unit_economy
         else:
@@ -352,7 +352,7 @@ class Orders_Screen(GameState):
             if "order" in units[index]:
                 if isinstance(order, dict) and "refund" in order:
                     unit = units[index]
-                    is_tactical = getattr(self.map_screen, 'tactical_mode', False) and unit is getattr(self.map_screen, 'player_unit', None)
+                    is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
                     if is_tactical:
                         p_data = self.map_screen.unit_economy
                     else:
@@ -371,7 +371,7 @@ class Orders_Screen(GameState):
                 if "order" in unit:
                     order = unit["order"]
                     if isinstance(order, dict) and "refund" in order:
-                        is_tactical = getattr(self.map_screen, 'tactical_mode', False) and unit is getattr(self.map_screen, 'player_unit', None)
+                        is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
                         if is_tactical:
                             p_data = self.map_screen.unit_economy
                         else:
@@ -408,7 +408,7 @@ class Orders_Screen(GameState):
                 mx, my = pygame.mouse.get_pos()
                 units = self.target_province.get("units", [])
                 
-                if getattr(self.map_screen, 'tactical_mode', False):
+                if self.map_screen.tactical_mode:
                     player_units = [u for u in units if u is self.map_screen.player_unit]
                 else:
                     player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -435,7 +435,7 @@ class Orders_Screen(GameState):
         on_ui = False
         units = self.target_province.get("units", [])
         
-        if getattr(self.map_screen, 'tactical_mode', False):
+        if self.map_screen.tactical_mode:
             player_units = [u for u in units if u is self.map_screen.player_unit]
         else:
             player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -519,9 +519,9 @@ class Orders_Screen(GameState):
                 if all(self.can_unit_enter(u, dest) for u in target_units):
                     
                     # --- TACTICAL FUEL LIMIT CHECK ---
-                    if getattr(self.map_screen, 'tactical_mode', False) and self.selected_unit_index != "ALL":
+                    if self.map_screen.tactical_mode and self.selected_unit_index != "ALL":
                         unit = target_units[0]
-                        if unit is getattr(self.map_screen, 'player_unit', None):
+                        if unit is self.map_screen.player_unit:
                             speed = queries.get_tactical_speed(unit, self.unit_library)
                             # If this step would execute this turn
                             if len(current_path) < speed:

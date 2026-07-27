@@ -311,7 +311,7 @@ def export_move_file(map_ref, file_path, player_key):
     Exports a .gd5move file containing ONLY the orders for the current turn.
     """
     save_dict = queries.build_save_dict(map_ref)
-    cid = getattr(map_ref, 'player_country', 'Unknown')
+    cid = map_ref.player_country
     
     player_data = {
         "nation_data": save_dict.get("nation_data", {}).get(cid, {}),

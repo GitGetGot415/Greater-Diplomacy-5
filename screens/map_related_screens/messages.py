@@ -191,7 +191,7 @@ class Messages_Screen(GameState):
 
     def additional_events(self, event):
         mx, my = pygame.mouse.get_pos()
-        is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+        is_tactical = self.map_screen.tactical_mode
         
         # --- Handle Draft Delete Clicks ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -344,7 +344,7 @@ class Messages_Screen(GameState):
         self.max_contact_scroll = min(0, c.SCREEN_HEIGHT - absolute_height - 20)
 
         if self.selected_recipient:
-            is_tactical = getattr(self.map_screen, 'tactical_mode', False)
+            is_tactical = self.map_screen.tactical_mode
             btn_x = c.SCREEN_WIDTH - 150
             btn_y = c.SCREEN_HEIGHT - c.MSG_INPUT_H + 15
             
@@ -607,7 +607,7 @@ class Messages_Screen(GameState):
                     del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
                     self.draft_edit_rects.append((del_rect, msg['draft_idx']))
                     
-                    if not getattr(self.map_screen, 'tactical_mode', False):
+                    if not self.map_screen.tactical_mode:
                         pygame.draw.rect(surface, (150, 0, 0), del_rect, border_radius=5)
                         surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
             else:

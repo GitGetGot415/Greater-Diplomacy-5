@@ -273,7 +273,7 @@ class Claims_Screen(GameState):
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if not on_ui:
-                    if getattr(self.map_screen, 'tactical_mode', False):
+                    if self.map_screen.tactical_mode:
                         self.map_screen.show_feedback("Tactical Mode: Cannot modify claims.")
                         continue
                         
@@ -687,7 +687,7 @@ class Peace_Screen(GameState):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", lambda: self.exit_screen())]
         
         term = self.terms[self.selected_term_idx]
-        is_human = self.target_nation in getattr(self.map_screen, 'active_players', [])
+        is_human = self.target_nation in self.map_screen.active_players
         
         if is_human:
             self.acceptance_text = "This is another player, whether they accept this deal or not is up to them."

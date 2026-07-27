@@ -30,7 +30,7 @@ class Declare_Independence_Screen(GameState):
         self.selected_core = None
         self.available_cores = []
         
-        if self.map_screen and getattr(self.map_screen, 'player_unit', None):
+        if self.map_screen and self.map_screen.player_unit:
             for prov in self.map_screen.map_data.values():
                 if self.map_screen.player_unit in prov.get("units", []):
                     self.available_cores = [core for core in prov.get("cores", []) if core not in c.UNPLAYABLE_NATIONS]

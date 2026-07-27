@@ -30,7 +30,7 @@ def draw_map_screen(self, surface):
         return # Skip drawing the map and UI completely!
 
     # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
-    if getattr(self, 'multi_turns_total', 0) > 0 and getattr(self, 'multi_turns_completed', 0) < getattr(self, 'multi_turns_total', 0):
+    if self.multi_turns_total > 0 and self.multi_turns_completed < self.multi_turns_total:
         surface.fill((10, 10, 15))
         loading_screen.draw_turn_loading_screen(self, surface)
         return
@@ -137,14 +137,14 @@ def draw_map_screen(self, surface):
                     
                     # Hide the arrows if it's not the current player's unit, the player isn't spectating,
                     # and the game isn't actively resolving AI/global turns.
-                    if not is_current_player_unit and not is_spectator and not getattr(self, 'viewing_ai_moves', False):
+                    if not is_current_player_unit and not is_spectator and not self.viewing_ai_moves:
                         continue
                         
                     speed = unit.get("speed", 1)
                     
                     # If we are resolving global turns (viewing_ai_moves), hide future queued moves 
                     # by truncating the path to only what happens this turn to prevent hotseat leaks
-                    if getattr(self, 'viewing_ai_moves', False):
+                    if self.viewing_ai_moves:
                         path = path[:speed]
                         if not path:
                             continue
@@ -154,7 +154,7 @@ def draw_map_screen(self, surface):
                     
                     # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
                     # Fix for tactical mode: only force visible if it's the specific tactical unit
-                    is_tactical = getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None)
+                    is_tactical = self.tactical_mode and self.player_unit
                     force_vis = (unit is self.player_unit) if is_tactical else is_current_player_unit
                     
                     overlay_renderer.draw_split_movement_path(surface, self, province, path, speed, owner_color, force_visible=force_vis)
@@ -208,12 +208,12 @@ def draw_map_screen(self, surface):
             disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
             
             # Contextual prompt formatting for Tactical Mode
-            if getattr(self, 'tactical_mode', False) and getattr(self, 'pending_unit', None):
+            if self.tactical_mode and getattr(self, 'pending_unit', None):
                 prompt_txt = f"Play as {self.pending_unit.get('type')} ({disp_name})?"
             else:
                 prompt_txt = f"Play as {disp_name}?"
         else:
-            if getattr(self, 'tactical_mode', False):
+            if self.tactical_mode:
                 prompt_txt = "Select a Unit to Control"
             else:
                 prompt_txt = "Select a Country to Play As"
@@ -272,7 +272,7 @@ def draw_map_screen(self, surface):
             disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
             
             # Contextual instructions for Tactical Mode
-            if getattr(self, 'tactical_mode', False) and getattr(self, 'pending_unit', None):
+            if self.tactical_mode and getattr(self, 'pending_unit', None):
                 instr_txt = f"Start Game as {self.pending_unit.get('type')}?"
             else:
                 instr_txt = f"Start Game as {disp_name}?"

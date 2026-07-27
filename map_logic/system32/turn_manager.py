@@ -26,8 +26,8 @@ def advance_time(map_screen):
         turn_processor.resolve_turn_logic(map_screen)
         
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = getattr(map_screen, 'multi_turns_total', 0) > 0
-        is_last_multi = not is_multi or (getattr(map_screen, 'multi_turns_completed', 0) >= getattr(map_screen, 'multi_turns_total', 0) - 1)
+        is_multi = map_screen.multi_turns_total > 0
+        is_last_multi = not is_multi or (map_screen.multi_turns_completed >= map_screen.multi_turns_total - 1)
         
         # 2. Define Refresh Tasks
         refresh_steps = [

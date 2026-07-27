@@ -162,7 +162,7 @@ def process_movement(self):
 
     # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
-        if getattr(self, 'tactical_mode', False) and u is getattr(self, 'player_unit', None):
+        if self.tactical_mode and u is self.player_unit:
             return queries.get_tactical_speed(u, self.cached_unit_library)
         return u.get("speed", 1)
 
@@ -235,7 +235,7 @@ def process_movement(self):
 
             if can_enter:
                 # --- TACTICAL MOVEMENT ECONOMY ---
-                if getattr(self, 'tactical_mode', False) and unit is getattr(self, 'player_unit', None):
+                if self.tactical_mode and unit is self.player_unit:
                     fuel_inc = self.unit_economy.get("fuel_inc", 0)
                     cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc, self.cached_unit_library)
                     

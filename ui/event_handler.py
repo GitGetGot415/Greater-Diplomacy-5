@@ -257,7 +257,7 @@ def handle_map_events(self, event):
                 
             if self.hovered_province:
                 # --- TACTICAL SELECTION ROUTING ---
-                if getattr(self, 'tactical_mode', False):
+                if self.tactical_mode:
                     player_setup.select_tactical_unit(self, self.hovered_province)
                 else:
                     player_setup.select_player_country(self, self.hovered_province)
@@ -276,7 +276,7 @@ def handle_map_events(self, event):
             # 1. Handle clicking the box to activate/deactivate it
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if mail_rect.collidepoint(event.pos):
-                    if getattr(self, 'tactical_mode', False):
+                    if self.tactical_mode:
                         self.show_feedback("Tactical Mode: Cannot send messages directly.")
                         self.mail_input_active = False
                     else:
@@ -286,7 +286,7 @@ def handle_map_events(self, event):
             
             # 2. Handle typing and sending if the box is active
             elif self.mail_input_active:
-                if getattr(self, 'tactical_mode', False):
+                if self.tactical_mode:
                     self.mail_input_active = False
                 else:
                     self.mail_draft_text, status = process_text_input(

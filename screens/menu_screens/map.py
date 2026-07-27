@@ -192,7 +192,7 @@ class Map(GameState):
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        if self.time_manager.total_turns == 0 and not getattr(self, 'is_editor', False):
+        if self.time_manager.total_turns == 0 and not self.is_editor:
             from map_logic.system32 import economy_processor
             economy_processor.process_economy(self)
 
@@ -238,7 +238,7 @@ class Map(GameState):
 
     @property
     def player_fuel(self): 
-        if getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None):
+        if self.tactical_mode and self.player_unit:
             base_fuel = self.unit_economy.get("fuel", 0)
             u = self.player_unit
             order = u.get("order")

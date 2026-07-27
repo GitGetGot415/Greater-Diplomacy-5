@@ -536,7 +536,7 @@ def process_scripted_events(map_screen):
         return
         
     active_nations = set(queries.get_living_nations(map_screen.map_data))
-    human_players = getattr(map_screen, 'active_players', [map_screen.player_country])
+    human_players = map_screen.active_players
     current_turn = queries.get_total_turns(map_screen.time_manager)
     
     for nation_name in active_nations:

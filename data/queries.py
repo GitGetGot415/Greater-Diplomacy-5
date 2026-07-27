@@ -55,8 +55,8 @@ def get_visible_provinces(map_screen):
     visible_set = set()
     partial_set = set()
     
-    is_tactical = getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None)
-    tactical_unit = getattr(map_screen, 'player_unit', None) if is_tactical else None
+    is_tactical = map_screen.tactical_mode and map_screen.player_unit
+    tactical_unit = map_screen.player_unit if is_tactical else None
     
     friendly_unit_locations = []
     tactical_location = None
@@ -1138,8 +1138,8 @@ def calculate_all_economies(map_data, nation_data):
 
 def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
-    is_tactical = getattr(map_screen, 'tactical_mode', False) and getattr(map_screen, 'player_unit', None)
-    
+    is_tactical = map_screen.tactical_mode and map_screen.player_unit
+
     if target_nation is None:
         target_nation = map_screen.player_country
         
@@ -1252,8 +1252,8 @@ def build_save_dict(map_screen):
             "total_turns": map_screen.time_manager.total_turns
         },
         "loop_map": getattr(map_screen, 'loop_map', False),
-        "player_country": getattr(map_screen, 'player_country', "None"),
-        "active_players": getattr(map_screen, 'active_players', []),
+        "player_country": map_screen.player_country,
+        "active_players": map_screen.active_players,
         "current_player_index": getattr(map_screen, 'current_player_index', 0),
         "scenario_settings": getattr(map_screen, 'scenario_settings', {}),
         "script_variables": getattr(map_screen, 'script_variables', []),
@@ -1744,7 +1744,7 @@ def get_active_ai_nations(map_screen):
     
     # --- TACTICAL OVERRIDE ---
     # Give the AI full command of the country's macro strategy
-    if getattr(map_screen, 'tactical_mode', False):
+    if map_screen.tactical_mode:
         human_players = []
     
     # Cross-reference with nations that actually own territory
@@ -1788,8 +1788,8 @@ def get_combat_predictions(map_screen):
     nation_data = map_screen.nation_data
     id_to_province = map_screen.id_to_province
     
-    player_country = getattr(map_screen, 'player_country', "None")
-    is_spectator = player_country == "Spectator" or getattr(map_screen, 'is_editor', False)
+    player_country = map_screen.player_country
+    is_spectator = player_country == "Spectator" or map_screen.is_editor
     friendly_nations = get_all_friendly_nations(player_country, nation_data) if not is_spectator else set()
     
     predictions = []

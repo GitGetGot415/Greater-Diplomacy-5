@@ -262,7 +262,7 @@ def process_diplomacy_turn(self):
     else:
         from map_logic.ai import ai_handler # Import this to safely check the mode
         
-        human_players = getattr(self, 'active_players', [self.player_country])
+        human_players = self.active_players
         
         mode = ai_handler.get_ai_mode()
         immersion = ai_handler.get_ai_immersion_level()

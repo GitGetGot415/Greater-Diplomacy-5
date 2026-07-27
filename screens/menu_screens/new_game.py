@@ -88,7 +88,7 @@ class New_Game(GameState):
         super().update()
         
         # Forcefully hide all UI buttons while the loading screen is active
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             for el in self.elements:
                 el.visible = False
         else:
@@ -123,7 +123,7 @@ class New_Game(GameState):
                 self._snap_scroll(event.pos[1])
 
     def handle_events(self, events):
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             return
         for event in events:
             super().handle_events([event])
@@ -148,7 +148,7 @@ class New_Game(GameState):
             )
 
         # --- Draw Progress Bar Overlay ---
-        if getattr(self, 'is_refreshing', False):
+        if self.is_refreshing:
             loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
 
     def scenario_settings(self):

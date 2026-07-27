@@ -75,7 +75,7 @@ def conquer_province(self, province, new_owner):
                     if old_owner in p.get("cores", []):
                         p["cores"].remove(old_owner)
                         # Visual Update (similar to remove_core)
-                        if not getattr(self, 'viewing_ai_moves', False) and not getattr(self, 'ai_is_thinking', False):
+                        if not self.viewing_ai_moves and not self.ai_is_thinking:
                             new_color = get_mixed_core_color(p["cores"])
                             map_utils.update_single_province_surface(self.cores_map, self.id_map, p["map_color"], new_color)
                             if self.map_mode == "CORES": self.active_map = self.cores_map
@@ -149,7 +149,7 @@ def add_core(self, province, nation):
             cores.insert(0, nation) # Insert at front as primary
         
         # Visual Update
-        if not self.viewing_ai_moves and not getattr(self, 'ai_is_thinking', False):
+        if not self.viewing_ai_moves and not self.ai_is_thinking:
             new_color = get_mixed_core_color(cores)
             map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
             if self.map_mode == "CORES": self.active_map = self.cores_map
@@ -161,7 +161,7 @@ def remove_core(self, province, nation):
             cores.remove(nation)
         
         # Visual Update
-        if not self.viewing_ai_moves and not getattr(self, 'ai_is_thinking', False):
+        if not self.viewing_ai_moves and not self.ai_is_thinking:
             new_color = get_mixed_core_color(cores)
             map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], new_color)
             if self.map_mode == "CORES": self.active_map = self.cores_map
@@ -172,7 +172,7 @@ def clear_cores(self, province):
         province["cores"] = []
         
         # Visual Update
-        if not self.viewing_ai_moves and not getattr(self, 'ai_is_thinking', False):
+        if not self.viewing_ai_moves and not self.ai_is_thinking:
             map_utils.update_single_province_surface(self.cores_map, self.id_map, province["map_color"], (255, 255, 255))
             if self.map_mode == "CORES": self.active_map = self.cores_map
 

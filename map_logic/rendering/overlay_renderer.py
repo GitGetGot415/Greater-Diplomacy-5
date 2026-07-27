@@ -9,9 +9,9 @@ def draw_combat_bubbles(self_map, surface):
     """Draws combat indicators on the map to visualize predicted battles."""
     
     # Hide combat bubbles during the AI moves screen to prevent leaking hotseat moves
-    if getattr(self_map, 'viewing_ai_moves', False):
+    if self_map.viewing_ai_moves:
         return
-        
+
     predictions = queries.get_combat_predictions(self_map)
     cam = self_map.camera
     
@@ -519,8 +519,8 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
     # --- NEW: Sort owners by Total HP descending, but keep Player Tactical Unit on top ---
-    is_tactical = getattr(self, 'tactical_mode', False)
-    player_unit = getattr(self, 'player_unit', None)
+    is_tactical = self.tactical_mode
+    player_unit = self.player_unit
     
     def get_owner_sort_weight(o):
         if is_tactical and any(u is player_unit for u in units_by_owner[o]):
@@ -560,7 +560,7 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
         
         # --- TACTICAL MODE INVERSION ---
-        is_player_tactical = getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None) is best_unit
+        is_player_tactical = self.tactical_mode and self.player_unit is best_unit
         
         if is_player_tactical:
             box_surf.fill((255, 255, 255))

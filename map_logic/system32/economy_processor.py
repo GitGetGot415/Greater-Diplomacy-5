@@ -5,7 +5,7 @@ def process_economy(self):
     """Calculates income, applies building yields, and deducts unit upkeep."""
     
     # --- TACTICAL ECONOMY OVERRIDE ---
-    if getattr(self, 'tactical_mode', False) and getattr(self, 'player_unit', None):
+    if self.tactical_mode and self.player_unit:
         u_type = self.player_unit.get("original_type", self.player_unit.get("type"))
         stats = queries.get_unit_library().get(u_type, {})
         
@@ -57,7 +57,7 @@ def process_queues(self):
         current_owner = province.get("owner", "None")
         
         # Freeze AI queues if AI is disabled
-        if ai_disabled and current_owner not in getattr(self, 'active_players', [self.player_country]):
+        if ai_disabled and current_owner not in self.active_players:
             continue
 
         in_combat = queries.is_province_in_active_combat(province, self.nation_data)
