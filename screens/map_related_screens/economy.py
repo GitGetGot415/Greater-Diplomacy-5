@@ -103,7 +103,7 @@ class Economy_Screen(GameState):
                 total_inc, upkeep, breakdown = econ_tuple
             else:
                 total_inc, upkeep = econ_tuple
-                breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
+                breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in c.ECON_RESOURCE_KEYS}
             
         font_large = fonts.get("heading1")
         font_med = fonts.get("heading2")
@@ -213,7 +213,7 @@ class Economy_Screen(GameState):
             data_list = [(tree.set(child, col), child) for child in tree.get_children("")]
             
             # Convert values to the appropriate type for accurate numerical sorting
-            if col in ("Manpower", "Materials", "Fuel"):
+            if col in c.ECON_RESOURCE_KEYS:
                 data_list.sort(key=lambda t: float(t[0]), reverse=reverse)
             elif col == "Location (Prov ID)":
                 data_list.sort(key=lambda t: int(t[0]), reverse=reverse)

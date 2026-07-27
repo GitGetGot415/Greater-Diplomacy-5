@@ -4,6 +4,7 @@ import re
 import base64
 import itertools
 import math
+import random
 import threading
 import shutil
 import zipfile
@@ -145,6 +146,21 @@ def scenario_has_scripted_events(nation_data):
         if isinstance(data, dict) and data.get("scripted_events"):
             return True
     return False
+
+
+def get_scenario_flag(flag_name, default=False, scenario_settings=None):
+    """Safely resolves a boolean scenario setting from the cached JSON data."""
+    if scenario_settings is None:
+        scenario_settings = get_scenario_settings()
+
+    if scenario_settings is None:
+        return default
+
+    value = scenario_settings.get(flag_name, default)
+    if isinstance(value, str):
+        return value.lower() == "true"
+    return bool(value)
+
 
 def get_scenario_settings(): 
     return _load_cached_json("scenario_settings")
@@ -554,7 +570,7 @@ def can_ships_enter(moving_nation, target_province, nation_data):
     if target_owner == "Unclaimed": return True
     
     scenario_settings = get_scenario_settings()
-    if str(scenario_settings.get("surprise_attack", c.DEFAULT_SURPRISE_ATTACK)).lower() == "true":
+    if get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, scenario_settings):
         pending = nation_data.get(moving_nation, {}).get("pending_diplomacy", {})
         info = pending.get(target_owner, {})
         if isinstance(info, dict) and info.get("action") == "WAR_DECLARATION":
@@ -587,7 +603,7 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
     if are_at_war(moving_nation, target_owner, nation_data): return True
     
     scenario_settings = get_scenario_settings()
-    if str(scenario_settings.get("surprise_attack", c.DEFAULT_SURPRISE_ATTACK)).lower() == "true":
+    if get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, scenario_settings):
         pending = nation_data.get(moving_nation, {}).get("pending_diplomacy", {})
         info = pending.get(target_owner, {})
         if isinstance(info, dict) and info.get("action") == "WAR_DECLARATION":
@@ -830,7 +846,7 @@ def get_wrapped_x(x1, x2, map_w, loop_map):
 # ECONOMY QUERIES
 # ==========================================
 
-_ECON_RESOURCES = ["manpower", "materials", "fuel"]
+_ECON_RESOURCES = list(c.ECON_RESOURCE_KEYS)
 
 def get_factory_count(nation, map_data):
     """Counts the total number of factories a nation has (built and in-progress)."""
@@ -872,7 +888,6 @@ def get_remove_core_cost(nation, map_data):
 
 def find_nearby_matching_core_tiles(origin_id, core_nation, current_owner, map_data, id_to_province, max_distance):
     """BFS from origin province to find tiles within max_distance that have core_nation as a core and are owned by current_owner."""
-    import random
     candidates = []
     visited = {origin_id}
     queue = [(origin_id, 0)]
@@ -917,7 +932,6 @@ def find_nearby_matching_core_tiles(origin_id, core_nation, current_owner, map_d
 def generate_rebellion_name(cores_on_tile, nation_data):
     """Generates a thematic rebellion name from core adjectives and a random term.
     Returns (rebel_id, rebel_display_name)."""
-    import random
     
     # Build combined adjective from all cores on the tile
     adjectives = []
@@ -1730,7 +1744,6 @@ def get_active_ai_nations(map_screen):
             ai_nations.append(name)
             
     # Randomize the order the AI processes countries
-    import random
     random.shuffle(ai_nations)
     
     return ai_nations
@@ -1931,8 +1944,6 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
 
 def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, nation_data):
     """Determines if a nation can physically reach another via land borders (including passable nations) or connected water."""
-    import data.constants as c
-    
     friendly_a = get_all_friendly_nations(nation_a, nation_data)
     at_war_a = set(nation_data.get(nation_a, {}).get("at_war_with", []))
     

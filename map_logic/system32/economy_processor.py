@@ -35,7 +35,7 @@ def process_economy(self):
         stats["fuel"] = stats.get("fuel", 0) + econ["total_inc"]["fuel"] - econ["upkeep"]["fuel"]
 
         # Prevent negative resources
-        for res in ["manpower", "materials", "fuel"]:
+        for res in c.ECON_RESOURCE_KEYS:
             stats[res] = max(0, stats[res])
 
     return self.nation_data.get(self.player_country, {}).get("manpower", 0)

@@ -138,7 +138,7 @@ class CountryEditor:
                         print(f"Added {tech_key} to {int_id}")
 
             # 3. Ensure other basic keys exist (money, manpower, etc)
-            for key in ["manpower", "materials", "fuel"]:
+            for key in c.ECON_RESOURCE_KEYS:
                 self.data[int_id].setdefault(key, 0)
             
             self.data[int_id].setdefault("at_war_with", [])

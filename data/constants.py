@@ -50,6 +50,9 @@ BASE_YIELDS = {
 
 GENERAL_RECRUITMENT_BONUS = 5 # Add this
 
+# Shared resource ordering used across economy and UI calculations
+ECON_RESOURCE_KEYS = ("manpower", "materials", "fuel")
+
 COUNTRY_BASE_YIELDS = {
     "manpower": 200,
     "materials": 100,

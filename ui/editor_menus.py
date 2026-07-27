@@ -339,7 +339,7 @@ def open_starting_economy_editor(self):
         edit_win.attributes("-topmost", True)
         
         entries = {}
-        for i, res in enumerate(["manpower", "materials", "fuel"]):
+        for i, res in enumerate(c.ECON_RESOURCE_KEYS):
             tk.Label(edit_win, text=res.capitalize()).grid(row=i, column=0, sticky="e", padx=5, pady=5)
             ent = tk.Entry(edit_win, width=10)
             ent.insert(0, str(int(base_data[res])))
