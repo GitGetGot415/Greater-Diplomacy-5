@@ -1,11 +1,3 @@
-Recent additions:
-Fullscreeen button
-you can now edit the resources a country starts out with
-you can now Force Time Appropriate Research to automatically set research when editing a map
-wheat resource added (gives manpower)
-resource multiplier option added to industry research
-3rd research slot added
-
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
