@@ -16,6 +16,8 @@ Immediate concerns:
 - resource multiplier???
 !!!!!!
 
+- give every country 3 research slots now, there's a lot of things that can be researched
+
 - curious, the arrows for research don't seem to be centered...
 
 - integrated puppets transfer everything to their master unless they capture territories they have a core on, and their master doesn't have a core on it
