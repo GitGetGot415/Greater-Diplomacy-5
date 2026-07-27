@@ -771,7 +771,7 @@ def render_settings_buttons(settings_screen):
 
     # Render above the player count
     thread_val = (settings_screen.ai_threads - 1) / 7.0
-    settings_screen.ai_thread_slider = Slider(60, 340, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
+    settings_screen.ai_thread_slider = Slider(60, 400, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
     
     # Only show the slider if an AI mode is active
     settings_screen.ai_thread_slider.visible = (settings_screen.ai_mode != "OFF")
