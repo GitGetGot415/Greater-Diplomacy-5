@@ -24,7 +24,7 @@ class Settings(GameState):
         self.ai_immersion_level = self.controller.ai_immersion_level
         self.ai_modes = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE"]
         
-        self.last_ai_mode = self.ai_mode if self.ai_mode != "OFF" else c.DEFAULT_AI_MODE
+        self.last_ai_mode = self.ai_mode if self.ai_mode != "OFF" else c.AI_MODE_REENABLE_FALLBACK
         
         self.fullscreen = False
         self.listening_for = None

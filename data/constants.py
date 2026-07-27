@@ -104,7 +104,7 @@ CREDITS_DATA = [
     },
 ]
 
-SHOW_FPS = True
+SHOW_FPS = False
 
 GAME_VERSION = "v18"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
@@ -215,8 +215,8 @@ FUEL_CONVERSION_RATIO = 0.1 # 10 materials -> 1 fuel
 
 USE_SOLOUD = True # Set to False to strictly force Pygame Mixer
 
-DEFAULT_SFX_VOLUME = 0.5
-DEFAULT_MUSIC_VOLUME = 0.5
+DEFAULT_SFX_VOLUME = 1.0
+DEFAULT_MUSIC_VOLUME = 1.0
 DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default playback speed
 
 # ==========================================
@@ -312,7 +312,8 @@ ACTION_BTN_STEP_Y = 33
 # SETTINGS
 # ==========================================
 
-DEFAULT_AI_MODE = "OLLAMA"
+DEFAULT_AI_MODE = "OFF" # LLM AI is opt-in; off until the player picks a provider
+AI_MODE_REENABLE_FALLBACK = "OLLAMA" # Provider selected when re-enabling AI from OFF with no prior mode
 DEFAULT_AI_THREADS = 1 # Added default thread count
 
 # --- Unified Settings UI Layout ---
