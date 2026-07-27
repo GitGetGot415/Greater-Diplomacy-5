@@ -233,11 +233,21 @@ class Research_Screen(GameState):
         special_ships = ["aircraft carrier", "battleship", "dreadnought", "submarine"]
         if any(ship in display_name.lower() for ship in special_ships):
             return "tech_square_ultra_wide"
+
+        # Check for specific wide vehicles
+        wide_vehicles = ["light tank ix"]
+        if any(tank in display_name.lower() for tank in wide_vehicles):
+            return "tech_square_wide"
+            
+        # Check for specific small vehicles
+        small_vehicles = ["civilian car", "armored car", "light tank i", "light tank v", "medium tank"]
+        if any(tank in display_name.lower() for tank in small_vehicles):
+            return "tech_square_medium"
         
         # Check for wide categories
         if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]):
             return "tech_square_wide"
-            
+      
         # Default
         return "tech_square"
     

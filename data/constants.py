@@ -331,7 +331,7 @@ CPU_LIMITER = 10
 
 START_YEAR = 1910
 END_YEAR = 2010
-RESEARCH_TIMELINE_SPACING = 90 # Width between years on the research timeline
+RESEARCH_TIMELINE_SPACING = 70 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
@@ -418,8 +418,9 @@ SIZES = {
     "small_square": (40, 40),
     "medium_square": (50, 50),
     "tech_square": (60, 60),
-    "tech_square_wide": (160, 60),
-    "tech_square_ultra_wide": (300, 60),
+    "tech_square_medium": (100, 60),
+    "tech_square_wide": (150, 60),
+    "tech_square_ultra_wide": (270, 60),
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),
