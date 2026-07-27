@@ -57,6 +57,8 @@ class Research_Screen(GameState):
         y2 = 270
         y3 = 340
         y4 = 410
+        y5 = 480
+
         self.tech_rows = {
             "infantry_type": y1,
             "motorized_infantry": y2,
@@ -394,14 +396,14 @@ class Research_Screen(GameState):
             l = node["lvl"]
             
             x1 = (node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-            y1 = node["base_y"] + 40
+            y1 = node["base_y"] + 30
             p1 = (x1, y1)
             
             def draw_line_to_prev(req_k, req_lvl):
                 prev_node = lookup.get((req_k, req_lvl))
                 if prev_node:
                     x2 = (prev_node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-                    y2 = prev_node["base_y"] + 40
+                    y2 = prev_node["base_y"] + 30
                     p2 = (x2, y2)
                     color = (0, 255, 0) if res_levels.get(req_k, 0) >= req_lvl else (100, 100, 100)
                     
