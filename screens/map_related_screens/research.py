@@ -202,7 +202,7 @@ class Research_Screen(GameState):
                 self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Tactical: Read Only", lambda: None))
             else:
                 if st == "AVAILABLE":
-                    if len(queue) >= 2:
+                    if len(queue) >= c.RESEARCH_SLOTS:
                         self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Slots Full", lambda: None))
                     else:
                         self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "blue", "Start Research", self.modal_start_research))
@@ -453,15 +453,16 @@ class Research_Screen(GameState):
                     process_req(req_k, req_v)
 
     def draw_hud_slots(self, surface):
-        hud_rect = pygame.Rect(20, c.SCREEN_HEIGHT - 120, 400, 100)
+        hud_height = 80 + (c.RESEARCH_SLOTS * 25)
+        hud_rect = pygame.Rect(20, c.SCREEN_HEIGHT - hud_height, 400, hud_height - 20)
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
         hud_font = fonts.get("button")
-        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, c.SCREEN_HEIGHT - 110))
-        
+        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, c.SCREEN_HEIGHT - hud_height + 10))
+
         queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
-        for i in range(2):
-            y_off = c.SCREEN_HEIGHT - 80 + (i * 25)
+        for i in range(c.RESEARCH_SLOTS):
+            y_off = c.SCREEN_HEIGHT - hud_height + 40 + (i * 25)
             if i < len(queue):
                 p = queue[i]
                 tech_name = p['tech_name'].replace('_',' ').title()

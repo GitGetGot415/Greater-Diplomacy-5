@@ -333,7 +333,8 @@ START_YEAR = 1910
 END_YEAR = 2010
 RESEARCH_TIMELINE_SPACING = 90 # Width between years on the research timeline
 
-BASE_RESEARCH_POINTS_PER_DAY = 10 
+BASE_RESEARCH_POINTS_PER_DAY = 10
+RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
 
 # Random Scenario Settings
 RANDOM_SCENARIO_SPAWN_UNITS = True

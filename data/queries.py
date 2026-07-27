@@ -1520,13 +1520,13 @@ def get_unread_message_count(nation, nation_data):
     return unread_count
 
 def has_free_research_slots(nation, nation_data):
-    """Returns True if the nation is researching fewer than 2 techs."""
+    """Returns True if the nation is researching fewer than c.RESEARCH_SLOTS techs."""
     # Prevent the research notification from popping up for the Spectator or Ocean
     if nation in c.UNPLAYABLE_NATIONS:
         return False
-        
+
     queue = nation_data.get(nation, {}).get("research_queue", [])
-    return len(queue) < 2
+    return len(queue) < c.RESEARCH_SLOTS
 
 def has_active_truce(nation_a, nation_b, nation_data):
     """Returns True if there is an active non-aggression pact/truce between the two nations."""

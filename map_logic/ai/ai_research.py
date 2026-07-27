@@ -17,8 +17,8 @@ def process_ai_research(map_screen):
 
         queue = data.setdefault("research_queue", [])
         
-        # AI can only research 2 things at a time
-        if len(queue) >= 2:
+        # AI can only research c.RESEARCH_SLOTS things at a time
+        if len(queue) >= c.RESEARCH_SLOTS:
             continue
 
         res_levels = data.setdefault("research", {})
@@ -55,7 +55,7 @@ def process_ai_research(map_screen):
         available_techs.sort(key=lambda x: (max(0, x[1] - current_year), x[2]))
 
         # Fill the queue
-        while len(queue) < 2 and available_techs:
+        while len(queue) < c.RESEARCH_SLOTS and available_techs:
             best_tech = available_techs.pop(0)
             queue.append({
                 "tech_name": best_tech[0],
