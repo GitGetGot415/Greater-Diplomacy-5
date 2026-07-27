@@ -52,25 +52,30 @@ class Research_Screen(GameState):
                 self.tech_years[(tech_key, i + 1)] = y
 
         # Stagger the Y positions to prevent branches overlapping (Keep this hardcoded since it's visual layout, not logic)
+
+        y1 = 200
+        y2 = 270
+        y3 = 340
+        y4 = 410
         self.tech_rows = {
-            "infantry_type": 250,
-            "motorized_infantry": 350,
-            "mechanized_infantry": 450,
-            "cavalry": 350,
-            "militia": 550,
-            "ww1_armored_car": 250, "armored_car": 250, "civilian_car": 250,
-            "ww1_tank": 350, "light_tank": 350,
-            "medium_tank": 450, "main_battle_tank": 450,
-            "heavy_tank": 550,
-            "destroyer": 250,
-            "carrack": 350, "ironclad": 350, "pre-dreadnought": 350, "dreadnought": 350,
-            "battleship": 350,
-            "aircraft_carrier": 350,
-            "submarine": 450,
-            "workshop": 250, "basic_factory": 250, "factory": 250,
-            "bergius_process": 350, "fuel_refining": 350,
-            "basic_recruitment": 450, "recruitment_buildings": 450,
-            "general_recruitment": 550
+            "infantry_type": y1,
+            "motorized_infantry": y2,
+            "mechanized_infantry": y3,
+            "cavalry": y2,
+            "militia": y4,
+            "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
+            "ww1_tank": y2, "light_tank": y2,
+            "medium_tank": y3, "main_battle_tank": y3,
+            "heavy_tank": y4,
+            "destroyer": y1,
+            "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,
+            "battleship": y2,
+            "aircraft_carrier": y2,
+            "submarine": y3,
+            "workshop": y1, "basic_factory": y1, "factory": y1,
+            "bergius_process": y2, "fuel_refining": y2,
+            "basic_recruitment": y3, "recruitment_buildings": y3,
+            "general_recruitment": y4
         }
 
         self.nodes = {"INFANTRY": [], "TANKS": [], "NAVY": [], "INDUSTRY": []}
