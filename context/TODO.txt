@@ -14,6 +14,10 @@ Immediate concerns:
 
 !!!!!!
 - resource multiplier???
+increases by +0.1x each time
+so 1911, 1.1
+1912, 1.2
+repeat until 2010 when it reaches 10.0
 !!!!!!
 
 - give every country 3 research slots now, there's a lot of things that can be researched

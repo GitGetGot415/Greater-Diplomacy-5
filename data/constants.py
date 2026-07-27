@@ -345,7 +345,7 @@ CPU_LIMITER = 10
 START_YEAR = 1910
 END_YEAR = 2010
 AI_THINKING_COOLDOWN = 0 # how long does an ai have to wait before thinking again
-RESEARCH_TIMELINE_SPACING = 100 # Width between years on the research timeline
+RESEARCH_TIMELINE_SPACING = 90 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10 
 
