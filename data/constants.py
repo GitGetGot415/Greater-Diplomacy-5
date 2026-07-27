@@ -106,7 +106,7 @@ CREDITS_DATA = [
 
 SHOW_FPS = False
 
-GAME_VERSION = "v18"
+GAME_VERSION = "v19"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
 # --- TACTICAL MODE CONSTANTS ---
