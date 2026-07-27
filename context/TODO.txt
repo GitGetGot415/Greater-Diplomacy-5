@@ -17,6 +17,7 @@ Immediate concerns:
 !!!!!!
 
 - give every country 3 research slots now, there's a lot of things that can be researched
+- actually, just make the number of research slots for countries editable
 
 - curious, the arrows for research don't seem to be centered...
 
