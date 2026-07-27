@@ -63,7 +63,7 @@ class Automation_Screen(GameState):
 
         # If confirmation is active, add confirmation buttons
         if self.confirm_action:
-            c_y = c.SCREEN_HEIGHT // 2 + 100
+            c_y = c.SCREEN_HEIGHT // 2
             self.elements.append(Button(c.SCREEN_WIDTH//2 - 250, c_y, "puppet_option", "red", "Cancel", self.cancel_confirmation, font_preset="normal"))
             self.elements.append(Button(c.SCREEN_WIDTH//2 + 50, c_y, "puppet_option", "green", "Confirm", self.execute_confirmation, font_preset="normal"))
 

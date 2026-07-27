@@ -3,6 +3,8 @@ Fullscreeen button
 you can now edit the resources a country starts out with
 you can now Force Time Appropriate Research to automatically set research when editing a map
 wheat resource added (gives manpower)
+resource multiplier option added to industry research
+3rd research slot added
 
 Immediate concerns:
 - newspaper events???
@@ -11,9 +13,6 @@ Immediate concerns:
 - when viewing claims you're unable to scroll down by clicking the scroll bar, you have you scroll using the mouse wheel, could this be fixed so you can click to scroll in that situation
 - enable building factories on puppet territory? (note that there could be a meta where you make a puppet, build a factory on it, and then annex it to build said factory cheaply) (unless the cost to build is based on your factory count and not that of your pupets)
 - maybe factory count is only counted for factories on core territory
-
-- give every country 3 research slots now, there's a lot of things that can be researched
-- actually, just make the number of research slots for countries editable
 
 - curious, the arrows for research don't seem to be centered...
 
