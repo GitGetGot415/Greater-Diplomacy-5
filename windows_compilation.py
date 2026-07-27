@@ -94,6 +94,14 @@ def main():
         with open(active_albums_path, "w") as f:
             f.write("[]")
 
+    # Reset scenario/global settings to {} so the build falls back to the game's
+    # built-in defaults instead of carrying over whatever the dev machine had set
+    for settings_file in ("scenario_settings.json", "settings_config.json"):
+        settings_path = os.path.join(dist_dir, "data", "json", settings_file)
+        if os.path.exists(os.path.dirname(settings_path)):
+            with open(settings_path, "w") as f:
+                f.write("{}")
+
     print("Compilation and copying finished successfully.")
 
     zip_name = f"GD5 WINDOWS {c.GAME_VERSION}"

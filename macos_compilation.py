@@ -49,6 +49,15 @@ def main():
         with open(active_albums_path, "w") as f:
             f.write("[]")
 
+    # Reset scenario/global settings to {} so the build falls back to the game's
+    # built-in defaults instead of carrying over whatever the dev machine had set
+    resources_json_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources", "data", "json")
+    for settings_file in ("scenario_settings.json", "settings_config.json"):
+        settings_path = os.path.join(resources_json_dir, settings_file)
+        if os.path.exists(resources_json_dir):
+            with open(settings_path, "w") as f:
+                f.write("{}")
+
     # 3. Zipping the app
     zip_name = f"GD5 MACOS {c.GAME_VERSION}"
     print(f"Zipping {dist_dir} into {zip_name}.zip...")
