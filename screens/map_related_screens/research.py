@@ -416,16 +416,20 @@ class Research_Screen(GameState):
                     mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
                     dx = p1[0] - p2[0]
                     dy = p1[1] - p2[1]
-                    
+
                     # Only draw arrows if the line is long enough to avoid extreme clutter
                     if math.hypot(dx, dy) > 20:
                         angle_rad = math.atan2(dy, dx)
                         head_size = 10
-                        left_wing = (mx - head_size * math.cos(angle_rad - math.pi / 6),
-                                     my - head_size * math.sin(angle_rad - math.pi / 6))
-                        right_wing = (mx - head_size * math.cos(angle_rad + math.pi / 6),
-                                       my - head_size * math.sin(angle_rad + math.pi / 6))
-                        pygame.draw.polygon(surface, color, [(mx, my), left_wing, right_wing])
+                        # Shift the tip forward so the arrowhead's centroid (not its tip) sits on the midpoint
+                        half_depth = (head_size * math.cos(math.pi / 6)) / 2
+                        tip = (mx + half_depth * math.cos(angle_rad),
+                               my + half_depth * math.sin(angle_rad))
+                        left_wing = (tip[0] - head_size * math.cos(angle_rad - math.pi / 6),
+                                     tip[1] - head_size * math.sin(angle_rad - math.pi / 6))
+                        right_wing = (tip[0] - head_size * math.cos(angle_rad + math.pi / 6),
+                                       tip[1] - head_size * math.sin(angle_rad + math.pi / 6))
+                        pygame.draw.polygon(surface, color, [tip, left_wing, right_wing])
 
             # Draw standard linear connection to previous level
             if l > 1:
