@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 
 class AI_Settings(GameState):
-    return_screen = "SCENARIO_SETTINGS"
+    back_state = "SCENARIO_SETTINGS"
 
     def __init__(self):
         super().__init__()
@@ -21,7 +21,7 @@ class AI_Settings(GameState):
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_to_menu),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
         ]
 
         # Toggle Button - AI Off
@@ -76,9 +76,4 @@ class AI_Settings(GameState):
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
-    def exit_to_menu(self):
-        self.next_state = self.__class__.return_screen
-        self.done = True
 
-    def handle_back_key(self):
-        self.exit_to_menu()

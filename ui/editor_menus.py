@@ -21,35 +21,33 @@ def editor_load_map(self):
         self.refresh_political_map()
         self.show_feedback("Map Loaded into Editor")
 
+def _select_brush(self, mode, attr, items, title, prompt, feedback_label="Brush"):
+    """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""
+    def cb(val):
+        setattr(self, attr, val)
+        self.editor_mode = mode
+        self.show_feedback(f"{feedback_label}: {val}")
+    queries.open_listbox_selector(self, title, prompt, items, cb)
+
+def _paintable_nations(self):
+    """The nation list every nation-painting brush offers, sorted accent-insensitively."""
+    nations = sorted(self.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
+    return ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+
 def select_brush_nation(self):
     """Opens a Tkinter selection window and sets mode to NATION."""
-    nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
-    def cb(val):
-        self.brush_nation = val
-        self.editor_mode = "NATION" 
-        self.show_feedback(f"Brush: {self.brush_nation}")
-    queries.open_listbox_selector(self, "Select Nation", "Select Paint Nation:", items, cb)
+    _select_brush(self, "NATION", "brush_nation", _paintable_nations(self),
+                  "Select Nation", "Select Paint Nation:")
 
 def select_core_brush(self):
     """Opens a Tkinter selection window and sets mode to CORE."""
-    nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
-    def cb(val):
-        self.brush_nation = val
-        self.editor_mode = "CORE" 
-        self.show_feedback(f"Core Brush: {self.brush_nation}")
-    queries.open_listbox_selector(self, "Select Core Nation", "Select Nation to Add Cores:", items, cb)
+    _select_brush(self, "CORE", "brush_nation", _paintable_nations(self),
+                  "Select Core Nation", "Select Nation to Add Cores:", "Core Brush")
 
 def select_claim_brush(self):
     """Opens a Tkinter selection window and sets mode to CLAIM."""
-    nations = sorted(list(self.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    items = ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
-    def cb(val):
-        self.brush_nation = val
-        self.editor_mode = "CLAIM" 
-        self.show_feedback(f"Claim Brush: {self.brush_nation}")
-    queries.open_listbox_selector(self, "Select Claim Nation", "Select Nation to Add Claims:", items, cb)
+    _select_brush(self, "CLAIM", "brush_nation", _paintable_nations(self),
+                  "Select Claim Nation", "Select Nation to Add Claims:", "Claim Brush")
 
 def open_editor_claims(self):
     """Opens a Tkinter window listing every claim on the map."""
@@ -103,11 +101,8 @@ def select_building_brush(self):
     """Opens a selection window for building types and sets mode to BUILDING."""
     bldg_lib = queries.get_building_library()
     items = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
-    def cb(val):
-        self.brush_building = val
-        self.editor_mode = "BUILDING"
-        self.show_feedback(f"Brush: {self.brush_building}")
-    queries.open_listbox_selector(self, "Select Building", "Select Building to Place:", items, cb)
+    _select_brush(self, "BUILDING", "brush_building", items,
+                  "Select Building", "Select Building to Place:")
 
 def spec_select_edit_country(self):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
@@ -661,11 +656,8 @@ def open_map_research_editor(self):
 def select_unit_brush(self):
     """Opens a selection window for unit types and sets mode to UNIT."""
     items = ["None", "Convoy", "----------"] + list(queries.get_unit_library().keys())
-    def cb(val):
-        self.brush_unit = val
-        self.editor_mode = "UNIT"
-        self.show_feedback(f"Brush: {self.brush_unit}")
-    queries.open_listbox_selector(self, "Select Unit", "Select Unit to Place:", items, cb)
+    _select_brush(self, "UNIT", "brush_unit", items,
+                  "Select Unit", "Select Unit to Place:")
 
 def open_convoy_converter(self, province):
     """Opens a Tkinter window to select which units on a tile should be converted to convoys/trucks."""

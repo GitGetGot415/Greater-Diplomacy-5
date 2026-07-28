@@ -120,9 +120,7 @@ def render_buttons(self):
     def open_declare_independence():
         from screens.map_related_screens.declare_independence import Declare_Independence_Screen
         from ui.player_diplomacy_menus import _run_pygame_sub_screen
-        screen = Declare_Independence_Screen()
-        screen.start_screen(self)
-        _run_pygame_sub_screen(self, screen)
+        _run_pygame_sub_screen(self, Declare_Independence_Screen(self))
         
     self.btn_declare_indep = Button(c.EDITOR_BOT_BTN_START_X - c.EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Independence!", open_declare_independence, font_preset="normal")
 
@@ -643,7 +641,7 @@ def render_edit_country_buttons(edit_screen):
     icons = ui_elements.UI_ICONS
     edit_screen.elements = []
     
-    edit_screen.btn_cancel = Button(20, 20, "small", "red", "Cancel", edit_screen.exit_to_map)
+    edit_screen.btn_cancel = Button(20, 20, "small", "red", "Cancel", edit_screen.exit_screen)
     edit_screen.btn_save = Button(140, 20, "medium", "green", "Save Changes", edit_screen.save_and_exit)
     
     # Switch country graphics configuration handler
@@ -715,7 +713,7 @@ def render_settings_buttons(settings_screen):
         orders_btn_text = "Press any key..."
 
     settings_screen.elements = [
-        Button(50, 50, "small", "red", "Back", settings_screen.go_back),
+        Button(50, 50, "small", "red", "Back", settings_screen.save_and_go_back),
         Button(keybind_x, 100, "medium", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
         Button(keybind_x, 160, "medium", "green" if settings_screen.show_fps else "red", 
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),

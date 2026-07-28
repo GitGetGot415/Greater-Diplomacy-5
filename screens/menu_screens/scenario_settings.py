@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 
 class Scenario_Settings(GameState):
-    return_screen = "NEW_GAME" # Track which screen to return to
+    back_state = "NEW_GAME" # Track which screen to return to
 
     def __init__(self):
         super().__init__()
@@ -27,7 +27,7 @@ class Scenario_Settings(GameState):
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_to_menu),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
         ]
         
         # Toggle Button - Fog of War
@@ -204,9 +204,3 @@ class Scenario_Settings(GameState):
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
-    def exit_to_menu(self):
-        self.next_state = self.__class__.return_screen
-        self.done = True
-
-    def handle_back_key(self):
-        self.exit_to_menu()

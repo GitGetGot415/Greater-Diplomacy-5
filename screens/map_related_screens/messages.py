@@ -7,6 +7,8 @@ from map_logic.diplomacy import diplomacy_logic
 from data import queries
 
 class Messages_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = c.MSG_BG_DARK
@@ -25,11 +27,6 @@ class Messages_Screen(GameState):
         self.is_dragging_messages = False # Tracks dragging inside the message pane
         
         self.show_all_contacts = False
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_messages(self, map_ref):
         self.map_screen = map_ref
@@ -270,7 +267,7 @@ class Messages_Screen(GameState):
                     self.send_message()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_to_map)]
+        self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen)]
         if self.selected_recipient:
             self.elements.append(Button(130, 20, "small", "orange", "Mark Unread", self.mark_thread_unread))
 
@@ -627,9 +624,6 @@ class Messages_Screen(GameState):
                 
             current_y -= 15 
 
-    def exit_to_map(self):
-        self.save_current_draft() 
-        self.next_state, self.done = "MAP", True
-
-    def handle_back_key(self):
-        self.exit_to_map()
+    def exit_screen(self):
+        self.save_current_draft()
+        super().exit_screen()

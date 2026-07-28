@@ -6,12 +6,14 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
 class Credits(GameState):
+    back_state = "MENU"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40) # Midnight Blue
 
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_to_menu),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
         ]
         
         self.credits_list = []
@@ -62,10 +64,6 @@ class Credits(GameState):
                     
             self.credits_list.append(credit_entry)
             current_y += 50
-
-    def exit_to_menu(self):
-        self.next_state = "MENU"
-        self.done = True
 
     def additional_events(self, event):
         # Hook into mouse clicks to make the hyperlinks functional

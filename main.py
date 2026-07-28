@@ -29,6 +29,7 @@ if os.name == 'nt':
     os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
 from screens.map_related_screens.messages import Messages_Screen
+from gameState import dispatch_global_keys
 from map_logic.rendering.font_manager import fonts
 import ui_elements
 import data.constants as c
@@ -300,9 +301,9 @@ class Controller:
 
         if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
             if previous_state == self.states["MAP"]:
-                self.states[next_state_name].return_state = "MAP"
+                self.states[next_state_name].back_state = "MAP"
             else:
-                self.states[next_state_name].return_state = "MENU"
+                self.states[next_state_name].back_state = "MENU"
 
         # 2. Map Persistence
         if next_state_name == "MAP":
@@ -385,7 +386,7 @@ class Controller:
 
         # 3. Load Game Refresh
         if next_state_name == "LOAD_GAME":
-            self.states["LOAD_GAME"].refresh_save_list()
+            self.states["LOAD_GAME"].refresh_ui()
 
         self.active_state.done = False
         self.active_state = self.states[next_state_name]
@@ -549,18 +550,11 @@ class Controller:
                     os._exit(0) # Instantly kills hanging background threads
                 
                 # GLOBAL KEYBOARD HANDLING
-                if event.type == pygame.KEYDOWN:
-                    is_listening = getattr(self.active_state, "listening_for", None)
-                    
-                    if not is_listening:
-                        if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
-                            self.toggle_fullscreen()
-                        elif event.key == self.keybinds.get("BACK", pygame.K_ESCAPE):
-                            if hasattr(self.active_state, "handle_back_key"):
-                                self.active_state.handle_back_key()
-                        elif event.key == self.keybinds.get("ORDERS", pygame.K_q):
-                            if hasattr(self.active_state, "handle_orders_key"):
-                                self.active_state.handle_orders_key()
+                if event.type == pygame.KEYDOWN and not getattr(self.active_state, "listening_for", None):
+                    if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
+                        self.toggle_fullscreen()
+                    else:
+                        dispatch_global_keys(self.active_state, event)
 
             self.active_state.handle_events(events)
             self.active_state.update()

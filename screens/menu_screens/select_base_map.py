@@ -12,6 +12,8 @@ from ui.bars import ui_bars
 from map_logic.system32 import loading_screen
 
 class Select_Base_Map(GameState):
+    back_state = "MENU"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (40, 20, 60)
@@ -38,14 +40,14 @@ class Select_Base_Map(GameState):
         self.refresh_completed = 0
         self.refresh_status = ""
 
-        self.refresh_maps()
+        self.refresh_ui()
 
     def set_sub_state(self, state):
         self.sub_state = state
         self.scroll_y = 0
         self.deleting_scenario = None
         self.renaming_scenario = None
-        self.refresh_maps()
+        self.refresh_ui()
 
     def update(self):
         super().update()
@@ -57,7 +59,7 @@ class Select_Base_Map(GameState):
         if self.last_custom_count != current_custom or self.last_base_count != current_base:
             self.last_custom_count = current_custom
             self.last_base_count = current_base
-            self.refresh_maps()
+            self.refresh_ui()
 
         # Forcefully hide all UI buttons while the loading screen is active
         if self.is_refreshing:
@@ -67,11 +69,11 @@ class Select_Base_Map(GameState):
             for el in self.elements:
                 el.visible = True
 
-    def refresh_maps(self):
+    def refresh_ui(self):
         self.elements = []
         
         if self.sub_state == "CUSTOM_MAPS":
-            self.elements.append(Button(20, 20, "small", "red", "Back", self.exit_to_menu))
+            self.elements.append(Button(20, 20, "small", "red", "Back", self.exit_screen))
             self.elements.append(Button(160, 20, "medium", "green", "Import .zip", self.import_scenario_zip))
             self.elements.append(Button("centered", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map", lambda: self.set_sub_state("BASE_MAPS")))
 
@@ -159,7 +161,7 @@ class Select_Base_Map(GameState):
             if os.path.exists(target_dir): target_dir += "_imported"
             try:
                 queries.extract_and_flatten_zip(file_path, target_dir)
-                self.refresh_maps()
+                self.refresh_ui()
                 messagebox.showinfo("Import Success", "Scenario Imported successfully.", parent=root)
             except Exception as e: 
                 messagebox.showerror("Import Error", str(e), parent=root)
@@ -184,7 +186,7 @@ class Select_Base_Map(GameState):
     def start_rename(self, scenario_name):
         self.renaming_scenario = scenario_name
         self.new_name_text = scenario_name
-        self.refresh_maps()
+        self.refresh_ui()
 
     def finish_rename(self):
         if self.new_name_text.strip() != "" and self.new_name_text != self.renaming_scenario:
@@ -193,11 +195,11 @@ class Select_Base_Map(GameState):
             if not os.path.exists(new_path): 
                 os.rename(old_path, new_path)
         self.renaming_scenario = None
-        self.refresh_maps()
+        self.refresh_ui()
 
     def trigger_delete_conf(self, scenario_name):
         self.deleting_scenario = scenario_name
-        self.refresh_maps()
+        self.refresh_ui()
 
     def confirm_delete(self):
         if self.deleting_scenario:
@@ -205,15 +207,11 @@ class Select_Base_Map(GameState):
             if os.path.exists(path):
                 shutil.rmtree(path)
         self.deleting_scenario = None
-        self.refresh_maps()
+        self.refresh_ui()
 
     def cancel_delete(self):
         self.deleting_scenario = None
-        self.refresh_maps()
-
-    def _snap_scroll(self, my):
-        self.scroll_y = ui_bars.calculate_scroll_snap(my, self.max_scroll, 150, c.SCREEN_HEIGHT - 200)
-        self.refresh_maps()
+        self.refresh_ui()
 
     def start_editor_with_custom_map(self, map_name):
         self.selected_save_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, map_name)
@@ -227,16 +225,16 @@ class Select_Base_Map(GameState):
         self.next_state = "MAP"
         self.done = True
 
-    def exit_to_menu(self):
+    def exit_screen(self):
         self.set_sub_state("CUSTOM_MAPS")
-        self.next_state = "MENU"
-        self.done = True
+        super().exit_screen()
 
     def handle_back_key(self):
+        # Escape steps back out of the base-map list before it leaves the screen.
         if self.sub_state == "BASE_MAPS":
             self.set_sub_state("CUSTOM_MAPS")
         else:
-            self.exit_to_menu()
+            self.exit_screen()
             
     def handle_events(self, events):
         import pygame
@@ -250,7 +248,7 @@ class Select_Base_Map(GameState):
                 if status == "SUBMIT": self.finish_rename()
                 elif status == "CANCEL": 
                     self.renaming_scenario = None
-                    self.refresh_maps()
+                    self.refresh_ui()
                 continue
                 
             if self.deleting_scenario:
@@ -260,24 +258,7 @@ class Select_Base_Map(GameState):
                 continue
 
             if self.sub_state in ("CUSTOM_MAPS", "BASE_MAPS"):
-                if event.type == pygame.MOUSEWHEEL:
-                    self.scroll_y += event.y * 40
-                    self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-                    self.refresh_maps()
-
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = event.pos
-                    if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(mx, my):
-                        self.is_dragging_scrollbar = True
-                    elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(mx, my):
-                        self.is_dragging_scrollbar = True
-                        self._snap_scroll(my)
-
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    self.is_dragging_scrollbar = False
-
-                elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
-                    self._snap_scroll(event.pos[1])
+                self.handle_list_scroll(event)
 
             super().handle_events([event])
 

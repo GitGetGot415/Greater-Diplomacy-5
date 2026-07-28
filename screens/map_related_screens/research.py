@@ -7,6 +7,8 @@ from map_logic.rendering import symbol_loader
 from data import queries
 
 class Research_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (20, 20, 30)
@@ -30,11 +32,6 @@ class Research_Screen(GameState):
         self.pixels_per_year = c.RESEARCH_TIMELINE_SPACING
 
         self.setup_nodes()
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def handle_events(self, events):
         for event in events:
@@ -214,7 +211,7 @@ class Research_Screen(GameState):
                     self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "green", "Researched", lambda: None))
             return
         
-        self.elements.append(Button(20, 10, "small", "red", "Exit", self.exit_to_map))
+        self.elements.append(Button(20, 10, "small", "red", "Exit", self.exit_screen))
 
         start_x = 180 
         for i, cat in enumerate(self.categories):
@@ -725,11 +722,9 @@ class Research_Screen(GameState):
         if self.active_modal:
             self.draw_subscreen_modal(surface)
 
-    def exit_to_map(self):
-        self.next_state, self.done = "MAP", True
-
     def handle_back_key(self):
+        # Escape closes an open tech modal before it leaves the screen.
         if self.active_modal:
             self.close_modal()
         else:
-            self.exit_to_map()
+            self.exit_screen()

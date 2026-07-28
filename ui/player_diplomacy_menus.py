@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_logic
-from gameState import GameState
+from gameState import MapOverlayScreen, dispatch_global_keys
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
@@ -13,7 +13,7 @@ def _run_pygame_sub_screen(map_screen, screen_obj):
     screen_obj.done = False
     clock = pygame.time.Clock()
     surface = pygame.display.get_surface()
-    
+
     while not screen_obj.done:
         events = pygame.event.get()
         for event in events:
@@ -21,33 +21,50 @@ def _run_pygame_sub_screen(map_screen, screen_obj):
                 import sys
                 pygame.quit()
                 sys.exit()
-        
+            # Mirrors the main loop so sub-screens get BACK/ORDERS for free.
+            dispatch_global_keys(screen_obj, event)
+
         screen_obj.handle_events(events)
         screen_obj.update()
-        
+
         # The background is safely filled by the map rendering itself.
         screen_obj.draw(surface)
-        
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(map_screen, surface)
-        
+
         pygame.display.flip()
-        
+
         clock.tick(c.TARGET_FPS)
-        
+
     # Clear any phantom hovering from the sub-screen
     map_screen.hovered_province = None
+
+def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
+    """Tints every province that would change hands if the treaty went through."""
+    p_color = map_screen.nation_colors.get(proposer, (0, 255, 0))
+    t_color = map_screen.nation_colors.get(target, (255, 0, 0))
+
+    for prov in map_screen.map_data.values():
+        curr = prov.get("owner")
+        if curr not in (proposer, target):
+            continue
+        proj = queries.get_projected_owner(prov, peace_type, proposer, target, map_screen.nation_data)
+        if proj == curr:
+            continue
+        color = p_color if proj == proposer else t_color if proj == target else None
+        if color:
+            overlay_renderer.draw_map_highlight(surface, map_screen, prov["id"], color, base_radius=10)
 
 # ==========================================
 # DECLARE WAR SCREEN
 # ==========================================
 
-class Declare_War_Screen(GameState):
+class Declare_War_Screen(MapOverlayScreen):
+    pans_camera = False
+
     def __init__(self, map_screen, target_nation):
-        super().__init__()
-        self.map_screen = map_screen
+        # Widen the panel to fit buttons side-by-side
+        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 250, c.SCREEN_HEIGHT//2 - 160, 500, 320))
         self.target_nation = target_nation
-        
+
         has_wg = queries.has_wargoal(map_screen.player_country, target_nation, map_screen.nation_data, map_screen.map_data)
         
         # Safely parse the setting in case it was saved as a string in the JSON
@@ -101,8 +118,6 @@ class Declare_War_Screen(GameState):
                     self.selected_wargoal_idx = i
                     break
 
-        # Widen the panel to fit buttons side-by-side
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 250, c.SCREEN_HEIGHT//2 - 160, 500, 320)
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -182,51 +197,20 @@ class Declare_War_Screen(GameState):
             self.map_screen.show_feedback("War Declaration Queued!" if not self.is_editing else "War Declaration Updated!")
             self.done = True
 
-    def exit_screen(self):
-        self.done = True
-
-    def handle_back_key(self):
-        self.exit_screen()
-
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-
-    def additional_draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-
-        ui_bars.draw_fullscreen_overlay(surface, 180)
+    def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
         ui_bars.draw_centered_title(surface, f"Declare War: {self.target_nation}", self.panel_rect.y + 20)
-
-        # Draw UI elements manually to prevent super().draw() from filling the screen with a solid background color
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
 
 # ==========================================
 # CLAIMS SCREEN
 # ==========================================
 
-class Claims_Screen(GameState):
+class Claims_Screen(MapOverlayScreen):
+    overlay_alpha = 0
+
     def __init__(self, map_screen):
-        super().__init__()
-        self.map_screen = map_screen
-        self.player = map_screen.player_country
-        self.panel_rect = pygame.Rect(80, 120, 380, c.SCREEN_HEIGHT - 240)
-        
-        self.scroll_y = 0
-        self.max_scroll = 0
-        
+        super().__init__(map_screen, pygame.Rect(80, 120, 380, c.SCREEN_HEIGHT - 240))
+
         # Determine if we have global viewing privileges
         self.is_global_viewer = map_screen.is_editor or self.player in ["Spectator", "None"]
         self.view_mode = "GLOBAL" if self.is_global_viewer else "YOURS"
@@ -252,61 +236,22 @@ class Claims_Screen(GameState):
             btn_theirs.is_selected = (self.view_mode == "THEIRS")
             self.elements.extend([btn_yours, btn_theirs])
         
-    def exit_screen(self):
-        self.done = True
+    def additional_events(self, event):
+        super().additional_events(event)
 
-    def handle_back_key(self):
-        self.exit_screen()
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not self.is_over_ui():
+            if self.map_screen.tactical_mode:
+                self.map_screen.show_feedback("Tactical Mode: Cannot modify claims.")
+                return
 
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-            
-            on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
-            
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if not on_ui:
-                    if self.map_screen.tactical_mode:
-                        self.map_screen.show_feedback("Tactical Mode: Cannot modify claims.")
-                        continue
-                        
-                    dest = self.get_clicked_province(event.pos)
-                    if dest and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
-                        if self.view_mode == "YOURS":
-                            if dest.get("owner") != self.player:
-                                self.toggle_claim(dest)
-                        elif self.view_mode == "THEIRS":
-                            if dest.get("owner") == self.player:
-                                self.return_foreign_claim(dest)
-                    else:
-                        self.map_screen.show_feedback("Can only edit claims on valid nations.")
-                        
-            elif event.type == pygame.MOUSEWHEEL:
-                if on_ui:
-                    self.scroll_y += event.y * 30
-                    self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-                else:
-                    self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-                    
-            elif event.type == pygame.MOUSEMOTION:
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-
-    def get_clicked_province(self, mouse_pos):
-        cam = self.map_screen.camera
-        mx, my = mouse_pos
-        wx = ((mx / cam.zoom) + cam.pos.x) % self.map_screen.map_w
-        wy = ((my - self.map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
-        if 0 <= wy < self.map_screen.map_h:
-            color = self.map_screen.id_map.get_at((int(wx), int(wy)))
-            return self.map_screen.map_data.get((color.r, color.g, color.b))
-        return None
+            dest = self.get_clicked_province(event.pos)
+            if dest and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
+                if self.view_mode == "YOURS" and dest.get("owner") != self.player:
+                    self.toggle_claim(dest)
+                elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
+                    self.return_foreign_claim(dest)
+            else:
+                self.map_screen.show_feedback("Can only edit claims on valid nations.")
 
     def toggle_claim(self, dest):
         pid = dest["id"]
@@ -392,15 +337,7 @@ class Claims_Screen(GameState):
         self.map_screen.show_feedback(f"Returning territory to {recipient} (1 turn).")
         self.refresh_ui()
 
-    def update(self):
-        super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-
-        self.map_screen.draw_clean_map_background(surface)
-
+    def draw_content(self, surface):
         # Draw territorial highlights
         data = self.map_screen.nation_data.get(self.player, {})
         claims = data.get("claims", [])
@@ -632,20 +569,18 @@ class Claims_Screen(GameState):
             surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 90, viewport_h, width=10
         )
 
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
-
 # ==========================================
 # CEASEFIRE / PEACE SCREEN
 # ==========================================
 
-class Peace_Screen(GameState):
+class Peace_Screen(MapOverlayScreen):
+    overlay_alpha = 0
+
     def __init__(self, map_screen, target_nation):
-        super().__init__()
-        self.map_screen = map_screen
+        # Restructured to be a wide, short banner docked cleanly above the bottom UI bar
+        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 350, c.SCREEN_HEIGHT - 250, 700, 190))
         self.target_nation = target_nation
-        
+
         my_wargoal = map_screen.nation_data.get(map_screen.player_country, {}).get("wargoals", {}).get(target_nation, {}).get("type", "")
         their_wargoal = map_screen.nation_data.get(target_nation, {}).get("wargoals", {}).get(map_screen.player_country, {}).get("type", "")
         
@@ -678,9 +613,7 @@ class Peace_Screen(GameState):
                 self.selected_term_idx = 2
         else:
             self.selected_term_idx = 2 # Default to Ceasefire
-            
-        # Restructured to be a wide, short banner docked cleanly above the bottom UI bar
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 350, c.SCREEN_HEIGHT - 250, 700, 190)
+
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -781,74 +714,9 @@ class Peace_Screen(GameState):
         self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
         self.done = True
 
-    def exit_screen(self):
-        self.done = True
-
-    def handle_back_key(self):
-        self.exit_screen()
-
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-            
-            on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
-            if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-
-    def update(self):
-        super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-
-    def get_projected_owner(self, prov, peace_type):
-        """Simulates the execution of the peace treaty to find who gets what."""
-        curr = prov.get("owner")
-        proj = curr
-        proposer = self.map_screen.player_country
-        target = self.target_nation
-
-        if peace_type == c.PEACE_WHITE_PEACE:
-            pass # A ceasefire freezes the map exactly as it is right now.
-        elif peace_type == c.PEACE_DEMAND_CLAIMS:
-            claims = self.map_screen.nation_data.get(proposer, {}).get("claims", [])
-            # Proposer gets their claims/cores that the target currently owns
-            if curr == target and (prov["id"] in claims or proposer in prov.get("cores", [])):
-                proj = proposer
-        elif peace_type == c.PEACE_SURRENDER:
-            claims = self.map_screen.nation_data.get(target, {}).get("claims", [])
-            # Target gets their claims/cores that the proposer currently owns
-            if curr == proposer and (prov["id"] in claims or target in prov.get("cores", [])):
-                proj = target
-        return proj
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-
-        # --- DRAW MAP PREVIEW HIGHLIGHTS ---
-        peace_type = self.terms[self.selected_term_idx]
-        proposer = self.map_screen.player_country
-        target = self.target_nation
-        p_color = self.map_screen.nation_colors.get(proposer, (0, 255, 0))
-        t_color = self.map_screen.nation_colors.get(target, (255, 0, 0))
-        
-        for prov in self.map_screen.map_data.values():
-            curr = prov.get("owner")
-            if curr in [proposer, target]:
-                # Use the centralized query
-                proj = queries.get_projected_owner(prov, peace_type, proposer, target, self.map_screen.nation_data)
-                if proj != curr:
-                    if proj == proposer:
-                        overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], p_color, base_radius=10)
-                    elif proj == target:
-                        overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], t_color, base_radius=10)
+    def draw_content(self, surface):
+        draw_projected_peace_map(surface, self.map_screen, self.terms[self.selected_term_idx],
+                                 self.map_screen.player_country, self.target_nation)
 
         # Draw the Banner
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 40, 30, 230), border_color=(50, 255, 50), border_width=3)
@@ -858,90 +726,47 @@ class Peace_Screen(GameState):
         acc_surf = small_font.render(self.acceptance_text, True, self.acceptance_color)
         surface.blit(acc_surf, (self.panel_rect.centerx - acc_surf.get_width()//2, self.panel_rect.y + 50))
 
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
-
 # ==========================================
 # VIEW PEACE TREATY SCREEN
 # ==========================================
 
-class View_Peace_Treaty_Screen(GameState):
+class View_Peace_Treaty_Screen(MapOverlayScreen):
+    overlay_alpha = 0
+
     def __init__(self, map_screen, proposer):
-        super().__init__()
-        self.map_screen = map_screen
+        super().__init__(map_screen)
         self.proposer = proposer
         self.target = map_screen.player_country
-        
+
         # Read the parameters directly from the proposed diplomacy message
         pending = map_screen.nation_data.get(self.proposer, {}).get("pending_diplomacy", {}).get(self.target, {})
         self.peace_type = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
-        
+
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
-        
-    def exit_screen(self):
-        self.done = True
 
-    def handle_back_key(self):
-        self.exit_screen()
-
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-            
-            on_ui = self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
-            if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-
-    def update(self):
-        super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-
-        p_color = self.map_screen.nation_colors.get(self.proposer, (0, 255, 0))
-        t_color = self.map_screen.nation_colors.get(self.target, (255, 0, 0))
-        
-        for prov in self.map_screen.map_data.values():
-            curr = prov.get("owner")
-            if curr in [self.proposer, self.target]:
-                # Use the centralized query
-                proj = queries.get_projected_owner(prov, self.peace_type, self.proposer, self.target, self.map_screen.nation_data)
-                if proj != curr:
-                    if proj == self.proposer:
-                        overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], p_color, base_radius=10)
-                    elif proj == self.target:
-                        overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], t_color, base_radius=10)
+    def draw_content(self, surface):
+        draw_projected_peace_map(surface, self.map_screen, self.peace_type, self.proposer, self.target)
 
         # Utilize the helper to render the header string over the map preview safely
         ui_bars.draw_centered_title(surface, f"Projected Map: Peace Treaty from {self.proposer}", 30)
-        
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
 
 # ==========================================
 # TRADE SCREEN
 # ==========================================
 
-class Trade_Screen(GameState):
+class Trade_Screen(MapOverlayScreen):
+    # Which text attribute each of the four number boxes edits.
+    FIELD_ATTRS = {
+        "GIVE_MATS": "give_mats_str",
+        "GIVE_FUEL": "give_fuel_str",
+        "TAKE_MATS": "take_mats_str",
+        "TAKE_FUEL": "take_fuel_str",
+    }
+
     def __init__(self, map_screen, target_nation):
-        super().__init__()
-        self.map_screen = map_screen
+        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 300, c.SCREEN_HEIGHT//2 - 220, 600, 420))
         self.target_nation = target_nation
-        
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 300, c.SCREEN_HEIGHT//2 - 220, 600, 420)
-        
+
         # State tracking for inputs
         self.give_mats_str = "0"
         self.give_fuel_str = "0"
@@ -1069,70 +894,44 @@ class Trade_Screen(GameState):
         self.done = True
 
     def handle_back_key(self):
-        self.cancel_trade()
+        # Escape backs out of a focused number box first, then out of the screen.
+        if self.active_input:
+            self.active_input = None
+        else:
+            self.cancel_trade()
 
-    def handle_events(self, events):
+    def input_rects(self):
+        """The four number boxes, keyed by the field they edit."""
+        return {
+            "GIVE_MATS": pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 100, 120, 30),
+            "GIVE_FUEL": pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 150, 120, 30),
+            "TAKE_MATS": pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 100, 120, 30),
+            "TAKE_FUEL": pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 150, 120, 30),
+        }
+
+    def additional_events(self, event):
         from ui_elements import process_text_input
-        
-        for event in events:
-            super().handle_events([event])
+        super().additional_events(event)
 
-            on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos())
-            if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            hit = next((key for key, rect in self.input_rects().items() if rect.collidepoint(event.pos)), None)
+            if not hit:
+                self.evaluate_input()
+            self.active_input = hit
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
-                
-                # Check bounding boxes for the 4 inputs
-                if pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 100, 120, 30).collidepoint(mx, my):
-                    self.active_input = "GIVE_MATS"
-                elif pygame.Rect(self.panel_rect.x + 130, self.panel_rect.y + 150, 120, 30).collidepoint(mx, my):
-                    self.active_input = "GIVE_FUEL"
-                elif pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 100, 120, 30).collidepoint(mx, my):
-                    self.active_input = "TAKE_MATS"
-                elif pygame.Rect(self.panel_rect.x + 430, self.panel_rect.y + 150, 120, 30).collidepoint(mx, my):
-                    self.active_input = "TAKE_FUEL"
-                else:
-                    self.evaluate_input()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                self.evaluate_input()
+                self.active_input = None
+            elif self.active_input:
+                attr = self.FIELD_ATTRS[self.active_input]
+                text, status = process_text_input(event, getattr(self, attr),
+                                                  validation_func=lambda ch: ch.isdigit() or ch == "-")
+                setattr(self, attr, text)
+                if status == "CANCEL":
                     self.active_input = None
 
-            elif event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-
-                if event.key == pygame.K_RETURN:
-                    self.evaluate_input()
-                    self.active_input = None
-                elif self.active_input:
-                    # Input routing
-                    val_func = lambda c: c.isdigit() or c == "-"
-                    status = "NONE"
-                    if self.active_input == "GIVE_MATS":
-                        self.give_mats_str, status = process_text_input(event, self.give_mats_str, validation_func=val_func)
-                    elif self.active_input == "GIVE_FUEL":
-                        self.give_fuel_str, status = process_text_input(event, self.give_fuel_str, validation_func=val_func)
-                    elif self.active_input == "TAKE_MATS":
-                        self.take_mats_str, status = process_text_input(event, self.take_mats_str, validation_func=val_func)
-                    elif self.active_input == "TAKE_FUEL":
-                        self.take_fuel_str, status = process_text_input(event, self.take_fuel_str, validation_func=val_func)
-                    
-                    if status == "CANCEL" or event.key == back_key:
-                        self.active_input = None
-                elif event.key == back_key:
-                    self.handle_back_key()
-
-    def update(self):
-        super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-
-        ui_bars.draw_fullscreen_overlay(surface, 180)
+    def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 50), border_color=(100, 200, 100), border_width=3)
         ui_bars.draw_centered_title(surface, f"Trade Agreement: {self.target_nation}", self.panel_rect.y + 15)
 
@@ -1153,21 +952,15 @@ class Trade_Screen(GameState):
         surface.blit(font_med.render("Puppeting Terms:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.centerx - 80, self.panel_rect.y + 190))
 
         # Draw Input Boxes
-        def draw_box(x, y, text, is_active):
-            rect = pygame.Rect(x, y, 120, 30)
-            pygame.draw.rect(surface, (20, 20, 30) if not is_active else (60, 60, 80), rect)
+        for key, rect in self.input_rects().items():
+            is_active = self.active_input == key
+            pygame.draw.rect(surface, (60, 60, 80) if is_active else (20, 20, 30), rect)
             pygame.draw.rect(surface, (150, 150, 150), rect, 1)
-            display = text + ("|" if is_active else "")
+            display = getattr(self, self.FIELD_ATTRS[key]) + ("|" if is_active else "")
             surface.blit(font_small.render(display, True, (255, 255, 255)), (rect.x + 5, rect.y + 5))
 
-        draw_box(self.panel_rect.x + 130, self.panel_rect.y + 100, self.give_mats_str, self.active_input == "GIVE_MATS")
-        draw_box(self.panel_rect.x + 130, self.panel_rect.y + 150, self.give_fuel_str, self.active_input == "GIVE_FUEL")
-        draw_box(self.panel_rect.x + 430, self.panel_rect.y + 100, self.take_mats_str, self.active_input == "TAKE_MATS")
-        draw_box(self.panel_rect.x + 430, self.panel_rect.y + 150, self.take_fuel_str, self.active_input == "TAKE_FUEL")
-
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
+    def draw(self, surface):
+        super().draw(surface)
 
         # Resource HUD (Replicating Production Screen Logic)
         hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
@@ -1175,7 +968,7 @@ class Trade_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         res_font = fonts.get("production_hud")
-        
+
         resources = queries.get_resource_hud_strings(self.map_screen, include_net=False)
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
@@ -1184,15 +977,15 @@ class Trade_Screen(GameState):
 # PUPPETS SCREEN
 # ==========================================
 
-class Puppets_Screen(GameState):
+class Puppets_Screen(MapOverlayScreen):
+    # The panel covers most of the screen, so the wheel always drives the list.
+    scroll_anywhere = True
+    pans_camera = False
+
     def __init__(self, map_screen):
-        super().__init__()
+        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200))
         self.bg_color = (30, 35, 40)
-        self.map_screen = map_screen
-        self.player = map_screen.player_country
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200)
-        self.scroll_y = 0
-        self.max_scroll = 0
+        self.back_state = "MAP"
         self.y_space_between_puppets = 120
         self.refresh_ui()
 
@@ -1286,38 +1079,7 @@ class Puppets_Screen(GameState):
         _run_pygame_sub_screen(self.map_screen, screen)
         self.refresh_ui()
 
-    def exit_screen(self):
-        self.next_state, self.done = "MAP", True
-
-    def update(self):
-        super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-
-    def handle_back_key(self):
-        self.exit_screen()
-
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-            
-            if event.type == pygame.MOUSEWHEEL:
-                self.scroll_y += event.y * 30
-                self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-                self.refresh_ui()
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-        
-        ui_bars.draw_fullscreen_overlay(surface, 180)
+    def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2)
         ui_bars.draw_centered_title(surface, "Your Subjects", self.panel_rect.y + 15)
 
@@ -1374,22 +1136,15 @@ class Puppets_Screen(GameState):
                 y_pos += self.y_space_between_puppets
 
         surface.set_clip(old_clip)
-        
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
 
-class Create_Integrated_Puppet_Screen(GameState):
+class Create_Integrated_Puppet_Screen(MapOverlayScreen):
+    overlay_alpha = 0
+
     def __init__(self, map_screen):
-        super().__init__()
+        super().__init__(map_screen, pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240))
         self.bg_color = (20, 20, 30)
-        self.map_screen = map_screen
-        self.player = map_screen.player_country
-        self.panel_rect = pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240)
-        self.scroll_y = 0
-        self.max_scroll = 0
         self.keep_cores = False
-        
+
         self.valid_subjects = set()
         for prov in self.map_screen.map_data.values():
             if prov.get("owner") == self.player:
@@ -1460,7 +1215,6 @@ class Create_Integrated_Puppet_Screen(GameState):
 
     def update(self):
         super().update()
-        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
         for el in self.elements:
             if getattr(el, 'is_scrollable', False):
                 el.rect.y = el.base_y + self.scroll_y
@@ -1480,36 +1234,7 @@ class Create_Integrated_Puppet_Screen(GameState):
                 self.refresh_ui()
                 return
 
-    def exit_screen(self):
-        self.done = True
-
-    def handle_back_key(self):
-        self.exit_screen()
-
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.KEYDOWN:
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                if event.key == back_key:
-                    self.handle_back_key()
-            
-            on_ui = self.panel_rect.collidepoint(pygame.mouse.get_pos()) or self.map_screen.top_bar_rect.collidepoint(pygame.mouse.get_pos())
-            if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-            if event.type == pygame.MOUSEWHEEL and on_ui:
-                self.scroll_y += event.y * 30
-                self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-                self.refresh_ui()
-
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        
-        self.map_screen.draw_clean_map_background(surface)
-
+    def draw_content(self, surface):
         # Highlight queued core provinces
         queue = self.map_screen.nation_data.get(self.player, {}).get("release_puppet_queue", [])
         queued_cores = [q["core_nation"] for q in queue]
@@ -1563,11 +1288,6 @@ class Create_Integrated_Puppet_Screen(GameState):
             self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
                 surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 100, viewport_h, width=10
             )
-
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
-
 
 # ==========================================
 # PUBLIC INTERCEPT LAUNCHERS

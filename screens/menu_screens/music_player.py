@@ -146,7 +146,7 @@ class Music_Player(GameState):
         super().__init__()
         self.controller = controller
         self.bg_color = (25, 25, 30)
-        self.return_state = "MENU"
+        self.back_state = "MENU"
         
         # Track auto-plays so UI syncs when a song naturally ends.
         # FIX: Explicitly set to None on boot so the UI forcefully syncs 
@@ -653,6 +653,3 @@ class Music_Player(GameState):
             surface, self.track_scroll_y, self.max_track_scroll, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200, width=10
         )
 
-    def handle_back_key(self):
-        self.next_state = self.return_state
-        self.done = True

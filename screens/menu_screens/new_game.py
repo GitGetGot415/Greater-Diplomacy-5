@@ -10,6 +10,8 @@ from ui.bars import ui_bars
 from map_logic.system32 import loading_screen
 
 class New_Game(GameState):
+    back_state = "MENU"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (0, 50, 0)
@@ -30,19 +32,19 @@ class New_Game(GameState):
         self.refresh_completed = 0
         self.refresh_status = ""
         
-        self.refresh_scenarios()
+        self.refresh_ui()
 
     def set_sub_state(self, state):
         self.sub_state = state
         self.scroll_y = 0
-        self.refresh_scenarios()
+        self.refresh_ui()
 
-    def refresh_scenarios(self):
+    def refresh_ui(self):
         self.elements = []
         
         if self.sub_state == "CATEGORY":
             self.elements = [
-                Button(20, 20, "small", "red", "Back", self.exit_to_menu),
+                Button(20, 20, "small", "red", "Back", self.exit_screen),
                 Button("centered", 200, "large", "blue", "Historical Scenarios", lambda: self.set_sub_state("HISTORICAL")),
                 Button("centered", 300, "large", "purple", "Alternate Scenarios", lambda: self.set_sub_state("ALTERNATE")),
                 Button("centered", 400, "large", "green", "Map Editor Scenarios", lambda: self.set_sub_state("MAP_EDITOR")),
@@ -95,32 +97,9 @@ class New_Game(GameState):
             for el in self.elements:
                 el.visible = True
 
-    # --- SCROLL LOGIC ---
-    def _snap_scroll(self, my):
-        self.scroll_y = ui_bars.calculate_scroll_snap(my, self.max_scroll, 200, c.SCREEN_HEIGHT - 200)
-        self.refresh_scenarios()
-
     def additional_events(self, event):
-        # 1. Scrolling Logic
         if self.sub_state != "CATEGORY":
-            if event.type == pygame.MOUSEWHEEL:
-                self.scroll_y += event.y * 40
-                self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-                self.refresh_scenarios()
-
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
-                if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(mx, my):
-                    self.is_dragging_scrollbar = True
-                elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(mx, my):
-                    self.is_dragging_scrollbar = True
-                    self._snap_scroll(my)
-
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self.is_dragging_scrollbar = False
-
-            elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
-                self._snap_scroll(event.pos[1])
+            self.handle_list_scroll(event)
 
     def handle_events(self, events):
         if self.is_refreshing:
@@ -153,7 +132,7 @@ class New_Game(GameState):
 
     def scenario_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
-        Scenario_Settings.return_screen = "NEW_GAME"
+        Scenario_Settings.back_state = "NEW_GAME"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True
 
@@ -226,16 +205,16 @@ class New_Game(GameState):
         self.next_state = "MAP"
         self.done = True
 
-    def exit_to_menu(self):
+    def exit_screen(self):
         self.set_sub_state("CATEGORY")
-        self.next_state = "MENU"
-        self.done = True
-    
+        super().exit_screen()
+
     def handle_back_key(self):
+        # Escape steps back up the category tree before it leaves the screen.
         if self.sub_state != "CATEGORY":
             self.set_sub_state("CATEGORY")
         else:
-            self.exit_to_menu()
+            self.exit_screen()
 
     def start_random_scenario(self):
         self.set_sub_state("CATEGORY")

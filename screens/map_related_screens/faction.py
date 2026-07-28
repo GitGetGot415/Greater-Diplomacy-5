@@ -8,17 +8,14 @@ from data import queries
 from map_logic.diplomacy import diplomacy_logic
 
 class Faction_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (30, 35, 40)
         self.map_screen = None
         self.is_renaming = False
         self.new_faction_name = ""
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
@@ -27,7 +24,7 @@ class Faction_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
 
         if not self.map_screen: return
 
@@ -170,25 +167,20 @@ class Faction_Screen(GameState):
             txt = font_normal.render(f"- {m_name}", True, (255, 255, 255))
             surface.blit(txt, (c.SCREEN_WIDTH // 2 - 280, list_start_y + 40 + (i * 30)))
 
-    def exit_to_map(self):
-        self.next_state, self.done = "MAP", True
-
     def handle_back_key(self):
+        # Escape cancels an in-progress rename before it leaves the screen.
         if self.is_renaming:
             self.cancel_rename()
         else:
-            self.exit_to_map()
+            self.exit_screen()
 
 class Faction_Territories_Screen(GameState):
+    back_state = "FACTION"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (20, 20, 40)
         self.map_screen = None
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_view(self, map_ref):
         self.map_screen = map_ref
@@ -196,7 +188,7 @@ class Faction_Territories_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_faction)]
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -232,8 +224,3 @@ class Faction_Territories_Screen(GameState):
             on_ui = self.map_screen.top_bar_rect.collidepoint(mx, my) or self.map_screen.bot_bar_rect.collidepoint(mx, my)
             self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
 
-    def exit_to_faction(self):
-        self.next_state, self.done = "FACTION", True
-
-    def handle_back_key(self):
-        self.exit_to_faction()

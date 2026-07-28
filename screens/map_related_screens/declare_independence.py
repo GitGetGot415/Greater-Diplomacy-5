@@ -1,6 +1,6 @@
 import pygame
 import copy
-from gameState import GameState
+from gameState import MapOverlayScreen
 import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, process_text_input
@@ -9,34 +9,31 @@ from data import queries
 from map_logic.system32 import turn_manager
 from tkinter import colorchooser
 
-class Declare_Independence_Screen(GameState):
-    def __init__(self):
-        super().__init__()
-        self.bg_color = (40, 20, 20)
-        self.map_screen = None
-        self.new_country_name = ""
-        self.new_country_color = [200, 50, 50]
-        self.active_input = False
-        self.selected_core = None
-        self.available_cores = []
-        self.input_y = 200
-        self.input_rect_x = 400
+class Declare_Independence_Screen(MapOverlayScreen):
+    overlay_alpha = 200
+    input_y = 200
+    input_rect_x = 400
 
-    def start_screen(self, map_ref):
-        self.map_screen = map_ref
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH // 2 - 350, c.SCREEN_HEIGHT // 2 - 200, 700, 420))
+        self.bg_color = (40, 20, 20)
         self.new_country_name = "Free Republic"
         self.new_country_color = [200, 50, 50]
         self.active_input = False
         self.selected_core = None
         self.available_cores = []
-        
-        if self.map_screen and self.map_screen.player_unit:
+
+        if self.map_screen.player_unit:
             for prov in self.map_screen.map_data.values():
                 if self.map_screen.player_unit in prov.get("units", []):
                     self.available_cores = [core for core in prov.get("cores", []) if core not in c.UNPLAYABLE_NATIONS]
                     break
-                    
+
         self.refresh_ui()
+
+    @property
+    def name_input_rect(self):
+        return pygame.Rect(self.panel_rect.x + 30, self.panel_rect.y + self.input_y + 80, self.input_rect_x, 40)
 
     def select_core(self, core_tag):
         self.selected_core = core_tag
@@ -48,11 +45,10 @@ class Declare_Independence_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
         
-        panel_x = c.SCREEN_WIDTH // 2 - 350
-        panel_y = c.SCREEN_HEIGHT // 2 - 200
-        
+        panel_x, panel_y = self.panel_rect.topleft
+
         self.elements.append(Button(c.SCREEN_WIDTH // 2 - 120, panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
         self.elements.append(Button(panel_x + 80, panel_y + self.input_y + 150, "small", "orange", "Pick Color", self.pick_color))
         
@@ -170,46 +166,28 @@ class Declare_Independence_Screen(GameState):
         
         self.done = True
 
-    def exit_to_map(self):
-        self.done = True
-
     def handle_back_key(self):
-        self.exit_to_map()
+        # Escape leaves the name box before it leaves the screen.
+        if self.active_input:
+            self.active_input = False
+        else:
+            self.exit_screen()
 
-    def handle_events(self, events):
-        for event in events:
-            super().handle_events([event])
-            
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                panel_x = c.SCREEN_WIDTH // 2 - 350
-                panel_y = c.SCREEN_HEIGHT // 2 - self.input_y
-                input_rect = pygame.Rect(panel_x + 30, panel_y + 280, self.input_rect_x, 40)
-                self.active_input = input_rect.collidepoint(event.pos)
-                
-            if event.type == pygame.KEYDOWN:
-                # Dynamically fetch the keybind, fallback to escape
-                back_key = pygame.K_ESCAPE
-                if hasattr(self, 'map_screen') and hasattr(self.map_screen, 'controller'):
-                    back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-                
-                if self.active_input:
-                    self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
-                    if status == "SUBMIT":
-                        self.confirm_independence()
-                    elif status == "CANCEL" or event.key == back_key:
-                        self.active_input = False
-                elif event.key == back_key:
-                    self.handle_back_key()
+    def additional_events(self, event):
+        super().additional_events(event)
 
-    def draw(self, surface):
-        surface.fill(self.map_screen.bg_color)
-        self.map_screen.draw_clean_map_background(surface)
-        
-        ui_bars.draw_fullscreen_overlay(surface, 200)
-        
-        panel_x = c.SCREEN_WIDTH // 2 - 350
-        panel_y = c.SCREEN_HEIGHT // 2 - self.input_y
-        panel_rect = pygame.Rect(panel_x, panel_y, 700, 420)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.active_input = self.name_input_rect.collidepoint(event.pos)
+
+        elif event.type == pygame.KEYDOWN and self.active_input:
+            self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
+            if status == "SUBMIT":
+                self.confirm_independence()
+            elif status == "CANCEL":
+                self.active_input = False
+
+    def draw_content(self, surface):
+        panel_rect = self.panel_rect
         ui_bars.draw_modal_box(surface, panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
         ui_bars.draw_centered_title(surface, "Declare Independence", panel_rect.y + 20)
         
@@ -233,17 +211,13 @@ class Declare_Independence_Screen(GameState):
         surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + self.input_y + 60))
         surface.blit(font.render("Claim Heritage (Cores):", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 450, panel_rect.y + 60))
         
-        input_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 80, self.input_rect_x, 40)
+        input_rect = self.name_input_rect
         pygame.draw.rect(surface, (60, 60, 80) if self.active_input else (30, 30, 40), input_rect)
         pygame.draw.rect(surface, (200, 200, 200), input_rect, 2)
-        
+
         name_surf = font.render(self.new_country_name + ("|" if self.active_input else ""), True, (255, 255, 255))
         surface.blit(name_surf, (input_rect.x + 10, input_rect.y + 10))
-        
+
         color_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 150, 40, 40)
         pygame.draw.rect(surface, self.new_country_color, color_rect)
         pygame.draw.rect(surface, (255, 255, 255), color_rect, 2)
-        
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)

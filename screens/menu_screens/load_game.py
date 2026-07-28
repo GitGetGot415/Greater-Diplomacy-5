@@ -13,6 +13,8 @@ import data.constants as c
 from ui.bars import ui_bars
 
 class Load_Game(GameState):
+    back_state = "MENU"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (50, 0, 50)
@@ -28,11 +30,11 @@ class Load_Game(GameState):
         self.scroll_track_rect = None
         self.scroll_handle_rect = None
         
-        self.refresh_save_list()
+        self.refresh_ui()
 
-    def refresh_save_list(self):
+    def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_to_menu),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
             Button(160, 20, "medium", "green", "Import .zip", self.import_save_zip)
         ]
         
@@ -73,18 +75,13 @@ class Load_Game(GameState):
             self.elements.append(Button(1115, btn_y, "small_save_button", "red", "Del", 
                                         lambda f=folder: self.trigger_delete_conf(f)))
 
-    def _snap_scroll(self, my):
-        """Helper to map mouse Y to scroll position."""
-        self.save_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_save_scroll, 120, c.SCREEN_HEIGHT - 200)
-        self.refresh_save_list()
-
     def additional_events(self, event):
         # 1. Renaming Input Logic
         if self.renaming_folder:
             is_valid_char = lambda c: c.isalnum() or c in " _-"
             self.new_name_text, status = process_text_input(event, self.new_name_text, validation_func=is_valid_char)
             if status == "SUBMIT": self.finish_rename()
-            elif status == "CANCEL": self.renaming_folder = None; self.refresh_save_list()
+            elif status == "CANCEL": self.renaming_folder = None; self.refresh_ui()
         
         # 2. Deletion Input Logic
         elif self.deleting_folder:
@@ -93,24 +90,7 @@ class Load_Game(GameState):
                 elif event.key == pygame.K_ESCAPE: self.cancel_delete()
 
         # 3. Scrolling Logic
-        if event.type == pygame.MOUSEWHEEL:
-            self.save_scroll_y += event.y * 40
-            self.save_scroll_y = max(self.max_save_scroll, min(0, self.save_scroll_y))
-            self.refresh_save_list()
-
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mx, my = event.pos
-            if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(mx, my):
-                self.is_dragging_scrollbar = True
-            elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(mx, my):
-                self.is_dragging_scrollbar = True
-                self._snap_scroll(my)
-
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.is_dragging_scrollbar = False
-
-        elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
-            self._snap_scroll(event.pos[1])
+        self.handle_list_scroll(event, attr="save_scroll_y", limit_attr="max_save_scroll")
 
     def additional_draw(self, surface):
         # --- Draw Rename Input Box ---
@@ -155,7 +135,7 @@ class Load_Game(GameState):
     def trigger_delete_conf(self, folder_name):
         """Activates the delete confirmation state."""
         self.deleting_folder = folder_name
-        self.refresh_save_list()
+        self.refresh_ui()
 
     def confirm_delete(self):
         """Actually deletes the folder."""
@@ -163,12 +143,12 @@ class Load_Game(GameState):
         if os.path.exists(path):
             shutil.rmtree(path)
         self.deleting_folder = None
-        self.refresh_save_list()
+        self.refresh_ui()
 
     def cancel_delete(self):
         """Backs out of deletion."""
         self.deleting_folder = None
-        self.refresh_save_list()
+        self.refresh_ui()
 
     def open_history_menu(self, folder_name):
         import tkinter as tk
@@ -263,14 +243,14 @@ class Load_Game(GameState):
             if os.path.exists(target_dir): target_dir += "_imported"
             try:
                 queries.extract_and_flatten_zip(file_path, target_dir)
-                self.refresh_save_list()
+                self.refresh_ui()
             except Exception as e: 
                 messagebox.showerror("Import Error", str(e))
 
     def start_rename(self, folder_name):
         self.renaming_folder = folder_name
         self.new_name_text = folder_name
-        self.refresh_save_list()
+        self.refresh_ui()
 
     def finish_rename(self):
         if self.new_name_text.strip() != "" and self.new_name_text != self.renaming_folder:
@@ -278,16 +258,10 @@ class Load_Game(GameState):
             new_path = os.path.join(c.SAVES_DIR, self.new_name_text.strip())
             if not os.path.exists(new_path): os.rename(old_path, new_path)
         self.renaming_folder = None
-        self.refresh_save_list()
+        self.refresh_ui()
 
     def load_specific_save(self, folder_name):
         self.selected_save_path = os.path.join(c.SAVES_DIR, folder_name)
         self.next_state = "MAP"
         self.done = True
 
-    def handle_back_key(self):
-        self.exit_to_menu()
-        
-    def exit_to_menu(self):
-        self.next_state = "MENU"
-        self.done = True

@@ -13,6 +13,7 @@ from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars
 
 class Orders_Screen(GameState):
+    back_state = "MAP"
     PANEL_X = 80
     PANEL_WIDTH = 600
     PANEL_TRANSPARENCY = 255
@@ -36,11 +37,6 @@ class Orders_Screen(GameState):
         self.panel_max_h = 420
         
         self.unit_library = queries.get_unit_library()
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_with_province(self, province, map_ref):
         self.target_province = province
@@ -74,7 +70,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
         
         units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
@@ -765,8 +761,3 @@ class Orders_Screen(GameState):
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
-    def exit_to_map(self):
-        self.next_state, self.done = "MAP", True
-
-    def handle_back_key(self):
-        self.exit_to_map()

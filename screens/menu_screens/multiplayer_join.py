@@ -5,17 +5,16 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
 class Multiplayer_Join(GameState):
+    back_state = "MULTIPLAYER_HUB"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40)
         self.elements = [
             Button("centered", "centered", "medium", "blue", "Load Tournament File", self.load_tour_file),
-            Button(20, 20, "small", "red", "Back", self.go_back)
+            Button(20, 20, "small", "red", "Back", self.exit_screen)
         ]
 
-    def additional_events(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.go_back()
 
 
     def load_tour_file(self):
@@ -43,9 +42,7 @@ class Multiplayer_Join(GameState):
         self.next_state = "MAP"
         self.done = True
 
-    def go_back(self):
-        self.next_state = "MULTIPLAYER_HUB"
-        self.done = True
+
 
     def draw(self, surface):
         surface.fill(self.bg_color)

@@ -7,6 +7,8 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 
 class Random_Setup(GameState):
+    back_state = "NEW_GAME"
+
     def __init__(self):
         # Track if we are doing a procedural world
         self.procedural_world = False
@@ -96,7 +98,7 @@ class Random_Setup(GameState):
 
     def scenario_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
-        Scenario_Settings.return_screen = "RANDOM_SETUP"
+        Scenario_Settings.back_state = "RANDOM_SETUP"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True
 
@@ -108,7 +110,7 @@ class Random_Setup(GameState):
         self.resource_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 480, 200, f"Resource Spawn: {int(self.resource_chance * 100)}%", self.resource_slider_val, self.update_resource_chance)
         
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.go_back),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
             Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
             
             # Sliders 
@@ -187,9 +189,3 @@ class Random_Setup(GameState):
         self.next_state = "MAP"
         self.done = True
 
-    def go_back(self):
-        self.next_state = "NEW_GAME"
-        self.done = True
-        
-    def handle_back_key(self):
-        self.go_back()

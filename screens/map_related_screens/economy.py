@@ -7,15 +7,12 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 
 class Economy_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (30, 35, 40)
         self.map_screen = None
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_economy(self, map_ref):
         self.map_screen = map_ref
@@ -25,7 +22,7 @@ class Economy_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
         
         # Expenses button positioned in the top right corner
         btn_expenses = Button(c.SCREEN_WIDTH - 120, 20, "small", "orange", "Expenses", self.open_expenses_table)
@@ -182,12 +179,6 @@ class Economy_Screen(GameState):
             if mat_lost > 0:
                 conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
                 surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, c.ECON_CONVERT_BTN_Y + 25))
-
-    def handle_back_key(self):
-        self.exit_to_map()
-
-    def exit_to_map(self):
-        self.next_state, self.done = "MAP", True
 
     def open_expenses_table(self):
         if not self.map_screen: return

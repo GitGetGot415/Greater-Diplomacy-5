@@ -17,9 +17,9 @@ class Multiplayer_New(GameState):
         self.scroll_track_rect = None
         self.scroll_handle_rect = None
         
-        self.refresh_scenarios()
+        self.refresh_ui()
 
-    def refresh_scenarios(self):
+    def refresh_ui(self):
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.exit_to_host_menu),
             Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings)
@@ -49,7 +49,7 @@ class Multiplayer_New(GameState):
 
     def scenario_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
-        Scenario_Settings.return_screen = "MULTIPLAYER_NEW"
+        Scenario_Settings.back_state = "MULTIPLAYER_NEW"
         self.next_state = "SCENARIO_SETTINGS"
         self.done = True
 
@@ -119,32 +119,7 @@ class Multiplayer_New(GameState):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.exit_to_host_menu()
             
-        if event.type == pygame.MOUSEWHEEL:
-            self.scroll_y = max(self.max_scroll, min(0, self.scroll_y + event.y * c.SCROLL_SPEED))
-            self.refresh_scenarios()
-            
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                if self.scroll_handle_rect and self.scroll_handle_rect.collidepoint(event.pos):
-                    self.is_dragging_scrollbar = True
-                elif self.scroll_track_rect and self.scroll_track_rect.collidepoint(event.pos):
-                    self._snap_scroll(event.pos[1])
-
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                self.is_dragging_scrollbar = False
-
-        elif event.type == pygame.MOUSEMOTION and self.is_dragging_scrollbar:
-            self._snap_scroll(event.pos[1])
-
-    def _snap_scroll(self, mouse_y):
-        track_y = self.scroll_track_rect.top
-        track_h = self.scroll_track_rect.height
-        rel_y = max(0, min(track_h, mouse_y - track_y))
-        
-        scroll_fraction = rel_y / track_h
-        self.scroll_y = int(self.max_scroll * scroll_fraction)
-        self.refresh_scenarios()
+        self.handle_list_scroll(event)
 
     def draw(self, surface):
         surface.fill(self.bg_color)

@@ -20,6 +20,8 @@ right_ui_x = c.EDIT_COUNTRY_UI_X3
 x_offset_confirmation = -100
 
 class Edit_Country_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (30, 30, 40)
@@ -67,11 +69,6 @@ class Edit_Country_Screen(GameState):
         self.orig_map_color = [150, 150, 150]
         
         self.palette = c.EDITOR_COLOR_PALETTE
-
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
 
     def start_editor(self, map_ref):
         self.map_screen = map_ref
@@ -520,10 +517,8 @@ class Edit_Country_Screen(GameState):
         id_surf = normal_font.render(id_text, True, (150, 150, 150))
         surface.blit(id_surf, (id_display_x, id_display_y))
 
-    def handle_back_key(self):
-        self.exit_to_map()
-
-    def exit_to_map(self):
+    def exit_screen(self):
+        # Backing out with pending edits asks before discarding them.
         if self.has_unsaved_changes():
             self.show_unsaved_confirmation = True
         else:
@@ -531,4 +526,4 @@ class Edit_Country_Screen(GameState):
 
     def force_exit_to_map(self):
         self.show_unsaved_confirmation = False
-        self.next_state, self.done = "MAP", True
+        super().exit_screen()

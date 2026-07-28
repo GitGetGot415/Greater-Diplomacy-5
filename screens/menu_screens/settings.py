@@ -16,7 +16,7 @@ class Settings(GameState):
         self.controller = controller
         self.bg_color = (40, 40, 40)
         self.bg_image_path = c.SETTINGS_BG_FILE 
-        self.return_state = "MENU"
+        self.back_state = "MENU"
         
         self.sfx_volume = self.controller.sfx_volume
         self.num_players = self.controller.num_players
@@ -94,7 +94,7 @@ class Settings(GameState):
     def update(self):
         super().update()
         if hasattr(self, 'player_slider'):
-            self.player_slider.visible = (self.return_state != "MAP")
+            self.player_slider.visible = (self.back_state != "MAP")
 
     def set_ai_mode(self, mode):
         self.ai_mode = mode
@@ -447,15 +447,12 @@ class Settings(GameState):
         queries.save_global_settings(self.controller)
         
         if execute_exit:
-            self.next_state = getattr(self, 'return_state', 'MENU')
-            self.done = True
+            self.exit_screen()
 
     def handle_back_key(self):
+        # Ignore Escape while a key is being rebound; it belongs to the capture.
         if not self.listening_for:
             self.save_and_go_back()
-    
-    def go_back(self):
-        self.save_and_go_back()
 
     def toggle_full(self):
         self.controller.toggle_fullscreen()

@@ -9,6 +9,8 @@ from data import queries
 section_spacing = 60
 
 class Production_Screen(GameState):
+    back_state = "MAP"
+
     def __init__(self):
         super().__init__()
         self.bg_color = (25, 25, 25)
@@ -29,18 +31,13 @@ class Production_Screen(GameState):
         self.target_scroll_y = 0
         self.max_scroll = 0
 
-    def draw(self, surface):
-        super().draw(surface)
-        from ui.information import feedback_text
-        feedback_text.draw_feedback(self.map_screen, surface)
-
     def handle_events(self, events):
         # Override to block all interaction
         if self.map_screen.tactical_mode:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.elements and self.elements[0].rect.collidepoint(event.pos):
-                        self.exit_to_map() # Allow back button explicitly
+                        self.exit_screen() # Allow back button explicitly
                     else:
                         self.map_screen.show_feedback("Tactical Mode: Cannot interact with national production.")
             return
@@ -72,7 +69,7 @@ class Production_Screen(GameState):
 
     def refresh_ui(self):
         # The back button doesn't scroll
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_to_map)]
+        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
         
         current_buildings = self.target_province.get("buildings", [])
         building_queue = self.target_province.get("building_queue", [])
@@ -600,8 +597,3 @@ class Production_Screen(GameState):
         # Draw Queue (Returns hitbox rectangles for the event handler)
         self.cancel_hitboxes = recruit_ui.draw_recruitment_overlay(surface, self.target_province)
 
-    def exit_to_map(self):
-        self.next_state, self.done = "MAP", True
-
-    def handle_back_key(self):
-        self.exit_to_map()
