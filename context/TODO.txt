@@ -11,6 +11,8 @@ Immediate concerns:
  in what order are puppets that you control shown when viewed through the puppets screen? could you make it so you can rearrange the order they're displayed in?
 - when viewing claims you're unable to scroll down by clicking the scroll bar, you have you scroll using the mouse wheel, could this be fixed so you can click to scroll in that situation
 
+- ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
+
 - back keybind doesn't work for automation
 
 - web version? (tkinter will have to be edited...)

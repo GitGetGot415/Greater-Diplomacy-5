@@ -92,13 +92,17 @@ class Automation_Screen(GameState):
         
     def exit_screen(self):
         self.done = True
-        
-    def handle_event(self, event):
+
+    def handle_back_key(self):
+        self.exit_screen()
+
+    def additional_events(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.exit_screen()
-        for element in self.elements:
-            element.handle_event(event)
+            back_key = pygame.K_ESCAPE
+            if hasattr(self.map_screen, 'controller'):
+                back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
+            if event.key == back_key:
+                self.handle_back_key()
 
     def draw(self, surface):
         surface.fill(self.bg_color)

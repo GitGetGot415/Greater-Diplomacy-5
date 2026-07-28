@@ -154,7 +154,7 @@ def render_buttons(self):
     
     # NEW: Automation Button
     def open_automation_screen():
-        from ui.automation_screen import Automation_Screen
+        from screens.map_related_screens.automation_screen import Automation_Screen
         from ui.player_diplomacy_menus import _run_pygame_sub_screen
         screen = Automation_Screen(self)
         _run_pygame_sub_screen(self, screen)
