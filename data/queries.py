@@ -793,10 +793,18 @@ def get_best_naval_unit(player_research, unit_library):
     """Finds the highest preference naval unit the nation has unlocked."""
     return get_best_preferred_unit(player_research, unit_library, c.AI_NAVAL_UNIT_PREFERENCE)
 
+REQ_GROUP_KEYS = ("OR", "AND")
+
 def check_tech_requirements(res_levels, reqs, target_lvl=1):
-    """Centralized tech requirement checker."""
+    """Centralized tech requirement checker.
+
+    A plain {tech: lvl, ...} mapping means every entry has to be met. "OR" and
+    "AND" each take a LIST of such mappings and may be nested inside each other:
+        {"AND": [{"heavy_tank": 4}, {"OR": [{"light_tank": 1}, {"armored_car": 1}]}]}
+    Anything that is not a group key is read as a tech name.
+    """
     if not reqs: return True
-    
+
     def get_req_val(v):
         if isinstance(v, str) and v.startswith("MATCH_LEVEL"):
             val = target_lvl
@@ -804,10 +812,21 @@ def check_tech_requirements(res_levels, reqs, target_lvl=1):
             elif "-" in v: val -= int(v.split("-")[1])
             return val
         return v
-        
+
     if "OR" in reqs:
-        return any(res_levels.get(k, 0) >= get_req_val(v) for sub in reqs["OR"] for k, v in sub.items())
+        return any(check_tech_requirements(res_levels, sub, target_lvl) for sub in reqs["OR"])
+    if "AND" in reqs:
+        return all(check_tech_requirements(res_levels, sub, target_lvl) for sub in reqs["AND"])
     return all(res_levels.get(k, 0) >= get_req_val(v) for k, v in reqs.items())
+
+def walk_tech_requirements(reqs):
+    """Yields every (tech_name, required_level) leaf in a req block, at any nesting depth."""
+    for key, val in (reqs or {}).items():
+        if key in REQ_GROUP_KEYS:
+            for sub in val:
+                yield from walk_tech_requirements(sub)
+        else:
+            yield key, val
 
 def is_training_troops(province):
     """Returns True if the province has any troops in its deployment queue."""

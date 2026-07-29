@@ -334,19 +334,9 @@ class Research_Screen(GameState):
             self.elements.append(btn)
 
     def check_requirements(self, res_levels, reqs, target_lvl=1):
-        if not reqs: return True
-        
-        def get_req_val(v):
-            if isinstance(v, str) and v.startswith("MATCH_LEVEL"):
-                val = target_lvl
-                if "+" in v: val += int(v.split("+")[1])
-                elif "-" in v: val -= int(v.split("-")[1])
-                return val
-            return v
-            
-        if "OR" in reqs:
-            return any(res_levels.get(k, 0) >= get_req_val(v) for sub in reqs["OR"] for k, v in sub.items())
-        return all(res_levels.get(k, 0) >= get_req_val(v) for k, v in reqs.items())
+        # Single source of truth, so this screen and the AI can never disagree
+        # about whether a tech is available.
+        return queries.check_tech_requirements(res_levels, reqs, target_lvl)
 
     def open_modal(self, node_info):
         self.active_modal = node_info
@@ -474,13 +464,9 @@ class Research_Screen(GameState):
                 elif l == 1:
                     draw_line_to_prev(req_k, req_v)
 
-            if "OR" in reqs:
-                for sub_req in reqs["OR"]:
-                    for req_k, req_v in sub_req.items():
-                        process_req(req_k, req_v)
-            else:
-                for req_k, req_v in reqs.items():
-                    process_req(req_k, req_v)
+            # Draw an arrow per prerequisite, whatever OR/AND nesting it sits in
+            for req_k, req_v in queries.walk_tech_requirements(reqs):
+                process_req(req_k, req_v)
 
     def draw_hud_slots(self, surface):
         hud_height = 80 + (c.RESEARCH_SLOTS * 25)
