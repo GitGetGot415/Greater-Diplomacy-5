@@ -74,10 +74,6 @@ def roman_suffixes(count):
     return [c.ROMAN_NUMERALS[i] for i in range(1, count + 1)]
 
 
-def numeric_suffixes(count):
-    return [str(i) for i in range(1, count + 1)]
-
-
 def single():
     """One entry, no numbering suffix (name == prefix)."""
     return [None]
@@ -160,12 +156,15 @@ UNIT_SECTIONS = [
         }),
         # Fragile in a straight fight - its damage is meant to come from bombarding
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
-        # Uses plain numbers instead of Roman numerals for its level suffix.
-        UnitFamily("Artillery", numeric_suffixes(51), {
-            "health": linear(100, 20), "attack": linear(50, 10),
+        # Uses the same "Type <year>" naming as Infantry: one level per year,
+        # 1910-2010. Endpoints (100/50 at 1910, 1100/550 at 2010) match the old
+        # 51-level version; the growth rate is just halved to spread the same
+        # range across twice as many levels.
+        UnitFamily("Artillery Type", year_suffixes(1910, 101), {
+            "health": linear(100, 10), "attack": linear(50, 5),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(50, 10),
+            "bombard_attack": linear(50, 5),
             "defense": const(0),
             "speed": const(1), "cost_materials": const(2000), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
@@ -365,8 +364,8 @@ RESEARCH_SECTIONS = [
                       "years": years_range(1910, 4, 5)}),
         ("militia", {"category": "INFANTRY", "max_lvl": 20, "cost": 600, "req": {},
                       "years": years_range(1910, 5, 20)}),
-        ("artillery", {"category": "INFANTRY", "max_lvl": 51, "cost": 900, "req": {},
-                        "years": years_range(1910, 2, 51)}),
+        ("artillery", {"category": "INFANTRY", "max_lvl": 101, "cost": 900, "req": {},
+                        "years": years_range(1910, 1, 101)}),
         ("motorized_infantry", {"category": "INFANTRY", "max_lvl": 81, "cost": 900,
                                  "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 5},
                                  "years": years_range(1930, 1, 81)}),

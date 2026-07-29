@@ -140,6 +140,11 @@ class Research_Screen(GameState):
             year = mech_years[min(lvl - 1, len(mech_years)-1)]
             return f"Mechanized Infantry Type {year}"
 
+        if tech_key == "artillery":
+            art_years = self.tech_tree.get("artillery", {}).get("years", [c.START_YEAR])
+            year = art_years[min(lvl - 1, len(art_years)-1)]
+            return f"Artillery Type {year}"
+
         romans = c.ROMAN_NUMERALS
 
         if tech_key == "civilian_car": return "Civilian Car"
@@ -158,7 +163,6 @@ class Research_Screen(GameState):
         if tech_key == "recruitment_buildings": return f"Recruitment Building Lvl {lvl}"
         if tech_key == "general_recruitment": return f"General Recruitment Lvl {lvl}"
         if tech_key == "resource_refining": return f"Resource Refining Lvl {lvl}"
-        if tech_key == "artillery": return f"Artillery {lvl}"
 
         base_name = tech_key.replace('_', ' ').title()
         

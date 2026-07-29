@@ -746,11 +746,11 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     if res_lvl <= 0:
         return None
 
-    # Handle Year-based units
-    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry"]:
+    # Handle Year-based units (Infantry variants and Artillery all use "Type <year>")
+    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"]:
         years = tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
         year_val = years[max(0, min(res_lvl - 1, len(years) - 1))]
-        
+
         target_name = f"{clean_base} Type {year_val}"
 
         if target_name in unit_library and target_name != unit_type:
@@ -759,13 +759,10 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
                 return target_name
         return None
 
-    # Handle Roman Numeral units (Artillery uses plain numbers instead)
-    if clean_base == "Artillery":
-        target_name = f"{clean_base} {res_lvl}"
-    else:
-        target_name = f"{clean_base} {c.ROMAN_NUMERALS.get(res_lvl, str(res_lvl))}"
+    # Handle Roman Numeral units
+    target_name = f"{clean_base} {c.ROMAN_NUMERALS.get(res_lvl, str(res_lvl))}"
     if target_name in unit_library and target_name != unit_type:
-        curr_lvl = parse_level_suffix(unit_type.replace(base_name, "").strip())
+        curr_lvl = roman_to_int(unit_type.replace(base_name, "").strip())
         if res_lvl > curr_lvl:
             return target_name
 
@@ -1654,10 +1651,9 @@ def is_foreign_playable(owner, player_country, nation_data):
     return owner != player_country and owner in nation_data and nation_data[owner].get("is_playable", False)
 
 def get_base_unit_name(unit_name):
-    """Strips years, roman numerals, and plain-number levels to return the base
-    unit class (e.g. 'Infantry Type 1850' -> 'Infantry', 'Artillery 12' -> 'Artillery')."""
+    """Strips years and roman numerals to return the base unit class (e.g. 'Infantry Type 1850' -> 'Infantry')."""
     base = re.sub(r'\s+\d{4}$', '', unit_name)
-    return re.sub(r'\s+(?:[IVXLCDM]+|\d+)$', '', base).strip()
+    return re.sub(r'\s+[IVXLCDM]+$', '', base).strip()
 
 def get_formatted_division_name(unit_type):
     """Standardizes parsing unit names into division categories while preserving case."""
@@ -1696,14 +1692,6 @@ def roman_to_int(s):
             else: res += s2 - s1; i += 2
         else: res += s1; i += 1
     return res
-
-def parse_level_suffix(s):
-    """Parses a unit name's level suffix, whether it's a plain number
-    (e.g. Artillery's "12") or a roman numeral (e.g. "XII")."""
-    s = s.strip()
-    if s.isdigit():
-        return int(s)
-    return roman_to_int(s)
 
 def is_naval_unit(unit_type):
     """Checks if a unit is a naval unit based on its type name or unit library stats."""
@@ -1775,11 +1763,6 @@ def generate_unit_custom_name(unit, unit_counters):
         numeral_match = re.search(r'\b([IVXLCDM]+)$', unit_type)
         if numeral_match:
             suffix = f" ({numeral_match.group(1)})"
-        else:
-            # Match a plain-number level suffix (e.g. Artillery's "12")
-            num_match = re.search(r'\b(\d+)$', unit_type)
-            if num_match:
-                suffix = f" ({num_match.group(1)})"
     
     # Clean up the base name using our new unified string parser
     base_name = get_formatted_division_name(unit_type)

@@ -116,10 +116,6 @@ def get_symbol(name, zoom, color=None):
     if base_name not in SYMBOLS:
         base_name = re.sub(r'\s+Lvl\s+\d+$', '', name, flags=re.IGNORECASE).strip()
 
-    # Fallback for a plain-number level suffix (e.g. "Artillery 12")
-    if base_name not in SYMBOLS:
-        base_name = re.sub(r'\s+\d+$', '', name).strip()
-
     if base_name not in SYMBOLS:
         return None
 
