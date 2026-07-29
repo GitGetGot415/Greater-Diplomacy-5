@@ -262,8 +262,7 @@ class Orders_Screen(GameState):
 
                 if is_tactical_other:
                     for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard]:
-                        b.disabled = True
-                        b.color = b.hover_color = c.UI_COLORS["grey"]
+                        b.apply_state(enabled=False)
             
             display_index += 1
 

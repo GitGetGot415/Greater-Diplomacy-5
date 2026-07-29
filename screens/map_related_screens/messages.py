@@ -3,7 +3,7 @@ from gameState import GameState
 import data.constants as c
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
 from data import queries
 
 class Messages_Screen(GameState):
@@ -66,7 +66,7 @@ class Messages_Screen(GameState):
         """Auto-saves whatever is currently typed or queued before switching menus/contacts."""
         if self.selected_recipient and self.map_screen:
             p_data = self.map_screen.nation_data[self.map_screen.player_country]
-            pending_dict = p_data.setdefault("pending_diplomacy", {})
+            pending_dict = diplomacy_messages.get_pending_map(self.map_screen.nation_data, self.map_screen.player_country, writable=True)
             draft_lists = p_data.setdefault("draft_lists", {}) # Isolate the array from the engine
             
             if self.compose_text.strip():
@@ -202,15 +202,11 @@ class Messages_Screen(GameState):
                             diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
                         elif idx == "WAR_DECLARATION":
-                            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
-                            if self.selected_recipient in pending:
-                                del pending[self.selected_recipient]
+                            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
                             self.map_screen.show_feedback("War Declaration Cancelled.")
                         elif isinstance(idx, str) and idx.startswith("FORMAL_"):
                             act_name = idx[7:]
-                            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
-                            if self.selected_recipient in pending:
-                                del pending[self.selected_recipient]
+                            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
                             self.map_screen.show_feedback(f"{act_name.replace('_', ' ').title()} Cancelled.")
                         else:
                             if isinstance(idx, int) and 0 <= idx < len(self.drafts):
@@ -288,7 +284,7 @@ class Messages_Screen(GameState):
             else:
                 history_contacts.add(sender)
 
-        pending = p_data.get("pending_diplomacy", {})
+        pending = diplomacy_messages.get_pending_map(self.map_screen.nation_data, self.map_screen.player_country)
         for target, p_info in pending.items():
             if target in playable and isinstance(p_info, dict) and p_info.get("action"):
                 history_contacts.add(target)
@@ -472,35 +468,32 @@ class Messages_Screen(GameState):
                     })
                         
         # Check if there is an active diplomatic action pending for this target
-        pending = p_data.get("pending_diplomacy", {}).get(self.selected_recipient, {})
-        is_diplo_action = False
-        if isinstance(pending, dict):
-            act_str = pending.get("action", "")
-            if act_str and not act_str.startswith("MSG:"):
-                is_diplo_action = True
-                
-                # --- INJECT PENDING FORMAL ACTIONS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
-                if pending.get("turns", 0) == 0:
-                    if act_str == "TRADE":
-                        content_str = pending.get("message", "Proposed Trade")
-                        d_idx = "TRADE_OFFER"
-                    elif act_str == "WAR_DECLARATION":
-                        content_str = f"War Declaration ({pending.get('message', 'Declare War')})"
-                        d_idx = "WAR_DECLARATION"
-                    else:
-                        act_lbl = act_str.replace("_", " ").title()
-                        msg_param = pending.get("message", "")
-                        content_str = f"Pending {act_lbl}: {msg_param}" if msg_param else f"Pending {act_lbl}"
-                        d_idx = f"FORMAL_{act_str}"
+        pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+        act_str = pending.get("action", "")
+        is_diplo_action = bool(act_str) and not act_str.startswith("MSG:")
 
-                    display_thread.append({
-                        "content": content_str,
-                        "is_player": True,
-                        "is_draft": True,
-                        "draft_idx": d_idx,
-                        "is_diplo": True,
-                        "date": ""
-                    })
+        # --- INJECT PENDING FORMAL ACTIONS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
+        if is_diplo_action and pending.get("turns", 0) == 0:
+            if act_str == "TRADE":
+                content_str = pending.get("message", "Proposed Trade")
+                d_idx = "TRADE_OFFER"
+            elif act_str == "WAR_DECLARATION":
+                content_str = f"War Declaration ({pending.get('message', 'Declare War')})"
+                d_idx = "WAR_DECLARATION"
+            else:
+                act_lbl = act_str.replace("_", " ").title()
+                msg_param = pending.get("message", "")
+                content_str = f"Pending {act_lbl}: {msg_param}" if msg_param else f"Pending {act_lbl}"
+                d_idx = f"FORMAL_{act_str}"
+
+            display_thread.append({
+                "content": content_str,
+                "is_player": True,
+                "is_draft": True,
+                "draft_idx": d_idx,
+                "is_diplo": True,
+                "date": ""
+            })
 
         # --- INJECT TEXT DRAFTS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
         for idx, draft_text in enumerate(self.drafts):

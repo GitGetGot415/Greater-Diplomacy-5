@@ -51,9 +51,7 @@ class Faction_Screen(GameState):
             btn_leave.disabled = True
             btn_leave.text = "Leaders Cannot Leave"
         elif is_puppet:
-            btn_leave.disabled = True
-            btn_leave.text = "Puppets Cannot Leave"
-            btn_leave.color, btn_leave.hover_color = c.UI_COLORS["grey"]
+            btn_leave.apply_state(enabled=False, text="Puppets Cannot Leave")
             
         self.elements.append(btn_leave)
 

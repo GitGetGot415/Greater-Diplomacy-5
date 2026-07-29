@@ -6,59 +6,100 @@ import data.constants as c
 from ui import buttons
 from data import queries
 from map_logic.rendering.font_manager import fonts
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import colorchooser
 
 class Settings(GameState):
+    # Every LLM provider stores its credentials under the same attribute pair,
+    # so one naming rule replaces the four-branch if/elif chains this screen
+    # used to carry in five separate places.
+    AI_MODES = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE"]
+    AI_FIELD_SUFFIX = {"KEY": "api_key", "MOD": "model"}
+
+    # key -> (constants attribute to keep in sync, default value, picker title)
+    DIR_FIELDS = {
+        "saves_dir":            ("SAVES_DIR",            "saves",                "Select Saves Directory"),
+        "custom_scenarios_dir": ("SCENARIOS_CUSTOM_DIR", "scenarios/map_editor", "Select Custom Scenarios Directory"),
+        "tournament_saves_dir": ("TOURNAMENT_SAVES_DIR", "tournament_saves",     "Select Tournament Saves Directory"),
+    }
+    # key -> (constants attribute, constants attribute holding the default, picker title)
+    COLOR_FIELDS = {
+        "ocean_light_color": ("OCEAN_LIGHT_BLUE", "DEFAULT_OCEAN_LIGHT_BLUE", "Select Zoom-In Water Color"),
+        "ocean_dark_color":  ("OCEAN_DARK_BLUE",  "DEFAULT_OCEAN_DARK_BLUE",  "Select Zoom-Out Water Color"),
+    }
+
+    # (y, kind, key, label) for the path/colour block in the middle of the screen.
+    # Shared by additional_draw here and by the Edit/Reset button rows in
+    # buttons.render_settings_buttons so the two cannot drift out of alignment.
+    PATH_ROWS = [
+        (60,  "dir",   "saves_dir",            "Saves Path:"),
+        (120, "dir",   "custom_scenarios_dir", "Custom Maps Path:"),
+        (175, "color", "ocean_light_color",    "Zoom-In Water Color:"),
+        (230, "color", "ocean_dark_color",     "Zoom-Out Water Color:"),
+        (285, "dir",   "tournament_saves_dir", "Tournament Saves Path:"),
+    ]
+
+    DIR_BOX_W = 400
+    DIR_BOX_H = 35
+    COLOR_BOX_W = 40
+
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
         self.bg_color = (40, 40, 40)
-        self.bg_image_path = c.SETTINGS_BG_FILE 
+        self.bg_image_path = c.SETTINGS_BG_FILE
         self.back_state = "MENU"
-        
+
         self.sfx_volume = self.controller.sfx_volume
         self.num_players = self.controller.num_players
         self.ai_mode = self.controller.ai_mode
         self.ai_immersion_level = self.controller.ai_immersion_level
-        self.ai_modes = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE"]
-        
+        self.ai_modes = self.AI_MODES
+
         self.last_ai_mode = self.ai_mode if self.ai_mode != "OFF" else c.AI_MODE_REENABLE_FALLBACK
-        
+
         self.fullscreen = False
         self.listening_for = None
 
-        # Dynamically load all 8 string fields from the controller
-        self.gemini_api_key_text = self.controller.gemini_api_key
-        self.gemini_model_text = self.controller.gemini_model
+        # Mirror the controller's editable string state onto "<attr>_text" locals:
+        # the API key / model name pair per provider, plus the path settings.
+        for attr in self.editable_attrs():
+            setattr(self, f"{attr}_text", getattr(self.controller, attr))
 
         # Load dynamic mouse button config from controller, fallback to constants configuration setting
         self.drag_mouse_button_toggle = self.controller.drag_mouse_button_toggle
-
-        self.ollama_api_key_text = self.controller.ollama_api_key
-        self.ollama_model_text = self.controller.ollama_model
-
-        self.chatgpt_api_key_text = self.controller.chatgpt_api_key
-        self.chatgpt_model_text = self.controller.chatgpt_model
-
-        self.claude_api_key_text = self.controller.claude_api_key
-        self.claude_model_text = self.controller.claude_model
 
         self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
 
         self.ai_threads = self.controller.ai_threads
         self.show_fps = self.controller.show_fps
-        
-        self.saves_dir = self.controller.saves_dir
-        self.custom_scenarios_dir = self.controller.custom_scenarios_dir
-        
-        self.ocean_light_color = self.controller.ocean_light_color
-        self.ocean_dark_color = self.controller.ocean_dark_color
-        
-        self.tournament_saves_dir = self.controller.tournament_saves_dir
-        
+
+        for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
+            setattr(self, key, getattr(self.controller, key))
+
         self.refresh_ui()
+
+    # ------------------------------------------------------------------ #
+    #                       AI PROVIDER TEXT FIELDS                      #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def editable_attrs(cls):
+        """Controller attribute names for every provider's key and model name."""
+        return [f"{mode.lower()}_{suffix}"
+                for mode in cls.AI_MODES if mode != "OFF"
+                for suffix in cls.AI_FIELD_SUFFIX.values()]
+
+    def field_attr(self, box_type):
+        """Controller attribute backing the KEY or MOD box for the active mode."""
+        return f"{self.ai_mode.lower()}_{self.AI_FIELD_SUFFIX[box_type]}"
+
+    def get_field(self, box_type):
+        return getattr(self, f"{self.field_attr(box_type)}_text", "")
+
+    def set_field(self, box_type, text):
+        """Writes a box's text to the screen state and its trimmed form to the controller."""
+        attr = self.field_attr(box_type)
+        setattr(self, f"{attr}_text", text)
+        setattr(self.controller, attr, text.strip())
 
     def toggle_fps(self):
         self.show_fps = not self.show_fps
@@ -109,19 +150,7 @@ class Settings(GameState):
 
     def clear_input(self, box_type):
         """Generic method to clear the currently visible input box."""
-        if box_type == "KEY":
-            # Map the active AI mode directly to its controller attribute
-            # This takes more lines but is safer in case it gets changed
-            if self.ai_mode == "GEMINI": self.gemini_api_key_text = self.controller.gemini_api_key = ""
-            elif self.ai_mode == "OLLAMA": self.ollama_api_key_text = self.controller.ollama_api_key = ""
-            elif self.ai_mode == "CHATGPT": self.chatgpt_api_key_text = self.controller.chatgpt_api_key = ""
-            elif self.ai_mode == "CLAUDE": self.claude_api_key_text = self.controller.claude_api_key = ""
-        elif box_type == "MOD":
-            if self.ai_mode == "GEMINI": self.gemini_model_text = self.controller.gemini_model = ""
-            elif self.ai_mode == "OLLAMA": self.ollama_model_text = self.controller.ollama_model = ""
-            elif self.ai_mode == "CHATGPT": self.chatgpt_model_text = self.controller.chatgpt_model = ""
-            elif self.ai_mode == "CLAUDE": self.claude_model_text = self.controller.claude_model = ""
-            
+        self.set_field(box_type, "")
         self.active_input = None
         self.refresh_ui()
 
@@ -143,114 +172,62 @@ class Settings(GameState):
         default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11}
         self.controller.keybinds = default_keys
         self.controller.target_fps = c.TARGET_FPS
-        
+
         self.controller.ai_threads = c.DEFAULT_AI_THREADS
         self.ai_threads = self.controller.ai_threads
-        
+
         self.controller.num_players = 1
         self.num_players = self.controller.num_players
 
         self.drag_mouse_button_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
         c.DRAG_MOUSE_BUTTON_TOGGLE = c.DEFAULT_MOUSE_BUTTON_TOGGLE
         self.controller.drag_mouse_button_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
-        
-        self.reset_ocean_light_color(refresh=False)
-        self.reset_ocean_dark_color(refresh=False)
-        
+
+        for key in self.COLOR_FIELDS:
+            self.reset_setting(key, refresh=False)
+
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
-    def edit_saves_dir(self):
-        root = tk.Tk()
-        root.withdraw()
-        folder_selected = filedialog.askdirectory(initialdir=self.saves_dir, title="Select Saves Directory")
-        if folder_selected:
-            self.saves_dir = folder_selected
-            self.controller.saves_dir = folder_selected
-            c.SAVES_DIR = folder_selected
-            queries.save_global_settings(self.controller)
-            self.refresh_ui()
+    # ------------------------------------------------------------------ #
+    #                     PATH & COLOUR PREFERENCES                      #
+    # ------------------------------------------------------------------ #
 
-    def edit_tournament_saves_dir(self):
-        root = tk.Tk()
-        root.withdraw()
-        folder_selected = filedialog.askdirectory(initialdir=self.tournament_saves_dir, title="Select Tournament Saves Directory")
-        if folder_selected:
-            self.tournament_saves_dir = folder_selected
-            self.controller.tournament_saves_dir = folder_selected
-            c.TOURNAMENT_SAVES_DIR = folder_selected
-            queries.save_global_settings(self.controller)
-            self.refresh_ui()
+    def apply_setting(self, key, value, refresh=True):
+        """Stores a path/colour on the screen, the controller and constants at once.
 
-    def edit_custom_scenarios_dir(self):
-        root = tk.Tk()
-        root.withdraw()
-        folder_selected = filedialog.askdirectory(initialdir=self.custom_scenarios_dir, title="Select Custom Scenarios Directory")
-        if folder_selected:
-            self.custom_scenarios_dir = folder_selected
-            self.controller.custom_scenarios_dir = folder_selected
-            c.SCENARIOS_CUSTOM_DIR = folder_selected
-            queries.save_global_settings(self.controller)
-            self.refresh_ui()
-
-    def reset_saves_dir(self):
-        self.saves_dir = "saves"
-        self.controller.saves_dir = "saves"
-        c.SAVES_DIR = "saves"
-        queries.save_global_settings(self.controller)
-        self.refresh_ui()
-
-    def reset_tournament_saves_dir(self):
-        self.tournament_saves_dir = "tournament_saves"
-        self.controller.tournament_saves_dir = "tournament_saves"
-        c.TOURNAMENT_SAVES_DIR = "tournament_saves"
-        queries.save_global_settings(self.controller)
-        self.refresh_ui()
-
-    def reset_custom_scenarios_dir(self):
-        self.custom_scenarios_dir = "scenarios/map_editor"
-        self.controller.custom_scenarios_dir = "scenarios/map_editor"
-        c.SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
-        queries.save_global_settings(self.controller)
-        self.refresh_ui()
-
-    def edit_ocean_light_color(self):
-        root = tk.Tk()
-        root.withdraw()
-        color = colorchooser.askcolor(title="Select Zoom-In Water Color", color=self.ocean_light_color)
-        if color[0]:
-            self.ocean_light_color = tuple(map(int, color[0]))
-            self.controller.ocean_light_color = self.ocean_light_color
-            c.OCEAN_LIGHT_BLUE = self.ocean_light_color
-            queries.save_global_settings(self.controller)
-            self.refresh_ui()
-
-    def edit_ocean_dark_color(self):
-        root = tk.Tk()
-        root.withdraw()
-        color = colorchooser.askcolor(title="Select Zoom-Out Water Color", color=self.ocean_dark_color)
-        if color[0]:
-            self.ocean_dark_color = tuple(map(int, color[0]))
-            self.controller.ocean_dark_color = self.ocean_dark_color
-            c.OCEAN_DARK_BLUE = self.ocean_dark_color
-            queries.save_global_settings(self.controller)
-            self.refresh_ui()
-
-    def reset_ocean_light_color(self, refresh=True):
-        self.ocean_light_color = c.DEFAULT_OCEAN_LIGHT_BLUE
-        self.controller.ocean_light_color = self.ocean_light_color
-        c.OCEAN_LIGHT_BLUE = self.ocean_light_color
+        All three had to be written together for the change to take effect, and
+        forgetting one was the failure mode of the per-setting methods this
+        replaces.
+        """
+        const_attr = (self.DIR_FIELDS.get(key) or self.COLOR_FIELDS[key])[0]
+        setattr(self, key, value)
+        setattr(self.controller, key, value)
+        setattr(c, const_attr, value)
         queries.save_global_settings(self.controller)
         if refresh:
             self.refresh_ui()
 
-    def reset_ocean_dark_color(self, refresh=True):
-        self.ocean_dark_color = c.DEFAULT_OCEAN_DARK_BLUE
-        self.controller.ocean_dark_color = self.ocean_dark_color
-        c.OCEAN_DARK_BLUE = self.ocean_dark_color
-        queries.save_global_settings(self.controller)
-        if refresh:
-            self.refresh_ui()
+    def edit_setting(self, key):
+        """Opens the native picker for a path or colour setting."""
+        current = getattr(self, key)
+        if key in self.DIR_FIELDS:
+            _const, _default, title = self.DIR_FIELDS[key]
+            chosen = queries.ask_directory(title, current)
+        else:
+            _const, _default_attr, title = self.COLOR_FIELDS[key]
+            chosen = queries.ask_color(title, current)
+
+        if chosen:
+            self.apply_setting(key, chosen)
+
+    def reset_setting(self, key, refresh=True):
+        """Restores a path or colour setting to its shipped default."""
+        if key in self.DIR_FIELDS:
+            default = self.DIR_FIELDS[key][1]
+        else:
+            default = getattr(c, self.COLOR_FIELDS[key][1])
+        self.apply_setting(key, default, refresh=refresh)
 
     def set_fps(self, val):
         fps = int(20 + (val * 40)) # Scale 0.0-1.0 to 20-60
@@ -286,156 +263,70 @@ class Settings(GameState):
             self.listening_for = None
             self.refresh_ui()
 
-        # Handle explicit text entry mapping (No getattr/setattr!)
         elif self.active_input and self.ai_mode != "OFF":
-            
-            if self.active_input.endswith("_KEY"):
-                # Fetch the current text based on mode
-                current_text = ""
-                if self.ai_mode == "GEMINI": current_text = self.gemini_api_key_text
-                elif self.ai_mode == "OLLAMA": current_text = self.ollama_api_key_text
-                elif self.ai_mode == "CHATGPT": current_text = self.chatgpt_api_key_text
-                elif self.ai_mode == "CLAUDE": current_text = self.claude_api_key_text
+            box_type = self.active_input.rsplit("_", 1)[-1]
+            if box_type in self.AI_FIELD_SUFFIX:
+                limit = c.MAX_API_KEY_LENGTH if box_type == "KEY" else c.MAX_MODEL_NAME_LENGTH
+                new_text, _status = ui_elements.process_text_input(event, self.get_field(box_type),
+                                                                  max_length=limit)
+                self.set_field(box_type, new_text)
 
-                new_text, status = ui_elements.process_text_input(event, current_text, max_length=c.MAX_API_KEY_LENGTH)
-                clean_text = new_text.strip()
+    # ------------------------------------------------------------------ #
+    #                             RENDERING                              #
+    # ------------------------------------------------------------------ #
 
-                # Save the new text back to the screen state and controller
-                if self.ai_mode == "GEMINI": 
-                    self.gemini_api_key_text = new_text
-                    self.controller.gemini_api_key = clean_text
-                elif self.ai_mode == "OLLAMA": 
-                    self.ollama_api_key_text = new_text
-                    self.controller.ollama_api_key = clean_text
-                elif self.ai_mode == "CHATGPT": 
-                    self.chatgpt_api_key_text = new_text
-                    self.controller.chatgpt_api_key = clean_text
-                elif self.ai_mode == "CLAUDE": 
-                    self.claude_api_key_text = new_text
-                    self.controller.claude_api_key = clean_text
+    @property
+    def dir_box_x(self):
+        return c.SCREEN_WIDTH // 2 - self.DIR_BOX_W // 2 + 50
 
-            elif self.active_input.endswith("_MOD"):
-                # Fetch the current text based on mode
-                current_text = ""
-                if self.ai_mode == "GEMINI": current_text = self.gemini_model_text
-                elif self.ai_mode == "OLLAMA": current_text = self.ollama_model_text
-                elif self.ai_mode == "CHATGPT": current_text = self.chatgpt_model_text
-                elif self.ai_mode == "CLAUDE": current_text = self.claude_model_text
+    def draw_text_field(self, surface, rect, text, active=False):
+        """Draws one of the screen's read-only/editable text boxes.
 
-                new_text, status = ui_elements.process_text_input(event, current_text, max_length=c.MAX_MODEL_NAME_LENGTH)
-                clean_text = new_text.strip()
-
-                # Save the new text back to the screen state and controller
-                if self.ai_mode == "GEMINI": 
-                    self.gemini_model_text = new_text
-                    self.controller.gemini_model = clean_text
-                elif self.ai_mode == "OLLAMA": 
-                    self.ollama_model_text = new_text
-                    self.controller.ollama_model = clean_text
-                elif self.ai_mode == "CHATGPT": 
-                    self.chatgpt_model_text = new_text
-                    self.controller.chatgpt_model = clean_text
-                elif self.ai_mode == "CLAUDE": 
-                    self.claude_model_text = new_text
-                    self.controller.claude_model = clean_text
+        Used for the path boxes and the API key/model boxes alike; `active`
+        lights the fill and appends the caret.
+        """
+        font = fonts.get("normal")
+        pygame.draw.rect(surface, (60, 60, 80) if active else (20, 20, 30), rect)
+        pygame.draw.rect(surface, (150, 150, 150), rect, 1)
+        surface.set_clip(rect.inflate(-10, -10))
+        surface.blit(font.render(text + ("|" if active else ""), True, (255, 255, 255)),
+                     (rect.x + 5, rect.y + 10))
+        surface.set_clip(None)
 
     def additional_draw(self, surface):
         font = fonts.get("normal")
+        x = self.dir_box_x
 
-        # --- DRAW DIRECTORY TEXTBOXES (Middle Top) ---
-        dir_box_w = 400
-        dir_box_h = 35
-        dir_box_x = c.SCREEN_WIDTH // 2 - dir_box_w // 2 + 50
-        
-        # Saves Dir Box
-        saves_y = 60
-        surface.blit(font.render("Saves Path:", True, (100, 100, 100)), (dir_box_x, saves_y - 20))
-        saves_rect = pygame.Rect(dir_box_x, saves_y, dir_box_w, dir_box_h)
-        pygame.draw.rect(surface, (20, 20, 30), saves_rect)
-        pygame.draw.rect(surface, (150, 150, 150), saves_rect, 1)
-        surface.set_clip(saves_rect.inflate(-10, -10))
-        surface.blit(font.render(self.saves_dir, True, (255, 255, 255)), (saves_rect.x + 5, saves_rect.y + 10))
-        surface.set_clip(None)
+        # --- PATH BOXES & WATER COLOUR SWATCHES (Middle Top) ---
+        for y, kind, key, label in self.PATH_ROWS:
+            value = getattr(self, key)
 
-        # Scenarios Dir Box
-        scen_y = 120
-        surface.blit(font.render("Custom Maps Path:", True, (100, 100, 100)), (dir_box_x, scen_y - 20))
-        scen_rect = pygame.Rect(dir_box_x, scen_y, dir_box_w, dir_box_h)
-        pygame.draw.rect(surface, (20, 20, 30), scen_rect)
-        pygame.draw.rect(surface, (150, 150, 150), scen_rect, 1)
-        surface.set_clip(scen_rect.inflate(-10, -10))
-        surface.blit(font.render(self.custom_scenarios_dir, True, (255, 255, 255)), (scen_rect.x + 5, scen_rect.y + 10))
-        surface.set_clip(None)
+            if kind == "dir":
+                surface.blit(font.render(label, True, (100, 100, 100)), (x, y - 20))
+                self.draw_text_field(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
+            else:
+                # Colour rows label to the right of the row and show a swatch
+                surface.blit(font.render(label, True, (100, 100, 100)), (x, y + 10))
+                swatch = pygame.Rect(x + self.DIR_BOX_W - self.COLOR_BOX_W, y,
+                                     self.COLOR_BOX_W, self.DIR_BOX_H)
+                pygame.draw.rect(surface, value, swatch)
+                pygame.draw.rect(surface, (150, 150, 150), swatch, 1)
 
-        # Draw current water colors
-        color_box_w = 40
-        color_box_h = 35
-        
-        # Light Water Color
-        light_color_y = 175
-        surface.blit(font.render("Zoom-In Water Color:", True, (100, 100, 100)), (dir_box_x, light_color_y + 10))
-        light_rect = pygame.Rect(dir_box_x + dir_box_w - color_box_w, light_color_y, color_box_w, color_box_h)
-        pygame.draw.rect(surface, self.ocean_light_color, light_rect)
-        pygame.draw.rect(surface, (150, 150, 150), light_rect, 1)
+        if self.ai_mode == "OFF":
+            return
 
-        # Dark Water Color
-        dark_color_y = 230
-        surface.blit(font.render("Zoom-Out Water Color:", True, (100, 100, 100)), (dir_box_x, dark_color_y + 10))
-        dark_rect = pygame.Rect(dir_box_x + dir_box_w - color_box_w, dark_color_y, color_box_w, color_box_h)
-        pygame.draw.rect(surface, self.ocean_dark_color, dark_rect)
-        pygame.draw.rect(surface, (150, 150, 150), dark_rect, 1)
-
-        # Tournament Saves Box
-        mp_saves_y = 285
-        surface.blit(font.render("Tournament Saves Path:", True, (100, 100, 100)), (dir_box_x, mp_saves_y - 20))
-        mp_saves_rect = pygame.Rect(dir_box_x, mp_saves_y, dir_box_w, dir_box_h)
-        pygame.draw.rect(surface, (20, 20, 30), mp_saves_rect)
-        pygame.draw.rect(surface, (150, 150, 150), mp_saves_rect, 1)
-        surface.set_clip(mp_saves_rect.inflate(-10, -10))
-        surface.blit(font.render(self.tournament_saves_dir, True, (255, 255, 255)), (mp_saves_rect.x + 5, mp_saves_rect.y + 10))
-        surface.set_clip(None)
-        
-        if self.ai_mode in ["GEMINI", "CHATGPT", "CLAUDE", "OLLAMA"]:
-            if self.ai_mode == "GEMINI":
-                key_text_var = self.gemini_api_key_text
-                mod_text_var = self.gemini_model_text
-            elif self.ai_mode == "OLLAMA":
-                key_text_var = self.ollama_api_key_text
-                mod_text_var = self.ollama_model_text
-            elif self.ai_mode == "CHATGPT":
-                key_text_var = self.chatgpt_api_key_text
-                mod_text_var = self.chatgpt_model_text
-            elif self.ai_mode == "CLAUDE":
-                key_text_var = self.claude_api_key_text
-                mod_text_var = self.claude_model_text
-
-            # --- TOP BOX: API KEY / URL ---
-            label_top = "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA" else f"Paste {self.ai_mode.capitalize()} API Key:"
-            surface.blit(font.render(label_top, True, (200, 200, 200)), (c.SETTINGS_BOX_X, c.SETTINGS_KEY_BOX_Y - 25))
-
-            key_rect = pygame.Rect(c.SETTINGS_BOX_X, c.SETTINGS_KEY_BOX_Y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-            is_key_active = (self.active_input == f"{self.ai_mode}_KEY")
-            pygame.draw.rect(surface, (60, 60, 80) if is_key_active else (20, 20, 30), key_rect)
-            pygame.draw.rect(surface, (150, 150, 150), key_rect, 1)
-
-            display_key = key_text_var + ("|" if is_key_active else "")
-            surface.set_clip(key_rect.inflate(-10, -10))
-            surface.blit(font.render(display_key, True, (255, 255, 255)), (key_rect.x + 5, key_rect.y + 10))
-            surface.set_clip(None)
-
-            # --- BOTTOM BOX: MODEL ---
-            label_bot = f"{self.ai_mode.capitalize()} Model Name:"
-            surface.blit(font.render(label_bot, True, (200, 200, 200)), (c.SETTINGS_BOX_X, c.SETTINGS_MOD_BOX_Y - 25))
-
-            mod_rect = pygame.Rect(c.SETTINGS_BOX_X, c.SETTINGS_MOD_BOX_Y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-            is_mod_active = (self.active_input == f"{self.ai_mode}_MOD")
-            pygame.draw.rect(surface, (60, 60, 80) if is_mod_active else (20, 20, 30), mod_rect)
-            pygame.draw.rect(surface, (150, 150, 150), mod_rect, 1)
-
-            display_mod = mod_text_var + ("|" if is_mod_active else "")
-            surface.set_clip(mod_rect.inflate(-10, -10))
-            surface.blit(font.render(display_mod, True, (255, 255, 255)), (mod_rect.x + 5, mod_rect.y + 10))
-            surface.set_clip(None)
+        # --- API KEY / URL box, then MODEL box ---
+        boxes = [
+            ("KEY", c.SETTINGS_KEY_BOX_Y,
+             "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA"
+             else f"Paste {self.ai_mode.capitalize()} API Key:"),
+            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{self.ai_mode.capitalize()} Model Name:"),
+        ]
+        for box_type, box_y, label in boxes:
+            surface.blit(font.render(label, True, (200, 200, 200)), (c.SETTINGS_BOX_X, box_y - 25))
+            rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
+            self.draw_text_field(surface, rect, self.get_field(box_type),
+                                 active=self.active_input == f"{self.ai_mode}_{box_type}")
 
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)
@@ -461,10 +352,4 @@ class Settings(GameState):
     def set_volume(self, val):
         self.sfx_volume = val
         self.controller.sfx_volume = val
-        ui_elements.global_sfx_volume = val
-        
-        if not c.USE_SOLOUD:
-            if getattr(ui_elements, 'pygame_click_sound', None):
-                ui_elements.pygame_click_sound.set_volume(val)
-            if getattr(ui_elements, 'pygame_slider_sound', None):
-                ui_elements.pygame_slider_sound.set_volume(val)
+        ui_elements.set_sfx_volume(val)

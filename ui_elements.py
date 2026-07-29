@@ -26,6 +26,44 @@ def parse_pos(val, limit, size):
             return base
     return val
 
+def play_ui_sound(kind="click"):
+    """Plays a UI sfx through whichever audio backend is active.
+
+    Single entry point for every click/slider blip in the game, so the SoLoud
+    vs. pygame.mixer branch and the volume/pitch maths live in exactly one place.
+    """
+    if global_sfx_volume <= 0:
+        return
+
+    if c.USE_SOLOUD:
+        sound = click_sound if kind == "click" else slider_sound
+        if sound and soloud_engine:
+            handle = soloud_engine.play(sound)
+            soloud_engine.set_volume(handle, global_sfx_volume)
+            # Centres the speed variance directly on a 0.5 pitch input
+            soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
+    else:
+        sound = pygame_click_sound if kind == "click" else pygame_slider_sound
+        if sound:
+            sound.set_volume(global_sfx_volume)
+            sound.play()
+
+def set_sfx_volume(val):
+    """Applies a new sfx volume to the shared state and both audio backends."""
+    global global_sfx_volume
+    global_sfx_volume = val
+    if not c.USE_SOLOUD:
+        for sound in (pygame_click_sound, pygame_slider_sound):
+            if sound:
+                sound.set_volume(val)
+
+def scale_icon(icon_name, size):
+    """Fetches a symbol and scales it to a square of `size`, or None if missing."""
+    icon_surf = symbol_loader.SYMBOLS.get(icon_name)
+    if not icon_surf:
+        return None
+    return pygame.transform.smoothscale(icon_surf, (size, size))
+
 class Button:
     # UPDATED: Added font_preset parameter defaulting to "button"
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button"):
@@ -33,10 +71,9 @@ class Button:
         final_x = parse_pos(x, c.SCREEN_WIDTH, self.width)
         final_y = parse_pos(y, c.SCREEN_HEIGHT, self.height)
         self.rect = pygame.Rect(final_x, final_y, self.width, self.height)
-        
-        self.color, self.hover_color = c.UI_COLORS.get(color_preset, c.UI_COLORS["grey"])
-        self.pressed_color = (max(0, self.color[0]-40), max(0, self.color[1]-40), max(0, self.color[2]-40))
-        
+
+        self.set_palette(color_preset)
+
         self.text = text
         self.callback = callback
         self.image = image 
@@ -57,6 +94,53 @@ class Button:
         # if it returns True. Lets a button stay visible/clickable-looking while
         # scrolled behind a fixed overlay without the click sfx sneaking through.
         self.click_guard = None
+
+    # ------------------------------------------------------------------ #
+    #                         APPEARANCE HELPERS                         #
+    # ------------------------------------------------------------------ #
+
+    def set_palette(self, color_preset):
+        """Recolours the button from a c.UI_COLORS preset name.
+
+        Always the way to change a button's colour: it keeps base, hover and
+        pressed shades in step, which hand-assigning `.color`/`.hover_color`
+        at the call site did not.
+        """
+        base, hover = c.UI_COLORS.get(color_preset, c.UI_COLORS["grey"])
+        self.set_colors(base, hover)
+
+    def set_colors(self, base, hover=None):
+        """Recolours the button from raw RGB values (palette swatches, etc.)."""
+        self.color = base
+        self.hover_color = base if hover is None else hover
+        self.pressed_color = tuple(max(0, ch - 40) for ch in base[:3])
+
+    def apply_state(self, visible=None, enabled=None, text=None, color=None):
+        """Updates the per-frame dynamic bits of a button in one call.
+
+        Passing `enabled=False` greys the button out, which is why colour and
+        enabled-ness are set together rather than by separate assignments.
+        """
+        if visible is not None:
+            self.visible = visible
+        if text is not None:
+            self.text = text
+        if enabled is not None:
+            self.disabled = not enabled
+        if color is not None or enabled is not None:
+            self.set_palette("grey" if self.disabled else (color or "green"))
+
+    def draw_label(self, surface, text, **anchor):
+        """Blits the button's text with its standard 1px drop shadow.
+
+        `anchor` takes any pygame rect keyword (center=, midleft=, midtop=...),
+        which is what lets every layout branch below share one blit path.
+        """
+        text_surf = self.font.render(text, True, (255, 255, 255))
+        text_rect = text_surf.get_rect(**anchor)
+        surface.blit(self.font.render(text, True, (0, 0, 0)), (text_rect.x + 1, text_rect.y + 1))
+        surface.blit(text_surf, text_rect)
+        return text_rect
 
     def draw(self, surface):
         if not self.visible: return
@@ -86,38 +170,26 @@ class Button:
             
         pygame.draw.rect(surface, border_color, self.rect, border_thickness)
 
-        if self.image and self.text and self.show_text:
-            if getattr(self, 'layout', 'horizontal') == 'vertical':
-                # Image in middle (shifted down slightly to make room for top text)
-                img_rect = self.image.get_rect(center=(self.rect.centerx, self.rect.centery + 10))
-                surface.blit(self.image, img_rect)
-                
-                # Text on top
-                text_surf = self.font.render(self.text, True, (255, 255, 255))
-                text_rect = text_surf.get_rect(midtop=(self.rect.centerx, self.rect.y + 5))
-                shadow = self.font.render(self.text, True, (0, 0, 0))
-                surface.blit(shadow, (text_rect.x + 1, text_rect.y + 1))
-                surface.blit(text_surf, text_rect)
+        labelled = bool(self.image and self.text and self.show_text)
+
+        if self.image:
+            if not labelled:
+                img_anchor = {"center": self.rect.center}
+            elif getattr(self, 'layout', 'horizontal') == 'vertical':
+                # Shifted down slightly to make room for the text above it
+                img_anchor = {"center": (self.rect.centerx, self.rect.centery + 10)}
             else:
-                img_rect = self.image.get_rect(midleft=(self.rect.x + 10, self.rect.centery))
-                surface.blit(self.image, img_rect)
-                
-                text_surf = self.font.render(self.text, True, (255, 255, 255))
-                text_rect = text_surf.get_rect(midleft=(img_rect.right + 10, self.rect.centery))
-                shadow = self.font.render(self.text, True, (0, 0, 0))
-                surface.blit(shadow, (text_rect.x + 1, text_rect.y + 1))
-                surface.blit(text_surf, text_rect)
-            
-        elif self.image:
-            img_rect = self.image.get_rect(center=self.rect.center)
+                img_anchor = {"midleft": (self.rect.x + 10, self.rect.centery)}
+            img_rect = self.image.get_rect(**img_anchor)
             surface.blit(self.image, img_rect)
-            
-        elif self.text:
-            text_surf = self.font.render(self.text, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=self.rect.center)
-            shadow = self.font.render(self.text, True, (0, 0, 0))
-            surface.blit(shadow, (text_rect.x + 1, text_rect.y + 1))
-            surface.blit(text_surf, text_rect)
+
+        if labelled:
+            if getattr(self, 'layout', 'horizontal') == 'vertical':
+                self.draw_label(surface, self.text, midtop=(self.rect.centerx, self.rect.y + 5))
+            else:
+                self.draw_label(surface, self.text, midleft=(img_rect.right + 10, self.rect.centery))
+        elif self.text and not self.image:
+            self.draw_label(surface, self.text, center=self.rect.center)
 
         if getattr(self, 'notification_count', 0) > 0:
             count_str = str(self.notification_count)
@@ -125,7 +197,7 @@ class Button:
             bubble_center = (self.rect.right - 5, self.rect.top + 5)
             pygame.draw.circle(surface, (220, 20, 20), bubble_center, bubble_radius)
             pygame.draw.circle(surface, (255, 255, 255), bubble_center, bubble_radius, 1)
-            
+
             notif_font = fonts.get("small")
             count_surf = notif_font.render(count_str, True, (255, 255, 255))
             count_rect = count_surf.get_rect(center=bubble_center)
@@ -153,17 +225,7 @@ class Button:
             if self.is_pressed:
                 self.is_pressed = False
                 if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
-                    # --- HYBRID ENGINE HOOK ---
-                    if c.USE_SOLOUD:
-                        if click_sound and soloud_engine and global_sfx_volume > 0:
-                            handle = soloud_engine.play(click_sound)
-                            soloud_engine.set_volume(handle, global_sfx_volume)
-                            # Mathematical tweak to center speed variance directly on 0.5 input
-                            soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
-                    else:
-                        if pygame_click_sound and global_sfx_volume > 0:
-                            pygame_click_sound.set_volume(global_sfx_volume)
-                            pygame_click_sound.play()
+                    play_ui_sound("click")
                     self.callback()
 
 class Slider:
@@ -247,18 +309,7 @@ class Slider:
                 # 2. Has it been at least 100ms since the last click?
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_sound_tick > 50:
-                    # --- HYBRID ENGINE HOOK ---
-                    if c.USE_SOLOUD:
-                        if slider_sound and soloud_engine and global_sfx_volume > 0:
-                            handle = soloud_engine.play(slider_sound)
-                            soloud_engine.set_volume(handle, global_sfx_volume)
-                            # Mathematical tweak to center speed variance directly on 0.5 input
-                            soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
-                    else:
-                        if pygame_slider_sound and global_sfx_volume > 0:
-                            pygame_slider_sound.set_volume(global_sfx_volume)
-                            pygame_slider_sound.play()
-                        
+                    play_ui_sound("slider")
                     self.last_sound_tick = current_time # Reset the throttle
 
 def process_text_input(event, current_text, max_length=None, validation_func=None):
@@ -304,91 +355,79 @@ def process_text_input(event, current_text, max_length=None, validation_func=Non
 
         return current_text + char, "TYPING"
 
-def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
+def draw_icon_row(surface, font, base_text, entries, x, y, color,
+                  icon_size=None, icon_gap=4, empty_text=None):
+    """Draws "<label>  [icon] value  [icon] value ..." on one line.
+
+    Every stat line in the game (costs, yields, combat, bombardment) is this
+    same shape, so they all funnel through here; the callers below only differ
+    in which icons they pick and how the values are formatted.
+
+    `entries` is a sequence of (icon_name, display_text) pairs, already
+    filtered and formatted by the caller. `icon_size` defaults to the font
+    height so icons line up with the text; pass a number to pin it.
+    """
     base_surf = font.render(base_text, True, color)
     surface.blit(base_surf, (x, y))
     curr_x = x + base_surf.get_width()
-    
-    icons = [("Iron", mat), ("Infantry", man), ("Oil", fuel)]
-    drawn_any = False
-    
-    for icon_name, val in icons:
+
+    size = max(16, font.get_height()) if icon_size is None else icon_size
+
+    for icon_name, display_text in entries:
+        icon_surf = scale_icon(icon_name, size)
+        if icon_surf:
+            surface.blit(icon_surf, (curr_x, y + 2))
+            curr_x += size + icon_gap
+
+        val_surf = font.render(f"{display_text}   ", True, color)
+        surface.blit(val_surf, (curr_x, y))
+        curr_x += val_surf.get_width()
+
+    if not entries and empty_text:
+        surface.blit(font.render(empty_text, True, color), (curr_x, y))
+
+def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
+    """Material/manpower/fuel row. Zero-valued resources are left out entirely."""
+    entries = []
+    for icon_name, val in (("Iron", mat), ("Infantry", man), ("Oil", fuel)):
         try:
-            if float(val) == 0:
-                continue
+            numeric = float(val)
         except (ValueError, TypeError):
             continue
-            
-        drawn_any = True
-        display_val = str(val)
-        
-        if is_yield and float(val) > 0 and not display_val.startswith("+"):
-            display_val = f"+{display_val}"
-
-        icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-        if icon_surf:
-            icon_surf = pygame.transform.smoothscale(icon_surf, (16, 16))
-            surface.blit(icon_surf, (curr_x, y + 2))
-            curr_x += 20
-        
-        val_surf = font.render(f"{display_val}   ", True, color)
-        surface.blit(val_surf, (curr_x, y))
-        curr_x += val_surf.get_width()
-        
-    if not drawn_any:
-        fallback_text = "None" if is_yield else "Free"
-        val_surf = font.render(fallback_text, True, color)
-        surface.blit(val_surf, (curr_x, y))
-
-def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color):
-    base_surf = font.render(base_text, True, color)
-    surface.blit(base_surf, (x, y))
-    curr_x = x + base_surf.get_width()
-
-    icons = [
-        (c.ICON_ATTACK, atk, "ATK:"), 
-        (c.ICON_DEFENSE, df, "DEF:"), 
-        (c.ICON_HEALTH, hp, "HP:"), 
-        (c.ICON_SPEED, spd, "SPD:")
-    ]
-
-    for icon_name, val, prefix in icons:
-        # Defense is hidden entirely when 0, same as a free resource cost is
-        # hidden in draw_resource_string, rather than showing "DEF: 0" noise.
-        if icon_name == c.ICON_DEFENSE and not val:
+        if numeric == 0:
             continue
 
-        icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-        if icon_surf:
-            icon_h = max(16, font.get_height())
-            icon_surf = pygame.transform.smoothscale(icon_surf, (icon_h, icon_h))
-            surface.blit(icon_surf, (curr_x, y + 2))
-            curr_x += icon_h + 4
+        display_val = str(val)
+        if is_yield and numeric > 0 and not display_val.startswith("+"):
+            display_val = f"+{display_val}"
+        entries.append((icon_name, display_val))
 
-        val_surf = font.render(f"{prefix} {val}   ", True, color)
-        surface.blit(val_surf, (curr_x, y))
-        curr_x += val_surf.get_width()
+    # 16px icons and a 20px step, rather than the font-height sizing the stat
+    # rows use, keeps the resource glyphs at their long-standing HUD size.
+    draw_icon_row(surface, font, base_text, entries, x, y, color,
+                  icon_size=16, icon_gap=4,
+                  empty_text="None" if is_yield else "Free")
+
+def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color):
+    """Attack/defense/health/speed row.
+
+    Defense is hidden entirely when 0, the same way a free resource cost is
+    hidden in draw_resource_string, rather than showing "DEF: 0" noise.
+    """
+    stats = [
+        (c.ICON_ATTACK, f"ATK: {atk}"),
+        (c.ICON_DEFENSE, f"DEF: {df}"),
+        (c.ICON_HEALTH, f"HP: {hp}"),
+        (c.ICON_SPEED, f"SPD: {spd}"),
+    ]
+    if not df:
+        stats.pop(1)
+    draw_icon_row(surface, font, base_text, stats, x, y, color)
 
 def draw_bombardment_stats(surface, font, dmg, rng, x, y, color):
-    """Draws bombardment damage/range, same icon+text layout as draw_combat_stats.
+    """Bombardment damage/range row.
     Caller is responsible for only calling this for units that can bombard."""
-    base_surf = font.render("Bombardment:   ", True, color)
-    surface.blit(base_surf, (x, y))
-    curr_x = x + base_surf.get_width()
-
-    icons = [
-        (c.ICON_BOMBARDMENT, dmg, "DMG:"),
-        (c.ICON_BOMBARD_RANGE, rng, "RNG:")
-    ]
-
-    for icon_name, val, prefix in icons:
-        icon_surf = symbol_loader.SYMBOLS.get(icon_name)
-        if icon_surf:
-            icon_h = max(16, font.get_height())
-            icon_surf = pygame.transform.smoothscale(icon_surf, (icon_h, icon_h))
-            surface.blit(icon_surf, (curr_x, y + 2))
-            curr_x += icon_h + 4
-
-        val_surf = font.render(f"{prefix} {val}   ", True, color)
-        surface.blit(val_surf, (curr_x, y))
-        curr_x += val_surf.get_width()
+    draw_icon_row(surface, font, "Bombardment:   ", [
+        (c.ICON_BOMBARDMENT, f"DMG: {dmg}"),
+        (c.ICON_BOMBARD_RANGE, f"RNG: {rng}"),
+    ], x, y, color)

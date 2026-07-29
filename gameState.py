@@ -1,3 +1,5 @@
+import os
+import shutil
 import pygame
 import data.constants as c
 from data import queries
@@ -25,6 +27,25 @@ def dispatch_global_keys(state, event):
         if hasattr(state, "handle_orders_key"):
             state.handle_orders_key()
 
+class ScreenLayer:
+    """A pseudo-element that defers its drawing to one of its screen's methods.
+
+    Screens whose buttons scroll register these to pin fixed chrome above the
+    scrolling content: draw() walks `elements` in order, so anything appended
+    after the scrolling buttons lands on top of them. Register genuinely fixed
+    buttons *after* the layer so the chrome doesn't paint over them in turn.
+    """
+    def __init__(self, screen, draw_method):
+        self.screen = screen
+        self.draw_method = draw_method
+        self.visible = True
+
+    def handle_event(self, event):
+        pass
+
+    def draw(self, surface):
+        getattr(self.screen, self.draw_method)(surface)
+
 class GameState:
     # Screens layered over the map set this; it drives feedback text and keybind lookup.
     map_screen = None
@@ -33,6 +54,22 @@ class GameState:
     # Pixels per wheel notch: panels layered on the map, and full-screen menu lists.
     scroll_speed = 30
     list_scroll_speed = 40
+
+    # Centred header drawn under the buttons. Set `title` for a fixed string or
+    # override get_title() for one that changes with the screen's sub-state.
+    title = None
+    title_y = 40
+    title_preset = "heading1"
+    title_shadow = False
+
+    # Scroll state for the standard vertical list. Declared here so no screen
+    # has to re-initialise the same five attributes; scroll_by/handle_list_scroll
+    # write instance values over these class defaults on first use.
+    scroll_y = 0
+    max_scroll = 0
+    is_dragging_scrollbar = False
+    scroll_track_rect = None
+    scroll_handle_rect = None
 
     def __init__(self):
         self.done = False
@@ -48,6 +85,11 @@ class GameState:
 
     def additional_events(self, event):
         pass
+
+    def go_to(self, state):
+        """Hands the state machine off to another screen and closes this one."""
+        self.next_state = state
+        self.done = True
 
     def exit_screen(self):
         """Closes this screen, handing off to back_state when one is declared."""
@@ -110,6 +152,59 @@ class GameState:
     def refresh_ui(self):
         pass
 
+    # ---------------------------------------------------------------- #
+    #                     STANDARD VERTICAL LISTS                      #
+    # ---------------------------------------------------------------- #
+
+    def layout_list_rows(self, count, row_h, top, view_h=None, pad=0,
+                         cull_top=100, cull_bottom=None,
+                         attr="scroll_y", limit_attr="max_scroll"):
+        """Sets the scroll limit for a list and yields (index, y) for visible rows.
+
+        Every folder/scenario list in the menus is built this way: derive the
+        scroll floor from the total content height, then walk the rows applying
+        the offset and skipping anything off-screen.
+        """
+        if view_h is None:
+            view_h = c.SCREEN_HEIGHT - 200
+        if cull_bottom is None:
+            cull_bottom = c.SCREEN_HEIGHT - 50
+
+        setattr(self, limit_attr, min(0, view_h - (count * row_h) - pad))
+        scroll = getattr(self, attr, 0)
+
+        for i in range(count):
+            y = top + (i * row_h) + scroll
+            if cull_top < y < cull_bottom:
+                yield i, y
+
+    def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15,
+                            attr="scroll_y", limit_attr="max_scroll",
+                            track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
+                            drag_attr=None):
+        """Draws the list scrollbar and publishes its rects for handle_list_scroll.
+
+        Accepts (and ignores) drag_attr so a screen can keep one dict of
+        attribute names and hand it to both this and handle_list_scroll.
+        """
+        track, handle = ui_bars.draw_standard_scrollbar(
+            surface, getattr(self, attr, 0), getattr(self, limit_attr, 0),
+            track_x, track_y, view_h, width
+        )
+        setattr(self, track_attr, track)
+        setattr(self, handle_attr, handle)
+        return track, handle
+
+    def get_title(self):
+        """The centred header text, or None for no header."""
+        return self.title
+
+    def draw_title(self, surface):
+        text = self.get_title()
+        if text:
+            ui_bars.draw_centered_title(surface, text, self.title_y,
+                                        self.title_preset, shadow=self.title_shadow)
+
     def draw(self, surface):
         # 1. Fill background or draw background image
         if self.bg_image_path:
@@ -121,8 +216,9 @@ class GameState:
             # Pull from constants instead of hardcoding
             surface.fill(getattr(self, 'bg_color', c.DEFAULT_BG_COLOR))
 
-        # 2. Draw the specific screen content (Map, UI Bars)
-        # Moving this BEFORE elements fixes the layering
+        # 2. Centred header, then the specific screen content (Map, UI Bars)
+        # Keeping both BEFORE elements fixes the layering
+        self.draw_title(surface)
         self.additional_draw(surface)
 
         # 3. Draw UI buttons on the very top
@@ -142,6 +238,134 @@ class GameState:
 
     def update(self):
         pass
+
+class FolderListState(GameState):
+    """Base for the menus that list folders on disk (saves, custom maps).
+
+    Subclasses point `managed_dir` at a directory and get the inline rename
+    box, the delete confirmation prompt and their keyboard handling for free.
+    Both were previously reimplemented per screen with the same layout and the
+    same Enter/Escape contract, just different attribute names.
+    """
+    # Geometry of the rename box, relative to the row being renamed.
+    rename_box_size = (300, 50)
+    # Size of the centred "Delete X?" confirmation popup.
+    delete_popup_size = (500, 200)
+
+    def __init__(self):
+        super().__init__()
+        self.renaming_item = None
+        self.deleting_item = None
+        self.new_name_text = ""
+
+    # -- the directory being managed; a property so sub-state screens can swap it
+    @property
+    def managed_dir(self):
+        raise NotImplementedError
+
+    def list_folders(self, directory=None):
+        """Lists a directory's entries, creating it first if it is missing."""
+        directory = self.managed_dir if directory is None else directory
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return os.listdir(directory)
+
+    # ---------------------------------------------------------------- #
+    #                         RENAME / DELETE                          #
+    # ---------------------------------------------------------------- #
+
+    def start_rename(self, name):
+        self.renaming_item = name
+        self.new_name_text = name
+        self.refresh_ui()
+
+    def finish_rename(self):
+        name = self.new_name_text.strip()
+        if name and name != self.renaming_item:
+            old_path = os.path.join(self.managed_dir, self.renaming_item)
+            new_path = os.path.join(self.managed_dir, name)
+            if not os.path.exists(new_path):
+                os.rename(old_path, new_path)
+        self.cancel_rename()
+
+    def cancel_rename(self):
+        self.renaming_item = None
+        self.refresh_ui()
+
+    def start_delete(self, name):
+        self.deleting_item = name
+        self.refresh_ui()
+
+    def confirm_delete(self):
+        if self.deleting_item:
+            path = os.path.join(self.managed_dir, self.deleting_item)
+            if os.path.exists(path):
+                shutil.rmtree(path)
+        self.cancel_delete()
+
+    def cancel_delete(self):
+        self.deleting_item = None
+        self.refresh_ui()
+
+    def handle_name_prompt_event(self, event):
+        """Feeds an event to whichever prompt is open. True means it was consumed."""
+        if self.renaming_item:
+            from ui_elements import process_text_input
+            is_valid_char = lambda ch: ch.isalnum() or ch in " _-"
+            self.new_name_text, status = process_text_input(event, self.new_name_text,
+                                                           validation_func=is_valid_char)
+            if status == "SUBMIT":
+                self.finish_rename()
+            elif status == "CANCEL":
+                self.cancel_rename()
+            return True
+
+        if self.deleting_item:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.confirm_delete()
+                elif event.key == pygame.K_ESCAPE:
+                    self.cancel_delete()
+            return True
+
+        return False
+
+    def is_row_hidden(self, name):
+        """True while a row is replaced by the rename box or the delete prompt."""
+        return name in (self.renaming_item, self.deleting_item)
+
+    # ---------------------------------------------------------------- #
+    #                            RENDERING                             #
+    # ---------------------------------------------------------------- #
+
+    def draw_rename_box(self, surface, x, y):
+        """Draws the inline name-entry box in place of the row being renamed."""
+        from map_logic.rendering.font_manager import fonts
+        input_rect = pygame.Rect(x, y, *self.rename_box_size)
+        pygame.draw.rect(surface, (100, 100, 100), input_rect)
+        pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
+
+        txt_surf = fonts.get("heading2").render(self.new_name_text + "|", True, (255, 255, 255))
+        surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
+
+        instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
+        surface.blit(instr, (input_rect.x, input_rect.y - 25))
+
+    def draw_delete_confirm(self, surface, center=None):
+        """Dims the screen and asks for Enter/Escape on the pending deletion."""
+        from map_logic.rendering.font_manager import fonts
+        ui_bars.draw_fullscreen_overlay(surface, 180)
+
+        pop_rect = pygame.Rect((0, 0), self.delete_popup_size)
+        pop_rect.center = center or (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        ui_bars.draw_modal_box(surface, pop_rect, bg_color=(60, 20, 20),
+                               border_color=(255, 50, 50), border_width=3)
+
+        msg = fonts.get("heading2").render(f"Delete '{self.deleting_item}'?", True, (255, 255, 255))
+        surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
+
+        sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
+        surface.blit(sub_msg, sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.centery + 25)))
 
 class MapOverlayScreen(GameState):
     """Base for screens drawn on top of the live map (claims, peace, trade, puppets...).

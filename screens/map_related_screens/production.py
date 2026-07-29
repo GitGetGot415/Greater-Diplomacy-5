@@ -1,25 +1,12 @@
 import pygame
 import data.constants as c
-from gameState import GameState
+from gameState import GameState, ScreenLayer
 from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
 
 section_spacing = 60
-
-class ProductionChromeOverlay:
-    """Draws the header and resource HUD last, so they cover any scrolled
-    buttons that slid underneath instead of the buttons drawing on top."""
-    def __init__(self, screen):
-        self.screen = screen
-        self.visible = True
-
-    def handle_event(self, event):
-        pass
-
-    def draw(self, surface):
-        self.screen.draw_chrome(surface)
 
 class Production_Screen(GameState):
     back_state = "MAP"
@@ -29,6 +16,7 @@ class Production_Screen(GameState):
         self.bg_color = (25, 25, 25)
         self.target_province = None
         self.map_screen = None
+        self.btn_back = None
         self.cancel_hitboxes = []
         
         self.unit_library = queries.get_unit_library()
@@ -49,7 +37,7 @@ class Production_Screen(GameState):
         if self.map_screen.tactical_mode:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.elements and self.elements[0].rect.collidepoint(event.pos):
+                    if self.btn_back and self.btn_back.rect.collidepoint(event.pos):
                         self.exit_screen() # Allow back button explicitly
                     else:
                         self.map_screen.show_feedback("Tactical Mode: Cannot interact with national production.")
@@ -86,9 +74,11 @@ class Production_Screen(GameState):
                     el.click_guard = lambda: 80 <= pygame.mouse.get_pos()[1] <= c.SCREEN_HEIGHT - 60
 
     def refresh_ui(self):
-        # The back button doesn't scroll
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
-        
+        # The back button doesn't scroll, so it is built here but registered at the
+        # very end of refresh_ui -- see the ScreenLayer note down there.
+        self.btn_back = Button(20, 20, "small", "red", "Back", self.exit_screen)
+        self.elements = []
+
         current_buildings = self.target_province.get("buildings", [])
         building_queue = self.target_province.get("building_queue", [])
         
@@ -359,8 +349,12 @@ class Production_Screen(GameState):
         # Calculate maximum scroll distance
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
 
-        # Drawn last so it covers any scrollable button still sliding past it.
-        self.elements.append(ProductionChromeOverlay(self))
+        # Drawn after the unit list so it covers any scrollable button sliding past it.
+        self.elements.append(ScreenLayer(self, "draw_chrome"))
+
+        # Back sits at (20, 20), inside the header band draw_chrome fills, so it has
+        # to be registered after the chrome or it gets painted over and vanishes.
+        self.elements.append(self.btn_back)
 
     def start_coring(self):
         owner = self.target_province.get("owner")

@@ -164,8 +164,7 @@ class Scenario_Settings(GameState):
         self.refresh_ui()
 
     def open_ai_settings(self):
-        self.next_state = "AI_SETTINGS"
-        self.done = True
+        self.go_to("AI_SETTINGS")
 
     def toggle_battle_royale(self):
         current = str(self.settings.get("battle_royale", c.DEFAULT_BATTLE_ROYALE)).lower() == "true"

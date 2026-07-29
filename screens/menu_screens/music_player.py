@@ -6,7 +6,6 @@ from gameState import GameState
 from ui_elements import Button, Slider, process_text_input
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
-from ui.bars import ui_bars
 
 song_y = 32
 
@@ -543,14 +542,7 @@ class Music_Player(GameState):
 
     def set_sfx_volume(self, val):
         self.controller.sfx_volume = val
-        ui_elements.global_sfx_volume = val    
-        
-        if not c.USE_SOLOUD:
-            if ui_elements.pygame_click_sound:
-                ui_elements.pygame_click_sound.set_volume(val)
-            if ui_elements.pygame_slider_sound:
-                ui_elements.pygame_slider_sound.set_volume(val)
-                
+        ui_elements.set_sfx_volume(val)
         self.save_audio_settings()
 
     def set_music_volume(self, val):
@@ -588,61 +580,28 @@ class Music_Player(GameState):
         self.controller.build_playlist()
         self.refresh_ui()
 
-    # --- SCROLL BAR SNAPPING HELPERS ---
-    def _snap_album_scroll(self, my):
-        self.album_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_album_scroll, 120, c.SCREEN_HEIGHT - 120)
-        self.refresh_ui()
-
-    def _snap_track_scroll(self, my):
-        self.track_scroll_y = ui_bars.calculate_scroll_snap(my, self.max_track_scroll, 200, c.SCREEN_HEIGHT - 200)
-        self.refresh_ui()
-
-    def handle_events(self, events):
-        for event in events:
-            for el in self.elements:
-                el.handle_event(event)
-            self.additional_events(event)
+    # The two panes are ordinary scrollable lists, so they both go through
+    # GameState.handle_list_scroll / draw_list_scrollbar with their own attrs.
+    PANES = {
+        "album": dict(attr="album_scroll_y", limit_attr="max_album_scroll",
+                      track_attr="album_track_rect", handle_attr="album_handle_rect",
+                      drag_attr="album_dragging"),
+        "track": dict(attr="track_scroll_y", limit_attr="max_track_scroll",
+                      track_attr="track_track_rect", handle_attr="track_handle_rect",
+                      drag_attr="track_dragging"),
+    }
 
     def additional_events(self, event):
-        mx, my = pygame.mouse.get_pos()
-        
-        # 1. Standard Mouse Wheel Scrolling
+        # The wheel scrolls whichever pane the cursor is over; scrollbar grabs are
+        # located by their own rects so they work from anywhere.
         if event.type == pygame.MOUSEWHEEL:
-            if mx < c.MUSIC_LEFT_PANE_W:
-                self.album_scroll_y += event.y * 40
-                self.album_scroll_y = max(self.max_album_scroll, min(0, self.album_scroll_y))
-            else:
-                self.track_scroll_y += event.y * 40
-                self.track_scroll_y = max(self.max_track_scroll, min(0, self.track_scroll_y))
-            self.refresh_ui()
-            
-        # 2. Scrollbar Drag Start
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # Album Scrollbar
-            if self.album_handle_rect and self.album_handle_rect.collidepoint(mx, my):
-                self.album_dragging = True
-            elif self.album_track_rect and self.album_track_rect.collidepoint(mx, my):
-                self.album_dragging = True
-                self._snap_album_scroll(my)
-                
-            # Track Scrollbar
-            elif self.track_handle_rect and self.track_handle_rect.collidepoint(mx, my):
-                self.track_dragging = True
-            elif self.track_track_rect and self.track_track_rect.collidepoint(mx, my):
-                self.track_dragging = True
-                self._snap_track_scroll(my)
-                
-        # 3. Scrollbar Drag Release
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.album_dragging = False
-            self.track_dragging = False
-            
-        # 4. Scrollbar Drag Motion
-        elif event.type == pygame.MOUSEMOTION:
-            if self.album_dragging:
-                self._snap_album_scroll(my)
-            elif self.track_dragging:
-                self._snap_track_scroll(my)
+            over_albums = pygame.mouse.get_pos()[0] < c.MUSIC_LEFT_PANE_W
+            self.handle_list_scroll(event, **self.PANES["album" if over_albums else "track"])
+            return
+
+        for pane in self.PANES.values():
+            if self.handle_list_scroll(event, **pane):
+                return
 
     def additional_draw(self, surface):
         # Left Pane Background (Drawn underneath everything)
@@ -650,11 +609,8 @@ class Music_Player(GameState):
         pygame.draw.rect(surface, (35, 35, 45), left_pane)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
-        self.album_track_rect, self.album_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.album_scroll_y, self.max_album_scroll, c.MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120, width=10
-        )
-        
-        self.track_track_rect, self.track_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.track_scroll_y, self.max_track_scroll, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200, width=10
-        )
+        self.draw_list_scrollbar(surface, c.MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120,
+                                 width=10, **self.PANES["album"])
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200,
+                                 width=10, **self.PANES["track"])
 

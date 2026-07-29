@@ -1,267 +1,119 @@
 import os
 import json
-import shutil
-import pygame
-import zipfile
-from pathlib import Path
-from tkinter import filedialog, messagebox
-from data import queries 
-from gameState import GameState
-from ui_elements import Button, process_text_input
-from map_logic.rendering.font_manager import fonts
+from tkinter import messagebox
+from data import queries
+from gameState import FolderListState
+from ui_elements import Button
 import data.constants as c
-from ui.bars import ui_bars
 
-class Load_Game(GameState):
+class Load_Game(FolderListState):
     back_state = "MENU"
+
+    ROW_HEIGHT = 40
+    ROW_TOP = 120
+    # (x, size preset, colour, label, handler name) for the buttons on every save row.
+    # A None label falls back to the folder name.
+    ROW_BUTTONS = [
+        (20, "save_file", "blue", None, "load_specific_save"),
+        (785, "small_save_button", "purple", "History", "open_history_menu"),
+        (895, "small_save_button", "grey", "Rename", "start_rename"),
+        (1005, "small_save_button", "green", "Export", "export_save_zip"),
+        (1115, "small_save_button", "red", "Del", "start_delete"),
+    ]
 
     def __init__(self):
         super().__init__()
         self.bg_color = (50, 0, 50)
-        
-        # State variables
-        self.renaming_folder = None
-        self.new_name_text = ""
-        self.deleting_folder = None 
-        
-        self.save_scroll_y = 0
-        self.max_save_scroll = 0
-        self.is_dragging_scrollbar = False
-        self.scroll_track_rect = None
-        self.scroll_handle_rect = None
-        
         self.refresh_ui()
+
+    @property
+    def managed_dir(self):
+        return c.SAVES_DIR
 
     def refresh_ui(self):
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.exit_screen),
-            Button(160, 20, "medium", "green", "Import .zip", self.import_save_zip)
+            Button(160, 20, "medium", "green", "Import .zip",
+                   lambda: queries.import_zip_to_dir(self.managed_dir, self.refresh_ui))
         ]
-        
-        if not os.path.exists(c.SAVES_DIR):
-            os.makedirs(c.SAVES_DIR)
-            
-        save_folders = os.listdir(c.SAVES_DIR)
-        
-        # Calculate scroll boundaries
-        total_content_height = len(save_folders) * 40
-        self.max_save_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height)
 
-        for i, folder in enumerate(save_folders):
-            # Apply the scroll offset to the button Y position
-            btn_y = 120 + (i * 40) + self.save_scroll_y
-            
-            # Simple Y-based culling so we don't draw off-screen buttons
-            if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
+        folders = self.list_folders()
+        for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
+            folder = folders[i]
+            # The row being renamed or deleted is replaced by its prompt
+            if self.is_row_hidden(folder):
                 continue
 
-            # Hide buttons for the row being renamed or deleted
-            if self.renaming_folder == folder or self.deleting_folder == folder:
-                continue
-
-            # Load
-            self.elements.append(Button(20, btn_y, "save_file", "blue", folder, 
-                                        lambda f=folder: self.load_specific_save(f)))
-            # History
-            self.elements.append(Button(785, btn_y, "small_save_button", "purple", "History", 
-                                        lambda f=folder: self.open_history_menu(f)))
-            # Rename
-            self.elements.append(Button(895, btn_y, "small_save_button", "grey", "Rename", 
-                                        lambda f=folder: self.start_rename(f)))
-            # Export
-            self.elements.append(Button(1005, btn_y, "small_save_button", "green", "Export", 
-                                        lambda f=folder: self.export_save_zip(f)))
-            # Delete trigger
-            self.elements.append(Button(1115, btn_y, "small_save_button", "red", "Del", 
-                                        lambda f=folder: self.trigger_delete_conf(f)))
+            for x, size, color, label, handler in self.ROW_BUTTONS:
+                self.elements.append(Button(x, btn_y, size, color, label or folder,
+                                            lambda f=folder, h=handler: getattr(self, h)(f)))
 
     def additional_events(self, event):
-        # 1. Renaming Input Logic
-        if self.renaming_folder:
-            is_valid_char = lambda c: c.isalnum() or c in " _-"
-            self.new_name_text, status = process_text_input(event, self.new_name_text, validation_func=is_valid_char)
-            if status == "SUBMIT": self.finish_rename()
-            elif status == "CANCEL": self.renaming_folder = None; self.refresh_ui()
-        
-        # 2. Deletion Input Logic
-        elif self.deleting_folder:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN: self.confirm_delete()
-                elif event.key == pygame.K_ESCAPE: self.cancel_delete()
-
-        # 3. Scrolling Logic
-        self.handle_list_scroll(event, attr="save_scroll_y", limit_attr="max_save_scroll")
+        if not self.handle_name_prompt_event(event):
+            self.handle_list_scroll(event)
 
     def additional_draw(self, surface):
-        # --- Draw Rename Input Box ---
-        if self.renaming_folder:
-            save_folders = os.listdir(c.SAVES_DIR)
-            idx = save_folders.index(self.renaming_folder) if self.renaming_folder in save_folders else 0
-            box_y = 120 + (idx * 40)
-            
-            input_rect = pygame.Rect(200, box_y, 300, 50)
-            pygame.draw.rect(surface, (100, 100, 100), input_rect)
-            pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
-            
-            font = fonts.get("heading2")
-            txt_surf = font.render(self.new_name_text + "|", True, (255, 255, 255))
-            surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
-            
-            instr = font.render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
-            surface.blit(instr, (200, 80))
+        if self.renaming_item:
+            folders = self.list_folders()
+            idx = folders.index(self.renaming_item) if self.renaming_item in folders else 0
+            self.draw_rename_box(surface, 200, self.ROW_TOP + (idx * self.ROW_HEIGHT) + self.scroll_y)
 
-        # --- Draw Delete Confirmation Popup ---
-        if self.deleting_folder:
-            ui_bars.draw_fullscreen_overlay(surface, 180)
-            
-            # Draw Popup Box
-            pop_rect = pygame.Rect(550, 10, 500, 100)
-            ui_bars.draw_modal_box(surface, pop_rect, bg_color=(60, 20, 20), border_color=(255, 50, 50), border_width=3)
-            
-            font = fonts.get("heading2")
-            msg = font.render(f"Delete '{self.deleting_folder}'?", True, (255, 255, 255))
-            msg_rect = msg.get_rect(center=(800, 40))
-            surface.blit(msg, msg_rect)
-            
-            sub_msg = font.render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
-            sub_rect = sub_msg.get_rect(center=(800, 80))
-            surface.blit(sub_msg, sub_rect)
+        if self.deleting_item:
+            self.draw_delete_confirm(surface)
 
-        # --- Draw Scrollbar ---
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.save_scroll_y, self.max_save_scroll, c.SCREEN_WIDTH - 40, 120, c.SCREEN_HEIGHT - 200
-        )
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
 
-    def trigger_delete_conf(self, folder_name):
-        """Activates the delete confirmation state."""
-        self.deleting_folder = folder_name
-        self.refresh_ui()
-
-    def confirm_delete(self):
-        """Actually deletes the folder."""
-        path = os.path.join(c.SAVES_DIR, self.deleting_folder)
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        self.deleting_folder = None
-        self.refresh_ui()
-
-    def cancel_delete(self):
-        """Backs out of deletion."""
-        self.deleting_folder = None
-        self.refresh_ui()
+    def export_save_zip(self, folder_name):
+        queries.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
 
     def open_history_menu(self, folder_name):
         import tkinter as tk
-        from tkinter import ttk
-        from data import queries
-        
-        history_path = os.path.join(c.SAVES_DIR, folder_name, "history.json")
-        if not os.path.exists(history_path):
-            root = queries.get_transient_tk_root()
-            messagebox.showinfo("No History", "No history available for this save.")
-            queries.destroy_tk_root(root)
-            return
-            
-        with open(history_path, "r") as f:
-            history_data = json.load(f)
-            
+
+        history_path = os.path.join(self.managed_dir, folder_name, "history.json")
+        history_data = {}
+        if os.path.exists(history_path):
+            with open(history_path, "r") as f:
+                history_data = json.load(f)
+
         if not history_data:
             root = queries.get_transient_tk_root()
-            messagebox.showinfo("No History", "History file is empty.")
+            messagebox.showinfo("No History", "History file is empty." if os.path.exists(history_path)
+                                else "No history available for this save.", parent=root)
             queries.destroy_tk_root(root)
             return
 
-        root = tk.Tk()
-        root.title(f"History: {folder_name}")
-        root.geometry("300x400")
-        root.attributes("-topmost", True)
-        self.menu_active = True
-        
+        root, close_menu = queries.create_managed_tk_window(self, f"History: {folder_name}", "300x400")
+
         tk.Label(root, text="Select a past turn to load:", font=("Arial", 12)).pack(pady=10)
-        
+
         frame = tk.Frame(root)
         frame.pack(fill="both", expand=True, padx=10)
         scrollbar = tk.Scrollbar(frame)
         scrollbar.pack(side="right", fill="y")
-        
+
         lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-        
+
         turns = sorted([int(k) for k in history_data.keys()])
         for t in turns:
             date_str = history_data[str(t)].get("date_str", f"Turn {t}")
             lb.insert(tk.END, f"Turn {t}: {date_str}")
-            
+
         lb.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=lb.yview)
-        
-        def close_menu():
-            self.menu_active = False
-            root.destroy()
-            
-        root.protocol("WM_DELETE_WINDOW", close_menu)
-        
+
         def on_select(event=None):
             selection = lb.curselection()
             if selection:
-                selected_idx = selection[0]
-                selected_turn = turns[selected_idx]
-                self.selected_save_path = os.path.join(c.SAVES_DIR, folder_name)
-                self.selected_history_turn = selected_turn
-                self.next_state = "MAP"
-                self.done = True
+                self.selected_history_turn = turns[selection[0]]
+                self.load_specific_save(folder_name)
                 close_menu()
-        
-        tk.Button(root, text="Load Selected Turn", command=on_select, bg="#9C27B0", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
+
+        tk.Button(root, text="Load Selected Turn", command=on_select, bg="#9C27B0",
+                  fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
         lb.bind('<Double-1>', on_select)
-        
+
         queries.run_tk_loop(self, root)
 
-    # --- File System Methods (Unchanged logic, just used by UI) ---
-    def export_save_zip(self, folder_name):
-        try:
-            source_path = os.path.join(c.SAVES_DIR, folder_name)
-            zip_filename = os.path.join(str(Path.home() / "Downloads"), f"{folder_name}.zip")
-            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for root, dirs, files in os.walk(source_path):
-                    for file in files:
-                        zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), source_path))
-            messagebox.showinfo("Export Success", f"Exported to Downloads.")
-        except Exception as e: messagebox.showerror("Export Error", str(e))
-
-    def import_save_zip(self):
-        # Create a temporary root via the centralized helper
-        root = queries.get_transient_tk_root()
-        
-        file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")])
-        
-        # Destroy it immediately after getting the path
-        queries.destroy_tk_root(root)
-        
-        if file_path:
-            save_name = Path(file_path).stem
-            target_dir = os.path.join(c.SAVES_DIR, save_name)
-            if os.path.exists(target_dir): target_dir += "_imported"
-            try:
-                queries.extract_and_flatten_zip(file_path, target_dir)
-                self.refresh_ui()
-            except Exception as e: 
-                messagebox.showerror("Import Error", str(e))
-
-    def start_rename(self, folder_name):
-        self.renaming_folder = folder_name
-        self.new_name_text = folder_name
-        self.refresh_ui()
-
-    def finish_rename(self):
-        if self.new_name_text.strip() != "" and self.new_name_text != self.renaming_folder:
-            old_path = os.path.join(c.SAVES_DIR, self.renaming_folder)
-            new_path = os.path.join(c.SAVES_DIR, self.new_name_text.strip())
-            if not os.path.exists(new_path): os.rename(old_path, new_path)
-        self.renaming_folder = None
-        self.refresh_ui()
-
     def load_specific_save(self, folder_name):
-        self.selected_save_path = os.path.join(c.SAVES_DIR, folder_name)
-        self.next_state = "MAP"
-        self.done = True
-
+        self.selected_save_path = os.path.join(self.managed_dir, folder_name)
+        self.go_to("MAP")

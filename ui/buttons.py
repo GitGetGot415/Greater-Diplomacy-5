@@ -34,13 +34,6 @@ def render_buttons(self):
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
     # ==================================================================== #
-    is_spec = self.player_country == "Spectator"
-    is_ed = self.is_editor
-
-    econ_callback = (lambda: editor_menus.open_starting_economy_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("ECONOMY"))
-    research_callback = (lambda: editor_menus.open_map_research_editor(self)) if (is_ed or is_spec) else (lambda: self.change_state("RESEARCH"))
-    msgs_callback = (lambda: editor_menus.open_spectator_messages(self)) if (is_ed or is_spec) else (lambda: self.change_state("MESSAGES"))
-
     start_y_val = 75
 
    # Editor Buttons
@@ -131,10 +124,15 @@ def render_buttons(self):
             self.editing_country = self.player_country
             self.change_state("EDIT_COUNTRY")
 
-    # FIX: Defer the conditional checks to execution time to prevent initialization sequence bugs!
-    econ_callback = lambda: editor_menus.open_starting_economy_editor(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("ECONOMY")
-    research_callback = lambda: editor_menus.open_map_research_editor(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("RESEARCH")
-    msgs_callback = lambda: editor_menus.open_spectator_messages(self) if (self.is_editor or self.player_country == "Spectator") else self.change_state("MESSAGES")
+    # Deferred to execution time to prevent initialization sequence bugs: whether
+    # the player is an editor/spectator isn't settled when the buttons are built.
+    def editor_or(editor_action, player_state):
+        return lambda: (editor_action(self) if (self.is_editor or self.player_country == "Spectator")
+                        else self.change_state(player_state))
+
+    econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
+    research_callback = editor_or(editor_menus.open_map_research_editor, "RESEARCH")
+    msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
     self.btn_gp_edit = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 1, "left_ui_button", "pink", "Identity", open_edit_country_action, image=icons.get("brush"), show_text=True)
     self.btn_gp_econ = Button(c.LEFT_UI_BAR_X, start_y_val + c.LEFT_UI_BAR_STEP_Y * 2, "left_ui_button", "pink", "Economy", econ_callback, image=icons.get("economy(the_economy_of_a_country_to_be_unusually_specific)"), show_text=True)
@@ -280,41 +278,24 @@ def update_button_states(map_screen):
         is_multiplayer = getattr(map_screen, 'num_players', 1) > 1
 
         if is_multiplayer:
-            map_screen.btn_tactical.disabled = True
-            map_screen.btn_tactical.text = "Tactical mode disabled for multiplayer"
-            map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["grey"]
+            map_screen.btn_tactical.apply_state(enabled=False, text="Tactical mode disabled for multiplayer")
+        elif map_screen.tactical_mode:
+            map_screen.btn_tactical.apply_state(enabled=True, text="TACTICAL", color="orange")
         else:
-            map_screen.btn_tactical.disabled = False
-            if map_screen.tactical_mode:
-                map_screen.btn_tactical.text = "TACTICAL"
-                map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["orange"]
-            else:
-                map_screen.btn_tactical.text = "STRATEGIC"
-                map_screen.btn_tactical.color, map_screen.btn_tactical.hover_color = c.UI_COLORS["green"]
+            map_screen.btn_tactical.apply_state(enabled=True, text="STRATEGIC", color="green")
 
         # --- BUGFIX: Disable Spectator Mode while in Tactical Mode ---
         if map_screen.tactical_mode:
-            map_screen.btn_spectator.disabled = True
-            map_screen.btn_spectator.text = "Disabled in Tactical"
-            map_screen.btn_spectator.color, map_screen.btn_spectator.hover_color = c.UI_COLORS["grey"]
+            map_screen.btn_spectator.apply_state(enabled=False, text="Disabled in Tactical")
         else:
-            map_screen.btn_spectator.disabled = False
-            map_screen.btn_spectator.text = "Spectator Mode"
-            map_screen.btn_spectator.color, map_screen.btn_spectator.hover_color = c.UI_COLORS["grey"]
+            map_screen.btn_spectator.apply_state(enabled=True, text="Spectator Mode", color="grey")
 
         return
 
-    # Helper function to override dynamically updated button values
+    # Shorthand for the per-frame visible/enabled/text/colour updates below
     def set_btn(btn, visible, enabled, text, color="green"):
-        if not btn: return
-        btn.visible = visible
-        btn.disabled = not enabled
-        btn.text = text
-        if enabled:
-            btn.color, btn.hover_color = c.UI_COLORS[color]
-        else:
-            btn.color, btn.hover_color = c.UI_COLORS["grey"]
-        btn.pressed_color = (max(0, btn.color[0]-40), max(0, btn.color[1]-40), max(0, btn.color[2]-40))
+        if btn:
+            btn.apply_state(visible=visible, enabled=enabled, text=text, color=color)
 
     # ==================================================================== #
     #                        VIEW TOGGLES SELECTION                        #
@@ -355,13 +336,13 @@ def update_button_states(map_screen):
             btn.visible = True
 
         # Use the cleaner 'is_selected' gold border instead of overriding raw RGB values
-        current_mode = map_screen.editor_mode
-        map_screen.btn_ed_resource.is_selected = (current_mode == "RESOURCE")
-        map_screen.btn_ed_nation.is_selected = (current_mode == "NATION")
-        map_screen.btn_ed_building.is_selected = (current_mode == "BUILDING")
-        map_screen.btn_ed_core.is_selected = (current_mode == "CORE")
-        map_screen.btn_ed_claim.is_selected = (current_mode == "CLAIM")
-        map_screen.btn_ed_unit.is_selected = (current_mode == "UNIT")
+        for mode, btn in (("RESOURCE", map_screen.btn_ed_resource),
+                          ("NATION", map_screen.btn_ed_nation),
+                          ("BUILDING", map_screen.btn_ed_building),
+                          ("CORE", map_screen.btn_ed_core),
+                          ("CLAIM", map_screen.btn_ed_claim),
+                          ("UNIT", map_screen.btn_ed_unit)):
+            btn.is_selected = (map_screen.editor_mode == mode)
 
     else:
         viewing_ai = map_screen.viewing_ai_moves
@@ -374,7 +355,7 @@ def update_button_states(map_screen):
         else:
             map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
             
-        map_screen.btn_next_turn.color, map_screen.btn_next_turn.hover_color = c.UI_COLORS["red" if viewing_ai else "purple"]
+        map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
 
         # Visibility and active color swapping for the skip toggle
         if getattr(map_screen, 'multiplayer_mode', False):
@@ -385,7 +366,7 @@ def update_button_states(map_screen):
             map_screen.btn_skip_ai.visible = not is_sel and not is_thinking
             skip_on = map_screen.skip_ai_view
             map_screen.btn_skip_ai.text = "Skip AI: ON" if skip_on else "Skip AI: OFF"
-            map_screen.btn_skip_ai.color, map_screen.btn_skip_ai.hover_color = c.UI_COLORS["green" if skip_on else "red"]
+            map_screen.btn_skip_ai.set_palette("green" if skip_on else "red")
 
         is_spec = map_screen.player_country == "Spectator"
         map_screen.btn_multi_turn.visible = not is_sel and not is_thinking and is_spec
@@ -424,18 +405,14 @@ def update_button_states(map_screen):
         
         # --- TACTICAL MODE LOCKDOWNS ---
         if map_screen.tactical_mode:
-            map_screen.btn_gp_faction.disabled = True
-            map_screen.btn_gp_puppets.disabled = True
-            map_screen.btn_gp_edit.disabled = True
-            
-            map_screen.btn_gp_faction.color, map_screen.btn_gp_faction.hover_color = c.UI_COLORS["grey"]
-            map_screen.btn_gp_puppets.color, map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["grey"]
-            map_screen.btn_gp_edit.color, map_screen.btn_gp_edit.hover_color = c.UI_COLORS["grey"]
+            for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit):
+                btn.apply_state(enabled=False)
         else:
             if bool(my_faction):
-                map_screen.btn_gp_faction.color, map_screen.btn_gp_faction.hover_color = c.UI_COLORS["pink"]
-            map_screen.btn_gp_puppets.color, map_screen.btn_gp_puppets.hover_color = c.UI_COLORS["pink"]
-            
+                map_screen.btn_gp_faction.set_palette("pink")
+            map_screen.btn_gp_puppets.set_palette("pink")
+
+
             # --- Update Automation Bubble ---
             if map_screen.player_country in map_screen.nation_data and map_screen.player_country not in ["Spectator", "None", "Editor"]:
                 p_data = map_screen.nation_data.get(map_screen.player_country, {})
@@ -444,7 +421,7 @@ def update_button_states(map_screen):
                 map_screen.btn_gp_automation.notification_count = active_count
             else:
                 map_screen.btn_gp_automation.notification_count = 0
-            map_screen.btn_gp_edit.color, map_screen.btn_gp_edit.hover_color = c.UI_COLORS["pink"]
+            map_screen.btn_gp_edit.set_palette("pink")
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
@@ -673,49 +650,50 @@ def render_edit_country_buttons(edit_screen):
         x = c.EDIT_COUNTRY_UI_X3 + (i % 8) * 45
         y = 150 + (i // 8) * 45
         btn = Button(x, y, "small_square", "grey", "", lambda c_val=color: edit_screen.set_color(c_val), show_text=False)
-        btn.color = btn.hover_color = color
+        btn.set_colors(color)
         btn.shading = False
         edit_screen.elements.append(btn)
 
-    brush_color = "blue" if edit_screen.draw_mode == "BRUSH" else "grey"
-    fill_color = "blue" if edit_screen.draw_mode == "FILL" else "grey"
-    picker_color = "blue" if edit_screen.draw_mode == "PICKER" else "grey"
-    
+    # Drawing tools are a one-of-three picker; the active tool shows blue
+    for tool_x, tool, label, icon_name in ((0, "PICKER", "Color Picker", "color_picker"),
+                                           (50, "BRUSH", "Brush", "brush"),
+                                           (100, "FILL", "Fill", "paint")):
+        edit_screen.elements.append(
+            Button(c.EDIT_COUNTRY_UI_X3 + tool_x, 375, "small_square",
+                   "blue" if edit_screen.draw_mode == tool else "grey", label,
+                   lambda t=tool: edit_screen.set_tool(t), image=icons.get(icon_name), show_text=False)
+        )
+
     edit_screen.elements.extend([
         Button(c.EDIT_COUNTRY_UI_X3, 425, "small_square", "grey", "Undo", edit_screen.undo),
         Button(c.EDIT_COUNTRY_UI_X3 + 50, 425, "small_square", "grey", "Redo", edit_screen.redo),
-        Button(c.EDIT_COUNTRY_UI_X3, 375, "small_square", picker_color, "Color Picker", lambda: edit_screen.set_tool("PICKER"), image=icons.get("color_picker"), show_text=False),
-        Button(c.EDIT_COUNTRY_UI_X3 + 50, 375, "small_square", brush_color, "Brush", lambda: edit_screen.set_tool("BRUSH"), image=icons.get("brush"), show_text=False),
-        Button(c.EDIT_COUNTRY_UI_X3 + 100, 375, "small_square", fill_color, "Fill", lambda: edit_screen.set_tool("FILL"), image=icons.get("paint"), show_text=False),
         Button(c.EDIT_COUNTRY_UI_X3 + 100, 600, "small", "orange", "Map Color", edit_screen.pick_map_color),
         Button(c.EDIT_COUNTRY_UI_X3 + 225, 60, "small_square", "light_grey", "Brush Color", edit_screen.pick_custom_brush_color, image=icons.get("colors"), show_text=False),
         Button(c.EDIT_COUNTRY_UI_X3 + 225, 105, "small_square", "light_grey", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0)), image=icons.get("red_line"), show_text=False)
     ])
 
+def make_option_buttons(options, on_select, current, size="small", color="blue", font_preset="button"):
+    """Builds a row/column of mutually exclusive buttons with the active one highlighted.
+
+    Options are (x, y, value, label) tuples. Used for every "pick exactly one
+    of these" cluster (AI provider, immersion level, wargoal, peace term...) so
+    the gold selection border and the callback binding are done identically.
+    """
+    built = []
+    for x, y, value, label in options:
+        btn = Button(x, y, size, color, label, lambda v=value: on_select(v), font_preset=font_preset)
+        btn.is_selected = (value == current)
+        built.append(btn)
+    return built
+
 def render_settings_buttons(settings_screen):
-
-    keybind_x = c.SCREEN_WIDTH - 250
-
     """Renders the buttons and sliders for the Settings screen."""
-    fullscreen_key_name = pygame.key.name(settings_screen.controller.keybinds.get("FULLSCREEN", pygame.K_F11)).upper()
-    fullscreen_btn_text = f"Fullscreen Key: {fullscreen_key_name}"
-    if settings_screen.listening_for == "FULLSCREEN":
-        fullscreen_btn_text = "Press any key..."
-
-    back_key_name = pygame.key.name(settings_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)).upper()
-    back_btn_text = f"Back Key: {back_key_name}"
-    if settings_screen.listening_for == "BACK":
-        back_btn_text = "Press any key..."
-
-    orders_key_name = pygame.key.name(settings_screen.controller.keybinds.get("ORDERS", pygame.K_q)).upper()
-    orders_btn_text = f"Orders Key: {orders_key_name}"
-    if settings_screen.listening_for == "ORDERS":
-        orders_btn_text = "Press any key..."
+    keybind_x = c.SCREEN_WIDTH - 250
 
     settings_screen.elements = [
         Button(50, 50, "small", "red", "Back", settings_screen.save_and_go_back),
         Button(keybind_x, 100, "medium", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
-        Button(keybind_x, 160, "medium", "green" if settings_screen.show_fps else "red", 
+        Button(keybind_x, 160, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, 220, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_button_toggle}", settings_screen.toggle_drag_button),
     ]
@@ -728,39 +706,28 @@ def render_settings_buttons(settings_screen):
 
     # --- Only render the sub-options if AI is currently turned ON ---
     if ai_is_on:
-        # AI Mode Toggles 
-        btn_gem = Button(120, c.SCREEN_HEIGHT - 250, "small", "blue", "GEMINI", lambda: settings_screen.set_ai_mode("GEMINI"))
-        btn_gem.is_selected = (settings_screen.ai_mode == "GEMINI")
-        settings_screen.elements.append(btn_gem)
+        # AI provider picker
+        settings_screen.elements.extend(make_option_buttons([
+            (10, c.SCREEN_HEIGHT - 250, "OLLAMA", "OLLAMA"),
+            (120, c.SCREEN_HEIGHT - 250, "GEMINI", "GEMINI"),
+            (230, c.SCREEN_HEIGHT - 250, "CHATGPT", "CHATGPT"),
+            (340, c.SCREEN_HEIGHT - 250, "CLAUDE", "CLAUDE"),
+        ], settings_screen.set_ai_mode, settings_screen.ai_mode))
 
-        btn_oll = Button(10, c.SCREEN_HEIGHT - 250, "small", "blue", "OLLAMA", lambda: settings_screen.set_ai_mode("OLLAMA"))
-        btn_oll.is_selected = (settings_screen.ai_mode == "OLLAMA")
-        settings_screen.elements.append(btn_oll)
-
-        btn_gpt = Button(230, c.SCREEN_HEIGHT - 250, "small", "blue", "CHATGPT", lambda: settings_screen.set_ai_mode("CHATGPT"))
-        btn_gpt.is_selected = (settings_screen.ai_mode == "CHATGPT")
-        settings_screen.elements.append(btn_gpt)
-
-        btn_claude = Button(340, c.SCREEN_HEIGHT - 250, "small", "blue", "CLAUDE", lambda: settings_screen.set_ai_mode("CLAUDE"))
-        btn_claude.is_selected = (settings_screen.ai_mode == "CLAUDE")
-        settings_screen.elements.append(btn_claude)
-
-        # --- AI IMMERSION BUTTONS ---
-        btn_lite = Button(10, c.SCREEN_HEIGHT - 110, "small", "red", "LITE AI", lambda: settings_screen.set_ai_immersion_level("LITE"))
-        btn_lite.is_selected = (settings_screen.ai_immersion_level == "LITE")
-        settings_screen.elements.append(btn_lite)
-
-        btn_full = Button(10, c.SCREEN_HEIGHT - 155, "small", "red", "FULL AI", lambda: settings_screen.set_ai_immersion_level("FULL"))
-        btn_full.is_selected = (settings_screen.ai_immersion_level == "FULL")
-        settings_screen.elements.append(btn_full)
-
-        btn_abs = Button(10, c.SCREEN_HEIGHT - 200, "small", "red", "ABSOLUTE AI", lambda: settings_screen.set_ai_immersion_level("ABSOLUTE"))
-        btn_abs.is_selected = (settings_screen.ai_immersion_level == "ABSOLUTE")
-        settings_screen.elements.append(btn_abs)
+        # AI immersion level picker
+        settings_screen.elements.extend(make_option_buttons([
+            (10, c.SCREEN_HEIGHT - 110, "LITE", "LITE AI"),
+            (10, c.SCREEN_HEIGHT - 155, "FULL", "FULL AI"),
+            (10, c.SCREEN_HEIGHT - 200, "ABSOLUTE", "ABSOLUTE AI"),
+        ], settings_screen.set_ai_immersion_level, settings_screen.ai_immersion_level, color="red"))
 
         # --- API KEY & MODEL CLEAR BUTTONS ---
-        settings_screen.elements.append(Button(c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10, c.SETTINGS_KEY_BOX_Y, "small_square", "red", "X", lambda: settings_screen.clear_input("KEY")))
-        settings_screen.elements.append(Button(c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10, c.SETTINGS_MOD_BOX_Y, "small_square", "red", "X", lambda: settings_screen.clear_input("MOD")))
+        clear_x = c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + 10
+        for box_type, box_y in (("KEY", c.SETTINGS_KEY_BOX_Y), ("MOD", c.SETTINGS_MOD_BOX_Y)):
+            settings_screen.elements.append(
+                Button(clear_x, box_y, "small_square", "red", "X",
+                       lambda b=box_type: settings_screen.clear_input(b))
+            )
 
     # Sliders
     settings_screen.player_slider = Slider(keybind_x, 340, 200, f"Players: {settings_screen.num_players}", (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
@@ -770,28 +737,37 @@ def render_settings_buttons(settings_screen):
     # Render above the player count
     thread_val = (settings_screen.ai_threads - 1) / 7.0
     settings_screen.ai_thread_slider = Slider(60, 400, 200, f"Maximum AI Threads: {settings_screen.ai_threads}", thread_val, settings_screen.set_ai_threads)
-    
+
     # Only show the slider if an AI mode is active
-    settings_screen.ai_thread_slider.visible = (settings_screen.ai_mode != "OFF")
-    
+    settings_screen.ai_thread_slider.visible = ai_is_on
+
     settings_screen.elements.append(settings_screen.ai_thread_slider)
 
-    dir_box_x = c.SCREEN_WIDTH // 2 - 150
     settings_screen.elements.extend([
         settings_screen.player_slider,
         settings_screen.fps_slider,
-        Button(keybind_x, 470, "medium", "grey", fullscreen_btn_text, lambda: settings_screen.start_listening("FULLSCREEN")),
-        Button(keybind_x, 530, "medium", "grey", back_btn_text, lambda: settings_screen.start_listening("BACK")),
-        Button(keybind_x, 590, "medium", "grey", orders_btn_text, lambda: settings_screen.start_listening("ORDERS")),
         Button(keybind_x, 650, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),
-        Button(dir_box_x - 220, 60, "small", "blue", "Edit", settings_screen.edit_saves_dir),
-        Button(dir_box_x - 110, 60, "small", "red", "Reset", settings_screen.reset_saves_dir),
-        Button(dir_box_x - 220, 120, "small", "blue", "Edit", settings_screen.edit_custom_scenarios_dir),
-        Button(dir_box_x - 110, 120, "small", "red", "Reset", settings_screen.reset_custom_scenarios_dir),
-        Button(dir_box_x - 220, 175, "small", "blue", "Edit", settings_screen.edit_ocean_light_color),
-        Button(dir_box_x - 110, 175, "small", "red", "Reset", settings_screen.reset_ocean_light_color),
-        Button(dir_box_x - 220, 230, "small", "blue", "Edit", settings_screen.edit_ocean_dark_color),
-        Button(dir_box_x - 110, 230, "small", "red", "Reset", settings_screen.reset_ocean_dark_color),
-        Button(dir_box_x - 220, 285, "small", "blue", "Edit", settings_screen.edit_tournament_saves_dir),
-        Button(dir_box_x - 110, 285, "small", "red", "Reset", settings_screen.reset_tournament_saves_dir)
     ])
+
+    # Rebindable keys: label shows the bound key, or the capture prompt while listening
+    keybind_rows = [(470, "FULLSCREEN", "Fullscreen", pygame.K_F11),
+                    (530, "BACK", "Back", pygame.K_ESCAPE),
+                    (590, "ORDERS", "Orders", pygame.K_q)]
+    for y, action, label, default_key in keybind_rows:
+        if settings_screen.listening_for == action:
+            text = "Press any key..."
+        else:
+            key_name = pygame.key.name(settings_screen.controller.keybinds.get(action, default_key)).upper()
+            text = f"{label} Key: {key_name}"
+        settings_screen.elements.append(
+            Button(keybind_x, y, "medium", "grey", text,
+                   lambda a=action: settings_screen.start_listening(a))
+        )
+
+    # Edit/Reset pair for each path and colour row, driven off the screen's own table
+    dir_box_x = c.SCREEN_WIDTH // 2 - 150
+    for y, _kind, key, _label in settings_screen.PATH_ROWS:
+        settings_screen.elements.extend([
+            Button(dir_box_x - 220, y, "small", "blue", "Edit", lambda k=key: settings_screen.edit_setting(k)),
+            Button(dir_box_x - 110, y, "small", "red", "Reset", lambda k=key: settings_screen.reset_setting(k)),
+        ])

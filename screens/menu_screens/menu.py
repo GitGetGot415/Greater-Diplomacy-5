@@ -29,14 +29,21 @@ class Menu(GameState):
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
 
+        # (y offset from centre, label, colour, icon, destination state) — one row
+        # per menu entry, so adding a screen is a single line here.
+        menu_items = [
+            ("- 150", "New Game",     "green",  "new_game",   "NEW_GAME"),
+            ("- 90",  "Load Game",    "yellow", "load_game",  "LOAD_GAME"),
+            ("- 30",  "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
+            ("+ 30",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
+            ("+ 90",  "Credits",      "purple", "credits",    "CREDITS"),
+            ("+ 150", "Music Player", "blue",   "music",      "MUSIC_PLAYER"),
+            ("+ 210", "Settings",     "grey",   "settings",   "SETTINGS"),
+        ]
         self.elements = [
-            Button("centered", "centered - 150", "medium", "green", "New Game", self.new_game, image=ui_elements.UI_ICONS.get("new_game")),
-            Button("centered", "centered - 90", "medium", "yellow", "Load Game", self.load_game, image=ui_elements.UI_ICONS.get("load_game")),
-            Button("centered", "centered - 30", "medium", "red", "Tournaments", self.multiplayer, image=ui_elements.UI_ICONS.get("mail")),
-            Button("centered", "centered + 30", "medium", "orange", "Map Editor", self.map_editor, image=ui_elements.UI_ICONS.get("map_editor")),
-            Button("centered", "centered + 90", "medium", "purple", "Credits", self.credits, image=ui_elements.UI_ICONS.get("credits")),
-            Button("centered", "centered + 150", "medium", "blue", "Music Player", self.music_player, image=ui_elements.UI_ICONS.get("music")),
-            Button("centered", "centered + 210", "medium", "grey", "Settings", self.settings, image=ui_elements.UI_ICONS.get("settings"))
+            Button("centered", f"centered {offset}", "medium", color, label,
+                   lambda s=state: self.go_to(s), image=ui_elements.UI_ICONS.get(icon))
+            for offset, label, color, icon, state in menu_items
         ]
         
         self.bottom_texts = []
@@ -179,31 +186,3 @@ class Menu(GameState):
         v_x = c.SCREEN_WIDTH - v_width - 20
         v_y = c.SCREEN_HEIGHT - version_font.get_height() - 10
         fonts.draw_text_with_shadow(surface, self.version_status, v_x, v_y, "heading2", self.version_color)
-
-    def new_game(self):
-        self.next_state = "NEW_GAME"
-        self.done = True
-
-    def multiplayer(self):
-        self.next_state = "MULTIPLAYER_HUB"
-        self.done = True
-
-    def load_game(self):
-        self.next_state = "LOAD_GAME"
-        self.done = True
-
-    def credits(self):
-        self.next_state = "CREDITS"
-        self.done = True
-
-    def music_player(self):
-        self.next_state = "MUSIC_PLAYER"
-        self.done = True
-
-    def settings(self):
-        self.next_state = "SETTINGS"
-        self.done = True
-
-    def map_editor(self):
-        self.next_state = "SELECT_BASE_MAP"
-        self.done = True

@@ -1,23 +1,11 @@
 import pygame
-from gameState import GameState
+from gameState import GameState, ScreenLayer
 import data.constants as c
+import ui_elements
 from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
-
-class ResearchHudOverlay:
-    """Draws the ACTIVE RESEARCH SLOTS box last, so it covers any tech-node
-    button that scrolled underneath instead of the button drawing on top."""
-    def __init__(self, screen):
-        self.screen = screen
-        self.visible = True
-
-    def handle_event(self, event):
-        pass
-
-    def draw(self, surface):
-        self.screen.draw_hud_slots(surface)
 
 class Research_Screen(GameState):
     back_state = "MAP"
@@ -263,7 +251,7 @@ class Research_Screen(GameState):
         else:
             self.draw_tech_nodes(res_levels, queue)
             # Drawn last so it covers any tech-node button still sliding past it.
-            self.elements.append(ResearchHudOverlay(self))
+            self.elements.append(ScreenLayer(self, "draw_hud_slots"))
 
     def get_button_size(self, tech_key, display_name):
         """Returns the appropriate button size based on category or specific items."""
@@ -597,13 +585,13 @@ class Research_Screen(GameState):
         if actual_turns > base_time:
             # --- MODIFIED WARNING LOGIC ---
             warn_x = panel_rect.x + 200
-            warn_icon = symbol_loader.SYMBOLS.get(c.ICON_WARNING)
+            icon_h = max(16, font_small.get_height())
+            warn_icon = ui_elements.scale_icon(c.ICON_WARNING, icon_h)
             if warn_icon:
-                icon_h = max(16, font_small.get_height())
-                warn_icon = pygame.transform.smoothscale(warn_icon, (icon_h, icon_h))
                 surface.blit(warn_icon, (warn_x, panel_rect.y + 130 + 2))
                 warn_x += icon_h + 5
-                
+
+
             warn_txt = font_small.render(f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns", True, (255, 100, 100))
             surface.blit(warn_txt, (warn_x, panel_rect.y + 130))
         # --------------------------------
@@ -630,12 +618,13 @@ class Research_Screen(GameState):
                 if unlock not in entities_to_show:
                     entities_to_show.append(unlock)
                     
-        # Fallback if there are no stats and no string unlocks
+        # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
         if not entities_to_show and not unlocks:
             txt1 = "Advanced statistical data unavailable."
             surface.blit(font_small.render(txt1, True, (150, 150, 150)), (panel_rect.x + 200, y_off))
             y_off += 30
-            
+
+
         # Draw stats for all relevant entities dynamically
         for entity in entities_to_show:
             # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
@@ -691,12 +680,6 @@ class Research_Screen(GameState):
                 y_off += 30
                 
             y_off += 10 # Padding between items
-        else:
-            # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
-            if not unlocks:
-                txt1 = "Advanced statistical data unavailable."
-                surface.blit(font_small.render(txt1, True, (150, 150, 150)), (panel_rect.x + 200, y_off))
-                y_off += 30
 
     def render_completed_text_list(self, surface):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]

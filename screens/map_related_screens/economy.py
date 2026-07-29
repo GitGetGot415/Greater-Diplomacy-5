@@ -27,8 +27,7 @@ class Economy_Screen(GameState):
         # Expenses button positioned in the top right corner
         btn_expenses = Button(c.SCREEN_WIDTH - 120, 20, "small", "orange", "Expenses", self.open_expenses_table)
         if self.map_screen.tactical_mode:
-            btn_expenses.disabled = True
-            btn_expenses.color, btn_expenses.hover_color = c.UI_COLORS["grey"]
+            btn_expenses.apply_state(enabled=False)
         self.elements.append(btn_expenses)
         
         # Conversion Slider positioned below the resource rows

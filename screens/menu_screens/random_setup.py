@@ -99,8 +99,7 @@ class Random_Setup(GameState):
     def scenario_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "RANDOM_SETUP"
-        self.next_state = "SCENARIO_SETTINGS"
-        self.done = True
+        self.go_to("SCENARIO_SETTINGS")
 
     def refresh_ui(self):
         # Use // to prevent floating point UI rendering errors
@@ -186,6 +185,5 @@ class Random_Setup(GameState):
             "resource_chance": self.resource_chance,
             "base_days_per_turn": self.base_days_per_turn
         }
-        self.next_state = "MAP"
-        self.done = True
+        self.go_to("MAP")
 

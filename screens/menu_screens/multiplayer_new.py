@@ -3,67 +3,53 @@ import pygame
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
-from ui.bars import ui_bars
+from data import queries
 
 class Multiplayer_New(GameState):
+    back_state = "MULTIPLAYER_HOST"
+
+    title = "HOST CUSTOM MAP"
+    ROW_HEIGHT = 60
+    ROW_TOP = 150
+
     def __init__(self):
         super().__init__()
         self.bg_color = (0, 50, 0)
         self.selected_save_path = None
-        
-        self.scroll_y = 0
-        self.max_scroll = 0
-        self.is_dragging_scrollbar = False
-        self.scroll_track_rect = None
-        self.scroll_handle_rect = None
-        
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_to_host_menu),
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
             Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings)
         ]
-        
+
         scenario_dir = c.SCENARIOS_CUSTOM_DIR
         if not os.path.exists(scenario_dir):
             os.makedirs(scenario_dir)
-            
         scenarios = os.listdir(scenario_dir)
-        
-        # Calculate scroll boundaries
-        total_content_height = len(scenarios) * 60
-        self.max_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height - 20)
 
-        for i, name in enumerate(scenarios):
-            btn_y = 150 + (i * 60) + self.scroll_y
-            
-            # Simple Y-based culling
-            if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
-                continue
-
+        for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
             self.elements.append(
-                Button("centered", btn_y, "large", "blue", name, 
-                       lambda n=name, d=scenario_dir: self.start_host_setup(n, d))
+                Button("centered", btn_y, "large", "blue", scenarios[i],
+                       lambda n=scenarios[i], d=scenario_dir: self.start_host_setup(n, d))
             )
 
     def scenario_settings(self):
+        # Point Scenario_Settings back here, the same way New_Game claims it,
+        # so its Back button returns to the host list instead of the new-game menu.
         from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "MULTIPLAYER_NEW"
-        self.next_state = "SCENARIO_SETTINGS"
-        self.done = True
+        self.go_to("SCENARIO_SETTINGS")
 
     def start_host_setup(self, scenario_name, directory=c.SCENARIOS_CUSTOM_DIR):
-        import tkinter as tk
         from tkinter import simpledialog, messagebox
         import secrets
-        import os
         from data.io import multiplayer_io
         from screens.menu_screens.map import Map
-        
-        root = tk.Tk()
-        root.withdraw()
-        
+
+        root = queries.get_transient_tk_root()
+
         import re
         while True:
             tour_name = simpledialog.askstring("Tournament Name", "Enter a name for this tournament:", parent=root)
@@ -103,31 +89,14 @@ class Multiplayer_New(GameState):
         keys_path, all_keys_path = multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
         
         messagebox.showinfo("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
-        
-        self.next_state = "MULTIPLAYER_HOST"
-        self.done = True
 
-    def scenario_settings(self):
-        self.next_state = "SCENARIO_SETTINGS"
-        self.done = True
-        
-    def exit_to_host_menu(self):
-        self.next_state = "MULTIPLAYER_HOST"
-        self.done = True
+        self.go_to("MULTIPLAYER_HOST")
 
     def additional_events(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.exit_to_host_menu()
-            
+            self.exit_screen()
+
         self.handle_list_scroll(event)
 
-    def draw(self, surface):
-        surface.fill(self.bg_color)
-        ui_bars.draw_centered_title(surface, "HOST CUSTOM MAP", 40)
-
-        # Draw Scrollbar
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.scroll_y, self.max_scroll, 40, 160, c.SCREEN_HEIGHT - 200
-        )
-        
-        super().draw(surface)
+    def additional_draw(self, surface):
+        self.draw_list_scrollbar(surface, 40, 160, c.SCREEN_HEIGHT - 200)

@@ -23,3 +23,9 @@ going to cause problems later if i ever change any of the variable names
 and forget to edit it there?
 
 I need you to aggressively consolidate duplicate functions / code into single unified functions / helpers to make making edits significantly easier
+
+for example, if you notice 2 functions that are technically different but essentially do the same thing try to merge those into a unified one
+
+also, try to standardize how the code works, so if you notice simmilar things being done a bit differently make them follow a simmilar ruleset
+
+do keep in mind though that the gameplay ideally should NOT be changed

@@ -1,11 +1,14 @@
-import pygame
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
-from map_logic.rendering.font_manager import fonts
+from data import queries
 
 class Multiplayer_Hub(GameState):
     back_state = "MENU"
+
+    title = "Asynchronous Multiplayer"
+    title_y = 100
+    title_shadow = True
 
     def __init__(self):
         super().__init__()
@@ -18,10 +21,8 @@ class Multiplayer_Hub(GameState):
         ]
 
     def show_help(self):
-        import tkinter as tk
         from tkinter import messagebox
-        root = tk.Tk()
-        root.withdraw()
+        root = queries.get_transient_tk_root()
         help_text = (
             "Tournaments allow for asynchronous multiplayer gameplay.\n\n"
             "Host: Create a new tournament, distribute the generated .gd5tour file and the player keys to your friends. "
@@ -30,24 +31,11 @@ class Multiplayer_Hub(GameState):
             "Player: Use 'Join Game' to load the .gd5tour file using your player key. "
             "Submit your orders and click 'Export Turn' to generate a .gd5move file, and send it to the host."
         )
-        messagebox.showinfo("Tournament Help", help_text)
-
-
+        messagebox.showinfo("Tournament Help", help_text, parent=root)
+        queries.destroy_tk_root(root)
 
     def host_game(self):
-        self.next_state = "MULTIPLAYER_HOST"
-        self.done = True
+        self.go_to("MULTIPLAYER_HOST")
 
     def join_game(self):
-        self.next_state = "MULTIPLAYER_JOIN"
-        self.done = True
-
-
-
-    def draw(self, surface):
-        surface.fill(self.bg_color)
-        title_text = "Asynchronous Multiplayer"
-        font = fonts.get("heading1")
-        w = font.size(title_text)[0]
-        fonts.draw_text_with_shadow(surface, title_text, c.SCREEN_WIDTH // 2 - w // 2, 100, "heading1", (255, 255, 255))
-        super().draw(surface)
+        self.go_to("MULTIPLAYER_JOIN")

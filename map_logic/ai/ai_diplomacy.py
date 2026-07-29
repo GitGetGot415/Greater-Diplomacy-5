@@ -1,8 +1,20 @@
 import random
 from map_logic.ai import ai_handler, ai_prompts
+from map_logic.diplomacy import diplomacy_messages
 from data import queries
 import data.constants as c
 import concurrent.futures
+
+def _attach_generated_message(nation_data, task, final_msg):
+    """Writes an LLM-generated line onto the action the task was queued for.
+
+    The action is only updated if it is still the one this task generated text
+    for, so a declaration the AI changed its mind about isn't overwritten.
+    """
+    target_info = diplomacy_messages.get_pending(nation_data, task["sender"], task["target"])
+    if target_info.get("action") == task["action_type"]:
+        target_info["message"] = final_msg
+
 
 def process_proactive_llm_tasks(map_screen):
     """Processes all queued proactive diplomacy texts in a background ThreadPoolExecutor."""
@@ -41,11 +53,7 @@ def process_proactive_llm_tasks(map_screen):
     if map_screen.force_skip_llm:
         for task in tasks:
             final_msg = task["fallback"]
-            sender_data = map_screen.nation_data.get(task["sender"], {})
-            pending = sender_data.get("pending_diplomacy", {})
-            target_info = pending.get(task["target"])
-            if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
-                target_info["message"] = final_msg
+            _attach_generated_message(map_screen.nation_data, task, final_msg)
         return
 
     # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
@@ -75,11 +83,7 @@ def process_proactive_llm_tasks(map_screen):
                     except:
                         pass
                         
-                sender_data = map_screen.nation_data.get(task["sender"], {})
-                pending = sender_data.get("pending_diplomacy", {})
-                target_info = pending.get(task["target"])
-                if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
-                    target_info["message"] = final_msg
+                _attach_generated_message(map_screen.nation_data, task, final_msg)
                     
                 # Progress Increment Logic
                 is_ai_to_human = task["target"] in human_players
@@ -106,11 +110,7 @@ def process_proactive_llm_tasks(map_screen):
                 final_msg = f"THREAD ERROR: {str(e)}"
                 
             # Update the pending dictionary with the final generated message
-            sender_data = map_screen.nation_data.get(task["sender"], {})
-            pending = sender_data.get("pending_diplomacy", {})
-            target_info = pending.get(task["target"])
-            if isinstance(target_info, dict) and target_info.get("action") == task["action_type"]:
-                target_info["message"] = final_msg
+            _attach_generated_message(map_screen.nation_data, task, final_msg)
                 
             # Progress Increment Logic
             is_ai_to_human = task["target"] in human_players

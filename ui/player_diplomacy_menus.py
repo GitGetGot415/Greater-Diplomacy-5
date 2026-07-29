@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
 from gameState import MapOverlayScreen, dispatch_global_keys
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
@@ -36,6 +36,29 @@ def _run_pygame_sub_screen(map_screen, screen_obj):
 
     # Clear any phantom hovering from the sub-screen
     map_screen.hovered_province = None
+
+def build_choice_button(x, y, size, label, enabled, selected, callback):
+    """One button in a mutually exclusive option row.
+
+    Green when picked, blue when available, greyed and unclickable when not,
+    plus the gold selection border. Every option row in these menus (wargoals,
+    peace terms, puppet direction, claim view mode) had its own copy of this.
+    """
+    color = ("green" if selected else "blue") if enabled else "grey"
+    btn = Button(x, y, size, color, label, callback)
+    btn.is_selected = selected
+    if not enabled:
+        btn.apply_state(enabled=False)
+    return btn
+
+def build_choice_row(specs, current, on_select, size="medium"):
+    """Builds a whole option row from (x, y, value, label[, enabled]) specs."""
+    return [
+        build_choice_button(spec[0], spec[1], size, spec[3],
+                            spec[4] if len(spec) > 4 else True,
+                            spec[2] == current, lambda v=spec[2]: on_select(v))
+        for spec in specs
+    ]
 
 def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
     """Tints every province that would change hands if the treaty went through."""
@@ -102,8 +125,8 @@ class Declare_War_Screen(MapOverlayScreen):
         self.selected_wargoal_idx = 3 # Default to Don't Declare War
         
         # Check if a war declaration is already queued
-        pending = map_screen.nation_data.get(map_screen.player_country, {}).get("pending_diplomacy", {}).get(target_nation, {})
-        self.is_editing = isinstance(pending, dict) and pending.get("action") == "WAR_DECLARATION"
+        pending = diplomacy_messages.get_pending(map_screen.nation_data, map_screen.player_country, target_nation)
+        self.is_editing = pending.get("action") == "WAR_DECLARATION"
         
         if self.is_editing:
             pending_msg = pending.get("message", "")
@@ -127,39 +150,14 @@ class Declare_War_Screen(MapOverlayScreen):
         btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", confirm_text, self.confirm)
         self.elements.append(btn_confirm)
         
+        # Two columns of two: options 0/1 on the upper row, 2/3 on the lower one
         for i, opt in enumerate(self.wargoal_options):
-            if opt["enabled"]:
-                color = "green" if self.selected_wargoal_idx == i else "blue"
-            else:
-                color = "grey"
-                
-            # Place the first two buttons left and right, and the 3rd/4th centered below
-            if i == 0:
-                btn_x = self.panel_rect.centerx - 210
-                btn_y = self.panel_rect.y + 80
-                btn_size = "medium"
-            elif i == 1:
-                btn_x = self.panel_rect.centerx + 10
-                btn_y = self.panel_rect.y + 80
-                btn_size = "medium"
-            elif i == 2:
-                btn_x = self.panel_rect.centerx - 210
-                btn_y = self.panel_rect.y + 150
-                btn_size = "medium"
-            else:
-                btn_x = self.panel_rect.centerx + 10
-                btn_y = self.panel_rect.y + 150
-                btn_size = "medium"
-
-            btn = Button(btn_x, btn_y, btn_size, color, opt["label"], lambda idx=i: self.select_wg(idx))
-            if not opt["enabled"]:
-                btn.disabled = True
-                
-            # Add the gold/yellow highlight outline
-            if self.selected_wargoal_idx == i:
-                btn.is_selected = True
-                
-            self.elements.append(btn)
+            btn_x = self.panel_rect.centerx + (-210 if i % 2 == 0 else 10)
+            btn_y = self.panel_rect.y + (80 if i < 2 else 150)
+            self.elements.append(
+                build_choice_button(btn_x, btn_y, "medium", opt["label"], opt["enabled"],
+                                    self.selected_wargoal_idx == i, lambda idx=i: self.select_wg(idx))
+            )
 
     def select_wg(self, idx):
         if self.wargoal_options[idx]["enabled"]:
@@ -170,10 +168,9 @@ class Declare_War_Screen(MapOverlayScreen):
         wg = self.wargoal_options[self.selected_wargoal_idx]["label"]
         
         if wg == "Don't Declare War":
-            pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
-            if self.target_nation in pending and pending[self.target_nation].get("action") == "WAR_DECLARATION":
-                del pending[self.target_nation]
-            
+            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country,
+                                             self.target_nation, only_actions=["WAR_DECLARATION"])
+
             p_data = self.map_screen.nation_data[self.map_screen.player_country]
             draft_lists = p_data.get("draft_lists", {})
             if self.target_nation in draft_lists:
@@ -185,15 +182,9 @@ class Declare_War_Screen(MapOverlayScreen):
             self.map_screen.show_feedback("War Declaration Cancelled.")
             self.done = True
         else:
-            # Overwrite any existing declaration natively without triggering the toggle/delete logic
-            pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
-            
-            pending[self.target_nation] = {
-                "action": "WAR_DECLARATION",
-                "turns": 0,
-                "timer": 0,
-                "message": wg
-            }
+            # Overwrites any existing declaration without triggering the toggle/delete logic
+            diplomacy_messages.set_pending(self.map_screen.nation_data, self.map_screen.player_country,
+                                           self.target_nation, "WAR_DECLARATION", message=wg)
             self.map_screen.show_feedback("War Declaration Queued!" if not self.is_editing else "War Declaration Updated!")
             self.done = True
 
@@ -224,18 +215,22 @@ class Claims_Screen(MapOverlayScreen):
 
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
-        
+
+        row_y = self.panel_rect.y + 40
         if self.is_global_viewer:
-            btn_global = Button(self.panel_rect.x + 20, self.panel_rect.y + 40, "medium", "blue" if self.view_mode == "GLOBAL" else "grey", "Global Claims", lambda: self.set_view_mode("GLOBAL"))
-            btn_global.is_selected = (self.view_mode == "GLOBAL")
-            self.elements.append(btn_global)
+            modes = [(self.panel_rect.x + 20, row_y, "GLOBAL", "Global Claims")]
         else:
-            btn_yours = Button(self.panel_rect.x + 20, self.panel_rect.y + 40, "medium", "blue" if self.view_mode == "YOURS" else "grey", "Your Claims", lambda: self.set_view_mode("YOURS"))
-            btn_theirs = Button(self.panel_rect.x + 200, self.panel_rect.y + 40, "medium", "blue" if self.view_mode == "THEIRS" else "grey", "Claims On You", lambda: self.set_view_mode("THEIRS"))
-            btn_yours.is_selected = (self.view_mode == "YOURS")
-            btn_theirs.is_selected = (self.view_mode == "THEIRS")
-            self.elements.extend([btn_yours, btn_theirs])
-        
+            modes = [(self.panel_rect.x + 20, row_y, "YOURS", "Your Claims"),
+                     (self.panel_rect.x + 200, row_y, "THEIRS", "Claims On You")]
+
+        # This row greys the inactive entries rather than showing them blue
+        for x, y, mode, label in modes:
+            btn = Button(x, y, "medium", "blue" if self.view_mode == mode else "grey", label,
+                         lambda m=mode: self.set_view_mode(m))
+            btn.is_selected = (self.view_mode == mode)
+            self.elements.append(btn)
+
+
     def additional_events(self, event):
         super().additional_events(event)
 
@@ -597,8 +592,8 @@ class Peace_Screen(MapOverlayScreen):
         ]
         
         # Check for existing peace offer
-        pending = map_screen.nation_data.get(map_screen.player_country, {}).get("pending_diplomacy", {}).get(target_nation, {})
-        self.is_editing = isinstance(pending, dict) and pending.get("action") in ["PEACE_TREATY", "CEASEFIRE"]
+        pending = diplomacy_messages.get_pending(map_screen.nation_data, map_screen.player_country, target_nation)
+        self.is_editing = pending.get("action") in ["PEACE_TREATY", "CEASEFIRE"]
         
         if self.is_editing:
             pending_msg = pending.get("message", "")
@@ -634,26 +629,13 @@ class Peace_Screen(MapOverlayScreen):
                 self.acceptance_text = "The AI will REJECT this peace deal."
                 self.acceptance_color = (255, 100, 100)
 
+        # Place the 3 main terms left-to-right
         for i, term_str in enumerate(self.terms):
-            is_enabled = self.terms_enabled[i]
-            if is_enabled:
-                color = "green" if self.selected_term_idx == i else "blue"
-            else:
-                color = "grey"
-                
-            # Place the 3 main terms left-to-right
-            btn_x = self.panel_rect.centerx - 330 + (i * 220)
-            btn_y = self.panel_rect.y + 80
-            
-            btn = Button(btn_x, btn_y, "medium", color, term_str, lambda idx=i: self.select_term(idx))
-            if not is_enabled:
-                btn.disabled = True
-                
-            # Add the gold/yellow highlight outline
-            if self.selected_term_idx == i:
-                btn.is_selected = True
-                
-            self.elements.append(btn)
+            self.elements.append(
+                build_choice_button(self.panel_rect.centerx - 330 + (i * 220), self.panel_rect.y + 80,
+                                    "medium", term_str, self.terms_enabled[i],
+                                    self.selected_term_idx == i, lambda idx=i: self.select_term(idx))
+            )
 
         confirm_text = "Update Offer" if self.is_editing else "Send Proposal"
         self.elements.append(Button(self.panel_rect.centerx - 100, self.panel_rect.y + 140, "medium", "green", confirm_text, self.confirm))
@@ -667,9 +649,8 @@ class Peace_Screen(MapOverlayScreen):
             self.refresh_ui()
 
     def revoke_offer(self):
-        pending = self.map_screen.nation_data[self.map_screen.player_country].get("pending_diplomacy", {})
-        if self.target_nation in pending and pending[self.target_nation].get("action") in ["PEACE_TREATY", "CEASEFIRE"]:
-            del pending[self.target_nation]
+        diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country,
+                                         self.target_nation, only_actions=["PEACE_TREATY", "CEASEFIRE"])
         self.map_screen.show_feedback("Peace Offer Cancelled.")
         self.done = True
 
@@ -702,15 +683,9 @@ class Peace_Screen(MapOverlayScreen):
             else:
                 term += " (No territories surrendered)"
         
-        # Overwrite directly to bypass toggle
-        pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
-        pending[self.target_nation] = {
-            "action": action_type,
-            "turns": 0,
-            "timer": 0,
-            "parameters": term,
-            "message": term
-        }
+        # Overwrites directly to bypass the toggle logic
+        diplomacy_messages.set_pending(self.map_screen.nation_data, self.map_screen.player_country,
+                                       self.target_nation, action_type, parameters=term, message=term)
         self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
         self.done = True
 
@@ -739,7 +714,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         self.target = map_screen.player_country
 
         # Read the parameters directly from the proposed diplomacy message
-        pending = map_screen.nation_data.get(self.proposer, {}).get("pending_diplomacy", {}).get(self.target, {})
+        pending = diplomacy_messages.get_pending(map_screen.nation_data, self.proposer, self.target)
         self.peace_type = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
 
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
@@ -795,24 +770,14 @@ class Trade_Screen(MapOverlayScreen):
         
         my_master = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("master", "")
         their_master = self.map_screen.nation_data.get(self.target_nation, {}).get("master", "")
-        is_either_puppet = bool(my_master) or bool(their_master)
-        
-        btn_sender = Button(self.panel_rect.x + 30, y_pos, "medium", "blue" if self.puppet_state != "SENDER" else "green", "Make Them Puppet", lambda: self.set_puppet_state("SENDER"))
-        if self.puppet_state == "SENDER": btn_sender.is_selected = True
-        
-        btn_none = Button(self.panel_rect.centerx - 100, y_pos, "medium", "blue" if self.puppet_state != "NONE" else "green", "No Puppeting", lambda: self.set_puppet_state("NONE"))
-        if self.puppet_state == "NONE": btn_none.is_selected = True
-        
-        btn_recv = Button(self.panel_rect.right - 230, y_pos, "medium", "blue" if self.puppet_state != "RECEIVER" else "green", "Become Their Puppet", lambda: self.set_puppet_state("RECEIVER"))
-        if self.puppet_state == "RECEIVER": btn_recv.is_selected = True
-        
-        if is_either_puppet:
-            btn_sender.disabled = True
-            btn_sender.color, btn_sender.hover_color = c.UI_COLORS["grey"]
-            btn_recv.disabled = True
-            btn_recv.color, btn_recv.hover_color = c.UI_COLORS["grey"]
-        
-        self.elements.extend([btn_sender, btn_none, btn_recv])
+        # A nation already in a puppet relationship can't change direction here
+        can_puppet = not (my_master or their_master)
+
+        self.elements.extend(build_choice_row([
+            (self.panel_rect.x + 30, y_pos, "SENDER", "Make Them Puppet", can_puppet),
+            (self.panel_rect.centerx - 100, y_pos, "NONE", "No Puppeting", True),
+            (self.panel_rect.right - 230, y_pos, "RECEIVER", "Become Their Puppet", can_puppet),
+        ], self.puppet_state, self.set_puppet_state))
 
     def evaluate_input(self):
         """Processes typed text, applies clamps, and secures/refunds the escrow safely."""
@@ -868,22 +833,18 @@ class Trade_Screen(MapOverlayScreen):
             self.map_screen.show_feedback("Cannot send an empty trade offer!")
             return
 
-        pending = self.map_screen.nation_data[self.map_screen.player_country].setdefault("pending_diplomacy", {})
-        
-        pending[self.target_nation] = {
-            "action": "TRADE",
-            "turns": 0,
-            "timer": 0,
-            "parameters": {
+        diplomacy_messages.set_pending(
+            self.map_screen.nation_data, self.map_screen.player_country, self.target_nation, "TRADE",
+            parameters={
                 "give_materials": self.escrow_mats,
                 "give_fuel": self.escrow_fuel,
                 "take_materials": int(self.take_mats_str),
                 "take_fuel": int(self.take_fuel_str),
                 "puppet_state": self.puppet_state
             },
-            "message": f"TRADE PROPOSAL:\nGive: {self.escrow_mats} Mat, {self.escrow_fuel} Fuel\nTake: {self.take_mats_str} Mat, {self.take_fuel_str} Fuel\nPuppet Terms: {self.puppet_state}"
-        }
-        
+            message=f"TRADE PROPOSAL:\nGive: {self.escrow_mats} Mat, {self.escrow_fuel} Fuel\nTake: {self.take_mats_str} Mat, {self.take_fuel_str} Fuel\nPuppet Terms: {self.puppet_state}"
+        )
+
         self.map_screen.show_feedback("Trade Offer Sent!")
         self.done = True
 
@@ -1008,14 +969,12 @@ class Puppets_Screen(MapOverlayScreen):
             # Reorder Arrows
             btn_up = Button(self.panel_rect.x + 15, y_pos, "tiny_square", "blue", "^", lambda i=idx: self.move_puppet(i, -1), font_preset="normal")
             if idx == 0:
-                btn_up.disabled = True
-                btn_up.color, btn_up.hover_color = c.UI_COLORS["grey"]
+                btn_up.apply_state(enabled=False)
             self.elements.append(btn_up)
 
             btn_down = Button(self.panel_rect.x + 15, y_pos + 35, "tiny_square", "blue", "v", lambda i=idx: self.move_puppet(i, 1), font_preset="normal")
             if idx == len(puppets) - 1:
-                btn_down.disabled = True
-                btn_down.color, btn_down.hover_color = c.UI_COLORS["grey"]
+                btn_down.apply_state(enabled=False)
             self.elements.append(btn_down)
 
             rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
@@ -1028,9 +987,7 @@ class Puppets_Screen(MapOverlayScreen):
             # Edit Button
             btn_edit = Button(self.panel_rect.x + 570, y_pos, "puppet_option", "blue", "Edit", lambda nation=p: self.edit_puppet(nation), font_preset="normal")
             if p_type != c.PUPPET_TYPE_INTEGRATED:
-                btn_edit.disabled = True
-                btn_edit.text = "Can't Edit!"
-                btn_edit.color, btn_edit.hover_color = c.UI_COLORS["grey"]
+                btn_edit.apply_state(enabled=False, text="Can't Edit!")
             self.elements.append(btn_edit)
             
             # Annex Button
@@ -1038,9 +995,7 @@ class Puppets_Screen(MapOverlayScreen):
             anx_col = "orange" if pending_action == "ANNEX_PUPPET" else "red"
             btn_annex = Button(self.panel_rect.x + 570, y_pos + 45, "puppet_option", anx_col, anx_txt, lambda nation=p: self.queue_annex(nation), font_preset="normal")
             if p_type != c.PUPPET_TYPE_INTEGRATED:
-                btn_annex.disabled = True
-                btn_annex.text = "Can't Annex!"
-                btn_annex.color, btn_annex.hover_color = c.UI_COLORS["grey"]
+                btn_annex.apply_state(enabled=False, text="Can't Annex!")
             self.elements.append(btn_annex)
             
             # Take Puppets Button
@@ -1048,9 +1003,9 @@ class Puppets_Screen(MapOverlayScreen):
             btn_take = Button(self.panel_rect.x + 750, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
             has_puppets = len(p_data.get("puppets", [])) > 0
             if p_type != c.PUPPET_TYPE_INTEGRATED or not has_puppets:
-                btn_take.disabled = True
-                btn_take.text = "Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED else "They have 0 Puppets!"
-                btn_take.color, btn_take.hover_color = c.UI_COLORS["grey"]
+                btn_take.apply_state(enabled=False,
+                                     text="Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED
+                                     else "They have 0 Puppets!")
             self.elements.append(btn_take)
             
             # if you ever want to add this
@@ -1222,9 +1177,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                 else:
                     btn = Button(self.panel_rect.x + 320, y_pos, "small", "green", "Create", lambda s=subject: self.queue_creation(s))
                     if territory_count == 0:
-                        btn.disabled = True
-                        btn.color, btn.hover_color = c.UI_COLORS["grey"]
-                        btn.text = "No Land"
+                        btn.apply_state(enabled=False, text="No Land")
 
                 btn.is_scrollable = True
                 btn.base_y = y_pos - self.scroll_y

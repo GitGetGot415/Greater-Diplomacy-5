@@ -561,30 +561,40 @@ def is_water_province(province):
     """Shorthand to check if a province is a water tile."""
     return province.get("terrain") in c.WATER_TERRAINS
 
+def has_surprise_attack_entry(moving_nation, target_owner, nation_data):
+    """True when a queued war declaration lets units pre-position inside the target.
+
+    Only applies while the surprise_attack scenario flag is on. Covers both the
+    player's pending_diplomacy entry and the AI's queued_ai_actions list, since
+    the two paths queue a declaration differently.
+    """
+    if not get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, get_scenario_settings()):
+        return False
+
+    from map_logic.diplomacy import diplomacy_messages
+    if diplomacy_messages.get_pending_action(nation_data, moving_nation, target_owner) == "WAR_DECLARATION":
+        return True
+
+    queued = nation_data.get(moving_nation, {}).get("queued_ai_actions", [])
+    return any(q.get("target") == target_owner and q.get("action") == "WAR_DECLARATION" for q in queued)
+
+def _can_enter_owned_tile(moving_nation, target_owner, nation_data):
+    """The shared tail of the naval and land movement rules."""
+    if has_surprise_attack_entry(moving_nation, target_owner, nation_data):
+        return True
+    if has_military_access(moving_nation, target_owner, nation_data):
+        return True
+    return target_owner in get_all_friendly_nations(moving_nation, nation_data)
+
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
     if is_water_province(target_province): return True
     if not target_province.get("is_coastal", False): return False
-        
+
     target_owner = target_province.get("owner", "Unclaimed")
     if target_owner == "Unclaimed": return True
-    
-    scenario_settings = get_scenario_settings()
-    if get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, scenario_settings):
-        pending = nation_data.get(moving_nation, {}).get("pending_diplomacy", {})
-        info = pending.get(target_owner, {})
-        if isinstance(info, dict) and info.get("action") == "WAR_DECLARATION":
-            return True
-            
-        queued = nation_data.get(moving_nation, {}).get("queued_ai_actions", [])
-        for q in queued:
-            if q.get("target") == target_owner and q.get("action") == "WAR_DECLARATION":
-                return True
-                
-    if has_military_access(moving_nation, target_owner, nation_data):
-        return True
-                
-    return target_owner in get_all_friendly_nations(moving_nation, nation_data)
+
+    return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
     """Centralized rules for land movement."""
@@ -592,7 +602,7 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
     target_owner = target_province.get("owner", "Unclaimed")
     turn_start_owner = target_province.get("_turn_start_owner", target_owner)
-    
+
     # If the tile was captured THIS TURN, we evaluate entry based on the original owner
     # to prevent movement execution order from blocking units moving on the exact same turn.
     if current_owner := target_owner:
@@ -601,23 +611,8 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
     if target_owner in ["Unclaimed", "None", "Ocean", "Lakes"]: return True
     if are_at_war(moving_nation, target_owner, nation_data): return True
-    
-    scenario_settings = get_scenario_settings()
-    if get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, scenario_settings):
-        pending = nation_data.get(moving_nation, {}).get("pending_diplomacy", {})
-        info = pending.get(target_owner, {})
-        if isinstance(info, dict) and info.get("action") == "WAR_DECLARATION":
-            return True
-            
-        queued = nation_data.get(moving_nation, {}).get("queued_ai_actions", [])
-        for q in queued:
-            if q.get("target") == target_owner and q.get("action") == "WAR_DECLARATION":
-                return True
-                
-    if has_military_access(moving_nation, target_owner, nation_data):
-        return True
-                
-    return target_owner in get_all_friendly_nations(moving_nation, nation_data)
+
+    return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
 def get_tactical_speed(unit, unit_library):
     """Calculates the effective speed of a unit in tactical mode."""
@@ -2379,12 +2374,20 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback,
     lb.bind('<Double-1>', _on_select)
     run_tk_loop(game_state, root)
 
-def create_tk_window(title, geometry):
-    """Standardizes the creation of floating editor tool windows."""
+def create_tk_window(title=None, geometry=None, hidden=False):
+    """Creates a top-most Tk root.
+
+    The one place a Tk window is born: named/sized floating editor tools pass a
+    title and geometry, native file/colour dialogs pass hidden=True instead.
+    """
     import tkinter as tk
     root = tk.Tk()
-    root.title(title)
-    root.geometry(geometry)
+    if title:
+        root.title(title)
+    if geometry:
+        root.geometry(geometry)
+    if hidden:
+        root.withdraw()
     root.attributes("-topmost", True)
     return root
 
@@ -2415,11 +2418,7 @@ def run_tk_loop(game_state, root):
 
 def get_transient_tk_root():
     """Creates a hidden, top-most Tkinter root for native dialogs (file picking, color picking)."""
-    import tkinter as tk
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    return root
+    return create_tk_window(hidden=True)
 
 def destroy_tk_root(root):
     """Destroys the Tk root and pumps Pygame events to clear phantom inputs."""
@@ -2429,10 +2428,8 @@ def destroy_tk_root(root):
 
 def copy_to_clipboard(text):
     """Headless standard helper to push text to the system clipboard."""
-    import tkinter as tk
     try:
-        root = tk.Tk()
-        root.withdraw()
+        root = get_transient_tk_root()
         root.clipboard_clear()
         root.clipboard_append(text)
         root.update()
@@ -2443,18 +2440,9 @@ def copy_to_clipboard(text):
         return False
 
 def play_click_sound():
-    """Unified helper to play the UI click sound with standard volume/pitch."""
+    """Plays the UI click sound. Thin alias kept for non-UI callers."""
     import ui_elements
-    import data.constants as c
-    if c.USE_SOLOUD:
-        if getattr(ui_elements, 'click_sound', None) and getattr(ui_elements, 'soloud_engine', None) and getattr(ui_elements, 'global_sfx_volume', 0) > 0:
-            handle = ui_elements.soloud_engine.play(ui_elements.click_sound)
-            ui_elements.soloud_engine.set_volume(handle, ui_elements.global_sfx_volume)
-            ui_elements.soloud_engine.set_relative_play_speed(handle, 0.5 + getattr(ui_elements, 'global_sfx_pitch', 0))
-    else:
-        if getattr(ui_elements, 'pygame_click_sound', None) and getattr(ui_elements, 'global_sfx_volume', 0) > 0:
-            ui_elements.pygame_click_sound.set_volume(ui_elements.global_sfx_volume)
-            ui_elements.pygame_click_sound.play()
+    ui_elements.play_ui_sound("click")
 
 # ==========================================
 # EDITOR UNDO / REDO LOGIC
@@ -2578,6 +2566,70 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
 # ==========================================
 # FILE & ZIP IMPORT QUERIES
 # ==========================================
+
+def export_dir_as_zip(source_dir, zip_name, parent=None):
+    """Zips a folder into the user's Downloads directory.
+
+    Counterpart to extract_and_flatten_zip, and the single implementation
+    behind every "Export" button (saves, scenarios) so the destination and the
+    success/error dialogs stay identical.
+    """
+    from pathlib import Path
+    from tkinter import messagebox
+    try:
+        zip_path = os.path.join(str(Path.home() / "Downloads"), zip_name)
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root_dir, _dirs, files in os.walk(source_dir):
+                for file in files:
+                    full = os.path.join(root_dir, file)
+                    zipf.write(full, os.path.relpath(full, source_dir))
+        messagebox.showinfo("Export Success", f"Exported to Downloads as {zip_name}", parent=parent)
+        return zip_path
+    except Exception as e:
+        messagebox.showerror("Export Error", str(e), parent=parent)
+        return None
+
+def import_zip_to_dir(target_parent_dir, on_success=None):
+    """Prompts for a .zip and unpacks it into a folder named after the archive.
+
+    Shared by the save and scenario import buttons; both used to open their own
+    transient Tk root and duplicate the "_imported" collision suffix logic.
+    """
+    from pathlib import Path
+    from tkinter import filedialog, messagebox
+
+    root = get_transient_tk_root()
+    file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")], parent=root)
+
+    if file_path:
+        target_dir = os.path.join(target_parent_dir, Path(file_path).stem)
+        if os.path.exists(target_dir):
+            target_dir += "_imported"
+        try:
+            extract_and_flatten_zip(file_path, target_dir)
+            messagebox.showinfo("Import Success", "Imported successfully.", parent=root)
+            if on_success:
+                on_success()
+        except Exception as e:
+            messagebox.showerror("Import Error", str(e), parent=root)
+
+    destroy_tk_root(root)
+
+def ask_directory(title, initialdir):
+    """Native folder picker returning the chosen path, or None if cancelled."""
+    from tkinter import filedialog
+    root = get_transient_tk_root()
+    chosen = filedialog.askdirectory(initialdir=initialdir, title=title, parent=root)
+    destroy_tk_root(root)
+    return chosen or None
+
+def ask_color(title, initial):
+    """Native colour picker returning an (r, g, b) tuple, or None if cancelled."""
+    from tkinter import colorchooser
+    root = get_transient_tk_root()
+    result = colorchooser.askcolor(title=title, color=initial, parent=root)
+    destroy_tk_root(root)
+    return tuple(map(int, result[0])) if result and result[0] else None
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):
     """

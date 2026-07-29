@@ -1,16 +1,22 @@
-from tkinter import ttk
 import os
-import pygame
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
 from data import queries
-from map_logic.rendering.font_manager import fonts
-from ui.bars import ui_bars
 from map_logic.system32 import loading_screen
 
 class New_Game(GameState):
     back_state = "MENU"
+
+    ROW_HEIGHT = 60
+    ROW_TOP = 200
+    # sub_state -> (header text, scenario directory). None means the category menu.
+    CATEGORIES = {
+        "CATEGORY": ("NEW GAME", None),
+        "HISTORICAL": ("HISTORICAL SCENARIOS", "SCENARIOS_HISTORICAL_DIR"),
+        "ALTERNATE": ("ALTERNATE SCENARIOS", "SCENARIOS_ALTERNATE_DIR"),
+        "MAP_EDITOR": ("MAP EDITOR SCENARIOS", "SCENARIOS_CUSTOM_DIR"),
+    }
 
     def __init__(self):
         super().__init__()
@@ -18,21 +24,27 @@ class New_Game(GameState):
         self.selected_scenario_path = None
         self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
         self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
-        
-        # --- SCROLLING STATE ---
-        self.scroll_y = 0
-        self.max_scroll = 0
-        self.is_dragging_scrollbar = False
-        self.scroll_track_rect = None
-        self.scroll_handle_rect = None
-        
+
         # --- REFRESH STATE ---
         self.is_refreshing = False
         self.refresh_total = 0
         self.refresh_completed = 0
         self.refresh_status = ""
-        
+
         self.refresh_ui()
+
+    def get_title(self):
+        return self.CATEGORIES[self.sub_state][0]
+
+    @property
+    def scenario_dir(self):
+        """Directory for the current sub-state, or None on the category menu.
+
+        Resolved off `c` by name each time so the Settings screen's live
+        directory overrides are picked up.
+        """
+        attr = self.CATEGORIES[self.sub_state][1]
+        return getattr(c, attr) if attr else None
 
     def set_sub_state(self, state):
         self.sub_state = state
@@ -40,8 +52,9 @@ class New_Game(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = []
-        
+        settings_btn = Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink",
+                              "Scenario Settings", self.scenario_settings)
+
         if self.sub_state == "CATEGORY":
             self.elements = [
                 Button(20, 20, "small", "red", "Back", self.exit_screen),
@@ -50,81 +63,48 @@ class New_Game(GameState):
                 Button("centered", 400, "large", "green", "Map Editor Scenarios", lambda: self.set_sub_state("MAP_EDITOR")),
                 Button("centered", 500, "large", "orange", "Random Scenario", self.start_random_scenario),
                 Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 160, "medium", "purple", "Data Refresh", self.trigger_global_data_refresh),
-                Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
+                settings_btn,
             ]
-        else:
-            self.elements = [
-                Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CATEGORY")),
-                Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
-            ]
-            
-            if self.sub_state == "HISTORICAL":
-                scenario_dir = c.SCENARIOS_HISTORICAL_DIR  
-            elif self.sub_state ==  "ALTERNATE":
-                scenario_dir = c.SCENARIOS_ALTERNATE_DIR
-            else:
-                scenario_dir = c.SCENARIOS_CUSTOM_DIR
-            if not os.path.exists(scenario_dir):
-                os.makedirs(scenario_dir)
-                
-            scenarios = os.listdir(scenario_dir)
-            
-            # Calculate scroll boundaries
-            total_content_height = len(scenarios) * 60
-            self.max_scroll = min(0, (c.SCREEN_HEIGHT - 200) - total_content_height - 20)
+            return
 
-            for i, name in enumerate(scenarios):
-                btn_y = 200 + (i * 60) + self.scroll_y
-                
-                # Simple Y-based culling so we don't draw off-screen buttons
-                if not (100 < btn_y < c.SCREEN_HEIGHT - 50):
-                    continue
+        self.elements = [
+            Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CATEGORY")),
+            settings_btn,
+        ]
 
-                # Standard centered layout for all playable scenarios
-                self.elements.append(
-                    Button("centered", btn_y, "new_game", "blue", name, 
-                           lambda n=name, d=scenario_dir: self.start_scenario(n, d))
-                )
+        scenario_dir = self.scenario_dir
+        if not os.path.exists(scenario_dir):
+            os.makedirs(scenario_dir)
+        scenarios = os.listdir(scenario_dir)
+
+        # Standard centered layout for all playable scenarios
+        for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
+            self.elements.append(
+                Button("centered", btn_y, "new_game", "blue", scenarios[i],
+                       lambda n=scenarios[i], d=scenario_dir: self.start_scenario(n, d))
+            )
 
     def update(self):
         super().update()
-        
+
         # Forcefully hide all UI buttons while the loading screen is active
-        if self.is_refreshing:
-            for el in self.elements:
-                el.visible = False
-        else:
-            for el in self.elements:
-                el.visible = True
+        for el in self.elements:
+            el.visible = not self.is_refreshing
 
     def additional_events(self, event):
         if self.sub_state != "CATEGORY":
             self.handle_list_scroll(event)
 
     def handle_events(self, events):
+        # GameState.handle_events already dispatches additional_events, so this
+        # only adds the "ignore input while refreshing" gate.
         if self.is_refreshing:
             return
-        for event in events:
-            super().handle_events([event])
-            self.additional_events(event)
+        super().handle_events(events)
 
     def additional_draw(self, surface):
-        if self.sub_state == "CATEGORY":
-            title_text = "NEW GAME"
-        elif self.sub_state == "HISTORICAL":
-            title_text = "HISTORICAL SCENARIOS"
-        elif self.sub_state == "ALTERNATE":
-            title_text = "ALTERNATE SCENARIOS"
-        else:
-            title_text = "MAP EDITOR SCENARIOS"
-            
-        ui_bars.draw_centered_title(surface, title_text, 40)
-
         if self.sub_state != "CATEGORY":
-            # --- Draw Scrollbar ---
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll, 40, 160, c.SCREEN_HEIGHT - 200
-            )
+            self.draw_list_scrollbar(surface, 40, 160, c.SCREEN_HEIGHT - 200)
 
         # --- Draw Progress Bar Overlay ---
         if self.is_refreshing:
@@ -133,16 +113,14 @@ class New_Game(GameState):
     def scenario_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "NEW_GAME"
-        self.next_state = "SCENARIO_SETTINGS"
-        self.done = True
+        self.go_to("SCENARIO_SETTINGS")
 
     def start_scenario(self, scenario_name, directory):
         self.selected_save_path = os.path.join(directory, scenario_name)
         # Pass the settings to the Map class
         self.map_settings = queries.get_scenario_settings() 
         self.set_sub_state("CATEGORY")
-        self.next_state = "MAP"
-        self.done = True
+        self.go_to("MAP")
 
     def trigger_global_data_refresh(self):
         """Calls the unified data refresh query for playable scenarios."""
@@ -201,10 +179,6 @@ class New_Game(GameState):
         
         queries.run_tk_loop(self, dialog)
 
-    def map_selected(self):
-        self.next_state = "MAP"
-        self.done = True
-
     def exit_screen(self):
         self.set_sub_state("CATEGORY")
         super().exit_screen()
@@ -218,5 +192,4 @@ class New_Game(GameState):
 
     def start_random_scenario(self):
         self.set_sub_state("CATEGORY")
-        self.next_state = "RANDOM_SETUP"
-        self.done = True
+        self.go_to("RANDOM_SETUP")

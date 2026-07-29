@@ -50,12 +50,15 @@ def draw_modal_box(surface, rect, bg_color=(40, 40, 50), border_color=(100, 150,
         pygame.draw.rect(surface, bg_color, rect)
     pygame.draw.rect(surface, border_color, rect, border_width)
 
-def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255)):
+def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False):
     """Draws centered title text to standardize headers."""
     from map_logic.rendering.font_manager import fonts
     title_font = fonts.get(font_preset)
     title_surf = title_font.render(text, True, color)
-    rect = title_surf.get_rect(topleft=(c.SCREEN_WIDTH // 2 - title_surf.get_width() // 2, y_pos))
+    x_pos = c.SCREEN_WIDTH // 2 - title_surf.get_width() // 2
+    if shadow:
+        surface.blit(title_font.render(text, True, (0, 0, 0)), (x_pos + 1, y_pos + 1))
+    rect = title_surf.get_rect(topleft=(x_pos, y_pos))
     surface.blit(title_surf, rect)
     return rect
 
