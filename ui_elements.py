@@ -348,13 +348,18 @@ def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color):
     ]
 
     for icon_name, val, prefix in icons:
+        # Defense is hidden entirely when 0, same as a free resource cost is
+        # hidden in draw_resource_string, rather than showing "DEF: 0" noise.
+        if icon_name == c.ICON_DEFENSE and not val:
+            continue
+
         icon_surf = symbol_loader.SYMBOLS.get(icon_name)
         if icon_surf:
             icon_h = max(16, font.get_height())
             icon_surf = pygame.transform.smoothscale(icon_surf, (icon_h, icon_h))
             surface.blit(icon_surf, (curr_x, y + 2))
             curr_x += icon_h + 4
-        
+
         val_surf = font.render(f"{prefix} {val}   ", True, color)
         surface.blit(val_surf, (curr_x, y))
         curr_x += val_surf.get_width()

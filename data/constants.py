@@ -686,7 +686,7 @@ ICON_DEFENSE = "Shield"
 ICON_HEALTH = "Heart"
 ICON_SPEED = "Lightning"
 ICON_WARNING = "Warning"
-ICON_BOMBARD_RANGE = "Range"
+ICON_BOMBARD_RANGE = "Target"
 
 # ==========================================
 # MAP UNIT DISPLAY (HOI4 STYLE)
