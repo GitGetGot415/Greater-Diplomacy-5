@@ -13,6 +13,8 @@ Immediate concerns:
 
 - slider volume specifically?
 
+- super heavy tanks
+
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - web version? (tkinter will have to be edited...)

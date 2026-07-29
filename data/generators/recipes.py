@@ -150,38 +150,40 @@ UNIT_SECTIONS = [
             "cost_materials": 6000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 6,
         }),
         UnitFamily("WW1 Armored Car", single(), {
-            "health": 1000, "attack": 500, "defense": 50, "speed": 2,
+            "health": 1000, "attack": 300, "defense": 50, "speed": 2,
             "cost_materials": 3000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 4,
         }),
-        UnitFamily("Armored Car", roman_suffixes(16), {
-            "health": linear(1000, 100), "attack": linear(600, 100), "defense": linear(60, 10),
-            # speed steps: I=2, II-III=3, IV+=4
-            "speed": piecewise([(0, 2, 0), (1, 3, 0), (3, 4, 0)]),
+        UnitFamily("Armored Car", roman_suffixes(24), {
+            "health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10),
+            # speed steps: I=2, II-IV=3, V+=4
+            "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]),
             "cost_materials": const(3000), "cost_manpower": const(1000),
             "cost_fuel": const(100), "production_time": const(4),
         }),
-        UnitFamily("Light Tank", roman_suffixes(16), {
-            "health": linear(1800, 200), "attack": linear(1200, 200), "defense": linear(80, 10),
+        UnitFamily("Light Tank", roman_suffixes(24), {
+            "health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10),
             # speed steps: I-III=2, IV+=3
             "speed": piecewise([(0, 2, 0), (3, 3, 0)]),
             "cost_materials": const(8000), "cost_manpower": const(1000),
             "cost_fuel": const(150), "production_time": const(5),
         }),
-        UnitFamily("Medium Tank", roman_suffixes(3), {
+        UnitFamily("Medium Tank", roman_suffixes(4), {
             "health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25),
             "speed": const(2), "cost_materials": const(12000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
-        UnitFamily("Heavy Tank", roman_suffixes(3), {
-            "health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(300, 50),
+        UnitFamily("Heavy Tank", roman_suffixes(4), {
+            "health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50),
             "speed": const(1), "cost_materials": const(15000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
-            "health": linear(4000, 500), "attack": linear(4000, 500), "defense": linear(250, 25),
+            "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
             "speed": const(2), "cost_materials": const(15000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
+    ],
+    [
         UnitFamily("Dreadnought", single(), {
             "health": 10000, "attack": 6000, "defense": 1000, "speed": 1,
             "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 10,
@@ -323,20 +325,20 @@ RESEARCH_SECTIONS = [
                            "years": years_range(1910, 1, 1)}),
         ("ww1_armored_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                               "req": {"civilian_car": 1}, "years": years_range(1912, 1, 1)}),
-        ("armored_car", {"category": "TANKS", "max_lvl": 16, "cost": 2400,
-                          "req": {"ww1_armored_car": 1}, "years": years_range(1916, 6, 16)}),
+        ("armored_car", {"category": "TANKS", "max_lvl": 24, "cost": 2400,
+                          "req": {"ww1_armored_car": 1}, "years": years_range(1916, 4, 24)}),
     ],
     [
         ("ww1_tank", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                        "req": {"ww1_armored_car": 1}, "years": years_range(1914, 1, 1)}),
-        ("light_tank", {"category": "TANKS", "max_lvl": 16, "cost": 2400,
-                         "req": {"ww1_tank": 1}, "years": years_range(1918, 6, 16)}),
-        ("medium_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
-                          "req": {"light_tank": 1}, "years": years_range(1925, 7, 3)}),
-        ("heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
-                         "req": {"medium_tank": 1}, "years": years_range(1930, 5, 3)}),
+        ("light_tank", {"category": "TANKS", "max_lvl": 24, "cost": 2400,
+                         "req": {"ww1_tank": 1}, "years": years_range(1918, 4, 24)}),
+        ("medium_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400,
+                          "req": {"light_tank": 1}, "years": years_range(1925, 5, 4)}),
+        ("heavy_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400,
+                         "req": {"medium_tank": 1}, "years": years_range(1929, 4, 4)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
-                               "req": {"OR": [{"medium_tank": 3}, {"heavy_tank": 3}]},
+                               "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),
     ],
     [
