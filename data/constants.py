@@ -423,7 +423,8 @@ SIZES = {
     "tech_square_wide": (150, 60),
     "tech_square_ultra_wide": (270, 60),
     "tech_square_railroad_gun": (270, 110),
-    "tech_square_landkreuzer_p1000_ratte": (400, 120),
+    "tech_square_ww2_railroad_gun": (340, 120),
+    "tech_square_landkreuzer_p1000_ratte": (400, 130),
     "tech_square_landkreuzer_p1500_monster": (600, 180),
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
@@ -603,7 +604,8 @@ MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
 # Matched against queries.get_base_unit_name, so every level of the family counts.
 BOMBARDMENT_UNITS = {
     "Artillery Type": 1,
-    "Railroad Gun": 2
+    "WW1 Railroad Gun": 2,
+    "WW2 Railroad Gun": 2
 }
 
 # Fallback range for anything that can bombard without a listed range.
@@ -653,7 +655,8 @@ SYMBOL_BASE_SCALES = {
 # Base unit classes that belong to the TANKS column despite not having
 # "Tank" or "Armored Car" in their name (see queries.get_ordered_unit_groups).
 TANK_GROUP_EXTRAS = [
-    "Railroad Gun",
+    "WW1 Railroad Gun",
+    "WW2 Railroad Gun",
     "Landkreuzer P.1000 Ratte",
     "Landkreuzer P.1500 Monster"
 ]

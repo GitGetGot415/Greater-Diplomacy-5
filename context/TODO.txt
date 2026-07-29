@@ -13,8 +13,6 @@ Immediate concerns:
 
 - slider volume specifically?
 
-- artillery level should be "Type Year" like how infantry is organized
-
 - KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war
 - revokes access once war is over

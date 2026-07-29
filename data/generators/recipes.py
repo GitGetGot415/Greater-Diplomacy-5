@@ -223,15 +223,22 @@ UNIT_SECTIONS = [
             "speed": const(2), "cost_materials": const(15000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
-        # Siege piece: reaches 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
-        UnitFamily("Railroad Gun", roman_suffixes(5), {
-            "health": linear(1200, 200), "attack": linear(150, 25),
+        # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
+        # Two standalone guns (not a leveled family) - stats equal the old 5-level
+        # Railroad Gun's level 1 and level 5 respectively.
+        UnitFamily("WW1 Railroad Gun", single(), {
+            "health": 1200, "attack": 150,
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(150, 25),
-            "defense": const(0),
-            "speed": const(1), "cost_materials": const(12000), "cost_manpower": const(1000),
-            "cost_fuel": const(0), "production_time": const(6),
+            "bombard_attack": 150,
+            "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
+            "cost_fuel": 0, "production_time": 6,
+        }),
+        UnitFamily("WW2 Railroad Gun", single(), {
+            "health": 2000, "attack": 250,
+            "bombard_attack": 250,
+            "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
+            "cost_fuel": 0, "production_time": 6,
         }),
     ],
     [
@@ -393,14 +400,16 @@ RESEARCH_SECTIONS = [
         ("super_heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
                                 "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 3)}),
         ("landkreuzer_p1000_ratte", {"category": "TANKS", "max_lvl": 1, "cost": 3000,
-                                        "req": {"AND": [{"heavy_tank": 4}, {"railroad_gun": 5}]}, "years": years_range(1944, 6, 1)}),
+                                        "req": {"AND": [{"heavy_tank": 4}, {"ww2_railroad_gun": 1}]}, "years": years_range(1944, 6, 1)}),
         ("landkreuzer_p1500_monster", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
                                                 "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1952, 8, 1)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),
-        ("railroad_gun", {"category": "TANKS", "max_lvl": 5, "cost": 2400,
-                           "req": {"ww1_tank": 1}, "years": years_range(1918, 5, 5)}),
+        ("ww1_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
+                               "req": {"ww1_tank": 1}, "years": years_range(1918, 1, 1)}),
+        ("ww2_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
+                               "req": {"ww1_railroad_gun": 1}, "years": years_range(1932, 1, 1)}),
     ],
     [
         ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {},
