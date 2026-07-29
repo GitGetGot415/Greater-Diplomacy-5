@@ -117,6 +117,13 @@ class UnitFamily:
                 if key in self.stats:
                     gen = self.stats[key]
                     entry[key] = gen(i) if callable(gen) else gen
+            # Bombardment range doesn't vary by level, so it isn't hand-specified
+            # per family like bombard_attack - it's pulled straight from
+            # c.BOMBARDMENT_UNITS (keyed by family prefix) to keep that dict the
+            # single source of truth instead of duplicating the number here.
+            bombard_range = c.BOMBARDMENT_UNITS.get(self.prefix, 0)
+            if bombard_range > 0:
+                entry["bombard_range"] = bombard_range
             entry["naval_unit"] = self.naval_unit
             entry["order"] = {}
             out.append((name, entry))
@@ -274,7 +281,7 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
-            "health": linear(2000, 1000), "attack": linear(20000, 5000), "defense": linear(1000, 100),
+            "health": linear(2000, 1000), "attack": linear(2000, 500), "defense": linear(1000, 100),
             "bombard_attack": linear(400, 50),
             "speed": const(1), "cost_materials": const(20000), "cost_manpower": const(2000),
             "cost_fuel": const(500), "production_time": const(10),

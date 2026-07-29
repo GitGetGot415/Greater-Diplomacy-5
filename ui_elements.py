@@ -358,3 +358,27 @@ def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color):
         val_surf = font.render(f"{prefix} {val}   ", True, color)
         surface.blit(val_surf, (curr_x, y))
         curr_x += val_surf.get_width()
+
+def draw_bombardment_stats(surface, font, dmg, rng, x, y, color):
+    """Draws bombardment damage/range, same icon+text layout as draw_combat_stats.
+    Caller is responsible for only calling this for units that can bombard."""
+    base_surf = font.render("Bombardment:   ", True, color)
+    surface.blit(base_surf, (x, y))
+    curr_x = x + base_surf.get_width()
+
+    icons = [
+        (c.ICON_BOMBARDMENT, dmg, "DMG:"),
+        (c.ICON_BOMBARD_RANGE, rng, "RNG:")
+    ]
+
+    for icon_name, val, prefix in icons:
+        icon_surf = symbol_loader.SYMBOLS.get(icon_name)
+        if icon_surf:
+            icon_h = max(16, font.get_height())
+            icon_surf = pygame.transform.smoothscale(icon_surf, (icon_h, icon_h))
+            surface.blit(icon_surf, (curr_x, y + 2))
+            curr_x += icon_h + 4
+
+        val_surf = font.render(f"{prefix} {val}   ", True, color)
+        surface.blit(val_surf, (curr_x, y))
+        curr_x += val_surf.get_width()

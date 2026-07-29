@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from gameState import GameState
-from ui_elements import Button, draw_resource_string, draw_combat_stats
+from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
@@ -315,9 +315,11 @@ class Production_Screen(GameState):
                     self.elements.append(btn)
                     
                     stats = self.unit_library[lookup_name]
-                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+                    # Bombarding units get an extra stat row, so their bar needs more room.
+                    bar_height = 70 if 'bombard_attack' in stats else 50
+                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, bar_height)
                     self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
-                    y_offset += 60
+                    y_offset += bar_height + 10
 
         self.infantry_start_y = y_offset
         process_unit_groups(self.infantry_groups, "green")
@@ -562,10 +564,17 @@ class Production_Screen(GameState):
                 
                 # --- MODIFIED COMBAT STATS STRING ---
                 draw_combat_stats(
-                    surface, bar_font, "Combat Stats:   ", 
-                    stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0), 
+                    surface, bar_font, "Combat Stats:   ",
+                    stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0),
                     bar_rect.x + 15, bar_rect.y + 26, (200, 200, 200)
                 )
+
+                if 'bombard_attack' in stats:
+                    draw_bombardment_stats(
+                        surface, bar_font,
+                        stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
+                        bar_rect.x + 15, bar_rect.y + 46, (200, 200, 200)
+                    )
 
         # --- STATIC OVERLAYS ---
         # Draw header overlay block to hide scrolling units that go too high

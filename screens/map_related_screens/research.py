@@ -1,7 +1,7 @@
 import pygame
 from gameState import GameState
 import data.constants as c
-from ui_elements import Button, draw_resource_string, draw_combat_stats
+from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
@@ -612,12 +612,20 @@ class Research_Screen(GameState):
                 
                 # --- MODIFIED COMBAT STATS STRING ---
                 draw_combat_stats(
-                    surface, font_small, "Combat Stats:   ", 
-                    s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0), 
+                    surface, font_small, "Combat Stats:   ",
+                    s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0),
                     panel_rect.x + 200, y_off, (200, 200, 200)
                 )
                 y_off += 30
-                
+
+                if 'bombard_attack' in s:
+                    draw_bombardment_stats(
+                        surface, font_small,
+                        s.get('bombard_attack', 0), s.get('bombard_range', 0),
+                        panel_rect.x + 200, y_off, (200, 200, 200)
+                    )
+                    y_off += 30
+
                 draw_resource_string(
                     surface, font_small, "Production Cost:   ",
                     s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
