@@ -206,7 +206,7 @@ UNIT_SECTIONS = [
         }),
         # Siege piece: reaches 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
         UnitFamily("Railroad Gun", roman_suffixes(5), {
-            "health": linear(1200, 200), "attack": linear(500, 100), "defense": const(0),
+            "health": linear(1200, 200), "attack": linear(150, 25), "defense": const(0),
             "speed": const(1), "cost_materials": const(12000), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(6),
         }),
