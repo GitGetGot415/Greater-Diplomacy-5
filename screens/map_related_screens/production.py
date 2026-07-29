@@ -8,6 +8,19 @@ from data import queries
 
 section_spacing = 60
 
+class ProductionChromeOverlay:
+    """Draws the header and resource HUD last, so they cover any scrolled
+    buttons that slid underneath instead of the buttons drawing on top."""
+    def __init__(self, screen):
+        self.screen = screen
+        self.visible = True
+
+    def handle_event(self, event):
+        pass
+
+    def draw(self, surface):
+        self.screen.draw_chrome(surface)
+
 class Production_Screen(GameState):
     back_state = "MAP"
 
@@ -61,11 +74,16 @@ class Production_Screen(GameState):
             self.enforce_scroll_bounds()
             if abs(self.scroll_y - self.target_scroll_y) > 0.5:
                 self.scroll_y += (self.target_scroll_y - self.scroll_y) * 0.15
-                
-                # Apply scroll to buttons
-                for el in self.elements:
-                    if getattr(el, 'is_scrollable', False):
-                        el.rect.y = el.base_y + int(self.scroll_y)
+
+            # Keep scrollable buttons pinned to the list. They stay visible (the
+            # ProductionChromeOverlay draws over them once they slide behind the
+            # header/resource-HUD bars) but a click only registers while the click
+            # itself lands clear of those bars, so a still-visible sliver of a
+            # button stays clickable and no sfx sneaks through on the hidden part.
+            for el in self.elements:
+                if getattr(el, 'is_scrollable', False):
+                    el.rect.y = el.base_y + int(self.scroll_y)
+                    el.click_guard = lambda: 80 <= pygame.mouse.get_pos()[1] <= c.SCREEN_HEIGHT - 60
 
     def refresh_ui(self):
         # The back button doesn't scroll
@@ -341,6 +359,9 @@ class Production_Screen(GameState):
         # Calculate maximum scroll distance
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
 
+        # Drawn last so it covers any scrollable button still sliding past it.
+        self.elements.append(ProductionChromeOverlay(self))
+
     def start_coring(self):
         owner = self.target_province.get("owner")
         data = queries.get_core_cost(owner, self.map_screen.map_data)
@@ -576,11 +597,15 @@ class Production_Screen(GameState):
                         bar_rect.x + 15, bar_rect.y + 46, (200, 200, 200)
                     )
 
-        # --- STATIC OVERLAYS ---
-        # Draw header overlay block to hide scrolling units that go too high
+    def draw_chrome(self, surface):
+        """Fixed header + resource HUD. Drawn by ProductionChromeOverlay, the very
+        last element each frame, so it sits on top of any scrolled-behind buttons."""
+        if not self.target_province: return
+
+        # Header overlay block hides scrolling units that go too high
         pygame.draw.rect(surface, self.bg_color, (0, 0, c.SCREEN_WIDTH, 80))
         title_font = fonts.get("heading1")
-        
+
         # Determine the name to display at the top of the production queue!
         owner_nation = self.target_province.get("owner", "Unclaimed")
         owner_name = self.map_screen.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
@@ -592,9 +617,7 @@ class Production_Screen(GameState):
         pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
 
         res_font = fonts.get("production_hud")
-        
-        owner_nation = self.target_province.get("owner", "Unclaimed")
-        
+
         resources = queries.get_resource_hud_strings(self.map_screen, include_net=False, target_nation=owner_nation)
         for i, (text, color) in enumerate(resources):
             surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))

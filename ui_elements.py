@@ -48,10 +48,15 @@ class Button:
 
         self.visible = True
         self.is_pressed = False
-        
+
         self.is_selected = False
         self.disabled = False
         self.notification_count = 0
+
+        # Optional callable: when set, a click only registers (sound + callback)
+        # if it returns True. Lets a button stay visible/clickable-looking while
+        # scrolled behind a fixed overlay without the click sfx sneaking through.
+        self.click_guard = None
 
     def draw(self, surface):
         if not self.visible: return
@@ -141,13 +146,13 @@ class Button:
         if not self.visible or getattr(self, 'disabled', False): return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.collidepoint(event.pos):
+            if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
                 self.is_pressed = True
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.is_pressed:
                 self.is_pressed = False
-                if self.rect.collidepoint(event.pos):
+                if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
                     # --- HYBRID ENGINE HOOK ---
                     if c.USE_SOLOUD:
                         if click_sound and soloud_engine and global_sfx_volume > 0:

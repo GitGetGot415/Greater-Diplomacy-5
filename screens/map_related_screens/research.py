@@ -6,6 +6,19 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
 
+class ResearchHudOverlay:
+    """Draws the ACTIVE RESEARCH SLOTS box last, so it covers any tech-node
+    button that scrolled underneath instead of the button drawing on top."""
+    def __init__(self, screen):
+        self.screen = screen
+        self.visible = True
+
+    def handle_event(self, event):
+        pass
+
+    def draw(self, surface):
+        self.screen.draw_hud_slots(surface)
+
 class Research_Screen(GameState):
     back_state = "MAP"
 
@@ -97,33 +110,47 @@ class Research_Screen(GameState):
                         "base_y": row_y
                     })
 
+    def hud_slots_rect(self):
+        """Screen-space rect of the ACTIVE RESEARCH SLOTS box drawn over the timeline."""
+        hud_height = 80 + (c.RESEARCH_SLOTS * 25)
+        return pygame.Rect(20, c.SCREEN_HEIGHT - hud_height, 400, hud_height - 20)
+
+    def _sync_tech_node_positions(self):
+        """Slides tech-node buttons with the timeline scroll. They stay visible
+        (ResearchHudOverlay draws the slots box over them once they slide behind
+        it -- tall nodes like railroad guns/landkreuzers can reach that corner)
+        but a click only registers while clear of the HUD, so no sfx sneaks through."""
+        hud_rect = self.hud_slots_rect()
+        for el in self.elements:
+            if getattr(el, 'is_tech_node', False):
+                el.rect.x = el.base_x + self.scroll_x
+                # Checked against the click position, not the whole button rect, so the
+                # still-visible sliver of a node only partly behind the HUD stays clickable.
+                el.click_guard = lambda hr=hud_rect: not hr.collidepoint(pygame.mouse.get_pos())
+
     def update(self):
         super().update()
         if hasattr(self, 'target_scroll_x'):
-            
+
             self.enforce_scroll_bounds()
-            
+
             if abs(self.scroll_x - self.target_scroll_x) > 0.5:
                 self.scroll_x += (self.target_scroll_x - self.scroll_x) * 0.15
-                
-                for el in self.elements:
-                    if getattr(el, 'is_tech_node', False):
-                        el.rect.x = el.base_x + self.scroll_x
+
+            self._sync_tech_node_positions()
 
     def additional_events(self, event):
         if self.current_category in ["INFANTRY", "TANKS", "NAVY", "INDUSTRY"] and not self.active_modal:
             if event.type == pygame.MOUSEWHEEL:
                 self.target_scroll_x += event.y * 70
-            elif event.type == pygame.MOUSEMOTION and event.buttons[2]: 
+            elif event.type == pygame.MOUSEMOTION and event.buttons[2]:
                 self.target_scroll_x += event.rel[0]
-                self.scroll_x += event.rel[0] 
-            
+                self.scroll_x += event.rel[0]
+
             # --- Clamp user input immediately ---
             self.enforce_scroll_bounds()
-            
-            for el in self.elements:
-                if getattr(el, 'is_tech_node', False):
-                    el.rect.x = el.base_x + self.scroll_x
+
+            self._sync_tech_node_positions()
 
     def get_display_name(self, tech_key, lvl):
         if tech_key == "infantry_type":
@@ -232,9 +259,11 @@ class Research_Screen(GameState):
             self.elements.append(btn)
 
         if self.current_category == "COMPLETED":
-            pass 
+            pass
         else:
             self.draw_tech_nodes(res_levels, queue)
+            # Drawn last so it covers any tech-node button still sliding past it.
+            self.elements.append(ResearchHudOverlay(self))
 
     def get_button_size(self, tech_key, display_name):
         """Returns the appropriate button size based on category or specific items."""
@@ -488,7 +517,7 @@ class Research_Screen(GameState):
 
     def draw_hud_slots(self, surface):
         hud_height = 80 + (c.RESEARCH_SLOTS * 25)
-        hud_rect = pygame.Rect(20, c.SCREEN_HEIGHT - hud_height, 400, hud_height - 20)
+        hud_rect = self.hud_slots_rect()
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
         hud_font = fonts.get("button")
@@ -747,8 +776,8 @@ class Research_Screen(GameState):
             res_levels = player_data.get("research", {})
             self.draw_connections(surface, res_levels)
 
-        if not self.active_modal and self.current_category != "COMPLETED":
-            self.draw_hud_slots(surface)
+        # ACTIVE RESEARCH SLOTS is now drawn by ResearchHudOverlay (appended last
+        # in refresh_ui), so it renders on top of any scrolled tech-node button.
 
         if self.active_modal:
             self.draw_subscreen_modal(surface)

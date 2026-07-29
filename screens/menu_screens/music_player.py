@@ -203,18 +203,21 @@ class Music_Player(GameState):
                         except Exception as e:
                             print(f"Error loading icon {file} for {album}: {e}")
             
-            # Conditionally fire the callback ONLY if the mouse is below the clipping header!
-            album_cb = lambda a=album: self.toggle_album(a) if pygame.mouse.get_pos()[1] >= 120 else None
+            # Only registers a click (sound included) when below the clipping header!
+            album_cb = lambda a=album: self.toggle_album(a)
+            album_guard = lambda: pygame.mouse.get_pos()[1] >= 120
 
             if icon_img:
-                self.elements.append(Button(20, y_offset, "album_square", color, album, 
-                                            album_cb, image=icon_img, show_text=True, layout="vertical"))
+                btn = Button(20, y_offset, "album_square", color, album,
+                             album_cb, image=icon_img, show_text=True, layout="vertical")
                 y_offset += 210 # 200 height + 10 padding
                 album_content_h += 210
             else:
-                self.elements.append(Button(20, y_offset, "medium", color, album, album_cb))
+                btn = Button(20, y_offset, "medium", color, album, album_cb)
                 y_offset += 60
                 album_content_h += 60
+            btn.click_guard = album_guard
+            self.elements.append(btn)
 
         # Calculate max boundary for Album scrolling
         self.max_album_scroll = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
@@ -228,10 +231,12 @@ class Music_Player(GameState):
             is_playing = (self.controller.now_playing == track_path)
             color = "orange" if is_playing else "grey"
             
-            # Conditionally fire the callback ONLY if the mouse is below the clipping header!
-            track_cb = lambda p=track_path: self.play_track(p) if pygame.mouse.get_pos()[1] >= 200 else None
-            
-            self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb))
+            # Only registers a click (sound included) when below the clipping header!
+            track_cb = lambda p=track_path: self.play_track(p)
+
+            track_btn = Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
+            track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
+            self.elements.append(track_btn)
             track_y += song_y
             track_content_h += song_y
 
