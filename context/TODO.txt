@@ -13,12 +13,6 @@ Immediate concerns:
 
 - slider volume specifically?
 
-- oh my god railroad gun
-
-- give each unit it's own range for bombardment
-
-- bombardment damage should be a different thing from actual damage dealt in combat
-
 - KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war
 - revokes access once war is over
