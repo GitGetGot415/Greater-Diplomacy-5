@@ -400,7 +400,7 @@ RESEARCH_SECTIONS = [
         ("super_heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
                                 "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 3)}),
         ("landkreuzer_p1000_ratte", {"category": "TANKS", "max_lvl": 1, "cost": 3000,
-                                        "req": {"AND": [{"heavy_tank": 4}, {"ww2_railroad_gun": 1}]}, "years": years_range(1944, 6, 1)}),
+                                        "req": {"ww2_railroad_gun": 1}, "years": years_range(1944, 6, 1)}),
         ("landkreuzer_p1500_monster", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
                                                 "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1952, 8, 1)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
@@ -409,7 +409,7 @@ RESEARCH_SECTIONS = [
         ("ww1_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                                "req": {"ww1_tank": 1}, "years": years_range(1918, 1, 1)}),
         ("ww2_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
-                               "req": {"ww1_railroad_gun": 1}, "years": years_range(1932, 1, 1)}),
+                               "req": {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, "years": years_range(1932, 1, 1)}),
     ],
     [
         ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {},
