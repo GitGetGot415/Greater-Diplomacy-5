@@ -190,7 +190,7 @@ UNIT_SECTIONS = [
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 800,
             "speed": 1, "cost_materials": 150000, "cost_manpower": 2000,
-            "cost_fuel": 3000, "production_time": 8,
+            "cost_fuel": 3000, "production_time": 10,
         }),
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
             "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
@@ -201,11 +201,11 @@ UNIT_SECTIONS = [
     [
         UnitFamily("Dreadnought", single(), {
             "health": 10000, "attack": 6000, "defense": 1000, "speed": 1,
-            "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 10,
+            "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Battleship", single(), {
             "health": 15000, "attack": 10000, "defense": 1500, "speed": 1,
-            "cost_materials": 20000, "cost_manpower": 1000, "cost_fuel": 400, "production_time": 10,
+            "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Destroyer", roman_suffixes(26), {
             "health": linear(6000, 1000), "attack": linear(3000, 1000), "defense": linear(600, 100),
@@ -222,7 +222,7 @@ UNIT_SECTIONS = [
         }, naval_unit=True),
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
             "health": linear(2000, 1000), "attack": linear(20000, 5000), "defense": linear(1000, 100),
-            "speed": const(1), "cost_materials": const(20000), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": const(20000), "cost_manpower": const(2000),
             "cost_fuel": const(500), "production_time": const(10),
         }, naval_unit=True),
     ],
