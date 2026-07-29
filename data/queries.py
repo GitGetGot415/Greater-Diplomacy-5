@@ -736,10 +736,10 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     base_name = get_base_unit_name(unit_type)
     
     # Strip "Type" to get the pure class ("Infantry", "Motorized Infantry") so string formatting doesn't duplicate it
-    clean_base = re.sub(r'(?i)\s+type', '', base_name).strip() 
-    tech_key = clean_base.lower().replace(" ", "_")
+    clean_base = re.sub(r'(?i)\s+type', '', base_name).strip()
+    tech_key = get_unit_tech_key(clean_base)
 
-    if clean_base == "Infantry": 
+    if clean_base == "Infantry":
         tech_key = "infantry_type"
 
     res_lvl = player_research.get(tech_key, 0)
@@ -1648,6 +1648,18 @@ def get_formatted_division_name(unit_type):
         
     return base_name
 
+def get_unit_tech_key(base_name):
+    """Maps a base unit class name to the research key that unlocks it.
+
+    Punctuation is dropped rather than turned into a separator, so
+    "Landkreuzer P.1000 Ratte" resolves to landkreuzer_p1000_ratte and not
+    landkreuzer_p.1000_ratte - which matched no tech, leaving the unit
+    permanently unbuildable.
+    """
+    key = re.sub(r'[^a-z0-9 ]', '', base_name.lower())
+    key = re.sub(r'\s+', '_', key.strip())
+    return c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
+
 def roman_to_int(s):
     """Converts a roman numeral string to an integer."""
     if not s: return 0
@@ -1671,17 +1683,27 @@ def is_naval_unit(unit_type):
     stats = get_unit_library().get(unit_type, {})
     return stats.get("naval_unit", False)
 
-def can_bombard(unit_type):
-    """Returns True if this unit class can shell a nearby tile instead of moving.
+def get_bombardment_range(unit_type):
+    """Returns how many tiles this unit class can shell, or 0 if it cannot bombard.
 
     Matched on the base class name so every level of the family qualifies, while
     a unit loaded onto a Convoy/Truck ("Convoy (Artillery III)") does not."""
-    return get_base_unit_name(unit_type) in c.BOMBARDMENT_UNITS
+    return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type), 0)
+
+def can_bombard(unit_type):
+    """Returns True if this unit class can shell a nearby tile instead of moving."""
+    return get_bombardment_range(unit_type) > 0
+
+def get_bombardment_arrow_icon(bomb_range):
+    """Picks the barrage sprite matching a gun's reach (long guns get their own art)."""
+    icons = c.BOMBARDMENT_ARROW_ICONS
+    eligible = [r for r in icons if r <= bomb_range]
+    return icons[max(eligible)] if eligible else icons[min(icons)]
 
 def get_bombardment_targets(province, id_to_province, max_range=None):
     """Returns the set of province ids a gun sitting on this tile can shell."""
     if max_range is None:
-        max_range = c.BOMBARDMENT_RANGE
+        max_range = c.DEFAULT_BOMBARDMENT_RANGE
 
     in_range = set()
     visited = {province["id"]}
@@ -2502,7 +2524,7 @@ def get_ordered_unit_groups(unit_library):
         base = get_base_unit_name(name)
         if stats.get("naval_unit", False):
             if base not in navy_groups: navy_groups.append(base)
-        elif "Tank" in base or "Armored Car" in base:
+        elif "Tank" in base or "Armored Car" in base or base in c.TANK_GROUP_EXTRAS:
             if base not in tank_groups: tank_groups.append(base)
         else:
             if base not in infantry_groups: infantry_groups.append(base)

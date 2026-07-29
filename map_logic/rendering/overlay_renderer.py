@@ -139,12 +139,13 @@ def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0,
             surface.blit(ellipse_surf, (int(sx) - radius_x, int(sy) - radius_y))
             pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*map_screen.camera.zoom)))
 
-def draw_bombardment_arrow(surface, map_screen, start_province, target_id, alpha=255, force_visible=False):
-    """Draws the Bombardment Arrows sprite pointing from a gun's tile at the tile it is shelling.
+def draw_bombardment_arrow(surface, map_screen, start_province, target_id, bomb_range=1, alpha=255, force_visible=False):
+    """Draws a barrage sprite pointing from a gun's tile at the tile it is shelling.
 
     Movement uses a Line/Circle/Triangle chain because a path has many hops;
-    a barrage is a single short throw, so one rotated sprite sat between the two
-    tiles reads the direction on its own.
+    a barrage is a single throw, so one rotated sprite sat between the two tiles
+    reads the direction on its own. The sprite depends on the gun's reach, so a
+    long-range shot is distinguishable from a short one at a glance.
     """
     target_prov = map_screen.id_to_province.get(target_id)
     if not target_prov: return
@@ -157,7 +158,8 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id, alpha
             return
 
     cam = map_screen.camera
-    arrow_img = symbol_loader.get_symbol(c.ICON_BOMBARDMENT, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
+    icon_name = queries.get_bombardment_arrow_icon(bomb_range)
+    arrow_img = symbol_loader.get_symbol(icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
 
     p1 = list(start_province["center"])
     p2 = list(target_prov["center"])
@@ -189,7 +191,7 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id, alpha
             rotated = map_utils.apply_tilt(rotated, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
             surface.blit(rotated, rotated.get_rect(center=mid))
         else:
-            # Fallback until Bombardment Arrows.png is present
+            # Fallback until the barrage sprite is present in assets/images
             pygame.draw.line(surface, (255, 200, 0), start_pos, end_pos, max(2, int(3 * cam.zoom)))
 
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):

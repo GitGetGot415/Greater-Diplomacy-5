@@ -67,6 +67,7 @@ class Research_Screen(GameState):
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
             "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y5, "landkreuzer_p1500_monster": y5,
+            "railroad_gun": y5,
             "destroyer": y1,
             "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,
             "battleship": y2,
@@ -243,6 +244,11 @@ class Research_Screen(GameState):
         small_vehicles = ["civilian car", "armored car", "light tank i", "light tank v", "medium tank"]
         if any(tank in display_name.lower() for tank in small_vehicles):
             return "tech_square_medium"
+
+        # Check for railroad gun
+        railroad_gun = ["railroad gun"]
+        if any(g in display_name.lower() for g in railroad_gun):
+            return "tech_square_railroad_gun"
 
         # Check for landkreuzer p.1000 ratte
         landkreuzer = ["landkreuzer p.1000 ratte"]

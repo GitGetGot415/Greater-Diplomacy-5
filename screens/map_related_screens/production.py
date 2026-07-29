@@ -267,11 +267,7 @@ class Production_Screen(GameState):
                     continue
 
                 highest_unlocked = None
-                tech_key = group_name.lower().replace(" ", "_")
-                
-                # Patch for motorized/mechanized types
-                if tech_key == "motorized_infantry_type": tech_key = "motorized_infantry"
-                if tech_key == "mechanized_infantry_type": tech_key = "mechanized_infantry"
+                tech_key = queries.get_unit_tech_key(group_name)
 
                 researched_lvl = player_research.get(tech_key, 0)
                 

@@ -76,6 +76,26 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.refresh_ui()
 
+    def fit_icon(self, icon, size_preset, padding=6):
+        """Shrinks an oversized unit sprite so it stays inside its button.
+
+        Unit art is drawn at roughly real-world scale, so a Railroad Gun or a
+        Battleship is many times the size of an infantryman and would otherwise
+        spill out over the neighbouring rows.
+        """
+        if not icon:
+            return icon
+
+        box_w, box_h = c.SIZES.get(size_preset, (50, 50))
+        box_w, box_h = box_w - padding, box_h - padding
+        w, h = icon.get_size()
+
+        if w <= box_w and h <= box_h:
+            return icon
+
+        ratio = min(box_w / w, box_h / h)
+        return pygame.transform.smoothscale(icon, (max(1, int(w * ratio)), max(1, int(h * ratio))))
+
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
         
@@ -118,8 +138,8 @@ class Orders_Screen(GameState):
                 unit_name = unit["type"]
                 
                 # Fetch the icon using the symbol_loader (zoom 1.5 is a standard starting scale)
-                unit_icon = symbol_loader.get_symbol(unit_name, zoom=1.5)
-                
+                unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=1.5), "medium_square")
+
                 # Create the button with the icon and set show_text=False
                 btn_sel = Button(100, y_pos, "medium_square", color, "", 
                                 lambda idx=i: self.select_unit(idx), 
@@ -349,7 +369,8 @@ class Orders_Screen(GameState):
             return
 
         unit = units[index]
-        in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province)
+        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+        in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province, bomb_range)
 
         if dest["id"] not in in_range:
             self.map_screen.show_feedback("Target out of bombardment range!")
@@ -795,18 +816,21 @@ class Orders_Screen(GameState):
                     surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
                     self.cancel_rects.append((cancel_rect, i))
 
-                    overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, force_visible=True)
+                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                    overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
 
             display_index += 1
 
         # --- Bombardment Targeting Preview ---
-        if self.bombarding_unit_index is not None:
-            in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province)
+        if self.bombarding_unit_index is not None and self.bombarding_unit_index < len(units):
+            aiming_unit = units[self.bombarding_unit_index]
+            bomb_range = queries.get_bombardment_range(aiming_unit.get("type", ""))
+            in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province, bomb_range)
             self.draw_target_markers(surface, self.target_province, in_range, (255, 200, 50))
 
             hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
             if hovered and hovered["id"] in in_range:
-                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, hovered["id"], alpha=160, force_visible=True)
+                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, hovered["id"], bomb_range, alpha=160, force_visible=True)
 
         # Hidden while aiming a barrage so the two previews don't fight over the same tiles
         if self.selected_unit_index is not None and self.bombarding_unit_index is None:

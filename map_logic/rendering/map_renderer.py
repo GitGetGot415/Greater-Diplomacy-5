@@ -148,7 +148,8 @@ def draw_map_screen(self, surface):
             if order.get("type") == "BOMBARD":
                 target_id = order.get("target_id")
                 if target_id is not None:
-                    overlay_renderer.draw_bombardment_arrow(surface, self, province, target_id, force_visible=force_vis)
+                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                    overlay_renderer.draw_bombardment_arrow(surface, self, province, target_id, bomb_range, force_visible=force_vis)
 
             elif order.get("type") == "MOVE":
                 path = order.get("path", [])

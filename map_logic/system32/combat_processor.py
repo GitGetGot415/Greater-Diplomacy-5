@@ -39,10 +39,11 @@ def process_bombardments(self):
                 continue
 
             target_id = order.get("target_id")
+            bomb_range = queries.get_bombardment_range(unit.get("type", ""))
 
             # Drop the order if the gun can no longer make the shot
-            if (not queries.can_bombard(unit.get("type", ""))
-                    or target_id not in queries.get_bombardment_targets(province, self.id_to_province)):
+            if (bomb_range <= 0
+                    or target_id not in queries.get_bombardment_targets(province, self.id_to_province, bomb_range)):
                 unit["order"] = {"type": "MOVE", "path": []}
                 continue
 

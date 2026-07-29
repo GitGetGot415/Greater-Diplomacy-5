@@ -422,6 +422,7 @@ SIZES = {
     "tech_square_medium": (100, 60),
     "tech_square_wide": (150, 60),
     "tech_square_ultra_wide": (270, 60),
+    "tech_square_railroad_gun": (270, 110),
     "tech_square_landkreuzer_p1000_ratte": (400, 120),
     "tech_square_landkreuzer_p1500_monster": (600, 180),
     "album_square": (200, 200),
@@ -597,14 +598,18 @@ MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
 # BOMBARDMENT
 # ==========================================
 
-# Base unit classes allowed to fire on a nearby tile instead of moving.
+# Base unit classes allowed to fire on a nearby tile instead of moving, mapped
+# to how many tiles their shells reach (1 = directly adjacent only).
 # Matched against queries.get_base_unit_name, so every level of the family counts.
-BOMBARDMENT_UNITS = ["Artillery"]
+BOMBARDMENT_UNITS = {
+    "Artillery": 1,
+    "Railroad Gun": 2
+}
 
-# How many tiles away a bombardment can reach (1 = directly adjacent only).
-BOMBARDMENT_RANGE = 1
+# Fallback range for anything that can bombard without a listed range.
+DEFAULT_BOMBARDMENT_RANGE = 1
 
-# Scale of the Bombardment Arrows sprite drawn between the gun and its target.
+# Scale of the barrage sprite drawn between the gun and its target.
 BOMBARDMENT_ARROW_SCALE = 1.0
 
 # ==========================================
@@ -625,6 +630,15 @@ ICON_TRAINING = "Training"
 ICON_CONSTRUCTION = "Hammer"
 ICON_DISBANDING = "Disbanding"
 ICON_BOMBARDMENT = "Bombardment Arrows"
+ICON_BOMBARDMENT_LONG = "Long Range Bombardment Arrows"
+
+# Barrage sprite keyed by the firing unit's range. The highest key at or below
+# the unit's range wins, so longer-ranged guns added later reuse the long art.
+BOMBARDMENT_ARROW_ICONS = {
+    1: ICON_BOMBARDMENT,
+    2: ICON_BOMBARDMENT_LONG
+}
+
 OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
@@ -634,6 +648,21 @@ SYMBOL_BASE_SCALES = {
     "Mechanized Infantry": 0.4,
     "Cavalry": 0.8,
     "Militia": 0.8,
+}
+
+# Base unit classes that belong to the TANKS column despite not having
+# "Tank" or "Armored Car" in their name (see queries.get_ordered_unit_groups).
+TANK_GROUP_EXTRAS = [
+    "Railroad Gun",
+    "Landkreuzer P.1000 Ratte",
+    "Landkreuzer P.1500 Monster"
+]
+
+# Unit classes whose research key isn't just their lowercased name (see
+# queries.get_unit_tech_key). The "Type" suffix is part of the unit name only.
+UNIT_TECH_KEY_OVERRIDES = {
+    "motorized_infantry_type": "motorized_infantry",
+    "mechanized_infantry_type": "mechanized_infantry"
 }
 
 LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]

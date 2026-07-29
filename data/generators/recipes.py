@@ -204,6 +204,12 @@ UNIT_SECTIONS = [
             "speed": const(2), "cost_materials": const(15000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
+        # Siege piece: reaches 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
+        UnitFamily("Railroad Gun", roman_suffixes(5), {
+            "health": linear(1200, 200), "attack": linear(500, 100), "defense": const(0),
+            "speed": const(1), "cost_materials": const(12000), "cost_manpower": const(1000),
+            "cost_fuel": const(0), "production_time": const(6),
+        }),
     ],
     [
         UnitFamily("Dreadnought", single(), {
@@ -370,6 +376,8 @@ RESEARCH_SECTIONS = [
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),
+        ("railroad_gun", {"category": "TANKS", "max_lvl": 5, "cost": 2400,
+                           "req": {"ww1_tank": 1}, "years": years_range(1918, 5, 5)}),
     ],
     [
         ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {},
