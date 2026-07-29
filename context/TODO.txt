@@ -15,6 +15,8 @@ Immediate concerns:
 
 - super heavy tanks
 
+- ai accepts millitary access if fighting the same enemies in a war
+- revokes access once war is over
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - web version? (tkinter will have to be edited...)

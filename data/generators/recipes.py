@@ -350,7 +350,7 @@ RESEARCH_SECTIONS = [
         ("super_heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
                                 "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 3)}),
         ("landkreuzer", {"category": "TANKS", "max_lvl": 2, "cost": 3600,
-                                        "req": {"heavy_tank": 4}, "years": years_range(1945, 5, 2)}),
+                                        "req": {"heavy_tank": 4}, "years": years_range(1944, 6, 2)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),
