@@ -13,10 +13,15 @@ Immediate concerns:
 
 - slider volume specifically?
 
-- super heavy tanks
+- artillery PLEASE so as to deal with deathstacks
+- oh my god schverer gustav gun
 
+- KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war
 - revokes access once war is over
+- exiled armies mechanic like how it works in eu4 so if an army is in someone's land but doesn't have millitary access then said army automatically queues up moves to pathfind back to friendly territory
+- gurella units? (kaiserin's suggestion)
+
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - web version? (tkinter will have to be edited...)
@@ -25,7 +30,6 @@ Immediate concerns:
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
 
-- gurella units? (kaiserin's suggestion)
 
 - specific starting music you can choose for when you first load in the game
 

@@ -182,10 +182,15 @@ UNIT_SECTIONS = [
                     "speed": const(1), "cost_materials": const(16000), "cost_manpower": const(1000),
                     "cost_fuel": const(200), "production_time": const(6),
         }),
-        UnitFamily("Landkreuzer", roman_suffixes(2), {
-            "health": linear(10000, 2000), "attack": linear(6000, 1000), "defense": linear(800, 100),
-            "speed": const(1), "cost_materials": const(100000), "cost_manpower": const(2000),
-            "cost_fuel": const(3000), "production_time": const(8),
+        UnitFamily("Landkreuzer P.1000 Ratte", single(), {
+            "health": 10000, "attack": 6000, "defense": 800,
+            "speed": 1, "cost_materials": 100000, "cost_manpower": 2000,
+            "cost_fuel": 3000, "production_time": 8,
+        }),
+        UnitFamily("Landkreuzer P.1500 Monster", single(), {
+            "health": 15000, "attack": 8000, "defense": 800,
+            "speed": 1, "cost_materials": 150000, "cost_manpower": 2000,
+            "cost_fuel": 3000, "production_time": 8,
         }),
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
             "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
@@ -349,8 +354,10 @@ RESEARCH_SECTIONS = [
                          "req": {"medium_tank": 1}, "years": years_range(1929, 4, 4)}),
         ("super_heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
                                 "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 3)}),
-        ("landkreuzer", {"category": "TANKS", "max_lvl": 2, "cost": 3600,
-                                        "req": {"heavy_tank": 4}, "years": years_range(1944, 6, 2)}),
+        ("landkreuzer_p1000_ratte", {"category": "TANKS", "max_lvl": 1, "cost": 3000,
+                                        "req": {"heavy_tank": 4}, "years": years_range(1944, 6, 1)}),
+        ("landkreuzer_p1500_monster", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
+                                                "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1952, 8, 1)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),

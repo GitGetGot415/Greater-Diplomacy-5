@@ -65,7 +65,7 @@ class Research_Screen(GameState):
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
-            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer": y5,
+            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y5, "landkreuzer_p1500_monster": y5,
             "destroyer": y1,
             "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,
             "battleship": y2,
@@ -151,6 +151,8 @@ class Research_Screen(GameState):
         if tech_key == "bergius_process": return "Bergius Process"
         if tech_key == "basic_factory": return "Basic Factory"
         if tech_key == "basic_recruitment": return "Basic Recruitment Center"
+        if tech_key == "landkreuzer_p1000_ratte": return "Landkreuzer P.1000 Ratte"
+        if tech_key == "landkreuzer_p1500_monster": return "Landkreuzer P.1500 Monster"
         if tech_key == "recruitment_buildings": return f"Recruitment Building Lvl {lvl}"
         if tech_key == "general_recruitment": return f"General Recruitment Lvl {lvl}"
         if tech_key == "resource_refining": return f"Resource Refining Lvl {lvl}"
@@ -241,10 +243,15 @@ class Research_Screen(GameState):
         if any(tank in display_name.lower() for tank in small_vehicles):
             return "tech_square_medium"
 
-        # Check for landkreuzer
-        landkreuzer = ["landkreuzer"]
+        # Check for landkreuzer p.1000 ratte
+        landkreuzer = ["landkreuzer p.1000 ratte"]
         if any(tank in display_name.lower() for tank in landkreuzer):
-            return "tech_square_landkreuzer"
+            return "tech_square_landkreuzer_p1000_ratte"
+
+        # Check for landkreuzer p.1500 monster
+        landkreuzer2 = ["landkreuzer p.1500 monster"]
+        if any(tank in display_name.lower() for tank in landkreuzer2):
+            return "tech_square_landkreuzer_p1500_monster"
         
         # Check for wide categories
         if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]):
