@@ -8,8 +8,7 @@ Immediate concerns:
 - integrated puppets transfer everything to their master unless they capture territories they have a core on, and their master doesn't have a core on it
 - or maybe it could be that if a country captures territory that one of their integrated puppets has a core on, that land is automatically transferred to them
 
-- in what order are puppets that you control shown when viewed through the puppets screen? could you make it so you can rearrange the order they're displayed in?
-- when viewing claims you're unable to scroll down by clicking the scroll bar, you have you scroll using the mouse wheel, could this be fixed so you can click to scroll in that situation
+- looks like you can hit neutral armies or your own armies with artillery (keep or remove? it is kinda funny tbh but idk)
 
 - slider volume specifically?
 
@@ -26,7 +25,6 @@ Immediate concerns:
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
-
 
 - specific starting music you can choose for when you first load in the game
 

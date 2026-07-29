@@ -996,15 +996,28 @@ class Puppets_Screen(MapOverlayScreen):
         
 
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
-        
+
         y_pos = self.panel_rect.y + 100 + self.scroll_y
-        for p in puppets:
+        for idx, p in enumerate(puppets):
             p_data = self.map_screen.nation_data.get(p, {})
             p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
             siphon = p_data.setdefault("siphon_rates", {"manpower": 0.0, "materials": 0.0, "fuel": 0.0})
-            
+
             pending_action, _ = queries.get_diplomatic_status(self.player, p, self.map_screen.nation_data)
-            
+
+            # Reorder Arrows
+            btn_up = Button(self.panel_rect.x + 15, y_pos, "tiny_square", "blue", "^", lambda i=idx: self.move_puppet(i, -1), font_preset="normal")
+            if idx == 0:
+                btn_up.disabled = True
+                btn_up.color, btn_up.hover_color = c.UI_COLORS["grey"]
+            self.elements.append(btn_up)
+
+            btn_down = Button(self.panel_rect.x + 15, y_pos + 35, "tiny_square", "blue", "v", lambda i=idx: self.move_puppet(i, 1), font_preset="normal")
+            if idx == len(puppets) - 1:
+                btn_down.disabled = True
+                btn_down.color, btn_down.hover_color = c.UI_COLORS["grey"]
+            self.elements.append(btn_down)
+
             rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
             rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
             btn_release = Button(self.panel_rect.x + 750, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
@@ -1053,6 +1066,13 @@ class Puppets_Screen(MapOverlayScreen):
 
     def set_siphon(self, puppet, res, slider_val):
         self.map_screen.nation_data[puppet]["siphon_rates"][res] = slider_val
+
+    def move_puppet(self, index, direction):
+        puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
+        new_index = index + direction
+        if 0 <= new_index < len(puppets):
+            puppets[index], puppets[new_index] = puppets[new_index], puppets[index]
+        self.refresh_ui()
 
     def edit_puppet(self, puppet):
         self.map_screen.editing_country = puppet
@@ -1112,8 +1132,8 @@ class Puppets_Screen(MapOverlayScreen):
                 name_txt = font_body.render(p_name, True, (255, 255, 255))
                 type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
                 
-                surface.blit(name_txt, (self.panel_rect.x + 20, y_pos))
-                surface.blit(type_txt, (self.panel_rect.x + 20, y_pos + 30))
+                surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
+                surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
                 
                 # Show exact siphoned amounts below sliders
                 if p_type == c.PUPPET_TYPE_INTEGRATED:

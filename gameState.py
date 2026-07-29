@@ -173,8 +173,19 @@ class MapOverlayScreen(GameState):
         return any(r and r.collidepoint(pos) for r in rects)
 
     def additional_events(self, event):
+        # Scrollbar grab/drag/release always takes priority over camera panning,
+        # so click-to-scroll works the same way it does on the standalone menu screens.
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
+            if self.handle_list_scroll(event):
+                return
+
         if event.type not in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
             return
+
+        if event.type == pygame.MOUSEMOTION and getattr(self, "is_dragging_scrollbar", False):
+            self.handle_list_scroll(event)
+            return
+
         on_ui = self.is_over_ui()
         if event.type == pygame.MOUSEWHEEL and (on_ui or self.scroll_anywhere):
             self.scroll_by(event)

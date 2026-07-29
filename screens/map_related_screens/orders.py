@@ -486,7 +486,12 @@ class Orders_Screen(GameState):
                     if rect.collidepoint(event.pos):
                         self.cancel_unit_order(idx)
                         return
-            
+
+            # --- Scrollbar click/drag (grab the handle or jump via the track) ---
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
+                if self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y"):
+                    return
+
             # --- Handle Mousewheel Scrolling ---
             if event.type == pygame.MOUSEWHEEL:
                 # Only scroll if mouse is over the orders panel
@@ -510,8 +515,13 @@ class Orders_Screen(GameState):
             self.additional_events(event)
 
     def additional_events(self, event):
+        # Dragging the scrollbar handle takes priority over camera panning/hover.
+        if event.type == pygame.MOUSEMOTION and getattr(self, "is_dragging_scrollbar", False):
+            self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y")
+            return
+
         mx, my = pygame.mouse.get_pos()
-        
+
         # --- Block clicks inside the Orders Panel ---
         # Define the panel area
         panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
