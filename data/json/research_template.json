@@ -13,6 +13,8 @@
     "light_tank": { "category": "TANKS", "max_lvl": 24, "cost": 2400, "req": {"ww1_tank": 1}, "years": [1918, 1922, 1926, 1930, 1934, 1938, 1942, 1946, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
     "medium_tank": { "category": "TANKS", "max_lvl": 4, "cost": 2400, "req": {"light_tank": 1}, "years": [1925, 1930, 1935, 1940] },
     "heavy_tank": { "category": "TANKS", "max_lvl": 4, "cost": 2400, "req": {"medium_tank": 1}, "years": [1929, 1933, 1937, 1941] },
+    "super_heavy_tank": { "category": "TANKS", "max_lvl": 3, "cost": 2400, "req": {"heavy_tank": 4}, "years": [1945, 1949, 1953] },
+    "landkreuzer": { "category": "TANKS", "max_lvl": 2, "cost": 2400, "req": {"heavy_tank": 4}, "years": [1945, 1950] },
     "main_battle_tank": { "category": "TANKS", "max_lvl": 14, "cost": 2400, "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]}, "years": [1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010] },
     
     "dreadnought": { "category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {}, "years": [1910] },

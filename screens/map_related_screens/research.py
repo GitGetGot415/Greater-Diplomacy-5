@@ -65,7 +65,7 @@ class Research_Screen(GameState):
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
-            "heavy_tank": y4,
+            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer": y5,
             "destroyer": y1,
             "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,
             "battleship": y2,
