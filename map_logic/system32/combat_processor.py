@@ -65,7 +65,9 @@ def process_bombardments(self):
 
             # Every gun that aimed here contributes; unlike a stack fight this
             # isn't capped by combat width, since each shot was ordered by hand.
-            total_atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in guns)
+            # "bombard_attack" is a separate stat from melee "attack" (falls
+            # back to attack for any family that doesn't define it).
+            total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK)) for u in guns)
             apply_group_damage(total_atk, targets)
 
             for u in targets:

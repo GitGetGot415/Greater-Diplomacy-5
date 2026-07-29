@@ -158,7 +158,8 @@ class Research_Screen(GameState):
         if tech_key == "recruitment_buildings": return f"Recruitment Building Lvl {lvl}"
         if tech_key == "general_recruitment": return f"General Recruitment Lvl {lvl}"
         if tech_key == "resource_refining": return f"Resource Refining Lvl {lvl}"
-        
+        if tech_key == "artillery": return f"Artillery {lvl}"
+
         base_name = tech_key.replace('_', ' ').title()
         
         if tech_key in ["factory", "fuel_refining"]:

@@ -74,6 +74,10 @@ def roman_suffixes(count):
     return [c.ROMAN_NUMERALS[i] for i in range(1, count + 1)]
 
 
+def numeric_suffixes(count):
+    return [str(i) for i in range(1, count + 1)]
+
+
 def single():
     """One entry, no numbering suffix (name == prefix)."""
     return [None]
@@ -89,6 +93,13 @@ def years_range(start, step, count):
 
 UNIT_STAT_KEYS = ["health", "attack", "defense", "speed", "cost_materials",
                    "cost_manpower", "cost_fuel", "production_time"]
+
+# Stats only some families define. A family that omits a key here simply
+# doesn't get it written to its JSON entries, and combat code falls back to
+# the equivalent required stat (e.g. "bombard_attack" falls back to "attack").
+# This is how bombardment damage stays independently tunable per family
+# without forcing every non-bombarding family to carry an unused stat.
+OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack"]
 
 
 class UnitFamily:
@@ -106,6 +117,10 @@ class UnitFamily:
             for key in UNIT_STAT_KEYS:
                 gen = self.stats[key]
                 entry[key] = gen(i) if callable(gen) else gen
+            for key in OPTIONAL_UNIT_STAT_KEYS:
+                if key in self.stats:
+                    gen = self.stats[key]
+                    entry[key] = gen(i) if callable(gen) else gen
             entry["naval_unit"] = self.naval_unit
             entry["order"] = {}
             out.append((name, entry))
@@ -145,8 +160,13 @@ UNIT_SECTIONS = [
         }),
         # Fragile in a straight fight - its damage is meant to come from bombarding
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
-        UnitFamily("Artillery", roman_suffixes(51), {
-            "health": linear(100, 20), "attack": linear(50, 10), "defense": const(0),
+        # Uses plain numbers instead of Roman numerals for its level suffix.
+        UnitFamily("Artillery", numeric_suffixes(51), {
+            "health": linear(100, 20), "attack": linear(50, 10),
+            # Bombardment damage, tracked separately from melee "attack" so the
+            # two can be tuned independently. Currently mirrors attack 1:1.
+            "bombard_attack": linear(50, 10),
+            "defense": const(0),
             "speed": const(1), "cost_materials": const(2000), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
         }),
@@ -206,7 +226,11 @@ UNIT_SECTIONS = [
         }),
         # Siege piece: reaches 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
         UnitFamily("Railroad Gun", roman_suffixes(5), {
-            "health": linear(1200, 200), "attack": linear(150, 25), "defense": const(0),
+            "health": linear(1200, 200), "attack": linear(150, 25),
+            # Bombardment damage, tracked separately from melee "attack" so the
+            # two can be tuned independently. Currently mirrors attack 1:1.
+            "bombard_attack": linear(150, 25),
+            "defense": const(0),
             "speed": const(1), "cost_materials": const(12000), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(6),
         }),

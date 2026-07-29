@@ -282,12 +282,13 @@ class Production_Screen(GameState):
                         year = tech_years[min(researched_lvl - 1, len(tech_years)-1)]
                         highest_unlocked = f"{group_name} {year}"
                 else:
-                    # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
+                    # Handles Cavalry, Tanks, Navies, Militia (Roman numerals) and
+                    # Artillery (plain numbers) alike.
                     group_units = [(n, s) for n, s in self.unit_library.items() if queries.get_base_unit_name(n) == group_name]
                     highest_lvl = -1
                     for name, stats in group_units:
                         lvl_str = name.replace(group_name, "").strip()
-                        lvl = queries.roman_to_int(lvl_str)
+                        lvl = queries.parse_level_suffix(lvl_str)
                         required_research = max(1, lvl) 
                         if researched_lvl >= required_research:
                             if lvl > highest_lvl:
