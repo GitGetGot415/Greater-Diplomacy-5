@@ -605,7 +605,12 @@ MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
 BOMBARDMENT_UNITS = {
     "Artillery Type": 1,
     "WW1 Railroad Gun": 2,
-    "WW2 Railroad Gun": 2
+    "WW2 Railroad Gun": 2,
+    "Landkreuzer P.1000 Ratte": 1,
+    "Landkreuzer P.1500 Monster": 2,
+    "Dreadnought": 1,
+    "Battleship": 1,
+    "Aircraft Carrier": 2
 }
 
 # Fallback range for anything that can bombard without a listed range.
