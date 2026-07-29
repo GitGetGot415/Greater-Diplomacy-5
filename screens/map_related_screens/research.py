@@ -55,6 +55,7 @@ class Research_Screen(GameState):
         y3 = 340
         y4 = 410
         y5 = 480
+        y6 = 550
 
         self.tech_rows = {
             "infantry_type": y1,
@@ -66,8 +67,8 @@ class Research_Screen(GameState):
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
-            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y5, "landkreuzer_p1500_monster": y5,
-            "ww1_railroad_gun": y5, "ww2_railroad_gun": y5,
+            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y6, "landkreuzer_p1500_monster": y6,
+            "ww1_railroad_gun": y5, "ww2_railroad_gun": y6,
             "destroyer": y1,
             "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,
             "battleship": y2,
@@ -292,9 +293,15 @@ class Research_Screen(GameState):
             
             # 2. Use our new helper to get the size
             btn_size = self.get_button_size(tech_key, display_name)
-            x_offset = c.SIZES.get(btn_size, (80, 80))[0] // 2
-            
+            btn_w, btn_h = c.SIZES.get(btn_size, (80, 80))
+            x_offset = btn_w // 2
+
             base_x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) - x_offset
+            # Row's vertical center line is base_y + 30 (matches draw_connections'
+            # anchor, based on the standard 60px-tall button). Center every node on
+            # that line instead of always dropping its top at base_y, so taller
+            # buttons (railroad guns, landkreuzers, ...) don't hang below the row.
+            node_y = (base_y + 30) - (btn_h // 2)
             
             # ... (Rest of your existing logic for status, color, and icon)
             cur_lvl = res_levels.get(tech_key, 0)
@@ -336,7 +343,7 @@ class Research_Screen(GameState):
                 "target_year": year
             }
             
-            btn = Button(base_x + self.scroll_x, base_y, btn_size, btn_color, display_name, 
+            btn = Button(base_x + self.scroll_x, node_y, btn_size, btn_color, display_name,
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
             
             btn.base_x = base_x
