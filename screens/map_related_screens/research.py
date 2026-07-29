@@ -240,6 +240,11 @@ class Research_Screen(GameState):
         small_vehicles = ["civilian car", "armored car", "light tank i", "light tank v", "medium tank"]
         if any(tank in display_name.lower() for tank in small_vehicles):
             return "tech_square_medium"
+
+        # Check for landkreuzer
+        landkreuzer = ["landkreuzer"]
+        if any(tank in display_name.lower() for tank in landkreuzer):
+            return "tech_square_landkreuzer"
         
         # Check for wide categories
         if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]):

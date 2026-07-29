@@ -422,6 +422,7 @@ SIZES = {
     "tech_square_medium": (100, 60),
     "tech_square_wide": (150, 60),
     "tech_square_ultra_wide": (270, 60),
+    "tech_square_landkreuzer": (250, 80),
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),
