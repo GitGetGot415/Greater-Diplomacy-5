@@ -256,33 +256,33 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Dreadnought", single(), {
-            "health": 1000, "attack": 600, "defense": 100, "speed": 1,
-            "bombard_attack": 100,
+            "health": 2000, "attack": 1200, "defense": 200, "speed": 1,
+            "bombard_attack": 150,
             "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Battleship", single(), {
-            "health": 1500, "attack": 1000, "defense": 150, "speed": 1,
-            "bombard_attack": 150,
+            "health": 3000, "attack": 2000, "defense": 300, "speed": 1,
+            "bombard_attack": 250,
             "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Destroyer", roman_suffixes(26), {
-            "health": linear(600, 100), "attack": linear(300, 100), "defense": linear(60, 10),
+            "health": linear(1200, 200), "attack": linear(600, 200), "defense": linear(100, 10),
             "speed": const(1), "cost_materials": const(10000), "cost_manpower": const(1000),
             "cost_fuel": const(300), "production_time": const(8),
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
-            "health": linear(300, 50),
-            # attack climbs 150/level through IX, jumps to 2000 at X, then 100/level
-            "attack": piecewise([(0, 600, 150), (9, 2000, 100)]),
-            "defense": linear(30, 5),
+            "health": linear(600, 100),
+            # attack climbs 300/level through IX, jumps to 4000 at X, then 100/level
+            "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
+            "defense": const(0),
             "speed": const(1), "cost_materials": const(8000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
-            "health": linear(200, 100), "attack": linear(200, 50), "defense": linear(100, 10),
-            "bombard_attack": linear(200, 20),
+            "health": linear(400, 200), "attack": linear(400, 100), "defense": linear(100, 10),
+            "bombard_attack": linear(300, 40),
             "speed": const(1), "cost_materials": const(20000), "cost_manpower": const(2000),
             "cost_fuel": const(500), "production_time": const(10),
         }, naval_unit=True),
