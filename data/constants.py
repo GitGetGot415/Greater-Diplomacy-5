@@ -594,6 +594,20 @@ MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
 
 # ==========================================
+# BOMBARDMENT
+# ==========================================
+
+# Base unit classes allowed to fire on a nearby tile instead of moving.
+# Matched against queries.get_base_unit_name, so every level of the family counts.
+BOMBARDMENT_UNITS = ["Artillery"]
+
+# How many tiles away a bombardment can reach (1 = directly adjacent only).
+BOMBARDMENT_RANGE = 1
+
+# Scale of the Bombardment Arrows sprite drawn between the gun and its target.
+BOMBARDMENT_ARROW_SCALE = 1.0
+
+# ==========================================
 # CONVOY & TRUCK LOGIC
 # ==========================================
 
@@ -610,6 +624,7 @@ TRUCK_CONVERT_TURNS = 3
 ICON_TRAINING = "Training"
 ICON_CONSTRUCTION = "Hammer"
 ICON_DISBANDING = "Disbanding"
+ICON_BOMBARDMENT = "Bombardment Arrows"
 OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 

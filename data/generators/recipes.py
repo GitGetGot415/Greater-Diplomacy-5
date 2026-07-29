@@ -143,6 +143,13 @@ UNIT_SECTIONS = [
             "speed": const(1), "cost_materials": const(300), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(1),
         }),
+        # Fragile in a straight fight - its damage is meant to come from bombarding
+        # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
+        UnitFamily("Artillery", roman_suffixes(51), {
+            "health": linear(100, 20), "attack": linear(50, 10), "defense": const(0),
+            "speed": const(1), "cost_materials": const(2000), "cost_manpower": const(500),
+            "cost_fuel": const(0), "production_time": const(3),
+        }),
     ],
     [
         UnitFamily("WW1 Tank", single(), {
@@ -328,6 +335,8 @@ RESEARCH_SECTIONS = [
                       "years": years_range(1910, 4, 5)}),
         ("militia", {"category": "INFANTRY", "max_lvl": 20, "cost": 600, "req": {},
                       "years": years_range(1910, 5, 20)}),
+        ("artillery", {"category": "INFANTRY", "max_lvl": 51, "cost": 900, "req": {},
+                        "years": years_range(1910, 2, 51)}),
         ("motorized_infantry", {"category": "INFANTRY", "max_lvl": 81, "cost": 900,
                                  "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 5},
                                  "years": years_range(1930, 1, 81)}),

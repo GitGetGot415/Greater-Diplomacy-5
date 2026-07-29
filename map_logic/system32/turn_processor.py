@@ -137,7 +137,8 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     print("[SYSTEM] Processing Queues (Deployments)...")
     economy_processor.process_queues(self)
 
-    # Pre-Movement Combat Mechanics 
+    # Pre-Movement Combat Mechanics
+    combat_processor.process_bombardments(self)
     combat_processor.process_pinning(self)
     combat_processor.process_meeting_engagements(self)
     

@@ -126,20 +126,33 @@ def draw_map_screen(self, surface):
     for province in self.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
-            if order and order.get("type") == "MOVE":
+            if not order:
+                continue
+
+            owner = unit.get("owner")
+
+            # Only show the arrows for the CURRENT player taking their turn!
+            is_current_player_unit = (owner == self.player_country)
+            is_spectator = self.player_country == "Spectator"
+
+            # Hide the arrows if it's not the current player's unit, the player isn't spectating,
+            # and the game isn't actively resolving AI/global turns.
+            if not is_current_player_unit and not is_spectator and not self.viewing_ai_moves:
+                continue
+
+            # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
+            # Fix for tactical mode: only force visible if it's the specific tactical unit
+            is_tactical = self.tactical_mode and self.player_unit
+            force_vis = (unit is self.player_unit) if is_tactical else is_current_player_unit
+
+            if order.get("type") == "BOMBARD":
+                target_id = order.get("target_id")
+                if target_id is not None:
+                    overlay_renderer.draw_bombardment_arrow(surface, self, province, target_id, force_visible=force_vis)
+
+            elif order.get("type") == "MOVE":
                 path = order.get("path", [])
                 if path:
-                    owner = unit.get("owner")
-                    
-                    # Only show the arrows for the CURRENT player taking their turn!
-                    is_current_player_unit = (owner == self.player_country)
-                    is_spectator = self.player_country == "Spectator"
-                    
-                    # Hide the arrows if it's not the current player's unit, the player isn't spectating,
-                    # and the game isn't actively resolving AI/global turns.
-                    if not is_current_player_unit and not is_spectator and not self.viewing_ai_moves:
-                        continue
-                        
                     speed = unit.get("speed", 1)
                     
                     # If we are resolving global turns (viewing_ai_moves), hide future queued moves 
@@ -151,12 +164,7 @@ def draw_map_screen(self, surface):
 
                     # Dynamically pull the color of the unit's owner (fallback to yellow)
                     owner_color = self.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
-                    
-                    # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
-                    # Fix for tactical mode: only force visible if it's the specific tactical unit
-                    is_tactical = self.tactical_mode and self.player_unit
-                    force_vis = (unit is self.player_unit) if is_tactical else is_current_player_unit
-                    
+
                     overlay_renderer.draw_split_movement_path(surface, self, province, path, speed, owner_color, force_visible=force_vis)
                             
     # --- LAYER 3.5: COUNTRY NAMES ---

@@ -20,6 +20,65 @@ def apply_group_damage(total_atk, target_units):
             
         u["health"] -= actual_dmg
 
+def process_bombardments(self):
+    """Resolves artillery fire on nearby tiles.
+
+    Runs before movement, so a unit that walks away this turn still eats the
+    shells first. Bombarding units hold position (they carry a BOMBARD order
+    instead of a MOVE one) and take no return fire.
+    """
+    # Collect every barrage before resolving any of them so the damage is
+    # simultaneous - two guns shelling each other's tiles both get to fire.
+    barrages = {}
+    firing_units = []
+
+    for province in self.map_data.values():
+        for unit in province.get("units", []):
+            order = unit.get("order")
+            if not isinstance(order, dict) or order.get("type") != "BOMBARD":
+                continue
+
+            target_id = order.get("target_id")
+
+            # Drop the order if the gun can no longer make the shot
+            if (not queries.can_bombard(unit.get("type", ""))
+                    or target_id not in queries.get_bombardment_targets(province, self.id_to_province)):
+                unit["order"] = {"type": "MOVE", "path": []}
+                continue
+
+            barrages.setdefault(target_id, {}).setdefault(unit["owner"], []).append(unit)
+            firing_units.append(unit)
+
+    if not firing_units:
+        return
+
+    for target_id, guns_by_owner in barrages.items():
+        target_prov = self.id_to_province.get(target_id)
+        if not target_prov: continue
+
+        for owner, guns in guns_by_owner.items():
+            targets = [u for u in target_prov.get("units", [])
+                       if queries.are_at_war(owner, u.get("owner"), self.nation_data)]
+            if not targets:
+                continue
+
+            # Every gun that aimed here contributes; unlike a stack fight this
+            # isn't capped by combat width, since each shot was ordered by hand.
+            total_atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in guns)
+            apply_group_damage(total_atk, targets)
+
+            for u in targets:
+                u["_in_combat_this_turn"] = True
+
+    # Clear the casualties out before movement and combat run
+    for province in self.map_data.values():
+        if province.get("units"):
+            province["units"] = [u for u in province["units"] if u.get("health", 0) > 0]
+
+    # Guns stay put; the order has to be reissued next turn
+    for unit in firing_units:
+        unit["order"] = {"type": "MOVE", "path": []}
+
 def process_pinning(self):
     """Rule: Units being attacked from a tile must defend the tile they're on, unless moving to friendly territory."""
     incoming_attacks = {}

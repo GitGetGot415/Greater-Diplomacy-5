@@ -139,6 +139,59 @@ def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0,
             surface.blit(ellipse_surf, (int(sx) - radius_x, int(sy) - radius_y))
             pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*map_screen.camera.zoom)))
 
+def draw_bombardment_arrow(surface, map_screen, start_province, target_id, alpha=255, force_visible=False):
+    """Draws the Bombardment Arrows sprite pointing from a gun's tile at the tile it is shelling.
+
+    Movement uses a Line/Circle/Triangle chain because a path has many hops;
+    a barrage is a single short throw, so one rotated sprite sat between the two
+    tiles reads the direction on its own.
+    """
+    target_prov = map_screen.id_to_province.get(target_id)
+    if not target_prov: return
+
+    # --- FOG OF WAR VISIBILITY CHECK ---
+    if not force_visible and map_screen.visible_provinces is not None:
+        partial = getattr(map_screen, 'partial_visible_provinces', set()) or set()
+        allowed = map_screen.visible_provinces.union(partial)
+        if start_province["id"] not in allowed and target_id not in allowed:
+            return
+
+    cam = map_screen.camera
+    arrow_img = symbol_loader.get_symbol(c.ICON_BOMBARDMENT, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
+
+    p1 = list(start_province["center"])
+    p2 = list(target_prov["center"])
+
+    # Account for map wrap to get the shortest continuous distance
+    p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+
+    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+
+    for offset in offsets:
+        start_pos = queries.world_to_screen(p1, map_screen, offset)
+        end_pos = queries.world_to_screen(p2, map_screen, offset)
+
+        mid = ((start_pos[0] + end_pos[0]) / 2, (start_pos[1] + end_pos[1]) / 2)
+
+        # Culling
+        if mid[0] < -50 or mid[0] > surface.get_width() + 50:
+            continue
+
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        angle = math.degrees(math.atan2(-dy, dx))
+
+        if arrow_img:
+            rotated = pygame.transform.rotate(arrow_img, angle)
+            if alpha < 255:
+                rotated = rotated.copy()
+                rotated.set_alpha(alpha)
+            rotated = map_utils.apply_tilt(rotated, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+            surface.blit(rotated, rotated.get_rect(center=mid))
+        else:
+            # Fallback until Bombardment Arrows.png is present
+            pygame.draw.line(surface, (255, 200, 0), start_pos, end_pos, max(2, int(3 * cam.zoom)))
+
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
     if not path_ids: return

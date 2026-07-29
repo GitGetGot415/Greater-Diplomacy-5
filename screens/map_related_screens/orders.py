@@ -15,7 +15,9 @@ from ui.bars import ui_bars
 class Orders_Screen(GameState):
     back_state = "MAP"
     PANEL_X = 80
-    PANEL_WIDTH = 600
+    # Wide enough to cover the whole button row (Bombard is the rightmost),
+    # so clicking a button never doubles as a click on the map underneath.
+    PANEL_WIDTH = 690
     PANEL_TRANSPARENCY = 255
     bottom_vanish_y = 20
 
@@ -24,12 +26,15 @@ class Orders_Screen(GameState):
         self.bg_color = (20, 20, 40)
         self.target_province = None
         self.map_screen = None
-        self.selected_unit_index = None 
+        self.selected_unit_index = None
         self.cancel_rects = []
-        
+
         self.renaming_unit_index = None
         self.rename_text = ""
-        
+
+        # Index of the unit currently waiting for the player to click a tile to shell
+        self.bombarding_unit_index = None
+
         self.scroll_y = 0
         self.max_scroll_y = 0
         self.row_height = 80
@@ -41,8 +46,9 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
-        self.scroll_y = 0 
-        
+        self.scroll_y = 0
+        self.bombarding_unit_index = None
+
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
         
@@ -67,6 +73,7 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
             return
         self.selected_unit_index = index
+        self.bombarding_unit_index = None
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -216,8 +223,25 @@ class Orders_Screen(GameState):
 
                 self.elements.append(btn_upgrade)
 
+                # Bombardment Button Logic
+                # Every unit shows the button so the option is discoverable; only the
+                # classes in c.BOMBARDMENT_UNITS (artillery) get a live one.
+                if order_type == "BOMBARD":
+                    btn_bombard = Button(x_pos + 385, y_pos, "orders_panel_button_2", "red", "Cancel Bomb.", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
+                elif not queries.can_bombard(unit_name):
+                    btn_bombard = Button(x_pos + 385, y_pos, "orders_panel_button_2", "grey", "No Bombard", lambda: None, font_preset="normal")
+                elif self.bombarding_unit_index == i:
+                    btn_bombard = Button(x_pos + 385, y_pos, "orders_panel_button_2", "orange", "Pick Tile", lambda: self.cancel_bombard_targeting(), font_preset="normal")
+                else:
+                    btn_bombard = Button(x_pos + 385, y_pos, "orders_panel_button_2", "yellow", "Bombard", lambda idx=i: self.start_bombard_targeting(idx), font_preset="normal")
+
+                if not queries.can_bombard(unit_name):
+                    btn_bombard.disabled = True
+
+                self.elements.append(btn_bombard)
+
                 if is_tactical_other:
-                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename]:
+                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard]:
                         b.disabled = True
                         b.color = b.hover_color = c.UI_COLORS["grey"]
             
@@ -301,6 +325,42 @@ class Orders_Screen(GameState):
         self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
         self.refresh_ui()
 
+    def start_bombard_targeting(self, index):
+        """Arms a gun and waits for the player to click the tile it should shell."""
+        units = self.target_province.get("units", [])
+        if not (0 <= index < len(units)): return
+
+        if self.map_screen.tactical_mode and units[index] is not self.map_screen.player_unit:
+            self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
+            return
+
+        self.bombarding_unit_index = index
+        self.map_screen.show_feedback("Select a tile within range to bombard.")
+        self.refresh_ui()
+
+    def cancel_bombard_targeting(self):
+        self.bombarding_unit_index = None
+        self.refresh_ui()
+
+    def set_bombard_target(self, index, dest):
+        units = self.target_province.get("units", [])
+        if not (0 <= index < len(units)):
+            self.bombarding_unit_index = None
+            return
+
+        unit = units[index]
+        in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province)
+
+        if dest["id"] not in in_range:
+            self.map_screen.show_feedback("Target out of bombardment range!")
+            return
+
+        # A gun that is firing stays put, so any queued movement is dropped
+        unit["order"] = {"type": "BOMBARD", "target_id": dest["id"]}
+        self.bombarding_unit_index = None
+        self.map_screen.show_feedback(f"Bombarding Province {dest['id']} (cannot move this turn)")
+        self.refresh_ui()
+
     def disband_unit(self, index):
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
@@ -361,7 +421,8 @@ class Orders_Screen(GameState):
     def clear_all_orders(self):
         units = self.target_province.get("units", [])
         cleared_any = False
-        
+        self.bombarding_unit_index = None
+
         for unit in units:
             if unit.get("owner") == self.map_screen.player_country:
                 if "order" in unit:
@@ -379,6 +440,13 @@ class Orders_Screen(GameState):
         if cleared_any:
             self.map_screen.show_feedback("All orders cleared")
             self.refresh_ui()
+
+    def handle_back_key(self):
+        # Escape drops a pending bombardment target before it leaves the screen.
+        if self.bombarding_unit_index is not None:
+            self.cancel_bombard_targeting()
+        else:
+            self.exit_screen()
 
     def handle_events(self, events):
         for event in events:
@@ -449,6 +517,17 @@ class Orders_Screen(GameState):
             else:
                 self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
 
+        # --- Bombardment Target Click ---
+        # Takes priority over move orders while a gun is armed
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.bombarding_unit_index is not None:
+            if panel_rect.collidepoint(event.pos):
+                return
+
+            dest = queries.get_clicked_province(event.pos, self.map_screen)
+            if dest:
+                self.set_bombard_target(self.bombarding_unit_index, dest)
+            return
+
         # --- Standard Order Placement Click ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
             # If the click is inside the panel, ignore it completely
@@ -490,8 +569,8 @@ class Orders_Screen(GameState):
 
             if not target_units: return
 
-            if any(isinstance(u.get("order"), dict) and u["order"].get("type") in ["CONVERT", "DISBAND", "REPAIR"] for u in target_units):
-                self.map_screen.show_feedback("Cannot move while converting, disbanding, or repairing!")
+            if any(isinstance(u.get("order"), dict) and u["order"].get("type") in ["CONVERT", "DISBAND", "REPAIR", "BOMBARD"] for u in target_units):
+                self.map_screen.show_feedback("Cannot move while converting, disbanding, repairing, or bombarding!")
                 return
             
             for unit in target_units:
@@ -598,8 +677,33 @@ class Orders_Screen(GameState):
             
         return True
 
+    def draw_target_markers(self, surface, origin_node, prov_ids, color):
+        """Rings every tile the player is currently allowed to click (move steps or bombard targets)."""
+        for p_id in prov_ids:
+            prov = self.map_screen.id_to_province.get(p_id)
+            if not prov:
+                continue
+
+            cx, cy = list(prov["center"])
+
+            # Account for map wrap to get the shortest distance
+            if self.map_screen.loop_map:
+                world_dx = cx - origin_node["center"][0]
+                if world_dx > self.map_screen.map_w / 2:
+                    cx -= self.map_screen.map_w
+                elif world_dx < -self.map_screen.map_w / 2:
+                    cx += self.map_screen.map_w
+
+            # Loop the pathmaking circles so they draw on the seam
+            offsets = [0, -self.map_screen.map_w, self.map_screen.map_w] if self.map_screen.loop_map else [0]
+            for offset in offsets:
+                sx, sy = queries.world_to_screen([cx, cy], self.map_screen, offset)
+
+                if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
+                    pygame.draw.circle(surface, color, (int(sx), int(sy)), 12, 3)
+
     def additional_draw(self, surface):
-        if not self.map_screen or not self.target_province: 
+        if not self.map_screen or not self.target_province:
             return
 
         self.map_screen.draw_clean_map_background(surface)
@@ -680,9 +784,32 @@ class Orders_Screen(GameState):
                     # Split draw using the helper function
                     overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
 
+                elif order.get("type") == "BOMBARD":
+                    target_id = order.get("target_id")
+                    txt = small_font.render(f"BOMBARDING: {target_id}", True, (255, 200, 50))
+                    surface.blit(txt, (140, y_pos + self.row_height - 20))
+
+                    cancel_rect = pygame.Rect(100, y_pos + self.row_height - 25, 25, 25)
+                    pygame.draw.rect(surface, (150, 0, 0), cancel_rect)
+                    x_label = small_font.render("X", True, (255, 255, 255))
+                    surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
+                    self.cancel_rects.append((cancel_rect, i))
+
+                    overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, force_visible=True)
+
             display_index += 1
 
-        if self.selected_unit_index is not None:
+        # --- Bombardment Targeting Preview ---
+        if self.bombarding_unit_index is not None:
+            in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province)
+            self.draw_target_markers(surface, self.target_province, in_range, (255, 200, 50))
+
+            hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
+            if hovered and hovered["id"] in in_range:
+                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, hovered["id"], alpha=160, force_visible=True)
+
+        # Hidden while aiming a barrage so the two previews don't fight over the same tiles
+        if self.selected_unit_index is not None and self.bombarding_unit_index is None:
             if self.selected_unit_index == "ALL":
                 # Find the first player unit to act as the reference for drawing the path preview
                 active_unit = player_units[0] if player_units else None
@@ -698,27 +825,7 @@ class Orders_Screen(GameState):
                     last_node = self.map_screen.id_to_province.get(active_path[-1])
 
                 if last_node:
-                    for n_id in last_node["neighbors"]:
-                        neighbor = self.map_screen.id_to_province.get(n_id)
-                        if neighbor:
-                            cam = self.map_screen.camera
-                            cx, cy = list(neighbor["center"])
-                            
-                            # Account for map wrap to get the shortest distance
-                            if self.map_screen.loop_map:
-                                world_dx = cx - last_node["center"][0]
-                                if world_dx > self.map_screen.map_w / 2:
-                                    cx -= self.map_screen.map_w
-                                elif world_dx < -self.map_screen.map_w / 2:
-                                    cx += self.map_screen.map_w
-
-                            # Loop the green pathmaking circles so they draw on the seam
-                            offsets = [0, -self.map_screen.map_w, self.map_screen.map_w] if self.map_screen.loop_map else [0]
-                            for offset in offsets:
-                                sx, sy = queries.world_to_screen([cx, cy], self.map_screen, offset)
-                                
-                                if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
-                                    pygame.draw.circle(surface, (0, 255, 0), (int(sx), int(sy)), 12, 3)
+                    self.draw_target_markers(surface, last_node, last_node["neighbors"], (0, 255, 0))
 
                     mouse_pos = pygame.mouse.get_pos()
                     hovered = queries.get_clicked_province(mouse_pos, self.map_screen)

@@ -62,6 +62,7 @@ class Research_Screen(GameState):
             "mechanized_infantry": y3,
             "cavalry": y2,
             "militia": y4,
+            "artillery": y5,
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,

@@ -1671,6 +1671,36 @@ def is_naval_unit(unit_type):
     stats = get_unit_library().get(unit_type, {})
     return stats.get("naval_unit", False)
 
+def can_bombard(unit_type):
+    """Returns True if this unit class can shell a nearby tile instead of moving.
+
+    Matched on the base class name so every level of the family qualifies, while
+    a unit loaded onto a Convoy/Truck ("Convoy (Artillery III)") does not."""
+    return get_base_unit_name(unit_type) in c.BOMBARDMENT_UNITS
+
+def get_bombardment_targets(province, id_to_province, max_range=None):
+    """Returns the set of province ids a gun sitting on this tile can shell."""
+    if max_range is None:
+        max_range = c.BOMBARDMENT_RANGE
+
+    in_range = set()
+    visited = {province["id"]}
+    frontier = [province["id"]]
+
+    for _ in range(max(0, max_range)):
+        next_frontier = []
+        for pid in frontier:
+            prov = id_to_province.get(pid)
+            if not prov: continue
+            for n_id in prov.get("neighbors", []):
+                if n_id in visited: continue
+                visited.add(n_id)
+                next_frontier.append(n_id)
+                in_range.add(n_id)
+        frontier = next_frontier
+
+    return in_range
+
 def get_ordinal(n):
     """Returns the ordinal string for an integer."""
     if 11 <= (n % 100) <= 13:
