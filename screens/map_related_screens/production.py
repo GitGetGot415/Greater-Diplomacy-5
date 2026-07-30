@@ -20,13 +20,13 @@ ROW_STEP_Y = 40
 SECTION_SPACING = 60
 
 BAR_OFFSET_X = 140
-BAR_WIDTH = 550
+BAR_WIDTH = 570
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
 
 # Coloured section panels drawn behind each group of rows
 PANEL_X = 30
-PANEL_WIDTH = 840
+PANEL_WIDTH = 750
 PANEL_PAD_TOP = 15
 PANEL_LABEL_X = 40
 PANEL_LABEL_OFFSET_Y = -45
@@ -343,8 +343,15 @@ class Production_Screen(GameState):
             self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
             y_offset += ROW_STEP_Y
 
+        def unit_speed_sort_key(unit_name):
+            # Fastest-to-build units float to the top of their category;
+            # materials cost is the tiebreaker when build time is equal.
+            stats = self.unit_library.get(unit_name, {})
+            return (stats.get('production_time', 0), stats.get('cost_materials', 0))
+
         def process_unit_groups(groups, btn_color):
             nonlocal y_offset
+            unlocked_units = []
             for group_name in groups:
                 if queries.is_unit_obsolete(group_name, player_research):
                     continue
@@ -378,7 +385,10 @@ class Production_Screen(GameState):
                                 highest_unlocked = name
 
                 if highest_unlocked:
-                    render_unit_button(highest_unlocked, btn_color)
+                    unlocked_units.append(highest_unlocked)
+
+            for unit_name in sorted(unlocked_units, key=unit_speed_sort_key):
+                render_unit_button(unit_name, btn_color)
 
         self.infantry_start_y = y_offset
         process_unit_groups(self.infantry_groups, "green")
@@ -420,7 +430,7 @@ class Production_Screen(GameState):
         self._add_scroll_button(x_pos, y_offset, manage_color, "Edit Custom Units", manage_cb)
         y_offset += ROW_STEP_Y
 
-        for unit_name in sorted(custom_units):
+        for unit_name in sorted(custom_units, key=unit_speed_sort_key):
             render_unit_button(unit_name, "yellow")
 
         self.custom_end_y = y_offset

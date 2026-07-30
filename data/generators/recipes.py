@@ -146,10 +146,8 @@ UNIT_SECTIONS = [
         }),
         UnitFamily("Mechanized Infantry Type", year_suffixes(1940, 71), {
             "health": linear(2500, 50), "attack": linear(400, 10), "defense": linear(100, 5),
-            "speed": const(2),
-            # material cost drops from 2000 to 1000 starting the 2001 model (index 61)
-            "cost_materials": piecewise([(0, 2000, 0), (61, 1000, 0)]),
-            "cost_manpower": const(1000), "cost_fuel": const(50), "production_time": const(3),
+            "speed": const(2), "cost_materials": const(2000), "cost_manpower": const(1000),
+            "cost_fuel": const(50), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),
@@ -243,13 +241,13 @@ UNIT_SECTIONS = [
             # two can be tuned independently. Currently mirrors attack 1:1.
             "bombard_attack": 150,
             "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 6,
+            "cost_fuel": 0, "production_time": 8,
         }),
         UnitFamily("WW2 Railroad Gun", single(), {
             "health": 2000, "attack": 250,
             "bombard_attack": 250,
             "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 6,
+            "cost_fuel": 0, "production_time": 8,
         }),
     ],
     [
