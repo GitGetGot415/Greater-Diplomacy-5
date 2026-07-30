@@ -1150,6 +1150,49 @@ def calculate_all_economies(map_data, nation_data):
 
     return econ_data
 
+_NUMBER_ABBREV_TIERS = [
+    (1_000_000_000_000, "T"),
+    (1_000_000_000, "B"),
+    (1_000_000, "M"),
+    (1_000, "K"),
+]
+
+def format_number(value):
+    """Abbreviates a number to at most 3 significant digits (e.g. 1543 -> '1.54K',
+    1234567 -> '1.23M'). Used for in-game resource/unit displays; economy screens
+    that need exact figures should format their own values instead of calling this."""
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+
+    sign = "-" if num < 0 else ""
+    num = abs(num)
+
+    if num < 1000:
+        return f"{sign}{int(round(num))}"
+
+    divisor, suffix = next(d_s for d_s in _NUMBER_ABBREV_TIERS if num >= d_s[0])
+    scaled = num / divisor
+    decimals = 0 if scaled >= 100 else (1 if scaled >= 10 else 2)
+    scaled = round(scaled, decimals)
+
+    # Rounding can push into the next tier (e.g. 999.995K -> "1000K"); bump up
+    # a tier when one exists. The top tier (T) has none, so it just grows digits,
+    # e.g. "1000T", as intended once numbers run past the trillions.
+    if scaled >= 1000 and suffix != "T":
+        idx = next(i for i, d_s in enumerate(_NUMBER_ABBREV_TIERS) if d_s[1] == suffix)
+        divisor, suffix = _NUMBER_ABBREV_TIERS[idx - 1]
+        scaled = num / divisor
+        decimals = 0 if scaled >= 100 else (1 if scaled >= 10 else 2)
+        scaled = round(scaled, decimals)
+
+    text = f"{scaled:.{decimals}f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+
+    return f"{sign}{text}{suffix}"
+
 def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
     is_tactical = map_screen.tactical_mode and map_screen.player_unit
@@ -1196,12 +1239,12 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
 
     def fmt_net(inc, exp):
         net = int(inc - exp)
-        return f" (+{net})" if net >= 0 else f" ({net})"
+        return f" (+{format_number(net)})" if net >= 0 else f" ({format_number(net)})"
 
     hud_strings = []
     for res_key, name, color, p_val in res_order:
         net_str = fmt_net(total_inc.get(res_key, 0), total_upkeep.get(res_key, 0)) if include_net else ""
-        
+
         if is_tactical and target_nation == map_screen.player_country:
             if res_key == "manpower":
                 max_val = c.TACTICAL_MAX_MANPOWER
@@ -1209,10 +1252,10 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
                 max_val = c.TACTICAL_MAX_MATERIALS
             else:
                 max_val = c.TACTICAL_MAX_FUEL
-                
-            hud_strings.append((f"{name}: {p_val}/{int(max_val)}{net_str}", color))
+
+            hud_strings.append((f"{name}: {format_number(p_val)}/{format_number(int(max_val))}{net_str}", color))
         else:
-            hud_strings.append((f"{name}: {p_val}{net_str}", color))
+            hud_strings.append((f"{name}: {format_number(p_val)}{net_str}", color))
             
     return hud_strings
 

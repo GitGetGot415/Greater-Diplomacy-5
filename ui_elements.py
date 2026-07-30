@@ -404,7 +404,7 @@ def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, 
         if numeric == 0:
             continue
 
-        display_val = str(val)
+        display_val = queries.format_number(val)
         if is_yield and numeric > 0 and not display_val.startswith("+"):
             display_val = f"+{display_val}"
         entries.append((icon_name, display_val))
@@ -425,17 +425,17 @@ def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color, l
     """
     if labeled:
         stats = [
-            (c.ICON_ATTACK, f"ATK: {atk}"),
-            (c.ICON_DEFENSE, f"DEF: {df}"),
-            (c.ICON_HEALTH, f"HP: {hp}"),
-            (c.ICON_SPEED, f"SPD: {spd}"),
+            (c.ICON_ATTACK, f"ATK: {queries.format_number(atk)}"),
+            (c.ICON_DEFENSE, f"DEF: {queries.format_number(df)}"),
+            (c.ICON_HEALTH, f"HP: {queries.format_number(hp)}"),
+            (c.ICON_SPEED, f"SPD: {queries.format_number(spd)}"),
         ]
     else:
         stats = [
-            (c.ICON_ATTACK, str(atk)),
-            (c.ICON_DEFENSE, str(df)),
-            (c.ICON_HEALTH, str(hp)),
-            (c.ICON_SPEED, str(spd)),
+            (c.ICON_ATTACK, queries.format_number(atk)),
+            (c.ICON_DEFENSE, queries.format_number(df)),
+            (c.ICON_HEALTH, queries.format_number(hp)),
+            (c.ICON_SPEED, queries.format_number(spd)),
         ]
     if not df:
         stats.pop(1)
@@ -445,9 +445,9 @@ def draw_bombardment_stats(surface, font, dmg, rng, x, y, color, base_text="Bomb
     """Bombardment damage/range row.
     Caller is responsible for only calling this for units that can bombard."""
     if labeled:
-        entries = [(c.ICON_BOMBARDMENT, f"DMG: {dmg}"), (c.ICON_BOMBARD_RANGE, f"RNG: {rng}")]
+        entries = [(c.ICON_BOMBARDMENT, f"DMG: {queries.format_number(dmg)}"), (c.ICON_BOMBARD_RANGE, f"RNG: {queries.format_number(rng)}")]
     else:
-        entries = [(c.ICON_BOMBARDMENT, str(dmg)), (c.ICON_BOMBARD_RANGE, str(rng))]
+        entries = [(c.ICON_BOMBARDMENT, queries.format_number(dmg)), (c.ICON_BOMBARD_RANGE, queries.format_number(rng))]
     return draw_icon_row(surface, font, base_text, entries, x, y, color)
 
 def draw_time_stat(surface, font, turns, x, y, color, icon_name="Clock"):
@@ -457,8 +457,8 @@ def draw_time_stat(surface, font, turns, x, y, color, icon_name="Clock"):
                           icon_size=16, icon_gap=4)
 
 def draw_stat_separator(surface, font, x, y, color=(130, 130, 130)):
-    """Draws a ' | ' divider between differently-colored stat segments packed
+    """Draws a '| ' divider between differently-colored stat segments packed
     onto the same line, and returns the x position just past it."""
-    sep_surf = font.render(" | ", True, color)
+    sep_surf = font.render("| ", True, color)
     surface.blit(sep_surf, (x, y))
     return x + sep_surf.get_width()

@@ -786,7 +786,7 @@ class Orders_Screen(GameState):
                 name_surf = small_font.render(name_txt, True, (255, 255, 255))
                 surface.blit(name_surf, (90, y_pos - 5))
 
-                stats_txt = f"HP: {hp}/{m_hp}"
+                stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
                 txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
                 
                 surface.blit(txt_surf, (160, y_pos + 15))

@@ -1090,7 +1090,7 @@ class Puppets_Screen(MapOverlayScreen):
                 surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
                 surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
                 
-                # Show exact siphoned amounts below sliders
+                # Show siphoned amounts below sliders
                 if p_type == c.PUPPET_TYPE_INTEGRATED:
                     econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
                     if len(econ_tuple) == 3:
@@ -1100,9 +1100,9 @@ class Puppets_Screen(MapOverlayScreen):
                         siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
                         
                         tiny_font = fonts.get("tiny")
-                        man_txt = tiny_font.render(f"Taking: {siphoned_man}", True, (200, 200, 200))
-                        mat_txt = tiny_font.render(f"Taking: {siphoned_mats}", True, (200, 200, 200))
-                        fuel_txt = tiny_font.render(f"Taking: {siphoned_fuel}", True, (200, 200, 200))
+                        man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, (200, 200, 200))
+                        mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, (200, 200, 200))
+                        fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, (200, 200, 200))
                         
                         surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
                         surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))

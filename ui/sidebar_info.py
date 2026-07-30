@@ -137,7 +137,7 @@ def draw_sidebar_info(self, surface):
                 hp = int(u.get("health", 0))
                 
                 # Format the string to match the combat zone
-                display_text = f"- {u_name} ({u_owner_display}) (ATK: {atk}) (DEF: {defense}) (HP: {hp})"
+                display_text = f"- {u_name} ({u_owner_display}) (ATK: {queries.format_number(atk)}) (DEF: {queries.format_number(defense)}) (HP: {queries.format_number(hp)})"
                 
                 txt = self.small_font.render(display_text, True, (200, 200, 200))
                 surface.blit(txt, (text_x + 5, current_y))
@@ -174,7 +174,7 @@ def draw_sidebar_info(self, surface):
                 defense = u.get("defense", 0)
                 hp = int(u.get("health", 0))
                 
-                u_stats = f" - {u_type} (ATK: {atk}) (DEF: {defense}) (HP: {hp})"
+                u_stats = f" - {u_type} (ATK: {queries.format_number(atk)}) (DEF: {queries.format_number(defense)}) (HP: {queries.format_number(hp)})"
 
                 txt = self.small_font.render(u_stats, True, (200, 200, 200))
                 surface.blit(txt, (x_offset + 10, current_y))

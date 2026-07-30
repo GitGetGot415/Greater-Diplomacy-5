@@ -561,7 +561,7 @@ class Research_Screen(GameState):
         pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
         
         base_time = max(1, cost // max(1, pts_per_turn)) 
-        cost_txt = font_med.render(f"Base Research Cost: {cost} pts ({int(base_time)} turns)", True, c.COLOR_GOLD_HIGHLIGHT)
+        cost_txt = font_med.render(f"Base Research Cost: {queries.format_number(cost)} pts ({int(base_time)} turns)", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
 
         # --- AHEAD OF TIME SIMULATION ---

@@ -79,7 +79,7 @@ def draw_tooltip(self, surface):
                 lines.append("--- Resources ---")
                 for r_type, amount in resources.items():
                     if amount > 0:
-                        lines.append(f"- {r_type}: {amount}")
+                        lines.append(f"- {r_type}: {queries.format_number(amount)}")
             else:
                 lines.append("No Natural Resources")
 
@@ -107,7 +107,7 @@ def draw_tooltip(self, surface):
         actual_mat = int(base_mat * mat_mult)
         actual_fuel = int(base_fuel * fuel_mult)
 
-        lines.append(f"Tile Yield: +{actual_man}Man, +{actual_mat}Mat, +{actual_fuel}Fuel")
+        lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
         if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
             lines.append("  *(Non-Core Penalties Applied)*")
 
@@ -127,9 +127,9 @@ def draw_tooltip(self, surface):
                     p_fuel = int(stats.get('prod_fuel', 0) * building_mult)
                     
                     yields = []
-                    if p_man > 0: yields.append(f"+{p_man}Man")
-                    if p_mat > 0: yields.append(f"+{p_mat}Mat")
-                    if p_fuel > 0: yields.append(f"+{p_fuel}Fuel")
+                    if p_man > 0: yields.append(f"+{queries.format_number(p_man)}Man")
+                    if p_mat > 0: yields.append(f"+{queries.format_number(p_mat)}Mat")
+                    if p_fuel > 0: yields.append(f"+{queries.format_number(p_fuel)}Fuel")
                     
                     prod_hint = f"({', '.join(yields)})" if yields else ""
                     lines.append(f"- {b} {prod_hint}")
