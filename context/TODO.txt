@@ -15,6 +15,7 @@ Immediate concerns:
 
 !!!!!
 EACH SAVE SHOULD HAVE THE VERSION NUMBER / DATE THAT IT WAS GENERATED ON ASSOCIATED WITH IT
+SO IT CAN BE UPDATED IF AN OUT OF DATE VERSION IS DETECTED
 !!!!!
 
 - KAISERIN SUGGESTIONS:
@@ -33,6 +34,11 @@ EACH SAVE SHOULD HAVE THE VERSION NUMBER / DATE THAT IT WAS GENERATED ON ASSOCIA
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
+
+- production screen should always show oil and defense
+- and then organize it like a table???
+
+- category for large units, and on the map the rectangle for them is rendered twice as big as other units
 
 - specific starting music you can choose for when you first load in the game
 
