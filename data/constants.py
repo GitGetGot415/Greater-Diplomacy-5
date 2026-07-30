@@ -398,6 +398,9 @@ OBSOLESCENCE_RULES = {
     "Medium Tank": ["main_battle_tank"],
     "Heavy Tank": ["super_heavy_tank"],
     "WW1 Railroad Gun": ["ww2_railroad_gun"],
+    "Landkreuzer P.1000 Ratte": ["landkreuzer_p1500_monster"],
+    "Dreadnought": ["battleship"],
+    "Battleship": ["aircraft_carrier"],
 }
 
 # ==========================================

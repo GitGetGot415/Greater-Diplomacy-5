@@ -474,6 +474,10 @@ class Production_Screen(GameState):
         stats = self.unit_library.get(unit_name)
         if not stats or not self.map_screen: return
 
+        if stats.get("naval_unit", False) and not self.target_province.get("is_coastal", False):
+            self.map_screen.show_feedback("Can't build naval units on landlocked tiles!")
+            return
+
         if queries.get_base_unit_name(unit_name) == "Militia":
             if not queries.has_industry(self.target_province):
                 self.map_screen.show_feedback("Requires a Workshop or Factory to recruit Militia!")
