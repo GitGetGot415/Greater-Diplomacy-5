@@ -1688,6 +1688,34 @@ def roman_to_int(s):
         else: res += s1; i += 1
     return res
 
+def get_unit_research_requirement(unit_name):
+    """Returns (tech_key, required_level) needed to unlock an exact unit tier by name.
+
+    Year-suffixed families (Infantry Type, Motorized/Mechanized Infantry, Artillery)
+    key off the tech's position in its 'years' list; everything else keys off its
+    trailing roman numeral - mirrors the tier logic in production.py's unit rendering.
+    """
+    base_name = get_base_unit_name(unit_name)
+    tech_key = get_unit_tech_key(base_name)
+
+    if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"):
+        years = get_tech_tree().get(tech_key, {}).get("years", [])
+        year_match = re.search(r'(\d{4})$', unit_name)
+        if year_match and years:
+            year = int(year_match.group(1))
+            if year in years:
+                return tech_key, years.index(year) + 1
+        return tech_key, 1
+
+    lvl_str = unit_name.replace(base_name, "").strip()
+    return tech_key, max(1, roman_to_int(lvl_str))
+
+def is_unit_unlocked(unit_name, player_research):
+    """Returns True if player_research meets the requirement for this exact unit tier,
+    independent of whether it's the group's currently-highest tier (see Custom production)."""
+    tech_key, required_lvl = get_unit_research_requirement(unit_name)
+    return player_research.get(tech_key, 0) >= required_lvl
+
 def is_naval_unit(unit_type):
     """Checks if a unit is a naval unit based on its type name or unit library stats."""
     if unit_type.startswith("Convoy"):

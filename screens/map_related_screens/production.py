@@ -268,6 +268,32 @@ class Production_Screen(GameState):
         y_offset += section_spacing
 
         # --- UNIT LOGIC ---
+        def render_unit_button(unit_name, btn_color):
+            nonlocal y_offset
+            if queries.get_base_unit_name(unit_name) == "Militia":
+                can_build = queries.has_industry(self.target_province)
+            else:
+                can_build = queries.has_basic_factory(self.target_province)
+
+            if is_spectator and not can_spectator_edit:
+                final_btn_color = "grey"
+                cb = lambda: None
+            else:
+                final_btn_color = btn_color if can_build else "grey"
+                cb = lambda n=unit_name: self.buy_unit(n)
+
+            btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", final_btn_color, unit_name, cb)
+            btn.base_y = y_offset
+            btn.is_scrollable = True
+            self.elements.append(btn)
+
+            stats = self.unit_library[unit_name]
+            # Bombarding units get an extra stat row, so their bar needs more room.
+            bar_height = 70 if 'bombard_attack' in stats else 50
+            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, bar_height)
+            self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
+            y_offset += bar_height + 10
+
         def process_unit_groups(groups, btn_color):
             nonlocal y_offset
             for group_name in groups:
@@ -278,7 +304,7 @@ class Production_Screen(GameState):
                 tech_key = queries.get_unit_tech_key(group_name)
 
                 researched_lvl = player_research.get(tech_key, 0)
-                
+
                 if tech_key == "infantry_type":
                     inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
                     if researched_lvl > 0:
@@ -296,38 +322,14 @@ class Production_Screen(GameState):
                     for name, stats in group_units:
                         lvl_str = name.replace(group_name, "").strip()
                         lvl = queries.roman_to_int(lvl_str)
-                        required_research = max(1, lvl) 
+                        required_research = max(1, lvl)
                         if researched_lvl >= required_research:
                             if lvl > highest_lvl:
                                 highest_lvl = lvl
                                 highest_unlocked = name
 
                 if highest_unlocked:
-                    lookup_name = highest_unlocked
-                    
-                    if queries.get_base_unit_name(lookup_name) == "Militia":
-                        can_build = queries.has_industry(self.target_province)
-                    else:
-                        can_build = queries.has_basic_factory(self.target_province)
-                    
-                    if is_spectator and not can_spectator_edit:
-                        final_btn_color = "grey"
-                        cb = lambda: None
-                    else:
-                        final_btn_color = btn_color if can_build else "grey"
-                        cb = lambda n=lookup_name: self.buy_unit(n)
-                    
-                    btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", final_btn_color, highest_unlocked, cb)
-                    btn.base_y = y_offset
-                    btn.is_scrollable = True
-                    self.elements.append(btn)
-                    
-                    stats = self.unit_library[lookup_name]
-                    # Bombarding units get an extra stat row, so their bar needs more room.
-                    bar_height = 70 if 'bombard_attack' in stats else 50
-                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, bar_height)
-                    self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
-                    y_offset += bar_height + 10
+                    render_unit_button(highest_unlocked, btn_color)
 
         self.infantry_start_y = y_offset
         process_unit_groups(self.infantry_groups, "green")
@@ -345,6 +347,37 @@ class Production_Screen(GameState):
             self.navy_end_y = y_offset
         else:
             self.navy_start_y = self.navy_end_y = y_offset
+
+        # --- CUSTOM UNIT LOGIC ---
+        # Lets a player build a specific researched tier (e.g. Medium Tank II) even
+        # when a higher tier is researched and would otherwise be the only option shown.
+        y_offset += section_spacing
+        self.custom_start_y = y_offset
+
+        p_data = self.map_screen.nation_data.get(owner_nation)
+        owner_valid = p_data is not None
+
+        custom_units = p_data.get("custom_production_units", []) if owner_valid else []
+        valid_custom_units = [u for u in custom_units if u in self.unit_library and queries.is_unit_unlocked(u, player_research)]
+        if owner_valid and valid_custom_units != custom_units:
+            p_data["custom_production_units"] = valid_custom_units
+        custom_units = valid_custom_units
+
+        if not owner_valid or (is_spectator and not can_spectator_edit):
+            manage_color, manage_cb = "grey", (lambda: None)
+        else:
+            manage_color, manage_cb = "pink", self.open_custom_unit_manager
+
+        manage_btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", manage_color, "Manage Custom Units", manage_cb)
+        manage_btn.base_y = y_offset
+        manage_btn.is_scrollable = True
+        self.elements.append(manage_btn)
+        y_offset += 60
+
+        for unit_name in sorted(custom_units):
+            render_unit_button(unit_name, "yellow")
+
+        self.custom_end_y = y_offset
 
         # Calculate maximum scroll distance
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
@@ -470,6 +503,79 @@ class Production_Screen(GameState):
         else:
             self.map_screen.show_feedback("Insufficient resources!")
 
+    def open_custom_unit_manager(self):
+        if not self.map_screen: return
+
+        owner_nation = self.target_province.get("owner")
+        p_data = self.map_screen.nation_data.get(owner_nation)
+        if p_data is None: return
+
+        player_research = p_data.get("research", {})
+        current_custom = set(p_data.get("custom_production_units", []))
+
+        # Group every unit the player currently has the research level for, regardless
+        # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
+        categorized = {"Infantry": [], "Tanks": [], "Navy": []}
+        for name, stats in self.unit_library.items():
+            if not queries.is_unit_unlocked(name, player_research):
+                continue
+            base = queries.get_base_unit_name(name)
+            if stats.get("naval_unit", False):
+                categorized["Navy"].append(name)
+            elif "Tank" in base or "Armored Car" in base or base in c.TANK_GROUP_EXTRAS:
+                categorized["Tanks"].append(name)
+            else:
+                categorized["Infantry"].append(name)
+
+        for group in categorized.values():
+            group.sort()
+
+        import tkinter as tk
+
+        root, close_menu = queries.create_managed_tk_window(self, "Manage Custom Production Units", "420x560")
+
+        tk.Label(root, text="Select researched units to add to the Custom build category:",
+                 font=("Arial", 10, "bold"), wraplength=380, justify="left").pack(pady=(10, 5), padx=10)
+
+        container = tk.Frame(root)
+        container.pack(fill="both", expand=True, padx=10)
+
+        canvas = tk.Canvas(container, borderwidth=0)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scroll_frame = tk.Frame(canvas)
+
+        scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        vars_by_unit = {}
+        for category, names in categorized.items():
+            if not names: continue
+            tk.Label(scroll_frame, text=category, font=("Arial", 10, "bold")).pack(anchor="w", pady=(8, 0))
+            for name in names:
+                var = tk.BooleanVar(value=name in current_custom)
+                vars_by_unit[name] = var
+                tk.Checkbutton(scroll_frame, text=name, variable=var).pack(anchor="w", padx=20)
+
+        if not vars_by_unit:
+            tk.Label(scroll_frame, text="No units researched yet.").pack(pady=20)
+
+        def on_apply():
+            p_data["custom_production_units"] = [name for name, var in vars_by_unit.items() if var.get()]
+            close_menu()
+            self.refresh_ui()
+
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=10)
+        tk.Button(btn_frame, text="Apply", command=on_apply, width=12, bg="#4CAF50", fg="white").pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Cancel", command=close_menu, width=12, bg="#f44336", fg="white").pack(side="left", padx=10)
+
+        queries.run_tk_loop(self, root)
+
     def cancel_order(self, index, q_type):
         queue_key = "building_queue" if q_type == "building" else "unit_queue"
         queue = self.target_province.get(queue_key, [])
@@ -561,6 +667,14 @@ class Production_Screen(GameState):
             pygame.draw.rect(surface, (50, 50, 150), navy_rect, 2)
             lbl = fonts.get("heading2").render("NAVAL FORCES", True, (100, 150, 255))
             surface.blit(lbl, (40, self.navy_start_y + scroll - 45))
+
+        # Custom (Gold)
+        if self.custom_end_y > self.custom_start_y:
+            custom_rect = pygame.Rect(30, self.custom_start_y + scroll - 15, 840, self.custom_end_y - self.custom_start_y + 15)
+            pygame.draw.rect(surface, (60, 55, 20), custom_rect)
+            pygame.draw.rect(surface, (200, 180, 50), custom_rect, 2)
+            lbl = fonts.get("heading2").render("CUSTOM", True, (255, 220, 100))
+            surface.blit(lbl, (40, self.custom_start_y + scroll - 45))
 
         # Stats Bars
         bar_font = fonts.get("small")

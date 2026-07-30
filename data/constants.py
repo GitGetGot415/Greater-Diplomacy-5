@@ -392,8 +392,12 @@ KEY_REPEAT_INTERVAL = 40
 # ==========================================
 
 OBSOLESCENCE_RULES = {
+    "Cavalry": ["motorized_infantry"],
     "WW1 Armored Car": ["armored_car"],
     "WW1 Tank": ["medium_tank", "heavy_tank"],
+    "Medium Tank": ["main_battle_tank"],
+    "Heavy Tank": ["super_heavy_tank"],
+    "WW1 Railroad Gun": ["ww2_railroad_gun"],
 }
 
 # ==========================================
