@@ -152,7 +152,8 @@ class Orders_Screen(GameState):
         
         units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
-        
+        player_research = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {})
+
         # Display all units owned by the player, regardless of mode
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         
@@ -234,7 +235,9 @@ class Orders_Screen(GameState):
                     else:
                         btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Coast", lambda: None, font_preset="normal")
                 else: # is_naval
-                    if is_coastal or not is_water:
+                    if player_research.get("trucks", 0) < 1:
+                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Trucks", lambda: None, font_preset="normal")
+                    elif is_coastal or not is_water:
                         btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "blue", "To Truck", lambda idx=i: self.convert_unit(idx), font_preset="normal")
                     else:
                         btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Coast", lambda: None, font_preset="normal")
@@ -454,13 +457,17 @@ class Orders_Screen(GameState):
             unit = units[index]
             u_type = unit.get("type", "")
             
-            if u_type.startswith("Convoy"): 
+            if u_type.startswith("Convoy"):
                 target_type = "Land Unit"
                 turns = 1
             elif u_type.startswith("Truck"):
                 target_type = "Ship"
                 turns = c.TRUCK_CONVERT_TURNS
             elif queries.is_naval_unit(u_type):
+                player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
+                if player_research.get("trucks", 0) < 1:
+                    self.map_screen.show_feedback("Requires Trucks research!")
+                    return
                 target_type = "Truck"
                 turns = c.TRUCK_CONVERT_TURNS
             else:

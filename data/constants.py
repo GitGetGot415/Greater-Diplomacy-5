@@ -324,7 +324,7 @@ KEY_REPEAT_INTERVAL = 40
 # ==========================================
 
 OBSOLESCENCE_RULES = {
-    "Cavalry": ["motorized_infantry"],
+    "Cavalry": ["trucks"],
     "WW1 Armored Car": ["armored_car"],
     "WW1 Tank": ["medium_tank", "heavy_tank"],
     "Medium Tank": ["main_battle_tank"],
@@ -602,6 +602,14 @@ UNIT_TECH_KEY_OVERRIDES = {
     "motorized_infantry_type": "motorized_infantry",
     "mechanized_infantry_type": "mechanized_infantry",
     "artillery_type": "artillery"
+}
+
+# motorized_infantry/mechanized_infantry (see UNIT_TECH_KEY_OVERRIDES above) aren't
+# leveled techs of their own - each is unlocked by a one-time "vehicle" tech and then
+# tracks the nation's own infantry_type year exactly (see queries.get_infantry_family_year).
+VEHICLE_INFANTRY_GATES = {
+    "motorized_infantry": "trucks",
+    "mechanized_infantry": "armored_personnel_carriers",
 }
 
 LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]

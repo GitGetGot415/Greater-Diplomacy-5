@@ -139,13 +139,27 @@ UNIT_SECTIONS = [
             "speed": const(1), "cost_materials": const(500), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(2),
         }),
-        UnitFamily("Motorized Infantry Type", year_suffixes(1930, 81), {
-            "health": linear(2000, 50), "attack": linear(300, 10), "defense": const(0),
+        # Ranges back to 1910 (not just 1930) - trucks/APCs are now one-time unlocks
+        # rather than their own leveled research, so a nation can unlock them well
+        # before its infantry_type research reaches 1930/1940 and needs a tier to
+        # build immediately. Health/attack deliberately reuse Infantry Type's own
+        # formulas (linear(1000, 50) / linear(100, 10)): at any shared year the two
+        # have identical health/attack - speed, cost and fuel are what actually
+        # differentiate a motorized unit, not raw stats. This also exactly reproduces
+        # the old 1930-2010 values (e.g. year 1930: 1000+50*20=2000, matching the old
+        # linear(2000, 50) index-0 value).
+        UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
+            "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": const(1000), "cost_manpower": const(1000),
             "cost_fuel": const(50), "production_time": const(2),
         }),
-        UnitFamily("Mechanized Infantry Type", year_suffixes(1940, 71), {
-            "health": linear(2500, 50), "attack": linear(400, 10), "defense": linear(100, 5),
+        # Same reasoning as Motorized Infantry Type above for health/attack/range.
+        # Defense keeps its old linear(100, 5) ramp starting exactly at 1940 (index
+        # 30) via piecewise, so 1940-2010 values are unchanged and 1910-1939 tiers
+        # simply carry no armor bonus over plain Infantry.
+        UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 101), {
+            "health": linear(1000, 50), "attack": linear(100, 10),
+            "defense": piecewise([(0, 0, 0), (30, 100, 5)]),
             "speed": const(2), "cost_materials": const(2000), "cost_manpower": const(1000),
             "cost_fuel": const(50), "production_time": const(3),
         }),
@@ -389,12 +403,16 @@ RESEARCH_SECTIONS = [
                       "years": years_range(1910, 5, 20)}),
         ("artillery", {"category": "INFANTRY", "max_lvl": 101, "cost": 900, "req": {},
                         "years": years_range(1910, 1, 101)}),
-        ("motorized_infantry", {"category": "INFANTRY", "max_lvl": 81, "cost": 900,
-                                 "req": {"infantry_type": "MATCH_LEVEL_+20", "cavalry": 5},
-                                 "years": years_range(1930, 1, 81)}),
-        ("mechanized_infantry", {"category": "INFANTRY", "max_lvl": 71, "cost": 900,
-                                  "req": {"motorized_infantry": "MATCH_LEVEL_+10"},
-                                  "years": years_range(1940, 1, 71)}),
+        # One-time unlocks rather than leveled techs: owning them lets a nation build
+        # Motorized/Mechanized Infantry up to whatever year its own infantry_type
+        # research has reached (see queries.get_infantry_family_year), instead of
+        # requiring a separate 71-101 level research track of their own.
+        ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+                     "req": {"cavalry": 5},
+                     "years": years_range(1930, 1, 1)}),
+        ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+                                         "req": {"trucks": 1},
+                                         "years": years_range(1940, 1, 1)}),
     ],
     [
         ("civilian_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {},

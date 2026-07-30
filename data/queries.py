@@ -742,23 +742,52 @@ def get_tech_unlocks(tech_key, level):
         mult = 1.0 + level * c.RESOURCE_REFINING_BONUS_PER_LVL
         unlocks.append(f"Resource Income x{mult:.1f}")
 
+    if tech_key == "trucks" and level == 1:
+        unlocks.append("Motorized Infantry (buildable up to your current Infantry tech)")
+        unlocks.append("Naval units can now be loaded into Trucks")
+
+    if tech_key == "armored_personnel_carriers" and level == 1:
+        unlocks.append("Mechanized Infantry (buildable up to your current Infantry tech)")
+
     return unlocks
+
+def get_infantry_family_year(family_key, player_research, tech_tree):
+    """Returns the highest year unlocked for infantry_type/motorized_infantry/
+    mechanized_infantry/artillery, or None if nothing is unlocked yet.
+
+    motorized_infantry and mechanized_infantry aren't leveled techs of their own
+    (see c.VEHICLE_INFANTRY_GATES) - owning the one-time "trucks"/
+    "armored_personnel_carriers" unlock lets a nation build that unit family up to
+    whatever year its infantry_type research has reached, rather than requiring a
+    separate multi-decade research track for each.
+    """
+    gate_tech = c.VEHICLE_INFANTRY_GATES.get(family_key)
+    if gate_tech is not None:
+        if player_research.get(gate_tech, 0) < 1:
+            return None
+        year_source = "infantry_type"
+    else:
+        year_source = family_key
+
+    lvl = player_research.get(year_source, 0)
+    if lvl <= 0:
+        return None
+    years = tech_tree.get(year_source, {}).get("years", [c.START_YEAR])
+    return years[max(0, min(lvl - 1, len(years) - 1))]
 
 def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True):
     """Finds the highest level infantry unit the nation has researched, prioritizing mechanized/motorized upgrades."""
     res_levels = nation_data_block.get("research", {})
-    
-    def check_upgrade(tech_key, name_fmt):
-        lvl = res_levels.get(tech_key, 0)
-        if lvl > 0:
-            years = tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
-            year_val = years[max(0, min(lvl - 1, len(years) - 1))]
+
+    def check_upgrade(family_key, name_fmt):
+        year_val = get_infantry_family_year(family_key, res_levels, tech_tree)
+        if year_val is not None:
             u_name = name_fmt.format(year_val)
             if u_name in unit_library: return u_name
         return None
 
     if allow_fuel_units:
-        for tech, fmt in [("mechanized_infantry", "Mechanized Infantry Type {}"), 
+        for tech, fmt in [("mechanized_infantry", "Mechanized Infantry Type {}"),
                           ("motorized_infantry", "Motorized Infantry Type {}")]:
             found = check_upgrade(tech, fmt)
             if found: return found
@@ -777,14 +806,11 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     if clean_base == "Infantry":
         tech_key = "infantry_type"
 
-    res_lvl = player_research.get(tech_key, 0)
-    if res_lvl <= 0:
-        return None
-
     # Handle Year-based units (Infantry variants and Artillery all use "Type <year>")
     if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"]:
-        years = tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
-        year_val = years[max(0, min(res_lvl - 1, len(years) - 1))]
+        year_val = get_infantry_family_year(tech_key, player_research, tech_tree)
+        if year_val is None:
+            return None
 
         target_name = f"{clean_base} Type {year_val}"
 
@@ -792,6 +818,10 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
             curr_year_match = re.search(r'\b(\d{4})\b', unit_type)
             if curr_year_match and int(year_val) > int(curr_year_match.group(1)):
                 return target_name
+        return None
+
+    res_lvl = player_research.get(tech_key, 0)
+    if res_lvl <= 0:
         return None
 
     # Handle Roman Numeral units
@@ -1882,14 +1912,17 @@ def roman_to_int(s):
 def get_unit_research_requirement(unit_name):
     """Returns (tech_key, required_level) needed to unlock an exact unit tier by name.
 
-    Year-suffixed families (Infantry Type, Motorized/Mechanized Infantry, Artillery)
-    key off the tech's position in its 'years' list; everything else keys off its
-    trailing roman numeral - mirrors the tier logic in production.py's unit rendering.
+    Year-suffixed families (Infantry Type, Artillery) key off the tech's position in
+    its 'years' list; everything else keys off its trailing roman numeral - mirrors
+    the tier logic in production.py's unit rendering. Motorized/Mechanized Infantry
+    aren't leveled techs of their own (see c.VEHICLE_INFANTRY_GATES) so they're not
+    representable as a single (tech_key, level) pair - is_unit_unlocked handles them
+    directly instead of going through this function.
     """
     base_name = get_base_unit_name(unit_name)
     tech_key = get_unit_tech_key(base_name)
 
-    if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"):
+    if tech_key in ("infantry_type", "artillery"):
         years = get_tech_tree().get(tech_key, {}).get("years", [])
         year_match = re.search(r'(\d{4})$', unit_name)
         if year_match and years:
@@ -1904,6 +1937,16 @@ def get_unit_research_requirement(unit_name):
 def is_unit_unlocked(unit_name, player_research):
     """Returns True if player_research meets the requirement for this exact unit tier,
     independent of whether it's the group's currently-highest tier (see Custom production)."""
+    base_name = get_base_unit_name(unit_name)
+    tech_key = get_unit_tech_key(base_name)
+
+    if tech_key in c.VEHICLE_INFANTRY_GATES:
+        unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree())
+        year_match = re.search(r'(\d{4})$', unit_name)
+        if unlocked_year is None or not year_match:
+            return False
+        return int(year_match.group(1)) <= unlocked_year
+
     tech_key, required_lvl = get_unit_research_requirement(unit_name)
     return player_research.get(tech_key, 0) >= required_lvl
 

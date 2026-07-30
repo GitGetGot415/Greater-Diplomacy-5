@@ -359,20 +359,13 @@ class Production_Screen(GameState):
                 highest_unlocked = None
                 tech_key = queries.get_unit_tech_key(group_name)
 
-                researched_lvl = player_research.get(tech_key, 0)
-
-                if tech_key == "infantry_type":
-                    inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
-                    if researched_lvl > 0:
-                        year = inf_years[min(researched_lvl - 1, len(inf_years)-1)]
-                        highest_unlocked = f"Infantry Type {year}"
-                elif tech_key in ["motorized_infantry", "mechanized_infantry", "artillery"]:
-                    tech_years = self.tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
-                    if researched_lvl > 0:
-                        year = tech_years[min(researched_lvl - 1, len(tech_years)-1)]
+                if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"):
+                    year = queries.get_infantry_family_year(tech_key, player_research, self.tech_tree)
+                    if year is not None:
                         highest_unlocked = f"{group_name} {year}"
                 else:
                     # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
+                    researched_lvl = player_research.get(tech_key, 0)
                     group_units = [(n, s) for n, s in self.unit_library.items() if queries.get_base_unit_name(n) == group_name]
                     highest_lvl = -1
                     for name, stats in group_units:

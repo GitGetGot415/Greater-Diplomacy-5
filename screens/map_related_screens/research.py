@@ -82,8 +82,6 @@ WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY"]
 # roman numeral tier, keyed off the year list in the tech tree.
 YEAR_TIER_TECHS = {
     "infantry_type": "Infantry Type",
-    "motorized_infantry": "Motorized Infantry Type",
-    "mechanized_infantry": "Mechanized Infantry Type",
     "artillery": "Artillery Type",
 }
 
@@ -104,6 +102,17 @@ FIXED_TECH_NAMES = {
     "basic_recruitment": "Basic Recruitment Center",
     "landkreuzer_p1000_ratte": "Landkreuzer P.1000 Ratte",
     "landkreuzer_p1500_monster": "Landkreuzer P.1500 Monster",
+    "trucks": "Trucks",
+    "armored_personnel_carriers": "Armored Personnel Carriers",
+}
+
+# Tech nodes whose icon isn't just its own display name (see draw_tech_nodes).
+# Trucks/APCs unlock a *capability* rather than a directly-buildable unit of the
+# same name, so they borrow the closest existing unit icon.
+TECH_ICON_OVERRIDES = {
+    "resource_refining": "Iron",
+    "trucks": "Truck",
+    "armored_personnel_carriers": "Mechanized Infantry",
 }
 
 # Tech keys displayed as "<Name> Lvl <n>" instead of a roman numeral.
@@ -179,11 +188,11 @@ class Research_Screen(GameState):
 
         self.tech_rows = {
             "infantry_type": y1,
-            "motorized_infantry": y2,
-            "mechanized_infantry": y3,
+            "trucks": y2,
+            "armored_personnel_carriers": y2,
             "cavalry": y2,
-            "militia": y4,
-            "artillery": y5,
+            "militia": y3,
+            "artillery": y4,
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
@@ -414,7 +423,7 @@ class Research_Screen(GameState):
             
             icon_scale = 4.0 if is_large else 2.0
 
-            icon_name = "Iron" if tech_key == "resource_refining" else display_name
+            icon_name = TECH_ICON_OVERRIDES.get(tech_key, display_name)
             icon = symbol_loader.get_symbol(icon_name, icon_scale)
             
             node_info = {
