@@ -14,6 +14,9 @@ MAP_QUEUE_OVERLAY_Y = 80
 MAP_QUEUE_MIN_HEIGHT = 80
 MAP_QUEUE_MAX_HEIGHT = 400
 
+# How fast the mouse wheel scrolls the read-only map queue overlay
+MAP_QUEUE_SCROLL_STEP = 30
+
 # --- Interactive queue panel on the Production screen ---
 PANEL_WIDTH = 460
 PANEL_MARGIN_X = 20
@@ -127,21 +130,43 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     # If the province is hidden by fog, draw the hidden text under both columns and stop
     if not is_visible:
+        if map_screen is not None:
+            map_screen.queue_scroll_rect = None
         hidden_txt = font.render("(Hidden by Fog of War)", True, MUTED_TEXT_COLOR)
         for _queue, start_x in columns:
             surface.blit(hidden_txt, (start_x, panel_rect.y + 40))
         return
 
+    # --- SCROLLABLE BODY ---
+    # A queue can hold more entries than the (height-capped) panel can show at
+    # once, so the body is clipped and scrolled with the mouse wheel instead
+    # of truncating with a "+N more..." line.
+    body_rect = pygame.Rect(panel_rect.x, panel_rect.y + 35, panel_rect.width, panel_rect.bottom - (panel_rect.y + 35))
+    body_top = body_rect.y
+
+    scroll_offset = 0
+    if map_screen is not None:
+        map_screen.queue_scroll_rect = body_rect
+        scroll_max = getattr(map_screen, 'queue_scroll_max', 0)
+        scroll_offset = max(0, min(getattr(map_screen, 'queue_scroll_y', 0), scroll_max))
+
+    surface.set_clip(body_rect)
+
+    content_bottom = body_top
     for queue_list, start_x in columns:
         if not queue_list:
-            surface.blit(font.render("(Queue Empty)", True, MUTED_TEXT_COLOR), (start_x, panel_rect.y + 40))
+            surface.blit(font.render("(Queue Empty)", True, MUTED_TEXT_COLOR), (start_x, body_top - scroll_offset))
             continue
 
         for i, item in enumerate(queue_list):
-            y_pos = panel_rect.y + 35 + (i * ROW_STEP_Y)
-            if y_pos + 30 > panel_rect.bottom:
-                more_txt = small_font.render(f"+{len(queue_list) - i} more...", True, MUTED_TEXT_COLOR)
-                surface.blit(more_txt, (start_x, y_pos))
-                break
-
+            y_pos = body_top - scroll_offset + (i * ROW_STEP_Y)
             surface.blit(small_font.render(get_queue_entry_text(item), True, QUEUE_TEXT_COLOR), (start_x, y_pos))
+
+        content_bottom = max(content_bottom, body_top + len(queue_list) * ROW_STEP_Y)
+
+    surface.set_clip(None)
+
+    if map_screen is not None:
+        content_height = content_bottom - body_top
+        map_screen.queue_scroll_max = max(0, content_height - body_rect.height)
+        map_screen.queue_scroll_y = min(scroll_offset, map_screen.queue_scroll_max)

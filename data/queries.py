@@ -1765,6 +1765,15 @@ def get_condensed_unit_name(unit_name):
     displays (production unit list, garrison rosters). e.g. 'Mechanized
     Infantry Type 1940' -> 'Mech Inf 1940', 'Medium Tank III' -> 'Med Tank III'.
     Everywhere else should keep showing the full name."""
+    # Convoys/Trucks wrap the carried unit's name in parens (e.g.
+    # "Convoy (Infantry Type 1940)"); condense the inner name and keep the
+    # wrapper, rather than leaving it untouched because the parens break the
+    # plain word-for-word lookup below.
+    carrier_match = re.match(r'^(Convoy|Truck) \((.+)\)$', unit_name)
+    if carrier_match:
+        carrier, inner = carrier_match.groups()
+        return f"{carrier} ({get_condensed_unit_name(inner)})"
+
     words = [CONDENSED_UNIT_NAME_WORDS.get(w, w) for w in unit_name.split(" ")]
     return " ".join(w for w in words if w)
 

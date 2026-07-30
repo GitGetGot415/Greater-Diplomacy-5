@@ -70,6 +70,33 @@ def handle_map_events(self, event):
         if self.raised_rect.collidepoint(mx, my) or self.ui_background_rect.collidepoint(mx, my):
             on_ui = True
 
+    # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
+    # Lets the mouse wheel scroll long Buildings/Garrison, Diplomatic Info, and
+    # queue-overlay lists instead of always zooming the map camera. Only
+    # relevant while those panels are actually on screen.
+    if event.type == pygame.MOUSEWHEEL and self.selected_province and not self.selection_mode:
+        from ui import sidebar_info
+        from ui.information import ui_info_popup
+        from screens.map_related_screens import recruit_ui
+
+        sidebar_rect = getattr(self, 'sidebar_scroll_rect', None)
+        if sidebar_rect and sidebar_rect.collidepoint(mx, my):
+            max_scroll = getattr(self, 'sidebar_scroll_max', 0)
+            self.sidebar_scroll_y = max(0, min(getattr(self, 'sidebar_scroll_y', 0) - event.y * sidebar_info.SIDEBAR_SCROLL_STEP, max_scroll))
+            return
+
+        dip_rect = getattr(self, 'diplomatic_scroll_rect', None)
+        if dip_rect and dip_rect.collidepoint(mx, my):
+            max_scroll = getattr(self, 'diplomatic_scroll_max', 0)
+            self.diplomatic_scroll_y = max(0, min(getattr(self, 'diplomatic_scroll_y', 0) - event.y * ui_info_popup.DIPLOMATIC_SCROLL_STEP, max_scroll))
+            return
+
+        queue_rect = getattr(self, 'queue_scroll_rect', None)
+        if queue_rect and queue_rect.collidepoint(mx, my):
+            max_scroll = getattr(self, 'queue_scroll_max', 0)
+            self.queue_scroll_y = max(0, min(getattr(self, 'queue_scroll_y', 0) - event.y * recruit_ui.MAP_QUEUE_SCROLL_STEP, max_scroll))
+            return
+
     # 2. Camera Controls (Always allow these so you can move while editing!)
     if event.type == pygame.MOUSEWHEEL:
         self.camera.handle_input(event, self, False)

@@ -27,12 +27,10 @@ current hp should be 400
 dont forget to edit other stats too, like attack, defense, speed, etc
 !!!!!
 
-- if in combat zone, remove the active garrison display
-- also let the user scroll down the combat zone / active garrison display / diplomatic info / buildings and units queue if it gets to be too long instead of just saying  something like (+3 more...)
-
 - KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war
 - revokes access once war is over
+- ai asks for millitary access too if fighting same enemies in war? (or maybe faction idk)
 - exiled armies mechanic like how it works in eu4 so if an army is in someone's land but doesn't have millitary access then said army automatically queues up moves to pathfind back to friendly territory
 - gurella units? (kaiserin's suggestion)
 

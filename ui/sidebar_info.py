@@ -8,13 +8,16 @@ from ui_elements import draw_combat_stats, draw_bombardment_stats
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
 GARRISON_FLAG_SIZE = (18, 12)
 
+# How fast the mouse wheel scrolls the Buildings/Garrison area
+SIDEBAR_SCROLL_STEP = 30
+
 # ==========================================
 # LAYOUT
 # ==========================================
 
 SIDEBAR_INFO_X = 900
 SIDEBAR_INFO_Y = 70
-SIDEBAR_INFO_WIDTH = 300
+SIDEBAR_INFO_WIDTH = 370
 SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
 
 # Define the area for the sidebar info panel utilizing constants
@@ -34,6 +37,7 @@ def draw_sidebar_info(self, surface):
     # 2. Extract Province Data
     province = self.selected_province
     if not province:
+        self.sidebar_scroll_rect = None
         return
 
     # --- FOG OF WAR VISIBILITY CHECK ---
@@ -83,6 +87,22 @@ def draw_sidebar_info(self, surface):
 
     current_y += 10 # Padding
 
+    # --- SCROLLABLE REGION (Buildings + Garrison/Combat Zone) ---
+    # Everything below this point can run arbitrarily long (building lists,
+    # garrisons, combat rosters), so it's clipped to the remaining panel space
+    # and scrolled with the mouse wheel instead of being truncated with a
+    # "+N more" line.
+    scroll_rect = pygame.Rect(info_rect.x, current_y, info_rect.width, info_rect.bottom - current_y)
+    self.sidebar_scroll_rect = scroll_rect
+
+    scroll_max = getattr(self, 'sidebar_scroll_max', 0)
+    scroll_offset = max(0, min(getattr(self, 'sidebar_scroll_y', 0), scroll_max))
+
+    scroll_top = current_y
+    current_y -= scroll_offset
+
+    surface.set_clip(scroll_rect)
+
     # Buildings Section
     header = self.font.render("--- BUILDINGS ---", True, (255, 255, 255))
     surface.blit(header, (text_x, current_y))
@@ -99,13 +119,8 @@ def draw_sidebar_info(self, surface):
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         else:
-            for b in buildings[:5]:
+            for b in buildings:
                 txt = self.small_font.render(f"- {b}", True, (200, 200, 200))
-                surface.blit(txt, (text_x + 5, current_y))
-                current_y += 20
-                
-            if len(buildings) > 5:
-                txt = self.small_font.render(f" + {len(buildings) - 5} more", True, (150, 150, 150))
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 20
 
@@ -115,8 +130,13 @@ def draw_sidebar_info(self, surface):
     owners_present = list(set(u.get("owner", "Unknown") for u in units))
     is_combat = queries.is_province_in_active_combat(province, self.nation_data)
 
-    # --- Active Garrison ---
-    header = self.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
+    # --- Active Garrison / Combat Zone ---
+    # While a fight is active, the Combat Zone display (grouped by side) fully
+    # replaces the Active Garrison list rather than both showing side by side.
+    if is_combat:
+        header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
+    else:
+        header = self.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
     surface.blit(header, (text_x, current_y))
     current_y += 25
 
@@ -129,84 +149,34 @@ def draw_sidebar_info(self, surface):
             txt = self.small_font.render("(Hidden by Fog of War)", True, (150, 150, 150))
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
-    else:
-        if not units:
-            txt = self.small_font.render("(Empty)", True, (150, 150, 150))
-            surface.blit(txt, (text_x + 5, current_y))
-            current_y += 25
-        else:
-            # Scale back the list size if combat is happening to fit the UI height limit
-            display_limit = 4 if is_combat else 12
-            for u in units[:display_limit]:
-                u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
-                u_owner_id = u.get("owner", "Unknown")
-
-                row_x = text_x + 5
-
-                # Unit name
-                name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
-                surface.blit(name_surf, (row_x, current_y))
-                row_x += name_surf.get_width() + 4
-
-                # Owner flag instead of a country name string
-                flag_w, flag_h = GARRISON_FLAG_SIZE
-                owner_flag_data = self.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
-                flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
-                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (name_surf.get_height() - flag_h) // 2
-                surface.blit(flag_surf, (row_x, flag_y))
-                pygame.draw.rect(surface, (100, 100, 100), (row_x, flag_y, flag_w, flag_h), 1)
-                row_x += flag_w + 6
-
-                # Condensed, icon-based combat stats, matching the production tab's style
-                draw_combat_stats(
-                    surface, self.small_font, "",
-                    u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
-                    row_x, current_y, (200, 200, 200), labeled=False
-                )
-
-                current_y += 20
-
-                # Bombardment stats on their own indented line, only for units that can bombard
-                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
-                if 'bombard_attack' in unit_stats:
-                    draw_bombardment_stats(
-                        surface, self.small_font,
-                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
-                        u.get("bombard_range", unit_stats.get('bombard_range', 0)),
-                        text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
-                    )
-                    current_y += 18
-                
-            if len(units) > display_limit:
-                txt = self.small_font.render(f" + {len(units) - display_limit} more", True, (150, 150, 150))
-                surface.blit(txt, (text_x + 5, current_y))
-                current_y += 20
-
-    current_y += 10 # Padding before next section
-
-    # 6. Draw the Combat Zone Section
-    if is_combat and is_visible:
-        x_offset = SIDEBAR_INFO_X + 10
-        header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
-        surface.blit(header, (x_offset, current_y))
-        
-        current_y += 35
-        
+    elif not units:
+        txt = self.small_font.render("(Empty)", True, (150, 150, 150))
+        surface.blit(txt, (text_x + 5, current_y))
+        current_y += 25
+    elif is_combat:
         for side_id in owners_present:
             side_data = self.nation_data.get(side_id, {})
             side_display = side_data.get("name", side_id)
             side_color = self.nation_colors.get(side_id, (200, 200, 200))
-            
+
+            # Flag next to the side/category name -- individual unit rows below stay as-is
+            flag_w, flag_h = GARRISON_FLAG_SIZE
+            side_flag_data = side_data.get("flag_data", "DEFAULT")
+            flag_surf = queries.decode_b64_to_surf(side_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=side_id)
+            flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
+            flag_y = current_y + (self.small_font.get_height() - flag_h) // 2
+            surface.blit(flag_surf, (text_x, flag_y))
+            pygame.draw.rect(surface, (100, 100, 100), (text_x, flag_y, flag_w, flag_h), 1)
+
             title = self.small_font.render(f"{side_display}:", True, side_color)
-            surface.blit(title, (x_offset, current_y))
+            surface.blit(title, (text_x + flag_w + 6, current_y))
             current_y += 22
-            
+
             side_units = [u for u in units if u.get("owner") == side_id]
-            for u in side_units[:5]:
+            for u in side_units:
                 u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
 
-                row_x = x_offset + 10
+                row_x = text_x + 10
 
                 # Unit name
                 name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
@@ -229,11 +199,61 @@ def draw_sidebar_info(self, surface):
                         surface, self.small_font,
                         u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
                         u.get("bombard_range", unit_stats.get('bombard_range', 0)),
-                        x_offset + 20, current_y, (200, 200, 200), base_text="", labeled=False
+                        text_x + 20, current_y, (200, 200, 200), base_text="", labeled=False
                     )
                     current_y += 18
 
             current_y += 10
+    else:
+        for u in units:
+            u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
+            u_owner_id = u.get("owner", "Unknown")
+
+            row_x = text_x + 5
+
+            # Unit name
+            name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+            surface.blit(name_surf, (row_x, current_y))
+            row_x += name_surf.get_width() + 4
+
+            # Owner flag instead of a country name string
+            flag_w, flag_h = GARRISON_FLAG_SIZE
+            owner_flag_data = self.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
+            flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
+            flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
+            flag_y = current_y + (name_surf.get_height() - flag_h) // 2
+            surface.blit(flag_surf, (row_x, flag_y))
+            pygame.draw.rect(surface, (100, 100, 100), (row_x, flag_y, flag_w, flag_h), 1)
+            row_x += flag_w + 6
+
+            # Condensed, icon-based combat stats, matching the production tab's style
+            draw_combat_stats(
+                surface, self.small_font, "",
+                u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                row_x, current_y, (200, 200, 200), labeled=False
+            )
+
+            current_y += 20
+
+            # Bombardment stats on their own indented line, only for units that can bombard
+            unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
+            if 'bombard_attack' in unit_stats:
+                draw_bombardment_stats(
+                    surface, self.small_font,
+                    u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
+                    u.get("bombard_range", unit_stats.get('bombard_range', 0)),
+                    text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
+                )
+                current_y += 18
+
+    surface.set_clip(None)
+
+    # Re-derive the scroll limit from what was actually drawn this frame, and
+    # settle on the offset so a shrinking list (units dying, etc.) doesn't
+    # leave the view stuck scrolled past the new bottom.
+    content_height = (current_y + scroll_offset) - scroll_top
+    self.sidebar_scroll_max = max(0, content_height - scroll_rect.height)
+    self.sidebar_scroll_y = min(scroll_offset, self.sidebar_scroll_max)
 
 # --- MODIFIED FUNCTION FOR PORTRAIT ---
 def draw_owner_portrait(self, surface):
