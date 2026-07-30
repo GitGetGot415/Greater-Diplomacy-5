@@ -673,12 +673,15 @@ class Research_Screen(GameState):
         tech_key = self.active_modal["tech_key"]
         level = self.active_modal["level"]
         
-        # Show what this tech unlocks
+        # Show what this tech unlocks - one per line so a long bonus string
+        # doesn't get crammed alongside others and run off the edge of the modal.
         unlocks = queries.get_tech_unlocks(tech_key, level)
         if unlocks:
-            txt_unlock = f"Unlocks: {', '.join(unlocks)}"
-            surface.blit(font_small.render(txt_unlock, True, (150, 255, 150)), (text_x, y_off))
+            surface.blit(font_small.render("Unlocks:", True, (150, 255, 150)), (text_x, y_off))
             y_off += MODAL_LINE_STEP_Y
+            for unlock in unlocks:
+                surface.blit(font_small.render(f"- {unlock}", True, (150, 255, 150)), (text_x, y_off))
+                y_off += MODAL_LINE_STEP_Y
             
         # Collect entities to show stats for (both the tech itself AND anything it unlocks)
         entities_to_show = []
