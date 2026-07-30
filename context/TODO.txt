@@ -27,6 +27,9 @@ EACH SAVE SHOULD HAVE THE VERSION NUMBER / DATE THAT IT WAS GENERATED ON ASSOCIA
 
 - web version? (tkinter will have to be edited...)
 
+- remove motorized infantry past 1939, keeping only mechanized infantry?
+- actually completely remove the whole motorized and mechanized infantry research, instead just keep regular infantry but add in a check next to it for either motorized, mechanized, or IFV, each one costing a bit more but giving a bonus
+
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet

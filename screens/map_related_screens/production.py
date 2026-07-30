@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from gameState import GameState, ScreenLayer
-from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
+from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats, draw_time_stat, draw_stat_separator
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
@@ -73,6 +73,15 @@ class Production_Screen(GameState):
                     el.rect.y = el.base_y + int(self.scroll_y)
                     el.click_guard = lambda: 80 <= pygame.mouse.get_pos()[1] <= c.SCREEN_HEIGHT - 60
 
+    def _add_scroll_button(self, x_pos, y_offset, color, text, callback):
+        """Creates one of the production screen's scrollable list buttons
+        (building/unit/manage rows) and registers it in self.elements."""
+        btn = Button(x_pos, y_offset + int(self.scroll_y), "production", color, text, callback, font_preset="button_small")
+        btn.base_y = y_offset
+        btn.is_scrollable = True
+        self.elements.append(btn)
+        return btn
+
     def refresh_ui(self):
         # The back button doesn't scroll, so it is built here but registered at the
         # very end of refresh_ui -- see the ScreenLayer note down there.
@@ -134,12 +143,9 @@ class Production_Screen(GameState):
                 btn_color = "purple"
                 cb = lambda: self.start_coring()
 
-            btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color, btn_txt, cb)
-            btn.base_y = y_offset
-            btn.is_scrollable = True
-            self.elements.append(btn)
+            self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
 
-            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
             mock_stats = {
                 "time": core_data["time"],
                 "cost_manpower": core_data["cost_manpower"],
@@ -148,7 +154,7 @@ class Production_Screen(GameState):
                 "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
             }
             self.active_bars.append((bar_rect, mock_stats, y_offset, "BUILDING"))
-            y_offset += 60
+            y_offset += 40
 
         # --- REMOVE CORES BUTTON ---
         foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
@@ -182,12 +188,9 @@ class Production_Screen(GameState):
             btn_color2 = "red"
             cb2 = lambda: self.start_remove_cores()
 
-        btn2 = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color2, btn_txt2, cb2)
-        btn2.base_y = y_offset
-        btn2.is_scrollable = True
-        self.elements.append(btn2)
+        self._add_scroll_button(x_pos, y_offset, btn_color2, btn_txt2, cb2)
 
-        bar_rect2 = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+        bar_rect2 = pygame.Rect(x_pos + 210, y_offset, 550, 30)
         mock_stats2 = {
             "time": remove_data["time"],
             "cost_manpower": remove_data["cost_manpower"],
@@ -196,7 +199,7 @@ class Production_Screen(GameState):
             "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
         }
         self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
-        y_offset += 60
+        y_offset += 40
 
         self.admin_end_y = y_offset
 
@@ -247,15 +250,11 @@ class Production_Screen(GameState):
                         btn_color = "orange"
                         if data["group"] == "recruitment": btn_color = "red"
 
-                    # Apply current scroll_y during creation
-                    btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", btn_color, btn_txt, cb)
-                    btn.base_y = y_offset
-                    btn.is_scrollable = True
-                    self.elements.append(btn)
+                    self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
 
-                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 50)
+                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
                     self.active_bars.append((bar_rect, data, y_offset, "BUILDING"))
-                    y_offset += 60
+                    y_offset += 40
 
         self.other_start_y = y_offset
         process_building_categories(bldg_groups["Other"])
@@ -282,17 +281,12 @@ class Production_Screen(GameState):
                 final_btn_color = btn_color if can_build else "grey"
                 cb = lambda n=unit_name: self.buy_unit(n)
 
-            btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", final_btn_color, unit_name, cb)
-            btn.base_y = y_offset
-            btn.is_scrollable = True
-            self.elements.append(btn)
+            self._add_scroll_button(x_pos, y_offset, final_btn_color, unit_name, cb)
 
             stats = self.unit_library[unit_name]
-            # Bombarding units get an extra stat row, so their bar needs more room.
-            bar_height = 70 if 'bombard_attack' in stats else 50
-            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, bar_height)
+            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
             self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
-            y_offset += bar_height + 10
+            y_offset += 40
 
         def process_unit_groups(groups, btn_color):
             nonlocal y_offset
@@ -368,11 +362,8 @@ class Production_Screen(GameState):
         else:
             manage_color, manage_cb = "pink", self.open_custom_unit_manager
 
-        manage_btn = Button(x_pos, y_offset + int(self.scroll_y), "medium", manage_color, "Manage Custom Units", manage_cb)
-        manage_btn.base_y = y_offset
-        manage_btn.is_scrollable = True
-        self.elements.append(manage_btn)
-        y_offset += 60
+        self._add_scroll_button(x_pos, y_offset, manage_color, "Manage Custom Units", manage_cb)
+        y_offset += 40
 
         for unit_name in sorted(custom_units):
             render_unit_button(unit_name, "yellow")
@@ -680,33 +671,43 @@ class Production_Screen(GameState):
             lbl = fonts.get("heading2").render("CUSTOM", True, (255, 220, 100))
             surface.blit(lbl, (40, self.custom_start_y + scroll - 45))
 
-        # Stats Bars
+        # Stats Bars -- everything packed onto a single line, per-section
+        # colors preserved but labels dropped, so it fits within the bar
+        # instead of running off-screen.
         bar_font = fonts.get("small")
         for base_rect, stats, base_y, bar_type in self.active_bars:
             bar_rect = pygame.Rect(base_rect.x, base_y + scroll, base_rect.width, base_rect.height)
             pygame.draw.rect(surface, (40, 40, 40), bar_rect)
             pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
-            
+
+            text_y = bar_rect.y + (bar_rect.height - bar_font.get_height()) // 2
+            x = bar_rect.x + 15
+
             if bar_type == "BUILDING":
                 t = max(1, stats.get('time', 1))
-                draw_resource_string(surface, bar_font, f"Build Time: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, c.COLOR_GOLD_HIGHLIGHT)
-                draw_resource_string(surface, bar_font, f"Yield (Per Turn):   ", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), bar_rect.x + 15, bar_rect.y + 26, (150, 255, 150), is_yield=True)
+                x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                x = draw_stat_separator(surface, bar_font, x, text_y)
+                x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                x = draw_stat_separator(surface, bar_font, x, text_y)
+                draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, (150, 255, 150), is_yield=True)
             else:
                 t = max(1, stats.get('production_time', 1))
-                draw_resource_string(surface, bar_font, f"Deploy: {t} turns   |   Cost: ", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), bar_rect.x + 15, bar_rect.y + 6, c.COLOR_GOLD_HIGHLIGHT)
-                
-                # --- MODIFIED COMBAT STATS STRING ---
-                draw_combat_stats(
-                    surface, bar_font, "Combat Stats:   ",
+                x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                x = draw_stat_separator(surface, bar_font, x, text_y)
+                x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                x = draw_stat_separator(surface, bar_font, x, text_y)
+                x = draw_combat_stats(
+                    surface, bar_font, "",
                     stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0),
-                    bar_rect.x + 15, bar_rect.y + 26, (200, 200, 200)
+                    x, text_y, (200, 200, 200), labeled=False
                 )
 
                 if 'bombard_attack' in stats:
+                    x = draw_stat_separator(surface, bar_font, x, text_y)
                     draw_bombardment_stats(
                         surface, bar_font,
                         stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
-                        bar_rect.x + 15, bar_rect.y + 46, (200, 200, 200)
+                        x, text_y, (200, 200, 200), base_text="", labeled=False
                     )
 
     def draw_chrome(self, surface):

@@ -366,6 +366,9 @@ def draw_icon_row(surface, font, base_text, entries, x, y, color,
     `entries` is a sequence of (icon_name, display_text) pairs, already
     filtered and formatted by the caller. `icon_size` defaults to the font
     height so icons line up with the text; pass a number to pin it.
+
+    Returns the x position just past the last thing drawn, so callers can
+    chain multiple colored segments onto the same line.
     """
     base_surf = font.render(base_text, True, color)
     surface.blit(base_surf, (x, y))
@@ -384,7 +387,11 @@ def draw_icon_row(surface, font, base_text, entries, x, y, color,
         curr_x += val_surf.get_width()
 
     if not entries and empty_text:
-        surface.blit(font.render(empty_text, True, color), (curr_x, y))
+        empty_surf = font.render(empty_text, True, color)
+        surface.blit(empty_surf, (curr_x, y))
+        curr_x += empty_surf.get_width()
+
+    return curr_x
 
 def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
     """Material/manpower/fuel row. Zero-valued resources are left out entirely."""
@@ -404,30 +411,54 @@ def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, 
 
     # 16px icons and a 20px step, rather than the font-height sizing the stat
     # rows use, keeps the resource glyphs at their long-standing HUD size.
-    draw_icon_row(surface, font, base_text, entries, x, y, color,
-                  icon_size=16, icon_gap=4,
-                  empty_text="None" if is_yield else "Free")
+    return draw_icon_row(surface, font, base_text, entries, x, y, color,
+                          icon_size=16, icon_gap=4,
+                          empty_text="None" if is_yield else "Free")
 
-def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color):
+def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color, labeled=True):
     """Attack/defense/health/speed row.
 
     Defense is hidden entirely when 0, the same way a free resource cost is
     hidden in draw_resource_string, rather than showing "DEF: 0" noise.
+    `labeled=False` drops the "ATK:"-style prefixes and shows bare numbers
+    next to each icon, for compact single-line layouts.
     """
-    stats = [
-        (c.ICON_ATTACK, f"ATK: {atk}"),
-        (c.ICON_DEFENSE, f"DEF: {df}"),
-        (c.ICON_HEALTH, f"HP: {hp}"),
-        (c.ICON_SPEED, f"SPD: {spd}"),
-    ]
+    if labeled:
+        stats = [
+            (c.ICON_ATTACK, f"ATK: {atk}"),
+            (c.ICON_DEFENSE, f"DEF: {df}"),
+            (c.ICON_HEALTH, f"HP: {hp}"),
+            (c.ICON_SPEED, f"SPD: {spd}"),
+        ]
+    else:
+        stats = [
+            (c.ICON_ATTACK, str(atk)),
+            (c.ICON_DEFENSE, str(df)),
+            (c.ICON_HEALTH, str(hp)),
+            (c.ICON_SPEED, str(spd)),
+        ]
     if not df:
         stats.pop(1)
-    draw_icon_row(surface, font, base_text, stats, x, y, color)
+    return draw_icon_row(surface, font, base_text, stats, x, y, color)
 
-def draw_bombardment_stats(surface, font, dmg, rng, x, y, color):
+def draw_bombardment_stats(surface, font, dmg, rng, x, y, color, base_text="Bombardment:   ", labeled=True):
     """Bombardment damage/range row.
     Caller is responsible for only calling this for units that can bombard."""
-    draw_icon_row(surface, font, "Bombardment:   ", [
-        (c.ICON_BOMBARDMENT, f"DMG: {dmg}"),
-        (c.ICON_BOMBARD_RANGE, f"RNG: {rng}"),
-    ], x, y, color)
+    if labeled:
+        entries = [(c.ICON_BOMBARDMENT, f"DMG: {dmg}"), (c.ICON_BOMBARD_RANGE, f"RNG: {rng}")]
+    else:
+        entries = [(c.ICON_BOMBARDMENT, str(dmg)), (c.ICON_BOMBARD_RANGE, str(rng))]
+    return draw_icon_row(surface, font, base_text, entries, x, y, color)
+
+def draw_time_stat(surface, font, turns, x, y, color, icon_name="Clock"):
+    """Single 'clock icon + turn count' stat, used where a full "Build Time:
+    N turns" label would take up too much space (e.g. compact list rows)."""
+    return draw_icon_row(surface, font, "", [(icon_name, str(turns))], x, y, color,
+                          icon_size=16, icon_gap=4)
+
+def draw_stat_separator(surface, font, x, y, color=(130, 130, 130)):
+    """Draws a ' | ' divider between differently-colored stat segments packed
+    onto the same line, and returns the x position just past it."""
+    sep_surf = font.render(" | ", True, color)
+    surface.blit(sep_surf, (x, y))
+    return x + sep_surf.get_width()

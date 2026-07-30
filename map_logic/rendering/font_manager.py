@@ -14,6 +14,7 @@ class FontManager:
             "small": {"size": 16, "bold": False},
             "normal": {"size": 18, "bold": False},
             "button": {"size": 24, "bold": False},
+            "button_small": {"size": 18, "bold": False},
             "research_year": {"size": 28, "bold": False},
             "heading2": {"size": 28, "bold": False},
             "heading1": {"size": 32, "bold": False},

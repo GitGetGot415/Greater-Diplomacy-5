@@ -436,6 +436,7 @@ SIZES = {
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),
+    "production": (200, 30),
     "orders": (100, 50),
     "small": (100, 40),
     "puppet_option": (160, 30),
