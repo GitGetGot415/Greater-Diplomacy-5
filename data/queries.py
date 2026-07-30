@@ -1741,6 +1741,7 @@ def get_base_unit_name(unit_name):
 # connector word before the year/tier (e.g. "Infantry Type 1940" -> "Inf 1940").
 CONDENSED_UNIT_NAME_WORDS = {
     "Type": "",
+    "Battle": "",
     "Mechanized": "Mech",
     "Motorized": "Mot",
     "Infantry": "Inf",
@@ -1750,6 +1751,7 @@ CONDENSED_UNIT_NAME_WORDS = {
     "Medium": "Med",
     "Heavy": "Hvy",
     "Light": "Lt",
+    "Tank": "Tnk",
     "Super": "Sup",
     "Aircraft": "Acft",
     "Carrier": "Carr",
@@ -1758,7 +1760,16 @@ CONDENSED_UNIT_NAME_WORDS = {
     "Dreadnought": "Dread",
     "Railroad": "RR",
     "Landkreuzer": "LK",
+    "P.1000": "",
+    "P.1500": "",
 }
+
+def _condense_words(name, word_map):
+    """Shared word-for-word substitution behind get_condensed_unit_name and
+    get_condensed_building_name: splits on spaces, swaps any word found in
+    word_map, and drops words mapped to "" (connector words like "Type")."""
+    words = [word_map.get(w, w) for w in name.split(" ")]
+    return " ".join(w for w in words if w)
 
 def get_condensed_unit_name(unit_name):
     """Shortens a unit name via CONDENSED_UNIT_NAME_WORDS for space-constrained
@@ -1774,8 +1785,28 @@ def get_condensed_unit_name(unit_name):
         carrier, inner = carrier_match.groups()
         return f"{carrier} ({get_condensed_unit_name(inner)})"
 
-    words = [CONDENSED_UNIT_NAME_WORDS.get(w, w) for w in unit_name.split(" ")]
-    return " ".join(w for w in words if w)
+    return _condense_words(unit_name, CONDENSED_UNIT_NAME_WORDS)
+
+# Word-for-word shorthand used ONLY by get_condensed_building_name, mirroring
+# CONDENSED_UNIT_NAME_WORDS. "Building" is dropped as a connector word the
+# same way "Type" is for units (e.g. "Recruitment Building Lvl 3" -> "Rcrt
+# Lvl 3"); "Lvl" is kept since it's already short.
+CONDENSED_BUILDING_NAME_WORDS = {
+    "Building": "",
+    "Recruitment": "Rcrt",
+    "Factory": "Fac",
+    "Center": "Ctr",
+    "Refinery": "Rfn",
+    "Workshop": "Wkshp",
+}
+
+def get_condensed_building_name(building_name):
+    """Shortens a building name via CONDENSED_BUILDING_NAME_WORDS for the same
+    space-constrained displays as get_condensed_unit_name. e.g. 'Basic
+    Recruitment Center' -> 'Basic Rcrt Ctr', 'Factory Lvl 5' -> 'Fac Lvl 5'.
+    Names with no recognized words (e.g. "Core Territory") pass through
+    unchanged. Everywhere else should keep showing the full name."""
+    return _condense_words(building_name, CONDENSED_BUILDING_NAME_WORDS)
 
 def get_base_item_name(name):
     """Collapses a unit OR building name down to the family the turn overrides key off.

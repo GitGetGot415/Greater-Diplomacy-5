@@ -50,6 +50,11 @@ def get_queue_entry_text(item):
     for old, new in NAME_ABBREVIATIONS.items():
         raw_name = raw_name.replace(old, new)
 
+    if "unit_type" in item:
+        raw_name = queries.get_condensed_unit_name(raw_name)
+    else:
+        raw_name = queries.get_condensed_building_name(raw_name)
+
     if len(raw_name) > ROW_NAME_MAX_CHARS:
         raw_name = raw_name[:ROW_NAME_MAX_CHARS - 2] + ".."
 

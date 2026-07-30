@@ -19,7 +19,7 @@ LIST_X = 50
 ROW_STEP_Y = 40
 SECTION_SPACING = 60
 
-BAR_OFFSET_X = 210
+BAR_OFFSET_X = 140
 BAR_WIDTH = 550
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
@@ -296,11 +296,11 @@ class Production_Screen(GameState):
                         cb = lambda: None
                         btn_color = "grey"
                     elif is_spectator and not can_spectator_edit:
-                        btn_txt = target
+                        btn_txt = queries.get_condensed_building_name(target)
                         cb = lambda: None
                         btn_color = "grey"
                     else:
-                        btn_txt = target
+                        btn_txt = queries.get_condensed_building_name(target)
                         cb = lambda t=target: self.start_construction(t)
                         btn_color = "orange"
                         if data["group"] == "recruitment": btn_color = "red"
@@ -417,7 +417,7 @@ class Production_Screen(GameState):
         else:
             manage_color, manage_cb = "pink", self.open_custom_unit_manager
 
-        self._add_scroll_button(x_pos, y_offset, manage_color, "Manage Custom Units", manage_cb)
+        self._add_scroll_button(x_pos, y_offset, manage_color, "Edit Custom Units", manage_cb)
         y_offset += ROW_STEP_Y
 
         for unit_name in sorted(custom_units):
