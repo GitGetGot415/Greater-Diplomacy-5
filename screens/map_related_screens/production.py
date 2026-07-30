@@ -336,7 +336,7 @@ class Production_Screen(GameState):
                 final_btn_color = btn_color if can_build else "grey"
                 cb = lambda n=unit_name: self.buy_unit(n)
 
-            self._add_scroll_button(x_pos, y_offset, final_btn_color, unit_name, cb)
+            self._add_scroll_button(x_pos, y_offset, final_btn_color, queries.get_condensed_unit_name(unit_name), cb)
 
             stats = self.unit_library[unit_name]
             bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)

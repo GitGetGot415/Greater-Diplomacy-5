@@ -3,6 +3,10 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
+from ui_elements import draw_combat_stats, draw_bombardment_stats
+
+# Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
+GARRISON_FLAG_SIZE = (18, 12)
 
 # ==========================================
 # LAYOUT
@@ -132,23 +136,47 @@ def draw_sidebar_info(self, surface):
             current_y += 25
         else:
             # Scale back the list size if combat is happening to fit the UI height limit
-            display_limit = 4 if is_combat else 12 
+            display_limit = 4 if is_combat else 12
             for u in units[:display_limit]:
-                u_name = u.get("type", "Unit")
+                u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
                 u_owner_id = u.get("owner", "Unknown")
-                u_owner_display = self.nation_data.get(u_owner_id, {}).get("name", u_owner_id)
-                
-                # Grab the combat stats
-                atk = u.get("attack", 0)
-                defense = u.get("defense", 0)
-                hp = int(u.get("health", 0))
-                
-                # Format the string to match the combat zone
-                display_text = f"- {u_name} ({u_owner_display}) (ATK: {queries.format_number(atk)}) (DEF: {queries.format_number(defense)}) (HP: {queries.format_number(hp)})"
-                
-                txt = self.small_font.render(display_text, True, (200, 200, 200))
-                surface.blit(txt, (text_x + 5, current_y))
+
+                row_x = text_x + 5
+
+                # Unit name
+                name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                surface.blit(name_surf, (row_x, current_y))
+                row_x += name_surf.get_width() + 4
+
+                # Owner flag instead of a country name string
+                flag_w, flag_h = GARRISON_FLAG_SIZE
+                owner_flag_data = self.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
+                flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
+                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
+                flag_y = current_y + (name_surf.get_height() - flag_h) // 2
+                surface.blit(flag_surf, (row_x, flag_y))
+                pygame.draw.rect(surface, (100, 100, 100), (row_x, flag_y, flag_w, flag_h), 1)
+                row_x += flag_w + 6
+
+                # Condensed, icon-based combat stats, matching the production tab's style
+                draw_combat_stats(
+                    surface, self.small_font, "",
+                    u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                    row_x, current_y, (200, 200, 200), labeled=False
+                )
+
                 current_y += 20
+
+                # Bombardment stats on their own indented line, only for units that can bombard
+                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
+                if 'bombard_attack' in unit_stats:
+                    draw_bombardment_stats(
+                        surface, self.small_font,
+                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
+                        u.get("bombard_range", unit_stats.get('bombard_range', 0)),
+                        text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
+                    )
+                    current_y += 18
                 
             if len(units) > display_limit:
                 txt = self.small_font.render(f" + {len(units) - display_limit} more", True, (150, 150, 150))
@@ -176,17 +204,35 @@ def draw_sidebar_info(self, surface):
             
             side_units = [u for u in units if u.get("owner") == side_id]
             for u in side_units[:5]:
-                u_type = u.get("type", "Unit")
-                atk = u.get("attack", 0)
-                defense = u.get("defense", 0)
-                hp = int(u.get("health", 0))
-                
-                u_stats = f" - {u_type} (ATK: {queries.format_number(atk)}) (DEF: {queries.format_number(defense)}) (HP: {queries.format_number(hp)})"
+                u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
 
-                txt = self.small_font.render(u_stats, True, (200, 200, 200))
-                surface.blit(txt, (x_offset + 10, current_y))
+                row_x = x_offset + 10
+
+                # Unit name
+                name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                surface.blit(name_surf, (row_x, current_y))
+                row_x += name_surf.get_width() + 6
+
+                # Condensed, icon-based combat stats, matching the garrison list
+                draw_combat_stats(
+                    surface, self.small_font, "",
+                    u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                    row_x, current_y, (200, 200, 200), labeled=False
+                )
+
                 current_y += 20
-            
+
+                # Bombardment stats on their own indented line, only for units that can bombard
+                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
+                if 'bombard_attack' in unit_stats:
+                    draw_bombardment_stats(
+                        surface, self.small_font,
+                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
+                        u.get("bombard_range", unit_stats.get('bombard_range', 0)),
+                        x_offset + 20, current_y, (200, 200, 200), base_text="", labeled=False
+                    )
+                    current_y += 18
+
             current_y += 10
 
 # --- MODIFIED FUNCTION FOR PORTRAIT ---

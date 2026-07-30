@@ -16,7 +16,19 @@ Immediate concerns:
 !!!!!
 EACH SAVE SHOULD HAVE THE VERSION NUMBER / DATE THAT IT WAS GENERATED ON ASSOCIATED WITH IT
 SO IT CAN BE UPDATED IF AN OUT OF DATE VERSION IS DETECTED
+
+if a unit has a max hp of 1000 and a current hp of 800
+then an update increases it to something like 2000
+current hp should be increased to 1600
+
+likewise if its max hp is decreased to 500
+current hp should be 400
+
+dont forget to edit other stats too, like attack, defense, speed, etc
 !!!!!
+
+- if in combat zone, remove the active garrison display
+- also let the user scroll down the combat zone / active garrison display / diplomatic info / buildings and units queue if it gets to be too long instead of just saying  something like (+3 more...)
 
 - KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war

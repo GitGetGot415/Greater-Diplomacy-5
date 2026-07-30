@@ -1735,6 +1735,39 @@ def get_base_unit_name(unit_name):
     base = re.sub(r'\s+\d{4}$', '', unit_name)
     return re.sub(r'\s+[IVXLCDM]+$', '', base).strip()
 
+# Word-for-word shorthand used ONLY by get_condensed_unit_name, for the tightly
+# spaced production unit list and garrison rosters. Every other screen shows
+# the full proper name. "Type" is dropped outright since it's a redundant
+# connector word before the year/tier (e.g. "Infantry Type 1940" -> "Inf 1940").
+CONDENSED_UNIT_NAME_WORDS = {
+    "Type": "",
+    "Mechanized": "Mech",
+    "Motorized": "Mot",
+    "Infantry": "Inf",
+    "Armored": "Armd",
+    "Artillery": "Arty",
+    "Cavalry": "Cav",
+    "Medium": "Med",
+    "Heavy": "Hvy",
+    "Light": "Lt",
+    "Super": "Sup",
+    "Aircraft": "Acft",
+    "Carrier": "Carr",
+    "Destroyer": "Dstr",
+    "Submarine": "Sub",
+    "Dreadnought": "Dread",
+    "Railroad": "RR",
+    "Landkreuzer": "LK",
+}
+
+def get_condensed_unit_name(unit_name):
+    """Shortens a unit name via CONDENSED_UNIT_NAME_WORDS for space-constrained
+    displays (production unit list, garrison rosters). e.g. 'Mechanized
+    Infantry Type 1940' -> 'Mech Inf 1940', 'Medium Tank III' -> 'Med Tank III'.
+    Everywhere else should keep showing the full name."""
+    words = [CONDENSED_UNIT_NAME_WORDS.get(w, w) for w in unit_name.split(" ")]
+    return " ".join(w for w in words if w)
+
 def get_base_item_name(name):
     """Collapses a unit OR building name down to the family the turn overrides key off.
 
