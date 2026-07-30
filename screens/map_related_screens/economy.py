@@ -6,6 +6,29 @@ from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from data import queries
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+TITLE_Y = 40
+BACK_BTN_POS = (20, 20)
+EXPENSES_BTN_OFFSET_X = 120 # Measured in from the right edge
+
+# Resource rows
+ROW_START_Y = 120
+ROW_STEP_Y = 120
+ROW_WIDTH = 1200
+ROW_HEIGHT = 100
+
+# Sliders below the rows
+SLIDER_WIDTH = 400
+CONSCRIPTION_SLIDER_Y = 530
+CONVERSION_SLIDER_Y = 600
+SLIDER_CAPTION_OFFSET_Y = 25
+
+# Zeroed income breakdown, used when there is nothing real to show yet.
+EMPTY_BREAKDOWN = {"core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
+
 class Economy_Screen(GameState):
     back_state = "MAP"
 
@@ -22,10 +45,10 @@ class Economy_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
+        self.elements = [Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)]
         
         # Expenses button positioned in the top right corner
-        btn_expenses = Button(c.SCREEN_WIDTH - 120, 20, "small", "orange", "Expenses", self.open_expenses_table)
+        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, BACK_BTN_POS[1], "small", "orange", "Expenses", self.open_expenses_table)
         if self.map_screen.tactical_mode:
             btn_expenses.apply_state(enabled=False)
         self.elements.append(btn_expenses)
@@ -44,8 +67,8 @@ class Economy_Screen(GameState):
         p_data["conscription_slider"] = conscript_val
         
         if not self.map_screen.tactical_mode:
-            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONSCRIPTION_BTN_Y, 400, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0))
-            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - 200, c.ECON_CONVERT_BTN_Y, 400, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
+            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0))
+            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
 
     def set_conscription(self, val):
         if not self.map_screen or self.map_screen.tactical_mode: return
@@ -62,7 +85,7 @@ class Economy_Screen(GameState):
         
         is_tactical = self.map_screen.tactical_mode
         title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
-        ui_bars.draw_centered_title(surface, title_text, 40)
+        ui_bars.draw_centered_title(surface, title_text, TITLE_Y)
         
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
 
@@ -76,7 +99,7 @@ class Economy_Screen(GameState):
             desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
             
             upkeep = {"manpower": desertion_cost, "materials": 0, "fuel": 0} 
-            breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in ["manpower", "materials", "fuel"]}
+            breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
             
             breakdown["manpower"]["morale"] = morale
             breakdown["manpower"]["desertion"] = desertion_cost
@@ -99,13 +122,13 @@ class Economy_Screen(GameState):
                 total_inc, upkeep, breakdown = econ_tuple
             else:
                 total_inc, upkeep = econ_tuple
-                breakdown = {k: {"core":0, "non_core":0, "buildings":0, "resources":0, "conversion":0} for k in c.ECON_RESOURCE_KEYS}
+                breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
             
         font_large = fonts.get("heading1")
         font_med = fonts.get("heading2")
         font_small = fonts.get("normal")
         
-        y_offset = 120
+        y_offset = ROW_START_Y
         resources = [
             ("manpower", "Manpower", self.map_screen.player_manpower, c.COLOR_RESOURCE_MANPOWER),
             ("materials", "Materials", self.map_screen.player_materials, c.COLOR_RESOURCE_MATERIALS),
@@ -120,7 +143,7 @@ class Economy_Screen(GameState):
             net_str = f"+{int(net)}" if net >= 0 else str(int(net))
             
             # Row Background (Made taller to fit details)
-            row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 600, y_offset, 1200, 100)
+            row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - ROW_WIDTH // 2, y_offset, ROW_WIDTH, ROW_HEIGHT)
             pygame.draw.rect(surface, (40, 40, 50), row_rect)
             pygame.draw.rect(surface, (100, 100, 100), row_rect, 1)
             
@@ -163,7 +186,7 @@ class Economy_Screen(GameState):
             # Detailed Breakdown
             surface.blit(font_small.render(detail_breakdown, True, (150, 150, 150)), (row_rect.x + 0, row_rect.y + 60))
             
-            y_offset += 120
+            y_offset += ROW_STEP_Y
 
         if not is_tactical:
             # Draw dynamic conversion info below sliders
@@ -171,13 +194,13 @@ class Economy_Screen(GameState):
             mat_gained = breakdown.get("materials", {}).get("conscription", 0)
             if man_lost > 0:
                 cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2, c.ECON_CONSCRIPTION_BTN_Y + 25))
+                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2, CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
             mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
             fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
             if mat_lost > 0:
                 conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, c.ECON_CONVERT_BTN_Y + 25))
+                surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
     def open_expenses_table(self):
         if not self.map_screen: return

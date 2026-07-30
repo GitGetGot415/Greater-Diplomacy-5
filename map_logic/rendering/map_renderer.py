@@ -2,7 +2,6 @@ import pygame
 from map_logic.rendering import hover_renderer, province_select, overlay_renderer, country_names
 from map_logic.system32 import loading_screen
 from ui import minimap
-from ui.information import feedback_text
 from data import queries
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
@@ -239,8 +238,7 @@ def draw_map_screen(self, surface):
             cb_font = fonts.get("normal")
 
             if has_events:
-                se_val_raw = self.scenario_settings.get("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS)
-                se_val = str(se_val_raw).lower() == "true"
+                se_val = queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, self.scenario_settings)
                 if se_val:
                     cb_text = "Scripted Events Enabled"
                 else:

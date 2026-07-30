@@ -1,4 +1,3 @@
-import pygame
 import data.constants as c
 from data.io import country_io
 from map_logic.rendering import map_utils
@@ -129,8 +128,8 @@ def get_mixed_core_color(cores):
         return color
         
     r = g = b = valid = 0
-    for c in cores:
-        col = nations_dict.get(c)
+    for core in cores:
+        col = nations_dict.get(core)
         if col:
             r += col[0]; g += col[1]; b += col[2]
             valid += 1

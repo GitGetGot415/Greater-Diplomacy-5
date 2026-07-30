@@ -1,8 +1,6 @@
-import pygame
 import os
-import secrets
 import tkinter as tk
-from tkinter import simpledialog, filedialog
+from tkinter import filedialog
 from data.io import multiplayer_io
 from data import queries
 import data.constants as c

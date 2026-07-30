@@ -1,8 +1,49 @@
-import os
 from gameState import GameState
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, parse_pos
 import data.constants as c
 from data import queries
+
+# ==========================================
+# LAYOUT
+# ==========================================
+
+BACK_BTN_POS = (20, 20)
+
+# Everything in the centre column, top to bottom.
+FOG_ROW_Y = 160
+DAYS_PER_TURN_ROW_Y = 480
+RESET_ROW_Y = 600
+
+# The fog intensity slider rides alongside the fog toggle on the first row,
+# which is why that toggle is the only one nudged left of centre.
+FOG_TOGGLE_X = "centered-120"
+FOG_SLIDER_X = "centered+120"
+FOG_SLIDER_WIDTH = 180
+FOG_SLIDER_Y = FOG_ROW_Y + 15
+
+# Side buttons that open their own sub-screens.
+SIDE_BTN_X = 80
+SIDE_BTN_AI_Y = 360
+SIDE_BTN_TURN_EDITOR_Y = 420
+
+# ==========================================
+# TOGGLES
+# ==========================================
+
+# (y, settings key, default constant, label). One entry per on/off scenario
+# rule: adding a row here gives it a button, a working toggle and a reset entry.
+TOGGLE_ROWS = [
+    (FOG_ROW_Y, "fog_of_war", c.DEFAULT_FOG_OF_WAR, "Fog of War"),
+    (240, "casus_belli_required", c.DEFAULT_CASUS_BELLI, "Casus Belli Required"),
+    (300, "surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack"),
+    (360, "disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions"),
+    (420, "battle_royale", c.DEFAULT_BATTLE_ROYALE, "Battle Royale"),
+    (540, "bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, "Bounce Tiebreaker"),
+]
+
+# Slider stops for fog_of_war_strength, as (saved value, slider position).
+FOG_STRENGTH_STEPS = [("lite", 0.0), ("normal", 1.0), ("extreme", 2.0)]
+
 
 class Scenario_Settings(GameState):
     back_state = "NEW_GAME" # Track which screen to return to
@@ -13,124 +54,64 @@ class Scenario_Settings(GameState):
         # Load persistent settings instead of creating defaults
         self.settings = queries.get_scenario_settings()
         if not self.settings:
-            self.settings = {
-                "fog_of_war": c.DEFAULT_FOG_OF_WAR,
-                "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
-                "casus_belli_required": c.DEFAULT_CASUS_BELLI,
-                "surprise_attack": c.DEFAULT_SURPRISE_ATTACK,
-                "use_scripted_events": c.DEFAULT_USE_SCRIPTED_EVENTS,
-                "ai_disabled": c.DEFAULT_AI_DISABLED,
-                "battle_royale": c.DEFAULT_BATTLE_ROYALE,
-                "bounce_tiebreaker": c.DEFAULT_BOUNCE_TIEBREAKER
-            }
+            self.settings = self.default_settings()
         self.refresh_ui()
 
+    def default_settings(self):
+        """Every scenario rule this screen owns, at its constants.py default."""
+        defaults = {key: default for _y, key, default, _label in TOGGLE_ROWS}
+        defaults["fog_of_war_strength"] = c.DEFAULT_FOG_OF_WAR_STRENGTH
+        defaults["use_scripted_events"] = c.DEFAULT_USE_SCRIPTED_EVENTS
+        defaults["days_per_turn"] = "Default"
+        return defaults
+
     def refresh_ui(self):
-        self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
-        ]
-        
-        # Toggle Button - Fog of War
-        fog_val = str(self.settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)).lower() == "true"
-        fog_color = "green" if fog_val else "red"
-        fog_text = "Fog of War: ON" if fog_val else "Fog of War: OFF"
-        
-        self.elements.append(
-            Button("centered-120", 160, "medium", fog_color, fog_text, self.toggle_fog)
-        )
+        self.elements = [Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)]
 
-        fog_strength = self.settings.get("fog_of_war_strength", "normal")
-        if fog_strength == "lite":
-            s_val = 0.0
-            s_text = "Intensity: Lite"
-        elif fog_strength == "extreme":
-            s_val = 2.0
-            s_text = "Intensity: Extreme"
-        else:
-            s_val = 1.0
-            s_text = "Intensity: Normal"
+        for y, key, default, label in TOGGLE_ROWS:
+            is_on = queries.get_scenario_flag(key, default, self.settings)
+            x = FOG_TOGGLE_X if key == "fog_of_war" else "centered"
+            self.elements.append(
+                Button(x, y, "medium", "green" if is_on else "red",
+                       f"{label}: {'ON' if is_on else 'OFF'}",
+                       lambda k=key, d=default: self.toggle(k, d))
+            )
 
-        def fog_slider_cb(val):
-            if val < 0.66:
-                self.settings["fog_of_war_strength"] = "lite"
-                self.fog_slider.text = "Intensity: Lite"
-            elif val > 1.33:
-                self.settings["fog_of_war_strength"] = "extreme"
-                self.fog_slider.text = "Intensity: Extreme"
-            else:
-                self.settings["fog_of_war_strength"] = "normal"
-                self.fog_slider.text = "Intensity: Normal"
-            queries.save_scenario_settings(self.settings)
-
-        from ui_elements import parse_pos
-        slider_x = parse_pos("centered+120", c.SCREEN_WIDTH, 180)
-        self.fog_slider = Slider(slider_x, 175, 180, s_text, s_val, fog_slider_cb, visual_max=2.0, allowed_max=2.0)
-        self.elements.append(self.fog_slider)
-
-        # Toggle Button - Casus Belli Required
-        cb_val = str(self.settings.get("casus_belli_required", c.DEFAULT_CASUS_BELLI)).lower() == "true"
-        cb_color = "green" if cb_val else "red"
-        cb_text = "Casus Belli Required: ON" if cb_val else "Casus Belli Required: OFF"
-
-        self.elements.append(
-            Button("centered", 240, "medium", cb_color, cb_text, self.toggle_casus_belli)
-        )
-
-        # Toggle Button - Surprise Attack
-        ib_val = str(self.settings.get("surprise_attack", c.DEFAULT_SURPRISE_ATTACK)).lower() == "true"
-        ib_color = "green" if ib_val else "red"
-        ib_text = "Surprise Attack: ON" if ib_val else "Surprise Attack: OFF"
-
-        self.elements.append(
-            Button("centered", 300, "medium", ib_color, ib_text, self.toggle_surprise_attack)
-        )
-
-        # Button to open AI Settings
-        self.elements.append(
-            Button(80, 360, "medium", "blue", "AI Specific Settings", self.open_ai_settings)
-        )
-
-        # Toggle Button - Disable Factions
-        df_val = str(self.settings.get("disable_factions", c.DEFAULT_DISABLE_FACTIONS)).lower() == "true"
-        df_color = "green" if df_val else "red"
-        df_text = "Disable Factions: ON" if df_val else "Disable Factions: OFF"
-
-        self.elements.append(
-            Button("centered", 360, "medium", df_color, df_text, self.toggle_disable_factions)
-        )
-
-        # Toggle Button - Battle Royale
-        br_val = str(self.settings.get("battle_royale", c.DEFAULT_BATTLE_ROYALE)).lower() == "true"
-        br_color = "green" if br_val else "red"
-        br_text = "Battle Royale: ON" if br_val else "Battle Royale: OFF"
-
-        self.elements.append(
-            Button("centered", 420, "medium", br_color, br_text, self.toggle_battle_royale)
-        )
+        self.elements.append(self.build_fog_slider())
 
         dpt_val = self.settings.get("days_per_turn", "Default")
-        self.elements.append(
-            Button("centered", 480, "medium", "blue", f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn)
-        )
+        self.elements.extend([
+            Button("centered", DAYS_PER_TURN_ROW_Y, "medium", "blue",
+                   f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn),
+            Button("centered", RESET_ROW_Y, "medium", "grey", "Reset to Defaults", self.reset_defaults),
+            Button(SIDE_BTN_X, SIDE_BTN_AI_Y, "medium", "blue", "AI Specific Settings", self.open_ai_settings),
+            Button(SIDE_BTN_X, SIDE_BTN_TURN_EDITOR_Y, "medium", "purple", "Edit Construction Turns", self.open_turn_editor),
+        ])
 
-        # Toggle Button - Bounce Tiebreaker
-        bt_val = str(self.settings.get("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER)).lower() == "true"
-        bt_color = "green" if bt_val else "red"
-        bt_text = "Bounce Tiebreaker: ON" if bt_val else "Bounce Tiebreaker: OFF"
+    def build_fog_slider(self):
+        """The Lite/Normal/Extreme intensity slider that sits next to the fog toggle."""
+        strength = self.settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
+        value = dict(FOG_STRENGTH_STEPS).get(strength, 1.0)
+        max_value = FOG_STRENGTH_STEPS[-1][1]
 
-        self.elements.append(
-            Button("centered", 540, "medium", bt_color, bt_text, self.toggle_bounce_tiebreaker)
-        )
+        def label_for(name):
+            return f"Intensity: {name.title()}"
 
-        # Reset Defaults Button
-        self.elements.append(
-            Button("centered", 600, "medium", "grey", "Reset to Defaults", self.reset_defaults)
-        )
+        def on_slide(val):
+            # Snap to whichever stop the handle landed nearest
+            name = min(FOG_STRENGTH_STEPS, key=lambda step: abs(step[1] - val))[0]
+            self.settings["fog_of_war_strength"] = name
+            self.fog_slider.text = label_for(name)
+            queries.save_scenario_settings(self.settings)
 
-        # Edit Construction Turns
-        self.elements.append(
-            Button(80, 420, "medium", "purple", "Edit Construction Turns", self.open_turn_editor)
-        )
+        slider_x = parse_pos(FOG_SLIDER_X, c.SCREEN_WIDTH, FOG_SLIDER_WIDTH)
+        self.fog_slider = Slider(slider_x, FOG_SLIDER_Y, FOG_SLIDER_WIDTH, label_for(strength),
+                                 value, on_slide, visual_max=max_value, allowed_max=max_value)
+        return self.fog_slider
+
+    def toggle(self, key, default):
+        queries.toggle_scenario_flag(self.settings, key, default)
+        self.refresh_ui()
 
     def open_turn_editor(self):
         try:
@@ -139,67 +120,18 @@ class Scenario_Settings(GameState):
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
 
-    def toggle_bounce_tiebreaker(self):
-        current = str(self.settings.get("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER)).lower() == "true"
-        self.settings["bounce_tiebreaker"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
-
-    def toggle_fog(self):
-        current = str(self.settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)).lower() == "true"
-        self.settings["fog_of_war"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
-
-    def toggle_casus_belli(self):
-        current = str(self.settings.get("casus_belli_required", c.DEFAULT_CASUS_BELLI)).lower() == "true"
-        self.settings["casus_belli_required"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
-
-    def toggle_surprise_attack(self):
-        current = str(self.settings.get("surprise_attack", c.DEFAULT_SURPRISE_ATTACK)).lower() == "true"
-        self.settings["surprise_attack"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
-
     def open_ai_settings(self):
         self.go_to("AI_SETTINGS")
-
-    def toggle_battle_royale(self):
-        current = str(self.settings.get("battle_royale", c.DEFAULT_BATTLE_ROYALE)).lower() == "true"
-        self.settings["battle_royale"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
 
     def cycle_days_per_turn(self):
         options = c.DAYS_PER_TURN_OPTIONS
         current = self.settings.get("days_per_turn", "Default")
-        if current in options:
-            idx = options.index(current)
-            next_idx = (idx + 1) % len(options)
-        else:
-            next_idx = 0
+        next_idx = (options.index(current) + 1) % len(options) if current in options else 0
         self.settings["days_per_turn"] = options[next_idx]
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
 
-    def toggle_disable_factions(self):
-        current = str(self.settings.get("disable_factions", c.DEFAULT_DISABLE_FACTIONS)).lower() == "true"
-        self.settings["disable_factions"] = not current
-        queries.save_scenario_settings(self.settings)
-        self.refresh_ui()
-
     def reset_defaults(self):
-        self.settings["fog_of_war"] = c.DEFAULT_FOG_OF_WAR
-        self.settings["fog_of_war_strength"] = c.DEFAULT_FOG_OF_WAR_STRENGTH
-        self.settings["casus_belli_required"] = c.DEFAULT_CASUS_BELLI
-        self.settings["surprise_attack"] = c.DEFAULT_SURPRISE_ATTACK
-        self.settings["days_per_turn"] = "Default"
-        self.settings["use_scripted_events"] = c.DEFAULT_USE_SCRIPTED_EVENTS
-        self.settings["battle_royale"] = c.DEFAULT_BATTLE_ROYALE
-        self.settings["bounce_tiebreaker"] = c.DEFAULT_BOUNCE_TIEBREAKER
-        self.settings["disable_factions"] = c.DEFAULT_DISABLE_FACTIONS
+        self.settings.update(self.default_settings())
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
-

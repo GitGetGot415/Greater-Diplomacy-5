@@ -2,17 +2,28 @@
 import pygame
 import os
 from pathlib import Path
-import tkinter as tk 
 from tkinter import colorchooser, filedialog
 import unicodedata
 from gameState import GameState
-from ui_elements import Button, process_text_input
+from ui_elements import process_text_input
 import ui_elements
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from ui import buttons
 from data import queries
 from map_logic.rendering import country_names
+
+# ==========================================
+# LAYOUT
+# ==========================================
+# Button placement for this screen lives in ui/buttons.py, next to the rest of
+# the game's button layout; only the text this screen draws itself is here.
+
+EDIT_COUNTRY_TITLE_X = 600
+EDIT_COUNTRY_TITLE_Y = 20
+EDIT_COUNTRY_ID_DISPLAY_X = c.SCREEN_WIDTH - 250
+EDIT_COUNTRY_ID_DISPLAY_Y = c.SCREEN_HEIGHT - 40
+
 
 input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
@@ -446,7 +457,7 @@ class Edit_Country_Screen(GameState):
         heading_font = fonts.get("heading2")
         normal_font = fonts.get("normal")
 
-        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), (c.EDIT_COUNTRY_TITLE_X, c.EDIT_COUNTRY_TITLE_Y))
+        surface.blit(title_font.render("Edit Country Identity", True, (255, 255, 255)), (EDIT_COUNTRY_TITLE_X, EDIT_COUNTRY_TITLE_Y))
 
         # Render Scaled Canvases
         scaled_flag = pygame.transform.scale(self.flag_surf, (self.flag_rect.width, self.flag_rect.height))
@@ -511,8 +522,8 @@ class Edit_Country_Screen(GameState):
             self._draw_popup(surface, "Discard Unsaved Changes?", "Press Enter to Discard or Esc to Cancel", "DISCARD", "CANCEL")
 
         # --- Draw Original Key Country ID block ---
-        id_display_x = c.EDIT_COUNTRY_ID_DISPLAY_X
-        id_display_y = c.EDIT_COUNTRY_ID_DISPLAY_Y
+        id_display_x = EDIT_COUNTRY_ID_DISPLAY_X
+        id_display_y = EDIT_COUNTRY_ID_DISPLAY_Y
         id_text = f"Country ID: {self.editing_country}"
         id_surf = normal_font.render(id_text, True, (150, 150, 150))
         surface.blit(id_surf, (id_display_x, id_display_y))

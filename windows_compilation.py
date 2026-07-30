@@ -29,21 +29,21 @@ def main():
     
     def data_ignore_func(dir_name, contents):
         ignored = []
-        for c in contents:
-            path = os.path.join(dir_name, c)
-            if os.path.isfile(path) and not c.endswith('.json'):
-                ignored.append(c)
+        for entry in contents:
+            path = os.path.join(dir_name, entry)
+            if os.path.isfile(path) and not entry.endswith('.json'):
+                ignored.append(entry)
         return ignored
 
     def assets_ignore_func(dir_name, contents):
         ignored = []
-        for c in contents:
-            path = os.path.join(dir_name, c)
+        for entry in contents:
+            path = os.path.join(dir_name, entry)
             try:
                 # git check-ignore returns 0 if ignored, 1 if not ignored
                 res = subprocess.run(["git", "check-ignore", "-q", path])
                 if res.returncode == 0:
-                    ignored.append(c)
+                    ignored.append(entry)
             except Exception as e:
                 print(f"Error checking git ignore for {path}: {e}")
         return ignored

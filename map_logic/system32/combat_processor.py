@@ -386,7 +386,7 @@ def check_for_post_combat_captures(self):
                     capturer = tied_by_spd[0]
                 else:
                     # Tiebreaker 3: Let fate decide, or bounce
-                    if str(self.scenario_settings.get("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER)).lower() == "true":
+                    if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, self.scenario_settings):
                         capturer = None
                         
                         # Bounce all valid capturer units back to where they came from

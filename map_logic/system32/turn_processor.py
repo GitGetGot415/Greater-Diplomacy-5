@@ -10,8 +10,7 @@ def prepare_turn(self):
     print("--- [PHASE 1] AI PREPARATION START ---")
     
     # --- NEW: Check if AI is turned off ---
-    ai_disabled_raw = self.scenario_settings.get("ai_disabled", c.DEFAULT_AI_DISABLED)
-    ai_disabled = str(ai_disabled_raw).lower() == "true"
+    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, self.scenario_settings)
     
 
     if not ai_disabled:

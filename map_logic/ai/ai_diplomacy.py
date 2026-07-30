@@ -128,9 +128,6 @@ def process_basic_proactive_ai(map_screen):
     active_nations = set(queries.get_living_nations(map_screen.map_data))
     ai_nations = queries.get_active_ai_nations(map_screen)
     
-    # Grab the active players to pass down for our FULL/ABSOLUTE optimization check
-    human_players = map_screen.active_players
-
     # --- Trigger the UI Progress Bar ---
     map_screen.proactive_tasks_total = len(ai_nations)
     map_screen.proactive_tasks_completed = 0
@@ -383,27 +380,10 @@ def process_basic_proactive_ai(map_screen):
                         if my_master and my_type == c.PUPPET_TYPE_AUTONOMOUS and target != my_master:
                             continue
                         
-                        # Check localized border strength instead of global strength
-                        my_border_str, target_border_str = queries.get_border_strength(ai_name, target, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data)
-                        
-                        # Prevent division by zero if they have literally no troops on the border
-                        target_border_str = max(1, target_border_str)
-                        
-                        # Consider total alliance strength, economy, and distractions
-                        my_alliance_str = queries.get_alliance_military_strength(ai_name, map_screen.map_data, map_screen.nation_data)
-                        target_alliance_str = queries.get_alliance_military_strength(target, map_screen.map_data, map_screen.nation_data)
-                        
-                        my_econ_power = queries.get_economic_power(ai_name, map_screen.nation_data) / 100.0
-                        target_econ_power = queries.get_economic_power(target, map_screen.nation_data) / 100.0
-
-                        # Factor in how distracted the target is by their existing wars
-                        target_distraction_str = queries.get_combined_enemy_strength(target, map_screen.map_data, map_screen.nation_data) * c.AI_ENEMY_DISTRACTION_WEIGHT
-
-                        # Add the target's distraction to our perceived power
-                        my_total_power = my_alliance_str + my_econ_power + target_distraction_str
-                        target_total_power = max(1.0, target_alliance_str + target_econ_power)
-                        
-                        # AI needs local border superiority AND overall global viability to declare war
+                        # Border superiority, alliance/economic power and how distracted
+                        # the target already is all live inside ai_thinks_it_can_win; this
+                        # block used to recompute every one of them and throw the result
+                        # away, which cost several full map scans per candidate target.
                         if queries.ai_thinks_it_can_win(ai_name, target, map_screen.map_data, map_screen.nation_data, map_screen.id_to_province):
                             
                             # Random chance to actually declare war
@@ -531,8 +511,7 @@ def process_basic_proactive_ai(map_screen):
 
 def process_scripted_events(map_screen):
     """Processes scenario-specific scripted events for AI nations."""
-    use_events_raw = map_screen.scenario_settings.get("use_scripted_events", False)
-    if str(use_events_raw).lower() == "false" or not use_events_raw:
+    if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.scenario_settings):
         return
         
     active_nations = set(queries.get_living_nations(map_screen.map_data))
@@ -734,7 +713,6 @@ def process_scripted_events(map_screen):
                 if not actions and "action_type" in evt:
                     actions = [{"type": evt["action_type"], "target": evt.get("action_target", "None")}]
                 
-                ai_queue = data.setdefault("queued_ai_actions", [])
                 pending = data.setdefault("pending_diplomacy", {})
                 
                 for act in actions:

@@ -6,7 +6,7 @@ from gameState import MapOverlayScreen, dispatch_global_keys
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
-from ui.bars import ui_bars
+from ui.bars import ui_bars, resource_hud
 
 def _run_pygame_sub_screen(map_screen, screen_obj):
     """Runs a blocking PyGame loop that acts like a GameState to bypass the main state machine."""
@@ -90,9 +90,7 @@ class Declare_War_Screen(MapOverlayScreen):
 
         has_wg = queries.has_wargoal(map_screen.player_country, target_nation, map_screen.nation_data, map_screen.map_data)
         
-        # Safely parse the setting in case it was saved as a string in the JSON
-        raw_cb_setting = map_screen.scenario_settings.get("casus_belli_required", c.CASUS_BELLI_REQUIRED)
-        cb_required = False if str(raw_cb_setting).lower() == "false" else bool(raw_cb_setting)
+        cb_required = queries.get_scenario_flag("casus_belli_required", c.CASUS_BELLI_REQUIRED, map_screen.scenario_settings)
 
         # Spectator / Override catch: if it's the spectator, let them force it anyway
         if map_screen.player_country == "Spectator":
@@ -923,16 +921,7 @@ class Trade_Screen(MapOverlayScreen):
     def draw(self, surface):
         super().draw(surface)
 
-        # Resource HUD (Replicating Production Screen Logic)
-        hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
-        pygame.draw.rect(surface, (30, 30, 30), hud_rect)
-        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
-
-        res_font = fonts.get("production_hud")
-
-        resources = queries.get_resource_hud_strings(self.map_screen, include_net=False)
-        for i, (text, color) in enumerate(resources):
-            surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
+        resource_hud.draw_resource_bar(surface, self.map_screen)
 
 # ==========================================
 # PUPPETS SCREEN
@@ -962,7 +951,7 @@ class Puppets_Screen(MapOverlayScreen):
         for idx, p in enumerate(puppets):
             p_data = self.map_screen.nation_data.get(p, {})
             p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
-            siphon = p_data.setdefault("siphon_rates", {"manpower": 0.0, "materials": 0.0, "fuel": 0.0})
+            siphon = queries.get_siphon_rates(p_data)
 
             pending_action, _ = queries.get_diplomatic_status(self.player, p, self.map_screen.nation_data)
 

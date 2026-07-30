@@ -5,8 +5,63 @@ from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bo
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from ui.bars import resource_hud
 
-section_spacing = 60
+# ==========================================
+# LAYOUT
+# ==========================================
+
+BACK_BTN_POS = (20, 20)
+
+# Scrolling list of buttons + their stat bars
+LIST_START_Y = 120
+LIST_X = 50
+ROW_STEP_Y = 40
+SECTION_SPACING = 60
+
+BAR_OFFSET_X = 210
+BAR_WIDTH = 550
+BAR_HEIGHT = 30
+BAR_TEXT_PAD_X = 15
+
+# Coloured section panels drawn behind each group of rows
+PANEL_X = 30
+PANEL_WIDTH = 840
+PANEL_PAD_TOP = 15
+PANEL_LABEL_X = 40
+PANEL_LABEL_OFFSET_Y = -45
+
+# Fixed chrome (drawn over the scrolling content)
+HEADER_HEIGHT = 80
+HEADER_TITLE_POS = (150, 25)
+SCROLL_BOTTOM_PAD = 150
+
+# Clicks only register between the header band and the resource bar, so a
+# button that has scrolled behind either one stays visible but inert.
+CLICK_GUARD_TOP = HEADER_HEIGHT
+CLICK_GUARD_BOTTOM = c.SCREEN_HEIGHT - resource_hud.BAR_HEIGHT
+
+# Scroll feel
+SCROLL_WHEEL_STEP = 50
+SCROLL_LERP = 0.15
+
+# --- Section panels: (attr prefix, label, fill, border, text colour) ---
+# Each entry paints one coloured block behind its rows. Adding a section means
+# adding a row here plus the matching self.<prefix>_start_y / _end_y markers.
+SECTION_PANELS = [
+    ("admin",    "ADMINISTRATION",     (40, 20, 60), (150, 100, 200), (200, 150, 255)),
+    ("other",    "GENERAL BUILDINGS",  (60, 40, 20), (200, 100, 30),  (255, 150, 50)),
+    ("recruit",  "RECRUITMENT CENTERS",(60, 30, 30), (200, 50, 50),   (255, 100, 100)),
+    ("infantry", "INFANTRY",           (30, 60, 30), (50, 150, 50),   c.COLOR_SUCCESS_GREEN),
+    ("tank",     "TANKS",              (20, 45, 20), (40, 120, 40),   (80, 200, 80)),
+    ("navy",     "NAVAL FORCES",       (30, 30, 60), (50, 50, 150),   (100, 150, 255)),
+    ("custom",   "CUSTOM",             (60, 55, 20), (200, 180, 50),  (255, 220, 100)),
+]
+
+BAR_BG_COLOR = (40, 40, 40)
+BAR_BORDER_COLOR = (100, 100, 100)
+BAR_YIELD_COLOR = (150, 255, 150)
+BAR_STAT_COLOR = (200, 200, 200)
 
 class Production_Screen(GameState):
     back_state = "MAP"
@@ -61,7 +116,7 @@ class Production_Screen(GameState):
         if hasattr(self, 'target_scroll_y'):
             self.enforce_scroll_bounds()
             if abs(self.scroll_y - self.target_scroll_y) > 0.5:
-                self.scroll_y += (self.target_scroll_y - self.scroll_y) * 0.15
+                self.scroll_y += (self.target_scroll_y - self.scroll_y) * SCROLL_LERP
 
             # Keep scrollable buttons pinned to the list. They stay visible (the
             # ProductionChromeOverlay draws over them once they slide behind the
@@ -71,7 +126,7 @@ class Production_Screen(GameState):
             for el in self.elements:
                 if getattr(el, 'is_scrollable', False):
                     el.rect.y = el.base_y + int(self.scroll_y)
-                    el.click_guard = lambda: 80 <= pygame.mouse.get_pos()[1] <= c.SCREEN_HEIGHT - 60
+                    el.click_guard = lambda: CLICK_GUARD_TOP <= pygame.mouse.get_pos()[1] <= CLICK_GUARD_BOTTOM
 
     def _add_scroll_button(self, x_pos, y_offset, color, text, callback):
         """Creates one of the production screen's scrollable list buttons
@@ -85,7 +140,7 @@ class Production_Screen(GameState):
     def refresh_ui(self):
         # The back button doesn't scroll, so it is built here but registered at the
         # very end of refresh_ui -- see the ScreenLayer note down there.
-        self.btn_back = Button(20, 20, "small", "red", "Back", self.exit_screen)
+        self.btn_back = Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)
         self.elements = []
 
         current_buildings = self.target_province.get("buildings", [])
@@ -98,8 +153,8 @@ class Production_Screen(GameState):
         can_spectator_edit = c.SPECTATOR_CAN_EDIT_PRODUCTION
 
         self.active_bars = []
-        y_offset = 120
-        x_pos = 50
+        y_offset = LIST_START_Y
+        x_pos = LIST_X
 
         # --- BUILDING LOGIC ---
         bldg_groups = {"Other": ["industry"], "Recruitment": ["recruitment"]}
@@ -145,7 +200,7 @@ class Production_Screen(GameState):
 
             self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
 
-            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
+            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
             mock_stats = {
                 "time": core_data["time"],
                 "cost_manpower": core_data["cost_manpower"],
@@ -154,7 +209,7 @@ class Production_Screen(GameState):
                 "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
             }
             self.active_bars.append((bar_rect, mock_stats, y_offset, "BUILDING"))
-            y_offset += 40
+            y_offset += ROW_STEP_Y
 
         # --- REMOVE CORES BUTTON ---
         foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
@@ -190,7 +245,7 @@ class Production_Screen(GameState):
 
         self._add_scroll_button(x_pos, y_offset, btn_color2, btn_txt2, cb2)
 
-        bar_rect2 = pygame.Rect(x_pos + 210, y_offset, 550, 30)
+        bar_rect2 = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
         mock_stats2 = {
             "time": remove_data["time"],
             "cost_manpower": remove_data["cost_manpower"],
@@ -199,11 +254,11 @@ class Production_Screen(GameState):
             "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
         }
         self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
-        y_offset += 40
+        y_offset += ROW_STEP_Y
 
         self.admin_end_y = y_offset
 
-        y_offset += section_spacing
+        y_offset += SECTION_SPACING
         
         self.other_start_y = y_offset
 
@@ -252,19 +307,19 @@ class Production_Screen(GameState):
 
                     self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
 
-                    bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
+                    bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
                     self.active_bars.append((bar_rect, data, y_offset, "BUILDING"))
-                    y_offset += 40
+                    y_offset += ROW_STEP_Y
 
         self.other_start_y = y_offset
         process_building_categories(bldg_groups["Other"])
         self.other_end_y = y_offset
 
-        y_offset += section_spacing
+        y_offset += SECTION_SPACING
         self.recruit_start_y = y_offset
         process_building_categories(bldg_groups["Recruitment"])
         self.recruit_end_y = y_offset
-        y_offset += section_spacing
+        y_offset += SECTION_SPACING
 
         # --- UNIT LOGIC ---
         def render_unit_button(unit_name, btn_color):
@@ -284,9 +339,9 @@ class Production_Screen(GameState):
             self._add_scroll_button(x_pos, y_offset, final_btn_color, unit_name, cb)
 
             stats = self.unit_library[unit_name]
-            bar_rect = pygame.Rect(x_pos + 210, y_offset, 550, 30)
+            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
             self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
-            y_offset += 40
+            y_offset += ROW_STEP_Y
 
         def process_unit_groups(groups, btn_color):
             nonlocal y_offset
@@ -329,12 +384,12 @@ class Production_Screen(GameState):
         process_unit_groups(self.infantry_groups, "green")
         self.infantry_end_y = y_offset
 
-        y_offset += section_spacing 
+        y_offset += SECTION_SPACING 
         self.tank_start_y = y_offset
         process_unit_groups(self.tank_groups, "green")
         self.tank_end_y = y_offset
 
-        y_offset += section_spacing 
+        y_offset += SECTION_SPACING 
         if self.target_province.get("is_coastal", False):
             self.navy_start_y = y_offset
             process_unit_groups(self.navy_groups, "blue")
@@ -345,7 +400,7 @@ class Production_Screen(GameState):
         # --- CUSTOM UNIT LOGIC ---
         # Lets a player build a specific researched tier (e.g. Medium Tank II) even
         # when a higher tier is researched and would otherwise be the only option shown.
-        y_offset += section_spacing
+        y_offset += SECTION_SPACING
         self.custom_start_y = y_offset
 
         p_data = self.map_screen.nation_data.get(owner_nation)
@@ -363,7 +418,7 @@ class Production_Screen(GameState):
             manage_color, manage_cb = "pink", self.open_custom_unit_manager
 
         self._add_scroll_button(x_pos, y_offset, manage_color, "Manage Custom Units", manage_cb)
-        y_offset += 40
+        y_offset += ROW_STEP_Y
 
         for unit_name in sorted(custom_units):
             render_unit_button(unit_name, "yellow")
@@ -371,7 +426,7 @@ class Production_Screen(GameState):
         self.custom_end_y = y_offset
 
         # Calculate maximum scroll distance
-        self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + 150)
+        self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + SCROLL_BOTTOM_PAD)
 
         # Drawn after the unit list so it covers any scrollable button sliding past it.
         self.elements.append(ScreenLayer(self, "draw_chrome"))
@@ -510,17 +565,10 @@ class Production_Screen(GameState):
 
         # Group every unit the player currently has the research level for, regardless
         # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
-        categorized = {"Infantry": [], "Tanks": [], "Navy": []}
-        for name, stats in self.unit_library.items():
-            if not queries.is_unit_unlocked(name, player_research):
-                continue
-            base = queries.get_base_unit_name(name)
-            if stats.get("naval_unit", False):
-                categorized["Navy"].append(name)
-            elif "Tank" in base or "Armored Car" in base or base in c.TANK_GROUP_EXTRAS:
-                categorized["Tanks"].append(name)
-            else:
-                categorized["Infantry"].append(name)
+        # Same Infantry/Tanks/Navy rule the production columns use.
+        categorized = queries.get_grouped_units(
+            self.unit_library, by_family=False,
+            unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research))
 
         for group in categorized.values():
             group.sort()
@@ -596,7 +644,7 @@ class Production_Screen(GameState):
 
     def additional_events(self, event):
         if event.type == pygame.MOUSEWHEEL:
-            self.target_scroll_y += event.y * 50
+            self.target_scroll_y += event.y * SCROLL_WHEEL_STEP
             self.enforce_scroll_bounds()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -612,64 +660,23 @@ class Production_Screen(GameState):
         if not self.target_province: return
         
         # --- DRAW SCROLLING CONTENT ---
-        # Draw category backgrounds mapped to the current scroll y
+        # Every section is the same panel + label, so they are painted from the
+        # SECTION_PANELS table rather than seven near-identical blocks.
         scroll = int(self.scroll_y)
+        heading_font = fonts.get("heading2")
 
-        # Administration (Purple)
-        if self.admin_end_y > self.admin_start_y:
-            admin_rect = pygame.Rect(30, self.admin_start_y + scroll - 15, 840, self.admin_end_y - self.admin_start_y + 15)
-            pygame.draw.rect(surface, (40, 20, 60), admin_rect)
-            pygame.draw.rect(surface, (150, 100, 200), admin_rect, 2)
-            lbl = fonts.get("heading2").render("ADMINISTRATION", True, (200, 150, 255))
-            surface.blit(lbl, (40, self.admin_start_y + scroll - 45))
+        for prefix, label, fill, border, text_color in SECTION_PANELS:
+            start_y = getattr(self, f"{prefix}_start_y", 0)
+            end_y = getattr(self, f"{prefix}_end_y", 0)
+            if end_y <= start_y:
+                continue
 
-        # General Buildings (Orange)
-        if self.other_end_y > self.other_start_y:
-            land_rect = pygame.Rect(30, self.other_start_y + scroll - 15, 840, self.other_end_y - self.other_start_y + 15)
-            pygame.draw.rect(surface, (60, 40, 20), land_rect)
-            pygame.draw.rect(surface, (200, 100, 30), land_rect, 2)
-            lbl = fonts.get("heading2").render("GENERAL BUILDINGS", True, (255, 150, 50))
-            surface.blit(lbl, (40, self.other_start_y + scroll - 45))
-
-        # Recruitment (Red)
-        if getattr(self, 'recruit_end_y', 0) > getattr(self, 'recruit_start_y', 0):
-            recruit_rect = pygame.Rect(30, self.recruit_start_y + scroll - 15, 840, self.recruit_end_y - self.recruit_start_y + 15)
-            pygame.draw.rect(surface, (60, 30, 30), recruit_rect)
-            pygame.draw.rect(surface, (200, 50, 50), recruit_rect, 2)
-            lbl = fonts.get("heading2").render("RECRUITMENT CENTERS", True, (255, 100, 100))
-            surface.blit(lbl, (40, self.recruit_start_y + scroll - 45))
-
-        # Infantry (Green)
-        if self.infantry_end_y > self.infantry_start_y:
-            inf_rect = pygame.Rect(30, self.infantry_start_y + scroll - 15, 840, self.infantry_end_y - self.infantry_start_y + 15)
-            pygame.draw.rect(surface, (30, 60, 30), inf_rect)
-            pygame.draw.rect(surface, (50, 150, 50), inf_rect, 2)
-            lbl = fonts.get("heading2").render("INFANTRY", True, c.COLOR_SUCCESS_GREEN)
-            surface.blit(lbl, (40, self.infantry_start_y + scroll - 45))
-
-        # Tanks (Dark Green)
-        if self.tank_end_y > self.tank_start_y:
-            tank_rect = pygame.Rect(30, self.tank_start_y + scroll - 15, 840, self.tank_end_y - self.tank_start_y + 15)
-            pygame.draw.rect(surface, (20, 45, 20), tank_rect) 
-            pygame.draw.rect(surface, (40, 120, 40), tank_rect, 2) 
-            lbl = fonts.get("heading2").render("TANKS", True, (80, 200, 80))
-            surface.blit(lbl, (40, self.tank_start_y + scroll - 45))
-
-        # Navy (Blue)
-        if self.navy_end_y > self.navy_start_y:
-            navy_rect = pygame.Rect(30, self.navy_start_y + scroll - 15, 840, self.navy_end_y - self.navy_start_y + 15)
-            pygame.draw.rect(surface, (30, 30, 60), navy_rect)
-            pygame.draw.rect(surface, (50, 50, 150), navy_rect, 2)
-            lbl = fonts.get("heading2").render("NAVAL FORCES", True, (100, 150, 255))
-            surface.blit(lbl, (40, self.navy_start_y + scroll - 45))
-
-        # Custom (Gold)
-        if self.custom_end_y > self.custom_start_y:
-            custom_rect = pygame.Rect(30, self.custom_start_y + scroll - 15, 840, self.custom_end_y - self.custom_start_y + 15)
-            pygame.draw.rect(surface, (60, 55, 20), custom_rect)
-            pygame.draw.rect(surface, (200, 180, 50), custom_rect, 2)
-            lbl = fonts.get("heading2").render("CUSTOM", True, (255, 220, 100))
-            surface.blit(lbl, (40, self.custom_start_y + scroll - 45))
+            panel = pygame.Rect(PANEL_X, start_y + scroll - PANEL_PAD_TOP,
+                                PANEL_WIDTH, end_y - start_y + PANEL_PAD_TOP)
+            pygame.draw.rect(surface, fill, panel)
+            pygame.draw.rect(surface, border, panel, 2)
+            surface.blit(heading_font.render(label, True, text_color),
+                         (PANEL_LABEL_X, start_y + scroll + PANEL_LABEL_OFFSET_Y))
 
         # Stats Bars -- everything packed onto a single line, per-section
         # colors preserved but labels dropped, so it fits within the bar
@@ -677,11 +684,11 @@ class Production_Screen(GameState):
         bar_font = fonts.get("small")
         for base_rect, stats, base_y, bar_type in self.active_bars:
             bar_rect = pygame.Rect(base_rect.x, base_y + scroll, base_rect.width, base_rect.height)
-            pygame.draw.rect(surface, (40, 40, 40), bar_rect)
-            pygame.draw.rect(surface, (100, 100, 100), bar_rect, 1)
+            pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
+            pygame.draw.rect(surface, BAR_BORDER_COLOR, bar_rect, 1)
 
             text_y = bar_rect.y + (bar_rect.height - bar_font.get_height()) // 2
-            x = bar_rect.x + 15
+            x = bar_rect.x + BAR_TEXT_PAD_X
 
             if bar_type == "BUILDING":
                 t = max(1, stats.get('time', 1))
@@ -689,7 +696,7 @@ class Production_Screen(GameState):
                 x = draw_stat_separator(surface, bar_font, x, text_y)
                 x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
                 x = draw_stat_separator(surface, bar_font, x, text_y)
-                draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, (150, 255, 150), is_yield=True)
+                draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, BAR_YIELD_COLOR, is_yield=True)
             else:
                 t = max(1, stats.get('production_time', 1))
                 x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
@@ -699,7 +706,7 @@ class Production_Screen(GameState):
                 x = draw_combat_stats(
                     surface, bar_font, "",
                     stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0),
-                    x, text_y, (200, 200, 200), labeled=False
+                    x, text_y, BAR_STAT_COLOR, labeled=False
                 )
 
                 if 'bombard_attack' in stats:
@@ -707,7 +714,7 @@ class Production_Screen(GameState):
                     draw_bombardment_stats(
                         surface, bar_font,
                         stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
-                        x, text_y, (200, 200, 200), base_text="", labeled=False
+                        x, text_y, BAR_STAT_COLOR, base_text="", labeled=False
                     )
 
     def draw_chrome(self, surface):
@@ -716,24 +723,15 @@ class Production_Screen(GameState):
         if not self.target_province: return
 
         # Header overlay block hides scrolling units that go too high
-        pygame.draw.rect(surface, self.bg_color, (0, 0, c.SCREEN_WIDTH, 80))
+        pygame.draw.rect(surface, self.bg_color, (0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT))
         title_font = fonts.get("heading1")
 
         # Determine the name to display at the top of the production queue!
         owner_nation = self.target_province.get("owner", "Unclaimed")
         owner_name = self.map_screen.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
-        surface.blit(title_font.render(f"{owner_name} PRODUCTION", True, (255, 255, 255)), (150, 25))
+        surface.blit(title_font.render(f"{owner_name} PRODUCTION", True, (255, 255, 255)), HEADER_TITLE_POS)
 
-        # Draw HUD
-        hud_rect = pygame.Rect(0, c.SCREEN_HEIGHT - 60, c.SCREEN_WIDTH, 60)
-        pygame.draw.rect(surface, (30, 30, 30), hud_rect)
-        pygame.draw.line(surface, (100, 100, 100), (0, hud_rect.y), (c.SCREEN_WIDTH, hud_rect.y), 2)
-
-        res_font = fonts.get("production_hud")
-
-        resources = queries.get_resource_hud_strings(self.map_screen, include_net=False, target_nation=owner_nation)
-        for i, (text, color) in enumerate(resources):
-            surface.blit(res_font.render(text, True, color), (50 + (i * 300), hud_rect.y + 15))
+        resource_hud.draw_resource_bar(surface, self.map_screen, target_nation=owner_nation)
 
         # Draw Queue (Returns hitbox rectangles for the event handler)
         self.cancel_hitboxes = recruit_ui.draw_recruitment_overlay(surface, self.target_province)

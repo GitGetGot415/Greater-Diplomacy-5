@@ -1,4 +1,3 @@
-import data.constants as c
 
 # ==========================================
 # PENDING DIPLOMACY ACCESS

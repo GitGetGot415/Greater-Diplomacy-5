@@ -1,5 +1,3 @@
-import os
-import json
 import data.constants as c
 from data import queries
 

@@ -1,13 +1,20 @@
 import pygame
-import base64
-import os
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+SIDEBAR_INFO_X = 900
+SIDEBAR_INFO_Y = 70
+SIDEBAR_INFO_WIDTH = 300
+SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
+
 # Define the area for the sidebar info panel utilizing constants
-info_rect = pygame.Rect(c.SIDEBAR_INFO_X, c.SIDEBAR_INFO_Y, c.SIDEBAR_INFO_WIDTH, c.SIDEBAR_INFO_HEIGHT)
+info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
 
 def draw_sidebar_info(self, surface):
     """
@@ -45,7 +52,7 @@ def draw_sidebar_info(self, surface):
         terrain_img = ui_bars.get_ui_image("Unknown.png", directory=c.TERRAINS_DIR)
     
     # Scale to fit the sidebar width with a small padding
-    img_width = c.SIDEBAR_INFO_WIDTH - 20
+    img_width = SIDEBAR_INFO_WIDTH - 20
     img_height = img_width / 3
     terrain_img = pygame.transform.scale(terrain_img, (img_width, img_height))
     
@@ -63,7 +70,7 @@ def draw_sidebar_info(self, surface):
     ]
     
     current_y = img_y + img_height + 10
-    text_x = c.SIDEBAR_INFO_X + 10
+    text_x = SIDEBAR_INFO_X + 10
     
     for i, line in enumerate(info_lines):
         tsurf = self.small_font.render(line, True, (255, 255, 255))
@@ -152,7 +159,7 @@ def draw_sidebar_info(self, surface):
 
     # 6. Draw the Combat Zone Section
     if is_combat and is_visible:
-        x_offset = c.SIDEBAR_INFO_X + 10
+        x_offset = SIDEBAR_INFO_X + 10
         header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
         surface.blit(header, (x_offset, current_y))
         

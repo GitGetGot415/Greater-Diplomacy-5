@@ -6,8 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import tkinter as tk
 from tkinter import messagebox, ttk
-import data.constants as c
-import json
 from data import queries
 
 class TurnEditor:
@@ -46,16 +44,6 @@ class TurnEditor:
         tk.Button(btn_frame, text="Save All Changes", command=self.save_all).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Reset to Defaults", command=self.reset_to_defaults, fg="red").pack(side=tk.RIGHT, padx=5)
 
-    def get_base_type(self, name):
-        if " Type " in name:
-            return name.split(" Type ")[0]
-        if " Lvl " in name:
-            return name.split(" Lvl ")[0]
-        parts = name.split(" ")
-        if parts[-1] in ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII", "XXIV", "XXV", "XXVI", "XXVII", "XXVIII", "XXIX", "XXX", "XXXI", "XXXII", "XXXIII", "XXXIV", "XXXV", "XXXVI", "XXXVII", "XXXVIII", "XXXIX", "XL", "XLI", "XLII", "XLIII", "XLIV", "XLV", "XLVI", "XLVII", "XLVIII", "XLIX", "L"]:
-            return " ".join(parts[:-1])
-        return name
-
     def setup_tab(self, parent_frame, data_dict, override_dict, turn_key, label_text):
         list_frame = tk.Frame(parent_frame)
         list_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
@@ -81,7 +69,7 @@ class TurnEditor:
         # Group items by base type
         base_types = {}
         for name, item_data in data_dict.items():
-            btype = self.get_base_type(name)
+            btype = queries.get_base_item_name(name)
             if btype not in base_types:
                 base_types[btype] = []
             base_types[btype].append(name)

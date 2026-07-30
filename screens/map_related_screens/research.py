@@ -6,6 +6,131 @@ from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bo
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
+from ui.bars import ui_bars
+
+# ==========================================
+# LAYOUT
+# ==========================================
+
+EXIT_BTN_POS = (20, 10)
+CATEGORY_BTN_START_X = 180
+CATEGORY_BTN_STEP_X = 205
+CATEGORY_BTN_Y = 10
+
+HEADER_HEIGHT = 70
+HEADER_TITLE_Y = 75
+HEADER_OUTPUT_Y = 85
+HEADER_OUTPUT_MARGIN_X = 30
+
+TIMELINE_AXIS_Y = 180
+TIMELINE_TICK_HALF = 10
+TIMELINE_YEAR_LABEL_OFFSET_Y = -40
+TIMELINE_YEAR_PADDING = 5     # Extra years drawn either side of the viewport
+NODE_ROW_HALF_HEIGHT = 30     # Half a standard 60px node; the row's centre line
+
+# Active research slots box, bottom-left over the timeline.
+HUD_SLOT_STEP_Y = 25
+HUD_BASE_HEIGHT = 80
+HUD_X = 20
+HUD_WIDTH = 400
+HUD_BOTTOM_PAD = 20
+HUD_TITLE_X = 30
+HUD_TITLE_OFFSET_Y = 10
+HUD_SLOT_TEXT_X = 40
+HUD_FIRST_SLOT_OFFSET_Y = 40
+
+# Tech detail modal
+MODAL_WIDTH = 800
+MODAL_HEIGHT = 500
+MODAL_ALPHA = 180
+MODAL_TITLE_X = 30
+MODAL_TITLE_Y = 30
+MODAL_ICON_X = 30
+MODAL_ICON_Y = 100
+MODAL_ICON_BOX = 120
+MODAL_TEXT_X = 200          # Left edge of every text column in the modal
+MODAL_COST_Y = 100
+MODAL_WARNING_Y = 130
+MODAL_BODY_START_Y = 170
+MODAL_LINE_STEP_Y = 30
+MODAL_SUBHEAD_STEP_Y = 25
+MODAL_ENTITY_PADDING_Y = 10
+MODAL_BTN_Y_OFFSET = 430
+MODAL_ACTION_BTN_X = 50
+MODAL_CANCEL_BTN_X = 650
+
+# Completed-tech text list
+COMPLETED_START_Y = 150
+COMPLETED_COLUMN_WIDTH = 290
+COMPLETED_START_X = 30
+COMPLETED_HEADER_STEP_Y = 40
+COMPLETED_ROW_STEP_Y = 28
+COMPLETED_INDENT_X = 10
+
+# Scroll feel
+SCROLL_WHEEL_STEP = 70
+SCROLL_LERP = 0.15
+
+# --- Node row heights (visual layout, deliberately hand-tuned) ---
+ROW_Y = [200, 270, 340, 410, 480, 550]
+ROW_DEFAULT_Y = 350
+
+# Categories whose nodes default to the wide button size.
+WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY"]
+
+# Tech families whose display name is "<Class> Type <year>" rather than a
+# roman numeral tier, keyed off the year list in the tech tree.
+YEAR_TIER_TECHS = {
+    "infantry_type": "Infantry Type",
+    "motorized_infantry": "Motorized Infantry Type",
+    "mechanized_infantry": "Mechanized Infantry Type",
+    "artillery": "Artillery Type",
+}
+
+# Tech keys whose display name is fixed and unrelated to their level.
+FIXED_TECH_NAMES = {
+    "civilian_car": "Civilian Car",
+    "ww1_armored_car": "WW1 Armored Car",
+    "ww1_tank": "WW1 Tank",
+    "ww1_railroad_gun": "WW1 Railroad Gun",
+    "ww2_railroad_gun": "WW2 Railroad Gun",
+    "carrack": "Carrack",
+    "ironclad": "Ironclad",
+    "pre-dreadnought": "Pre-Dreadnought",
+    "dreadnought": "Dreadnought",
+    "battleship": "Battleship",
+    "bergius_process": "Bergius Process",
+    "basic_factory": "Basic Factory",
+    "basic_recruitment": "Basic Recruitment Center",
+    "landkreuzer_p1000_ratte": "Landkreuzer P.1000 Ratte",
+    "landkreuzer_p1500_monster": "Landkreuzer P.1500 Monster",
+}
+
+# Tech keys displayed as "<Name> Lvl <n>" instead of a roman numeral.
+LEVEL_SUFFIX_TECHS = {
+    "recruitment_buildings": "Recruitment Building",
+    "general_recruitment": "General Recruitment",
+    "resource_refining": "Resource Refining",
+    "factory": "Factory",
+    "fuel_refining": "Fuel Refining",
+}
+
+# Node button sizes, matched against the lowercased display name in order.
+# First hit wins, so the more specific entries have to come first.
+NODE_SIZE_RULES = [
+    (("aircraft carrier", "battleship", "dreadnought", "submarine"), "tech_square_ultra_wide"),
+    (("ww2 railroad gun",), "tech_square_ww2_railroad_gun"),
+    (("landkreuzer p.1000 ratte",), "tech_square_landkreuzer_p1000_ratte"),
+    (("landkreuzer p.1500 monster",), "tech_square_landkreuzer_p1500_monster"),
+    (("railroad gun",), "tech_square_railroad_gun"),
+    (("light tank ix",), "tech_square_wide"),
+    (("civilian car", "armored car", "light tank i", "light tank v", "medium tank"), "tech_square_medium"),
+]
+
+DEFAULT_TECH_COST = 300
+
+STATUS_COLORS = {"COMPLETED": "green", "RESEARCHING": "orange", "AVAILABLE": "blue", "LOCKED": "grey"}
+
 
 class Research_Screen(GameState):
     back_state = "MAP"
@@ -49,14 +174,8 @@ class Research_Screen(GameState):
             for i, y in enumerate(years):
                 self.tech_years[(tech_key, i + 1)] = y
 
-        # Stagger the Y positions to prevent branches overlapping (Keep this hardcoded since it's visual layout, not logic)
-
-        y1 = 200
-        y2 = 270
-        y3 = 340
-        y4 = 410
-        y5 = 480
-        y6 = 550
+        # Stagger the Y positions to prevent branches overlapping (visual layout, not logic)
+        y1, y2, y3, y4, y5, y6 = ROW_Y
 
         self.tech_rows = {
             "infantry_type": y1,
@@ -90,7 +209,7 @@ class Research_Screen(GameState):
                 max_lvl = data["max_lvl"]
                 for lvl in range(1, max_lvl + 1):
                     year = self.tech_years.get((tech_key, lvl), 1900)
-                    row_y = self.tech_rows.get(tech_key, 350)
+                    row_y = self.tech_rows.get(tech_key, ROW_DEFAULT_Y)
                     self.nodes[cat].append({
                         "key": tech_key,
                         "lvl": lvl,
@@ -100,8 +219,8 @@ class Research_Screen(GameState):
 
     def hud_slots_rect(self):
         """Screen-space rect of the ACTIVE RESEARCH SLOTS box drawn over the timeline."""
-        hud_height = 80 + (c.RESEARCH_SLOTS * 25)
-        return pygame.Rect(20, c.SCREEN_HEIGHT - hud_height, 400, hud_height - 20)
+        hud_height = HUD_BASE_HEIGHT + (c.RESEARCH_SLOTS * HUD_SLOT_STEP_Y)
+        return pygame.Rect(HUD_X, c.SCREEN_HEIGHT - hud_height, HUD_WIDTH, hud_height - HUD_BOTTOM_PAD)
 
     def _sync_tech_node_positions(self):
         """Slides tech-node buttons with the timeline scroll. They stay visible
@@ -123,14 +242,14 @@ class Research_Screen(GameState):
             self.enforce_scroll_bounds()
 
             if abs(self.scroll_x - self.target_scroll_x) > 0.5:
-                self.scroll_x += (self.target_scroll_x - self.scroll_x) * 0.15
+                self.scroll_x += (self.target_scroll_x - self.scroll_x) * SCROLL_LERP
 
             self._sync_tech_node_positions()
 
     def additional_events(self, event):
         if self.current_category in ["INFANTRY", "TANKS", "NAVY", "INDUSTRY"] and not self.active_modal:
             if event.type == pygame.MOUSEWHEEL:
-                self.target_scroll_x += event.y * 70
+                self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
             elif event.type == pygame.MOUSEMOTION and event.buttons[2]:
                 self.target_scroll_x += event.rel[0]
                 self.scroll_x += event.rel[0]
@@ -140,55 +259,40 @@ class Research_Screen(GameState):
 
             self._sync_tech_node_positions()
 
+    def tech_year(self, tech_key, lvl):
+        """The year a year-tiered tech reaches this level."""
+        years = self.tech_tree.get(tech_key, {}).get("years", [c.START_YEAR])
+        return years[min(max(lvl, 1) - 1, len(years) - 1)]
+
     def get_display_name(self, tech_key, lvl):
-        if tech_key == "infantry_type":
-            inf_years = self.tech_tree.get("infantry_type", {}).get("years", [c.START_YEAR])
-            year = inf_years[min(lvl - 1, len(inf_years)-1)]
-            return f"Infantry Type {year}"
-            
-        if tech_key == "motorized_infantry":
-            mot_years = self.tech_tree.get("motorized_infantry", {}).get("years", [c.START_YEAR])
-            year = mot_years[min(lvl - 1, len(mot_years)-1)]
-            return f"Motorized Infantry Type {year}"
+        """The player-facing name of a tech at a given level.
 
-        if tech_key == "mechanized_infantry":
-            mech_years = self.tech_tree.get("mechanized_infantry", {}).get("years", [c.START_YEAR])
-            year = mech_years[min(lvl - 1, len(mech_years)-1)]
-            return f"Mechanized Infantry Type {year}"
+        Three naming schemes, each driven by its own table at the top of this
+        file rather than a chain of ifs: year-tiered families, fixed one-off
+        names, and "<Name> Lvl <n>". Anything unlisted falls back to a title
+        cased key plus a roman numeral.
+        """
+        if tech_key in YEAR_TIER_TECHS:
+            return f"{YEAR_TIER_TECHS[tech_key]} {self.tech_year(tech_key, lvl)}"
 
-        if tech_key == "artillery":
-            art_years = self.tech_tree.get("artillery", {}).get("years", [c.START_YEAR])
-            year = art_years[min(lvl - 1, len(art_years)-1)]
-            return f"Artillery Type {year}"
+        if tech_key in FIXED_TECH_NAMES:
+            return FIXED_TECH_NAMES[tech_key]
 
-        romans = c.ROMAN_NUMERALS
-
-        if tech_key == "civilian_car": return "Civilian Car"
-        if tech_key == "ww1_armored_car": return "WW1 Armored Car"
-        if tech_key == "ww1_tank": return "WW1 Tank"
-        if tech_key == "ww1_railroad_gun": return "WW1 Railroad Gun"
-        if tech_key == "ww2_railroad_gun": return "WW2 Railroad Gun"
-        if tech_key == "carrack": return "Carrack"
-        if tech_key == "ironclad": return "Ironclad"
-        if tech_key == "pre-dreadnought": return "Pre-Dreadnought"
-        if tech_key == "dreadnought": return "Dreadnought"
-        if tech_key == "battleship": return "Battleship"
-        if tech_key == "bergius_process": return "Bergius Process"
-        if tech_key == "basic_factory": return "Basic Factory"
-        if tech_key == "basic_recruitment": return "Basic Recruitment Center"
-        if tech_key == "landkreuzer_p1000_ratte": return "Landkreuzer P.1000 Ratte"
-        if tech_key == "landkreuzer_p1500_monster": return "Landkreuzer P.1500 Monster"
-        if tech_key == "recruitment_buildings": return f"Recruitment Building Lvl {lvl}"
-        if tech_key == "general_recruitment": return f"General Recruitment Lvl {lvl}"
-        if tech_key == "resource_refining": return f"Resource Refining Lvl {lvl}"
+        if tech_key in LEVEL_SUFFIX_TECHS:
+            return f"{LEVEL_SUFFIX_TECHS[tech_key]} Lvl {lvl}"
 
         base_name = tech_key.replace('_', ' ').title()
-        
-        if tech_key in ["factory", "fuel_refining"]:
-            if tech_key == "fuel_refining": base_name = "Fuel Refining" 
-            return f"{base_name} Lvl {lvl}"
-            
-        return f"{base_name} {romans.get(lvl, str(lvl))}"
+        return f"{base_name} {c.ROMAN_NUMERALS.get(lvl, str(lvl))}"
+
+    def year_to_x(self, year, include_scroll=True):
+        """Screen x of a year on the timeline. The node buttons position
+        themselves before the scroll offset is applied, hence the flag."""
+        current_year = self.map_screen.time_manager.year
+        x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2)
+        return x + self.scroll_x if include_scroll else x
+
+    def tech_cost(self, tech_key):
+        return self.tech_tree.get(tech_key, {}).get("cost", DEFAULT_TECH_COST)
 
     def start_research(self, map_ref):
         self.map_screen = map_ref
@@ -220,30 +324,29 @@ class Research_Screen(GameState):
             st = self.active_modal["status"]
             panel_x, panel_y = self.complete_panel_x, self.complete_panel_y
             
-            self.elements.append(Button(panel_x + 650, panel_y + 430, "small", "red", "Cancel", self.close_modal))
+            self.elements.append(Button(panel_x + MODAL_CANCEL_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "small", "red", "Cancel", self.close_modal))
             
             if is_tactical:
-                self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Tactical: Read Only", lambda: None))
+                self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", "Tactical: Read Only", lambda: None))
             else:
                 if st == "AVAILABLE":
                     if len(queue) >= c.RESEARCH_SLOTS:
-                        self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "grey", "Slots Full", lambda: None))
+                        self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", "Slots Full", lambda: None))
                     else:
-                        self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "blue", "Start Research", self.modal_start_research))
+                        self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "blue", "Start Research", self.modal_start_research))
                 elif st == "RESEARCHING":
-                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "orange", "Pause", self.modal_pause_research))
+                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "orange", "Pause", self.modal_pause_research))
                 elif st == "LOCKED":
-                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "red", "Missing Reqs", lambda: None))
+                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "red", "Missing Reqs", lambda: None))
                 elif st == "COMPLETED":
-                    self.elements.append(Button(panel_x + 50, panel_y + 430, "medium", "green", "Researched", lambda: None))
+                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "green", "Researched", lambda: None))
             return
         
-        self.elements.append(Button(20, 10, "small", "red", "Exit", self.exit_screen))
+        self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen))
 
-        start_x = 180 
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
-            btn = Button(start_x + (i * 205), 10, "medium", color, cat, lambda c=cat: self.set_category(c))
+            btn = Button(CATEGORY_BTN_START_X + (i * CATEGORY_BTN_STEP_X), CATEGORY_BTN_Y, "medium", color, cat, lambda c=cat: self.set_category(c))
             self.elements.append(btn)
 
         if self.current_category == "COMPLETED":
@@ -254,51 +357,18 @@ class Research_Screen(GameState):
             self.elements.append(ScreenLayer(self, "draw_hud_slots"))
 
     def get_button_size(self, tech_key, display_name):
-        """Returns the appropriate button size based on category or specific items."""
-        # Check for our specific large ships
-        special_ships = ["aircraft carrier", "battleship", "dreadnought", "submarine"]
-        if any(ship in display_name.lower() for ship in special_ships):
-            return "tech_square_ultra_wide"
+        """Picks a node's button size from NODE_SIZE_RULES (first match wins)."""
+        name = display_name.lower()
+        for needles, size in NODE_SIZE_RULES:
+            if any(needle in name for needle in needles):
+                return size
 
-        # Check for specific wide vehicles
-        wide_vehicles = ["light tank ix"]
-        if any(tank in display_name.lower() for tank in wide_vehicles):
+        if self.current_category in WIDE_RESEARCH_CATEGORIES:
             return "tech_square_wide"
-            
-        # Check for specific small vehicles
-        small_vehicles = ["civilian car", "armored car", "light tank i", "light tank v", "medium tank"]
-        if any(tank in display_name.lower() for tank in small_vehicles):
-            return "tech_square_medium"
 
-        # Check for WW2 Railroad Gun specifically - wider sprite than WW1's, needs its own size
-        if "ww2 railroad gun" in display_name.lower():
-            return "tech_square_ww2_railroad_gun"
-
-        # Check for railroad gun
-        railroad_gun = ["railroad gun"]
-        if any(g in display_name.lower() for g in railroad_gun):
-            return "tech_square_railroad_gun"
-
-        # Check for landkreuzer p.1000 ratte
-        landkreuzer = ["landkreuzer p.1000 ratte"]
-        if any(tank in display_name.lower() for tank in landkreuzer):
-            return "tech_square_landkreuzer_p1000_ratte"
-
-        # Check for landkreuzer p.1500 monster
-        landkreuzer2 = ["landkreuzer p.1500 monster"]
-        if any(tank in display_name.lower() for tank in landkreuzer2):
-            return "tech_square_landkreuzer_p1500_monster"
-        
-        # Check for wide categories
-        if self.current_category in getattr(c, 'WIDE_RESEARCH_CATEGORIES', ["TANKS", "NAVY"]):
-            return "tech_square_wide"
-      
-        # Default
         return "tech_square"
-    
+
     def draw_tech_nodes(self, res_levels, queue):
-        current_year = self.map_screen.time_manager.year
-        
         for node in self.nodes.get(self.current_category, []):
             tech_key = node["key"]
             lvl = node["lvl"]
@@ -313,12 +383,12 @@ class Research_Screen(GameState):
             btn_w, btn_h = c.SIZES.get(btn_size, (80, 80))
             x_offset = btn_w // 2
 
-            base_x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) - x_offset
+            base_x = self.year_to_x(year, include_scroll=False) - x_offset
             # Row's vertical center line is base_y + 30 (matches draw_connections'
             # anchor, based on the standard 60px-tall button). Center every node on
             # that line instead of always dropping its top at base_y, so taller
             # buttons (railroad guns, landkreuzers, ...) don't hang below the row.
-            node_y = (base_y + 30) - (btn_h // 2)
+            node_y = (base_y + NODE_ROW_HALF_HEIGHT) - (btn_h // 2)
             
             # ... (Rest of your existing logic for status, color, and icon)
             cur_lvl = res_levels.get(tech_key, 0)
@@ -336,10 +406,7 @@ class Research_Screen(GameState):
                 else:
                     status = "LOCKED"
                     
-            color_map = {"COMPLETED": "green", "RESEARCHING": "orange", "AVAILABLE": "blue", "LOCKED": "grey"}
-            btn_color = color_map[status]
-            
-            display_name = self.get_display_name(tech_key, lvl)
+            btn_color = STATUS_COLORS[status]
 
             unlocks = queries.get_tech_unlocks(tech_key, lvl)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or 
@@ -354,7 +421,7 @@ class Research_Screen(GameState):
                 "tech_key": tech_key,
                 "level": lvl,
                 "display_name": display_name,
-                "cost": self.tech_tree[tech_key].get("cost", 300),
+                "cost": self.tech_cost(tech_key),
                 "status": status,
                 "icon": icon,
                 "target_year": year
@@ -392,7 +459,7 @@ class Research_Screen(GameState):
     def start_or_resume_research(self, tech_name):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
         progress_cache = player_data.setdefault("research_progress", {})
-        total_cost = self.tech_tree[tech_name].get("cost", 300)
+        total_cost = self.tech_cost(tech_name)
         points_remaining = progress_cache.pop(tech_name, total_cost)
             
         player_data["research_queue"].append({
@@ -417,13 +484,13 @@ class Research_Screen(GameState):
             return
 
         current_year = self.map_screen.time_manager.year
-        axis_y = 180
+        axis_y = TIMELINE_AXIS_Y
 
         pygame.draw.line(surface, (150, 150, 150), (0, axis_y), (c.SCREEN_WIDTH, axis_y), 3)
         year_font = fonts.get("heading2")
 
-        start_year = int((-self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - 5
-        end_year = int((c.SCREEN_WIDTH - self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + 5
+        start_year = int((-self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year - TIMELINE_YEAR_PADDING
+        end_year = int((c.SCREEN_WIDTH - self.scroll_x - (c.SCREEN_WIDTH // 2)) / self.pixels_per_year) + current_year + TIMELINE_YEAR_PADDING
 
         # --- Clamp the visual tick marks ---
         start_year = max(c.START_YEAR, start_year)
@@ -431,33 +498,31 @@ class Research_Screen(GameState):
         # ----------------------------------------
 
         for year in range(start_year, end_year):
-            x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-            
+            x = self.year_to_x(year)
+
             # Removed the modulo 5 check; draws a major tick and text for every year
-            pygame.draw.line(surface, (200, 200, 200), (x, axis_y - 10), (x, axis_y + 10), 2)
+            pygame.draw.line(surface, (200, 200, 200), (x, axis_y - TIMELINE_TICK_HALF), (x, axis_y + TIMELINE_TICK_HALF), 2)
             txt = year_font.render(str(year), True, (200, 200, 200))
-            surface.blit(txt, (x - txt.get_width()//2, axis_y - 40))
+            surface.blit(txt, (x - txt.get_width()//2, axis_y + TIMELINE_YEAR_LABEL_OFFSET_Y))
 
     def draw_connections(self, surface, res_levels):
         import math
         nodes = self.nodes.get(self.current_category, [])
         lookup = {(n["key"], n["lvl"]): n for n in nodes}
         
-        current_year = self.map_screen.time_manager.year
-        
         for node in nodes:
             k = node["key"]
             l = node["lvl"]
-            
-            x1 = (node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-            y1 = node["base_y"] + 30
+
+            x1 = self.year_to_x(node["year"])
+            y1 = node["base_y"] + NODE_ROW_HALF_HEIGHT
             p1 = (x1, y1)
             
             def draw_line_to_prev(req_k, req_lvl):
                 prev_node = lookup.get((req_k, req_lvl))
                 if prev_node:
-                    x2 = (prev_node["year"] - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2) + self.scroll_x
-                    y2 = prev_node["base_y"] + 30
+                    x2 = self.year_to_x(prev_node["year"])
+                    y2 = prev_node["base_y"] + NODE_ROW_HALF_HEIGHT
                     p2 = (x2, y2)
                     color = (0, 255, 0) if res_levels.get(req_k, 0) >= req_lvl else (100, 100, 100)
                     
@@ -504,34 +569,32 @@ class Research_Screen(GameState):
                 process_req(req_k, req_v)
 
     def draw_hud_slots(self, surface):
-        hud_height = 80 + (c.RESEARCH_SLOTS * 25)
+        hud_height = HUD_BASE_HEIGHT + (c.RESEARCH_SLOTS * HUD_SLOT_STEP_Y)
         hud_rect = self.hud_slots_rect()
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
         hud_font = fonts.get("button")
-        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (30, c.SCREEN_HEIGHT - hud_height + 10))
+        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (HUD_TITLE_X, c.SCREEN_HEIGHT - hud_height + HUD_TITLE_OFFSET_Y))
 
         queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
         for i in range(c.RESEARCH_SLOTS):
-            y_off = c.SCREEN_HEIGHT - hud_height + 40 + (i * 25)
+            y_off = c.SCREEN_HEIGHT - hud_height + HUD_FIRST_SLOT_OFFSET_Y + (i * HUD_SLOT_STEP_Y)
             if i < len(queue):
                 p = queue[i]
                 tech_name = p['tech_name'].replace('_',' ').title()
                 pts_left = p.get('points_remaining', 0)
-                total_cost = self.tech_tree.get(p['tech_name'], {}).get("cost", 300)
+                total_cost = self.tech_cost(p['tech_name'])
                 progress_pct = int((1 - (pts_left / total_cost)) * 100)
                 
                 txt = f"Slot {i+1}: {tech_name} ({pts_left} pts left | {progress_pct}%)"
-                surface.blit(hud_font.render(txt, True, c.COLOR_SUCCESS_GREEN), (40, y_off))
+                surface.blit(hud_font.render(txt, True, c.COLOR_SUCCESS_GREEN), (HUD_SLOT_TEXT_X, y_off))
             else:
-                surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (40, y_off))
+                surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (HUD_SLOT_TEXT_X, y_off))
 
     def draw_subscreen_modal(self, surface):
-        overlay = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
+        ui_bars.draw_fullscreen_overlay(surface, MODAL_ALPHA)
 
-        panel_rect = pygame.Rect(self.complete_panel_x, self.complete_panel_y, 800, 500)
+        panel_rect = pygame.Rect(self.complete_panel_x, self.complete_panel_y, MODAL_WIDTH, MODAL_HEIGHT)
         pygame.draw.rect(surface, (30, 30, 40), panel_rect)
         pygame.draw.rect(surface, (200, 200, 200), panel_rect, 2)
 
@@ -540,20 +603,21 @@ class Research_Screen(GameState):
         font_small = fonts.get("normal")
 
         title = font_title.render(self.active_modal["display_name"].upper(), True, (255, 255, 255))
-        surface.blit(title, (panel_rect.x + 30, panel_rect.y + 30))
+        surface.blit(title, (panel_rect.x + MODAL_TITLE_X, panel_rect.y + MODAL_TITLE_Y))
 
         if self.active_modal["icon"]:
             original_icon = self.active_modal["icon"]
             width, height = original_icon.get_size()
 
-            scale_factor = min(120 / width, 120 / height)
+            scale_factor = min(MODAL_ICON_BOX / width, MODAL_ICON_BOX / height)
             
             new_width = width * scale_factor
             new_height = height * scale_factor
         
             big_icon = pygame.transform.scale(original_icon, (new_width, new_height))
             
-            surface.blit(big_icon, (panel_rect.x + 30 + (120 - new_width) // 2, panel_rect.y + 100 + (120 - new_height) // 2))
+            surface.blit(big_icon, (panel_rect.x + MODAL_ICON_X + (MODAL_ICON_BOX - new_width) // 2,
+                                    panel_rect.y + MODAL_ICON_Y + (MODAL_ICON_BOX - new_height) // 2))
 
         cost = self.active_modal["cost"]
         
@@ -562,7 +626,7 @@ class Research_Screen(GameState):
         
         base_time = max(1, cost // max(1, pts_per_turn)) 
         cost_txt = font_med.render(f"Base Research Cost: {queries.format_number(cost)} pts ({int(base_time)} turns)", True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(cost_txt, (panel_rect.x + 200, panel_rect.y + 100))
+        surface.blit(cost_txt, (panel_rect.x + MODAL_TEXT_X, panel_rect.y + MODAL_COST_Y))
 
         # --- AHEAD OF TIME SIMULATION ---
         current_exact_year = queries.get_exact_year(self.map_screen.time_manager)
@@ -584,19 +648,20 @@ class Research_Screen(GameState):
             
         if actual_turns > base_time:
             # --- MODIFIED WARNING LOGIC ---
-            warn_x = panel_rect.x + 200
+            warn_x = panel_rect.x + MODAL_TEXT_X
             icon_h = max(16, font_small.get_height())
             warn_icon = ui_elements.scale_icon(c.ICON_WARNING, icon_h)
             if warn_icon:
-                surface.blit(warn_icon, (warn_x, panel_rect.y + 130 + 2))
+                surface.blit(warn_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
                 warn_x += icon_h + 5
 
 
             warn_txt = font_small.render(f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns", True, (255, 100, 100))
-            surface.blit(warn_txt, (warn_x, panel_rect.y + 130))
+            surface.blit(warn_txt, (warn_x, panel_rect.y + MODAL_WARNING_Y))
         # --------------------------------
 
-        y_off = panel_rect.y + 170 # Shifted down slightly to make room for the warning text
+        y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
+        text_x = panel_rect.x + MODAL_TEXT_X
         display_name = self.active_modal["display_name"]
         tech_key = self.active_modal["tech_key"]
         level = self.active_modal["level"]
@@ -605,8 +670,8 @@ class Research_Screen(GameState):
         unlocks = queries.get_tech_unlocks(tech_key, level)
         if unlocks:
             txt_unlock = f"Unlocks: {', '.join(unlocks)}"
-            surface.blit(font_small.render(txt_unlock, True, (150, 255, 150)), (panel_rect.x + 200, y_off))
-            y_off += 30
+            surface.blit(font_small.render(txt_unlock, True, (150, 255, 150)), (text_x, y_off))
+            y_off += MODAL_LINE_STEP_Y
             
         # Collect entities to show stats for (both the tech itself AND anything it unlocks)
         entities_to_show = []
@@ -621,16 +686,16 @@ class Research_Screen(GameState):
         # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
         if not entities_to_show and not unlocks:
             txt1 = "Advanced statistical data unavailable."
-            surface.blit(font_small.render(txt1, True, (150, 150, 150)), (panel_rect.x + 200, y_off))
-            y_off += 30
+            surface.blit(font_small.render(txt1, True, (150, 150, 150)), (text_x, y_off))
+            y_off += MODAL_LINE_STEP_Y
 
 
         # Draw stats for all relevant entities dynamically
         for entity in entities_to_show:
             # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
             if entity != display_name or len(entities_to_show) > 1:
-                surface.blit(font_small.render(f"Stats for {entity}:", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 200, y_off))
-                y_off += 25
+                surface.blit(font_small.render(f"Stats for {entity}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
+                y_off += MODAL_SUBHEAD_STEP_Y
                 
             if entity in self.unit_library:
                 s = self.unit_library[entity]
@@ -639,47 +704,47 @@ class Research_Screen(GameState):
                 draw_combat_stats(
                     surface, font_small, "Combat Stats:   ",
                     s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0),
-                    panel_rect.x + 200, y_off, (200, 200, 200)
+                    text_x, y_off, (200, 200, 200)
                 )
-                y_off += 30
+                y_off += MODAL_LINE_STEP_Y
 
                 if 'bombard_attack' in s:
                     draw_bombardment_stats(
                         surface, font_small,
                         s.get('bombard_attack', 0), s.get('bombard_range', 0),
-                        panel_rect.x + 200, y_off, (200, 200, 200)
+                        text_x, y_off, (200, 200, 200)
                     )
-                    y_off += 30
+                    y_off += MODAL_LINE_STEP_Y
 
                 draw_resource_string(
                     surface, font_small, "Production Cost:   ",
                     s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
-                    panel_rect.x + 200, y_off, (200, 200, 200)
+                    text_x, y_off, (200, 200, 200)
                 )
-                y_off += 30
+                y_off += MODAL_LINE_STEP_Y
                 
             elif entity in self.building_library:
                 s = self.building_library[entity]
                 
                 txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
-                surface.blit(font_small.render(txt1, True, (200, 200, 200)), (panel_rect.x + 200, y_off))
-                y_off += 30
+                surface.blit(font_small.render(txt1, True, (200, 200, 200)), (text_x, y_off))
+                y_off += MODAL_LINE_STEP_Y
                 
                 draw_resource_string(
                     surface, font_small, "Yield (Per Turn):   ",
                     s.get('prod_materials', 0), s.get('prod_manpower', 0), s.get('prod_fuel', 0),
-                    panel_rect.x + 200, y_off, (150, 255, 150), is_yield=True
+                    text_x, y_off, (150, 255, 150), is_yield=True
                 )
-                y_off += 30
+                y_off += MODAL_LINE_STEP_Y
                 
                 draw_resource_string(
                     surface, font_small, "Construction Cost:   ",
                     s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
-                    panel_rect.x + 200, y_off, (200, 200, 200)
+                    text_x, y_off, (200, 200, 200)
                 )
-                y_off += 30
+                y_off += MODAL_LINE_STEP_Y
                 
-            y_off += 10 # Padding between items
+            y_off += MODAL_ENTITY_PADDING_Y # Padding between items
 
     def render_completed_text_list(self, surface):
         player_data = self.map_screen.nation_data[self.map_screen.player_country]
@@ -694,16 +759,13 @@ class Research_Screen(GameState):
             lvl = res_levels.get(tech_id, 0)
             organized[cat].append((tech_id, lvl, data["max_lvl"]))
 
-        start_y = 150
-        column_width = 290
-        
         for i, (cat_name, techs) in enumerate(organized.items()):
-            curr_x = 30 + (i * column_width)
-            curr_y = start_y
+            curr_x = COMPLETED_START_X + (i * COMPLETED_COLUMN_WIDTH)
+            curr_y = COMPLETED_START_Y
             
             head = label_font.render(cat_name, True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(head, (curr_x, curr_y))
-            curr_y += 40
+            curr_y += COMPLETED_HEADER_STEP_Y
             
             techs.sort(key=lambda x: x[2] != 9999)
             
@@ -718,8 +780,8 @@ class Research_Screen(GameState):
                 color = (200, 200, 200) if lvl > 0 else (100, 100, 100)
 
                 txt_surf = text_font.render(f"{display_name}{val_text}", True, color)
-                surface.blit(txt_surf, (curr_x + 10, curr_y))
-                curr_y += 28
+                surface.blit(txt_surf, (curr_x + COMPLETED_INDENT_X, curr_y))
+                curr_y += COMPLETED_ROW_STEP_Y
 
     def enforce_scroll_bounds(self):
         """Prevents the timeline from scrolling past the defined START_YEAR or END_YEAR."""
@@ -739,18 +801,18 @@ class Research_Screen(GameState):
         self.draw_timeline_axis(surface)
         
         # --- Standard Header ---
-        pygame.draw.rect(surface, (40, 40, 50), (0, 0, c.SCREEN_WIDTH, 70))
-        pygame.draw.line(surface, (200, 200, 200), (0, 70), (c.SCREEN_WIDTH, 70), 2)
+        pygame.draw.rect(surface, (40, 40, 50), (0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT))
+        pygame.draw.line(surface, (200, 200, 200), (0, HEADER_HEIGHT), (c.SCREEN_WIDTH, HEADER_HEIGHT), 2)
 
         font = fonts.get("heading1")
         ts = font.render(f"VIEWING: {self.current_category}", True, (255, 255, 255))
-        surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, 75))
+        surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 
         # --- DYNAMIC OUTPUT CALCULATION ---
         days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
         pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn)
         output_text = font.render(f"RESEARCH OUTPUT: {pts_per_turn} pts/turn", True, (0, 255, 255))
-        surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - 30, 85))
+        surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
 
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)

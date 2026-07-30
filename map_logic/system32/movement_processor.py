@@ -1,4 +1,3 @@
-import math
 import data.constants as c
 from data import queries
 from map_logic.system32 import edit_province_ownership
@@ -163,7 +162,7 @@ def process_movement(self):
     # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
         if self.tactical_mode and u is self.player_unit:
-            return queries.get_tactical_speed(u, self.cached_unit_library)
+            return queries.get_tactical_speed(u)
         return u.get("speed", 1)
 
     # Calculate max turns loop using the new helper
@@ -237,7 +236,7 @@ def process_movement(self):
                 # --- TACTICAL MOVEMENT ECONOMY ---
                 if self.tactical_mode and unit is self.player_unit:
                     fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                    cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc, self.cached_unit_library)
+                    cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc)
                     
                     if self.unit_economy.get("fuel", 0) >= cost_per_tile:
                         self.unit_economy["fuel"] -= cost_per_tile

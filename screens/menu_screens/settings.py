@@ -1,7 +1,6 @@
 import pygame
 import ui_elements
 from gameState import GameState
-from data.io import keybind_io
 import data.constants as c
 from ui import buttons
 from data import queries

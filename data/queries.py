@@ -149,7 +149,16 @@ def scenario_has_scripted_events(nation_data):
 
 
 def get_scenario_flag(flag_name, default=False, scenario_settings=None):
-    """Safely resolves a boolean scenario setting from the cached JSON data."""
+    """Safely resolves a boolean scenario setting from a settings dict.
+
+    The single reader for every on/off scenario rule. Saves written by older
+    builds store these as the strings "True"/"False" rather than JSON booleans,
+    so both spellings have to resolve the same way -- doing that in one place is
+    why no caller should hand-roll `str(x).lower() == "true"` again.
+
+    Pass `scenario_settings` when a screen or map holds its own copy; omitting
+    it falls back to the globally cached scenario_settings.json.
+    """
     if scenario_settings is None:
         scenario_settings = get_scenario_settings()
 
@@ -160,6 +169,38 @@ def get_scenario_flag(flag_name, default=False, scenario_settings=None):
     if isinstance(value, str):
         return value.lower() == "true"
     return bool(value)
+
+
+# Scenario flags that are mirrored onto live constants so gameplay code can read
+# them without threading a settings dict everywhere: {setting key: (constant, default)}.
+GLOBAL_SCENARIO_FLAGS = {
+    "fog_of_war": ("USE_FOG_OF_WAR", c.DEFAULT_FOG_OF_WAR),
+    "casus_belli_required": ("CASUS_BELLI_REQUIRED", c.DEFAULT_CASUS_BELLI),
+    "battle_royale": ("BATTLE_ROYALE_MODE", c.DEFAULT_BATTLE_ROYALE),
+    "disable_factions": ("DISABLE_FACTIONS", c.DEFAULT_DISABLE_FACTIONS),
+}
+
+
+def apply_global_scenario_flags(scenario_settings):
+    """Pushes the scenario's on/off rules onto their live constants.
+
+    Called on map load and again whenever a save overrides the session settings;
+    keeping the flag list in one table is what stops the two paths drifting apart.
+    """
+    for flag_name, (const_name, default) in GLOBAL_SCENARIO_FLAGS.items():
+        setattr(c, const_name, get_scenario_flag(flag_name, default, scenario_settings))
+
+
+def toggle_scenario_flag(scenario_settings, flag_name, default=False):
+    """Flips a scenario flag in-place, saves it, and returns the new value.
+
+    Counterpart to get_scenario_flag, so the settings screens never have to
+    re-derive the current value themselves before inverting it.
+    """
+    new_value = not get_scenario_flag(flag_name, default, scenario_settings)
+    scenario_settings[flag_name] = new_value
+    save_scenario_settings(scenario_settings)
+    return new_value
 
 
 def get_scenario_settings(): 
@@ -235,8 +276,7 @@ def save_cached_json(cache_key, new_data):
 def save_global_settings(controller):
     """Unified helper to save all settings directly from the controller state."""
     from data.io import keybind_io
-    import data.constants as c
-    
+
     keybind_io.save_settings(
         controller.keybinds,
         controller.sfx_volume,
@@ -614,13 +654,13 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
     return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
-def get_tactical_speed(unit, unit_library):
+def get_tactical_speed(unit):
     """Calculates the effective speed of a unit in tactical mode."""
-    return unit.get("speed", 1)
+    return unit.get("speed", c.DEFAULT_UNIT_SPD)
 
-def get_tactical_fuel_cost_per_tile(unit, fuel_inc, unit_library):
+def get_tactical_fuel_cost_per_tile(unit, fuel_inc):
     """Calculates the fuel cost per tile moved in tactical mode."""
-    calc_speed = get_tactical_speed(unit, unit_library)
+    calc_speed = get_tactical_speed(unit)
     return math.ceil(fuel_inc / (calc_speed * 0.75)) if calc_speed > 0 else 0
 
 # ==========================================
@@ -864,8 +904,6 @@ def get_wrapped_x(x1, x2, map_w, loop_map):
 # ECONOMY QUERIES
 # ==========================================
 
-_ECON_RESOURCES = list(c.ECON_RESOURCE_KEYS)
-
 def get_factory_count(nation, map_data):
     """Counts the total number of factories a nation has (built and in-progress)."""
     count = 0
@@ -1011,7 +1049,7 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
 def _modify_resources(nation_data_block, costs_dict, is_refund=False):
     """Unified helper to add or subtract resources from a nation."""
     modifier = 1 if is_refund else -1
-    for res in _ECON_RESOURCES:
+    for res in c.ECON_RESOURCE_KEYS:
         new_val = nation_data_block.get(res, 0) + (costs_dict.get(f"cost_{res}", 0) * modifier)
         nation_data_block[res] = max(0, new_val) if not is_refund else new_val
 
@@ -1020,11 +1058,11 @@ def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_da
 
 def can_afford(nation_data_block, costs_dict):
     """Returns True if the nation has enough resources to cover the costs."""
-    return all(nation_data_block.get(res, 0) >= costs_dict.get(f"cost_{res}", 0) for res in _ECON_RESOURCES)
+    return all(nation_data_block.get(res, 0) >= costs_dict.get(f"cost_{res}", 0) for res in c.ECON_RESOURCE_KEYS)
 
 def execute_trade_transfer(proposer_data, target_data, params):
     """Executes a trade transfer between two nations, exchanging escrowed and requested resources."""
-    for res in ["materials", "fuel"]:
+    for res in c.TRADE_RESOURCE_KEYS:
         # Target gains proposer's escrow
         target_data[res] = target_data.get(res, 0) + params.get(f"give_{res}", 0)
         # Target pays their side
@@ -1035,8 +1073,12 @@ def execute_trade_transfer(proposer_data, target_data, params):
 
 def cancel_trade_escrow(proposer_data, params):
     """Refunds escrowed resources from a pending trade proposal."""
-    for res in ["materials", "fuel"]:
+    for res in c.TRADE_RESOURCE_KEYS:
         proposer_data[res] = proposer_data.get(res, 0) + params.get(f"give_{res}", 0)
+
+def get_siphon_rates(nation_data_block):
+    """Returns a puppet's per-resource siphon rates, creating the block if missing."""
+    return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
 
 def calculate_all_economies(map_data, nation_data):
     """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
@@ -1061,10 +1103,10 @@ def calculate_all_economies(map_data, nation_data):
             res: {"base": c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0), 
                   "core": 0, "non_core": 0, "buildings": 0, "resources": 0, 
                   "conversion": 0, "conscription": 0, "siphon": 0, "siphon_income": 0}
-            for res in _ECON_RESOURCES
+            for res in c.ECON_RESOURCE_KEYS
         }
 
-        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in _ECON_RESOURCES}, "total_inc": {r: 0 for r in _ECON_RESOURCES}, "resource_mult": resource_refining_mult}
+        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult}
 
     # Single efficient pass over the map
     for province in map_data.values():
@@ -1078,7 +1120,7 @@ def calculate_all_economies(map_data, nation_data):
             dyn_yields = econ_data[owner]["dynamic_yields"]
 
             # Base tile yields based on ownership tier
-            for res in _ECON_RESOURCES:
+            for res in c.ECON_RESOURCE_KEYS:
                 mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res]
                 bd[res][cat] += mult * dyn_yields[res]
 
@@ -1094,7 +1136,7 @@ def calculate_all_economies(map_data, nation_data):
             building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
             for b_name in province.get("buildings", []):
                 stats = bldg_lib.get(b_name, {})
-                for res in _ECON_RESOURCES:
+                for res in c.ECON_RESOURCE_KEYS:
                     bd[res]["buildings"] += int(stats.get(f"prod_{res}", 0) * building_mult)
 
             # Basic Factory transitional construction yields
@@ -1111,7 +1153,7 @@ def calculate_all_economies(map_data, nation_data):
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
                 u_type = unit.get("original_type", unit.get("type"))
                 upkeep = get_unit_upkeep(unit_lib.get(u_type, {}))
-                for res in _ECON_RESOURCES:
+                for res in c.ECON_RESOURCE_KEYS:
                     econ_data[u_owner]["upkeep"][res] += upkeep[res]
 
     # Helper for converting one resource to another via the dynamic sliders
@@ -1133,15 +1175,15 @@ def calculate_all_economies(map_data, nation_data):
         # Fuel Conversion
         _process_conversion(data, "materials", "fuel", "conversion", min(n_data.get("mat_to_fuel_slider", 0.0), get_max_fuel_conversion(n_data)), c.FUEL_CONVERSION_RATIO)
 
-        for res in _ECON_RESOURCES:
+        for res in c.ECON_RESOURCE_KEYS:
             data["total_inc"][res] = sum(data["breakdown"][res].values())
 
         # --- PUPPET SIPHONING LOGIC ---
         master = n_data.get("master", "")
         if master and master in econ_data and n_data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
-            siphon_rates = n_data.setdefault("siphon_rates", {"manpower": 0.0, "materials": 0.0, "fuel": 0.0})
-            
-            for res in _ECON_RESOURCES:
+            siphon_rates = get_siphon_rates(n_data)
+
+            for res in c.ECON_RESOURCE_KEYS:
                 siphon_amt = int(max(0, data["total_inc"][res]) * min(c.MAX_PUPPET_SIPHON, siphon_rates.get(res, 0.0)))
                 data["total_inc"][res] -= siphon_amt
                 econ_data[master]["total_inc"][res] += siphon_amt
@@ -1216,8 +1258,8 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
         ("fuel", "Fuel", c.COLOR_RESOURCE_FUEL, fuel)
     ]
     
-    total_inc = {r: 0 for r in _ECON_RESOURCES}
-    total_upkeep = {r: 0 for r in _ECON_RESOURCES}
+    total_inc = {r: 0 for r in c.ECON_RESOURCE_KEYS}
+    total_upkeep = {r: 0 for r in c.ECON_RESOURCE_KEYS}
 
     if include_net:
         if is_tactical and target_nation == map_screen.player_country:
@@ -1266,9 +1308,9 @@ def get_economy_projections(target_nation, map_data, nation_data):
     
     if not p_econ:
         return (
-            {r: 0 for r in _ECON_RESOURCES},
-            {r: 0 for r in _ECON_RESOURCES},
-            {r: {} for r in _ECON_RESOURCES}
+            {r: 0 for r in c.ECON_RESOURCE_KEYS},
+            {r: 0 for r in c.ECON_RESOURCE_KEYS},
+            {r: {} for r in c.ECON_RESOURCE_KEYS}
         )
         
     return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")
@@ -1693,6 +1735,39 @@ def get_base_unit_name(unit_name):
     base = re.sub(r'\s+\d{4}$', '', unit_name)
     return re.sub(r'\s+[IVXLCDM]+$', '', base).strip()
 
+def get_base_item_name(name):
+    """Collapses a unit OR building name down to the family the turn overrides key off.
+
+    Unlike get_base_unit_name this also folds the tier separators away, so
+    "Infantry Type 1936" and "Factory Lvl 3" both come back as "Infantry" and
+    "Factory". The trailing-numeral test runs through roman_to_int rather than a
+    hardcoded numeral list, so it keeps working past whatever tier someone adds.
+    """
+    if " Type " in name: return name.split(" Type ")[0]
+    if " Lvl " in name: return name.split(" Lvl ")[0]
+
+    parts = name.split(" ")
+    if len(parts) > 1 and re.fullmatch(r'[IVXLCDM]+', parts[-1]) and roman_to_int(parts[-1]) > 0:
+        return " ".join(parts[:-1])
+    return name
+
+# Production/research columns a unit family belongs to, in the order the UI shows them.
+UNIT_GROUP_INFANTRY = "Infantry"
+UNIT_GROUP_TANKS = "Tanks"
+UNIT_GROUP_NAVY = "Navy"
+
+def classify_unit_group(base_name, stats):
+    """Sorts a unit family into its Infantry / Tanks / Navy column.
+
+    One rule for the production list, the custom-production picker and anything
+    added later, so a unit can never land in different columns in two screens.
+    """
+    if stats.get("naval_unit", False):
+        return UNIT_GROUP_NAVY
+    if "Tank" in base_name or "Armored Car" in base_name or base_name in c.TANK_GROUP_EXTRAS:
+        return UNIT_GROUP_TANKS
+    return UNIT_GROUP_INFANTRY
+
 def get_formatted_division_name(unit_type):
     """Standardizes parsing unit names into division categories while preserving case."""
     # Use regex to strip out " type" case-insensitively, without lowercasing the entire string
@@ -1923,8 +1998,7 @@ def get_combat_predictions(map_screen):
     """Generates predictions for meeting engagements and province clashes."""
     map_data = map_screen.map_data
     nation_data = map_screen.nation_data
-    id_to_province = map_screen.id_to_province
-    
+
     player_country = map_screen.player_country
     is_spectator = player_country == "Spectator" or map_screen.is_editor
     friendly_nations = get_all_friendly_nations(player_country, nation_data) if not is_spectator else set()
@@ -2307,7 +2381,6 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 total_maps += 1
     
     if total_maps == 0:
-        import tkinter as tk
         from tkinter import messagebox
         root = get_transient_tk_root()
         messagebox.showinfo("Data Refresh", "No maps found to refresh.", parent=root)
@@ -2476,9 +2549,7 @@ def create_managed_tk_window(game_state, title, geometry):
 
 def run_tk_loop(game_state, root):
     """Standardizes the Pygame-safe Tkinter event loop."""
-    import pygame
     import tkinter as tk
-    import data.constants as c
     while getattr(game_state, 'menu_active', True) and not getattr(game_state, 'done', False) and root.winfo_exists():
         try:
             root.update()
@@ -2493,7 +2564,6 @@ def get_transient_tk_root():
 
 def destroy_tk_root(root):
     """Destroys the Tk root and pumps Pygame events to clear phantom inputs."""
-    import pygame
     root.destroy()
     pygame.event.pump()
 
@@ -2595,43 +2665,71 @@ def redo_editor_state(map_screen):
 # UI ABSTRACTION QUERIES
 # ==========================================
 
-def get_ordered_unit_groups(unit_library):
-    """Categorizes and sorts units into Infantry, Tanks, and Navy groups."""
-    infantry_groups, tank_groups, navy_groups = [], [], []
+def get_grouped_units(unit_library, by_family=True, unit_filter=None):
+    """Buckets a unit library into {Infantry/Tanks/Navy: [names]} via classify_unit_group.
+
+    `by_family=True` lists each base class once (the production columns);
+    False lists every individual tier (the custom-production picker).
+    `unit_filter(name, stats)` drops units the caller doesn't want listed.
+    """
+    groups = {UNIT_GROUP_INFANTRY: [], UNIT_GROUP_TANKS: [], UNIT_GROUP_NAVY: []}
     for name, stats in unit_library.items():
+        if unit_filter and not unit_filter(name, stats):
+            continue
         base = get_base_unit_name(name)
-        if stats.get("naval_unit", False):
-            if base not in navy_groups: navy_groups.append(base)
-        elif "Tank" in base or "Armored Car" in base or base in c.TANK_GROUP_EXTRAS:
-            if base not in tank_groups: tank_groups.append(base)
-        else:
-            if base not in infantry_groups: infantry_groups.append(base)
-    return infantry_groups, tank_groups, navy_groups
+        entry = base if by_family else name
+        bucket = groups[classify_unit_group(base, stats)]
+        if entry not in bucket:
+            bucket.append(entry)
+    return groups
+
+def get_ordered_unit_groups(unit_library):
+    """Categorizes and sorts unit families into Infantry, Tanks, and Navy groups."""
+    groups = get_grouped_units(unit_library)
+    return groups[UNIT_GROUP_INFANTRY], groups[UNIT_GROUP_TANKS], groups[UNIT_GROUP_NAVY]
+
+def was_original_owner(prov, nation, nation_data):
+    """True if the tile belonged to `nation` before the current war started.
+
+    Prefers the faction's pre-war border snapshot; without one it falls back to
+    cores. Shared by the projected-peace preview and the treaty execution in
+    diplomacy_agreements, which used to keep separate copies of this rule and
+    could therefore disagree about what a treaty was going to do.
+    """
+    fac = nation_data.get(nation, {}).get("faction", "")
+    if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
+        pre_war = nation_data["FACTION_WAR_MAPS"][fac]
+        if str(prov["id"]) in pre_war:
+            return pre_war[str(prov["id"])] == nation
+    return nation in prov.get("cores", [])
+
+def parse_peace_frozen_ids(peace_type):
+    """Pulls the explicitly demanded/surrendered province ids out of a peace string."""
+    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)', peace_type)
+    if not match:
+        return []
+    return [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
+
+def get_peace_winner_loser(peace_type, proposer, target):
+    """Returns (winner, loser) for a treaty type, so the preview and the
+    execution can never disagree about which side is taking territory."""
+    return (proposer, target) if peace_type.startswith(c.PEACE_DEMAND_CLAIMS) else (target, proposer)
 
 def get_projected_owner(prov, peace_type, proposer, target, nation_data):
     """Simulates the execution of a peace treaty to find who gets what territory."""
     curr = prov.get("owner")
 
-    def was_original_owner(prov, nation):
-        faction = nation_data.get(nation, {}).get("faction", "")
-        return get_historical_owner(prov, faction, nation_data) == nation
-
-    # Extract frozen_ids safely using regex to support pre-formatted strings
-    frozen_ids = []
-    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)', peace_type)
-    if match:
-        frozen_ids = [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
-
     if peace_type.startswith(c.PEACE_WHITE_PEACE):
         return curr
 
-    # Determine winner and loser based on treaty type to streamline core transfer simulation
-    winner, loser = (proposer, target) if peace_type.startswith(c.PEACE_DEMAND_CLAIMS) else (target, proposer)
+    frozen_ids = parse_peace_frozen_ids(peace_type)
+    winner, loser = get_peace_winner_loser(peace_type, proposer, target)
     claims = nation_data.get(winner, {}).get("claims", [])
-    
-    if (prov["id"] in frozen_ids and curr == loser) or (curr == loser and (prov["id"] in claims or was_original_owner(prov, winner))):
+
+    if curr == loser and (prov["id"] in frozen_ids or prov["id"] in claims
+                          or was_original_owner(prov, winner, nation_data)):
         return winner
-        
+
     return curr
 
 # ==========================================

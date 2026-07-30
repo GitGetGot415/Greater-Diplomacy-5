@@ -92,7 +92,6 @@ def handle_map_events(self, event):
         if self.hovered_province:
             curr_id = self.hovered_province["id"]
             if curr_id != self.last_hovered_id:
-                from map_logic.rendering import map_utils
                 self.hover_glow_surf, self.hover_glow_rect = map_utils.create_glow_surface(
                     self.id_map, self.hovered_province["map_color"]
                 )
@@ -236,10 +235,7 @@ def handle_map_events(self, event):
             if not self.pending_selection:
                 if hasattr(self, 'se_checkbox_rect') and self.se_checkbox_rect.collidepoint(mx, my):
                     if queries.scenario_has_scripted_events(self.nation_data):
-                        current_val = str(self.scenario_settings.get("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS)).lower() == "true"
-                        self.scenario_settings["use_scripted_events"] = not current_val
-                        queries.save_scenario_settings(self.scenario_settings)
-                        if self.scenario_settings["use_scripted_events"]:
+                        if queries.toggle_scenario_flag(self.scenario_settings, "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS):
                             self.show_feedback("Scripted Events: ON")
                         else:
                             self.show_feedback("Scripted Events: OFF")

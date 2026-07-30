@@ -1,7 +1,6 @@
 import pygame
 import json
 import os
-import base64
 import copy
 from map_logic.system32.time_handler import TimeHandler
 from data.io import country_io
@@ -38,10 +37,7 @@ def load_map_assets(self, load_path):
         "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
         "casus_belli_required": c.DEFAULT_CASUS_BELLI
     }
-    c.USE_FOG_OF_WAR = str(self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)).lower() == "true"
-    c.CASUS_BELLI_REQUIRED = str(self.scenario_settings.get("casus_belli_required", c.DEFAULT_CASUS_BELLI)).lower() == "true"
-    c.BATTLE_ROYALE_MODE = str(self.scenario_settings.get("battle_royale", c.DEFAULT_BATTLE_ROYALE)).lower() == "true"
-    c.DISABLE_FACTIONS = str(self.scenario_settings.get("disable_factions", c.DEFAULT_DISABLE_FACTIONS)).lower() == "true"
+    queries.apply_global_scenario_flags(self.scenario_settings)
     print(f"[SYSTEM] Fog of War set to: {c.USE_FOG_OF_WAR}")
 
     # --- PROCEDURAL INTERCEPT ---
@@ -111,10 +107,7 @@ def load_map_assets(self, load_path):
     if save_meta and "scenario_settings" in save_meta:
         if not getattr(self, 'selection_mode', False):
             self.scenario_settings = save_meta["scenario_settings"]
-            c.USE_FOG_OF_WAR = str(self.scenario_settings.get("fog_of_war", c.DEFAULT_FOG_OF_WAR)).lower() == "true"
-            c.CASUS_BELLI_REQUIRED = str(self.scenario_settings.get("casus_belli_required", c.DEFAULT_CASUS_BELLI)).lower() == "true"
-            c.BATTLE_ROYALE_MODE = str(self.scenario_settings.get("battle_royale", c.DEFAULT_BATTLE_ROYALE)).lower() == "true"
-            c.DISABLE_FACTIONS = str(self.scenario_settings.get("disable_factions", c.DEFAULT_DISABLE_FACTIONS)).lower() == "true"
+            queries.apply_global_scenario_flags(self.scenario_settings)
         else:
             # Inject built-in scenario constants that shouldn't be wiped by the user's UI settings
             if "base_days_per_turn" in save_meta["scenario_settings"]:
@@ -136,27 +129,16 @@ def load_map_assets(self, load_path):
         building_lib.clear()
         building_lib.update(json.load(f))
     
-    def get_base_type(name):
-        if " Type " in name: return name.split(" Type ")[0]
-        if " Lvl " in name: return name.split(" Lvl ")[0]
-        parts = name.split(" ")
-        if parts[-1] in ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]: return " ".join(parts[:-1])
-        return name
-        
-    unit_overrides = self.scenario_settings.get("unit_turn_overrides", {})
-    building_overrides = self.scenario_settings.get("building_turn_overrides", {})
-    
-    if unit_overrides:
-        for name, data in unit_lib.items():
-            btype = get_base_type(name)
-            if btype in unit_overrides:
-                data["production_time"] = unit_overrides[btype]
-                
-    if building_overrides:
-        for name, data in building_lib.items():
-            btype = get_base_type(name)
-            if btype in building_overrides:
-                data["time"] = building_overrides[btype]
+    # Same family-name rule the turn editor writes these overrides with, so the
+    # keys it saves always match the ones looked up here.
+    for library, overrides, time_key in (
+        (unit_lib, self.scenario_settings.get("unit_turn_overrides", {}), "production_time"),
+        (building_lib, self.scenario_settings.get("building_turn_overrides", {}), "time"),
+    ):
+        for name, data in library.items():
+            btype = queries.get_base_item_name(name)
+            if btype in overrides:
+                data[time_key] = overrides[btype]
 
     if load_path:
         history_path = os.path.join(load_path, "history.json")

@@ -3,7 +3,6 @@ from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, Slider
-from map_logic.rendering.font_manager import fonts
 from data import queries
 
 class Random_Setup(GameState):

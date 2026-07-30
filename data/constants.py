@@ -26,11 +26,6 @@ UNPLAYABLE_NATIONS = ["None", "Unclaimed", "The Rot", "Ocean", "Lakes", "Spectat
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
-# --- Feedback Text Placement ---
-# ie the green text stuff
-FEEDBACK_TEXT_OFFSET_X = 620
-FEEDBACK_TEXT_Y = 220
-
 # --- Text Input Limits ---
 MAX_API_KEY_LENGTH = 200
 MAX_MODEL_NAME_LENGTH = 150
@@ -50,8 +45,11 @@ GENERAL_RECRUITMENT_BONUS = 5 # Add this
 
 RESOURCE_REFINING_BONUS_PER_LVL = 0.1 # +10% natural resource income per level
 
-# Shared resource ordering used across economy and UI calculations
+# Shared resource ordering used across economy and UI calculations.
+# ECON_RESOURCE_KEYS is the canonical order for anything that touches all three;
+# TRADE_RESOURCE_KEYS is the subset nations can actually hand to each other.
 ECON_RESOURCE_KEYS = ("manpower", "materials", "fuel")
+TRADE_RESOURCE_KEYS = ("materials", "fuel")
 
 COUNTRY_BASE_YIELDS = {
     "manpower": 200,
@@ -147,16 +145,6 @@ DISABLE_FACTIONS = False
 DEFAULT_DISABLE_FACTIONS = False
 
 # ==========================================
-# DIPLOMATIC POPUPS
-# ==========================================
-
-POPUP_WIDTH = 450
-POPUP_HEIGHT = 130
-POPUP_START_X = (SCREEN_WIDTH // 2) - (POPUP_WIDTH // 2)
-POPUP_START_Y = 100
-POPUP_OFFSET_STEP = 30
-
-# ==========================================
 # DEFAULTS & ASSETS
 # ==========================================
 
@@ -199,10 +187,6 @@ BASIC_FACTORY_TURNS = 20
 # ECONOMY SCREEN
 # ==========================================
 
-# --- Economy Screen Placement ---
-ECON_CONSCRIPTION_BTN_Y = 530
-ECON_CONVERT_BTN_Y = 600
-
 FUEL_REFINING_CONVERSION_PER_LVL = 0.01
 
 MAX_CONVERSION_SLIDER_VAL = 0.50
@@ -230,33 +214,10 @@ TOP_UI_HEIGHT = 60
 BOT_UI_HEIGHT = 60
 TOTAL_UI_HEIGHT = 120
 
-# --- Resource HUD UI Layout ---
-RESOURCE_HUD_START_X = 300
-RESOURCE_HUD_SPACING = 200
-RESOURCE_HUD_HEIGHT_OFFSET = 40
-RESOURCE_HUD_BG_ALPHA = 200
-
 # This probably needs to be implemented in more places than just orders.py / buttons.py (does it? what is this for again?)
 # I think this is implemented in everywhere it needs to be... right?
 TOP_BAR_UI_CENTER_Y = 10
 BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
-
-# --- Top Bar Text Placement ---
-TOP_BAR_COUNTRY_X = 180
-TOP_BAR_COUNTRY_Y = 15
-TOP_BAR_TEXT_BG_PADDING = 10
-TOP_BAR_TEXT_BG_ALPHA = 180
-
-# --- View Toggle UI Layout ---
-VIEW_BTN_START_X = 10
-VIEW_BTN_STEP_X = 50
-VIEW_BTN_ROW1_Y = SCREEN_HEIGHT - 50
-VIEW_BTN_ROW2_Y = SCREEN_HEIGHT - 100
-
-# --- Left UI Bar Placement ---
-LEFT_UI_BAR_X = 20
-LEFT_UI_BAR_STEP_Y = 35
-BTN_SPECTATOR_Y = SCREEN_HEIGHT - 55
 
 # ==========================================
 # EDIT COUNTRY
@@ -269,17 +230,6 @@ EDIT_COUNTRY_UI_X1 = 50
 EDIT_COUNTRY_UI_X2 = 450
 EDIT_COUNTRY_UI_X3 = 850
 
-EDITOR_BOT_BTN_START_X = SCREEN_WIDTH - 120
-EDITOR_BOT_BTN_STEP_X = 110
-
-# --- Appearance Switcher & Formatting Layout Nodes ---
-EDIT_COUNTRY_SWITCH_BTN_X = 350
-EDIT_COUNTRY_SWITCH_BTN_Y = 20
-EDIT_COUNTRY_TITLE_X = 600
-EDIT_COUNTRY_TITLE_Y = 20
-EDIT_COUNTRY_ID_DISPLAY_X = SCREEN_WIDTH - 250
-EDIT_COUNTRY_ID_DISPLAY_Y = SCREEN_HEIGHT - 40
-
 # ==========================================
 # PROVINCE MENU
 # ==========================================
@@ -289,24 +239,6 @@ PROVINCE_UI = {
     "diplomatic_box": (10, 150, 140, 450),
     "mail_box": (400, 300, 150, 300)
 }
-
-MAP_QUEUE_OVERLAY_WIDTH = 400
-MAP_QUEUE_OVERLAY_X = 400
-MAP_QUEUE_OVERLAY_Y = 80
-
-DIPLOMATIC_INFO_TITLE = "Diplomatic Info"
-MAX_DIPLOMACY_DISPLAY = 10 # <-- Added this constant to prevent hardcoding display limits
-
-# --- Sidebar Info Panel ---
-SIDEBAR_INFO_X = 900
-SIDEBAR_INFO_Y = 70
-SIDEBAR_INFO_WIDTH = 300
-SIDEBAR_INFO_HEIGHT = 640 # Increased to accommodate the new terrain image and buildings list
-
-# --- Action Buttons UI Layout ---
-ACTION_BTN_X = 200
-ACTION_BTN_START_Y = 300
-ACTION_BTN_STEP_Y = 33
 
 # ==========================================
 # SETTINGS
@@ -521,16 +453,9 @@ EDITOR_COLOR_PALETTE = [
 # MESSAGING APP UI
 # ==========================================
 
-MSG_LEFT_PANE_W = 280
-MSG_INPUT_H = 80
-MSG_BG_DARK = (25, 25, 30)
-MSG_BG_LIGHT = (35, 35, 45)
-MSG_BUBBLE_PLAYER = (40, 100, 200)
-MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Added: Player diplomatic red
-MSG_BUBBLE_AI = (60, 60, 80)
-MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # Added: AI diplomatic orange
+# Unread-mail badge on the map screen; the rest of the messaging layout lives
+# in screens/map_related_screens/messages.py.
 MSG_NOTIFICATION_COLOR = (255, 50, 50)
-MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 
 # ==========================================
 # CAMERA & MAP RENDERING
@@ -561,9 +486,6 @@ NAME_FADE_WINDOW = 1.5
 
 NAME_MIN_TILES_TO_SHOW = 3      # when to ignore showing islands
 NAME_ABS_MIN_TILES_TO_SHOW = 1  # if a country only has this many tiles
-
-# Added from minimap.py
-MINIMAP_WIDTH = 240
 
 # ==========================================
 # DEFAULT UNIT STATS (Fallbacks)
@@ -852,12 +774,6 @@ COLOR_REL_POS = (0, 255, 0)         # Green at 100
 COLOR_REL_NEU = (255, 255, 255)     # White at 0
 COLOR_REL_NEG = (255, 0, 0)         # Red at -100
 COLOR_REL_MAX_NEG = (150, 0, 0)     # Very dark red at -200
-
-# ==========================================
-# MUSIC PLAYER UI
-# ==========================================
-
-MUSIC_LEFT_PANE_W = 250
 
 # ==========================================
 # RANDOM PROCEDURAL MAP GENERATION DEFAULTS

@@ -1,7 +1,13 @@
 import pygame
-from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
+
+# ==========================================
+# CONTENT LIMITS
+# ==========================================
+
+DIPLOMATIC_INFO_TITLE = "Diplomatic Info"
+MAX_DIPLOMACY_DISPLAY = 10 # Caps how many relations the panel lists
 
 # --- Define the split boxes using the centralized constants ---
 dip_rect = pygame.Rect(*c.PROVINCE_UI["diplomatic_box"])
@@ -20,7 +26,7 @@ def draw_unit_info(self, surface):
         pygame.draw.rect(surface, (40, 30, 40), dip_rect)
         pygame.draw.rect(surface, (150, 100, 250), dip_rect, 2)
 
-        dip_title = self.font.render(c.DIPLOMATIC_INFO_TITLE, True, (255, 255, 255))
+        dip_title = self.font.render(DIPLOMATIC_INFO_TITLE, True, (255, 255, 255))
         surface.blit(dip_title, (dip_rect.x + 10, dip_rect.y + 10))
         
         faction_name = self.nation_data.get(owner, {}).get("faction", "")
@@ -34,12 +40,12 @@ def draw_unit_info(self, surface):
             y_offset += 20
             
             members = queries.get_faction_members(faction_name, self.nation_data)
-            for m in members[:c.MAX_DIPLOMACY_DISPLAY]:
+            for m in members[:MAX_DIPLOMACY_DISPLAY]:
                 m_display = self.nation_data.get(m, {}).get("name", m)
                 surface.blit(self.small_font.render(f" - {m_display}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 
-            if len(members) > c.MAX_DIPLOMACY_DISPLAY:
+            if len(members) > MAX_DIPLOMACY_DISPLAY:
                 surface.blit(self.small_font.render("(...and more)", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
@@ -54,11 +60,11 @@ def draw_unit_info(self, surface):
         if puppets:
             surface.blit(self.small_font.render("Puppets:", True, c.COLOR_GOLD_HIGHLIGHT), (dip_rect.x + 10, y_offset))
             y_offset += 20
-            for p in puppets[:c.MAX_DIPLOMACY_DISPLAY]:
+            for p in puppets[:MAX_DIPLOMACY_DISPLAY]:
                 p_disp = self.nation_data.get(p, {}).get("name", p)
                 surface.blit(self.small_font.render(f" - {p_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
-            if len(puppets) > c.MAX_DIPLOMACY_DISPLAY:
+            if len(puppets) > MAX_DIPLOMACY_DISPLAY:
                 surface.blit(self.small_font.render("(...and more)", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
@@ -68,12 +74,12 @@ def draw_unit_info(self, surface):
             surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (dip_rect.x + 10, y_offset))
             y_offset += 20
             # Use the new constant here
-            for w in wars[:c.MAX_DIPLOMACY_DISPLAY]:
+            for w in wars[:MAX_DIPLOMACY_DISPLAY]:
                 w_disp = self.nation_data.get(w, {}).get("name", w)
                 surface.blit(self.small_font.render(f" - {w_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
-            if len(wars) > c.MAX_DIPLOMACY_DISPLAY:
+            if len(wars) > MAX_DIPLOMACY_DISPLAY:
                 # Updated the fallback text
                 surface.blit(self.small_font.render("(...and more)", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
                 y_offset += 20

@@ -2,7 +2,6 @@ import json
 import pygame
 import os
 from datetime import datetime
-from pathlib import Path
 import data.constants as c
 from data import queries
 

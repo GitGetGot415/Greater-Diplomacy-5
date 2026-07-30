@@ -56,7 +56,7 @@ class Map(GameState):
         # --- TACTICAL MODE STATE ---
         self.tactical_mode = False
         self.player_unit = None
-        self.unit_economy = {"manpower": 0, "materials": 0, "fuel": 0, "fuel_inc": 0}
+        self.unit_economy = {**{res: 0 for res in c.ECON_RESOURCE_KEYS}, "fuel_inc": 0}
         
         # --- MULTI-TURN FLAGS ---
         self.multi_turn_processing_complete = False
@@ -244,11 +244,9 @@ class Map(GameState):
             order = u.get("order")
             path = order.get("path", []) if isinstance(order, dict) else []
             if path:
-                from data import queries
-                unit_lib = queries.get_unit_library()
                 fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(u, fuel_inc, unit_lib)
-                calc_speed = queries.get_tactical_speed(u, unit_lib)
+                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(u, fuel_inc)
+                calc_speed = queries.get_tactical_speed(u)
                 immediate_steps = min(len(path), calc_speed)
                 return max(0, base_fuel - (cost_per_tile * immediate_steps))
             return base_fuel

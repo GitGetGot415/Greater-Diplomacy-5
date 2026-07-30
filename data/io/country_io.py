@@ -1,4 +1,3 @@
-import data.constants as c
 from data import queries
 
 def load_all_country_data():

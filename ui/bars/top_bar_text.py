@@ -2,6 +2,21 @@ import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+TOP_BAR_COUNTRY_X = 180
+TOP_BAR_COUNTRY_Y = 15
+TOP_BAR_TEXT_BG_PADDING = 10
+TOP_BAR_TEXT_BG_ALPHA = 180
+TOP_BAR_TEXT_BG_COLOR = (30, 30, 40)
+TOP_BAR_TEXT_BORDER_COLOR = (100, 100, 100)
+
+# The date sits above the bottom bar rather than in the top one.
+DATE_X = 300
+DATE_Y_OFFSET = -50
+
 def draw_top_text(map_screen, surface):
     """Draws the current date/time and the 'Playing As' country name."""
     if map_screen.hide_top_info:
@@ -10,21 +25,21 @@ def draw_top_text(map_screen, surface):
     def draw_with_bg(surf_text, x, y):
         """Helper to draw a semi-transparent background box behind text."""
         bg_rect = pygame.Rect(
-            x - c.TOP_BAR_TEXT_BG_PADDING, 
-            y - c.TOP_BAR_TEXT_BG_PADDING // 2, 
-            surf_text.get_width() + c.TOP_BAR_TEXT_BG_PADDING * 2, 
-            surf_text.get_height() + c.TOP_BAR_TEXT_BG_PADDING
+            x - TOP_BAR_TEXT_BG_PADDING, 
+            y - TOP_BAR_TEXT_BG_PADDING // 2, 
+            surf_text.get_width() + TOP_BAR_TEXT_BG_PADDING * 2, 
+            surf_text.get_height() + TOP_BAR_TEXT_BG_PADDING
         )
         bg_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-        bg_surf.fill((30, 30, 40, c.TOP_BAR_TEXT_BG_ALPHA)) # Matches your UI color scheme
+        bg_surf.fill((*TOP_BAR_TEXT_BG_COLOR, TOP_BAR_TEXT_BG_ALPHA))
         surface.blit(bg_surf, bg_rect.topleft)
-        pygame.draw.rect(surface, (100, 100, 100), bg_rect, 1) # Clean UI border
+        pygame.draw.rect(surface, TOP_BAR_TEXT_BORDER_COLOR, bg_rect, 1) # Clean UI border
         surface.blit(surf_text, (x, y))
 
     # 1. Draw Date (Centered)
     date_str = map_screen.time_manager.get_date_string()
     date_surf = fonts.get("date_bar").render(date_str, True, (255, 255, 255))
-    draw_with_bg(date_surf, 300, c.BOTTOM_BAR_UI_CENTER_Y -50)
+    draw_with_bg(date_surf, DATE_X, c.BOTTOM_BAR_UI_CENTER_Y + DATE_Y_OFFSET)
 
     # 2. Draw "Playing As" Name / Selected Province Owner / Tactical Unit Name
     if map_screen.tactical_mode and map_screen.player_unit:
@@ -47,4 +62,4 @@ def draw_top_text(map_screen, surface):
     name_surf = big_font.render(f"{player_display}", True, (200, 200, 200))
 
     # Position it
-    draw_with_bg(name_surf, c.TOP_BAR_COUNTRY_X, c.TOP_BAR_COUNTRY_Y)
+    draw_with_bg(name_surf, TOP_BAR_COUNTRY_X, TOP_BAR_COUNTRY_Y)

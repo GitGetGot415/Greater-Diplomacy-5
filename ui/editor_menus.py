@@ -259,10 +259,10 @@ def open_editor_economy(self):
         tree.column(col, width=widths[col], anchor="center")
         
     def populate_tree(country_list):
-        for i, c in enumerate(country_list):
-            if c not in all_econ: continue
-            d = all_econ[c]
-            n_data = self.nation_data.get(c, {})
+        for i, cid in enumerate(country_list):
+            if cid not in all_econ: continue
+            d = all_econ[cid]
+            n_data = self.nation_data.get(cid, {})
             
             def get_stats(res_key):
                 bd = d["breakdown"][res_key]
@@ -311,11 +311,11 @@ def open_starting_economy_editor(self):
     
     def populate_listbox():
         lb.delete(0, tk.END)
-        for c in sorted(active_countries):
-            c_data = self.nation_data.get(c, {})
-            is_modified = c_data.get("manpower", 0) != 0 or c_data.get("materials", 0) != 0 or c_data.get("fuel", 0) != 0
+        for cid in sorted(active_countries):
+            c_data = self.nation_data.get(cid, {})
+            is_modified = any(c_data.get(res, 0) != 0 for res in c.ECON_RESOURCE_KEYS)
             prefix = "[MODIFIED] " if is_modified else ""
-            lb.insert(tk.END, f"{prefix}{c}")
+            lb.insert(tk.END, f"{prefix}{cid}")
 
     populate_listbox()
     lb.pack(fill="both", expand=True, padx=10, pady=5)
@@ -366,11 +366,10 @@ def open_starting_economy_editor(self):
 
     def reset_all():
         if messagebox.askyesno("Confirm Reset", "Are you sure you want to reset every starting economy to 0?"):
-            for c in active_countries:
-                if c in self.nation_data:
-                    self.nation_data[c]["manpower"] = 0
-                    self.nation_data[c]["materials"] = 0
-                    self.nation_data[c]["fuel"] = 0
+            for cid in active_countries:
+                if cid in self.nation_data:
+                    for res in c.ECON_RESOURCE_KEYS:
+                        self.nation_data[cid][res] = 0
             self.show_feedback("Reset starting economy for all nations!")
             populate_listbox()
             close_menu()

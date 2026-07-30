@@ -335,52 +335,23 @@ def finalize_neutral(nation_data, a, b):
 
 def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
     """Executes the specific terms of a peace deal based on its type."""
-    import re
+    # Frozen-id parsing and the pre-war ownership rule live in queries, so the
+    # projected-peace map the player is shown is driven by the exact same logic
+    # that runs here when they accept.
+    frozen_ids = queries.parse_peace_frozen_ids(peace_type)
 
-    # Helper to check original ownership (Uses the pre-war border snapshot if available)
-    def was_original_owner(prov, nation):
-        fac = nation_data.get(nation, {}).get("faction", "")
-        if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
-            pre_war = nation_data["FACTION_WAR_MAPS"][fac]
-            if str(prov["id"]) in pre_war:
-                return pre_war[str(prov["id"])] == nation
-        # Fallback to cores if the war snapshot doesn't exist
-        return nation in prov.get("cores", [])
-
-    # Extract frozen IDs using regex
-    frozen_ids = []
-    
-    # THE FIX: Removed the space before the + so it correctly matches the list of numbers
-    match = re.search(r'\(Territories (?:demanded|surrendered): ([\d, ]+)', peace_type)
-    
-    if match:
-        frozen_ids = [int(x.strip()) for x in match.group(1).split(",") if x.strip().isdigit()]
-
-    if peace_type.startswith(c.PEACE_WHITE_PEACE):
-        # Status Quo: Nothing changes
-        pass
-
-    elif peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
-        # Proposer wins. Target is Loser.
+    # A white peace is pure status quo, so only the two territory-transferring
+    # treaty types actually touch the map.
+    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS) or peace_type.startswith(c.PEACE_SURRENDER):
+        winner, loser = queries.get_peace_winner_loser(peace_type, proposer, target)
         for prov in map_data.values():
-            # 1. Proposer gets the explicitly frozen claims
-            if prov["id"] in frozen_ids and prov.get("owner") == target:
-                edit_province_ownership.conquer_province(map_screen, prov, proposer)
-            # 2. Loser (Target) must return any of Proposer's territory they occupied
-            elif prov.get("owner") == target and was_original_owner(prov, proposer):
-                edit_province_ownership.conquer_province(map_screen, prov, proposer)
-            # Proposer keeps anything they currently occupy, so no action needed.
-
-    elif peace_type.startswith(c.PEACE_SURRENDER):
-        # Target wins. Proposer is Loser.
-        for prov in map_data.values():
-            # 1. Target gets the explicitly frozen claims
-            if prov["id"] in frozen_ids and prov.get("owner") == proposer:
-                edit_province_ownership.conquer_province(map_screen, prov, target)
-            # 2. Loser (Proposer) must return any of Target's territory they occupied
-            elif prov.get("owner") == proposer and was_original_owner(prov, target):
-                edit_province_ownership.conquer_province(map_screen, prov, target)
-            # Target keeps anything they currently occupy, so no action needed.
+            if prov.get("owner") != loser:
+                # The winner keeps anything they currently occupy, so no action needed.
+                continue
+            # The loser hands over the explicitly frozen claims, plus any of the
+            # winner's own pre-war territory they are sitting on.
+            if prov["id"] in frozen_ids or queries.was_original_owner(prov, winner, nation_data):
+                edit_province_ownership.conquer_province(map_screen, prov, winner)
 
     # Clear wargoals between the two
     if proposer in nation_data.get(target, {}).get("wargoals", {}):

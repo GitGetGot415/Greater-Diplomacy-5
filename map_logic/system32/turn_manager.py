@@ -1,7 +1,6 @@
 import pygame
 import threading
 from map_logic.system32 import turn_processor
-from map_logic.system32 import loading_screen
 from ui import buttons, diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries

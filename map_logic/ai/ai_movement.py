@@ -119,8 +119,7 @@ def process_ai_unit_orders(map_screen):
             continue
 
         my_provs = nation_provs[ai_name]
-        my_prov_ids = set(p["id"] for p in my_provs)
-        
+
         # Combine land and water IDs so BFS can route overseas
         # Include ALL legally passable tiles so the AI isn't blind!
         allowed_prov_ids = set(allowed_prov_ids_cache)
@@ -131,8 +130,7 @@ def process_ai_unit_orders(map_screen):
         enemies = list(map_screen.nation_data[ai_name].get("at_war_with", []))
         
         # --- NEW: SURPRISE ATTACK AI INTEGRATION ---
-        scenario_settings = queries.get_scenario_settings()
-        if str(scenario_settings.get("surprise_attack", c.DEFAULT_SURPRISE_ATTACK)).lower() == "true":
+        if queries.get_scenario_flag("surprise_attack", c.DEFAULT_SURPRISE_ATTACK):
             queued = map_screen.nation_data[ai_name].get("queued_ai_actions", [])
             pending_wars = [q["target"] for q in queued if q.get("action") == "WAR_DECLARATION"]
             

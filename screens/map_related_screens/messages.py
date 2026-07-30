@@ -6,12 +6,33 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
 from data import queries
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+MSG_LEFT_PANE_W = 280
+MSG_INPUT_H = 80
+
+# Diplomacy buttons sit in a row above the compose box.
+MSG_DIPLO_BTN_ROW_OFFSET_Y = -60
+MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
+MSG_DIPLO_BTN_STEP_X = 220
+
+MSG_BG_DARK = (25, 25, 30)
+MSG_BG_LIGHT = (35, 35, 45)
+MSG_BUBBLE_PLAYER = (40, 100, 200)
+MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Player diplomatic red
+MSG_BUBBLE_AI = (60, 60, 80)
+MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # AI diplomatic orange
+MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
+
+
 class Messages_Screen(GameState):
     back_state = "MAP"
 
     def __init__(self):
         super().__init__()
-        self.bg_color = c.MSG_BG_DARK
+        self.bg_color = MSG_BG_DARK
         self.map_screen = None
         self.selected_recipient = None
         self.compose_text = ""
@@ -218,7 +239,7 @@ class Messages_Screen(GameState):
 
         # --- Scrolling Logic ---
         if event.type == pygame.MOUSEWHEEL:
-            if mx < c.MSG_LEFT_PANE_W:
+            if mx < MSG_LEFT_PANE_W:
                 self.contact_scroll_y += event.y * 30
                 self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
                 self.refresh_ui() 
@@ -228,9 +249,9 @@ class Messages_Screen(GameState):
 
         # --- Drag to Scroll Logic ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if mx < c.MSG_LEFT_PANE_W:
+            if mx < MSG_LEFT_PANE_W:
                 self.is_dragging_contacts = True
-            elif self.selected_recipient and my < c.SCREEN_HEIGHT - c.MSG_INPUT_H:
+            elif self.selected_recipient and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
                 # Ensure we aren't dragging when we're actually trying to click 'Delete Draft'
                 clicked_del = False
                 if hasattr(self, 'draft_edit_rects'):
@@ -339,7 +360,7 @@ class Messages_Screen(GameState):
         if self.selected_recipient:
             is_tactical = self.map_screen.tactical_mode
             btn_x = c.SCREEN_WIDTH - 150
-            btn_y = c.SCREEN_HEIGHT - c.MSG_INPUT_H + 15
+            btn_y = c.SCREEN_HEIGHT - MSG_INPUT_H + 15
             
             if is_tactical:
                 self.elements.append(Button(btn_x, btn_y, "small", "grey", "Tactical: Read Only", lambda: None))
@@ -387,19 +408,19 @@ class Messages_Screen(GameState):
                 
             if show_buttons and orig_incoming in c.BILATERAL_ACTIONS:
                 action_name = orig_incoming.replace("_", " ").title()
-                btn_y_diplo = c.SCREEN_HEIGHT - c.MSG_INPUT_H - 60
+                btn_y_diplo = c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y
                 
                 is_peace = orig_incoming in ["PEACE_TREATY", "CEASEFIRE"]
                 
                 if is_tactical:
-                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
-                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
                     if is_peace:
-                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 460, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
                 elif pending_action == f"ACCEPT_{orig_incoming}":
-                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
                 elif pending_action == f"REJECT_{orig_incoming}":
-                    self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
                 else:
                     # Check if the player is busy doing something else (e.g., WAR_DECLARATION)
                     is_busy = False
@@ -414,15 +435,15 @@ class Messages_Screen(GameState):
                             is_busy = True
                     
                     if is_busy:
-                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "grey", f"Accept {action_name}", lambda: None))
-                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "grey", f"Reject {action_name}", lambda: None))
+                        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", f"Accept {action_name}", lambda: None))
+                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", f"Reject {action_name}", lambda: None))
                         if is_peace:
-                            self.elements.append(Button(c.MSG_LEFT_PANE_W + 460, btn_y_diplo, "medium", "grey", "View Peace Treaty", lambda: None))
+                            self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "grey", "View Peace Treaty", lambda: None))
                     else:
-                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 20, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
-                        self.elements.append(Button(c.MSG_LEFT_PANE_W + 240, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
+                        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
+                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
                         if is_peace:
-                            self.elements.append(Button(c.MSG_LEFT_PANE_W + 460, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+                            self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
 
     def open_trade(self):
         self.save_current_draft()
@@ -436,13 +457,13 @@ class Messages_Screen(GameState):
         font_small = fonts.get("normal")
         font_tiny = fonts.get("tiny")
 
-        left_pane_rect = pygame.Rect(0, 0, c.MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
-        pygame.draw.rect(surface, c.MSG_BG_LIGHT, left_pane_rect)
-        pygame.draw.line(surface, (100, 100, 100), (c.MSG_LEFT_PANE_W, 0), (c.MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+        left_pane_rect = pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
+        pygame.draw.rect(surface, MSG_BG_LIGHT, left_pane_rect)
+        pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, 0), (MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
 
         if not self.selected_recipient:
             txt = font_med.render("Select a nation to view communications.", True, (150, 150, 150))
-            surface.blit(txt, (c.MSG_LEFT_PANE_W + 50, c.SCREEN_HEIGHT // 2))
+            surface.blit(txt, (MSG_LEFT_PANE_W + 50, c.SCREEN_HEIGHT // 2))
             return
 
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
@@ -506,9 +527,9 @@ class Messages_Screen(GameState):
                 "date": ""
             })
         
-        input_rect = pygame.Rect(c.MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - c.MSG_INPUT_H, c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W, c.MSG_INPUT_H)
-        pygame.draw.rect(surface, c.MSG_BG_LIGHT, input_rect)
-        pygame.draw.line(surface, (100, 100, 100), (c.MSG_LEFT_PANE_W, input_rect.y), (c.SCREEN_WIDTH, input_rect.y), 2)
+        input_rect = pygame.Rect(MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_INPUT_H, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_INPUT_H)
+        pygame.draw.rect(surface, MSG_BG_LIGHT, input_rect)
+        pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, input_rect.y), (c.SCREEN_WIDTH, input_rect.y), 2)
 
         txt_surf = font_small.render(self.compose_text + "|", True, (255, 255, 255))
         surface.blit(txt_surf, (input_rect.x + 20, input_rect.y + 30))
@@ -516,7 +537,7 @@ class Messages_Screen(GameState):
         # --- PRE-CALCULATE SIZES TO ESTABLISH MAX SCROLL CEILING ---
         processed_messages = []
         total_h = 20
-        max_width = int((c.SCREEN_WIDTH - c.MSG_LEFT_PANE_W) * c.MSG_BUBBLE_MAX_WIDTH_RATIO)
+        max_width = int((c.SCREEN_WIDTH - MSG_LEFT_PANE_W) * MSG_BUBBLE_MAX_WIDTH_RATIO)
 
         for msg in reversed(display_thread):
             words = msg['content'].split(" ")
@@ -583,7 +604,7 @@ class Messages_Screen(GameState):
                 if is_player:
                     surface.blit(date_surf, (c.SCREEN_WIDTH - date_surf.get_width() - 30, draw_y))
                 else:
-                    surface.blit(date_surf, (c.MSG_LEFT_PANE_W + 30, draw_y))
+                    surface.blit(date_surf, (MSG_LEFT_PANE_W + 30, draw_y))
                 draw_y += 20 # Push the physical bubble down 20px so it sits under the text
 
             # Only color the physical bubble, excluding the space we reserved for the date
@@ -591,7 +612,7 @@ class Messages_Screen(GameState):
 
             if is_player:
                 box_x = c.SCREEN_WIDTH - box_width - 30
-                color = c.MSG_BUBBLE_PLAYER_DIPLO if is_diplo else c.MSG_BUBBLE_PLAYER
+                color = MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER
                 
                 if is_draft:
                     del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
@@ -601,8 +622,8 @@ class Messages_Screen(GameState):
                         pygame.draw.rect(surface, (150, 0, 0), del_rect, border_radius=5)
                         surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
             else:
-                box_x = c.MSG_LEFT_PANE_W + 30
-                color = c.MSG_BUBBLE_AI_DIPLO if is_diplo else c.MSG_BUBBLE_AI
+                box_x = MSG_LEFT_PANE_W + 30
+                color = MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI
 
             bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
             pygame.draw.rect(surface, color, bubble_rect, border_radius=10)

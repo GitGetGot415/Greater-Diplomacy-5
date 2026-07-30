@@ -2,24 +2,39 @@ import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from data import queries
-import ui_elements
+
+# ==========================================
+# LAYOUT
+# ==========================================
+
+POPUP_WIDTH = 450
+POPUP_HEIGHT = 130
+POPUP_START_X = (c.SCREEN_WIDTH // 2) - (POPUP_WIDTH // 2)
+POPUP_START_Y = 100
+POPUP_OFFSET_STEP = 30
+
+# Close ("X") box, anchored to the popup's top-right corner.
+POPUP_CLOSE_SIZE = 25
+POPUP_CLOSE_INSET_X = 30
+POPUP_CLOSE_INSET_Y = 5
 
 class DiplomaticPopup:
     def __init__(self, sender, text, index):
-        self.width = c.POPUP_WIDTH
-        self.height = c.POPUP_HEIGHT
+        self.width = POPUP_WIDTH
+        self.height = POPUP_HEIGHT
         
         # Start positions
-        start_x = c.POPUP_START_X
-        start_y = c.POPUP_START_Y
+        start_x = POPUP_START_X
+        start_y = POPUP_START_Y
         
         # Cascade offset (cap it so it doesn't push completely off screen)
-        offset_step = c.POPUP_OFFSET_STEP
+        offset_step = POPUP_OFFSET_STEP
         max_offset = min(start_x, c.SCREEN_HEIGHT - start_y - self.height)
         total_offset = min(offset_step * index, max_offset)
         
         self.rect = pygame.Rect(start_x + total_offset, start_y + total_offset, self.width, self.height)
-        self.x_rect = pygame.Rect(self.rect.right - 30, self.rect.y + 5, 25, 25)
+        self.x_rect = pygame.Rect(self.rect.right - POPUP_CLOSE_INSET_X, self.rect.y + POPUP_CLOSE_INSET_Y,
+                                  POPUP_CLOSE_SIZE, POPUP_CLOSE_SIZE)
 
         self.sender = sender
         self.text = text
@@ -48,8 +63,8 @@ class DiplomaticPopup:
             if self.is_dragging:
                 self.rect.x = event.pos[0] + self.drag_offset_x
                 self.rect.y = event.pos[1] + self.drag_offset_y
-                self.x_rect.x = self.rect.right - 30
-                self.x_rect.y = self.rect.y + 5
+                self.x_rect.x = self.rect.right - POPUP_CLOSE_INSET_X
+                self.x_rect.y = self.rect.y + POPUP_CLOSE_INSET_Y
                 return "DRAG"
         return None
 

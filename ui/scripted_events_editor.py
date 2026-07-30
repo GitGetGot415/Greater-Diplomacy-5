@@ -761,8 +761,8 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             for nat, ndata in self.nation_data.items():
                 for idx, ev in enumerate(ndata.get("scripted_events", [])):
                     used = False
-                    for c in ev.get("conditions", []):
-                        if c.get("type") == "Variable" and c.get("variable") == var_name: used = True
+                    for cond in ev.get("conditions", []):
+                        if cond.get("type") == "Variable" and cond.get("variable") == var_name: used = True
                     for a in ev.get("actions", []):
                         if a.get("type") == "Set Variable" and a.get("target") == var_name: used = True
                     if used: usage.append((nat, ev))
@@ -805,9 +805,9 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
                 msg = f"Changing to string will force all non-equals conditionals to '==' and non-set actions to 'Set'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
                 if not messagebox.askyesno("Warning", msg): return
                 for nat, ev in usage:
-                    for c in ev.get("conditions", []):
-                        if c.get("type") == "Variable" and c.get("variable") == old_v["name"]:
-                            if c.get("operator") not in ["==", "!="]: c["operator"] = "=="
+                    for cond in ev.get("conditions", []):
+                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
+                            if cond.get("operator") not in ["==", "!="]: cond["operator"] = "=="
                     for a in ev.get("actions", []):
                         if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
                             if a.get("unit_type") != "Set": a["unit_type"] = "Set"
@@ -817,12 +817,12 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
                 msg = f"Changing to int/double will reset non-numerical condition/action values to '0'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
                 if not messagebox.askyesno("Warning", msg): return
                 for nat, ev in usage:
-                    for c in ev.get("conditions", []):
-                        if c.get("type") == "Variable" and c.get("variable") == old_v["name"]:
+                    for cond in ev.get("conditions", []):
+                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
                             try:
-                                float(c.get("value", "0"))
+                                float(cond.get("value", "0"))
                             except ValueError:
-                                c["value"] = "0"
+                                cond["value"] = "0"
                     for a in ev.get("actions", []):
                         if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
                             try:
@@ -832,9 +832,9 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
                                 
             if old_v["name"] != new_n and usage:
                 for nat, ev in usage:
-                    for c in ev.get("conditions", []):
-                        if c.get("type") == "Variable" and c.get("variable") == old_v["name"]:
-                            c["variable"] = new_n
+                    for cond in ev.get("conditions", []):
+                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
+                            cond["variable"] = new_n
                     for a in ev.get("actions", []):
                         if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
                             a["target"] = new_n

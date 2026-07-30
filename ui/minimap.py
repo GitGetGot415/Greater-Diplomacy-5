@@ -1,17 +1,28 @@
 import pygame
 import data.constants as c
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+MINIMAP_WIDTH = 240
+MINIMAP_MARGIN_X = 20
+MINIMAP_MARGIN_Y = 80
+MINIMAP_BG_COLOR = (10, 10, 10)
+MINIMAP_BORDER_COLOR = (100, 100, 100)
+MINIMAP_VIEWBOX_COLOR = (255, 255, 0)
+
 def draw_minimap(self, surface, screen_width, screen_height):
     map_aspect = self.map_h / self.map_w
-    mini_w = c.MINIMAP_WIDTH
+    mini_w = MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
     
     # Position of the minimap background
-    mx, my = screen_width - mini_w - 20, screen_height - mini_h - 80
-    
+    mx, my = screen_width - mini_w - MINIMAP_MARGIN_X, screen_height - mini_h - MINIMAP_MARGIN_Y
+
     # Draw Background
-    pygame.draw.rect(surface, (10, 10, 10), (mx, my, mini_w, mini_h))
-    pygame.draw.rect(surface, (100, 100, 100), (mx, my, mini_w, mini_h), 1)
+    pygame.draw.rect(surface, MINIMAP_BG_COLOR, (mx, my, mini_w, mini_h))
+    pygame.draw.rect(surface, MINIMAP_BORDER_COLOR, (mx, my, mini_w, mini_h), 1)
     
     # --- UI Offset Logic ---
     visible_map_width = screen_width - c.UI_LEFT_OFFSET

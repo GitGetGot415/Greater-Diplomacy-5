@@ -3,10 +3,15 @@ import os
 from data import queries
 import ui_elements 
 from gameState import GameState
-from ui_elements import Button, Slider, process_text_input
+from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 
+# ==========================================
+# LAYOUT
+# ==========================================
+
+MUSIC_LEFT_PANE_W = 250
 song_y = 32
 
 # ==========================================
@@ -41,18 +46,18 @@ class TopBarOverlay:
         
     def draw(self, surface):
         # Draw solid backgrounds over the scrolling area
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, c.MUSIC_LEFT_PANE_W, 120))
-        pygame.draw.rect(surface, (25, 25, 30), (c.MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - c.MUSIC_LEFT_PANE_W, 200)) # Height for scrubber
+        pygame.draw.rect(surface, (35, 35, 45), (0, 0, MUSIC_LEFT_PANE_W, 120))
+        pygame.draw.rect(surface, (25, 25, 30), (MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200)) # Height for scrubber
         
         # Re-draw the divider line over the header
-        pygame.draw.line(surface, (100, 100, 100), (c.MUSIC_LEFT_PANE_W, 0), (c.MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+        pygame.draw.line(surface, (100, 100, 100), (MUSIC_LEFT_PANE_W, 0), (MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
         
         font_title = fonts.get("heading1")
         font_norm = fonts.get("normal")
         surface.blit(font_title.render("ALBUMS", True, (255, 255, 255)), (20, 80))
         
         np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if self.controller.now_playing != "None" else "Now Playing: Nothing"
-        surface.blit(font_norm.render(np_text, True, c.COLOR_GOLD_HIGHLIGHT), (c.MUSIC_LEFT_PANE_W + 20, 30))
+        surface.blit(font_norm.render(np_text, True, c.COLOR_GOLD_HIGHLIGHT), (MUSIC_LEFT_PANE_W + 20, 30))
 
 
 class MusicScrubber:
@@ -233,7 +238,7 @@ class Music_Player(GameState):
             # Only registers a click (sound included) when below the clipping header!
             track_cb = lambda p=track_path: self.play_track(p)
 
-            track_btn = Button(c.MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
+            track_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             self.elements.append(track_btn)
             track_y += song_y
@@ -247,14 +252,14 @@ class Music_Player(GameState):
         
         self.elements.append(Button(20, 20, "small", "red", "Back", self.handle_back_key))
         # Anchored relative to the UI so it never scrolls away!
-        self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song", self.play_track))
+        self.elements.append(Button(MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song", self.play_track))
         
         # Add Pause Button
         pause_text = "Play" if getattr(self.controller, 'is_paused', False) else "Pause"
-        self.elements.append(Button(c.MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text, self.toggle_pause))
+        self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text, self.toggle_pause))
         
         # Add Progress Slider (Custom MusicScrubber)
-        self.progress_slider = MusicScrubber(c.MUSIC_LEFT_PANE_W + 20, 155, 400, 15, self.scrub_music)
+        self.progress_slider = MusicScrubber(MUSIC_LEFT_PANE_W + 20, 155, 400, 15, self.scrub_music)
         self.elements.append(self.progress_slider)
         
         # --- 4. Top Layer: Audio Sliders ---
@@ -595,7 +600,7 @@ class Music_Player(GameState):
         # The wheel scrolls whichever pane the cursor is over; scrollbar grabs are
         # located by their own rects so they work from anywhere.
         if event.type == pygame.MOUSEWHEEL:
-            over_albums = pygame.mouse.get_pos()[0] < c.MUSIC_LEFT_PANE_W
+            over_albums = pygame.mouse.get_pos()[0] < MUSIC_LEFT_PANE_W
             self.handle_list_scroll(event, **self.PANES["album" if over_albums else "track"])
             return
 
@@ -605,11 +610,11 @@ class Music_Player(GameState):
 
     def additional_draw(self, surface):
         # Left Pane Background (Drawn underneath everything)
-        left_pane = pygame.Rect(0, 0, c.MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT)
+        left_pane = pygame.Rect(0, 0, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT)
         pygame.draw.rect(surface, (35, 35, 45), left_pane)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
-        self.draw_list_scrollbar(surface, c.MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120,
+        self.draw_list_scrollbar(surface, MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120,
                                  width=10, **self.PANES["album"])
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200,
                                  width=10, **self.PANES["track"])

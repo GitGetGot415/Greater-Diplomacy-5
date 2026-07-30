@@ -427,8 +427,7 @@ class Controller:
                             
         self.all_albums = synced_albums
         
-        # Load the user's active playlist toggles
-        from data import queries
+        # Load the user's active playlist toggles.
         # Returns {} by default if empty, so ensure it's a list
         loaded_albums = queries.get_active_albums()
         self.active_albums = loaded_albums if isinstance(loaded_albums, list) else []
@@ -438,7 +437,6 @@ class Controller:
         self.build_playlist()
 
     def save_active_albums(self):
-        from data import queries
         queries.save_cached_json("active_albums", self.active_albums)
 
     def build_playlist(self):

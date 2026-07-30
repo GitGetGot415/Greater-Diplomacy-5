@@ -22,7 +22,6 @@ def select_tactical_unit(map_screen, province):
     
     if not units:
         # SPAWN A BLANK UNIT
-        from data import queries
         nation_data = map_screen.nation_data.get(owner, {})
         unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(), queries.get_unit_library(), allow_fuel_units=False)
         
@@ -89,7 +88,6 @@ def confirm_player_country(map_screen):
             
             # Start the game with max fuel
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
-            from data import queries
             stats = queries.get_unit_library().get(u_type, {})
             map_screen.unit_economy["fuel"] = c.TACTICAL_MAX_FUEL
             map_screen.unit_economy["fuel_inc"] = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]

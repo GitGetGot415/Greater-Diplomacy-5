@@ -1,4 +1,3 @@
-import data.constants as c
 
 def log_global_event(nation_data, event_message):
     """Stores world events so the AI can react to them on the next turn."""

@@ -44,11 +44,9 @@ def process_queues(self):
     """Processes only the VERY FIRST item in the unit and building queues sequentially."""
     # REPLACE DISK I/O WITH CACHED QUERIES
     unit_library = queries.get_unit_library()
-    building_library = queries.get_building_library()
 
     # --- NEW: Check if AI is disabled to freeze their queues ---
-    ai_disabled_raw = self.scenario_settings.get("ai_disabled", c.DEFAULT_AI_DISABLED)
-    ai_disabled = str(ai_disabled_raw).lower() == "true"
+    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, self.scenario_settings)
     
     # --- Build active unit counters once per turn for new deployments ---
     active_unit_counters = queries.build_active_unit_counters(self.map_data)
