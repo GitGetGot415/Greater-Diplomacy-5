@@ -1,4 +1,6 @@
 {
+    "version": "v20",
+    "generated_at": "2026-07-31T09:11:15.334993",
     "date": {
         "day": 15,
         "month": 0,
@@ -37010,7 +37012,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37020,7 +37022,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37052,7 +37055,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37062,7 +37065,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37111,7 +37115,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "European Union",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -37121,7 +37125,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -37210,7 +37215,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37220,7 +37225,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37241,7 +37247,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37251,7 +37257,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Infantry Division (1940)"
+                    "custom_name": "3rd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37286,7 +37293,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37296,12 +37303,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "European Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -37311,7 +37319,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37360,7 +37369,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37370,7 +37379,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Infantry Division (1940)"
+                    "custom_name": "4th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37413,7 +37423,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "European Union",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -37423,7 +37433,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Destroyer (VIII)"
+                    "custom_name": "2nd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -37447,7 +37458,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37457,12 +37468,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Soviet Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -37472,12 +37484,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37487,7 +37500,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37508,7 +37522,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37518,7 +37532,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37539,7 +37554,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37549,7 +37564,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37585,7 +37601,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37595,7 +37611,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "5th Infantry Division (1940)"
+                    "custom_name": "5th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37616,7 +37633,7 @@
                 {
                     "type": "Light Tank IV",
                     "owner": "European Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -37626,12 +37643,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Light Tank Division (IV)"
+                    "custom_name": "2nd Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37641,12 +37659,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37656,12 +37675,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Mechanized Infantry Division (1940)"
+                    "custom_name": "3rd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Medium Tank II",
                     "owner": "European Union",
-                    "health": 3000,
+                    "health": 3000.0,
                     "max_health": 3000,
                     "speed": 2,
                     "attack": 3000,
@@ -37671,7 +37691,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Medium Tank Division (II)"
+                    "custom_name": "1st Medium Tank Division (II)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37738,7 +37759,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Mongolia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37748,7 +37769,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37780,7 +37802,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37790,7 +37812,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "6th Infantry Division (1940)"
+                    "custom_name": "6th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37810,7 +37833,7 @@
                 {
                     "type": "Light Tank IV",
                     "owner": "Soviet Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -37820,12 +37843,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Light Tank Division (IV)"
+                    "custom_name": "2nd Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -37835,7 +37859,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Mechanized Infantry Division (1940)"
+                    "custom_name": "3rd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37895,7 +37920,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37905,7 +37930,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Infantry Division (1940)"
+                    "custom_name": "3rd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37939,7 +37965,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -37949,7 +37975,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -37979,7 +38006,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Japanese Empire",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -37989,12 +38016,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Japanese Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38004,12 +38032,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Japanese Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -38019,12 +38048,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Destroyer VIII",
                     "owner": "Japanese Empire",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -38034,7 +38064,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Destroyer (VIII)"
+                    "custom_name": "2nd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38058,7 +38089,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38068,12 +38099,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Mechanized Infantry Division (1940)"
+                    "custom_name": "4th Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Soviet Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -38083,7 +38115,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Light Tank Division (IV)"
+                    "custom_name": "3rd Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38106,7 +38139,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Korea",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38116,7 +38149,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38139,7 +38173,7 @@
                 {
                     "type": "Light Tank IV",
                     "owner": "European Union",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -38149,12 +38183,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Light Tank Division (IV)"
+                    "custom_name": "3rd Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38164,7 +38199,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Mechanized Infantry Division (1940)"
+                    "custom_name": "4th Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38187,7 +38223,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38197,7 +38233,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Infantry Division (1940)"
+                    "custom_name": "3rd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38229,7 +38266,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "European Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38239,7 +38276,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Infantry Division (1940)"
+                    "custom_name": "4th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38271,7 +38309,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "European Union",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -38281,7 +38319,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Destroyer (VIII)"
+                    "custom_name": "3rd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38302,7 +38341,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38312,12 +38351,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "7th Infantry Division (1940)"
+                    "custom_name": "7th Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Soviet Union",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38327,7 +38367,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "8th Infantry Division (1940)"
+                    "custom_name": "8th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38407,7 +38448,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "European Union",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -38417,7 +38458,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Destroyer (VIII)"
+                    "custom_name": "4th Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38461,7 +38503,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38471,7 +38513,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38492,7 +38535,7 @@
                 {
                     "type": "Light Tank IV",
                     "owner": "Ottoman Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -38502,12 +38545,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38517,12 +38561,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38532,7 +38577,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38566,7 +38612,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Nationalist China",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -38576,7 +38622,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38630,7 +38677,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38640,12 +38687,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Mechanized Infantry Division (1940)"
+                    "custom_name": "3rd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Ottoman Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -38655,7 +38703,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Light Tank Division (IV)"
+                    "custom_name": "2nd Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38678,7 +38727,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Afghanistan",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38688,7 +38737,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38742,7 +38792,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Pakistan",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38752,7 +38802,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38775,7 +38826,7 @@
                 {
                     "type": "Destroyer VII",
                     "owner": "Ottoman Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 1,
                     "attack": 1800,
@@ -38785,7 +38836,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VII)"
+                    "custom_name": "1st Destroyer (VII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38808,7 +38860,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38818,7 +38870,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38839,7 +38892,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Ottoman Empire",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -38849,7 +38902,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Destroyer (VIII)"
+                    "custom_name": "2nd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -38872,7 +38926,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "India",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -38882,7 +38936,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38903,7 +38958,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38913,7 +38968,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Infantry Division (1940)"
+                    "custom_name": "4th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -38949,7 +39005,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -38959,7 +39015,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39041,7 +39098,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ottoman Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39051,12 +39108,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Mechanized Infantry Division (1940)"
+                    "custom_name": "4th Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Ottoman Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -39066,7 +39124,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Light Tank Division (IV)"
+                    "custom_name": "3rd Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39098,7 +39157,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39108,7 +39167,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39151,7 +39211,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "India",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39161,12 +39221,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "India",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -39176,7 +39237,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39221,7 +39283,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Myanmar",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39231,7 +39293,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39274,7 +39337,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Communist China",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -39284,7 +39347,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -39305,7 +39369,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Nationalist China",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39315,12 +39379,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Mechanized Infantry Division (1940)"
+                    "custom_name": "3rd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Nationalist China",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -39330,7 +39395,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39364,7 +39430,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Ottoman Empire",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -39374,7 +39440,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Destroyer (VIII)"
+                    "custom_name": "3rd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -39408,7 +39475,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Vietnam",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39418,7 +39485,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39439,7 +39507,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "India",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -39449,7 +39517,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -39494,7 +39563,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Sudan",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39504,7 +39573,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39525,7 +39595,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Thailand",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39535,7 +39605,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39558,7 +39629,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Mali Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39568,7 +39639,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39611,7 +39683,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Philippines",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -39621,7 +39693,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -39677,7 +39750,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Chad",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39687,7 +39760,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39708,7 +39782,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Mali Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39718,7 +39792,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39750,7 +39825,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ethiopia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39760,12 +39835,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Ethiopia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39775,12 +39851,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Ethiopia",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -39790,7 +39867,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39857,7 +39935,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Mali Empire",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -39867,12 +39945,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Mali Empire",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -39882,7 +39961,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -39925,7 +40005,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Mali Empire",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -39935,7 +40015,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -39989,7 +40070,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Democratic Republic of the Congo",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -39999,7 +40080,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40062,7 +40144,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Indonesia",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40072,7 +40154,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40126,7 +40209,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Papua New Guinea",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40136,7 +40219,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40159,7 +40243,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Indonesia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40169,7 +40253,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40190,7 +40275,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Tanzania",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40200,7 +40285,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40221,7 +40307,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Democratic Republic of the Congo",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40231,12 +40317,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Democratic Republic of the Congo",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40246,7 +40333,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Infantry Division (1940)"
+                    "custom_name": "3rd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40302,7 +40390,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Indonesia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40312,7 +40400,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40430,7 +40519,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Union of South Africa",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -40440,7 +40529,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Mechanized Infantry Division (1940)"
+                    "custom_name": "1st Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40459,7 +40549,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Australia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40469,7 +40559,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40490,7 +40581,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Australia",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40500,7 +40591,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40541,7 +40633,7 @@
                 {
                     "type": "Mechanized Infantry Type 1940",
                     "owner": "Union of South Africa",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
@@ -40551,12 +40643,13 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Mechanized Infantry Division (1940)"
+                    "custom_name": "2nd Mechanized Infantry Division (1940)",
+                    "naval_unit": false
                 },
                 {
                     "type": "Light Tank IV",
                     "owner": "Union of South Africa",
-                    "health": 2400,
+                    "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
                     "attack": 1650,
@@ -40566,7 +40659,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Light Tank Division (IV)"
+                    "custom_name": "1st Light Tank Division (IV)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40585,7 +40679,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Indonesia",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40595,7 +40689,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Destroyer (VIII)"
+                    "custom_name": "2nd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40671,7 +40766,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Union of South Africa",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40681,7 +40776,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1940)"
+                    "custom_name": "1st Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40700,7 +40796,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Australia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40710,7 +40806,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Infantry Division (1940)"
+                    "custom_name": "2nd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -40731,7 +40828,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Madagascar",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40741,7 +40838,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40845,7 +40943,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Australia",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40855,7 +40953,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Destroyer (VIII)"
+                    "custom_name": "2nd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40898,7 +40997,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Australia",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40908,7 +41007,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Destroyer (VIII)"
+                    "custom_name": "3rd Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40929,7 +41029,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Union of South Africa",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -40939,7 +41039,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -40973,7 +41074,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Australia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -40983,7 +41084,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Infantry Division (1940)"
+                    "custom_name": "3rd Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -41013,7 +41115,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "New Zealand",
-                    "health": 2600,
+                    "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
                     "attack": 2000,
@@ -41023,7 +41125,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (VIII)"
+                    "custom_name": "1st Destroyer (VIII)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -41099,7 +41202,7 @@
                 {
                     "type": "Infantry Type 1940",
                     "owner": "Australia",
-                    "health": 2500,
+                    "health": 2500.0,
                     "max_health": 2500,
                     "speed": 1,
                     "attack": 400,
@@ -41109,7 +41212,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "4th Infantry Division (1940)"
+                    "custom_name": "4th Infantry Division (1940)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],

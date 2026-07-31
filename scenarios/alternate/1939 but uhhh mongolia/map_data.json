@@ -423,7 +423,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -433,7 +433,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -628,7 +629,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Soviet Union",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -638,7 +639,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -1799,7 +1801,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1809,7 +1811,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -1912,7 +1915,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1922,12 +1925,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1937,12 +1941,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1952,12 +1957,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1967,12 +1973,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -1982,7 +1989,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2051,7 +2059,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -2061,12 +2069,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Main Battle Tank Division (III)"
+                "custom_name": "1st Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -2076,12 +2085,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Mechanized Infantry Division (1950)"
+                "custom_name": "1st Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -2091,7 +2101,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Mechanized Infantry Division (1950)"
+                "custom_name": "2nd Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2455,7 +2466,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -2465,7 +2476,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Armored Car Division (VII)"
+                "custom_name": "1st Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2508,7 +2520,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Finland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -2518,7 +2530,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2619,7 +2632,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -2629,7 +2642,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Armored Car Division (VII)"
+                "custom_name": "2nd Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2768,7 +2782,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Finland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -2778,7 +2792,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3043,7 +3058,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -3053,12 +3068,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Main Battle Tank Division (III)"
+                "custom_name": "2nd Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -3068,12 +3084,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Mechanized Infantry Division (1950)"
+                "custom_name": "3rd Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -3083,7 +3100,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Mechanized Infantry Division (1950)"
+                "custom_name": "4th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3223,7 +3241,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3233,12 +3251,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1939)"
+                "custom_name": "8th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3248,12 +3267,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1939)"
+                "custom_name": "9th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3263,12 +3283,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1939)"
+                "custom_name": "10th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3278,12 +3299,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1939)"
+                "custom_name": "11th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3293,7 +3315,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1939)"
+                "custom_name": "12th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3400,7 +3423,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Soviet Union",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -3410,7 +3433,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (VIII)"
+                "custom_name": "2nd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -3685,7 +3709,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Norway",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3695,7 +3719,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3767,7 +3792,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Estonia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3777,7 +3802,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3880,7 +3906,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -3890,7 +3916,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Armored Car Division (VII)"
+                "custom_name": "3rd Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3934,7 +3961,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -3944,7 +3971,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1939)"
+                "custom_name": "13th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4016,7 +4044,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Norway",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4026,7 +4054,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4231,7 +4260,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -4241,12 +4270,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Main Battle Tank Division (III)"
+                "custom_name": "3rd Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -4256,12 +4286,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Mechanized Infantry Division (1950)"
+                "custom_name": "5th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -4271,7 +4302,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Mechanized Infantry Division (1950)"
+                "custom_name": "6th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4478,7 +4510,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -4488,7 +4520,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Armored Car Division (VII)"
+                "custom_name": "4th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4722,7 +4755,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Latvia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4732,7 +4765,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4836,7 +4870,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4846,12 +4880,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1939)"
+                "custom_name": "14th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4861,12 +4896,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1939)"
+                "custom_name": "15th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4876,12 +4912,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1939)"
+                "custom_name": "16th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4891,12 +4928,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1939)"
+                "custom_name": "17th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -4906,7 +4944,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1939)"
+                "custom_name": "18th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5143,7 +5182,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -5153,7 +5192,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Armored Car Division (VII)"
+                "custom_name": "5th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5564,7 +5604,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -5574,12 +5614,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Main Battle Tank Division (III)"
+                "custom_name": "4th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -5589,12 +5630,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Mechanized Infantry Division (1950)"
+                "custom_name": "7th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -5604,7 +5646,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Mechanized Infantry Division (1950)"
+                "custom_name": "8th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5846,7 +5889,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -5856,7 +5899,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5929,7 +5973,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Sweden",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -5939,7 +5983,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5978,7 +6023,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -5988,7 +6033,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Armored Car Division (VII)"
+                "custom_name": "6th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6224,7 +6270,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6234,12 +6280,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1939)"
+                "custom_name": "19th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6249,12 +6296,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "20th Infantry Division (1939)"
+                "custom_name": "20th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6264,12 +6312,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "21st Infantry Division (1939)"
+                "custom_name": "21st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6279,12 +6328,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "22nd Infantry Division (1939)"
+                "custom_name": "22nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6294,7 +6344,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "23rd Infantry Division (1939)"
+                "custom_name": "23rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6367,7 +6418,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6377,7 +6428,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "24th Infantry Division (1939)"
+                "custom_name": "24th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6448,7 +6500,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -6458,7 +6510,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Armored Car Division (VII)"
+                "custom_name": "7th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6653,7 +6706,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Sweden",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6663,7 +6716,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6702,7 +6756,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Lithuania",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6712,7 +6766,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6785,7 +6840,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Denmark",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6795,7 +6850,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6901,7 +6957,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Ireland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -6911,7 +6967,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7510,7 +7567,7 @@
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -7520,7 +7577,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Motorized Infantry Division (1939)"
+                "custom_name": "1st Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7630,7 +7688,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7640,12 +7698,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "25th Infantry Division (1939)"
+                "custom_name": "25th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7655,12 +7714,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "26th Infantry Division (1939)"
+                "custom_name": "26th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7670,12 +7730,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "27th Infantry Division (1939)"
+                "custom_name": "27th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7685,12 +7746,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "28th Infantry Division (1939)"
+                "custom_name": "28th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7700,7 +7762,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "29th Infantry Division (1939)"
+                "custom_name": "29th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7868,7 +7931,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7878,7 +7941,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7986,7 +8050,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -7996,7 +8060,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8037,7 +8102,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -8047,12 +8112,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Main Battle Tank Division (III)"
+                "custom_name": "5th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -8062,12 +8128,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Mechanized Infantry Division (1950)"
+                "custom_name": "9th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -8077,7 +8144,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Mechanized Infantry Division (1950)"
+                "custom_name": "10th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8187,7 +8255,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "German Reich",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -8197,7 +8265,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -8239,7 +8308,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -8249,7 +8318,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8359,7 +8429,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United Kingdom",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -8369,7 +8439,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -8474,7 +8545,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -8484,7 +8555,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Armored Car Division (VII)"
+                "custom_name": "8th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8524,7 +8596,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -8534,7 +8606,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Armored Car Division (VII)"
+                "custom_name": "9th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8578,7 +8651,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -8588,7 +8661,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8893,7 +8967,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -8903,7 +8977,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "30th Infantry Division (1939)"
+                "custom_name": "30th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9268,7 +9343,7 @@
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -9278,7 +9353,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Motorized Infantry Division (1939)"
+                "custom_name": "2nd Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9388,7 +9464,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9398,12 +9474,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "31st Infantry Division (1939)"
+                "custom_name": "31st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9413,12 +9490,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "32nd Infantry Division (1939)"
+                "custom_name": "32nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9428,12 +9506,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "33rd Infantry Division (1939)"
+                "custom_name": "33rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9443,12 +9522,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "34th Infantry Division (1939)"
+                "custom_name": "34th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9458,7 +9538,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "35th Infantry Division (1939)"
+                "custom_name": "35th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9555,7 +9636,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -9565,12 +9646,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Main Battle Tank Division (III)"
+                "custom_name": "6th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -9580,12 +9662,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Mechanized Infantry Division (1950)"
+                "custom_name": "11th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -9595,7 +9678,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Mechanized Infantry Division (1950)"
+                "custom_name": "12th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9668,7 +9752,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9678,12 +9762,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9693,12 +9778,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9708,12 +9794,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9723,12 +9810,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9738,12 +9826,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -9753,12 +9842,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Medium Tank II",
                 "owner": "United Kingdom",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 3000,
@@ -9768,7 +9858,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Medium Tank Division (II)"
+                "custom_name": "1st Medium Tank Division (II)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9809,7 +9900,7 @@
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -9819,7 +9910,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Motorized Infantry Division (1939)"
+                "custom_name": "3rd Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9997,7 +10089,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -10007,7 +10099,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Armored Car Division (VII)"
+                "custom_name": "10th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10154,7 +10247,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United Kingdom",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -10164,7 +10257,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (VIII)"
+                "custom_name": "2nd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -10235,7 +10329,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Netherlands",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -10245,7 +10339,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10385,7 +10480,7 @@
             {
                 "type": "Light Tank III",
                 "owner": "German Reich",
-                "health": 2200,
+                "health": 2200.0,
                 "max_health": 2200,
                 "speed": 2,
                 "attack": 1500,
@@ -10395,12 +10490,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Light Tank Division (III)"
+                "custom_name": "1st Light Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Light Tank III",
                 "owner": "German Reich",
-                "health": 2200,
+                "health": 2200.0,
                 "max_health": 2200,
                 "speed": 2,
                 "attack": 1500,
@@ -10410,12 +10506,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Light Tank Division (III)"
+                "custom_name": "2nd Light Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Light Tank III",
                 "owner": "German Reich",
-                "health": 2200,
+                "health": 2200.0,
                 "max_health": 2200,
                 "speed": 2,
                 "attack": 1500,
@@ -10425,12 +10522,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Light Tank Division (III)"
+                "custom_name": "3rd Light Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -10440,12 +10538,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Motorized Infantry Division (1939)"
+                "custom_name": "4th Motorized Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -10455,12 +10554,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Motorized Infantry Division (1939)"
+                "custom_name": "5th Motorized Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -10470,7 +10570,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Motorized Infantry Division (1939)"
+                "custom_name": "6th Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10646,7 +10747,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -10656,7 +10757,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Armored Car Division (VII)"
+                "custom_name": "11th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10865,7 +10967,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -10875,12 +10977,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -10890,12 +10993,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -10905,12 +11009,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -10920,7 +11025,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Motorized Infantry Division (1939)"
+                "custom_name": "1st Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11156,7 +11262,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11166,12 +11272,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "36th Infantry Division (1939)"
+                "custom_name": "36th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11181,12 +11288,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "37th Infantry Division (1939)"
+                "custom_name": "37th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11196,12 +11304,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "38th Infantry Division (1939)"
+                "custom_name": "38th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11211,12 +11320,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "39th Infantry Division (1939)"
+                "custom_name": "39th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11226,7 +11336,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "40th Infantry Division (1939)"
+                "custom_name": "40th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11332,7 +11443,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -11342,7 +11453,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "41st Infantry Division (1939)"
+                "custom_name": "41st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11609,7 +11721,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -11619,7 +11731,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Armored Car Division (VII)"
+                "custom_name": "12th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11898,7 +12011,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -11908,7 +12021,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Armored Car Division (VII)"
+                "custom_name": "13th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12220,7 +12334,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "France",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -12230,7 +12344,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -12371,7 +12486,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -12381,12 +12496,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Main Battle Tank Division (III)"
+                "custom_name": "7th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -12396,12 +12512,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Mechanized Infantry Division (1950)"
+                "custom_name": "13th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -12411,7 +12528,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Mechanized Infantry Division (1950)"
+                "custom_name": "14th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12546,7 +12664,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Belgium",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -12556,7 +12674,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12700,7 +12819,7 @@
             {
                 "type": "Motorized Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 2,
                 "attack": 390,
@@ -12710,7 +12829,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Motorized Infantry Division (1939)"
+                "custom_name": "7th Motorized Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12750,7 +12870,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -12760,7 +12880,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13072,7 +13193,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Poland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13082,7 +13203,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13124,7 +13246,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13134,7 +13256,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13244,7 +13367,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13254,12 +13377,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "42nd Infantry Division (1939)"
+                "custom_name": "42nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13269,12 +13393,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "43rd Infantry Division (1939)"
+                "custom_name": "43rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13284,12 +13409,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "44th Infantry Division (1939)"
+                "custom_name": "44th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13299,12 +13425,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "45th Infantry Division (1939)"
+                "custom_name": "45th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13314,7 +13441,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "46th Infantry Division (1939)"
+                "custom_name": "46th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13349,7 +13477,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -13359,7 +13487,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Armored Car Division (VII)"
+                "custom_name": "14th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13435,7 +13564,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13445,7 +13574,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "47th Infantry Division (1939)"
+                "custom_name": "47th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13984,7 +14114,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -13994,12 +14124,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14009,12 +14140,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14024,12 +14156,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14039,12 +14172,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14054,12 +14188,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14069,12 +14204,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14084,12 +14220,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14099,12 +14236,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1939)"
+                "custom_name": "8th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14114,12 +14252,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1939)"
+                "custom_name": "9th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Heavy Tank I",
                 "owner": "France",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 3000,
@@ -14129,7 +14268,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Heavy Tank Division (I)"
+                "custom_name": "1st Heavy Tank Division (I)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14203,7 +14343,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14213,12 +14353,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "48th Infantry Division (1939)"
+                "custom_name": "48th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14228,12 +14369,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "49th Infantry Division (1939)"
+                "custom_name": "49th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14243,12 +14385,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "50th Infantry Division (1939)"
+                "custom_name": "50th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14258,12 +14401,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "51st Infantry Division (1939)"
+                "custom_name": "51st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14273,7 +14417,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "52nd Infantry Division (1939)"
+                "custom_name": "52nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14311,7 +14456,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -14321,7 +14466,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Armored Car Division (VII)"
+                "custom_name": "15th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14397,7 +14543,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14407,12 +14553,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1939)"
+                "custom_name": "10th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14422,12 +14569,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1939)"
+                "custom_name": "11th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14437,7 +14585,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1939)"
+                "custom_name": "12th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14648,7 +14797,7 @@
             {
                 "type": "Armored Car VII",
                 "owner": "Mongolia",
-                "health": 1600,
+                "health": 1600.0,
                 "max_health": 1600,
                 "speed": 4,
                 "attack": 1000,
@@ -14658,7 +14807,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Armored Car Division (VII)"
+                "custom_name": "16th Armored Car Division (VII)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14734,7 +14884,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Slovakia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14744,7 +14894,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14815,7 +14966,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14825,7 +14976,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14865,7 +15017,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -14875,7 +15027,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14984,7 +15137,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -14994,12 +15147,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Main Battle Tank Division (III)"
+                "custom_name": "8th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -15009,12 +15163,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Mechanized Infantry Division (1950)"
+                "custom_name": "15th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -15024,7 +15179,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Mechanized Infantry Division (1950)"
+                "custom_name": "16th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15135,7 +15291,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -15145,12 +15301,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1939)"
+                "custom_name": "13th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -15160,12 +15317,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1939)"
+                "custom_name": "14th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -15175,7 +15333,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1939)"
+                "custom_name": "15th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15552,7 +15711,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Hungary",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -15562,7 +15721,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15870,7 +16030,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Canada",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -15880,7 +16040,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16022,7 +16183,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16032,7 +16193,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "53rd Infantry Division (1939)"
+                "custom_name": "53rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16174,7 +16336,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Romania",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16184,7 +16346,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16286,7 +16449,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -16296,12 +16459,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Main Battle Tank Division (III)"
+                "custom_name": "9th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -16311,12 +16475,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Mechanized Infantry Division (1950)"
+                "custom_name": "17th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -16326,7 +16491,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Mechanized Infantry Division (1950)"
+                "custom_name": "18th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16433,7 +16599,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United States of America",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16443,7 +16609,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16481,7 +16648,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Canada",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16491,7 +16658,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16561,7 +16729,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Romania",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16571,7 +16739,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16675,7 +16844,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -16685,7 +16854,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16757,7 +16927,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -16767,12 +16937,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Main Battle Tank Division (III)"
+                "custom_name": "10th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -16782,12 +16953,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Mechanized Infantry Division (1950)"
+                "custom_name": "19th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -16797,7 +16969,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "20th Mechanized Infantry Division (1950)"
+                "custom_name": "20th Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17207,7 +17380,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Hungary",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17217,7 +17390,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17362,7 +17536,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17372,7 +17546,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17449,7 +17624,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17459,12 +17634,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "54th Infantry Division (1939)"
+                "custom_name": "54th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17474,12 +17650,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "55th Infantry Division (1939)"
+                "custom_name": "55th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17489,12 +17666,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "56th Infantry Division (1939)"
+                "custom_name": "56th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17504,12 +17682,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "57th Infantry Division (1939)"
+                "custom_name": "57th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17519,7 +17698,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "58th Infantry Division (1939)"
+                "custom_name": "58th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17558,7 +17738,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Switzerland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17568,7 +17748,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17672,7 +17853,7 @@
             {
                 "type": "Main Battle Tank III",
                 "owner": "Mongolia",
-                "health": 5000,
+                "health": 5000.0,
                 "max_health": 6000,
                 "speed": 2,
                 "attack": 6000,
@@ -17682,12 +17863,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Main Battle Tank Division (III)"
+                "custom_name": "11th Main Battle Tank Division (III)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -17697,12 +17879,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "21st Mechanized Infantry Division (1950)"
+                "custom_name": "21st Mechanized Infantry Division (1950)",
+                "naval_unit": false
             },
             {
                 "type": "Mechanized Infantry Type 1950",
                 "owner": "Mongolia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 2,
                 "attack": 500,
@@ -17712,7 +17895,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "22nd Mechanized Infantry Division (1950)"
+                "custom_name": "22nd Mechanized Infantry Division (1950)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17783,7 +17967,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Canada",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -17793,7 +17977,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -17832,7 +18017,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Switzerland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -17842,7 +18027,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18012,7 +18198,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "German Reich",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18022,7 +18208,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1939)"
+                "custom_name": "8th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18261,7 +18448,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Soviet Union",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -18271,7 +18458,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Destroyer (VIII)"
+                "custom_name": "3rd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -18345,7 +18533,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Romania",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18355,7 +18543,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18461,7 +18650,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Hungary",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18471,7 +18660,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18747,7 +18937,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Switzerland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18757,7 +18947,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18824,7 +19015,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18834,12 +19025,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "59th Infantry Division (1939)"
+                "custom_name": "59th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18849,12 +19041,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "60th Infantry Division (1939)"
+                "custom_name": "60th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18864,12 +19057,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "61st Infantry Division (1939)"
+                "custom_name": "61st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18879,12 +19073,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "62nd Infantry Division (1939)"
+                "custom_name": "62nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18894,7 +19089,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "63rd Infantry Division (1939)"
+                "custom_name": "63rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18965,7 +19161,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Switzerland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -18975,7 +19171,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19047,7 +19244,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Switzerland",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19057,7 +19254,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19259,7 +19457,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19269,12 +19467,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "64th Infantry Division (1939)"
+                "custom_name": "64th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19284,12 +19483,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "65th Infantry Division (1939)"
+                "custom_name": "65th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19299,12 +19499,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "66th Infantry Division (1939)"
+                "custom_name": "66th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19314,12 +19515,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "67th Infantry Division (1939)"
+                "custom_name": "67th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19329,7 +19531,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "68th Infantry Division (1939)"
+                "custom_name": "68th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19468,7 +19671,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19478,7 +19681,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19581,7 +19785,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19591,7 +19795,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "69th Infantry Division (1939)"
+                "custom_name": "69th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19697,7 +19902,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19707,7 +19912,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19812,7 +20018,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Romania",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -19822,7 +20028,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20028,7 +20235,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20038,12 +20245,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "70th Infantry Division (1939)"
+                "custom_name": "70th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20053,12 +20261,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "71st Infantry Division (1939)"
+                "custom_name": "71st Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20068,12 +20277,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "72nd Infantry Division (1939)"
+                "custom_name": "72nd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20083,12 +20293,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "73rd Infantry Division (1939)"
+                "custom_name": "73rd Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20098,7 +20309,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "74th Infantry Division (1939)"
+                "custom_name": "74th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20137,7 +20349,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Yugoslavia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20147,7 +20359,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20221,7 +20434,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20231,12 +20444,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1939)"
+                "custom_name": "16th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20246,12 +20460,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1939)"
+                "custom_name": "17th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20261,7 +20476,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1939)"
+                "custom_name": "18th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20300,7 +20516,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Yugoslavia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20310,7 +20526,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20418,7 +20635,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20428,7 +20645,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20466,7 +20684,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Canada",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20476,7 +20694,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20582,7 +20801,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20592,7 +20811,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20734,7 +20954,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20744,12 +20964,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1939)"
+                "custom_name": "5th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -20759,7 +20980,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1939)"
+                "custom_name": "6th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21003,7 +21225,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United States of America",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -21013,7 +21235,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21608,7 +21831,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Bulgaria",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -21618,7 +21841,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21855,7 +22079,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -21865,7 +22089,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "75th Infantry Division (1939)"
+                "custom_name": "75th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22002,7 +22227,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22012,12 +22237,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1939)"
+                "custom_name": "19th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22027,12 +22253,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "20th Infantry Division (1939)"
+                "custom_name": "20th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22042,7 +22269,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "21st Infantry Division (1939)"
+                "custom_name": "21st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22145,7 +22373,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "France",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -22155,7 +22383,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (VIII)"
+                "custom_name": "2nd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -22393,7 +22622,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Yugoslavia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22403,7 +22632,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22642,7 +22872,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22652,7 +22882,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "76th Infantry Division (1939)"
+                "custom_name": "76th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22788,7 +23019,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Bulgaria",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -22798,7 +23029,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23005,7 +23237,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Turkey",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -23015,7 +23247,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23254,7 +23487,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United States of America",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -23264,7 +23497,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -23574,7 +23808,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Turkey",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -23584,7 +23818,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24171,7 +24406,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Yugoslavia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -24181,7 +24416,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24220,7 +24456,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Turkey",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -24230,7 +24466,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24339,7 +24576,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Spain",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -24349,7 +24586,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24581,7 +24819,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Soviet Union",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -24591,7 +24829,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "77th Infantry Division (1939)"
+                "custom_name": "77th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24701,7 +24940,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -24711,12 +24950,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1939)"
+                "custom_name": "7th Infantry Division (1939)",
+                "naval_unit": false
             },
             {
                 "type": "Light Tank III",
                 "owner": "Italy",
-                "health": 2200,
+                "health": 2200.0,
                 "max_health": 2200,
                 "speed": 2,
                 "attack": 1500,
@@ -24726,7 +24966,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Light Tank Division (III)"
+                "custom_name": "1st Light Tank Division (III)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25064,7 +25305,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United States of America",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -25074,7 +25315,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1939)"
+                "custom_name": "3rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25272,7 +25514,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Portugal",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -25282,7 +25524,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25655,7 +25898,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Greece",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -25665,7 +25908,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -26131,7 +26375,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Turkey",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -26141,7 +26385,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -26604,7 +26849,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Italy",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -26614,7 +26859,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (VIII)"
+                "custom_name": "1st Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -27496,7 +27742,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -27506,7 +27752,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "22nd Infantry Division (1939)"
+                "custom_name": "22nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -27803,7 +28050,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Italy",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -27813,7 +28060,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (VIII)"
+                "custom_name": "2nd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -28182,7 +28430,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United Kingdom",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -28192,7 +28440,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Destroyer (VIII)"
+                "custom_name": "3rd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -28493,7 +28742,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Greece",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -28503,7 +28752,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1939)"
+                "custom_name": "2nd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -28664,7 +28914,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Italy",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -28674,7 +28924,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Destroyer (VIII)"
+                "custom_name": "3rd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -30239,7 +30490,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -30249,7 +30500,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "23rd Infantry Division (1939)"
+                "custom_name": "23rd Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30481,7 +30733,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -30491,7 +30743,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1939)"
+                "custom_name": "8th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30597,7 +30850,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -30607,7 +30860,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1939)"
+                "custom_name": "8th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30801,7 +31055,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -30811,7 +31065,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1939)"
+                "custom_name": "9th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30848,7 +31103,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "France",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -30858,7 +31113,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "24th Infantry Division (1939)"
+                "custom_name": "24th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30897,7 +31153,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United States of America",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -30907,7 +31163,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (VIII)"
+                "custom_name": "2nd Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -31005,7 +31262,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Iran",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -31015,7 +31272,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31156,7 +31414,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Iraq",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -31166,7 +31424,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31362,7 +31621,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Italy",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -31372,7 +31631,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1939)"
+                "custom_name": "10th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31409,7 +31669,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United Kingdom",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -31419,7 +31679,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1939)"
+                "custom_name": "9th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31553,7 +31814,7 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "United Kingdom",
-                "health": 2600,
+                "health": 2600.0,
                 "max_health": 2600,
                 "speed": 1,
                 "attack": 2000,
@@ -31563,7 +31824,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Destroyer (VIII)"
+                "custom_name": "4th Destroyer (VIII)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -32780,7 +33042,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "United States of America",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -32790,7 +33052,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1939)"
+                "custom_name": "4th Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -33077,7 +33340,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Saudi Arabia",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -33087,7 +33350,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -33859,7 +34123,7 @@
             {
                 "type": "Infantry Type 1939",
                 "owner": "Cuba",
-                "health": 2450,
+                "health": 2450.0,
                 "max_health": 2450,
                 "speed": 1,
                 "attack": 390,
@@ -33869,7 +34133,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1939)"
+                "custom_name": "1st Infantry Division (1939)",
+                "naval_unit": false
             }
         ],
         "orders": [],

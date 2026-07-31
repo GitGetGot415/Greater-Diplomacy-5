@@ -325,7 +325,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Norway",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -335,7 +335,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -536,7 +537,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -546,7 +547,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -799,7 +801,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Sweden",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -809,7 +811,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -882,7 +885,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -892,7 +895,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2225,7 +2229,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Sweden",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -2235,7 +2239,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -2342,7 +2347,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Norway",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -2352,7 +2357,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3139,7 +3145,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -3149,7 +3155,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (I)"
+                "custom_name": "1st Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -3424,7 +3431,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Norway",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -3434,7 +3441,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3539,7 +3547,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Sweden",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -3549,7 +3557,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -3586,7 +3595,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -3596,7 +3605,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -4615,7 +4625,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -4625,7 +4635,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5200,7 +5211,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5210,7 +5221,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5283,7 +5295,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5293,7 +5305,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5329,7 +5342,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Denmark",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5339,7 +5352,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5379,7 +5393,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5389,7 +5403,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5560,7 +5575,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5570,7 +5585,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -5704,7 +5720,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -5714,7 +5730,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6011,7 +6028,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6021,7 +6038,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6120,7 +6138,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6130,7 +6148,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6170,7 +6189,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6180,7 +6199,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6217,7 +6237,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6227,7 +6247,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6297,7 +6318,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6307,7 +6328,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6482,7 +6504,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6492,7 +6514,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6604,7 +6627,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6614,7 +6637,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6813,7 +6837,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6823,7 +6847,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -6894,7 +6919,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -6904,7 +6929,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7044,7 +7070,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -7054,7 +7080,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (I)"
+                "custom_name": "1st Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -7192,7 +7219,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7202,7 +7229,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7474,7 +7502,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7484,7 +7512,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7523,7 +7552,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7533,7 +7562,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7576,7 +7606,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -7586,7 +7616,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (I)"
+                "custom_name": "2nd Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -7628,7 +7659,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7638,7 +7669,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7676,7 +7708,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Netherlands",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7686,7 +7718,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -7764,7 +7797,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -7774,12 +7807,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (I)"
+                "custom_name": "1st Destroyer (I)",
+                "naval_unit": true
             },
             {
                 "type": "Dreadnought",
                 "owner": "United Kingdom",
-                "health": 2000,
+                "health": 2000.0,
                 "max_health": 2000,
                 "speed": 1,
                 "attack": 1200,
@@ -7789,7 +7823,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Dreadnought"
+                "custom_name": "1st Dreadnought",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -7958,7 +7993,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -7968,7 +8003,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8073,7 +8109,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8083,7 +8119,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8157,7 +8194,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8167,7 +8204,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8242,7 +8280,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8252,7 +8290,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8455,7 +8494,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Netherlands",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8465,7 +8504,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8536,7 +8576,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8546,7 +8586,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8750,7 +8791,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -8760,7 +8801,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -8990,7 +9032,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9000,7 +9042,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9041,7 +9084,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9051,7 +9094,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9092,7 +9136,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9102,12 +9146,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9117,7 +9162,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9397,7 +9443,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -9407,7 +9453,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (I)"
+                "custom_name": "2nd Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -9478,7 +9525,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Netherlands",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9488,7 +9535,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9594,7 +9642,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9604,7 +9652,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9644,7 +9693,7 @@
             {
                 "type": "WW1 Tank",
                 "owner": "German Empire",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 1500,
@@ -9654,7 +9703,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Ww1 Tank Division"
+                "custom_name": "1st Ww1 Tank Division",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -9798,7 +9848,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9808,12 +9858,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -9823,7 +9874,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10026,7 +10078,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10036,7 +10088,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1914)"
+                "custom_name": "14th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10077,7 +10130,7 @@
             {
                 "type": "WW1 Tank",
                 "owner": "Russia",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 1500,
@@ -10087,7 +10140,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Ww1 Tank Division"
+                "custom_name": "1st Ww1 Tank Division",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10259,7 +10313,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10269,7 +10323,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10408,7 +10463,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10418,7 +10473,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10525,7 +10581,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Netherlands",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10535,7 +10591,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10573,7 +10630,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10583,12 +10640,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10598,7 +10656,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1914)"
+                "custom_name": "14th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10830,7 +10889,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10840,7 +10899,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -10983,7 +11043,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -10993,12 +11053,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1914)"
+                "custom_name": "15th Infantry Division (1914)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11008,7 +11069,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1914)"
+                "custom_name": "16th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11183,7 +11245,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Belgium",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11193,7 +11255,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11297,7 +11360,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11307,7 +11370,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11486,7 +11550,7 @@
             {
                 "type": "WW1 Tank",
                 "owner": "German Empire",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 1500,
@@ -11496,7 +11560,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Ww1 Tank Division"
+                "custom_name": "2nd Ww1 Tank Division",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11534,7 +11599,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11544,7 +11609,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1914)"
+                "custom_name": "17th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11618,7 +11684,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11628,7 +11694,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11728,7 +11795,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Belgium",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11738,7 +11805,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11883,7 +11951,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11893,7 +11961,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1914)"
+                "custom_name": "14th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -11933,7 +12002,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11943,12 +12012,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1914)"
+                "custom_name": "18th Infantry Division (1914)",
+                "naval_unit": false
             },
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -11958,7 +12028,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1914)"
+                "custom_name": "19th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12030,7 +12101,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12040,7 +12111,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "20th Infantry Division (1914)"
+                "custom_name": "20th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12287,7 +12359,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12297,7 +12369,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "21st Infantry Division (1914)"
+                "custom_name": "21st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12339,7 +12412,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12349,7 +12422,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1914)"
+                "custom_name": "15th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12392,7 +12466,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Luxembourg",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12402,7 +12476,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12538,7 +12613,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12548,7 +12623,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12587,7 +12663,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12597,7 +12673,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "22nd Infantry Division (1914)"
+                "custom_name": "22nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12740,7 +12817,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -12750,7 +12827,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -12950,7 +13028,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -12960,7 +13038,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (I)"
+                "custom_name": "1st Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -13002,7 +13081,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13012,7 +13091,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13221,7 +13301,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13231,7 +13311,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13370,7 +13451,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13380,7 +13461,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1914)"
+                "custom_name": "16th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13420,7 +13502,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13430,7 +13512,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13571,7 +13654,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13581,7 +13664,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13689,7 +13773,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13699,7 +13783,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13841,7 +13926,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13851,7 +13936,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13892,7 +13978,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13902,7 +13988,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -13975,7 +14062,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -13985,7 +14072,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14025,7 +14113,7 @@
             {
                 "type": "WW1 Tank",
                 "owner": "France",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 1500,
@@ -14035,7 +14123,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Ww1 Tank Division"
+                "custom_name": "1st Ww1 Tank Division",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14075,7 +14164,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -14085,7 +14174,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1914)"
+                "custom_name": "17th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14193,7 +14283,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -14203,7 +14293,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "23rd Infantry Division (1914)"
+                "custom_name": "23rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14819,7 +14910,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -14829,7 +14920,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14936,7 +15028,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -14946,7 +15038,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "24th Infantry Division (1914)"
+                "custom_name": "24th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -14985,7 +15078,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -14995,7 +15088,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1914)"
+                "custom_name": "18th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15069,7 +15163,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15079,7 +15173,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15121,7 +15216,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15131,7 +15226,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15328,7 +15424,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15338,7 +15434,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15376,7 +15473,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15386,7 +15483,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15456,7 +15554,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15466,7 +15564,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "25th Infantry Division (1914)"
+                "custom_name": "25th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15570,7 +15669,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "German Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15580,7 +15679,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1914)"
+                "custom_name": "19th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15687,7 +15787,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15697,7 +15797,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15903,7 +16004,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15913,7 +16014,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -15985,7 +16087,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -15995,7 +16097,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "26th Infantry Division (1914)"
+                "custom_name": "26th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16177,7 +16280,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16187,7 +16290,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16226,7 +16330,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16236,7 +16340,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16380,7 +16485,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Switzerland",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16390,7 +16495,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16462,7 +16568,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16472,7 +16578,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16606,7 +16713,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Switzerland",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16616,7 +16723,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16653,7 +16761,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16663,7 +16771,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "27th Infantry Division (1914)"
+                "custom_name": "27th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16737,7 +16846,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16747,7 +16856,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16785,7 +16895,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16795,7 +16905,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16834,7 +16945,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16844,7 +16955,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -16952,7 +17064,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -16962,7 +17074,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17001,7 +17114,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17011,7 +17124,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "28th Infantry Division (1914)"
+                "custom_name": "28th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17049,7 +17163,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17059,7 +17173,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17133,7 +17248,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17143,7 +17258,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "29th Infantry Division (1914)"
+                "custom_name": "29th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17184,7 +17300,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17194,7 +17310,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17233,7 +17350,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17243,7 +17360,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17315,7 +17433,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17325,7 +17443,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17498,7 +17617,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17508,7 +17627,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1914)"
+                "custom_name": "14th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17549,7 +17669,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17559,7 +17679,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1914)"
+                "custom_name": "15th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17670,7 +17791,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Switzerland",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17680,7 +17801,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17779,7 +17901,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17789,7 +17911,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17828,7 +17951,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Switzerland",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17838,7 +17961,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17877,7 +18001,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17887,7 +18011,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17926,7 +18051,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Switzerland",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -17936,7 +18061,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -17975,7 +18101,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -17985,7 +18111,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Destroyer (I)"
+                "custom_name": "2nd Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -18024,7 +18151,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18034,7 +18161,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18304,7 +18432,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18314,7 +18442,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18387,7 +18516,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18397,7 +18526,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18432,7 +18562,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -18442,7 +18572,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Destroyer (I)"
+                "custom_name": "3rd Destroyer (I)",
+                "naval_unit": true
             }
         ],
         "orders": [],
@@ -18548,7 +18679,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18558,7 +18689,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1914)"
+                "custom_name": "16th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18599,7 +18731,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18609,7 +18741,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "30th Infantry Division (1914)"
+                "custom_name": "30th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18680,7 +18813,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18690,7 +18823,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18767,7 +18901,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18777,7 +18911,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18848,7 +18983,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18858,7 +18993,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -18896,7 +19032,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -18906,7 +19042,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19012,7 +19149,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19022,7 +19159,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1914)"
+                "custom_name": "17th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19063,7 +19201,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19073,7 +19211,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19112,7 +19251,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19122,7 +19261,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19230,7 +19370,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19240,7 +19380,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19278,7 +19419,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19288,7 +19429,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19327,7 +19469,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Canada",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19337,7 +19479,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19378,7 +19521,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19388,7 +19531,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19426,7 +19570,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19436,7 +19580,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1914)"
+                "custom_name": "18th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19512,7 +19657,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19522,7 +19667,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19595,7 +19741,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19605,7 +19751,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19676,7 +19823,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19686,7 +19833,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19794,7 +19942,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Romania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19804,7 +19952,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -19880,7 +20029,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -19890,7 +20039,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20058,7 +20208,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20068,7 +20218,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1914)"
+                "custom_name": "19th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20173,7 +20324,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United States of America",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20183,7 +20334,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20255,7 +20407,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20265,7 +20417,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20404,7 +20557,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20414,7 +20567,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20549,7 +20703,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20559,7 +20713,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20730,7 +20885,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20740,7 +20895,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20780,7 +20936,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20790,7 +20946,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20828,7 +20985,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20838,7 +20995,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "31st Infantry Division (1914)"
+                "custom_name": "31st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -20976,7 +21134,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -20986,7 +21144,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21187,7 +21346,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21197,7 +21356,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21337,7 +21497,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21347,7 +21507,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "20th Infantry Division (1914)"
+                "custom_name": "20th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21386,7 +21547,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21396,7 +21557,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21532,7 +21694,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21542,7 +21704,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21618,7 +21781,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21628,7 +21791,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "32nd Infantry Division (1914)"
+                "custom_name": "32nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21699,7 +21863,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21709,7 +21873,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21781,7 +21946,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21791,7 +21956,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -21834,7 +22000,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -21844,7 +22010,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22014,7 +22181,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22024,7 +22191,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22062,7 +22230,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Portugal",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22072,7 +22240,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22146,7 +22315,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22156,7 +22325,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22399,7 +22569,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22409,7 +22579,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22447,7 +22618,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22457,7 +22628,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22500,7 +22672,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22510,7 +22682,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22547,7 +22720,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22557,7 +22730,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22595,7 +22769,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22605,7 +22779,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22644,7 +22819,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22654,7 +22829,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22696,7 +22872,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22706,7 +22882,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "4th Infantry Division (1914)"
+                "custom_name": "4th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -22876,7 +23053,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -22886,7 +23063,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23145,7 +23323,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23155,7 +23333,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23226,7 +23405,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Austria-Hungary",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23236,7 +23415,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "21st Infantry Division (1914)"
+                "custom_name": "21st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23341,7 +23521,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Serbia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23351,7 +23531,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23391,7 +23572,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23401,7 +23582,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "5th Infantry Division (1914)"
+                "custom_name": "5th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23443,7 +23625,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23453,7 +23635,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23654,7 +23837,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Albania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23664,7 +23847,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23702,7 +23886,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23712,7 +23896,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23784,7 +23969,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23794,7 +23979,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "33rd Infantry Division (1914)"
+                "custom_name": "33rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23836,7 +24022,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23846,7 +24032,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "34th Infantry Division (1914)"
+                "custom_name": "34th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -23955,7 +24142,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Bulgaria",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -23965,7 +24152,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24107,7 +24295,7 @@
             {
                 "type": "Destroyer I",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 600,
@@ -24117,12 +24305,13 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Destroyer (I)"
+                "custom_name": "1st Destroyer (I)",
+                "naval_unit": true
             },
             {
                 "type": "WW1 Tank",
                 "owner": "Ottoman Empire",
-                "health": 3000,
+                "health": 3000.0,
                 "max_health": 3000,
                 "speed": 1,
                 "attack": 1500,
@@ -24132,7 +24321,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Ww1 Tank Division"
+                "custom_name": "1st Ww1 Tank Division",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24336,7 +24526,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -24346,7 +24536,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24608,7 +24799,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Russia",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -24618,7 +24809,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "35th Infantry Division (1914)"
+                "custom_name": "35th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24663,7 +24855,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Portugal",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -24673,7 +24865,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24746,7 +24939,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Albania",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -24756,7 +24949,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -24925,7 +25119,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Greece",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -24935,7 +25129,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25170,7 +25365,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -25180,7 +25375,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25687,7 +25883,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Iran",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -25697,7 +25893,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25862,7 +26059,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Greece",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -25872,7 +26069,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "2nd Infantry Division (1914)"
+                "custom_name": "2nd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -25939,7 +26137,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Greece",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -25949,7 +26147,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -26256,7 +26455,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Portugal",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -26266,7 +26465,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "3rd Infantry Division (1914)"
+                "custom_name": "3rd Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -26366,7 +26566,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -26376,7 +26576,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -26414,7 +26615,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -26424,7 +26625,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -27206,7 +27408,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -27216,7 +27418,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -27389,7 +27592,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -27399,7 +27602,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "9th Infantry Division (1914)"
+                "custom_name": "9th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -27537,7 +27741,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -27547,7 +27751,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1914)"
+                "custom_name": "15th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -28034,7 +28239,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -28044,7 +28249,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "14th Infantry Division (1914)"
+                "custom_name": "14th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -28349,7 +28555,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -28359,7 +28565,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -28813,7 +29020,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -28823,7 +29030,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "15th Infantry Division (1914)"
+                "custom_name": "15th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -28991,7 +29199,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -29001,7 +29209,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "10th Infantry Division (1914)"
+                "custom_name": "10th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -29626,7 +29835,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -29636,7 +29845,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1914)"
+                "custom_name": "16th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -29676,7 +29886,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -29686,7 +29896,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -29984,7 +30195,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -29994,7 +30205,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "6th Infantry Division (1914)"
+                "custom_name": "6th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30188,7 +30400,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30198,7 +30410,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "7th Infantry Division (1914)"
+                "custom_name": "7th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30235,7 +30448,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30245,7 +30458,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1914)"
+                "custom_name": "17th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30544,7 +30758,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30554,7 +30768,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "12th Infantry Division (1914)"
+                "custom_name": "12th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30715,7 +30930,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Italy",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30725,7 +30940,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "8th Infantry Division (1914)"
+                "custom_name": "8th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30762,7 +30978,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30772,7 +30988,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "16th Infantry Division (1914)"
+                "custom_name": "16th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30813,7 +31030,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Ottoman Empire",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30823,7 +31040,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "13th Infantry Division (1914)"
+                "custom_name": "13th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -30922,7 +31140,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -30932,7 +31150,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "17th Infantry Division (1914)"
+                "custom_name": "17th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31069,7 +31288,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -31079,7 +31298,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1914)"
+                "custom_name": "18th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -31504,7 +31724,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "United Kingdom",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -31514,7 +31734,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "19th Infantry Division (1914)"
+                "custom_name": "19th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -32246,7 +32467,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "France",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -32256,7 +32477,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "18th Infantry Division (1914)"
+                "custom_name": "18th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -32720,7 +32942,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Spain",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -32730,7 +32952,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "11th Infantry Division (1914)"
+                "custom_name": "11th Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
@@ -33258,7 +33481,7 @@
             {
                 "type": "Infantry Type 1914",
                 "owner": "Cuba",
-                "health": 1200,
+                "health": 1200.0,
                 "max_health": 1200,
                 "speed": 1,
                 "attack": 140,
@@ -33268,7 +33491,8 @@
                     "type": "MOVE",
                     "path": []
                 },
-                "custom_name": "1st Infantry Division (1914)"
+                "custom_name": "1st Infantry Division (1914)",
+                "naval_unit": false
             }
         ],
         "orders": [],
