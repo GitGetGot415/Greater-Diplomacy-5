@@ -226,13 +226,13 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Landkreuzer P.1000 Ratte", single(), {
-            "health": 10000, "attack": 6000, "defense": 800,
+            "health": 10000, "attack": 6000, "defense": 400,
             "bombard_attack": 400,
             "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 8,
         }),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
-            "health": 15000, "attack": 8000, "defense": 800,
+            "health": 15000, "attack": 8000, "defense": 500,
             "bombard_attack": 500,
             "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
@@ -240,7 +240,7 @@ UNIT_SECTIONS = [
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
         UnitFamily("Railgun", single(), {
-            "health": 10000, "attack": 1000, "defense": 800,
+            "health": 10000, "attack": 1000, "defense": 500,
             "bombard_attack": 1000,
             "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
