@@ -583,6 +583,21 @@ class Production_Screen(GameState):
         tk.Label(root, text="Select researched units to add to the Custom build category:",
                  font=("Arial", 10, "bold"), wraplength=380, justify="left").pack(pady=(10, 5), padx=10)
 
+        vars_by_unit = {}
+
+        def select_all():
+            for var in vars_by_unit.values():
+                var.set(True)
+
+        def deselect_all():
+            for var in vars_by_unit.values():
+                var.set(False)
+
+        select_frame = tk.Frame(root)
+        select_frame.pack(pady=(0, 5))
+        tk.Button(select_frame, text="Select All", command=select_all, width=12).pack(side="left", padx=5)
+        tk.Button(select_frame, text="Deselect All", command=deselect_all, width=12).pack(side="left", padx=5)
+
         container = tk.Frame(root)
         container.pack(fill="both", expand=True, padx=10)
 
@@ -598,7 +613,6 @@ class Production_Screen(GameState):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        vars_by_unit = {}
         for category, names in categorized.items():
             if not names: continue
             tk.Label(scroll_frame, text=category, font=("Arial", 10, "bold")).pack(anchor="w", pady=(8, 0))
