@@ -1,6 +1,6 @@
 import random
 from map_logic.ai import ai_handler, ai_prompts
-from map_logic.diplomacy import diplomacy_messages
+from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
 import concurrent.futures
@@ -156,6 +156,26 @@ def process_basic_proactive_ai(map_screen):
                         del actions[act]
                 if not actions:
                     del data["diplo_cooldowns"][target]
+
+        # --- 0.5. Auto-Revoke War-Based Military Access ---
+        # Access granted purely because we shared an enemy lapses once that
+        # shared enemy is no longer common to both of us (peace, ceasefire, etc).
+        access_reasons = data.get("military_access_reasons", {})
+        if access_reasons:
+            my_access = data.get("military_access", [])
+            for grantee in list(access_reasons.keys()):
+                if access_reasons[grantee] != "war":
+                    continue
+                grantee_enemies = set(map_screen.nation_data.get(grantee, {}).get("at_war_with", []))
+                if set(my_enemies) & grantee_enemies:
+                    continue  # still fighting a common enemy, access stands
+
+                if grantee in my_access:
+                    my_access.remove(grantee)
+                del access_reasons[grantee]
+
+                diplomacy_events.log_global_event(map_screen.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
+                diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
         if c.BATTLE_ROYALE_MODE:
             return
@@ -313,7 +333,46 @@ def process_basic_proactive_ai(map_screen):
                                 "fallback": fallback,
                                 "action_type": "CALL_TO_ARMS"
                             })
-                            
+
+        # --- 2.5. Request Military Access From Co-Belligerents ---
+        # Even nations in different factions ask each other for passage if they're
+        # both fighting the same enemy, so allied fronts can actually link up.
+        if is_already_at_war:
+            co_belligerents = []
+            for enemy in my_enemies:
+                if enemy not in active_nations: continue
+                for co in map_screen.nation_data.get(enemy, {}).get("at_war_with", []):
+                    if co == ai_name or co not in active_nations: continue
+                    if co in co_belligerents: continue
+                    if co in my_enemies: continue
+                    if queries.has_military_access(ai_name, co, map_screen.nation_data): continue
+                    co_belligerents.append(co)
+
+            for co in co_belligerents:
+                if queries.is_ai_diplo_on_cooldown(ai_name, co, "REQ_MILITARY_ACCESS", map_screen.nation_data):
+                    continue
+                existing = pending.get(co, {})
+                turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
+
+                if co not in pending or turns == 0:
+                    action_context = ai_prompts.get_proactive_action_context("REQ_MILITARY_ACCESS")
+                    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_REQ_MILITARY_ACCESS", "As we both fight against a common foe, we request military access through your territory.")
+
+                    pending[co] = {
+                        "action": "REQ_MILITARY_ACCESS",
+                        "turns": 0,
+                        "message": fallback
+                    }
+                    queries.set_ai_diplo_cooldown(ai_name, co, "REQ_MILITARY_ACCESS", map_screen.nation_data)
+
+                    map_screen.proactive_llm_tasks.append({
+                        "sender": ai_name,
+                        "target": co,
+                        "context": action_context,
+                        "fallback": fallback,
+                        "action_type": "REQ_MILITARY_ACCESS"
+                    })
+                    break  # Act once per turn to avoid conflicts
 
         # --- 3. Faction War Joining Logic ---
         if my_faction:

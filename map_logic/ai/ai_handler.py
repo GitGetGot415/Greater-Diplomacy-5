@@ -263,9 +263,12 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         if queries.are_in_same_faction(ai_nation, sender_nation, nation_data):
             accepted = True
             
-    # Always decline Military Access
+    # Accept Military Access requests from nations fighting the same enemies as us,
+    # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
-        accepted = False
+        ai_enemies = set(ai_stats.get("at_war_with", []))
+        sender_enemies = set(nation_data.get(sender_nation, {}).get("at_war_with", []))
+        accepted = bool(ai_enemies & sender_enemies)
             
     # NEW: AI Master-Puppet Faction Acceptance
     my_master = ai_stats.get("master", "")

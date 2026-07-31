@@ -1,3 +1,5 @@
+from collections import deque
+
 import data.constants as c
 from data import queries
 from map_logic.system32 import edit_province_ownership
@@ -287,3 +289,80 @@ def process_movement(self):
     for unit in moving_units:
         if "_skip_remaining_steps" in unit:
             del unit["_skip_remaining_steps"]
+
+def _find_nearest_owned_province(start_prov, owner, id_to_province):
+    """BFS over the province graph for the closest tile owned by `owner`."""
+    visited = {start_prov["id"]}
+    queue = deque([start_prov["id"]])
+
+    while queue:
+        current_id = queue.popleft()
+        prov = id_to_province.get(current_id)
+        if not prov:
+            continue
+
+        for n_id in prov.get("neighbors", []):
+            if n_id in visited:
+                continue
+            visited.add(n_id)
+
+            n_prov = id_to_province.get(n_id)
+            if not n_prov:
+                continue
+            if n_prov.get("owner") == owner:
+                return n_prov
+            queue.append(n_id)
+
+    return None
+
+def process_stranded_units(self):
+    """Exiles armies that end up occupying foreign soil without a legal right to be there.
+
+    A unit can find itself standing in territory it no longer has any claim to enter
+    (a ceasefire/peace is signed, access is revoked, a faction dissolves) since none of
+    those events forcibly move units off the map. Rather than pathfinding a route home
+    like a real retreat, we just teleport it to the nearest province it still owns,
+    mirroring EU4-style "exiled army" handling.
+    """
+    unit_library = queries.get_unit_library()
+
+    for province in list(self.map_data.values()):
+        owner = province.get("owner")
+        if owner in c.UNPLAYABLE_NATIONS:
+            continue
+
+        units = province.get("units", [])
+        if not units:
+            continue
+
+        stranded = []
+        for unit in units:
+            unit_owner = unit.get("owner")
+            if not unit_owner or unit_owner == owner or unit_owner in c.UNPLAYABLE_NATIONS:
+                continue
+
+            # Naval units follow separate coastal-access rules; only land armies exile here.
+            stats = unit_library.get(unit.get("type", ""), {})
+            if unit.get("naval_unit") or stats.get("naval_unit", False):
+                continue
+
+            if queries.can_land_units_enter(unit_owner, province, self.nation_data):
+                continue  # legally present: at war, has access, or friendly territory
+
+            stranded.append(unit)
+
+        if not stranded:
+            continue
+
+        for unit in stranded:
+            home_prov = _find_nearest_owned_province(province, unit["owner"], self.id_to_province)
+            if home_prov is None:
+                continue  # nation holds no territory to return the unit to
+
+            units.remove(unit)
+            unit["_current_province_id"] = home_prov["id"]
+            unit["_previous_province_id"] = home_prov["id"]
+            order = unit.get("order")
+            if isinstance(order, dict):
+                order["path"] = []
+            home_prov.setdefault("units", []).append(unit)

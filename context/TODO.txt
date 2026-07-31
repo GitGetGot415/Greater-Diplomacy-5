@@ -1,3 +1,5 @@
+ai now accepts millitary access if both fighting in the same war
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
@@ -14,12 +16,6 @@ Immediate concerns:
 - slider volume specifically?
 
 - KAISERIN SUGGESTIONS:
-- ai accepts millitary access if fighting the same enemies in a war
-- revokes access once war is over
-- ai asks for millitary access too if fighting same enemies in war? (or maybe faction idk)
-- exiled armies mechanic like how it works in eu4 so if an army is in someone's land but doesn't have millitary access then said army automatically queues up moves to pathfind back to friendly territory
-or to a coastal tile so said unit can convoy out into open waters if said waters have a connection back to your countries coasts
-...or just teleport back to the nearest tile controlled bu you?
 - gurella units? (kaiserin's suggestion)
 
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research

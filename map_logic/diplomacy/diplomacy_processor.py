@@ -618,13 +618,22 @@ def process_diplomacy_turn(self):
                             target_list = self.nation_data.get(country_name, {}).setdefault("military_access", [])
                             if target not in target_list:
                                 target_list.append(target)
-                            
+
+                            shared_enemy = bool(
+                                set(self.nation_data.get(country_name, {}).get("at_war_with", [])) &
+                                set(self.nation_data.get(target, {}).get("at_war_with", []))
+                            )
+                            if shared_enemy:
+                                self.nation_data[country_name].setdefault("military_access_reasons", {})[target] = "war"
+
                             # If they ALSO accepted our request, grant them access to us too!
                             if other_pending.get("action") == action:
                                 my_list = self.nation_data.get(target, {}).setdefault("military_access", [])
                                 if country_name not in my_list:
                                     my_list.append(country_name)
-                                    
+                                if shared_enemy:
+                                    self.nation_data[target].setdefault("military_access_reasons", {})[country_name] = "war"
+
                             msg_text = custom_msg if custom_msg else "We accept your request for military access."
 
                         
@@ -880,6 +889,18 @@ def process_diplomacy_turn(self):
                                 t_data = self.nation_data[target]       # Target (AI)
 
                                 queries.execute_trade_transfer(c_data, t_data, params)
+                            elif action == "REQ_MILITARY_ACCESS":
+                                # Target (AI) is granting access to country_name (proposer)
+                                target_list = self.nation_data[target].setdefault("military_access", [])
+                                if country_name not in target_list:
+                                    target_list.append(country_name)
+
+                                shared_enemy = bool(
+                                    set(self.nation_data.get(target, {}).get("at_war_with", [])) &
+                                    set(self.nation_data.get(country_name, {}).get("at_war_with", []))
+                                )
+                                if shared_enemy:
+                                    self.nation_data[target].setdefault("military_access_reasons", {})[country_name] = "war"
                         else:
                             if action == "TRADE":
                                 params = info.get("parameters", {})

@@ -144,7 +144,10 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     movement_processor.process_movement(self)
     combat_processor.process_combat(self)
     combat_processor.check_for_post_combat_captures(self)
-    
+
+    # Exile any units left standing on foreign soil without a legal right to be there
+    movement_processor.process_stranded_units(self)
+
     # Kill orphaned units and ghost wars
     movement_processor.process_dead_nations(self)
     
