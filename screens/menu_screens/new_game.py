@@ -140,19 +140,19 @@ class New_Game(GameState):
         dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
         
         var_names = tk.BooleanVar(value=True)
+        var_color = tk.BooleanVar(value=True)
         var_adj = tk.BooleanVar(value=True)
         var_leader = tk.BooleanVar(value=True)
         var_flags = tk.BooleanVar(value=True)
-        var_color = tk.BooleanVar(value=True)
         var_custom = tk.BooleanVar(value=True)
 
         tk.Label(dialog, text="Select what to forcefully reset:", font=("Arial", 12, "bold")).pack(pady=10)
 
         tk.Checkbutton(dialog, text="Country Names", variable=var_names, font=("Arial", 11)).pack(anchor="w", padx=40)
+        tk.Checkbutton(dialog, text="Country Color", variable=var_color, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Adjectives", variable=var_adj, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Leader Names & Titles", variable=var_leader, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Flags & Portraits", variable=var_flags, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Country Color", variable=var_color, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Include Scenarios in Custom/Editor Dir", variable=var_custom, font=("Arial", 11)).pack(anchor="w", padx=40)
         
         tk.Label(dialog, text="", font=("Arial", 8)).pack()
@@ -161,10 +161,10 @@ class New_Game(GameState):
         def on_confirm():
             options = {
                 "reset_names": var_names.get(),
+                "reset_colors": var_color.get(),
                 "reset_adjectives": var_adj.get(),
                 "reset_leaders": var_leader.get(),
                 "reset_flags": var_flags.get(),
-                "reset_colors": var_color.get(),
                 "include_custom": var_custom.get(),
             }
             close_menu()
