@@ -175,17 +175,22 @@ UNIT_SECTIONS = [
         }),
         # Fragile in a straight fight - its damage is meant to come from bombarding
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
-        # Uses the same "Type <year>" naming as Infantry: one level per year,
-        # 1910-2010. Endpoints (100/50 at 1910, 1100/550 at 2010) match the old
-        # 51-level version; the growth rate is just halved to spread the same
-        # range across twice as many levels.
-        UnitFamily("Artillery Type", year_suffixes(1910, 101), {
-            "health": linear(100, 10), "attack": linear(50, 5),
+        # Roman-numeral leveling like Militia (20 levels) instead of one tier per
+        # year: level 20 is rescaled to land on exactly the old "Artillery Type
+        # 2005" values (the old formula's endpoint at year index 95), so this is a
+        # pure re-leveling, not a balance change. Old: linear(100, 10) health /
+        # linear(50, 5) attack&bombard / linear(2000, 20) cost_materials, indexed
+        # 0-100 by year-since-1910. New: same start (level 1 == year-1910 value),
+        # delta scaled so level 20 == year-2005 value (delta_new = delta_old*5,
+        # since 20 levels now cover the same span as 100 old year-steps at 5x the
+        # per-level jump).
+        UnitFamily("Artillery", roman_suffixes(20), {
+            "health": linear(100, 50), "attack": linear(50, 25),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(50, 5),
+            "bombard_attack": linear(50, 25),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(2000, 20), "cost_manpower": const(500),
+            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
         }),
     ],
@@ -409,8 +414,8 @@ RESEARCH_SECTIONS = [
                       "years": years_range(1910, 4, 5)}),
         ("militia", {"category": "INFANTRY", "max_lvl": 20, "cost": 600, "req": {},
                       "years": years_range(1910, 5, 20)}),
-        ("artillery", {"category": "INFANTRY", "max_lvl": 101, "cost": 900, "req": {},
-                        "years": years_range(1910, 1, 101)}),
+        ("artillery", {"category": "INFANTRY", "max_lvl": 20, "cost": 900, "req": {},
+                        "years": years_range(1910, 5, 20)}),
         # One-time unlocks rather than leveled techs: owning them lets a nation build
         # Motorized/Mechanized Infantry up to whatever year its own infantry_type
         # research has reached (see queries.get_infantry_family_year), instead of

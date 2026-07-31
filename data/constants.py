@@ -534,7 +534,7 @@ MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
 # to how many tiles their shells reach (1 = directly adjacent only).
 # Matched against queries.get_base_unit_name, so every level of the family counts.
 BOMBARDMENT_UNITS = {
-    "Artillery Type": 1,
+    "Artillery": 1,
     "WW1 Railroad Gun": 2,
     "WW2 Railroad Gun": 2,
     "Landkreuzer P.1000 Ratte": 2,
@@ -607,7 +607,6 @@ TANK_GROUP_EXTRAS = [
 UNIT_TECH_KEY_OVERRIDES = {
     "motorized_infantry_type": "motorized_infantry",
     "mechanized_infantry_type": "mechanized_infantry",
-    "artillery_type": "artillery"
 }
 
 # motorized_infantry/mechanized_infantry (see UNIT_TECH_KEY_OVERRIDES above) aren't

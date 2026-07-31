@@ -753,7 +753,7 @@ def get_tech_unlocks(tech_key, level):
 
 def get_infantry_family_year(family_key, player_research, tech_tree):
     """Returns the highest year unlocked for infantry_type/motorized_infantry/
-    mechanized_infantry/artillery, or None if nothing is unlocked yet.
+    mechanized_infantry, or None if nothing is unlocked yet.
 
     motorized_infantry and mechanized_infantry aren't leveled techs of their own
     (see c.VEHICLE_INFANTRY_GATES) - owning the one-time "trucks"/
@@ -806,8 +806,9 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     if clean_base == "Infantry":
         tech_key = "infantry_type"
 
-    # Handle Year-based units (Infantry variants and Artillery all use "Type <year>")
-    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry", "artillery"]:
+    # Handle Year-based units (Infantry Type variants use "Type <year>"; Artillery
+    # is roman-numeral leveled like Militia and falls through to the branch below)
+    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry"]:
         year_val = get_infantry_family_year(tech_key, player_research, tech_tree)
         if year_val is None:
             return None
@@ -1912,17 +1913,18 @@ def roman_to_int(s):
 def get_unit_research_requirement(unit_name):
     """Returns (tech_key, required_level) needed to unlock an exact unit tier by name.
 
-    Year-suffixed families (Infantry Type, Artillery) key off the tech's position in
-    its 'years' list; everything else keys off its trailing roman numeral - mirrors
-    the tier logic in production.py's unit rendering. Motorized/Mechanized Infantry
-    aren't leveled techs of their own (see c.VEHICLE_INFANTRY_GATES) so they're not
-    representable as a single (tech_key, level) pair - is_unit_unlocked handles them
-    directly instead of going through this function.
+    Infantry Type (year-suffixed) keys off the tech's position in its 'years' list;
+    everything else - including Artillery, which is roman-numeral leveled like
+    Militia - keys off its trailing roman numeral, mirroring the tier logic in
+    production.py's unit rendering. Motorized/Mechanized Infantry aren't leveled
+    techs of their own (see c.VEHICLE_INFANTRY_GATES) so they're not representable
+    as a single (tech_key, level) pair - is_unit_unlocked handles them directly
+    instead of going through this function.
     """
     base_name = get_base_unit_name(unit_name)
     tech_key = get_unit_tech_key(base_name)
 
-    if tech_key in ("infantry_type", "artillery"):
+    if tech_key == "infantry_type":
         years = get_tech_tree().get(tech_key, {}).get("years", [])
         year_match = re.search(r'(\d{4})$', unit_name)
         if year_match and years:

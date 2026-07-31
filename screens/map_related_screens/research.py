@@ -82,7 +82,6 @@ WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY"]
 # roman numeral tier, keyed off the year list in the tech tree.
 YEAR_TIER_TECHS = {
     "infantry_type": "Infantry Type",
-    "artillery": "Artillery Type",
 }
 
 # Tech keys whose display name is fixed and unrelated to their level.
