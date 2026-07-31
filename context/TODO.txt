@@ -12,6 +12,10 @@ Immediate concerns:
 
 - slider volume specifically?
 
+could you make it so that when damage is actually dealt to units, it's spread out only amongst units that are actually in combat instead of literally every enemy unit on that tile?
+maybe units deal less damage the less hp they have...
+this would mean that units basically swap out with other units when they have less hp...
+
 - KAISERIN SUGGESTIONS:
 - gurella units? (kaiserin's suggestion)
 

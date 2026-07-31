@@ -61,8 +61,8 @@ MODAL_CANCEL_BTN_X = 650
 
 # Completed-tech text list
 COMPLETED_START_Y = 150
-COMPLETED_COLUMN_WIDTH = 290
-COMPLETED_START_X = 30
+COMPLETED_COLUMN_WIDTH = 320
+COMPLETED_START_X = 10
 COMPLETED_HEADER_STEP_Y = 40
 COMPLETED_ROW_STEP_Y = 28
 COMPLETED_INDENT_X = 10
@@ -787,9 +787,11 @@ class Research_Screen(GameState):
                 display_name = tech_id.replace('_', ' ').title()
                 
                 if max_lvl == 1:
-                    val_text = ": Level 1" if lvl >= 1 else ": Level 0"
+                    val_text = ": YES" if lvl >= 1 else ": NO"
+                elif tech_id in YEAR_TIER_TECHS:
+                    val_text = f": {self.tech_year(tech_id, lvl)}" if lvl > 0 else ": 0"
                 else:
-                    val_text = f": Level {lvl}"
+                    val_text = f": {lvl}"
 
                 color = (200, 200, 200) if lvl > 0 else (100, 100, 100)
 
