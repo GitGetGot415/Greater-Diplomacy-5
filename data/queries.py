@@ -8,6 +8,7 @@ import random
 import threading
 import shutil
 import zipfile
+from datetime import datetime
 
 import pygame
 
@@ -1372,9 +1373,38 @@ def create_unit_dict(unit_type, owner, unit_library):
         "order": {"type": "MOVE", "path": []}
     }
 
+def migrate_units_to_current_stats(map_data, unit_library):
+    """
+    Rescales every unit's frozen stats (max_health/attack/defense/speed/naval_unit)
+    to match the currently loaded unit_library, preserving each unit's current
+    health as a percentage of its (possibly changed) max health.
+
+    Used when a save/map's version doesn't match c.GAME_VERSION (or has no
+    version at all), since older saves carry stat values baked in at whatever
+    balance patch they were created under.
+    """
+    for province in map_data.values():
+        for unit in province.get("units", []):
+            stats = unit_library.get(unit.get("type"))
+            if not stats:
+                continue
+
+            old_max_health = unit.get("max_health", 1)
+            hp_pct = unit.get("health", old_max_health) / max(1, old_max_health)
+
+            unit["max_health"] = stats.get("health", c.DEFAULT_UNIT_HP)
+            unit["attack"] = stats.get("attack", c.DEFAULT_UNIT_ATK)
+            unit["defense"] = stats.get("defense", c.DEFAULT_UNIT_DEF)
+            unit["speed"] = stats.get("speed", c.DEFAULT_UNIT_SPD)
+            unit["naval_unit"] = stats.get("naval_unit", is_naval_unit(unit.get("type", "")))
+
+            unit["health"] = unit["max_health"] * hp_pct
+
 def build_save_dict(map_screen):
     """Standardizes the construction of the map save state dictionary."""
     save_dict = {
+        "version": c.GAME_VERSION,
+        "generated_at": datetime.now().isoformat(),
         "date": {
             "day": map_screen.time_manager.day,
             "month": map_screen.time_manager.month_index,

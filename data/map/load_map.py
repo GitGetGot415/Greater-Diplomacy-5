@@ -320,6 +320,15 @@ def load_map_assets(self, load_path):
         self.map_data[color_tuple] = v
         self.id_to_province[v["id"]] = v
 
+    # --- VERSION MIGRATION ---
+    # Old (or version-less) saves carry unit stats baked in from whatever
+    # balance patch they were created under. Rescale them to match the
+    # currently loaded unit_data.json, preserving each unit's HP percentage.
+    save_version = save_meta.get("version") if save_meta else None
+    if save_version != c.GAME_VERSION:
+        queries.migrate_units_to_current_stats(self.map_data, unit_lib)
+        print(f"[SYSTEM] Migrated save from version '{save_version or 'unversioned'}' to '{c.GAME_VERSION}'.")
+
     # Init Pre-War Maps for Factions starting at war
     self.nation_data.setdefault("FACTION_WAR_MAPS", {})
     for c_name, c_data in self.nation_data.items():
