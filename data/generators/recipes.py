@@ -420,13 +420,13 @@ RESEARCH_SECTIONS = [
         # Motorized/Mechanized Infantry up to whatever year its own infantry_type
         # research has reached (see queries.get_infantry_family_year), instead of
         # requiring a separate 71-101 level research track of their own.
-        ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+        ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
                      "req": {"cavalry": 5},
                      "years": years_range(1930, 1, 1)}),
-        ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+        ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
                                          "req": {"trucks": 1},
                                          "years": years_range(1940, 1, 1)}),
-        ("infantry_fighting_vehicle", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+        ("infantry_fighting_vehicle", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
                                         "req": {"armored_personnel_carriers": 1},
                                         "years": years_range(1950, 1, 1)}),
     ],
