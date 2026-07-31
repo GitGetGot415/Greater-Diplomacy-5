@@ -139,15 +139,6 @@ UNIT_SECTIONS = [
             "speed": const(1), "cost_materials": linear(500, 5), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(2),
         }),
-        # Ranges back to 1910 (not just 1930) - trucks/APCs are now one-time unlocks
-        # rather than their own leveled research, so a nation can unlock them well
-        # before its infantry_type research reaches 1930/1940 and needs a tier to
-        # build immediately. Health/attack deliberately reuse Infantry Type's own
-        # formulas (linear(1000, 50) / linear(100, 10)): at any shared year the two
-        # have identical health/attack - speed, cost and fuel are what actually
-        # differentiate a motorized unit, not raw stats. This also exactly reproduces
-        # the old 1930-2010 values (e.g. year 1930: 1000+50*20=2000, matching the old
-        # linear(2000, 50) index-0 value).
         UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
@@ -161,7 +152,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": piecewise([(0, 0, 0), (30, 100, 5)]),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
-            "cost_fuel": const(50), "production_time": const(3),
+            "cost_fuel": const(50), "production_time": const(2),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),

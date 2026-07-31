@@ -24,6 +24,14 @@ BAR_WIDTH = 570
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
 
+# Infantry row: "Mot"/"Mec" mode toggles sit where the button normally starts,
+# pushing the button (and its stat bar, which shrinks to keep its right edge
+# fixed) right by this much. Only that one row is affected - every other row
+# keeps its normal x position.
+INFANTRY_MODE_BTN_GAP = 4
+INFANTRY_MODE_TO_MAIN_GAP = 8
+INFANTRY_MODE_BLOCK_WIDTH = 30 * 2 + INFANTRY_MODE_BTN_GAP + INFANTRY_MODE_TO_MAIN_GAP
+
 # Coloured section panels drawn behind each group of rows
 PANEL_X = 30
 PANEL_WIDTH = 750
@@ -81,11 +89,16 @@ class Production_Screen(GameState):
         # Use the centralized query
         self.infantry_groups, self.tank_groups, self.navy_groups = queries.get_ordered_unit_groups(self.unit_library)
         self.active_bars = []
-        
+
         # Scroll variables
         self.scroll_y = 0
         self.target_scroll_y = 0
         self.max_scroll = 0
+
+        # Which variant the single combined Infantry row currently builds -
+        # "normal", "motorized", or "mechanized". Purely a UI selection, not
+        # game state, so it isn't persisted - see start_with_province.
+        self.infantry_mode = "normal"
 
     def handle_events(self, events):
         # Override to block all interaction
@@ -105,6 +118,7 @@ class Production_Screen(GameState):
         self.map_screen = map_ref
         self.scroll_y = 0
         self.target_scroll_y = 0
+        self.infantry_mode = "normal"
         self.refresh_ui()
 
     def enforce_scroll_bounds(self):
@@ -128,10 +142,10 @@ class Production_Screen(GameState):
                     el.rect.y = el.base_y + int(self.scroll_y)
                     el.click_guard = lambda: CLICK_GUARD_TOP <= pygame.mouse.get_pos()[1] <= CLICK_GUARD_BOTTOM
 
-    def _add_scroll_button(self, x_pos, y_offset, color, text, callback):
+    def _add_scroll_button(self, x_pos, y_offset, color, text, callback, size="production", font_preset="button_small"):
         """Creates one of the production screen's scrollable list buttons
         (building/unit/manage rows) and registers it in self.elements."""
-        btn = Button(x_pos, y_offset + int(self.scroll_y), "production", color, text, callback, font_preset="button_small")
+        btn = Button(x_pos, y_offset + int(self.scroll_y), size, color, text, callback, font_preset=font_preset)
         btn.base_y = y_offset
         btn.is_scrollable = True
         self.elements.append(btn)
@@ -322,7 +336,7 @@ class Production_Screen(GameState):
         y_offset += SECTION_SPACING
 
         # --- UNIT LOGIC ---
-        def render_unit_button(unit_name, btn_color):
+        def render_unit_button(unit_name, btn_color, x_offset=0):
             nonlocal y_offset
             if queries.get_base_unit_name(unit_name) == "Militia":
                 can_build = queries.has_industry(self.target_province)
@@ -336,12 +350,57 @@ class Production_Screen(GameState):
                 final_btn_color = btn_color if can_build else "grey"
                 cb = lambda n=unit_name: self.buy_unit(n)
 
-            self._add_scroll_button(x_pos, y_offset, final_btn_color, queries.get_condensed_unit_name(unit_name), cb)
+            self._add_scroll_button(x_pos + x_offset, y_offset, final_btn_color, queries.get_condensed_unit_name(unit_name), cb)
 
             stats = self.unit_library[unit_name]
-            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
+            # Shrinks to keep its right edge fixed when x_offset > 0 (the Infantry
+            # row's Mot/Mec toggles push its button right) so every bar's right
+            # edge still lines up regardless of which row it belongs to.
+            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X + x_offset, y_offset, BAR_WIDTH - x_offset, BAR_HEIGHT)
             self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
             y_offset += ROW_STEP_Y
+
+        def render_infantry_row():
+            """Single combined Infantry row: a Mot/Mec toggle pair to the left of
+            the production button picks which variant it builds (motorized/
+            mechanized share Infantry's own current year - see
+            queries.get_infantry_family_year), instead of three separate rows."""
+            nonlocal y_offset
+            base_year = queries.get_infantry_family_year("infantry_type", player_research, self.tech_tree)
+            if base_year is None:
+                return
+
+            mot_unlocked = queries.get_infantry_family_year("motorized_infantry", player_research, self.tech_tree) is not None
+            mec_unlocked = queries.get_infantry_family_year("mechanized_infantry", player_research, self.tech_tree) is not None
+
+            mode = self.infantry_mode
+            if mode == "motorized" and not mot_unlocked: mode = "normal"
+            if mode == "mechanized" and not mec_unlocked: mode = "normal"
+            self.infantry_mode = mode
+
+            if mode == "motorized":
+                unit_name = f"Motorized Infantry Type {base_year}"
+            elif mode == "mechanized":
+                unit_name = f"Mechanized Infantry Type {base_year}"
+            else:
+                unit_name = f"Infantry Type {base_year}"
+
+            def set_mode(new_mode):
+                # Clicking the already-active mode toggles it back off (regular Infantry).
+                self.infantry_mode = new_mode if self.infantry_mode != new_mode else "normal"
+                self.refresh_ui()
+
+            toggle_x = x_pos
+            spectator_locked = is_spectator and not can_spectator_edit
+            for available, key, label in ((mot_unlocked, "motorized", "Mot"), (mec_unlocked, "mechanized", "Mec")):
+                toggle_color = "orange" if (available and mode == key) else "blue"
+                toggle_cb = (lambda k=key: set_mode(k)) if (available and not spectator_locked) else (lambda: None)
+                toggle_btn = self._add_scroll_button(toggle_x, y_offset, toggle_color, label, toggle_cb,
+                                                      size="tiny_square", font_preset="tiny")
+                toggle_btn.disabled = not available or spectator_locked
+                toggle_x += 30 + INFANTRY_MODE_BTN_GAP
+
+            render_unit_button(unit_name, "green", x_offset=INFANTRY_MODE_BLOCK_WIDTH)
 
         def unit_speed_sort_key(unit_name):
             # Fastest-to-build units float to the top of their category;
@@ -384,7 +443,12 @@ class Production_Screen(GameState):
                 render_unit_button(unit_name, btn_color)
 
         self.infantry_start_y = y_offset
-        process_unit_groups(self.infantry_groups, "green")
+        render_infantry_row()
+        # Motorized/Mechanized are folded into the combined Infantry row above,
+        # not listed as their own group here.
+        other_infantry_groups = [g for g in self.infantry_groups
+                                  if g not in ("Infantry Type", "Motorized Infantry Type", "Mechanized Infantry Type")]
+        process_unit_groups(other_infantry_groups, "green")
         self.infantry_end_y = y_offset
 
         y_offset += SECTION_SPACING 
@@ -568,30 +632,40 @@ class Production_Screen(GameState):
 
         # Group every unit the player currently has the research level for, regardless
         # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
-        # Same Infantry/Tanks/Navy rule the production columns use.
+        # Same Infantry/Tanks/Navy rule the production columns use. Motorized/Mechanized
+        # Infantry are excluded here - like the production screen's combined Infantry
+        # row, each plain "Infantry Type <year>" gets its own Mot/Mec toggle instead
+        # of being listed as three separate units (see infantry_rows below).
         categorized = queries.get_grouped_units(
             self.unit_library, by_family=False,
             unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research))
 
-        for group in categorized.values():
-            group.sort()
+        for names in categorized.values():
+            names[:] = [n for n in names
+                        if queries.get_base_unit_name(n) not in ("Motorized Infantry Type", "Mechanized Infantry Type")]
+            names.sort()
 
         import tkinter as tk
 
-        root, close_menu = queries.create_managed_tk_window(self, "Manage Custom Production Units", "420x560")
+        root, close_menu = queries.create_managed_tk_window(self, "Manage Custom Production Units", "460x560")
 
         tk.Label(root, text="Select researched units to add to the Custom build category:",
-                 font=("Arial", 10, "bold"), wraplength=380, justify="left").pack(pady=(10, 5), padx=10)
+                 font=("Arial", 10, "bold"), wraplength=420, justify="left").pack(pady=(10, 5), padx=10)
 
-        vars_by_unit = {}
+        vars_by_unit = {}   # plain units -> BooleanVar (included or not)
+        infantry_rows = {}  # "Infantry Type <year>" -> {"checked", "motorized", "mechanized"} BooleanVars
 
         def select_all():
             for var in vars_by_unit.values():
                 var.set(True)
+            for row in infantry_rows.values():
+                row["checked"].set(True)
 
         def deselect_all():
             for var in vars_by_unit.values():
                 var.set(False)
+            for row in infantry_rows.values():
+                row["checked"].set(False)
 
         select_frame = tk.Frame(root)
         select_frame.pack(pady=(0, 5))
@@ -617,15 +691,51 @@ class Production_Screen(GameState):
             if not names: continue
             tk.Label(scroll_frame, text=category, font=("Arial", 10, "bold")).pack(anchor="w", pady=(8, 0))
             for name in names:
-                var = tk.BooleanVar(value=name in current_custom)
-                vars_by_unit[name] = var
-                tk.Checkbutton(scroll_frame, text=name, variable=var).pack(anchor="w", padx=20)
+                if queries.get_base_unit_name(name) == "Infantry Type":
+                    mot_name = name.replace("Infantry Type", "Motorized Infantry Type")
+                    mec_name = name.replace("Infantry Type", "Mechanized Infantry Type")
+                    mot_ok = mot_name in self.unit_library and queries.is_unit_unlocked(mot_name, player_research)
+                    mec_ok = mec_name in self.unit_library and queries.is_unit_unlocked(mec_name, player_research)
 
-        if not vars_by_unit:
+                    mot_var = tk.BooleanVar(value=mot_ok and mot_name in current_custom)
+                    mec_var = tk.BooleanVar(value=mec_ok and mec_name in current_custom)
+                    checked_var = tk.BooleanVar(value=mot_var.get() or mec_var.get() or name in current_custom)
+                    infantry_rows[name] = {"checked": checked_var, "motorized": mot_var, "mechanized": mec_var}
+
+                    row_frame = tk.Frame(scroll_frame)
+                    row_frame.pack(anchor="w", padx=20, fill="x")
+
+                    def clear_other(this_var, other_var):
+                        if this_var.get():
+                            other_var.set(False)
+
+                    if mot_ok:
+                        tk.Checkbutton(row_frame, text="Mot", variable=mot_var, indicatoron=False, width=3,
+                                       command=lambda mv=mot_var, ev=mec_var: clear_other(mv, ev)).pack(side="left")
+                    if mec_ok:
+                        tk.Checkbutton(row_frame, text="Mec", variable=mec_var, indicatoron=False, width=3,
+                                       command=lambda mv=mec_var, ev=mot_var: clear_other(mv, ev)).pack(side="left")
+                    tk.Checkbutton(row_frame, text=name, variable=checked_var).pack(side="left", padx=(5, 0))
+                else:
+                    var = tk.BooleanVar(value=name in current_custom)
+                    vars_by_unit[name] = var
+                    tk.Checkbutton(scroll_frame, text=name, variable=var).pack(anchor="w", padx=20)
+
+        if not vars_by_unit and not infantry_rows:
             tk.Label(scroll_frame, text="No units researched yet.").pack(pady=20)
 
         def on_apply():
-            p_data["custom_production_units"] = [name for name, var in vars_by_unit.items() if var.get()]
+            selected = [name for name, var in vars_by_unit.items() if var.get()]
+            for base_name, row in infantry_rows.items():
+                if not row["checked"].get():
+                    continue
+                if row["motorized"].get():
+                    selected.append(base_name.replace("Infantry Type", "Motorized Infantry Type"))
+                elif row["mechanized"].get():
+                    selected.append(base_name.replace("Infantry Type", "Mechanized Infantry Type"))
+                else:
+                    selected.append(base_name)
+            p_data["custom_production_units"] = selected
             close_menu()
             self.refresh_ui()
 

@@ -27,6 +27,13 @@ current hp should be 400
 dont forget to edit other stats too, like attack, defense, speed, etc
 !!!!!
 
+- could you completely rework infantry, motorized infantry, and mechanized infantry in the production tab
+- instead of having 3 different buttons for regular infantry, motorized, and mechanized, you could have a single infantry button, and then to the left of it, 2 tiny 30x30 square buttons what say "Mot" and "Mec"
+- selecting "Mot" changes the production button to produce a motorized infantry if clicked
+- selecting "Mec" changes the production button to produce a mechanized infantry if clicked
+- if neither of those two options are selected then it should just default back to regular infantry
+- this should also be applied for making custom units, so instead of there being options for motorized or mechanized infantry, there's just regular infantry of a certain type, which you can then click the buttons to the left of in order to get motorized or mechanized infantry for that specific type
+
 - KAISERIN SUGGESTIONS:
 - ai accepts millitary access if fighting the same enemies in a war
 - revokes access once war is over
