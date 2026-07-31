@@ -558,7 +558,7 @@ def open_map_research_editor(self):
         edit_win = tk.Toplevel(root)
         title_text = "MAP DEFAULT" if is_default_only else ("ALL COUNTRIES" if is_bulk else actual_name)
         edit_win.title(f"{title_text} Research")
-        edit_win.geometry("300x500")
+        edit_win.geometry("600x1000")
         edit_win.attributes("-topmost", True)
         
         canvas = tk.Canvas(edit_win)
@@ -583,22 +583,26 @@ def open_map_research_editor(self):
                 chk.grid(row=i, column=1, pady=2)
                 entries[tech] = ("checkbox", var)
             else:
+                max_lvl = tech_tree.get(tech, {}).get("max_lvl", 1)
                 ent = tk.Entry(scroll_frame, width=8)
                 ent.insert(0, str(base_data[tech]))
                 ent.grid(row=i, column=1, pady=2)
-                entries[tech] = ("entry", ent)
+                tk.Label(scroll_frame, text=f"(0-{max_lvl})", fg="grey").grid(row=i, column=2, sticky="w", padx=5)
+                entries[tech] = ("entry", ent, max_lvl)
 
         def save_res():
             nonlocal default_res
             new_data = {}
-            for tech, (kind, widget) in entries.items():
-                if kind == "checkbox":
-                    new_data[tech] = widget.get()
+            for tech, entry in entries.items():
+                if entry[0] == "checkbox":
+                    new_data[tech] = entry[1].get()
                 else:
+                    _, widget, max_lvl = entry
                     try:
-                        new_data[tech] = int(widget.get())
+                        val = int(widget.get())
                     except ValueError:
-                        new_data[tech] = base_data.get(tech, 0)
+                        val = base_data.get(tech, 0)
+                    new_data[tech] = max(0, min(val, max_lvl))
             
             if is_default_only:
                 self.default_research = new_data.copy()

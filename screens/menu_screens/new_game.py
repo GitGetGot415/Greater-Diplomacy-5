@@ -129,7 +129,7 @@ class New_Game(GameState):
         from data import queries
         import data.constants as c
         
-        dialog, close_menu = queries.create_managed_tk_window(self, "Refresh Options", "400x320")
+        dialog, close_menu = queries.create_managed_tk_window(self, "Refresh Options", "400x350")
         
         # Center the window
         dialog.update_idletasks()
@@ -143,14 +143,16 @@ class New_Game(GameState):
         var_adj = tk.BooleanVar(value=True)
         var_leader = tk.BooleanVar(value=True)
         var_flags = tk.BooleanVar(value=True)
+        var_color = tk.BooleanVar(value=True)
         var_custom = tk.BooleanVar(value=True)
-        
+
         tk.Label(dialog, text="Select what to forcefully reset:", font=("Arial", 12, "bold")).pack(pady=10)
-        
+
         tk.Checkbutton(dialog, text="Country Names", variable=var_names, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Adjectives", variable=var_adj, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Leader Names & Titles", variable=var_leader, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Flags & Portraits", variable=var_flags, font=("Arial", 11)).pack(anchor="w", padx=40)
+        tk.Checkbutton(dialog, text="Country Color", variable=var_color, font=("Arial", 11)).pack(anchor="w", padx=40)
         tk.Checkbutton(dialog, text="Include Scenarios in Custom/Editor Dir", variable=var_custom, font=("Arial", 11)).pack(anchor="w", padx=40)
         
         tk.Label(dialog, text="", font=("Arial", 8)).pack()
@@ -162,6 +164,7 @@ class New_Game(GameState):
                 "reset_adjectives": var_adj.get(),
                 "reset_leaders": var_leader.get(),
                 "reset_flags": var_flags.get(),
+                "reset_colors": var_color.get(),
                 "include_custom": var_custom.get(),
             }
             close_menu()

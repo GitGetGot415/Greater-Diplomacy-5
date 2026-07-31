@@ -1,6 +1,6 @@
 {
     "version": "v20",
-    "generated_at": "2026-07-31T09:11:15.334993",
+    "generated_at": "2026-07-31T14:28:55.274137",
     "date": {
         "day": 15,
         "month": 0,
@@ -37297,7 +37297,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -37462,7 +37462,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -37494,7 +37494,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -37653,7 +37653,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -37669,7 +37669,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -37853,7 +37853,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38026,7 +38026,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38093,7 +38093,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38193,7 +38193,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38555,7 +38555,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38571,7 +38571,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38681,7 +38681,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38864,7 +38864,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -38930,7 +38930,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39102,7 +39102,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39161,7 +39161,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39215,7 +39215,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39373,7 +39373,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39829,7 +39829,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39845,7 +39845,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -39939,7 +39939,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -40523,7 +40523,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -40637,7 +40637,7 @@
                     "max_health": 2500,
                     "speed": 2,
                     "attack": 400,
-                    "defense": 100,
+                    "defense": 120,
                     "level": 0,
                     "order": {
                         "type": "MOVE",

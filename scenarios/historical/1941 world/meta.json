@@ -1,6 +1,6 @@
 {
     "version": "v20",
-    "generated_at": "2026-07-31T09:11:04.390462",
+    "generated_at": "2026-07-31T14:28:44.234241",
     "date": {
         "day": 15,
         "month": 5,
@@ -41887,7 +41887,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -41904,7 +41904,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -41921,7 +41921,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -42133,7 +42133,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -43216,7 +43216,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -43592,7 +43592,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -43775,7 +43775,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -43825,7 +43825,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -44261,7 +44261,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -45244,7 +45244,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -45356,7 +45356,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -45574,7 +45574,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -47003,7 +47003,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -47169,7 +47169,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",
@@ -47643,7 +47643,7 @@
                     "morale": 100.0,
                     "speed": 2,
                     "attack": 410,
-                    "defense": 105,
+                    "defense": 124,
                     "level": 0,
                     "order": {
                         "type": "MOVE",

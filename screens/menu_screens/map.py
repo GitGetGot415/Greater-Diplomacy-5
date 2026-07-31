@@ -618,6 +618,7 @@ class Map(GameState):
                 "reset_adjectives": True,
                 "reset_leaders": True,
                 "reset_flags": True,
+                "reset_colors": True,
             }
             
         from data.io import country_io
@@ -635,7 +636,7 @@ class Map(GameState):
                     if base_key not in self.nation_data[country]:
                         self.nation_data[country][base_key] = base_val
 
-                if "color" in data and self.nation_data[country].get("color") != data["color"]:
+                if "color" in data and options.get("reset_colors", True) and self.nation_data[country].get("color") != data["color"]:
                     self.nation_data[country]["color"] = data["color"]
                     updated_count += 1
                 if "name" in data and options.get("reset_names", True):
