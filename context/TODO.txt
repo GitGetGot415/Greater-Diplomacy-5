@@ -1,5 +1,3 @@
-ai now accepts millitary access if both fighting in the same war
-
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
