@@ -173,8 +173,21 @@ def draw_sidebar_info(self, surface):
             current_y += 22
 
             side_units = [u for u in units if u.get("owner") == side_id]
+            # Only the top MAX_COMBAT_ATTACKERS units (by attack) actually deal
+            # damage each combat round -- highlight those rows so it's clear
+            # which units are pulling their weight vs. just sitting on the tile.
+            engaged_ids = {id(eu) for eu in queries.get_top_attackers(side_units)}
             for u in side_units:
                 u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
+                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
+                has_bombard = 'bombard_attack' in unit_stats
+                row_height = 20 + (18 if has_bombard else 0)
+
+                if id(u) in engaged_ids:
+                    highlight_w = info_rect.right - (text_x + 5) - 10
+                    highlight_surf = pygame.Surface((highlight_w, row_height), pygame.SRCALPHA)
+                    highlight_surf.fill((*c.COLOR_SUCCESS_GREEN, 55))
+                    surface.blit(highlight_surf, (text_x + 5, current_y - 1))
 
                 row_x = text_x + 10
 
@@ -193,8 +206,7 @@ def draw_sidebar_info(self, surface):
                 current_y += 20
 
                 # Bombardment stats on their own indented line, only for units that can bombard
-                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
-                if 'bombard_attack' in unit_stats:
+                if has_bombard:
                     draw_bombardment_stats(
                         surface, self.small_font,
                         u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
