@@ -10,9 +10,6 @@ Immediate concerns:
 - integrated puppets transfer everything to their master unless they capture territories they have a core on, and their master doesn't have a core on it
 - or maybe it could be that if a country captures territory that one of their integrated puppets has a core on, that land is automatically transferred to them
 
-- looks like you can hit neutral armies or your own armies with artillery (keep or remove? it is kinda funny tbh but idk)
-- make it so that artillery only damages countries with which you are at war with (for example, if a neutral and an enemy army are fighting and you bomb the file, only the enemy army is hurt)
-
 - slider volume specifically?
 
 - KAISERIN SUGGESTIONS:
@@ -21,9 +18,6 @@ Immediate concerns:
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - web version? (tkinter will have to be edited...)
-
-- remove motorized infantry past 1939, keeping only mechanized infantry?
-- actually completely remove the whole motorized and mechanized infantry research, instead just keep regular infantry but add in a check next to it for either motorized, mechanized, or IFV, each one costing a bit more but giving a bonus
 
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for

@@ -607,14 +607,17 @@ TANK_GROUP_EXTRAS = [
 UNIT_TECH_KEY_OVERRIDES = {
     "motorized_infantry_type": "motorized_infantry",
     "mechanized_infantry_type": "mechanized_infantry",
+    "infantry_fighting_vehicle_type": "infantry_fighting_vehicle",
 }
 
-# motorized_infantry/mechanized_infantry (see UNIT_TECH_KEY_OVERRIDES above) aren't
-# leveled techs of their own - each is unlocked by a one-time "vehicle" tech and then
-# tracks the nation's own infantry_type year exactly (see queries.get_infantry_family_year).
+# motorized_infantry/mechanized_infantry/infantry_fighting_vehicle (see
+# UNIT_TECH_KEY_OVERRIDES above) aren't leveled techs of their own - each is
+# unlocked by a one-time "vehicle" tech and then tracks the nation's own
+# infantry_type year exactly (see queries.get_infantry_family_year).
 VEHICLE_INFANTRY_GATES = {
     "motorized_infantry": "trucks",
     "mechanized_infantry": "armored_personnel_carriers",
+    "infantry_fighting_vehicle": "infantry_fighting_vehicle",
 }
 
 LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]

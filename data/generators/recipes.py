@@ -150,9 +150,18 @@ UNIT_SECTIONS = [
         # simply carry no armor bonus over plain Infantry.
         UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10),
-            "defense": piecewise([(0, 0, 0), (30, 100, 5)]),
+            "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
             "cost_fuel": const(50), "production_time": const(2),
+        }),
+        # Identical to Mechanized Infantry Type in every stat except double attack
+        # and double cost_materials - the premium tier Armored Personnel Carriers
+        # open the door to once Infantry Fighting Vehicles are researched.
+        UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 101), {
+            "health": linear(1000, 50), "attack": linear(150, 15),
+            "defense": linear(0, 4),
+            "speed": const(2), "cost_materials": linear(4000, 40), "cost_manpower": const(1000),
+            "cost_fuel": const(50), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),
@@ -417,6 +426,9 @@ RESEARCH_SECTIONS = [
         ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
                                          "req": {"trucks": 1},
                                          "years": years_range(1940, 1, 1)}),
+        ("infantry_fighting_vehicle", {"category": "INFANTRY", "max_lvl": 1, "cost": 900,
+                                        "req": {"armored_personnel_carriers": 1},
+                                        "years": years_range(1950, 1, 1)}),
     ],
     [
         ("civilian_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {},

@@ -24,13 +24,14 @@ BAR_WIDTH = 570
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
 
-# Infantry row: "Mot"/"Mec" mode toggles sit where the button normally starts,
-# pushing the button (and its stat bar, which shrinks to keep its right edge
-# fixed) right by this much. Only that one row is affected - every other row
-# keeps its normal x position.
+# Infantry row: "Mot"/"Mec"/"IFV" mode toggles sit where the button normally
+# starts, pushing the button (and its stat bar, which shrinks to keep its right
+# edge fixed) right by this much. Only that one row is affected - every other
+# row keeps its normal x position.
 INFANTRY_MODE_BTN_GAP = 4
 INFANTRY_MODE_TO_MAIN_GAP = 8
-INFANTRY_MODE_BLOCK_WIDTH = 30 * 2 + INFANTRY_MODE_BTN_GAP + INFANTRY_MODE_TO_MAIN_GAP
+INFANTRY_MODE_COUNT = 3
+INFANTRY_MODE_BLOCK_WIDTH = 30 * INFANTRY_MODE_COUNT + INFANTRY_MODE_BTN_GAP * (INFANTRY_MODE_COUNT - 1) + INFANTRY_MODE_TO_MAIN_GAP
 
 # Coloured section panels drawn behind each group of rows
 PANEL_X = 30
@@ -367,20 +368,30 @@ class Production_Screen(GameState):
             self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
             y_offset += ROW_STEP_Y
 
-        # Whether Motorized/Mechanized Infantry are unlocked at all (Trucks/APCs
-        # researched) - shared by the main Infantry row and every custom Infantry
-        # row, since the toggle's availability isn't per-year, just global.
+        # Whether Motorized/Mechanized/IFV Infantry are unlocked at all
+        # (Trucks/APCs/IFV researched) - shared by the main Infantry row and every
+        # custom Infantry row, since the toggle's availability isn't per-year, just global.
         mot_unlocked = queries.get_infantry_family_year("motorized_infantry", player_research, self.tech_tree) is not None
         mec_unlocked = queries.get_infantry_family_year("mechanized_infantry", player_research, self.tech_tree) is not None
+        ifv_unlocked = queries.get_infantry_family_year("infantry_fighting_vehicle", player_research, self.tech_tree) is not None
+
+        # (mode key, name-swap target, toggle label) for every non-regular variant,
+        # left to right. Shared by render_mode_toggles and both row renderers so
+        # the three stay in sync.
+        INFANTRY_VARIANTS = (
+            ("motorized", "Motorized Infantry Type", "Mot", mot_unlocked),
+            ("mechanized", "Mechanized Infantry Type", "Mec", mec_unlocked),
+            ("ifv", "Infantry Fighting Vehicle Type", "IFV", ifv_unlocked),
+        )
 
         def render_mode_toggles(mode, set_mode):
-            """Draws the Mot/Mec toggle squares at the row's left edge (see
+            """Draws the Mot/Mec/IFV toggle squares at the row's left edge (see
             INFANTRY_MODE_BLOCK_WIDTH). Always drawn, disabled/greyed when the
             corresponding tech isn't researched. `set_mode(key)` should flip to
             that mode, or back to 'normal' if it's already active."""
             toggle_x = x_pos
             spectator_locked = is_spectator and not can_spectator_edit
-            for available, key, label in ((mot_unlocked, "motorized", "Mot"), (mec_unlocked, "mechanized", "Mec")):
+            for key, _prefix, label, available in INFANTRY_VARIANTS:
                 toggle_color = "orange" if (available and mode == key) else "blue"
                 toggle_cb = (lambda k=key: set_mode(k)) if (available and not spectator_locked) else (lambda: None)
                 toggle_btn = self._add_scroll_button(toggle_x, y_offset, toggle_color, label, toggle_cb,
@@ -388,26 +399,26 @@ class Production_Screen(GameState):
                 toggle_btn.disabled = not available or spectator_locked
                 toggle_x += 30 + INFANTRY_MODE_BTN_GAP
 
+        def resolve_infantry_variant(mode):
+            """Validates a stored mode against current research, returning the
+            (possibly corrected) mode and its unit-name prefix swap target."""
+            for key, prefix, _label, available in INFANTRY_VARIANTS:
+                if mode == key:
+                    return (key, prefix) if available else ("normal", None)
+            return "normal", None
+
         def render_infantry_row():
-            """Single combined Infantry row: a Mot/Mec toggle pair to the left of
-            the production button picks which variant it builds (motorized/
-            mechanized share Infantry's own current year - see
-            queries.get_infantry_family_year), instead of three separate rows."""
+            """Single combined Infantry row: a Mot/Mec/IFV toggle to the left of
+            the production button picks which variant it builds (they all share
+            Infantry's own current year - see queries.get_infantry_family_year),
+            instead of separate rows per variant."""
             base_year = queries.get_infantry_family_year("infantry_type", player_research, self.tech_tree)
             if base_year is None:
                 return
 
-            mode = self.infantry_mode
-            if mode == "motorized" and not mot_unlocked: mode = "normal"
-            if mode == "mechanized" and not mec_unlocked: mode = "normal"
+            mode, prefix = resolve_infantry_variant(self.infantry_mode)
             self.infantry_mode = mode
-
-            if mode == "motorized":
-                unit_name = f"Motorized Infantry Type {base_year}"
-            elif mode == "mechanized":
-                unit_name = f"Mechanized Infantry Type {base_year}"
-            else:
-                unit_name = f"Infantry Type {base_year}"
+            unit_name = f"{prefix} {base_year}" if prefix else f"Infantry Type {base_year}"
 
             def set_mode(new_mode):
                 # Clicking the already-active mode toggles it back off (regular Infantry).
@@ -418,20 +429,12 @@ class Production_Screen(GameState):
             render_unit_button(unit_name, "green", x_offset=INFANTRY_MODE_BLOCK_WIDTH)
 
         def render_custom_infantry_row(base_name, btn_color):
-            """Same Mot/Mec toggle as render_infantry_row, but for one specific
+            """Same Mot/Mec/IFV toggle as render_infantry_row, but for one specific
             "Infantry Type <year>" entry in the Custom section - each such entry
             gets its own independent toggle (see self.custom_infantry_modes)."""
-            mode = self.custom_infantry_modes.get(base_name, "normal")
-            if mode == "motorized" and not mot_unlocked: mode = "normal"
-            if mode == "mechanized" and not mec_unlocked: mode = "normal"
+            mode, prefix = resolve_infantry_variant(self.custom_infantry_modes.get(base_name, "normal"))
             self.custom_infantry_modes[base_name] = mode
-
-            if mode == "motorized":
-                unit_name = base_name.replace("Infantry Type", "Motorized Infantry Type")
-            elif mode == "mechanized":
-                unit_name = base_name.replace("Infantry Type", "Mechanized Infantry Type")
-            else:
-                unit_name = base_name
+            unit_name = base_name.replace("Infantry Type", prefix) if prefix else base_name
 
             def set_mode(new_mode, base=base_name):
                 current = self.custom_infantry_modes.get(base, "normal")
@@ -457,7 +460,7 @@ class Production_Screen(GameState):
                 highest_unlocked = None
                 tech_key = queries.get_unit_tech_key(group_name)
 
-                if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry"):
+                if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"):
                     year = queries.get_infantry_family_year(tech_key, player_research, self.tech_tree)
                     if year is not None:
                         highest_unlocked = f"{group_name} {year}"
@@ -483,10 +486,11 @@ class Production_Screen(GameState):
 
         self.infantry_start_y = y_offset
         render_infantry_row()
-        # Motorized/Mechanized are folded into the combined Infantry row above,
+        # Motorized/Mechanized/IFV are folded into the combined Infantry row above,
         # not listed as their own group here.
         other_infantry_groups = [g for g in self.infantry_groups
-                                  if g not in ("Infantry Type", "Motorized Infantry Type", "Mechanized Infantry Type")]
+                                  if g not in ("Infantry Type", "Motorized Infantry Type",
+                                               "Mechanized Infantry Type", "Infantry Fighting Vehicle Type")]
         process_unit_groups(other_infantry_groups, "green")
         self.infantry_end_y = y_offset
 
@@ -678,17 +682,18 @@ class Production_Screen(GameState):
 
         # Group every unit the player currently has the research level for, regardless
         # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
-        # Same Infantry/Tanks/Navy rule the production columns use. Motorized/Mechanized
-        # Infantry aren't listed separately - add the plain "Infantry Type <year>" here
-        # and use the Mot/Mec toggle next to it on the production screen's Custom row
-        # to build the motorized/mechanized version instead.
+        # Same Infantry/Tanks/Navy rule the production columns use. Motorized/Mechanized/
+        # IFV Infantry aren't listed separately - add the plain "Infantry Type <year>"
+        # here and use the Mot/Mec/IFV toggle next to it on the production screen's
+        # Custom row to build that variant instead.
         categorized = queries.get_grouped_units(
             self.unit_library, by_family=False,
             unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research))
 
         for names in categorized.values():
             names[:] = [n for n in names
-                        if queries.get_base_unit_name(n) not in ("Motorized Infantry Type", "Mechanized Infantry Type")]
+                        if queries.get_base_unit_name(n) not in (
+                            "Motorized Infantry Type", "Mechanized Infantry Type", "Infantry Fighting Vehicle Type")]
             names.sort()
 
         import tkinter as tk

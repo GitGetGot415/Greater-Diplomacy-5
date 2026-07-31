@@ -750,17 +750,21 @@ def get_tech_unlocks(tech_key, level):
     if tech_key == "armored_personnel_carriers" and level == 1:
         unlocks.append("Mechanized Infantry (buildable up to your current Infantry tech)")
 
+    if tech_key == "infantry_fighting_vehicle" and level == 1:
+        unlocks.append("Infantry Fighting Vehicle (buildable up to your current Infantry tech)")
+
     return unlocks
 
 def get_infantry_family_year(family_key, player_research, tech_tree):
     """Returns the highest year unlocked for infantry_type/motorized_infantry/
-    mechanized_infantry, or None if nothing is unlocked yet.
+    mechanized_infantry/infantry_fighting_vehicle, or None if nothing is unlocked yet.
 
-    motorized_infantry and mechanized_infantry aren't leveled techs of their own
-    (see c.VEHICLE_INFANTRY_GATES) - owning the one-time "trucks"/
-    "armored_personnel_carriers" unlock lets a nation build that unit family up to
-    whatever year its infantry_type research has reached, rather than requiring a
-    separate multi-decade research track for each.
+    motorized_infantry, mechanized_infantry, and infantry_fighting_vehicle aren't
+    leveled techs of their own (see c.VEHICLE_INFANTRY_GATES) - owning the
+    one-time "trucks"/"armored_personnel_carriers"/"infantry_fighting_vehicle"
+    unlock lets a nation build that unit family up to whatever year its
+    infantry_type research has reached, rather than requiring a separate
+    multi-decade research track for each.
     """
     gate_tech = c.VEHICLE_INFANTRY_GATES.get(family_key)
     if gate_tech is not None:
@@ -788,7 +792,8 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
         return None
 
     if allow_fuel_units:
-        for tech, fmt in [("mechanized_infantry", "Mechanized Infantry Type {}"),
+        for tech, fmt in [("infantry_fighting_vehicle", "Infantry Fighting Vehicle Type {}"),
+                          ("mechanized_infantry", "Mechanized Infantry Type {}"),
                           ("motorized_infantry", "Motorized Infantry Type {}")]:
             found = check_upgrade(tech, fmt)
             if found: return found
@@ -809,7 +814,7 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
 
     # Handle Year-based units (Infantry Type variants use "Type <year>"; Artillery
     # is roman-numeral leveled like Militia and falls through to the branch below)
-    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry"]:
+    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"]:
         year_val = get_infantry_family_year(tech_key, player_research, tech_tree)
         if year_val is None:
             return None
@@ -1802,7 +1807,6 @@ def get_base_unit_name(unit_name):
 # connector word before the year/tier (e.g. "Infantry Type 1940" -> "Inf 1940").
 CONDENSED_UNIT_NAME_WORDS = {
     "Type": "",
-    "Battle": "",
     "Mechanized": "Mech",
     "Motorized": "Mot",
     "Infantry": "Inf",
@@ -1825,6 +1829,17 @@ CONDENSED_UNIT_NAME_WORDS = {
     "P.1500": "",
 }
 
+# Multi-word unit-class names collapsed to a single acronym, checked before the
+# per-word substitution above. A per-word map can't express these cleanly:
+# "Infantry"/"Tank" already have their own one-word shorthand used by several
+# *other* families (Infantry Type, Medium/Heavy/Light Tank, ...), so remapping
+# either word on its own would wrongly shorten those too. Keyed by the exact
+# leading class name (i.e. get_base_unit_name's output), matched as a whole.
+CONDENSED_UNIT_NAME_PHRASES = {
+    "Infantry Fighting Vehicle": "IFV",
+    "Main Battle Tank": "MBT",
+}
+
 def _condense_words(name, word_map):
     """Shared word-for-word substitution behind get_condensed_unit_name and
     get_condensed_building_name: splits on spaces, swaps any word found in
@@ -1845,6 +1860,11 @@ def get_condensed_unit_name(unit_name):
     if carrier_match:
         carrier, inner = carrier_match.groups()
         return f"{carrier} ({get_condensed_unit_name(inner)})"
+
+    for phrase, short in CONDENSED_UNIT_NAME_PHRASES.items():
+        if unit_name == phrase or unit_name.startswith(phrase + " "):
+            unit_name = short + unit_name[len(phrase):]
+            break
 
     return _condense_words(unit_name, CONDENSED_UNIT_NAME_WORDS)
 
