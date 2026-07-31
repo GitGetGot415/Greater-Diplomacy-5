@@ -104,6 +104,8 @@ FIXED_TECH_NAMES = {
     "landkreuzer_p1500_monster": "Landkreuzer P.1500 Monster",
     "trucks": "Trucks",
     "armored_personnel_carriers": "Armored Personnel Carriers",
+    "electromagnetic_launcher": "Electromagnetic Launcher",
+    "railgun": "Railgun",
 }
 
 # Tech nodes whose icon isn't just its own display name (see draw_tech_nodes).
@@ -132,6 +134,7 @@ NODE_SIZE_RULES = [
     (("landkreuzer p.1000 ratte",), "tech_square_landkreuzer_p1000_ratte"),
     (("landkreuzer p.1500 monster",), "tech_square_landkreuzer_p1500_monster"),
     (("railroad gun",), "tech_square_railroad_gun"),
+    (("railgun",), "tech_square_railgun"),
     (("light tank ix",), "tech_square_wide"),
     (("civilian car", "armored car", "light tank i", "light tank v", "medium tank"), "tech_square_medium"),
 ]
@@ -195,6 +198,7 @@ class Research_Screen(GameState):
             "ww1_tank": y2, "light_tank": y2,
             "medium_tank": y3, "main_battle_tank": y3,
             "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y6, "landkreuzer_p1500_monster": y6,
+            "electromagnetic_launcher": y6, "railgun": y6,
             "ww1_railroad_gun": y5, "ww2_railroad_gun": y6,
             "destroyer": y1,
             "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y2,

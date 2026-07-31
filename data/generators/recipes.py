@@ -222,8 +222,8 @@ UNIT_SECTIONS = [
             "speed": const(1), "cost_materials": const(16000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
-        UnitFamily("Super Heavy Tank", roman_suffixes(3), {
-                    "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(550, 50),
+        UnitFamily("Super Heavy Tank", roman_suffixes(5), {
+                    "health":  const(5000), "attack":  const(5000), "defense": linear(600, 100),
                     "speed": const(1), "cost_materials": const(16000), "cost_manpower": const(1000),
                     "cost_fuel": const(200), "production_time": const(6),
         }),
@@ -239,6 +239,14 @@ UNIT_SECTIONS = [
             "health": 15000, "attack": 8000, "defense": 800,
             "bombard_attack": 500,
             "speed": 1, "cost_materials": 150000, "cost_manpower": 2000,
+            "cost_fuel": 3000, "production_time": 10,
+        }),
+        # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
+        # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
+        UnitFamily("Railgun", single(), {
+            "health": 10000, "attack": 1000, "defense": 800,
+            "bombard_attack": 1000,
+            "speed": 1, "cost_materials": 200000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
@@ -431,12 +439,16 @@ RESEARCH_SECTIONS = [
                           "req": {"light_tank": 1}, "years": years_range(1925, 5, 4)}),
         ("heavy_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400,
                          "req": {"medium_tank": 1}, "years": years_range(1929, 4, 4)}),
-        ("super_heavy_tank", {"category": "TANKS", "max_lvl": 3, "cost": 2400,
-                                "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 3)}),
+        ("super_heavy_tank", {"category": "TANKS", "max_lvl": 5, "cost": 2400,
+                                "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 5)}),
         ("landkreuzer_p1000_ratte", {"category": "TANKS", "max_lvl": 1, "cost": 3000,
                                         "req": {"ww2_railroad_gun": 1}, "years": years_range(1944, 6, 1)}),
         ("landkreuzer_p1500_monster", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
-                                                "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1952, 8, 1)}),
+                                                "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1956, 8, 1)}),
+        ("electromagnetic_launcher", {"category": "TANKS", "max_lvl": 1, "cost": 3000, "req": {},
+                                       "years": years_range(1980, 1, 1)}),
+        ("railgun", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
+                      "req": {"electromagnetic_launcher": 1}, "years": years_range(2010, 1, 1)}),
         ("main_battle_tank", {"category": "TANKS", "max_lvl": 14, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
                                "years": years_range(1945, 5, 14)}),

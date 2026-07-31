@@ -365,6 +365,7 @@ SIZES = {
     "tech_square_ww2_railroad_gun": (340, 120),
     "tech_square_landkreuzer_p1000_ratte": (400, 130),
     "tech_square_landkreuzer_p1500_monster": (600, 180),
+    "tech_square_railgun": (500, 220),
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),
@@ -538,6 +539,7 @@ BOMBARDMENT_UNITS = {
     "WW2 Railroad Gun": 2,
     "Landkreuzer P.1000 Ratte": 2,
     "Landkreuzer P.1500 Monster": 2,
+    "Railgun": 3,
     "Dreadnought": 1,
     "Battleship": 1,
     "Aircraft Carrier": 2
@@ -568,12 +570,14 @@ ICON_CONSTRUCTION = "Hammer"
 ICON_DISBANDING = "Disbanding"
 ICON_BOMBARDMENT = "Bombardment Arrows"
 ICON_BOMBARDMENT_LONG = "Long Range Bombardment Arrows"
+ICON_BOMBARDMENT_VERY_LONG = "Very Long Range Bombardment Arrows"
 
 # Barrage sprite keyed by the firing unit's range. The highest key at or below
 # the unit's range wins, so longer-ranged guns added later reuse the long art.
 BOMBARDMENT_ARROW_ICONS = {
     1: ICON_BOMBARDMENT,
-    2: ICON_BOMBARDMENT_LONG
+    2: ICON_BOMBARDMENT_LONG,
+    3: ICON_BOMBARDMENT_VERY_LONG
 }
 
 OVERLAY_STATUS_ICON_SCALE = 0.6
@@ -594,7 +598,8 @@ TANK_GROUP_EXTRAS = [
     "WW1 Railroad Gun",
     "WW2 Railroad Gun",
     "Landkreuzer P.1000 Ratte",
-    "Landkreuzer P.1500 Monster"
+    "Landkreuzer P.1500 Monster",
+    "Railgun"
 ]
 
 # Unit classes whose research key isn't just their lowercased name (see
