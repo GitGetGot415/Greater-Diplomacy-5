@@ -136,7 +136,7 @@ UNIT_SECTIONS = [
     [
         UnitFamily("Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
-            "speed": const(1), "cost_materials": const(500), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": linear(500, 5), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(2),
         }),
         # Ranges back to 1910 (not just 1930) - trucks/APCs are now one-time unlocks
@@ -150,7 +150,7 @@ UNIT_SECTIONS = [
         # linear(2000, 50) index-0 value).
         UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
-            "speed": const(2), "cost_materials": const(1000), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
             "cost_fuel": const(50), "production_time": const(2),
         }),
         # Same reasoning as Motorized Infantry Type above for health/attack/range.
@@ -160,7 +160,7 @@ UNIT_SECTIONS = [
         UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": piecewise([(0, 0, 0), (30, 100, 5)]),
-            "speed": const(2), "cost_materials": const(2000), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
             "cost_fuel": const(50), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
@@ -185,7 +185,7 @@ UNIT_SECTIONS = [
             # two can be tuned independently. Currently mirrors attack 1:1.
             "bombard_attack": linear(50, 5),
             "defense": const(0),
-            "speed": const(1), "cost_materials": const(2000), "cost_manpower": const(500),
+            "speed": const(1), "cost_materials": linear(2000, 20), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
         }),
     ],
@@ -202,29 +202,29 @@ UNIT_SECTIONS = [
             "health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10),
             # speed steps: I=2, II-IV=3, V+=4
             "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]),
-            "cost_materials": const(3000), "cost_manpower": const(1000),
+            "cost_materials": linear(3000, 200), "cost_manpower": const(1000),
             "cost_fuel": const(100), "production_time": const(4),
         }),
         UnitFamily("Light Tank", roman_suffixes(24), {
             "health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10),
             # speed steps: I-III=2, IV+=3
             "speed": piecewise([(0, 2, 0), (3, 3, 0)]),
-            "cost_materials": const(8000), "cost_manpower": const(1000),
+            "cost_materials": linear(5000, 500), "cost_manpower": const(1000),
             "cost_fuel": const(150), "production_time": const(5),
         }),
         UnitFamily("Medium Tank", roman_suffixes(4), {
             "health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25),
-            "speed": const(2), "cost_materials": const(12000), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(9000, 1000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
         UnitFamily("Heavy Tank", roman_suffixes(4), {
             "health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50),
-            "speed": const(1), "cost_materials": const(16000), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": linear(12000, 1000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
         UnitFamily("Super Heavy Tank", roman_suffixes(5), {
                     "health":  const(5000), "attack":  const(5000), "defense": linear(600, 100),
-                    "speed": const(1), "cost_materials": const(16000), "cost_manpower": const(1000),
+                    "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000),
                     "cost_fuel": const(200), "production_time": const(6),
         }),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
@@ -232,13 +232,13 @@ UNIT_SECTIONS = [
         UnitFamily("Landkreuzer P.1000 Ratte", single(), {
             "health": 10000, "attack": 6000, "defense": 800,
             "bombard_attack": 400,
-            "speed": 1, "cost_materials": 100000, "cost_manpower": 2000,
+            "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 8,
         }),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 800,
             "bombard_attack": 500,
-            "speed": 1, "cost_materials": 150000, "cost_manpower": 2000,
+            "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
@@ -246,12 +246,12 @@ UNIT_SECTIONS = [
         UnitFamily("Railgun", single(), {
             "health": 10000, "attack": 1000, "defense": 800,
             "bombard_attack": 1000,
-            "speed": 1, "cost_materials": 200000, "cost_manpower": 2000,
+            "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
             "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
-            "speed": const(2), "cost_materials": const(15000), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }),
         # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
@@ -268,7 +268,7 @@ UNIT_SECTIONS = [
         UnitFamily("WW2 Railroad Gun", single(), {
             "health": 2000, "attack": 250,
             "bombard_attack": 250,
-            "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
+            "defense": 0, "speed": 1, "cost_materials": 16000, "cost_manpower": 1000,
             "cost_fuel": 0, "production_time": 8,
         }),
     ],
@@ -287,7 +287,7 @@ UNIT_SECTIONS = [
         }, naval_unit=True),
         UnitFamily("Destroyer", roman_suffixes(26), {
             "health": linear(1200, 200), "attack": linear(600, 200), "defense": linear(100, 10),
-            "speed": const(1), "cost_materials": const(10000), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
             "cost_fuel": const(300), "production_time": const(8),
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
@@ -295,7 +295,7 @@ UNIT_SECTIONS = [
             # attack climbs 300/level through IX, jumps to 4000 at X, then 100/level
             "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
             "defense": const(0),
-            "speed": const(1), "cost_materials": const(8000), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000),
             "cost_fuel": const(200), "production_time": const(6),
         }, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
@@ -303,7 +303,7 @@ UNIT_SECTIONS = [
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
             "health": linear(400, 200), "attack": linear(400, 100), "defense": linear(100, 10),
             "bombard_attack": linear(300, 40),
-            "speed": const(1), "cost_materials": const(20000), "cost_manpower": const(2000),
+            "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
             "cost_fuel": const(500), "production_time": const(10),
         }, naval_unit=True),
     ],
