@@ -570,22 +570,35 @@ def open_map_research_editor(self):
         canvas.pack(side="left", fill="both", expand=True, pady=5)
         scrollbar.pack(side="right", fill="y")
         
+        tech_tree = queries.get_tech_tree()
+
         entries = {}
         for i, tech in enumerate(sorted(base_data.keys())):
             tk.Label(scroll_frame, text=tech.replace("_", " ").title()).grid(row=i, column=0, sticky="e", padx=5)
-            ent = tk.Entry(scroll_frame, width=8)
-            ent.insert(0, str(base_data[tech]))
-            ent.grid(row=i, column=1, pady=2)
-            entries[tech] = ent
-            
+
+            # Single-level techs are a yes/no toggle, not a numeric level.
+            if tech_tree.get(tech, {}).get("max_lvl", 1) == 1:
+                var = tk.IntVar(value=1 if base_data[tech] >= 1 else 0)
+                chk = tk.Checkbutton(scroll_frame, variable=var)
+                chk.grid(row=i, column=1, pady=2)
+                entries[tech] = ("checkbox", var)
+            else:
+                ent = tk.Entry(scroll_frame, width=8)
+                ent.insert(0, str(base_data[tech]))
+                ent.grid(row=i, column=1, pady=2)
+                entries[tech] = ("entry", ent)
+
         def save_res():
             nonlocal default_res
             new_data = {}
-            for tech, ent in entries.items():
-                try:
-                    new_data[tech] = int(ent.get())
-                except ValueError: 
-                    new_data[tech] = base_data.get(tech, 0)
+            for tech, (kind, widget) in entries.items():
+                if kind == "checkbox":
+                    new_data[tech] = widget.get()
+                else:
+                    try:
+                        new_data[tech] = int(widget.get())
+                    except ValueError:
+                        new_data[tech] = base_data.get(tech, 0)
             
             if is_default_only:
                 self.default_research = new_data.copy()
