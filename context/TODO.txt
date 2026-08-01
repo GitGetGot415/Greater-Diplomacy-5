@@ -6,8 +6,6 @@
 
 - check the recent issues coming from playtesting
 
-- optimize turn processesing to make it faster
-
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there
