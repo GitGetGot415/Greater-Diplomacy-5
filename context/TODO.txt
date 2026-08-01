@@ -1,5 +1,4 @@
 - add in a symbol for converting a unit to a convoy?
-- also for some reason it looks like the symbol for convoys doesn't appear when giving orders
 
 - check the recent issues coming from playtesting
 

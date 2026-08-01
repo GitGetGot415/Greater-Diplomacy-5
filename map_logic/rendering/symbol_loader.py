@@ -64,7 +64,14 @@ def get_symbol(name, zoom, color=None):
     """Returns scaled icon. Generates and caches colored variants if a color is provided."""
     # 1. Resolve base name
     base_name = name
-    
+
+    # Convoys/Trucks wrap the carried unit's name in parens (e.g.
+    # "Convoy (Infantry Type 1940)"); the wrapper itself is what should be
+    # drawn on the map/orders panel, so strip the carried unit off first.
+    carrier_match = re.match(r'^(Convoy|Truck) \(.+\)$', name)
+    if carrier_match:
+        base_name = carrier_match.group(1)
+
     # --- NEW: RANGE-BASED IMAGE LOOKUP (Lvl X-Y) ---
     if base_name not in SYMBOLS:
         lvl_match = re.search(r'^(.*?)\s+Lvl\s+(\d+)$', name, re.IGNORECASE)
