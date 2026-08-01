@@ -404,9 +404,16 @@ def draw_overlay_content(self, surface):
 
                     # --- Conversion Indicator (Convoy/Truck transformations) ---
                     if not is_partial:
-                        convert_target = next((u.get("order", {}).get("to") for u in province.get("units", [])
-                                                if u.get("order", {}).get("type") == "CONVERT"), None)
-                        convert_icon = c.CONVERSION_ICONS.get(convert_target)
+                        convert_order = next((u.get("order", {}) for u in province.get("units", [])
+                                               if u.get("order", {}).get("type") == "CONVERT"), None)
+                        convert_icon = None
+                        if convert_order:
+                            base_icon = c.CONVERSION_ICONS.get(convert_order.get("to"))
+                            if base_icon in (c.ICON_CONVERTING_TO_TRUCK, c.ICON_CONVERTING_TO_SHIP):
+                                turns_left = max(1, min(c.TRUCK_CONVERT_TURNS, convert_order.get("turns_left", 1)))
+                                convert_icon = f"{base_icon} {turns_left}"
+                            else:
+                                convert_icon = base_icon
                         if convert_icon:
                             convert_sym = symbol_loader.get_symbol(convert_icon, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                             if convert_sym:
