@@ -164,29 +164,17 @@ def render_buttons(self):
         self.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
         
         def m_import():
-            import tkinter as tk
-            from tkinter import filedialog
             from data.io.multiplayer_io import load_move_files
             import os
-            
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes('-topmost', True)
-            file_path = filedialog.askopenfilename(
-                initialdir=c.TOURNAMENT_SAVES_DIR,
-                title="Select Move File",
-                filetypes=(("Greater Diplomacy 5 Move", "*.gd5move"), ("All files", "*.*"))
-            )
-            root.destroy()
-            
-            if file_path:
+
+            def on_move_file_picked(file_path):
                 cid = self.player_country
                 player_key = getattr(self, 'multiplayer_player_key', '')
                 keys_dict = {cid: player_key}
-                
+
                 load_move_files(self, [file_path], keys_dict)
                 self.show_feedback(f"Move imported from {os.path.basename(file_path)}")
-                
+
                 self.refresh_political_map()
                 self.refresh_factions_map()
                 self.refresh_relations_map()
@@ -195,6 +183,9 @@ def render_buttons(self):
                 self.refresh_faction_territories_map()
                 if hasattr(self, 'sync_units_to_data'):
                     self.sync_units_to_data()
+
+            queries.open_file_browser(self, "Select Move File", c.TOURNAMENT_SAVES_DIR, on_move_file_picked,
+                                      mode="open_file", extensions=[".gd5move"])
 
         self.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
     else:

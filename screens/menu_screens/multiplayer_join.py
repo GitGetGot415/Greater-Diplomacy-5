@@ -19,22 +19,13 @@ class Multiplayer_Join(GameState):
         ]
 
     def load_tour_file(self):
-        from tkinter import filedialog
+        queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
+                                  self._on_tournament_file_picked, mode="open_file", extensions=[".gd5tour"])
+
+    def _on_tournament_file_picked(self, file_path):
         from ui import confirm_dialog
-
-        root = queries.get_transient_tk_root()
-
-        file_path = filedialog.askopenfilename(
-            initialdir=c.TOURNAMENT_SAVES_DIR,
-            title="Select Tournament File",
-            filetypes=[("Tournament Files", "*.gd5tour")],
-            parent=root
-        )
-        queries.destroy_tk_root(root)
-
-        key = confirm_dialog.ask_string("Player Key", "Enter your Country Key:") if file_path else None
-
-        if not file_path or not key:
+        key = confirm_dialog.ask_string("Player Key", "Enter your Country Key:")
+        if not key:
             return
 
         self.selected_tournament_path = file_path

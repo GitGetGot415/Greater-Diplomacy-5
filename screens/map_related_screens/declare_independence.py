@@ -7,7 +7,6 @@ from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager
-from tkinter import colorchooser
 
 class Declare_Independence_Screen(MapOverlayScreen):
     overlay_alpha = 200
@@ -65,12 +64,10 @@ class Declare_Independence_Screen(MapOverlayScreen):
             self.elements.append(Button(btn_x, btn_y + 60 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
 
     def pick_color(self):
-        root = queries.get_transient_tk_root()
-        color_code = colorchooser.askcolor(title="Choose Country Color", initialcolor=tuple(self.new_country_color))
-        if color_code[0]:
-            self.new_country_color = [int(x) for x in color_code[0]]
-        queries.destroy_tk_root(root)
-        self.refresh_ui()
+        def on_confirm(color):
+            self.new_country_color = list(color)
+            self.refresh_ui()
+        queries.open_color_picker(self, "Choose Country Color", tuple(self.new_country_color), on_confirm)
 
     def confirm_independence(self):
         if not self.new_country_name.strip():

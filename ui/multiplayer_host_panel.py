@@ -8,17 +8,12 @@ import data.constants as c
 
 
 def load_multiplayer_moves(map_ref):
-    root = tk.Tk()
-    root.withdraw()
-    
-    files = filedialog.askopenfilenames(
-        initialdir=c.TOURNAMENT_SAVES_DIR,
-        title="Select Move Files",
-        filetypes=[("Move Files", "*.gd5move")]
-    )
-    if files:
+    def on_files_picked(files):
         multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
         map_ref.show_feedback(f"Loaded {len(files)} move files.")
+
+    queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR, on_files_picked,
+                              mode="open_files", extensions=[".gd5move"])
 
 def export_next_turn(map_ref):
     turn = map_ref.time_manager.total_turns

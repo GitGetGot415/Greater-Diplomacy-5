@@ -2,7 +2,6 @@
 import pygame
 import os
 from pathlib import Path
-from tkinter import colorchooser, filedialog
 import unicodedata
 from gameState import GameState
 from ui_elements import process_text_input
@@ -123,27 +122,18 @@ class Edit_Country_Screen(GameState):
 
     def pick_map_color(self):
         """Opens a native color picker to select the country's map color."""
-        root = queries.get_transient_tk_root()
-        color_code = colorchooser.askcolor(title="Choose Map Color", initialcolor=tuple(self.new_map_color))
-        
-        if color_code[0]: # If they didn't click cancel
-            self.new_map_color = [int(c) for c in color_code[0]]
-            
-        queries.destroy_tk_root(root)
+        def on_confirm(color):
+            self.new_map_color = list(color)
+        queries.open_color_picker(self, "Choose Map Color", tuple(self.new_map_color), on_confirm)
 
     def pick_custom_brush_color(self):
         """Opens a native color picker to select a custom drawing color."""
-        root = queries.get_transient_tk_root()
-        
-        # Slice to [:3] to ensure we only pass RGB to Tkinter, dropping the Alpha
-        color_code = colorchooser.askcolor(title="Choose Brush Color", initialcolor=tuple(self.active_color)[:3])
-        
-        if color_code[0]: 
+        def on_confirm(color):
             # Re-append the full opacity alpha channel (255) to the returned RGB tuple
-            self.active_color = tuple(int(c) for c in color_code[0]) + (255,)
-            
-        queries.destroy_tk_root(root)
-        
+            self.active_color = tuple(color) + (255,)
+        # Slice to [:3] so we only pass RGB to the picker, dropping the Alpha
+        queries.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
+
     def export_flag(self):
         downloads_path = str(Path.home() / "Downloads")
         safe_name = "".join(c for c in self.country_name if c.isalnum() or c in " _-") or "Flag"
@@ -165,14 +155,7 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback("Failed to export")
 
     def import_flag(self):
-        root = queries.get_transient_tk_root()
-        file_path = filedialog.askopenfilename(
-            title="Select Flag Image",
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
-        )
-        queries.destroy_tk_root(root)
-
-        if file_path:
+        def on_file_picked(file_path):
             try:
                 new_img = pygame.image.load(file_path).convert()
                 self.flag_surf = pygame.transform.scale(new_img, self.flag_size)
@@ -181,15 +164,11 @@ class Edit_Country_Screen(GameState):
             except Exception as e:
                 self.map_screen.show_feedback("Failed to import flag.")
 
-    def import_portrait(self):
-        root = queries.get_transient_tk_root()
-        file_path = filedialog.askopenfilename(
-            title="Select Portrait Image",
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
-        )
-        queries.destroy_tk_root(root)
+        queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR, on_file_picked,
+                                  mode="open_file", extensions=[".png", ".jpg", ".jpeg", ".bmp"])
 
-        if file_path:
+    def import_portrait(self):
+        def on_file_picked(file_path):
             try:
                 new_img = pygame.image.load(file_path).convert()
                 self.portrait_surf = pygame.transform.scale(new_img, self.portrait_size)
@@ -197,6 +176,9 @@ class Edit_Country_Screen(GameState):
                 self.map_screen.show_feedback("Portrait Imported!")
             except Exception as e:
                 self.map_screen.show_feedback("Failed to import portrait.")
+
+        queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR, on_file_picked,
+                                  mode="open_file", extensions=[".png", ".jpg", ".jpeg", ".bmp"])
 
     def refresh_ui(self):
         buttons.render_edit_country_buttons(self)

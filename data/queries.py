@@ -2773,6 +2773,23 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback)
     screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
+def open_file_browser(game_state, title, root_dir, on_confirm_callback, mode="open_file", extensions=None):
+    """In-engine file/folder picker: replaces tkinter.filedialog.askopenfilename/askdirectory.
+
+    `mode` is "open_file", "open_files" (multi-select) or "select_folder"; browsing
+    never leaves root_dir. on_confirm_callback is never called on cancel."""
+    from ui.file_browser_screen import FileBrowserScreen
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    screen = FileBrowserScreen(game_state, title, root_dir, on_confirm_callback, mode=mode, extensions=extensions)
+    _run_pygame_sub_screen(game_state, screen)
+
+def open_color_picker(game_state, title, initial_color, on_confirm_callback):
+    """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
+    from ui.color_picker_screen import ColorPickerScreen
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
+    _run_pygame_sub_screen(game_state, screen)
+
 # ==========================================
 # TKINTER DIALOG HELPERS
 # ==========================================
@@ -2827,13 +2844,11 @@ def destroy_tk_root(root):
     pygame.event.pump()
 
 def copy_to_clipboard(text):
-    """Headless standard helper to push text to the system clipboard."""
+    """Pushes text to the OS clipboard via SDL's clipboard (pygame.scrap)."""
     try:
-        root = get_transient_tk_root()
-        root.clipboard_clear()
-        root.clipboard_append(text)
-        root.update()
-        root.destroy()
+        if not pygame.scrap.get_init():
+            pygame.scrap.init()
+        pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
         return True
     except Exception as e:
         print(f"Failed to copy to clipboard: {e}")
@@ -3017,21 +3032,16 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
-def import_zip_to_dir(target_parent_dir, on_success=None):
+def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     """Prompts for a .zip and unpacks it into a folder named after the archive.
 
     Shared by the save and scenario import buttons; both used to open their own
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
     from pathlib import Path
-    from tkinter import filedialog
     from ui import confirm_dialog
 
-    root = get_transient_tk_root()
-    file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")], parent=root)
-    destroy_tk_root(root)
-
-    if file_path:
+    def on_picked(file_path):
         target_dir = os.path.join(target_parent_dir, Path(file_path).stem)
         if os.path.exists(target_dir):
             target_dir += "_imported"
@@ -3043,21 +3053,20 @@ def import_zip_to_dir(target_parent_dir, on_success=None):
         except Exception as e:
             confirm_dialog.show_error("Import Error", str(e))
 
-def ask_directory(title, initialdir):
-    """Native folder picker returning the chosen path, or None if cancelled."""
-    from tkinter import filedialog
-    root = get_transient_tk_root()
-    chosen = filedialog.askdirectory(initialdir=initialdir, title=title, parent=root)
-    destroy_tk_root(root)
-    return chosen or None
+    browse_root = str(Path.home() / "Downloads")
+    open_file_browser(game_state, "Select Zip File", browse_root, on_picked, mode="open_file", extensions=[".zip"])
 
-def ask_color(title, initial):
+def ask_directory(game_state, title, initialdir):
+    """Native folder picker returning the chosen path, or None if cancelled."""
+    result = {}
+    open_file_browser(game_state, title, initialdir, lambda path: result.setdefault("path", path), mode="select_folder")
+    return result.get("path")
+
+def ask_color(game_state, title, initial):
     """Native colour picker returning an (r, g, b) tuple, or None if cancelled."""
-    from tkinter import colorchooser
-    root = get_transient_tk_root()
-    result = colorchooser.askcolor(title=title, color=initial, parent=root)
-    destroy_tk_root(root)
-    return tuple(map(int, result[0])) if result and result[0] else None
+    result = {}
+    open_color_picker(game_state, title, initial, lambda color: result.setdefault("color", color))
+    return result.get("color")
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):
     """
