@@ -78,3 +78,83 @@ class ListSelectScreen(GameState):
 
         self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.ROW_TOP,
                                  self.panel_rect.height - self.ROW_TOP - 30)
+
+class MultiSelectScreen(GameState):
+    """In-engine stand-in for a tkinter multi-select listbox.
+
+    Same freeze-and-dim modal panel as ListSelectScreen, but rows toggle on and
+    off instead of selecting-and-closing; a Done button confirms the set.
+    """
+    PANEL_SIZE = (620, 560)
+    ROW_HEIGHT = 40
+    ROW_TOP = 110
+    ROW_LABEL_MAX_CHARS = 38
+
+    def __init__(self, game_state, title, prompt, items, initial_selected, on_confirm):
+        super().__init__()
+        self.map_screen = getattr(game_state, "map_screen", None) or game_state
+        self.title = title
+        self.prompt = prompt
+        self.items = list(items)
+        self.selected = set(initial_selected)
+        self.on_confirm = on_confirm
+
+        surface = pygame.display.get_surface()
+        self.background = surface.copy() if surface else None
+
+        panel_w, panel_h = self.PANEL_SIZE
+        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+
+        self.refresh_ui()
+
+    def toggle(self, item):
+        if item in self.selected:
+            self.selected.discard(item)
+        else:
+            self.selected.add(item)
+        self.refresh_ui()
+
+    def confirm(self):
+        self.on_confirm(self.selected)
+        self.exit_screen()
+
+    def refresh_ui(self):
+        self.elements = [
+            Button(self.panel_rect.x + 20, self.panel_rect.y + 20, "small", "red", "Cancel", self.exit_screen),
+            Button(self.panel_rect.right - 170, self.panel_rect.y + 20, "small", "green", "Done", self.confirm),
+        ]
+
+        row_top = self.panel_rect.y + self.ROW_TOP
+        view_h = self.panel_rect.height - self.ROW_TOP - 30
+        row_x = self.panel_rect.centerx - (c.SIZES["list_row"][0] // 2)
+
+        for i, y in self.layout_list_rows(len(self.items), self.ROW_HEIGHT, row_top, view_h=view_h,
+                                          cull_top=self.panel_rect.y + 60, cull_bottom=self.panel_rect.bottom - 20):
+            item = self.items[i]
+            checked = item in self.selected
+            label = item if len(item) <= self.ROW_LABEL_MAX_CHARS else item[:self.ROW_LABEL_MAX_CHARS - 3] + "..."
+            label = f"{'[X]' if checked else '[ ]'} {label}"
+            btn = Button(row_x, y, "list_row", "green" if checked else "blue", label, lambda it=item: self.toggle(it))
+            self.elements.append(btn)
+
+    def additional_events(self, event):
+        self.handle_list_scroll(event)
+
+    def draw(self, surface):
+        if self.background:
+            surface.blit(self.background, (0, 0))
+        ui_bars.draw_fullscreen_overlay(surface, 190)
+
+        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(35, 35, 45),
+                               border_color=(100, 150, 255), border_width=3)
+        ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 20, "heading2")
+
+        prompt_surf = fonts.get("normal").render(self.prompt, True, (220, 220, 220))
+        surface.blit(prompt_surf, prompt_surf.get_rect(center=(self.panel_rect.centerx, self.panel_rect.y + 75)))
+
+        for el in self.elements:
+            el.draw(surface)
+
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.ROW_TOP,
+                                 self.panel_rect.height - self.ROW_TOP - 30)

@@ -312,6 +312,77 @@ class Slider:
                     play_ui_sound("slider")
                     self.last_sound_tick = current_time # Reset the throttle
 
+class TextField:
+    """A single-line text entry box with the same duck-typed interface as Button
+    (.rect, .visible, .handle_event(event), .draw(surface)) so it can sit in a
+    screen's `self.elements` list and get events/drawing for free.
+
+    Click to focus; typing while focused edits `.text`. Enter calls on_submit
+    (if given) and unfocuses; Escape just unfocuses. Screens that need Tab-like
+    behaviour between fields should defocus other fields themselves on click.
+    """
+    def __init__(self, x, y, width, height, initial_text="", numeric=False,
+                max_length=None, on_submit=None, label=None):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = str(initial_text)
+        self.numeric = numeric
+        self.max_length = max_length
+        self.on_submit = on_submit
+        self.label = label
+        self.active = False
+        self.visible = True
+
+    def _valid_char(self, ch):
+        if self.numeric:
+            return ch.isdigit() or (ch == "-" and not self.text)
+        return ch.isprintable()
+
+    def get_int(self, default=0):
+        try:
+            return int(self.text)
+        except ValueError:
+            return default
+
+    def handle_event(self, event):
+        if not self.visible:
+            return
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.active = self.rect.collidepoint(event.pos)
+            return
+
+        if not self.active or event.type != pygame.KEYDOWN:
+            return
+
+        self.text, status = process_text_input(event, self.text, max_length=self.max_length,
+                                                validation_func=self._valid_char)
+        if status == "SUBMIT":
+            self.active = False
+            if self.on_submit:
+                self.on_submit()
+        elif status == "CANCEL":
+            self.active = False
+
+    def draw(self, surface):
+        if not self.visible:
+            return
+
+        if self.label:
+            label_font = fonts.get("normal")
+            label_surf = label_font.render(self.label, True, (220, 220, 220))
+            surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
+
+        pygame.draw.rect(surface, (30, 30, 40), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255) if self.active else (150, 150, 150), self.rect, 2)
+
+        field_font = fonts.get("normal")
+        display = self.text + ("|" if self.active else "")
+        text_surf = field_font.render(display, True, (255, 255, 255))
+        old_clip = surface.get_clip()
+        surface.set_clip(self.rect.inflate(-6, -4))
+        surface.blit(text_surf, text_surf.get_rect(midleft=(self.rect.x + 8, self.rect.centery)))
+        surface.set_clip(old_clip)
+
 def process_text_input(event, current_text, max_length=None, validation_func=None):
     if event.type != pygame.KEYDOWN:
         return current_text, "TYPING"
