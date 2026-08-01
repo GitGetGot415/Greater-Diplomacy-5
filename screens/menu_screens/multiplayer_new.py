@@ -69,8 +69,7 @@ class Multiplayer_New(GameState):
         if not master_key: return
         
         os.makedirs(tournament_dir, exist_ok=True)
-        
-        from data import queries
+
         map_settings = queries.get_scenario_settings()
         
         temp_map = Map(load_path=os.path.join(directory, scenario_name), is_scenario=True, map_settings=map_settings)

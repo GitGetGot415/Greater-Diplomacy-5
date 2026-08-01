@@ -383,6 +383,7 @@ SIZES = {
     "save_file": (745, 30),
     "small_save_button": (100, 30),
     "diplomatic": (200, 30),
+    "keys": (60, 30),
     "menu": (200, 45),
     "medium": (200, 50),
     "large": (300, 80),
