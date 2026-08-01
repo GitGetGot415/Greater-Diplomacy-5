@@ -73,6 +73,27 @@ def draw_turn_loading_screen(map_screen, surface):
     multi_total = map_screen.multi_turns_total
     if multi_total > 0:
         draw_bar(center_y - 50, "Multi-Turn Skip Progress", map_screen.multi_turns_completed, multi_total)
+
+        # --- Draw the Abort Multi-Turn Button ---
+        abort_btn_rect = pygame.Rect(center_x - 110, c.SCREEN_HEIGHT - 90, 220, 45)
+        mx, my = pygame.mouse.get_pos()
+
+        already_aborting = map_screen.multi_turn_abort_requested
+        if already_aborting:
+            btn_color = (90, 90, 90)
+            abort_label = "STOPPING..."
+        else:
+            btn_color = (200, 60, 60) if abort_btn_rect.collidepoint(mx, my) else (150, 40, 40)
+            abort_label = "ABORT MULTI-TURN"
+
+        pygame.draw.rect(surface, btn_color, abort_btn_rect, border_radius=5)
+        pygame.draw.rect(surface, (255, 100, 100), abort_btn_rect, 2, border_radius=5)
+
+        abort_txt = fonts.get("button").render(abort_label, True, (255, 255, 255))
+        surface.blit(abort_txt, abort_txt.get_rect(center=abort_btn_rect.center))
+
+        # Store for the event handler
+        map_screen.multi_turn_abort_btn_rect = abort_btn_rect
         return
 
     # Render the 4 distinct phases

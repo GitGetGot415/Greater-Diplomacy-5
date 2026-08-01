@@ -49,13 +49,17 @@ def handle_map_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if hasattr(self, 'force_skip_btn_rect') and self.force_skip_btn_rect.collidepoint(mx, my):
                 self.force_skip_llm = True
-                
+
                 # --- IMPORTANT: Set the module-level abort flag so running threads instantly die ---
                 from map_logic.ai import ai_handler
                 ai_handler.FORCE_SKIP = True
                 ai_handler.abort_ai_generation()
-                
+
                 self.show_feedback("Forcing AI to skip LLM generation...")
+            elif hasattr(self, 'multi_turn_abort_btn_rect') and self.multi_turn_abort_btn_rect.collidepoint(mx, my):
+                if not self.multi_turn_abort_requested:
+                    self.multi_turn_abort_requested = True
+                    self.show_feedback("Multi-turn processing will stop after this turn...")
         return # Block all other map events while AI is processing!
     
     # 1. UI Check (make sure the mouse can't go through the ui bars)

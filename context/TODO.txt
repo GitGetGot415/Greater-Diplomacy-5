@@ -1,4 +1,12 @@
+- possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
+
+- combat zone shows both sides (or 3 sides? or 4? idk)
+- combat width might be wack if there's multiple countries involved... 10 for the side with 2 countries, 5 for the side with 1 country
+- seems a bit unbalanced
+
 - check the recent issues coming from playtesting
+
+- optimize turn processesing to make it faster
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4

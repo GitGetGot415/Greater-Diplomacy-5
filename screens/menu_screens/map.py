@@ -62,6 +62,7 @@ class Map(GameState):
         self.multi_turn_processing_complete = False
         self.multi_turns_total = 0
         self.multi_turns_completed = 0
+        self.multi_turn_abort_requested = False
         
         # --- NEW PROGRESS BAR TRACKERS ---
         self.loading_status_text = "Waiting..."
@@ -315,6 +316,7 @@ class Map(GameState):
         if turns:
             self.multi_turns_total = turns
             self.multi_turns_completed = 0
+            self.multi_turn_abort_requested = False
             self.ai_is_thinking = True
             self.loading_status_text = f"Skipping {turns} Turns..."
             threading.Thread(target=self._run_multi_turn_thread, args=(turns,), daemon=True).start()
@@ -323,16 +325,16 @@ class Map(GameState):
         from map_logic.system32 import turn_processor
         from map_logic.ai import ai_handler
         import traceback
-        
+
         try:
             ai_handler.FORCE_SKIP = True
             self.force_skip_llm = True
             self.viewing_ai_moves = True # Prevents PyGame surface edits from background thread
-            
+
             for i in range(turns):
                 self.multi_turns_completed = i + 1
                 self.loading_status_text = f"Processing Turn {i+1}/{turns}..."
-                
+
                 # Mock the UI prep variables to prevent crashes
                 self.proactive_tasks_total = 1
                 self.proactive_tasks_completed = 1
@@ -341,16 +343,25 @@ class Map(GameState):
                 self.proactive_llm_tasks = []
                 self.responsive_tasks_total = 0
                 self.responsive_tasks_completed = 0
-                
+
                 turn_processor.prepare_turn(self)
                 turn_processor.resolve_turn_logic(self)
-                
+
+                # --- ABORT CHECK ---
+                # Can't interrupt a turn mid-computation, so the turn that was
+                # running when the user clicked Abort finishes normally, and
+                # simply becomes the last one processed.
+                if self.multi_turn_abort_requested:
+                    self.multi_turns_total = self.multi_turns_completed
+                    break
+
         except Exception as e:
             self.thread_error = traceback.format_exc()
             print(f"MULTI-TURN CRASH CAUGHT:\n{self.thread_error}")
         finally:
             ai_handler.FORCE_SKIP = False
             self.force_skip_llm = False
+            self.multi_turn_abort_requested = False
             self.multi_turn_processing_complete = True
 
     def update_country_centers(self):
