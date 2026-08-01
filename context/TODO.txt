@@ -1,3 +1,28 @@
+- fix bug where countries try to ask for millitary access, even if they can already access your territory through the following:
+- puppet / master relationship
+- in a faction already
+
+- add in a symbol for converting a unit to a convoy?
+- also for some reason it looks like the symbol for convoys doesn't appear when giving orders
+
+- check the recent issues coming from playtesting
+
+- COMPLETE REWORK OF THE ORDERS SCREEN
+- instead of having to click a tile and then click the units, make it work like hoi4
+- you can just click the unit from the tile and then get a list of all units there
+(really complicated to explain, tldr make it work like hoi4)
+(THAT'S EXTREMELY VAGUE THOUGH)
+
+- lesser diplomacy
+- ...but it's publically available on github
+- ...and the files for it can be integrated onto here...?????
+- ??????????????
+- idk figure it out
+
+- artillery should be able to pierce defense so it isn't made completely useless by it
+- or maybe artillery could do a percentage of damage instead of a set amount?
+- maybe percentage or set amount, whichever one is higher???
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
