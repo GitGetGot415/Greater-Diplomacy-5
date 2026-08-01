@@ -43,7 +43,6 @@ class Multiplayer_New(GameState):
         self.go_to("SCENARIO_SETTINGS")
 
     def start_host_setup(self, scenario_name, directory=c.SCENARIOS_CUSTOM_DIR):
-        from tkinter import messagebox
         import secrets
         from data.io import multiplayer_io
         from screens.menu_screens.map import Map
@@ -60,7 +59,7 @@ class Multiplayer_New(GameState):
 
             tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
             if os.path.exists(tournament_dir):
-                messagebox.showerror("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
+                confirm_dialog.show_error("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
                 continue
             break
 
@@ -86,7 +85,7 @@ class Multiplayer_New(GameState):
         export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
         keys_path, all_keys_path = multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
         
-        messagebox.showinfo("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
+        confirm_dialog.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
 
         self.go_to("MULTIPLAYER_HOST")
 

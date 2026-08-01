@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk
 from data import queries
 from ui import confirm_dialog
 
@@ -103,9 +103,9 @@ class TurnEditor:
                     new_turns = 1
                     
                 override_dict[btype] = new_turns
-                messagebox.showinfo("Applied", f"Updated all '{btype}' to {new_turns} turns. (Don't forget to Save All)")
+                confirm_dialog.show_success("Applied", f"Updated all '{btype}' to {new_turns} turns. (Don't forget to Save All)", tk_parent=self.root)
             except ValueError:
-                messagebox.showerror("Error", "Please enter a valid integer for turns.")
+                confirm_dialog.show_error("Error", "Please enter a valid integer for turns.", tk_parent=self.root)
                 
         listbox.bind('<<ListboxSelect>>', on_select)
         tk.Button(edit_frame, text="Apply locally", command=apply_change).grid(row=2, column=0, columnspan=2, pady=10)
@@ -117,7 +117,7 @@ class TurnEditor:
         self.settings["unit_turn_overrides"] = self.unit_overrides
         self.settings["building_turn_overrides"] = self.building_overrides
         queries.save_scenario_settings(self.settings)
-        messagebox.showinfo("Saved", "Successfully saved overrides to scenario settings.")
+        confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.", tk_parent=self.root)
         self.root.destroy()
 
     def reset_to_defaults(self):

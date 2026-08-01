@@ -1,6 +1,6 @@
 import os
 import json
-from tkinter import messagebox
+from ui import confirm_dialog
 from data import queries
 from gameState import FolderListState
 from ui_elements import Button
@@ -74,10 +74,8 @@ class Load_Game(FolderListState):
                 history_data = json.load(f)
 
         if not history_data:
-            root = queries.get_transient_tk_root()
-            messagebox.showinfo("No History", "History file is empty." if os.path.exists(history_path)
-                                else "No history available for this save.", parent=root)
-            queries.destroy_tk_root(root)
+            confirm_dialog.show_info("No History", "History file is empty." if os.path.exists(history_path)
+                                     else "No history available for this save.")
             return
 
         turns = sorted([int(k) for k in history_data.keys()])

@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, colorchooser, filedialog
+from tkinter import ttk, colorchooser, filedialog
 import pygame
 import os
 import tempfile
@@ -207,7 +207,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
     def open_event_window(event_idx=None):
         target = current_target[0]
         if not target:
-            messagebox.showwarning("Warning", "Select a nation first.")
+            confirm_dialog.show_warning("Warning", "Select a nation first.", tk_parent=root)
             return
 
         edit_win = tk.Toplevel(root)
@@ -490,7 +490,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
                         msg_var.set(b64_str)
                         update_act_row()
                     except Exception as e:
-                        messagebox.showerror("Error", f"Could not load image: {e}")
+                        confirm_dialog.show_error("Error", f"Could not load image: {e}", tk_parent=edit_win)
 
             pick_color_btn = tk.Button(row_frame, text="Pick Color", command=do_pick_color)
             pick_img_btn = tk.Button(row_frame, text="Browse Image", command=do_pick_image)
@@ -777,7 +777,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             if not n: return
             for v in self.script_variables:
                 if v["name"] == n:
-                    messagebox.showerror("Error", "Variable name must be unique.")
+                    confirm_dialog.show_error("Error", "Variable name must be unique.", tk_parent=var_win)
                     return
             self.script_variables.append({
                 "name": n, "type": type_var.get(), "value": val_var.get()
@@ -796,7 +796,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             if old_v["name"] != new_n:
                 for i, v in enumerate(self.script_variables):
                     if v["name"] == new_n and i != idx:
-                        messagebox.showerror("Error", "Variable name must be unique.")
+                        confirm_dialog.show_error("Error", "Variable name must be unique.", tk_parent=var_win)
                         return
                         
             usage = get_usage(old_v["name"])

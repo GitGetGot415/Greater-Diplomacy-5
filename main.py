@@ -356,15 +356,11 @@ class Controller:
                     buttons.render_buttons(self.states["MAP"])
                 else:
                     print(f"Failed to load tournament: {msg}")
-                    
+
                     # Show popup to user
-                    import tkinter as tk
-                    from tkinter import messagebox
-                    root = tk.Tk()
-                    root.withdraw()
-                    messagebox.showerror("Load Failed", msg)
-                    root.destroy()
-                    
+                    from ui import confirm_dialog
+                    confirm_dialog.show_error("Load Failed", msg)
+
                     # Abort transition
                     self.active_state.done = False
                     self.active_state.next_state = "MULTIPLAYER_HUB"

@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog
 import unicodedata
 import data.constants as c
 from data.map import load_map
@@ -149,13 +149,13 @@ def open_editor_date(self):
             b_dpt = int(dpt_ent.get())
             
             if not (1 <= d <= 30):
-                messagebox.showerror("Error", "Day must be between 1 and 30.")
+                confirm_dialog.show_error("Error", "Day must be between 1 and 30.", tk_parent=root)
                 return
             if not (0 <= m <= 11):
-                messagebox.showerror("Error", "Month must be between 1 and 12.")
+                confirm_dialog.show_error("Error", "Month must be between 1 and 12.", tk_parent=root)
                 return
             if b_dpt <= 0:
-                messagebox.showerror("Error", "Days per turn must be positive.")
+                confirm_dialog.show_error("Error", "Days per turn must be positive.", tk_parent=root)
                 return
                 
             self.time_manager.day = d
@@ -168,7 +168,7 @@ def open_editor_date(self):
             self.show_feedback(f"Date & Turn Rate set!")
             close_menu()
         except ValueError:
-            messagebox.showerror("Error", "Please enter valid integers.")
+            confirm_dialog.show_error("Error", "Please enter valid integers.", tk_parent=root)
 
     tk.Button(root, text="Apply Date", command=apply_date, bg="#FF9800", fg="black", pady=5).pack(pady=15, fill="x", padx=20)
     queries.run_tk_loop(self, root)
@@ -646,7 +646,7 @@ def select_resource_brush(self):
                 
             close_menu()
         except ValueError:
-            messagebox.showerror("Error", "Amount must be a whole number.")
+            confirm_dialog.show_error("Error", "Amount must be a whole number.", tk_parent=root)
 
     tk.Button(root, text="Confirm Selection", command=on_confirm, 
               bg="#9C27B0", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=15)
@@ -964,13 +964,13 @@ def open_clear_menu(self):
         r_val = resource_type_var.get()
         
         if ("country" in opt or "countries" in opt) and not c_val:
-            messagebox.showerror("Error", "Please select a country.")
+            confirm_dialog.show_error("Error", "Please select a country.", tk_parent=root)
             return
         if opt in ["all (x) units", "all (x) units from country (x)"] and not u_val:
-            messagebox.showerror("Error", "Please select a unit type.")
+            confirm_dialog.show_error("Error", "Please select a unit type.", tk_parent=root)
             return
         if opt in ["all (x) resources", "all (x) resources on (x) countries territory"] and not r_val:
-            messagebox.showerror("Error", "Please select a resource type.")
+            confirm_dialog.show_error("Error", "Please select a resource type.", tk_parent=root)
             return
             
         msg = f"Are you sure you want to clear:\n{opt}"

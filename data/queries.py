@@ -2664,10 +2664,8 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 total_maps += 1
     
     if total_maps == 0:
-        from tkinter import messagebox
-        root = get_transient_tk_root()
-        messagebox.showinfo("Data Refresh", "No maps found to refresh.", parent=root)
-        destroy_tk_root(root)
+        from ui import confirm_dialog
+        confirm_dialog.show_info("Data Refresh", "No maps found to refresh.")
         return
 
     # Setup screen state for UI
@@ -3005,7 +3003,7 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
     success/error dialogs stay identical.
     """
     from pathlib import Path
-    from tkinter import messagebox
+    from ui import confirm_dialog
     try:
         zip_path = os.path.join(str(Path.home() / "Downloads"), zip_name)
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -3013,10 +3011,10 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
                 for file in files:
                     full = os.path.join(root_dir, file)
                     zipf.write(full, os.path.relpath(full, source_dir))
-        messagebox.showinfo("Export Success", f"Exported to Downloads as {zip_name}", parent=parent)
+        confirm_dialog.show_success("Export Success", f"Exported to Downloads as {zip_name}", tk_parent=parent)
         return zip_path
     except Exception as e:
-        messagebox.showerror("Export Error", str(e), parent=parent)
+        confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
 def import_zip_to_dir(target_parent_dir, on_success=None):
@@ -3026,10 +3024,12 @@ def import_zip_to_dir(target_parent_dir, on_success=None):
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
     from pathlib import Path
-    from tkinter import filedialog, messagebox
+    from tkinter import filedialog
+    from ui import confirm_dialog
 
     root = get_transient_tk_root()
     file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")], parent=root)
+    destroy_tk_root(root)
 
     if file_path:
         target_dir = os.path.join(target_parent_dir, Path(file_path).stem)
@@ -3037,13 +3037,11 @@ def import_zip_to_dir(target_parent_dir, on_success=None):
             target_dir += "_imported"
         try:
             extract_and_flatten_zip(file_path, target_dir)
-            messagebox.showinfo("Import Success", "Imported successfully.", parent=root)
+            confirm_dialog.show_success("Import Success", "Imported successfully.")
             if on_success:
                 on_success()
         except Exception as e:
-            messagebox.showerror("Import Error", str(e), parent=root)
-
-    destroy_tk_root(root)
+            confirm_dialog.show_error("Import Error", str(e))
 
 def ask_directory(title, initialdir):
     """Native folder picker returning the chosen path, or None if cancelled."""

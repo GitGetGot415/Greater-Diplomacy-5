@@ -290,3 +290,96 @@ def ask_string(title, message, initial="", tk_parent=None, allow_empty=True):
         return text, ""
 
     return _run_text_input_dialog(title, message, initial, tk_parent, char_allowed, validate)
+
+
+_KIND_ACCENTS = {
+    "info": (80, 150, 220),
+    "success": (60, 170, 90),
+    "warning": (210, 160, 40),
+    "error": (200, 70, 70),
+}
+
+
+def show_message(title, message, tk_parent=None, kind="info"):
+    """Blocking pygame notice dialog with a single OK button.
+
+    Drop-in replacement for messagebox.showinfo / showwarning / showerror.
+    `kind` picks the accent colour: "info", "success", "warning", or "error".
+    """
+    surface, owns_display = _acquire_surface()
+    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
+
+    title_font = fonts.get("heading2")
+    msg_font = fonts.get("normal")
+    btn_font = fonts.get("button")
+    accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
+
+    box_w = min(520, surface.get_width() - 40)
+    lines = _wrap_text(message, msg_font, box_w - 40)
+    box_h = max(200, 110 + len(lines) * (msg_font.get_height() + 2) + 60)
+    box_rect = pygame.Rect(0, 0, box_w, box_h)
+    box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
+
+    ok_rect = pygame.Rect(box_rect.centerx - 60, box_rect.bottom - 55, 120, 40)
+
+    background = surface.copy()
+    clock = pygame.time.Clock()
+    waiting = True
+
+    try:
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE):
+                        waiting = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if ok_rect.collidepoint(event.pos):
+                        waiting = False
+
+            surface.blit(background, (0, 0))
+            overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            surface.blit(overlay, (0, 0))
+
+            pygame.draw.rect(surface, (40, 40, 40), box_rect)
+            pygame.draw.rect(surface, accent, box_rect, 3)
+
+            title_surf = title_font.render(title, True, (255, 255, 255))
+            surface.blit(title_surf, title_surf.get_rect(center=(box_rect.centerx, box_rect.y + 35)))
+
+            y = box_rect.y + 75
+            for line in lines:
+                line_surf = msg_font.render(line, True, (210, 210, 210))
+                surface.blit(line_surf, line_surf.get_rect(center=(box_rect.centerx, y)))
+                y += msg_font.get_height() + 2
+
+            mx, my = pygame.mouse.get_pos()
+            hovered = ok_rect.collidepoint(mx, my)
+            ok_color = tuple(min(255, ch + 40) for ch in accent) if hovered else accent
+            pygame.draw.rect(surface, ok_color, ok_rect, border_radius=4)
+            ok_surf = btn_font.render("OK", True, (255, 255, 255))
+            surface.blit(ok_surf, ok_surf.get_rect(center=ok_rect.center))
+
+            pygame.display.flip()
+            clock.tick(60)
+    finally:
+        _show_tk_chain(hidden_tk)
+        _release_surface(owns_display)
+
+
+def show_info(title, message, tk_parent=None):
+    show_message(title, message, tk_parent=tk_parent, kind="info")
+
+
+def show_success(title, message, tk_parent=None):
+    show_message(title, message, tk_parent=tk_parent, kind="success")
+
+
+def show_warning(title, message, tk_parent=None):
+    show_message(title, message, tk_parent=tk_parent, kind="warning")
+
+
+def show_error(title, message, tk_parent=None):
+    show_message(title, message, tk_parent=tk_parent, kind="error")

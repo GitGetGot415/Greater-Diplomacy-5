@@ -21,8 +21,7 @@ class Multiplayer_Hub(GameState):
         ]
 
     def show_help(self):
-        from tkinter import messagebox
-        root = queries.get_transient_tk_root()
+        from ui import confirm_dialog
         help_text = (
             "Tournaments allow for asynchronous multiplayer gameplay.\n\n"
             "Host: Create a new tournament, distribute the generated .gd5tour file and the player keys to your friends. "
@@ -31,8 +30,7 @@ class Multiplayer_Hub(GameState):
             "Player: Use 'Join Game' to load the .gd5tour file using your player key. "
             "Submit your orders and click 'Export Turn' to generate a .gd5move file, and send it to the host."
         )
-        messagebox.showinfo("Tournament Help", help_text, parent=root)
-        queries.destroy_tk_root(root)
+        confirm_dialog.show_info("Tournament Help", help_text)
 
     def host_game(self):
         self.go_to("MULTIPLAYER_HOST")
