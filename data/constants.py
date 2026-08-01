@@ -571,6 +571,18 @@ TRUCK_CONVERT_TURNS = 3
 ICON_TRAINING = "Training"
 ICON_CONSTRUCTION = "Hammer"
 ICON_DISBANDING = "Disbanding"
+ICON_CONVERTING_TO_CONVOY = "Convoying"
+ICON_CONVERTING_TO_LAND = "Unconvoying"
+ICON_CONVERTING_TO_TRUCK = "Trucking"
+ICON_CONVERTING_TO_SHIP = "Untrucking"
+
+# Maps a unit's CONVERT order "to" field to the icon shown over the unit while converting
+CONVERSION_ICONS = {
+    "Convoy": ICON_CONVERTING_TO_CONVOY,
+    "Land Unit": ICON_CONVERTING_TO_LAND,
+    "Truck": ICON_CONVERTING_TO_TRUCK,
+    "Ship": ICON_CONVERTING_TO_SHIP,
+}
 ICON_BOMBARDMENT = "Bombardment Arrows"
 ICON_BOMBARDMENT_LONG = "Long Range Bombardment Arrows"
 ICON_BOMBARDMENT_VERY_LONG = "Very Long Range Bombardment Arrows"

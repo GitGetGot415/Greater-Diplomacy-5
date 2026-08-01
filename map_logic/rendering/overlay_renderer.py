@@ -402,6 +402,19 @@ def draw_overlay_content(self, surface):
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
+                    # --- Conversion Indicator (Convoy/Truck transformations) ---
+                    if not is_partial:
+                        convert_target = next((u.get("order", {}).get("to") for u in province.get("units", [])
+                                                if u.get("order", {}).get("type") == "CONVERT"), None)
+                        convert_icon = c.CONVERSION_ICONS.get(convert_target)
+                        if convert_icon:
+                            convert_sym = symbol_loader.get_symbol(convert_icon, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                            if convert_sym:
+                                convert_sym = map_utils.apply_tilt(convert_sym, self.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+                                convert_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
+                                rect = convert_sym.get_rect(center=(sx, sy))
+                                surface.blit(convert_sym, rect)
+
                 # --- ECONOMY VIEW ---
                 elif self.secondary_mode == "ECONOMY":
                     if is_partial:

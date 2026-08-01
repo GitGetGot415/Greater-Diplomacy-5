@@ -1,5 +1,3 @@
-- add in a symbol for converting a unit to a convoy?
-
 - check the recent issues coming from playtesting
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
