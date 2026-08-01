@@ -345,7 +345,7 @@ def process_basic_proactive_ai(map_screen):
                     if co == ai_name or co not in active_nations: continue
                     if co in co_belligerents: continue
                     if co in my_enemies: continue
-                    if queries.has_military_access(ai_name, co, map_screen.nation_data): continue
+                    if not queries.needs_military_access_request(ai_name, co, map_screen.nation_data): continue
                     co_belligerents.append(co)
 
             for co in co_belligerents:

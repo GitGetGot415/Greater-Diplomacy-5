@@ -2,6 +2,7 @@ import copy
 from map_logic.system32 import edit_province_ownership
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
+from map_logic.diplomacy.diplomacy_messages import clear_pending
 import data.constants as c
 
 # --- RECURSIVE PUPPET HELPERS ---
@@ -80,6 +81,14 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
     if queries.are_at_war(master, puppet, nation_data) or queries.are_at_war(puppet, master, nation_data):
         finalize_neutral(nation_data, master, puppet)
 
+    # Clear military access (granted and pending) since puppet/master already have free passage
+    if "military_access" in nation_data.get(master, {}) and puppet in nation_data[master]["military_access"]:
+        nation_data[master]["military_access"].remove(puppet)
+    if "military_access" in nation_data.get(puppet, {}) and master in nation_data[puppet]["military_access"]:
+        nation_data[puppet]["military_access"].remove(master)
+    clear_pending(nation_data, master, puppet, only_actions=["REQ_MILITARY_ACCESS"])
+    clear_pending(nation_data, puppet, master, only_actions=["REQ_MILITARY_ACCESS"])
+
 def pull_puppets_into_war(master, target, map_data, nation_data):
     def _add_war(p):
         if queries.are_in_same_faction(p, target, nation_data):
@@ -113,7 +122,15 @@ def pull_puppets_into_faction(master, fac, map_data, nation_data):
                     finalize_neutral(nation_data, p, member)
                 nation_data[p].setdefault("relations", {})[member] = 100
                 nation_data[member].setdefault("relations", {})[p] = 100
-                
+
+                # Clear military access (granted and pending) since they are now in the same faction
+                if "military_access" in nation_data[p] and member in nation_data[p]["military_access"]:
+                    nation_data[p]["military_access"].remove(member)
+                if "military_access" in nation_data[member] and p in nation_data[member]["military_access"]:
+                    nation_data[member]["military_access"].remove(p)
+                clear_pending(nation_data, p, member, only_actions=["REQ_MILITARY_ACCESS"])
+                clear_pending(nation_data, member, p, only_actions=["REQ_MILITARY_ACCESS"])
+
     apply_to_puppets_recursively(master, nation_data, _set_fac)
 
 def pull_puppets_out_of_faction(master, nation_data):
@@ -416,6 +433,10 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
                     nation_data[joiner]["military_access"].remove(member)
                 if "military_access" in nation_data[member] and joiner in nation_data[member]["military_access"]:
                     nation_data[member]["military_access"].remove(joiner)
+
+                # Cancel any now-unnecessary pending military access requests between them
+                clear_pending(nation_data, joiner, member, only_actions=["REQ_MILITARY_ACCESS"])
+                clear_pending(nation_data, member, joiner, only_actions=["REQ_MILITARY_ACCESS"])
 
         if queries.is_faction_at_war(fac, nation_data):
             queries.add_member_to_pre_war_map(joiner, fac, map_data, nation_data)

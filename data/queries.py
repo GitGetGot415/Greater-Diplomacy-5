@@ -587,6 +587,19 @@ def has_military_access(moving_nation, target_owner, nation_data):
     """Returns True if the target_owner has granted military access to the moving_nation."""
     return moving_nation in nation_data.get(target_owner, {}).get("military_access", [])
 
+def needs_military_access_request(moving_nation, target_owner, nation_data):
+    """False if moving_nation can already enter target_owner's territory.
+
+    Covers explicit grants as well as implicit access via puppet/master,
+    faction, or alliance ties, so the AI doesn't ask for something it
+    (or its allies) already has.
+    """
+    if has_military_access(moving_nation, target_owner, nation_data):
+        return False
+    if target_owner in get_all_friendly_nations(moving_nation, nation_data):
+        return False
+    return True
+
 
 def can_convoy_enter(current_province, target_province):
     """Convoys on a land tile can only move into water tiles."""
