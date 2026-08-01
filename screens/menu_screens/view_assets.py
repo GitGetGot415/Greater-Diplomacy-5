@@ -65,7 +65,7 @@ class TopBarOverlay:
 
         # No Back-button clearance needed here, so it can sit right at the top edge.
         folder_label = self.screen.current_folder.upper() if self.screen.current_folder else "FILES"
-        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 15))
+        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 72))
 
         name_text = self.screen.current_file or "No image selected"
         name_surf = fonts.get("normal").render(name_text, True, c.COLOR_GOLD_HIGHLIGHT)
@@ -199,7 +199,10 @@ class View_Assets(GameState):
         try:
             downloads_dir = str(Path.home() / "Downloads")
             os.makedirs(downloads_dir, exist_ok=True)
-            shutil.copy2(src, os.path.join(downloads_dir, self.current_file))
+            # copy() (not copy2()) so the download gets today's mtime instead of
+            # inheriting the source asset's, which can be months old and would
+            # otherwise bury it in a Downloads folder sorted by date modified.
+            shutil.copy(src, os.path.join(downloads_dir, self.current_file))
             self.download_status = "Saved to Downloads"
             self.download_status_color = c.COLOR_SUCCESS_GREEN
         except Exception as e:
