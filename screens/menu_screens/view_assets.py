@@ -21,6 +21,13 @@ FOLDER_ROW_H = 40
 FILE_ROW_H = 24
 FILE_FONT_PRESET = "small"
 
+PREVIEW_TEXT_FONT = "small"
+PREVIEW_MARGIN = 20
+
+IMAGE_EXTENSIONS = (".png",)
+TEXT_EXTENSIONS = (".txt",)
+VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS + TEXT_EXTENSIONS
+
 
 def _truncate_text(text, font, max_width):
     """Shortens text with a trailing ellipsis so it fits max_width, for the
@@ -38,7 +45,44 @@ def _truncate_text(text, font, max_width):
             hi = mid - 1
     return (text[:lo] + "...") if lo > 0 else "..."
 
-# Folders that hold non-image assets and shouldn't show up as browsable albums.
+
+def _wrap_text(text, font, max_width):
+    """Word-wraps text to max_width, preserving blank lines and hard-breaking
+    any single word too wide to ever fit (long paths/URLs in README files)."""
+    lines = []
+    for paragraph in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if not paragraph:
+            lines.append("")
+            continue
+
+        current = ""
+        for word in paragraph.split(" "):
+            candidate = f"{current} {word}" if current else word
+            if font.size(candidate)[0] <= max_width:
+                current = candidate
+                continue
+
+            if current:
+                lines.append(current)
+                current = ""
+
+            if font.size(word)[0] <= max_width:
+                current = word
+                continue
+
+            chunk = ""
+            for ch in word:
+                if font.size(chunk + ch)[0] <= max_width:
+                    chunk += ch
+                else:
+                    lines.append(chunk)
+                    chunk = ch
+            current = chunk
+
+        lines.append(current)
+    return lines
+
+# Folders that hold non-image, non-text assets and shouldn't show up as browsable albums.
 EXCLUDED_ASSET_FOLDERS = {"music", "sounds", "fonts"}
 
 
@@ -67,7 +111,7 @@ class TopBarOverlay:
         folder_label = self.screen.current_folder.upper() if self.screen.current_folder else "FILES"
         surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 72))
 
-        name_text = self.screen.current_file or "No image selected"
+        name_text = self.screen.current_file or "No file selected"
         name_surf = fonts.get("normal").render(name_text, True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(name_surf, (PREVIEW_X + 20, 35))
 
@@ -87,8 +131,11 @@ class View_Assets(GameState):
 
         self.current_folder = None
         self.current_file = None
+        self.preview_kind = None  # "image" | "text" | None
         self.preview_surface = None
         self.preview_error = None
+        self.preview_lines = []
+        self.preview_line_h = 20
 
         self.download_status = None
         self.download_status_color = c.COLOR_SUCCESS_GREEN
@@ -96,15 +143,20 @@ class View_Assets(GameState):
 
         self.folder_scroll_y = 0
         self.file_scroll_y = 0
+        self.preview_scroll_y = 0
         self.max_folder_scroll = 0
         self.max_file_scroll = 0
+        self.max_preview_scroll = 0
 
         self.folder_dragging = False
         self.file_dragging = False
+        self.preview_dragging = False
         self.folder_track_rect = None
         self.folder_handle_rect = None
         self.file_track_rect = None
         self.file_handle_rect = None
+        self.preview_track_rect = None
+        self.preview_handle_rect = None
 
         self.folders = self._list_folders()
         self.files = []
@@ -127,16 +179,17 @@ class View_Assets(GameState):
             if not os.path.isdir(full) or name.lower() in EXCLUDED_ASSET_FOLDERS:
                 continue
             # Folders with nothing viewable in them aren't worth listing.
-            if self._list_png_files(name):
+            if self._list_viewable_files(name):
                 names.append(name)
         return names
 
-    def _list_png_files(self, folder):
+    def _list_viewable_files(self, folder):
         folder_path = os.path.join(c.ASSETS_ROOT_DIR, folder)
         if not os.path.isdir(folder_path):
             return []
         return sorted(
-            (name for name in os.listdir(folder_path) if name.lower().endswith(".png")),
+            (name for name in os.listdir(folder_path)
+             if os.path.splitext(name)[1].lower() in VIEWABLE_EXTENSIONS),
             key=str.lower,
         )
 
@@ -158,6 +211,17 @@ class View_Assets(GameState):
             return pygame.transform.scale(img, new_size)
         return pygame.transform.smoothscale(img, new_size)
 
+    def _layout_text_preview(self, raw_text):
+        font = fonts.get(PREVIEW_TEXT_FONT)
+        max_width = max(1, PREVIEW_W - PREVIEW_MARGIN * 2)
+
+        self.preview_lines = _wrap_text(raw_text, font, max_width)
+        self.preview_line_h = font.get_height() + 4
+
+        avail_h = max(1, c.SCREEN_HEIGHT - HEADER_H - PREVIEW_MARGIN * 2)
+        content_h = len(self.preview_lines) * self.preview_line_h
+        self.max_preview_scroll = min(0, avail_h - content_h)
+
     # ------------------------------------------------------------------ #
     #                            SELECTION                               #
     # ------------------------------------------------------------------ #
@@ -165,33 +229,48 @@ class View_Assets(GameState):
     def select_folder(self, folder):
         self.current_folder = folder
         self.file_scroll_y = 0
-        self.files = self._list_png_files(folder)
+        self.files = self._list_viewable_files(folder)
 
         if self.files:
             self.select_file(self.files[0])
         else:
             self.current_file = None
+            self.preview_kind = None
             self.preview_surface = None
             self.preview_error = None
+            self.preview_lines = []
+            self.max_preview_scroll = 0
             self.refresh_ui()
 
     def select_file(self, name):
         self.current_file = name
+        self.preview_kind = None
         self.preview_error = None
         self.preview_surface = None
+        self.preview_lines = []
+        self.preview_scroll_y = 0
+        self.max_preview_scroll = 0
         self.download_status = None
 
         path = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, name)
+        ext = os.path.splitext(name)[1].lower()
         try:
-            raw_img = pygame.image.load(path).convert_alpha()
-            self.preview_surface = self._scale_to_fit(raw_img)
+            if ext in TEXT_EXTENSIONS:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    raw_text = f.read()
+                self._layout_text_preview(raw_text)
+                self.preview_kind = "text"
+            else:
+                raw_img = pygame.image.load(path).convert_alpha()
+                self.preview_surface = self._scale_to_fit(raw_img)
+                self.preview_kind = "image"
         except Exception as e:
             self.preview_error = f"Failed to load {name}: {e}"
 
         self.refresh_ui()
 
-    def download_current_image(self):
-        """Copies the full-resolution source PNG (not the scaled preview) to Downloads."""
+    def download_current_file(self):
+        """Copies the full-resolution source file (not the scaled/wrapped preview) to Downloads."""
         if not self.current_folder or not self.current_file:
             return
 
@@ -260,7 +339,7 @@ class View_Assets(GameState):
 
         if self.current_file:
             self.elements.append(Button(c.SCREEN_WIDTH - 220, 20, "medium", "green",
-                                        "Download", self.download_current_image))
+                                        "Download", self.download_current_file))
 
     # ------------------------------------------------------------------ #
     #                        SCROLL / EVENTS                             #
@@ -273,6 +352,9 @@ class View_Assets(GameState):
         "file": dict(attr="file_scroll_y", limit_attr="max_file_scroll",
                      track_attr="file_track_rect", handle_attr="file_handle_rect",
                      drag_attr="file_dragging"),
+        "preview": dict(attr="preview_scroll_y", limit_attr="max_preview_scroll",
+                        track_attr="preview_track_rect", handle_attr="preview_handle_rect",
+                        drag_attr="preview_dragging"),
     }
 
     def additional_events(self, event):
@@ -282,6 +364,8 @@ class View_Assets(GameState):
                 self.handle_list_scroll(event, **self.PANES["folder"])
             elif mouse_x < PREVIEW_X:
                 self.handle_list_scroll(event, **self.PANES["file"])
+            else:
+                self.handle_list_scroll(event, **self.PANES["preview"])
             return
 
         for pane in self.PANES.values():
@@ -294,12 +378,14 @@ class View_Assets(GameState):
         pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, c.SCREEN_HEIGHT))
         pygame.draw.rect(surface, (20, 20, 25), (PREVIEW_X, 0, PREVIEW_W, c.SCREEN_HEIGHT))
 
-        # --- Preview image (majority of the screen, for high-quality viewing) ---
+        # --- Preview (majority of the screen, for high-quality viewing) ---
         center = (PREVIEW_X + PREVIEW_W // 2, HEADER_H + (c.SCREEN_HEIGHT - HEADER_H) // 2)
-        if self.preview_surface:
+        if self.preview_kind == "image" and self.preview_surface:
             surface.blit(self.preview_surface, self.preview_surface.get_rect(center=center))
+        elif self.preview_kind == "text":
+            self._draw_text_preview(surface)
         else:
-            msg = self.preview_error or "No image selected"
+            msg = self.preview_error or "No file selected"
             color = (255, 100, 100) if self.preview_error else (150, 150, 150)
             text_surf = fonts.get("normal").render(msg, True, color)
             surface.blit(text_surf, text_surf.get_rect(center=center))
@@ -309,3 +395,18 @@ class View_Assets(GameState):
                                  width=10, **self.PANES["folder"])
         self.draw_list_scrollbar(surface, PREVIEW_X - 15, HEADER_H, c.SCREEN_HEIGHT - HEADER_H,
                                  width=10, **self.PANES["file"])
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 15, HEADER_H, c.SCREEN_HEIGHT - HEADER_H,
+                                 width=10, **self.PANES["preview"])
+
+    def _draw_text_preview(self, surface):
+        font = fonts.get(PREVIEW_TEXT_FONT)
+        line_h = self.preview_line_h
+        cull_bottom = c.SCREEN_HEIGHT + line_h
+
+        y = HEADER_H + PREVIEW_MARGIN + self.preview_scroll_y
+        for line in self.preview_lines:
+            if HEADER_H - line_h < y < cull_bottom:
+                if line:
+                    text_surf = font.render(line, True, (220, 220, 220))
+                    surface.blit(text_surf, (PREVIEW_X + PREVIEW_MARGIN, y))
+            y += line_h
