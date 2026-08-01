@@ -27,6 +27,8 @@
 
 - loading screen for saving if it takes a long time
 
+- please make the ai less... dumb? (very vague, gonna have to clarify on this)
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
