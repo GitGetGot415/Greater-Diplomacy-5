@@ -147,7 +147,7 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
         p = self.panel_rect
         self.elements = [
             Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
-            Button(p.right - 230, p.y + 20, "medium", "red", "Reset All to 0", self.reset_all),
+            Button(p.right - 120, p.y + 20, "small", "red", "Reset All", self.reset_all),
         ]
 
         row_top = p.y + 90
