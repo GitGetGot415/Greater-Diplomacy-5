@@ -2,6 +2,7 @@
 import pygame
 import os
 from pathlib import Path
+from tkinter import filedialog
 import unicodedata
 from gameState import GameState
 from ui_elements import process_text_input
@@ -155,7 +156,14 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback("Failed to export")
 
     def import_flag(self):
-        def on_file_picked(file_path):
+        root = queries.get_transient_tk_root()
+        file_path = filedialog.askopenfilename(
+            title="Select Flag Image",
+            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
+        )
+        queries.destroy_tk_root(root)
+
+        if file_path:
             try:
                 new_img = pygame.image.load(file_path).convert()
                 self.flag_surf = pygame.transform.scale(new_img, self.flag_size)
@@ -164,11 +172,15 @@ class Edit_Country_Screen(GameState):
             except Exception as e:
                 self.map_screen.show_feedback("Failed to import flag.")
 
-        queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR, on_file_picked,
-                                  mode="open_file", extensions=[".png", ".jpg", ".jpeg", ".bmp"])
-
     def import_portrait(self):
-        def on_file_picked(file_path):
+        root = queries.get_transient_tk_root()
+        file_path = filedialog.askopenfilename(
+            title="Select Portrait Image",
+            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
+        )
+        queries.destroy_tk_root(root)
+
+        if file_path:
             try:
                 new_img = pygame.image.load(file_path).convert()
                 self.portrait_surf = pygame.transform.scale(new_img, self.portrait_size)
@@ -176,9 +188,6 @@ class Edit_Country_Screen(GameState):
                 self.map_screen.show_feedback("Portrait Imported!")
             except Exception as e:
                 self.map_screen.show_feedback("Failed to import portrait.")
-
-        queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR, on_file_picked,
-                                  mode="open_file", extensions=[".png", ".jpg", ".jpeg", ".bmp"])
 
     def refresh_ui(self):
         buttons.render_edit_country_buttons(self)

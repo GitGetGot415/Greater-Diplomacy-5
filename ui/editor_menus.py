@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 import unicodedata
 import data.constants as c
 from data.map import load_map
@@ -11,14 +11,15 @@ from map_logic.diplomacy.diplomacy_agreements import assign_puppet
 # ==========================================
 
 def editor_load_map(self):
-    """Opens a native folder picker to load a map folder directly into the editor."""
-    def on_folder_picked(path):
+    """Opens a file dialog to load a map folder directly into the editor."""
+    root = queries.get_transient_tk_root()
+    path = filedialog.askdirectory(initialdir=c.SCENARIOS_CUSTOM_DIR, title="Select Map Folder to Edit")
+    queries.destroy_tk_root(root)
+
+    if path:
         load_map.load_map_assets(self, path)
         self.refresh_political_map()
         self.show_feedback("Map Loaded into Editor")
-
-    queries.open_file_browser(self, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
-                              on_folder_picked, mode="select_folder")
 
 def _select_brush(self, mode, attr, items, title, prompt, feedback_label="Brush"):
     """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""

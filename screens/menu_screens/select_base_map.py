@@ -68,7 +68,7 @@ class Select_Base_Map(FolderListState):
             self.elements.extend([
                 Button(20, 20, "small", "red", "Back", self.exit_screen),
                 Button(160, 20, "medium", "green", "Import .zip",
-                       lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
+                       lambda: queries.import_zip_to_dir(self.managed_dir, self.refresh_ui)),
                 Button("centered", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
                        lambda: self.set_sub_state("BASE_MAPS")),
             ])

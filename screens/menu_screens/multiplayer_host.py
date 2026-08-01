@@ -25,13 +25,22 @@ class Multiplayer_Host(GameState):
         self.go_to("MULTIPLAYER_NEW")
 
     def load_existing(self):
-        queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
-                                  self._on_tournament_file_picked, mode="open_file", extensions=[".gd5tour"])
-
-    def _on_tournament_file_picked(self, file_path):
+        from tkinter import filedialog
         from ui import confirm_dialog
-        key = confirm_dialog.ask_string("Master Key", "Enter your Master Key:")
-        if not key:
+
+        root = queries.get_transient_tk_root()
+
+        file_path = filedialog.askopenfilename(
+            initialdir=c.TOURNAMENT_SAVES_DIR,
+            title="Select Tournament File",
+            filetypes=[("Tournament Files", "*.gd5tour")],
+            parent=root
+        )
+        queries.destroy_tk_root(root)
+
+        key = confirm_dialog.ask_string("Master Key", "Enter your Master Key:") if file_path else None
+
+        if not file_path or not key:
             return
 
         self.selected_tournament_path = file_path
