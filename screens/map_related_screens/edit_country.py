@@ -2,7 +2,6 @@
 import pygame
 import os
 from pathlib import Path
-from tkinter import filedialog
 import unicodedata
 from gameState import GameState
 from ui_elements import process_text_input
@@ -156,13 +155,8 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback("Failed to export")
 
     def import_flag(self):
-        root = queries.get_transient_tk_root()
-        file_path = filedialog.askopenfilename(
-            title="Select Flag Image",
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
-        )
-        queries.destroy_tk_root(root)
-
+        file_path = queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
+                                              extensions=[".png", ".jpg", ".jpeg", ".bmp"])
         if file_path:
             try:
                 new_img = pygame.image.load(file_path).convert()
@@ -173,13 +167,8 @@ class Edit_Country_Screen(GameState):
                 self.map_screen.show_feedback("Failed to import flag.")
 
     def import_portrait(self):
-        root = queries.get_transient_tk_root()
-        file_path = filedialog.askopenfilename(
-            title="Select Portrait Image",
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")]
-        )
-        queries.destroy_tk_root(root)
-
+        file_path = queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
+                                              extensions=[".png", ".jpg", ".jpeg", ".bmp"])
         if file_path:
             try:
                 new_img = pygame.image.load(file_path).convert()

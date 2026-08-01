@@ -34,7 +34,7 @@ class Load_Game(FolderListState):
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.exit_screen),
             Button(160, 20, "medium", "green", "Import .zip",
-                   lambda: queries.import_zip_to_dir(self.managed_dir, self.refresh_ui))
+                   lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
         ]
 
         folders = self.list_folders()

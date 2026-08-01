@@ -1,13 +1,14 @@
 import json
 import os
-import tkinter as tk
-from tkinter import filedialog
+import sys
+
+# Add the parent directory (project root) to the Python path so the picker's imports resolve
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from ui.file_browser_screen import run_file_browser
 
 # Ask the user which base map to reset
-root = tk.Tk()
-root.withdraw()
-target_dir = filedialog.askdirectory(initialdir="base_maps", title="Select Map to Reset")
-root.destroy()
+target_dir = run_file_browser("Select Map to Reset", "base_maps", mode="select_folder")
 
 if not target_dir:
     print("No folder selected. Exiting.")

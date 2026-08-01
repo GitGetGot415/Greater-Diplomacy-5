@@ -1,18 +1,15 @@
 import pygame
 import json
 import sys, os
-import tkinter as tk
-from tkinter import filedialog
 
 sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
+from ui.file_browser_screen import run_file_browser
 
-# Ask which map to test BEFORE starting Pygame
-root = tk.Tk()
-root.withdraw()
-target_dir = filedialog.askdirectory(initialdir=c.BASE_MAPS_DIR, title="Select Map to Test")
-root.destroy()
+# Ask which map to test BEFORE starting Pygame. The browser opens (and tears
+# down) its own window when no display exists yet.
+target_dir = run_file_browser("Select Map to Test", c.BASE_MAPS_DIR, mode="select_folder")
 
 if not target_dir:
     print("No map selected.")

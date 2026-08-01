@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, colorchooser, filedialog
+from tkinter import ttk, colorchooser
 import pygame
 import os
 import tempfile
@@ -479,7 +479,9 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
                     update_act_row()
 
             def do_pick_image():
-                filepath = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+                filepath = queries.open_file_browser(None, "Select Image", c.ASSETS_DIR,
+                                                     extensions=[".png", ".jpg", ".jpeg", ".bmp"],
+                                                     tk_parent=edit_win)
                 if filepath:
                     try:
                         img = pygame.image.load(filepath).convert_alpha()

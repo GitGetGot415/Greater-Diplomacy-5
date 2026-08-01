@@ -2780,15 +2780,36 @@ def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
+def open_file_browser(game_state, title, start_dir=None, mode="open_file", extensions=None,
+                      on_confirm_callback=None, tk_parent=None):
+    """In-engine file/folder picker: replaces filedialog.askopenfilename,
+    askopenfilenames and askdirectory.
+
+    Browses the whole machine -- `start_dir` is only where it opens, never a
+    fence. `mode` is "open_file", "open_files" (multi-select) or "select_folder".
+    Blocks and returns the pick (a path, a list of paths, or None when
+    cancelled); on_confirm_callback, when given, fires only on a real pick.
+    """
+    from ui.file_browser_screen import run_file_browser
+    picked = run_file_browser(title, start_dir, mode=mode, extensions=extensions,
+                              game_state=game_state, tk_parent=tk_parent)
+    if picked is not None and on_confirm_callback:
+        on_confirm_callback(picked)
+    # Clear any phantom hovering the blocking loop left behind, as the other
+    # sub-screens do on their way out.
+    if hasattr(game_state, "hovered_province"):
+        game_state.hovered_province = None
+    return picked
+
 # ==========================================
 # TKINTER DIALOG HELPERS
 # ==========================================
 
-def create_tk_window(title=None, geometry=None, hidden=False):
-    """Creates a top-most Tk root.
+def create_tk_window(title=None, geometry=None):
+    """Creates a top-most Tk root for the named/sized floating editor tools.
 
-    The one place a Tk window is born: named/sized floating editor tools pass a
-    title and geometry, native file/colour dialogs pass hidden=True instead.
+    The one place a Tk window is born. Nothing else needs one: the file, folder
+    and colour pickers are all pygame screens now.
     """
     import tkinter as tk
     root = tk.Tk()
@@ -2796,8 +2817,6 @@ def create_tk_window(title=None, geometry=None, hidden=False):
         root.title(title)
     if geometry:
         root.geometry(geometry)
-    if hidden:
-        root.withdraw()
     root.attributes("-topmost", True)
     return root
 
@@ -2823,15 +2842,6 @@ def run_tk_loop(game_state, root):
             pygame.time.wait(c.CPU_LIMITER)
         except (tk.TclError, Exception):
             break
-
-def get_transient_tk_root():
-    """Creates a hidden, top-most Tkinter root for native dialogs (file picking, color picking)."""
-    return create_tk_window(hidden=True)
-
-def destroy_tk_root(root):
-    """Destroys the Tk root and pumps Pygame events to clear phantom inputs."""
-    root.destroy()
-    pygame.event.pump()
 
 def copy_to_clipboard(text):
     """Pushes text to the OS clipboard via SDL's clipboard (pygame.scrap)."""
@@ -3022,20 +3032,17 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
-def import_zip_to_dir(target_parent_dir, on_success=None):
+def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     """Prompts for a .zip and unpacks it into a folder named after the archive.
 
     Shared by the save and scenario import buttons; both used to open their own
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
     from pathlib import Path
-    from tkinter import filedialog
     from ui import confirm_dialog
 
-    root = get_transient_tk_root()
-    file_path = filedialog.askopenfilename(filetypes=[("Zip files", "*.zip")], parent=root)
-    destroy_tk_root(root)
-
+    file_path = open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
+                                  extensions=[".zip"])
     if file_path:
         target_dir = os.path.join(target_parent_dir, Path(file_path).stem)
         if os.path.exists(target_dir):
@@ -3048,13 +3055,9 @@ def import_zip_to_dir(target_parent_dir, on_success=None):
         except Exception as e:
             confirm_dialog.show_error("Import Error", str(e))
 
-def ask_directory(title, initialdir):
+def ask_directory(game_state, title, initialdir):
     """Native folder picker returning the chosen path, or None if cancelled."""
-    from tkinter import filedialog
-    root = get_transient_tk_root()
-    chosen = filedialog.askdirectory(initialdir=initialdir, title=title, parent=root)
-    destroy_tk_root(root)
-    return chosen or None
+    return open_file_browser(game_state, title, initialdir, mode="select_folder")
 
 def ask_color(game_state, title, initial):
     """Native colour picker returning an (r, g, b) tuple, or None if cancelled."""

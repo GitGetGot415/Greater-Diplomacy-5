@@ -1,24 +1,21 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
 from data.io import multiplayer_io
 from data import queries
 import data.constants as c
 
 
 
-def load_multiplayer_moves(map_ref):
-    root = tk.Tk()
-    root.withdraw()
+def load_multiplayer_moves(map_ref, tk_parent=None):
+    """Multi-select move import. Returns True when files were actually loaded."""
+    files = queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
+                                      mode="open_files", extensions=[".gd5move"], tk_parent=tk_parent)
+    if not files:
+        return False
 
-    files = filedialog.askopenfilenames(
-        initialdir=c.TOURNAMENT_SAVES_DIR,
-        title="Select Move Files",
-        filetypes=[("Move Files", "*.gd5move")]
-    )
-    if files:
-        multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
-        map_ref.show_feedback(f"Loaded {len(files)} move files.")
+    multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
+    map_ref.show_feedback(f"Loaded {len(files)} move files.")
+    return True
 
 def export_next_turn(map_ref):
     turn = map_ref.time_manager.total_turns
@@ -64,15 +61,7 @@ def manage_players_panel(map_ref):
     lbl.pack(pady=(0, 10))
 
     def on_load_moves():
-        files = filedialog.askopenfilenames(
-            parent=root,
-            initialdir=c.TOURNAMENT_SAVES_DIR,
-            title="Select Move Files",
-            filetypes=[("Move Files", "*.gd5move")]
-        )
-        if files:
-            multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
-            map_ref.show_feedback(f"Loaded {len(files)} move files.")
+        if load_multiplayer_moves(map_ref, tk_parent=root):
             refresh_list()
 
     load_btn = tk.Button(top_frame, text="Load .gd5move Files", command=on_load_moves, width=20, bg="#add8e6")
