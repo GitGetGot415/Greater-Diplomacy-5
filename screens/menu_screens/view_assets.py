@@ -1,5 +1,7 @@
 import pygame
 import os
+import shutil
+from pathlib import Path
 from gameState import GameState
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
@@ -13,7 +15,7 @@ FOLDER_PANE_W = 240
 FILE_PANE_W = 300
 PREVIEW_X = FOLDER_PANE_W + FILE_PANE_W
 PREVIEW_W = c.SCREEN_WIDTH - PREVIEW_X
-HEADER_H = 90
+HEADER_H = 115
 
 FOLDER_ROW_H = 40
 FILE_ROW_H = 24
@@ -58,14 +60,23 @@ class TopBarOverlay:
         pygame.draw.line(surface, (100, 100, 100), (PREVIEW_X, 0), (PREVIEW_X, c.SCREEN_HEIGHT), 2)
 
         font_title = fonts.get("heading2")
-        surface.blit(font_title.render("FOLDERS", True, (255, 255, 255)), (20, 55))
+        # Sits below the Back button so the two never overlap.
+        surface.blit(font_title.render("FOLDERS", True, (255, 255, 255)), (20, 72))
 
+        # No Back-button clearance needed here, so it can sit right at the top edge.
         folder_label = self.screen.current_folder.upper() if self.screen.current_folder else "FILES"
-        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 55))
+        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 15))
 
         name_text = self.screen.current_file or "No image selected"
         name_surf = fonts.get("normal").render(name_text, True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(name_surf, (PREVIEW_X + 20, 35))
+
+        # Download status: drawn here (not additional_draw) so this pane's own
+        # background fill above doesn't paint over it a moment later.
+        status = self.screen.download_status
+        if status and pygame.time.get_ticks() - self.screen.download_status_timer < 2500:
+            status_surf = fonts.get("small").render(status, True, self.screen.download_status_color)
+            surface.blit(status_surf, status_surf.get_rect(topright=(c.SCREEN_WIDTH - 20, 75)))
 
 
 class View_Assets(GameState):
@@ -78,6 +89,10 @@ class View_Assets(GameState):
         self.current_file = None
         self.preview_surface = None
         self.preview_error = None
+
+        self.download_status = None
+        self.download_status_color = c.COLOR_SUCCESS_GREEN
+        self.download_status_timer = 0
 
         self.folder_scroll_y = 0
         self.file_scroll_y = 0
@@ -109,7 +124,10 @@ class View_Assets(GameState):
         names = []
         for name in sorted(os.listdir(c.ASSETS_ROOT_DIR), key=str.lower):
             full = os.path.join(c.ASSETS_ROOT_DIR, name)
-            if os.path.isdir(full) and name.lower() not in EXCLUDED_ASSET_FOLDERS:
+            if not os.path.isdir(full) or name.lower() in EXCLUDED_ASSET_FOLDERS:
+                continue
+            # Folders with nothing viewable in them aren't worth listing.
+            if self._list_png_files(name):
                 names.append(name)
         return names
 
@@ -131,6 +149,13 @@ class View_Assets(GameState):
 
         scale = min(avail_w / img_w, avail_h / img_h)
         new_size = (max(1, int(img_w * scale)), max(1, int(img_h * scale)))
+
+        # smoothscale anti-aliases, which is correct when shrinking an image but
+        # turns pixel art fuzzy when blown up. Most assets here are small game
+        # icons being enlarged to fill the preview, so use crisp nearest-neighbour
+        # scaling whenever we're not shrinking the source.
+        if scale >= 1.0:
+            return pygame.transform.scale(img, new_size)
         return pygame.transform.smoothscale(img, new_size)
 
     # ------------------------------------------------------------------ #
@@ -154,6 +179,7 @@ class View_Assets(GameState):
         self.current_file = name
         self.preview_error = None
         self.preview_surface = None
+        self.download_status = None
 
         path = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, name)
         try:
@@ -163,6 +189,24 @@ class View_Assets(GameState):
             self.preview_error = f"Failed to load {name}: {e}"
 
         self.refresh_ui()
+
+    def download_current_image(self):
+        """Copies the full-resolution source PNG (not the scaled preview) to Downloads."""
+        if not self.current_folder or not self.current_file:
+            return
+
+        src = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, self.current_file)
+        try:
+            downloads_dir = str(Path.home() / "Downloads")
+            os.makedirs(downloads_dir, exist_ok=True)
+            shutil.copy2(src, os.path.join(downloads_dir, self.current_file))
+            self.download_status = "Saved to Downloads"
+            self.download_status_color = c.COLOR_SUCCESS_GREEN
+        except Exception as e:
+            self.download_status = f"Failed to save: {e}"
+            self.download_status_color = (255, 100, 100)
+
+        self.download_status_timer = pygame.time.get_ticks()
 
     # ------------------------------------------------------------------ #
     #                               UI                                   #
@@ -210,6 +254,10 @@ class View_Assets(GameState):
         # --- Fixed chrome on top ---
         self.elements.append(TopBarOverlay(self))
         self.elements.append(Button(20, 20, "small", "red", "Back", self.handle_back_key))
+
+        if self.current_file:
+            self.elements.append(Button(c.SCREEN_WIDTH - 220, 20, "medium", "green",
+                                        "Download", self.download_current_image))
 
     # ------------------------------------------------------------------ #
     #                        SCROLL / EVENTS                             #
