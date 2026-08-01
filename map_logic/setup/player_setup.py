@@ -41,34 +41,14 @@ def select_tactical_unit(map_screen, province):
     elif len(units) == 1:
         _stage_tactical_selection(map_screen, units[0], owner, province)
     else:
-        # MULTIPLE UNITS: Open Tkinter menu to pick one
-        import tkinter as tk
-        from data import queries
-        root = queries.create_tk_window("Select Tactical Unit", "300x400")
-        map_screen.menu_active = True
+        # MULTIPLE UNITS: let the player pick one from an in-game list
+        unit_by_label = {f"{i+1}. {u.get('type')}": u for i, u in enumerate(units)}
 
-        def close_menu():
-            map_screen.menu_active = False
-            root.destroy()
+        def on_select(label):
+            _stage_tactical_selection(map_screen, unit_by_label[label], owner, province)
 
-        root.protocol("WM_DELETE_WINDOW", close_menu)
-        tk.Label(root, text="Select Unit to Control:", font=("Arial", 12)).pack(pady=10)
-        
-        lb = tk.Listbox(root, font=("Arial", 11))
-        for i, u in enumerate(units):
-            lb.insert(tk.END, f"{i+1}. {u.get('type')}")
-        lb.pack(fill="both", expand=True, padx=10)
-        
-        def on_select(event=None):
-            selection = lb.curselection()
-            if selection:
-                selected_unit = units[selection[0]]
-                _stage_tactical_selection(map_screen, selected_unit, owner, province)
-            close_menu()
-
-        tk.Button(root, text="Take Control", command=on_select, bg="#4CAF50", fg="white", pady=10).pack(fill="x", padx=10, pady=10)
-        lb.bind('<Double-1>', on_select)
-        queries.run_tk_loop(map_screen, root)
+        queries.open_listbox_selector(map_screen, "Select Tactical Unit", "Select Unit to Control:",
+                                      list(unit_by_label.keys()), on_select)
 
 def _stage_tactical_selection(map_screen, unit, owner, province):
     map_screen.pending_selection = owner

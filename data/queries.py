@@ -2767,39 +2767,17 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
     # Fire and forget the background process
     threading.Thread(target=_refresh_thread, daemon=True).start()
 
+def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback):
+    """In-engine listbox picker for editor tools and spectators: dims and freezes
+    the current frame, then shows a clickable list of rows in a modal panel."""
+    from ui.list_select_screen import ListSelectScreen
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback)
+    _run_pygame_sub_screen(game_state, screen)
+
 # ==========================================
 # TKINTER DIALOG HELPERS
 # ==========================================
-
-def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback, window_size="300x450"):
-    """Unified Tkinter listbox selection dialog for editor tools and spectators."""
-    import tkinter as tk
-    root, close_menu = create_managed_tk_window(game_state, title, window_size)
-    tk.Label(root, text=prompt, font=("Arial", 12)).pack(pady=10)
-    
-    frame = tk.Frame(root)
-    frame.pack(fill="both", expand=True, padx=10)
-    scrollbar = tk.Scrollbar(frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-    for item in items:
-        lb.insert(tk.END, item)
-    lb.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=lb.yview)
-    
-    def _on_select(event=None):
-        selection = lb.curselection()
-        if selection:
-            selected_val = lb.get(selection[0])
-            if selected_val != "----------":
-                on_confirm_callback(selected_val)
-        close_menu()
-        
-    tk.Button(root, text="Confirm Selection", command=_on_select, 
-              bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-    lb.bind('<Double-1>', _on_select)
-    run_tk_loop(game_state, root)
 
 def create_tk_window(title=None, geometry=None, hidden=False):
     """Creates a top-most Tk root.

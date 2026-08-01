@@ -385,7 +385,8 @@ SIZES = {
     "diplomatic": (200, 30),
     "menu": (200, 45),
     "medium": (200, 50),
-    "large": (300, 80)
+    "large": (300, 80),
+    "list_row": (520, 34)
 }
 
 COLOR_GOLD_HIGHLIGHT = (255, 215, 0)

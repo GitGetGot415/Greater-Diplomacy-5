@@ -4,6 +4,8 @@
 - combat width might be wack if there's multiple countries involved... 10 for the side with 2 countries, 5 for the side with 1 country
 - seems a bit unbalanced
 
+- temporarially rent out factories to other countries via trade?
+
 - check the recent issues coming from playtesting
 
 - COMPLETE REWORK OF THE ORDERS SCREEN

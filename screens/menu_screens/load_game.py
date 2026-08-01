@@ -67,8 +67,6 @@ class Load_Game(FolderListState):
         queries.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
 
     def open_history_menu(self, folder_name):
-        import tkinter as tk
-
         history_path = os.path.join(self.managed_dir, folder_name, "history.json")
         history_data = {}
         if os.path.exists(history_path):
@@ -82,37 +80,21 @@ class Load_Game(FolderListState):
             queries.destroy_tk_root(root)
             return
 
-        root, close_menu = queries.create_managed_tk_window(self, f"History: {folder_name}", "300x400")
-
-        tk.Label(root, text="Select a past turn to load:", font=("Arial", 12)).pack(pady=10)
-
-        frame = tk.Frame(root)
-        frame.pack(fill="both", expand=True, padx=10)
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill="y")
-
-        lb = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 11))
-
         turns = sorted([int(k) for k in history_data.keys()])
+        turn_by_label = {}
+        items = []
         for t in turns:
             date_str = history_data[str(t)].get("date_str", f"Turn {t}")
-            lb.insert(tk.END, f"Turn {t}: {date_str}")
+            label = f"Turn {t}: {date_str}"
+            items.append(label)
+            turn_by_label[label] = t
 
-        lb.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=lb.yview)
+        def on_select(label):
+            self.selected_history_turn = turn_by_label[label]
+            self.load_specific_save(folder_name)
 
-        def on_select(event=None):
-            selection = lb.curselection()
-            if selection:
-                self.selected_history_turn = turns[selection[0]]
-                self.load_specific_save(folder_name)
-                close_menu()
-
-        tk.Button(root, text="Load Selected Turn", command=on_select, bg="#9C27B0",
-                  fg="white", font=("Arial", 10, "bold"), pady=10).pack(fill="x", padx=10, pady=10)
-        lb.bind('<Double-1>', on_select)
-
-        queries.run_tk_loop(self, root)
+        queries.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
+                                      items, on_select)
 
     def load_specific_save(self, folder_name):
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
