@@ -237,9 +237,9 @@ def open_diplomacy_editor(self):
         self.show_feedback("No active countries on map!")
         return
 
-    from ui.editor_screens import Diplomacy_List_Screen
+    from ui.editor_screens import Diplomacy_Editor_Screen
     from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Diplomacy_List_Screen(self))
+    _run_pygame_sub_screen(self, Diplomacy_Editor_Screen(self))
 
 def open_edited_countries(self):
     """Opens a full-screen sortable table of countries with edited properties."""

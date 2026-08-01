@@ -743,82 +743,121 @@ class Clear_Map_Screen(MapOverlayScreen):
 # GLOBAL DIPLOMACY & FACTIONS EDITOR
 # ==========================================
 
-class Diplomacy_Edit_Screen(MapOverlayScreen):
-    """Wars, faction and puppet state for one nation.
+class Diplomacy_Editor_Screen(MapOverlayScreen):
+    """Wars, factions and puppets for the whole map on a single screen.
 
-    The tkinter original packed two multi-select listboxes, an entry, a checkbox
-    and two comboboxes into one window; here the two multi-selects open the
-    shared checkbox picker and the comboboxes open the shared listbox picker,
-    so the panel itself only has to show what is currently set.
+    Keeps the shape of the tkinter original: nations down the left, and the
+    selected nation's relations laid out live to the right. Picking a nation
+    only swaps what the right-hand side is editing -- and, like the original,
+    reloads from nation_data, so switching away drops unsaved edits. Saving
+    leaves the screen open so several nations can be edited in a row.
     """
     pans_camera = False
+    overlay_alpha = 220
 
-    def __init__(self, map_screen, target, active_countries):
-        super().__init__(map_screen, pygame.Rect(0, 0, 640, 520))
+    ROW_HEIGHT = 30
+    NAT_W = 260
+    COL_W = 296
+    COL_GAP = 10
+    LIST_VIEW_H = 390
+    # Each scrollable region keeps its own offset/track attributes so the four
+    # lists on screen scroll independently.
+    REGIONS = ("nations", "wars", "members", "master")
+    PUPPET_TYPES = (c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_TYPE_INTEGRATED)
+
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(0, 0, 1240, 660))
         self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
-        self.target = target
-        self.active_countries = sorted(active_countries)
-        self.others = [n for n in self.active_countries if n != target]
 
-        data = map_screen.nation_data.get(target, {})
+        self.countries = sorted(queries.get_living_nations(map_screen.map_data))
+        self.target = None
+        self.others = []
+        self.wars = set()
+        self.members = set()
+        self.is_leader = False
+        self.master = "None"
+        self.puppet_type = c.PUPPET_TYPE_AUTONOMOUS
+
+        for name in self.REGIONS:
+            setattr(self, f"scroll_{name}", 0)
+
+        self.faction_field = TextField(0, 0, 300, 36, "", label="Faction Name:")
+        self._layout()
+
+        if self.countries:
+            self.select_nation(self.countries[0])
+        else:
+            self.refresh_ui()
+
+    def _layout(self):
+        p = self.panel_rect
+        self.nat_x = p.x + 16
+        self.nations_top = p.y + 108
+        self.nations_view_h = p.bottom - 16 - self.nations_top
+
+        self.cols_x = self.nat_x + self.NAT_W + 20
+        self.lists_top = p.y + 132
+        self.row_a_y = self.lists_top + self.LIST_VIEW_H + 20
+        self.row_b_y = self.row_a_y + 56
+
+        self.regions = {"nations": pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h)}
+        for i, name in enumerate(("wars", "members", "master")):
+            self.regions[name] = pygame.Rect(self._col_x(i), self.lists_top, self.COL_W, self.LIST_VIEW_H)
+
+    def _col_x(self, index):
+        return self.cols_x + index * (self.COL_W + self.COL_GAP)
+
+    def _scroll_attrs(self, name):
+        return {"attr": f"scroll_{name}", "limit_attr": f"max_{name}",
+                "track_attr": f"track_{name}", "handle_attr": f"handle_{name}",
+                "drag_attr": f"drag_{name}"}
+
+    @property
+    def listening_for(self):
+        """Keeps the global BACK keybind from closing the editor mid-edit."""
+        return self.faction_field.active
+
+    # ------------------------------------------------------------------ #
+    #                             SELECTION                              #
+    # ------------------------------------------------------------------ #
+
+    def select_nation(self, cid):
+        """Loads a nation into the right-hand side, discarding unsaved edits."""
+        data = self.map_screen.nation_data.get(cid, {})
+        self.target = cid
+        self.others = [n for n in self.countries if n != cid]
+
         self.wars = {n for n in data.get("at_war_with", []) if n in self.others}
         self.is_leader = bool(data.get("is_faction_leader", False))
         self.master = data.get("master", "") or "None"
         self.puppet_type = data.get("puppet_type", "") or c.PUPPET_TYPE_AUTONOMOUS
 
         faction = data.get("faction", "")
+        self.faction_field.text = faction
+        self.faction_field.active = False
         self.members = {n for n in self.others
-                        if faction and map_screen.nation_data.get(n, {}).get("faction", "") == faction}
+                        if faction and self.map_screen.nation_data.get(n, {}).get("faction", "") == faction}
 
-        self.faction_field = TextField(0, 0, 300, 36, faction, label="Faction Name:")
+        for name in ("wars", "members", "master"):
+            setattr(self, f"scroll_{name}", 0)
         self.refresh_ui()
 
-    @property
-    def listening_for(self):
-        return self.faction_field.active
-
-    # ------------------------------------------------------------------ #
-    #                              PICKERS                               #
-    # ------------------------------------------------------------------ #
-
-    def _pick_countries(self, title, prompt, current):
-        from ui.checkbox_list_screen import CheckboxItem
-        picked = queries.open_checkbox_list(
-            self.map_screen, title, prompt,
-            [CheckboxItem(n, n, checked=n in current) for n in self.others])
-        self.refresh_ui()
-        return None if picked is None else set(picked)
-
-    def pick_wars(self):
-        picked = self._pick_countries("At War With", f"Select every nation {self.target} is at war with:", self.wars)
-        if picked is not None:
-            self.wars = picked
-            self.refresh_ui()
-
-    def pick_members(self):
-        picked = self._pick_countries("Faction Members",
-                                      "Select the nations that belong to this faction:", self.members)
-        if picked is not None:
-            self.members = picked
-            self.refresh_ui()
-
-    def pick_master(self):
-        def on_pick(val):
-            self.master = val
-        queries.open_listbox_selector(self.map_screen, "Master Nation", "Select this nation's master:",
-                                      ["None"] + self.others, on_pick)
+    def toggle_membership(self, group, name):
+        group.symmetric_difference_update({name})
         self.refresh_ui()
 
-    def pick_puppet_type(self):
-        def on_pick(val):
-            self.puppet_type = val
-        queries.open_listbox_selector(self.map_screen, "Puppet Type", "Select the puppet type:",
-                                      [c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_TYPE_INTEGRATED], on_pick)
+    def set_master(self, name):
+        self.master = name
         self.refresh_ui()
 
     def toggle_leader(self):
         self.is_leader = not self.is_leader
+        self.refresh_ui()
+
+    def cycle_puppet_type(self):
+        i = self.PUPPET_TYPES.index(self.puppet_type) if self.puppet_type in self.PUPPET_TYPES else 0
+        self.puppet_type = self.PUPPET_TYPES[(i + 1) % len(self.PUPPET_TYPES)]
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -826,12 +865,15 @@ class Diplomacy_Edit_Screen(MapOverlayScreen):
     # ------------------------------------------------------------------ #
 
     def save(self):
+        if not self.target:
+            return
+
         nation_data = self.map_screen.nation_data
         target = self.target
         data = nation_data.get(target, {})
 
         # 1. Wars, kept bidirectional -- drop target from everyone, then re-add the picks.
-        for name in self.active_countries:
+        for name in self.countries:
             if target in nation_data[name].get("at_war_with", []):
                 nation_data[name]["at_war_with"].remove(target)
         data["at_war_with"] = sorted(self.wars)
@@ -867,95 +909,118 @@ class Diplomacy_Edit_Screen(MapOverlayScreen):
 
         self.map_screen.refresh_diplomacy_maps()
         self.map_screen.show_feedback(f"Diplomacy saved for {target}")
-        self.done = True
+        self.refresh_ui()
 
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #
     # ------------------------------------------------------------------ #
 
-    def refresh_ui(self):
-        p = self.panel_rect
-        btn_x = p.x + 30
-        btn_w = p.width - 60
-        self.faction_field.rect.topleft = (p.x + 200, p.y + 150)
+    def _row(self, x, y, width, color, text, callback):
+        btn = Button(x, y, "list_row", color, text, callback, font_preset="button_small")
+        btn.rect.width = width
+        return btn
 
-        def wide(y, color, text, callback):
-            btn = Button(btn_x, y, "editor_ui", color, text, callback, font_preset="button_small")
-            btn.rect.width = btn_w
-            return btn
+    def _rows_of(self, name, count, top, view_h):
+        attrs = self._scroll_attrs(name)
+        return self.layout_list_rows(count, self.ROW_HEIGHT, top, view_h=view_h,
+                                     cull_top=top - 1,
+                                     cull_bottom=top + view_h - self.ROW_HEIGHT + 2,
+                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"])
 
-        war_label = ", ".join(sorted(self.wars)) if self.wars else "nobody"
-        member_label = ", ".join(sorted(self.members)) if self.members else "nobody"
-
-        leader_btn = Button(p.x + 200, p.y + 200, "editor_ui", "green" if self.is_leader else "grey",
-                            f"Faction Leader: {'Yes' if self.is_leader else 'No'}", self.toggle_leader,
-                            font_preset="button_small")
-        leader_btn.is_selected = self.is_leader
-
-        self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
-            wide(p.y + 90, "orange", f"At War With ({len(self.wars)}): {truncate(war_label, 60)}", self.pick_wars),
-            self.faction_field,
-            leader_btn,
-            wide(p.y + 250, "orange", f"Faction Members ({len(self.members)}): {truncate(member_label, 55)}",
-                 self.pick_members),
-            wide(p.y + 310, "blue", f"Master Nation: {self.master}", self.pick_master),
-            wide(p.y + 370, "blue", f"Puppet Type: {self.puppet_type}", self.pick_puppet_type),
-            Button(p.centerx - 100, p.bottom - 60, "medium", "green", "Save Changes", self.save),
+    def _columns(self):
+        """(region, header, rows, is_checked, on_click) for the three right-hand lists."""
+        return [
+            ("wars", "At War With", self.others,
+             lambda n: n in self.wars, lambda n: self.toggle_membership(self.wars, n)),
+            ("members", "Faction Members", self.others,
+             lambda n: n in self.members, lambda n: self.toggle_membership(self.members, n)),
+            ("master", "Master Nation", ["None"] + self.others,
+             lambda n: n == self.master, self.set_master),
         ]
 
-    def draw_content(self, surface):
-        p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(33, 150, 243), border_width=2)
-        ui_bars.draw_centered_title(surface, f"Editing: {self.target}", p.y + 20, "heading2")
-
-class Diplomacy_List_Screen(MapOverlayScreen):
-    pans_camera = False
-    scroll_anywhere = True
-
-    def __init__(self, map_screen):
-        super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 120))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-        self.back_state = "MAP"
-        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-        self.refresh_ui()
-
-    def edit(self, cid):
-        _run_pygame_sub_screen(self.map_screen, Diplomacy_Edit_Screen(self.map_screen, cid, self.active_countries))
-        self.refresh_ui()
-
-    def _summary(self, cid):
-        data = self.map_screen.nation_data.get(cid, {})
-        bits = []
-        wars = data.get("at_war_with", [])
-        if wars:
-            bits.append(f"{len(wars)} war(s)")
-        if data.get("faction"):
-            bits.append(f"{'leads' if data.get('is_faction_leader') else 'in'} {data['faction']}")
-        if data.get("master"):
-            bits.append(f"puppet of {data['master']}")
-        return f"{cid}  -  {', '.join(bits)}" if bits else cid
-
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [Button(self.nat_x, p.y + 10, "small", "red", "Back", self.exit_screen)]
 
-        row_top = p.y + 80
-        view_h = p.height - 100
-        row_x = p.x + 20
-        row_w = p.width - 40
-        for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=p.y + 70, cull_bottom=p.bottom - 30):
-            cid = self.active_countries[i]
-            btn = Button(row_x, y, "list_row", "blue", truncate(self._summary(cid), 52),
-                         lambda cc=cid: self.edit(cc), font_preset="button_small")
-            btn.rect.width = row_w
+        for i, y in self._rows_of("nations", len(self.countries), self.nations_top, self.nations_view_h):
+            cid = self.countries[i]
+            btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
+                            lambda cc=cid: self.select_nation(cc))
+            btn.is_selected = cid == self.target
             self.elements.append(btn)
 
-        self.list_view_h = view_h
+        if not self.target:
+            return
+
+        for idx, (region, _header, rows, is_checked, on_click) in enumerate(self._columns()):
+            col_x = self._col_x(idx)
+            single = region == "master"
+            for i, y in self._rows_of(region, len(rows), self.lists_top, self.LIST_VIEW_H):
+                name = rows[i]
+                checked = is_checked(name)
+                label = truncate(name, 28) if single else f"{'[X]' if checked else '[  ]'} {truncate(name, 24)}"
+                btn = self._row(col_x, y, self.COL_W - 24, "green" if checked else "blue", label,
+                                lambda n=name, cb=on_click: cb(n))
+                btn.is_selected = checked
+                self.elements.append(btn)
+
+        self.faction_field.rect.topleft = (self.cols_x + 130, self.row_a_y)
+        self.elements.append(self.faction_field)
+
+        leader_btn = Button(self.cols_x + 470, self.row_a_y - 2, "editor_ui",
+                            "green" if self.is_leader else "grey",
+                            f"Faction Leader: {'Yes' if self.is_leader else 'No'}",
+                            self.toggle_leader, font_preset="button_small")
+        leader_btn.is_selected = self.is_leader
+        self.elements.append(leader_btn)
+
+        self.elements.append(Button(self.cols_x, self.row_b_y, "editor_ui", "blue",
+                                    f"Puppet Type: {self.puppet_type}", self.cycle_puppet_type,
+                                    font_preset="button_small"))
+        self.elements.append(Button(self.cols_x + 470, self.row_b_y - 5, "medium", "green",
+                                    "Save Changes", self.save))
+
+    def additional_events(self, event):
+        # The wheel drives whichever list the cursor is over; scrollbar presses and
+        # drags are offered to every region, which each ignore what is not theirs.
+        if event.type == pygame.MOUSEWHEEL:
+            pos = pygame.mouse.get_pos()
+            for name, rect in self.regions.items():
+                if rect.collidepoint(pos):
+                    self.handle_list_scroll(event, **self._scroll_attrs(name))
+                    return
+            return
+
+        for name in self.REGIONS:
+            if self.handle_list_scroll(event, **self._scroll_attrs(name)):
+                return
 
     def draw_content(self, surface):
         p = self.panel_rect
         ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(33, 150, 243), border_width=2)
-        ui_bars.draw_centered_title(surface, "Diplomacy & Factions", p.y + 20, "heading2")
-        self.draw_list_scrollbar(surface, p.right - 15, p.y + 80, self.list_view_h)
+        ui_bars.draw_centered_title(surface, "Global Diplomacy & Factions", p.y + 14, "heading2")
+
+        small = fonts.get("small")
+        surface.blit(small.render("Nations:", True, (170, 170, 210)), (self.nat_x, self.nations_top - 20))
+        pygame.draw.line(surface, (70, 70, 95), (self.cols_x - 10, p.y + 60),
+                         (self.cols_x - 10, p.bottom - 16), 1)
+
+        if not self.target:
+            msg = fonts.get("heading2").render("Select a nation...", True, (200, 200, 200))
+            surface.blit(msg, msg.get_rect(center=(self.cols_x + 450, p.centery)))
+            return
+
+        heading = fonts.get("heading2").render(f"Editing: {self.target}", True, c.COLOR_GOLD_HIGHLIGHT)
+        surface.blit(heading, (self.cols_x, p.y + 66))
+
+        for idx, (region, header, rows, _is_checked, _on_click) in enumerate(self._columns()):
+            col_x = self._col_x(idx)
+            surface.blit(small.render(header, True, (170, 170, 210)), (col_x, self.lists_top - 20))
+            if not rows:
+                surface.blit(small.render("None available.", True, (150, 150, 150)),
+                             (col_x + 4, self.lists_top + 6))
+            self.draw_list_scrollbar(surface, col_x + self.COL_W - 18, self.lists_top, self.LIST_VIEW_H,
+                                     **self._scroll_attrs(region))
+
+        self.draw_list_scrollbar(surface, self.nat_x + self.NAT_W - 18, self.nations_top,
+                                 self.nations_view_h, **self._scroll_attrs("nations"))
