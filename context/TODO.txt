@@ -22,6 +22,9 @@
 - or maybe artillery could do a percentage of damage instead of a set amount?
 - maybe percentage or set amount, whichever one is higher???
 
+- more damaged a unit is, less damage it deals?
+- also maybe if a unit does overkill it can kill a unit before it does other damage? (think about this)
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
