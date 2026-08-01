@@ -204,69 +204,35 @@ class Economy_Screen(GameState):
 
     def open_expenses_table(self):
         if not self.map_screen: return
-        import tkinter as tk
-        from tkinter import ttk
-        
-        root, close_menu = queries.create_managed_tk_window(self, "Military Upkeep Expenses", "650x400")
-
-        style = ttk.Style(root)
-        try: style.theme_use("clam")
-        except tk.TclError: pass
-
-        columns = ("Unit", "Location (Prov ID)", "Manpower", "Materials", "Fuel")
-        tree = ttk.Treeview(root, columns=columns, show="headings")
-        
-        # State dictionary to track ascending/descending sort for each column
-        sort_dirs = {col: True for col in columns}
-
-        def sort_data(col):
-            reverse = sort_dirs[col]
-            sort_dirs[col] = not reverse
-            
-            data_list = [(tree.set(child, col), child) for child in tree.get_children("")]
-            
-            # Convert values to the appropriate type for accurate numerical sorting
-            if col in c.ECON_RESOURCE_KEYS:
-                data_list.sort(key=lambda t: float(t[0]), reverse=reverse)
-            elif col == "Location (Prov ID)":
-                data_list.sort(key=lambda t: int(t[0]), reverse=reverse)
-            else:
-                data_list.sort(reverse=reverse)
-                
-            # Rearrange the items based on the sorted list
-            for index, (val, child) in enumerate(data_list):
-                tree.move(child, "", index)
-        
-        for col in columns:
-            # Passing col to lambda safely captures its state for the button click
-            tree.heading(col, text=col, command=lambda c=col: sort_data(c))
-            tree.column(col, width=120, anchor="center")
-
-        scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
-        tree.configure(yscroll=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        tree.pack(fill="both", expand=True)
 
         # Retrieve all currently owned units and the base unit stat library
         _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
         unit_lib = queries.get_unit_library()
 
+        rows = []
         for unit, prov in units:
             # Use original_type to properly account for converted units like Convoys and Trucks
             u_type = unit.get("original_type", unit.get("type"))
             stats = unit_lib.get(u_type, {})
-            
             upkeep = queries.get_unit_upkeep(stats)
-            man_upk = upkeep["manpower"]
-            mat_upk = upkeep["materials"]
-            fuel_upk = upkeep["fuel"]
 
-            tree.insert("", tk.END, values=(
-                unit.get("type"),
-                prov["id"],
-                f"{man_upk:.2f}",
-                f"{mat_upk:.2f}",
-                f"{fuel_upk:.2f}"
-            ))
+            rows.append({
+                "unit": unit.get("type"),
+                "location": prov["id"],
+                "manpower": upkeep["manpower"],
+                "materials": upkeep["materials"],
+                "fuel": upkeep["fuel"],
+            })
 
-        queries.run_tk_loop(self, root)
+        from ui.table_screen import TableScreen, TableColumn
+        columns = [
+            TableColumn("unit", "Unit", 220, align="left"),
+            TableColumn("location", "Location (Prov ID)", 180),
+            TableColumn("manpower", "Manpower", 120, align="right", fmt=lambda v: f"{v:.2f}"),
+            TableColumn("materials", "Materials", 120, align="right", fmt=lambda v: f"{v:.2f}"),
+            TableColumn("fuel", "Fuel", 120, align="right", fmt=lambda v: f"{v:.2f}"),
+        ]
+
+        from ui.player_diplomacy_menus import _run_pygame_sub_screen
+        _run_pygame_sub_screen(self.map_screen, TableScreen(self, "Military Upkeep Expenses", columns, rows,
+                                                             empty_message="No units to show expenses for."))

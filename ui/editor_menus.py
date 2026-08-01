@@ -174,126 +174,44 @@ def open_editor_date(self):
 
 
 def open_editor_economy(self):
-    """Opens a Tkinter window listing the detailed income of every active country."""
-    active_countries = queries.get_living_nations(self.map_data)
+    """Opens a full-screen sortable table of every active country's detailed income."""
+    active_countries = sorted(queries.get_living_nations(self.map_data))
 
     if not active_countries:
         self.show_feedback("No active countries on map!")
         return
 
-    root, close_menu = queries.create_managed_tk_window(self, "Global Economy Overview", "1200x500")
-
-    style = ttk.Style(root)
-    try:
-        style.theme_use("clam") 
-    except:
-        pass 
-        
-    style.configure("Treeview.Heading", 
-                    background="#d9e1f2", 
-                    font=('Arial', 10, 'bold'),
-                    relief="flat")
-                    
-    style.configure("Treeview", 
-                    background="#ffffff",
-                    fieldbackground="#ffffff",
-                    rowheight=28,
-                    font=('Arial', 10))
-                    
     all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
 
-    columns = (
-        "Country", 
-        "|1", "P_Cur", "P_Inc", "P_Bld", "P_Upk", "P_Net", 
-        "|2", "M_Cur", "M_Inc", "M_Bld", "M_Upk", "M_Net", 
-        "|3", "F_Cur", "F_Inc", "F_Bld", "F_Upk", "F_Net", 
-        "|4"
-    )
-    
-    tree = ttk.Treeview(root, columns=columns, show="headings")
-    tree.tag_configure('evenrow', background='#ffffff')
-    tree.tag_configure('oddrow', background='#f2f2f2') 
-    
-    sort_dirs = {col: True for col in columns}
+    def get_stats(cid, res_key):
+        d = all_econ[cid]
+        bd = d["breakdown"][res_key]
+        cur = int(self.nation_data.get(cid, {}).get(res_key, 0))
+        inc = int(bd["core"] + bd["non_core"] + bd["resources"])
+        bld = int(bd["buildings"])
+        upk = int(d["upkeep"][res_key])
+        net = int(d["total_inc"][res_key] - d["upkeep"][res_key])
+        return cur, inc, bld, upk, net
 
-    def sort_data(col):
-        reverse = sort_dirs[col]
-        sort_dirs[col] = not reverse 
-        
-        def get_val(c):
-            if c not in all_econ: return 0
-            d = all_econ[c]
-            if col == "Country": return c
-            if col.startswith("|"): return 0
-            
-            res_key = "manpower" if col.startswith("P_") else ("materials" if col.startswith("M_") else "fuel")
-            stat_type = col.split("_")[1]
-            bd = d["breakdown"][res_key]
-            
-            if stat_type == "Cur": return self.nation_data.get(c, {}).get(res_key, 0)
-            if stat_type == "Inc": return bd["core"] + bd["non_core"] + bd["resources"]
-            if stat_type == "Bld": return bd["buildings"]
-            if stat_type == "Upk": return d["upkeep"][res_key]
-            if stat_type == "Net": return d["total_inc"][res_key] - d["upkeep"][res_key]
-            
-            return 0
+    rows = []
+    for cid in active_countries:
+        if cid not in all_econ:
+            continue
+        row = {"country": cid}
+        for prefix, res_key in (("p", "manpower"), ("m", "materials"), ("f", "fuel")):
+            cur, inc, bld, upk, net = get_stats(cid, res_key)
+            row[f"{prefix}_cur"], row[f"{prefix}_inc"] = cur, inc
+            row[f"{prefix}_bld"], row[f"{prefix}_upk"], row[f"{prefix}_net"] = bld, upk, net
+        rows.append(row)
 
-        sorted_countries = sorted(active_countries, key=get_val, reverse=reverse)
-        
-        for item in tree.get_children():
-            tree.delete(item)
-            
-        populate_tree(sorted_countries)
+    from ui.table_screen import TableScreen, TableColumn
+    columns = [TableColumn("country", "Country", 160, align="left")]
+    for group, prefix in (("Manpower", "p"), ("Materials", "m"), ("Fuel", "f")):
+        for stat, label in (("cur", "Cur"), ("inc", "Inc"), ("bld", "Bld"), ("upk", "Upk"), ("net", "Net")):
+            columns.append(TableColumn(f"{prefix}_{stat}", label, 60, group=group))
 
-    widths = {
-        "Country": 130,
-        "|1": 20, "P_Cur": 55, "P_Inc": 55, "P_Bld": 55, "P_Upk": 55, "P_Net": 55,
-        "|2": 20, "M_Cur": 55, "M_Inc": 55, "M_Bld": 55, "M_Upk": 55, "M_Net": 55,
-        "|3": 20, "F_Cur": 55, "F_Inc": 55, "F_Bld": 55, "F_Upk": 55, "F_Net": 55,
-        "|4": 20
-    }
-
-    for col in columns:
-        heading_text = "|" if col.startswith("|") else col
-        tree.heading(col, text=heading_text, command=lambda c=col: sort_data(c))
-        tree.column(col, width=widths[col], anchor="center")
-        
-    def populate_tree(country_list):
-        for i, cid in enumerate(country_list):
-            if cid not in all_econ: continue
-            d = all_econ[cid]
-            n_data = self.nation_data.get(cid, {})
-            
-            def get_stats(res_key):
-                bd = d["breakdown"][res_key]
-                cur = int(n_data.get(res_key, 0))
-                inc = int(bd["core"] + bd["non_core"] + bd["resources"])
-                bld = int(bd["buildings"])
-                upk = int(d["upkeep"][res_key])
-                net = int(d["total_inc"][res_key] - d["upkeep"][res_key])
-                return cur, inc, bld, upk, net
-
-            p_cur, p_inc, p_bld, p_upk, p_net = get_stats("manpower")
-            m_cur, m_inc, m_bld, m_upk, m_net = get_stats("materials")
-            f_cur, f_inc, f_bld, f_upk, f_net = get_stats("fuel")
-                        
-            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            tree.insert("", tk.END, values=(
-                c, 
-                "|", p_cur, p_inc, p_bld, p_upk, p_net, 
-                "|", m_cur, m_inc, m_bld, m_upk, m_net, 
-                "|", f_cur, f_inc, f_bld, f_upk, f_net,
-                "|"
-            ), tags=(tag,))
-
-    populate_tree(sorted(active_countries))
-
-    scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
-    scrollbar.pack(side="right", fill="y")
-    tree.pack(fill="both", expand=True)
-
-    queries.run_tk_loop(self, root)
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    _run_pygame_sub_screen(self, TableScreen(self, "Global Economy Overview", columns, rows))
 
 def open_starting_economy_editor(self):
     """Opens a UI to edit starting resources for countries currently existing on the map."""
@@ -380,48 +298,23 @@ def open_starting_economy_editor(self):
     queries.run_tk_loop(self, root)
         
 def open_spectator_messages(self):
-    """Opens a Tkinter window listing all messages sent between active countries."""
+    """Opens a full-screen sortable table of every message sent between active countries."""
     active_countries = queries.get_living_nations(self.map_data)
 
     if not active_countries:
         self.show_feedback("No active countries on map!")
         return
 
-    root, close_menu = queries.create_managed_tk_window(self, "Global Messages Overview", "1100x500")
-
-    style = ttk.Style(root)
-    try:
-        style.theme_use("clam") 
-    except:
-        pass 
-        
-    style.configure("Treeview.Heading", 
-                    background="#d9e1f2", 
-                    font=('Arial', 10, 'bold'),
-                    relief="flat")
-                    
-    style.configure("Treeview", 
-                    background="#ffffff",
-                    fieldbackground="#ffffff",
-                    rowheight=28,
-                    font=('Arial', 10))
-
-    columns = ("Date", "Sender", "Receiver", "Type", "Message")
-    tree = ttk.Treeview(root, columns=columns, show="headings")
-    
-    tree.tag_configure('evenrow', background='#ffffff')
-    tree.tag_configure('oddrow', background='#f2f2f2') 
-
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    
+
     for c_name, data in self.nation_data.items():
         if data.get("is_playable"):
             inbox = data.get("inbox", [])
             for msg in inbox:
                 msg["spectator_read"] = True
                 sender = msg.get("sender", "")
-                
+
                 if not sender.startswith("To: "):
                     date_str = msg.get("date", "Unknown")
                     sort_val = 0
@@ -435,63 +328,30 @@ def open_spectator_messages(self):
                                 sort_val = (y * 360) + (m * 30) + d
                     except Exception:
                         pass
-                        
+
                     all_msgs.append({
                         "date": date_str,
+                        "date_sort": sort_val,
                         "sender": sender,
                         "receiver": c_name,
                         "type": msg.get("type", "TEXT"),
-                        "content": msg.get("content", ""),
-                        "sort_val": sort_val
+                        "message": msg.get("content", "")
                     })
 
-    sort_dirs = {col: True for col in columns}
+    all_msgs.sort(key=lambda m: m["date_sort"], reverse=True)
 
-    def sort_data(col):
-        reverse = sort_dirs[col]
-        sort_dirs[col] = not reverse 
-        
-        def get_val(m):
-            if col == "Date": return m["sort_val"]
-            if col == "Sender": return m["sender"]
-            if col == "Receiver": return m["receiver"]
-            if col == "Type": return m["type"]
-            if col == "Message": return m["content"]
-            return 0
+    from ui.table_screen import TableScreen, TableColumn, truncate
+    columns = [
+        TableColumn("date", "Date", 130, sort_key=lambda r: r["date_sort"]),
+        TableColumn("sender", "Sender", 120),
+        TableColumn("receiver", "Receiver", 120),
+        TableColumn("type", "Type", 100),
+        TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
+    ]
 
-        sorted_msgs = sorted(all_msgs, key=get_val, reverse=reverse)
-        for item in tree.get_children():
-            tree.delete(item)
-        populate_tree(sorted_msgs)
-
-    for col in columns:
-        tree.heading(col, text=col, command=lambda c=col: sort_data(c))
-
-    tree.column("Date", width=130, anchor="center")
-    tree.column("Sender", width=120, anchor="center")
-    tree.column("Receiver", width=120, anchor="center")
-    tree.column("Type", width=100, anchor="center")
-    tree.column("Message", width=550, anchor="w")
-
-    def populate_tree(msg_list):
-        for row_idx, m in enumerate(msg_list):
-            tag = 'evenrow' if row_idx % 2 == 0 else 'oddrow'
-            tree.insert("", tk.END, values=(
-                m["date"],
-                m["sender"],
-                m["receiver"],
-                m["type"],
-                m["content"]
-            ), tags=(tag,))
-
-    populate_tree(sorted(all_msgs, key=lambda x: x["sort_val"], reverse=True))
-
-    scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
-    scrollbar.pack(side="right", fill="y")
-    tree.pack(fill="both", expand=True)
-
-    queries.run_tk_loop(self, root)
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    _run_pygame_sub_screen(self, TableScreen(self, "Global Messages Overview", columns, all_msgs,
+                                             empty_message="No messages have been sent yet."))
 
 def open_map_research_editor(self):
     """Opens a UI to edit research for countries currently existing on the map."""
@@ -951,76 +811,60 @@ def open_diplomacy_editor(self):
     queries.run_tk_loop(self, root)
 
 def open_edited_countries(self):
-    """Opens a Tkinter window listing countries with edited properties."""
+    """Opens a full-screen sortable table of countries with edited properties."""
     from data.io import country_io
     default_data = country_io.load_all_country_data()
-    
-    edited_list = []
+
+    rows = []
     for c_id, current_data in self.nation_data.items():
         if c_id in ["Unclaimed", "Ocean", "Lakes", "The Rot", "Spectator", "GLOBAL_EVENTS", "FACTION_WAR_MAPS"]:
             continue
-            
+
         def_country = default_data.get(c_id, {})
         changes = {}
-        
+
         # Tracking what differs from default
         c_name = current_data.get("name", c_id)
         d_name = def_country.get("name", c_id)
-        if c_name != d_name: changes["Name"] = c_name
-        
+        if c_name != d_name: changes["name"] = c_name
+
         c_leader = current_data.get("leader_name", "")
         d_leader = def_country.get("leader_name", "")
-        if c_leader != d_leader: changes["Leader Name"] = c_leader
-        
+        if c_leader != d_leader: changes["leader_name"] = c_leader
+
         c_title = current_data.get("leader_title", "")
         d_title = def_country.get("leader_title", "")
-        if c_title != d_title: changes["Leader Title"] = c_title
-        
+        if c_title != d_title: changes["leader_title"] = c_title
+
         c_flag = current_data.get("flag_data", "DEFAULT")
-        if c_flag != "DEFAULT": changes["Flag"] = "CUSTOM"
-        
+        if c_flag != "DEFAULT": changes["flag"] = "CUSTOM"
+
         c_port = current_data.get("portrait_data", "DEFAULT")
-        if c_port != "DEFAULT": changes["Portrait"] = "CUSTOM"
-        
+        if c_port != "DEFAULT": changes["portrait"] = "CUSTOM"
+
         if changes:
-            edited_list.append((c_id, changes))
-            
-    root, close_menu = queries.create_managed_tk_window(self, "Edited Countries Overview", "900x500")
-    
-    style = ttk.Style(root)
-    try: style.theme_use("clam")
-    except: pass
-    
-    style.configure("Treeview.Heading", background="#d9e1f2", font=('Arial', 10, 'bold'), relief="flat")
-    style.configure("Treeview", background="#ffffff", fieldbackground="#ffffff", rowheight=28, font=('Arial', 10))
-    
-    columns = ("ID", "Name", "Leader Name", "Leader Title", "Flag", "Portrait")
-    tree = ttk.Treeview(root, columns=columns, show="headings")
-    
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, anchor="center", width=140)
-        
-    tree.tag_configure('evenrow', background='#ffffff')
-    tree.tag_configure('oddrow', background='#f2f2f2')
-    
-    for i, (c_id, changes) in enumerate(edited_list):
-        tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-        tree.insert("", tk.END, values=(
-            c_id,
-            changes.get("Name", "-"),
-            changes.get("Leader Name", "-"),
-            changes.get("Leader Title", "-"),
-            changes.get("Flag", "-"),
-            changes.get("Portrait", "-")
-        ), tags=(tag,))
-        
-    scrollbar = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
-    scrollbar.pack(side="right", fill="y")
-    tree.pack(fill="both", expand=True)
-    
-    queries.run_tk_loop(self, root)
+            rows.append({
+                "id": c_id,
+                "name": changes.get("name", "-"),
+                "leader_name": changes.get("leader_name", "-"),
+                "leader_title": changes.get("leader_title", "-"),
+                "flag": changes.get("flag", "-"),
+                "portrait": changes.get("portrait", "-"),
+            })
+
+    from ui.table_screen import TableScreen, TableColumn
+    columns = [
+        TableColumn("id", "ID", 150, align="left"),
+        TableColumn("name", "Name", 150),
+        TableColumn("leader_name", "Leader Name", 150),
+        TableColumn("leader_title", "Leader Title", 150),
+        TableColumn("flag", "Flag", 100),
+        TableColumn("portrait", "Portrait", 100),
+    ]
+
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    _run_pygame_sub_screen(self, TableScreen(self, "Edited Countries Overview", columns, rows,
+                                             empty_message="No countries have been edited yet."))
 
 
 def open_clear_menu(self):
