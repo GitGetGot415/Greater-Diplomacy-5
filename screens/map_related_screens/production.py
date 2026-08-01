@@ -696,65 +696,25 @@ class Production_Screen(GameState):
                             "Motorized Infantry Type", "Mechanized Infantry Type", "Infantry Fighting Vehicle Type")]
             names.sort()
 
-        import tkinter as tk
+        from ui.checkbox_list_screen import CheckboxItem, SectionHeader
 
-        root, close_menu = queries.create_managed_tk_window(self, "Manage Custom Production Units", "420x560")
-
-        tk.Label(root, text="Select researched units to add to the Custom build category:",
-                 font=("Arial", 10, "bold"), wraplength=380, justify="left").pack(pady=(10, 5), padx=10)
-
-        vars_by_unit = {}
-
-        def select_all():
-            for var in vars_by_unit.values():
-                var.set(True)
-
-        def deselect_all():
-            for var in vars_by_unit.values():
-                var.set(False)
-
-        select_frame = tk.Frame(root)
-        select_frame.pack(pady=(0, 5))
-        tk.Button(select_frame, text="Select All", command=select_all, width=12).pack(side="left", padx=5)
-        tk.Button(select_frame, text="Deselect All", command=deselect_all, width=12).pack(side="left", padx=5)
-
-        container = tk.Frame(root)
-        container.pack(fill="both", expand=True, padx=10)
-
-        canvas = tk.Canvas(container, borderwidth=0)
-        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        scroll_frame = tk.Frame(canvas)
-
-        scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
+        items = []
         for category, names in categorized.items():
-            if not names: continue
-            tk.Label(scroll_frame, text=category, font=("Arial", 10, "bold")).pack(anchor="w", pady=(8, 0))
-            for name in names:
-                var = tk.BooleanVar(value=name in current_custom)
-                vars_by_unit[name] = var
-                tk.Checkbutton(scroll_frame, text=name, variable=var).pack(anchor="w", padx=20)
+            if not names:
+                continue
+            items.append(SectionHeader(category))
+            items.extend(CheckboxItem(name, name, checked=name in current_custom) for name in names)
 
-        if not vars_by_unit:
-            tk.Label(scroll_frame, text="No units researched yet.").pack(pady=20)
+        picked = queries.open_checkbox_list(
+            self, "Manage Custom Production Units",
+            "Select researched units to add to the Custom build category:",
+            items, confirm_label="Apply")
 
-        def on_apply():
-            p_data["custom_production_units"] = [name for name, var in vars_by_unit.items() if var.get()]
-            close_menu()
-            self.refresh_ui()
+        if picked is None:
+            return
 
-        btn_frame = tk.Frame(root)
-        btn_frame.pack(pady=10)
-        tk.Button(btn_frame, text="Apply", command=on_apply, width=12, bg="#4CAF50", fg="white").pack(side="left", padx=10)
-        tk.Button(btn_frame, text="Cancel", command=close_menu, width=12, bg="#f44336", fg="white").pack(side="left", padx=10)
-
-        queries.run_tk_loop(self, root)
+        p_data["custom_production_units"] = picked
+        self.refresh_ui()
 
     def cancel_order(self, index, q_type):
         queue_key = "building_queue" if q_type == "building" else "unit_queue"

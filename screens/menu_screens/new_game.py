@@ -122,65 +122,37 @@ class New_Game(GameState):
         self.set_sub_state("CATEGORY")
         self.go_to("MAP")
 
+    REFRESH_FIELDS = [
+        ("reset_names", "Country Names"),
+        ("reset_colors", "Country Color"),
+        ("reset_adjectives", "Adjectives"),
+        ("reset_leaders", "Leader Names & Titles"),
+        ("reset_flags", "Flags & Portraits"),
+        ("include_custom", "Include Scenarios in Custom/Editor Dir"),
+    ]
+
     def trigger_global_data_refresh(self):
         """Calls the unified data refresh query for playable scenarios."""
-        import tkinter as tk
-        from tkinter import messagebox
         from data import queries
         import data.constants as c
-        
-        dialog, close_menu = queries.create_managed_tk_window(self, "Refresh Options", "400x350")
-        
-        # Center the window
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-        
-        var_names = tk.BooleanVar(value=True)
-        var_color = tk.BooleanVar(value=True)
-        var_adj = tk.BooleanVar(value=True)
-        var_leader = tk.BooleanVar(value=True)
-        var_flags = tk.BooleanVar(value=True)
-        var_custom = tk.BooleanVar(value=True)
+        from ui.checkbox_list_screen import CheckboxItem
 
-        tk.Label(dialog, text="Select what to forcefully reset:", font=("Arial", 12, "bold")).pack(pady=10)
+        picked = queries.open_checkbox_list(
+            self, "Refresh Options", "Select what to forcefully reset:",
+            [CheckboxItem(key, label, checked=True) for key, label in self.REFRESH_FIELDS],
+            footnote="If you don't know what you're doing, this might ruin your saved maps!")
 
-        tk.Checkbutton(dialog, text="Country Names", variable=var_names, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Country Color", variable=var_color, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Adjectives", variable=var_adj, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Leader Names & Titles", variable=var_leader, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Flags & Portraits", variable=var_flags, font=("Arial", 11)).pack(anchor="w", padx=40)
-        tk.Checkbutton(dialog, text="Include Scenarios in Custom/Editor Dir", variable=var_custom, font=("Arial", 11)).pack(anchor="w", padx=40)
-        
-        tk.Label(dialog, text="", font=("Arial", 8)).pack()
-        tk.Label(dialog, text="If you don't know what you're doing, this might ruin your saved maps!", font=("Arial", 8)).pack()
-        
-        def on_confirm():
-            options = {
-                "reset_names": var_names.get(),
-                "reset_colors": var_color.get(),
-                "reset_adjectives": var_adj.get(),
-                "reset_leaders": var_leader.get(),
-                "reset_flags": var_flags.get(),
-                "include_custom": var_custom.get(),
-            }
-            close_menu()
-            
-            dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR]
-            if options["include_custom"]:
-                dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
-                
-            queries.refresh_map_directories(self, dirs_to_check, success_message="Synced scenarios successfully.", options=options)
-            
-        btn_frame = tk.Frame(dialog)
-        btn_frame.pack(pady=20)
-        tk.Button(btn_frame, text="Confirm", command=on_confirm, width=12, bg="#4CAF50", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=15)
-        tk.Button(btn_frame, text="Cancel", command=close_menu, width=12, bg="#f44336", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=15)
-        
-        queries.run_tk_loop(self, dialog)
+        if picked is None:
+            return
+
+        options = {key: key in picked for key, _label in self.REFRESH_FIELDS}
+
+        dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR]
+        if options["include_custom"]:
+            dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
+
+        queries.refresh_map_directories(self, dirs_to_check,
+                                        success_message="Synced scenarios successfully.", options=options)
 
     def exit_screen(self):
         self.set_sub_state("CATEGORY")

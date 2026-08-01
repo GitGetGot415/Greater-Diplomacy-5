@@ -2773,6 +2773,32 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback)
     screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
+def _clear_phantom_hover(game_state):
+    """Drops the hover a blocking sub-screen left behind, like _run_pygame_sub_screen does."""
+    host = getattr(game_state, "map_screen", None) or game_state
+    if hasattr(host, "hovered_province"):
+        host.hovered_province = None
+
+def open_checkbox_list(game_state, title, prompt, items, confirm_label="Confirm",
+                       show_select_all=True, extra_buttons=None, footnote=None):
+    """In-engine multi-toggle picker: replaces the scrollable tk.Checkbutton panels.
+
+    `items` are ui.checkbox_list_screen CheckboxItem / SectionHeader objects.
+    Blocks and returns the list of checked keys -- empty when nothing was ticked,
+    None when the user cancelled, so the two cases stay distinguishable.
+    """
+    from ui.checkbox_list_screen import CheckboxListScreen
+    from ui.screen_runner import run_screen
+    result = {}
+    run_screen(lambda: CheckboxListScreen(game_state, title, prompt, items,
+                                          lambda keys: result.setdefault("keys", keys),
+                                          confirm_label=confirm_label,
+                                          show_select_all=show_select_all,
+                                          extra_buttons=extra_buttons, footnote=footnote),
+               caption=title)
+    _clear_phantom_hover(game_state)
+    return result.get("keys")
+
 def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
     from ui.color_picker_screen import ColorPickerScreen
@@ -2795,10 +2821,7 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
                               game_state=game_state, tk_parent=tk_parent)
     if picked is not None and on_confirm_callback:
         on_confirm_callback(picked)
-    # Clear any phantom hovering the blocking loop left behind, as the other
-    # sub-screens do on their way out.
-    if hasattr(game_state, "hovered_province"):
-        game_state.hovered_province = None
+    _clear_phantom_hover(game_state)
     return picked
 
 # ==========================================
@@ -2806,10 +2829,10 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
 # ==========================================
 
 def create_tk_window(title=None, geometry=None):
-    """Creates a top-most Tk root for the named/sized floating editor tools.
+    """Creates a top-most Tk root for the scripted events editor.
 
-    The one place a Tk window is born. Nothing else needs one: the file, folder
-    and colour pickers are all pygame screens now.
+    The one place a Tk window is born, and the only tool left that needs one --
+    every other dialog, picker and editor is a pygame screen now.
     """
     import tkinter as tk
     root = tk.Tk()

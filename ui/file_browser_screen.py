@@ -12,7 +12,7 @@ same trick ui/confirm_dialog.py uses.
 import os
 import string
 import pygame
-from gameState import GameState, dispatch_global_keys
+from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, TextField
@@ -531,16 +531,6 @@ class FileBrowserScreen(GameState):
 #                            BLOCKING ENTRY POINT                        #
 # ---------------------------------------------------------------------- #
 
-def _acquire_surface():
-    surface = pygame.display.get_surface()
-    if surface is not None:
-        return surface, False
-    if not pygame.get_init():
-        pygame.init()
-    surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-    return surface, True
-
-
 def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
                      confirm_label=None, game_state=None, tk_parent=None):
     """Blocking browse. Returns the chosen path (or list of paths), None if cancelled.
@@ -548,45 +538,12 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
     Usable from the game (a display is already up) and from the standalone
     map_tools scripts and Tk editor windows (one is created for the duration).
     """
-    surface, owns_display = _acquire_surface()
-    if owns_display:
-        pygame.display.set_caption(title)
-
-    hidden_tk = []
-    if tk_parent is not None:
-        from ui.confirm_dialog import _hide_tk_chain
-        hidden_tk = _hide_tk_chain(tk_parent)
+    from ui.screen_runner import run_screen
 
     result = {}
-    screen = FileBrowserScreen(game_state, title, start_dir,
-                               lambda picked: result.setdefault("picked", picked),
-                               mode=mode, extensions=extensions, confirm_label=confirm_label)
-
-    clock = pygame.time.Clock()
-    try:
-        while not screen.done:
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    if owns_display:
-                        screen.done = True  # Only this dialog's window was closed.
-                    else:
-                        import sys
-                        pygame.quit()
-                        sys.exit()
-                # Mirrors the main loop so the browser gets BACK/ORDERS for free.
-                dispatch_global_keys(screen, event)
-            screen.handle_events(events)
-            screen.draw(surface)
-            pygame.display.flip()
-            clock.tick(c.TARGET_FPS)
-    finally:
-        if hidden_tk:
-            from ui.confirm_dialog import _show_tk_chain
-            _show_tk_chain(hidden_tk)
-        if owns_display:
-            pygame.display.quit()
-        else:
-            pygame.event.pump()
-
+    run_screen(lambda: FileBrowserScreen(game_state, title, start_dir,
+                                         lambda picked: result.setdefault("picked", picked),
+                                         mode=mode, extensions=extensions,
+                                         confirm_label=confirm_label),
+               tk_parent=tk_parent, caption=title)
     return result.get("picked")

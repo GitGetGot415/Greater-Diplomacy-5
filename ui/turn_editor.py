@@ -1,137 +1,219 @@
+"""Native pygame replacement for the tkinter Construction Turns Editor.
+
+Every base item type gets a row with its turn count inline, replacing the old
+listbox + "Apply locally" round trip -- everything on screen is editable and
+Save All writes both tabs at once. A row left at its library default stores no
+override, so defaults keep tracking the unit/building libraries.
+"""
 import sys
 import os
 
-# Add the parent directory (project root) to the Python path so it can find the 'data' module
+# Add the parent directory (project root) to the Python path so this stays runnable standalone
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import tkinter as tk
-from tkinter import ttk
+import pygame
+from gameState import GameState
+import data.constants as c
 from data import queries
 from ui import confirm_dialog
+from ui.bars import ui_bars
+from ui_elements import Button, TextField
+from map_logic.rendering.font_manager import fonts
 
-class TurnEditor:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Construction Turns Editor")
-        
-        # Load the base un-modified definitions to display defaults
-        self.unit_data = queries._load_cached_json("unit_library") or {}
-        self.building_data = queries._load_cached_json("building_library") or {}
-        
-        # Load scenario settings to read/write overrides
+
+class TurnEditorScreen(GameState):
+    PANEL_SIZE = (900, 640)
+    ROW_HEIGHT = 34
+    PAD = 20
+    LIST_TOP_OFF = 120
+
+    def __init__(self):
+        super().__init__()
+        self.title = "Construction Turns Editor"
+
         self.settings = queries.get_scenario_settings() or {}
-        self.unit_overrides = self.settings.get("unit_turn_overrides", {})
-        self.building_overrides = self.settings.get("building_turn_overrides", {})
+        self.tabs = {
+            "unit": self._build_tab(queries._load_cached_json("unit_library") or {},
+                                    self.settings.setdefault("unit_turn_overrides", {}),
+                                    "production_time", "Unit Type"),
+            "building": self._build_tab(queries._load_cached_json("building_library") or {},
+                                        self.settings.setdefault("building_turn_overrides", {}),
+                                        "time", "Building Type"),
+        }
+        self.active_tab = "unit"
 
-        self.create_widgets()
+        surface = pygame.display.get_surface()
+        self.background = surface.copy() if surface else None
 
-    def create_widgets(self):
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        panel_w, panel_h = self.PANEL_SIZE
+        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
 
-        # Units Tab
-        self.unit_frame = ttk.Frame(notebook)
-        notebook.add(self.unit_frame, text="Units")
-        self.setup_tab(self.unit_frame, self.unit_data, self.unit_overrides, "production_time", "Unit Name")
+        self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
+        self.list_view_h = (self.panel_rect.bottom - 66) - self.list_top
 
-        # Buildings Tab
-        self.building_frame = ttk.Frame(notebook)
-        notebook.add(self.building_frame, text="Buildings")
-        self.setup_tab(self.building_frame, self.building_data, self.building_overrides, "time", "Building Name")
+        self.refresh_ui()
 
-        btn_frame = tk.Frame(self.root)
-        btn_frame.pack(fill=tk.X, padx=10, pady=10)
+    def _build_tab(self, library, overrides, turn_key, label):
+        """Collapses a library to its base types, each with a default and a current value.
 
-        tk.Button(btn_frame, text="Save All Changes", command=self.save_all).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Reset to Defaults", command=self.reset_to_defaults, fg="red").pack(side=tk.RIGHT, padx=5)
-
-    def setup_tab(self, parent_frame, data_dict, override_dict, turn_key, label_text):
-        list_frame = tk.Frame(parent_frame)
-        list_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-        
-        listbox = tk.Listbox(list_frame, width=40)
-        listbox.pack(side=tk.LEFT, fill=tk.Y)
-        
-        scrollbar = tk.Scrollbar(list_frame, command=listbox.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        listbox.config(yscrollcommand=scrollbar.set)
-        
-        edit_frame = tk.Frame(parent_frame)
-        edit_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        tk.Label(edit_frame, text=label_text).grid(row=0, column=0, pady=5, sticky=tk.W)
-        name_entry = tk.Entry(edit_frame, state='readonly', width=30)
-        name_entry.grid(row=0, column=1, pady=5)
-        
-        tk.Label(edit_frame, text="Turns to Construct").grid(row=1, column=0, pady=5, sticky=tk.W)
-        turn_entry = tk.Entry(edit_frame, width=10)
-        turn_entry.grid(row=1, column=1, pady=5, sticky=tk.W)
-        
-        # Group items by base type
+        Variants of one base type ("Infantry Type 1936/1939/...") always shared a
+        turn count, which is why the editor works on base types rather than items.
+        """
         base_types = {}
-        for name, item_data in data_dict.items():
-            btype = queries.get_base_item_name(name)
-            if btype not in base_types:
-                base_types[btype] = []
-            base_types[btype].append(name)
-            
-        def on_select(event):
-            selection = event.widget.curselection()
-            if selection:
-                btype = event.widget.get(selection[0])
-                
-                name_entry.config(state='normal')
-                name_entry.delete(0, tk.END)
-                name_entry.insert(0, btype)
-                name_entry.config(state='readonly')
-                
-                # Show turn value (override if exists, else first item's default)
-                first_item = base_types[btype][0]
-                default_turn = data_dict[first_item].get(turn_key, 0)
-                current_turn = override_dict.get(btype, default_turn)
-                
-                turn_entry.delete(0, tk.END)
-                turn_entry.insert(0, str(current_turn))
-                
-        def apply_change():
-            btype = name_entry.get()
-            if not btype:
-                return
-            try:
-                new_turns = int(turn_entry.get())
-                if new_turns < 1:
-                    new_turns = 1
-                    
-                override_dict[btype] = new_turns
-                confirm_dialog.show_success("Applied", f"Updated all '{btype}' to {new_turns} turns. (Don't forget to Save All)", tk_parent=self.root)
-            except ValueError:
-                confirm_dialog.show_error("Error", "Please enter a valid integer for turns.", tk_parent=self.root)
-                
-        listbox.bind('<<ListboxSelect>>', on_select)
-        tk.Button(edit_frame, text="Apply locally", command=apply_change).grid(row=2, column=0, columnspan=2, pady=10)
-        
-        for btype in base_types:
-            listbox.insert(tk.END, btype)
+        for name in library:
+            base_types.setdefault(queries.get_base_item_name(name), []).append(name)
+
+        defaults, values = {}, {}
+        for btype, names in base_types.items():
+            defaults[btype] = library[names[0]].get(turn_key, 0)
+            values[btype] = str(overrides.get(btype, defaults[btype]))
+
+        return {"label": label, "names": sorted(base_types, key=str.lower),
+                "defaults": defaults, "values": values, "overrides": overrides}
+
+    # ------------------------------------------------------------------ #
+    #                               EDITING                              #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def tab(self):
+        return self.tabs[self.active_tab]
+
+    @property
+    def listening_for(self):
+        """Keeps the global BACK keybind from closing the editor mid-edit."""
+        return any(getattr(el, "turn_key", None) and el.active for el in self.elements)
+
+    def _sync_entries(self):
+        """Pulls live text out of the on-screen fields before they are rebuilt or saved."""
+        for el in self.elements:
+            key = getattr(el, "turn_key", None)
+            if key is not None:
+                self.tab["values"][key] = el.text
+
+    def select_tab(self, key):
+        self._sync_entries()
+        self.active_tab = key
+        self.scroll_y = 0
+        self.refresh_ui()
 
     def save_all(self):
-        self.settings["unit_turn_overrides"] = self.unit_overrides
-        self.settings["building_turn_overrides"] = self.building_overrides
+        self._sync_entries()
+        for tab in self.tabs.values():
+            overrides = tab["overrides"]
+            overrides.clear()
+            for btype in tab["names"]:
+                try:
+                    value = max(1, int(tab["values"][btype]))
+                except ValueError:
+                    continue
+                tab["values"][btype] = str(value)
+                if value != tab["defaults"][btype]:
+                    overrides[btype] = value
+
+        self.settings["unit_turn_overrides"] = self.tabs["unit"]["overrides"]
+        self.settings["building_turn_overrides"] = self.tabs["building"]["overrides"]
         queries.save_scenario_settings(self.settings)
-        confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.", tk_parent=self.root)
-        self.root.destroy()
+        confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.")
+        self.exit_screen()
 
     def reset_to_defaults(self):
-        confirm = confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to clear overrides and reset to defaults? This applies to the current scenario.", tk_parent=self.root)
-        if confirm:
-            self.unit_overrides.clear()
-            self.building_overrides.clear()
-            self.save_all()
+        if not confirm_dialog.ask_yes_no(
+                "Confirm Reset",
+                "Are you sure you want to clear overrides and reset to defaults? "
+                "This applies to the current scenario."):
+            return
+        for tab in self.tabs.values():
+            tab["overrides"].clear()
+            tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
+        self.save_all()
+
+    # ------------------------------------------------------------------ #
+    #                             RENDERING                              #
+    # ------------------------------------------------------------------ #
+
+    def refresh_ui(self):
+        self._sync_entries()
+        p = self.panel_rect
+        self.elements = []
+
+        tab_w, _tab_h = c.SIZES["browser_tool"]
+        for i, (key, label) in enumerate((("unit", "Units"), ("building", "Buildings"))):
+            btn = Button(p.x + self.PAD + i * (tab_w + 10), p.y + 56, "browser_tool",
+                         "green" if key == self.active_tab else "light_blue", label,
+                         lambda k=key: self.select_tab(k))
+            btn.is_selected = key == self.active_tab
+            self.elements.append(btn)
+
+        names = self.tab["names"]
+        self._row_layout = list(self.layout_list_rows(
+            len(names), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
+            cull_top=self.list_top - 1,
+            cull_bottom=self.list_top + self.list_view_h - self.ROW_HEIGHT + 2))
+
+        for i, y in self._row_layout:
+            btype = names[i]
+            field = TextField(p.right - self.PAD - 130, y, 100, 28, self.tab["values"][btype], numeric=True)
+            field.turn_key = btype
+            self.elements.append(field)
+
+        btn_y = p.bottom - 52
+        self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Back", self.exit_screen))
+        self.elements.append(Button(p.centerx - 100, btn_y - 5, "medium", "green", "Save All Changes", self.save_all))
+        self.elements.append(Button(p.right - self.PAD - 200, btn_y - 5, "medium", "red",
+                                    "Reset to Defaults", self.reset_to_defaults))
+
+    def additional_events(self, event):
+        self.handle_list_scroll(event)
+
+    def draw(self, surface):
+        if self.background:
+            surface.blit(self.background, (0, 0))
+        else:
+            surface.fill((20, 20, 28))
+        ui_bars.draw_fullscreen_overlay(surface, 190)
+
+        p = self.panel_rect
+        ui_bars.draw_modal_box(surface, p, bg_color=(35, 35, 45),
+                               border_color=(100, 150, 255), border_width=3)
+        ui_bars.draw_centered_title(surface, self.title, p.y + 14, "heading2")
+
+        font = fonts.get("normal")
+        small = fonts.get("small")
+        surface.blit(small.render(self.tab["label"], True, (170, 170, 210)), (p.x + self.PAD, self.list_top - 20))
+        turns_hdr = small.render("Turns to Construct", True, (170, 170, 210))
+        surface.blit(turns_hdr, turns_hdr.get_rect(midright=(p.right - self.PAD - 30, self.list_top - 12)))
+
+        names = self.tab["names"]
+        for i, y in self._row_layout:
+            btype = names[i]
+            if i % 2 == 0:
+                pygame.draw.rect(surface, (44, 44, 56),
+                                 pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
+
+            label = font.render(btype, True, (225, 225, 225))
+            surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + self.ROW_HEIGHT // 2)))
+
+            default = self.tab["defaults"][btype]
+            hint = small.render(f"default: {default}", True, (150, 150, 165))
+            surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 145, y + self.ROW_HEIGHT // 2)))
+
+        if not names:
+            msg = font.render("Nothing to edit.", True, (200, 200, 200))
+            surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
+
+        for el in self.elements:
+            el.draw(surface)
+
+        self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)
+
 
 def open_turn_editor():
-    root = tk.Tk()
-    app = TurnEditor(root)
-    root.geometry("600x400")
-    root.mainloop()
+    """Blocking construction-turns editor, usable in-game or standalone."""
+    from ui.screen_runner import run_screen
+    run_screen(TurnEditorScreen, caption="Construction Turns Editor")
+
 
 if __name__ == "__main__":
     open_turn_editor()

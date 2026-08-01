@@ -394,7 +394,13 @@ SIZES = {
     "browser_place": (210, 30),
     "browser_row": (890, 30),
     "browser_nav": (70, 32),
-    "browser_tool": (170, 40)
+    "browser_tool": (170, 40),
+    # Checkbox list: one toggleable row, and the small buttons above it.
+    "checkbox_row": (700, 30),
+    "checkbox_tool": (150, 32),
+    # Editor forms (unit/country editors, turn overrides).
+    "form_row": (420, 30),
+    "form_tool": (130, 32)
 }
 
 COLOR_GOLD_HIGHLIGHT = (255, 215, 0)

@@ -14,7 +14,9 @@ from ui_elements import Button, TextField
 from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.player_diplomacy_menus import _run_pygame_sub_screen
+from ui.table_screen import truncate
 from map_logic.rendering.font_manager import fonts
+from map_logic.diplomacy.diplomacy_agreements import assign_puppet
 
 # ==========================================
 # SET START DATE
@@ -736,3 +738,224 @@ class Clear_Map_Screen(MapOverlayScreen):
     def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 20, 20), border_color=(244, 67, 54), border_width=2)
         ui_bars.draw_centered_title(surface, "Clear Map Items", self.panel_rect.y + 20, "heading2")
+
+# ==========================================
+# GLOBAL DIPLOMACY & FACTIONS EDITOR
+# ==========================================
+
+class Diplomacy_Edit_Screen(MapOverlayScreen):
+    """Wars, faction and puppet state for one nation.
+
+    The tkinter original packed two multi-select listboxes, an entry, a checkbox
+    and two comboboxes into one window; here the two multi-selects open the
+    shared checkbox picker and the comboboxes open the shared listbox picker,
+    so the panel itself only has to show what is currently set.
+    """
+    pans_camera = False
+
+    def __init__(self, map_screen, target, active_countries):
+        super().__init__(map_screen, pygame.Rect(0, 0, 640, 520))
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        self.back_state = "MAP"
+        self.target = target
+        self.active_countries = sorted(active_countries)
+        self.others = [n for n in self.active_countries if n != target]
+
+        data = map_screen.nation_data.get(target, {})
+        self.wars = {n for n in data.get("at_war_with", []) if n in self.others}
+        self.is_leader = bool(data.get("is_faction_leader", False))
+        self.master = data.get("master", "") or "None"
+        self.puppet_type = data.get("puppet_type", "") or c.PUPPET_TYPE_AUTONOMOUS
+
+        faction = data.get("faction", "")
+        self.members = {n for n in self.others
+                        if faction and map_screen.nation_data.get(n, {}).get("faction", "") == faction}
+
+        self.faction_field = TextField(0, 0, 300, 36, faction, label="Faction Name:")
+        self.refresh_ui()
+
+    @property
+    def listening_for(self):
+        return self.faction_field.active
+
+    # ------------------------------------------------------------------ #
+    #                              PICKERS                               #
+    # ------------------------------------------------------------------ #
+
+    def _pick_countries(self, title, prompt, current):
+        from ui.checkbox_list_screen import CheckboxItem
+        picked = queries.open_checkbox_list(
+            self.map_screen, title, prompt,
+            [CheckboxItem(n, n, checked=n in current) for n in self.others])
+        self.refresh_ui()
+        return None if picked is None else set(picked)
+
+    def pick_wars(self):
+        picked = self._pick_countries("At War With", f"Select every nation {self.target} is at war with:", self.wars)
+        if picked is not None:
+            self.wars = picked
+            self.refresh_ui()
+
+    def pick_members(self):
+        picked = self._pick_countries("Faction Members",
+                                      "Select the nations that belong to this faction:", self.members)
+        if picked is not None:
+            self.members = picked
+            self.refresh_ui()
+
+    def pick_master(self):
+        def on_pick(val):
+            self.master = val
+        queries.open_listbox_selector(self.map_screen, "Master Nation", "Select this nation's master:",
+                                      ["None"] + self.others, on_pick)
+        self.refresh_ui()
+
+    def pick_puppet_type(self):
+        def on_pick(val):
+            self.puppet_type = val
+        queries.open_listbox_selector(self.map_screen, "Puppet Type", "Select the puppet type:",
+                                      [c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_TYPE_INTEGRATED], on_pick)
+        self.refresh_ui()
+
+    def toggle_leader(self):
+        self.is_leader = not self.is_leader
+        self.refresh_ui()
+
+    # ------------------------------------------------------------------ #
+    #                               SAVING                               #
+    # ------------------------------------------------------------------ #
+
+    def save(self):
+        nation_data = self.map_screen.nation_data
+        target = self.target
+        data = nation_data.get(target, {})
+
+        # 1. Wars, kept bidirectional -- drop target from everyone, then re-add the picks.
+        for name in self.active_countries:
+            if target in nation_data[name].get("at_war_with", []):
+                nation_data[name]["at_war_with"].remove(target)
+        data["at_war_with"] = sorted(self.wars)
+        for enemy in self.wars:
+            if target not in nation_data[enemy].get("at_war_with", []):
+                nation_data[enemy].setdefault("at_war_with", []).append(target)
+
+        # 2. Faction membership.
+        new_faction = self.faction_field.text.strip()
+        data["faction"] = new_faction
+        data["is_faction_leader"] = self.is_leader
+
+        for name in self.others:
+            if name in self.members:
+                nation_data[name]["faction"] = new_faction
+                if new_faction:
+                    nation_data[name]["is_faction_leader"] = False
+            elif new_faction and nation_data[name].get("faction", "") == new_faction:
+                nation_data[name]["faction"] = ""
+                nation_data[name]["is_faction_leader"] = False
+
+        # 3. Puppet state.
+        old_master = data.get("master", "")
+        if old_master and old_master != "None" and old_master in nation_data:
+            if target in nation_data[old_master].get("puppets", []):
+                nation_data[old_master]["puppets"].remove(target)
+
+        if self.master and self.master != "None" and self.master != target:
+            assign_puppet(self.map_screen.map_data, nation_data, self.master, target, self.puppet_type)
+        else:
+            data["master"] = ""
+            data["puppet_type"] = ""
+
+        self.map_screen.refresh_diplomacy_maps()
+        self.map_screen.show_feedback(f"Diplomacy saved for {target}")
+        self.done = True
+
+    # ------------------------------------------------------------------ #
+    #                             RENDERING                              #
+    # ------------------------------------------------------------------ #
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        btn_x = p.x + 30
+        btn_w = p.width - 60
+        self.faction_field.rect.topleft = (p.x + 200, p.y + 150)
+
+        def wide(y, color, text, callback):
+            btn = Button(btn_x, y, "editor_ui", color, text, callback, font_preset="button_small")
+            btn.rect.width = btn_w
+            return btn
+
+        war_label = ", ".join(sorted(self.wars)) if self.wars else "nobody"
+        member_label = ", ".join(sorted(self.members)) if self.members else "nobody"
+
+        leader_btn = Button(p.x + 200, p.y + 200, "editor_ui", "green" if self.is_leader else "grey",
+                            f"Faction Leader: {'Yes' if self.is_leader else 'No'}", self.toggle_leader,
+                            font_preset="button_small")
+        leader_btn.is_selected = self.is_leader
+
+        self.elements = [
+            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            wide(p.y + 90, "orange", f"At War With ({len(self.wars)}): {truncate(war_label, 60)}", self.pick_wars),
+            self.faction_field,
+            leader_btn,
+            wide(p.y + 250, "orange", f"Faction Members ({len(self.members)}): {truncate(member_label, 55)}",
+                 self.pick_members),
+            wide(p.y + 310, "blue", f"Master Nation: {self.master}", self.pick_master),
+            wide(p.y + 370, "blue", f"Puppet Type: {self.puppet_type}", self.pick_puppet_type),
+            Button(p.centerx - 100, p.bottom - 60, "medium", "green", "Save Changes", self.save),
+        ]
+
+    def draw_content(self, surface):
+        p = self.panel_rect
+        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(33, 150, 243), border_width=2)
+        ui_bars.draw_centered_title(surface, f"Editing: {self.target}", p.y + 20, "heading2")
+
+class Diplomacy_List_Screen(MapOverlayScreen):
+    pans_camera = False
+    scroll_anywhere = True
+
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 120))
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        self.back_state = "MAP"
+        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
+        self.refresh_ui()
+
+    def edit(self, cid):
+        _run_pygame_sub_screen(self.map_screen, Diplomacy_Edit_Screen(self.map_screen, cid, self.active_countries))
+        self.refresh_ui()
+
+    def _summary(self, cid):
+        data = self.map_screen.nation_data.get(cid, {})
+        bits = []
+        wars = data.get("at_war_with", [])
+        if wars:
+            bits.append(f"{len(wars)} war(s)")
+        if data.get("faction"):
+            bits.append(f"{'leads' if data.get('is_faction_leader') else 'in'} {data['faction']}")
+        if data.get("master"):
+            bits.append(f"puppet of {data['master']}")
+        return f"{cid}  -  {', '.join(bits)}" if bits else cid
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+
+        row_top = p.y + 80
+        view_h = p.height - 100
+        row_x = p.x + 20
+        row_w = p.width - 40
+        for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
+                                          cull_top=p.y + 70, cull_bottom=p.bottom - 30):
+            cid = self.active_countries[i]
+            btn = Button(row_x, y, "list_row", "blue", truncate(self._summary(cid), 52),
+                         lambda cc=cid: self.edit(cc), font_preset="button_small")
+            btn.rect.width = row_w
+            self.elements.append(btn)
+
+        self.list_view_h = view_h
+
+    def draw_content(self, surface):
+        p = self.panel_rect
+        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(33, 150, 243), border_width=2)
+        ui_bars.draw_centered_title(surface, "Diplomacy & Factions", p.y + 20, "heading2")
+        self.draw_list_scrollbar(surface, p.right - 15, p.y + 80, self.list_view_h)
