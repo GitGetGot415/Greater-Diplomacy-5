@@ -7,6 +7,7 @@ import re
 import data.constants as c
 from data import queries
 from map_logic.system32.time_handler import TimeHandler
+from ui import confirm_dialog
 
 def open_scripted_events_editor(self):
     active_countries = queries.get_living_nations(self.map_data)
@@ -803,7 +804,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             if old_v["type"] in ["int", "double"] and new_t == "string" and usage:
                 nations = get_nations_used(usage)
                 msg = f"Changing to string will force all non-equals conditionals to '==' and non-set actions to 'Set'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
-                if not messagebox.askyesno("Warning", msg): return
+                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
                 for nat, ev in usage:
                     for cond in ev.get("conditions", []):
                         if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
@@ -815,7 +816,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             if old_v["type"] == "string" and new_t in ["int", "double"] and usage:
                 nations = get_nations_used(usage)
                 msg = f"Changing to int/double will reset non-numerical condition/action values to '0'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
-                if not messagebox.askyesno("Warning", msg): return
+                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
                 for nat, ev in usage:
                     for cond in ev.get("conditions", []):
                         if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
@@ -852,7 +853,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
             if usage:
                 nations = get_nations_used(usage)
                 msg = f"Deleting this variable will delete {len(usage)} events across countries: {', '.join(nations)}.\nProceed?"
-                if not messagebox.askyesno("Warning", msg): return
+                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
                 for nat, ev in usage:
                     if ev in self.nation_data[nat]["scripted_events"]:
                         self.nation_data[nat]["scripted_events"].remove(ev)

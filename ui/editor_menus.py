@@ -5,6 +5,7 @@ import data.constants as c
 from data.map import load_map
 from data import queries
 from map_logic.diplomacy.diplomacy_agreements import assign_puppet
+from ui import confirm_dialog
 
 # ==========================================
 # EDITOR MENUS
@@ -283,7 +284,7 @@ def open_starting_economy_editor(self):
         open_edit_window(lb.get(sel[0]))
 
     def reset_all():
-        if messagebox.askyesno("Confirm Reset", "Are you sure you want to reset every starting economy to 0?"):
+        if confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", tk_parent=root):
             for cid in active_countries:
                 if cid in self.nation_data:
                     for res in c.ECON_RESOURCE_KEYS:
@@ -507,7 +508,7 @@ def open_map_research_editor(self):
             f"exactly as if a random scenario was created in {current_year}.\n\n"
             f"Are you sure you want to force time-appropriate research for all nations?"
         )
-        if not messagebox.askyesno("Force Time Appropriate Research", msg, parent=root):
+        if not confirm_dialog.ask_yes_no("Force Time Appropriate Research", msg, tk_parent=root):
             return
 
         time_app_res = queries.get_time_appropriate_research(current_year)
@@ -977,7 +978,7 @@ def open_clear_menu(self):
         if u_val and opt in ["all (x) units", "all (x) units from country (x)"]: msg += f"\nUnit: {u_val}"
         if r_val and opt in ["all (x) resources", "all (x) resources on (x) countries territory"]: msg += f"\nResource: {r_val}"
             
-        if not messagebox.askyesno("Confirm Clear", msg):
+        if not confirm_dialog.ask_yes_no("Confirm Clear", msg, tk_parent=root):
             return
             
         for prov_id, prov_data in self.map_data.items():

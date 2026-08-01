@@ -304,15 +304,11 @@ class Map(GameState):
         self.show_feedback(f"View Mode: {self.secondary_mode}")
 
     def trigger_multi_turn(self):
-        import tkinter as tk
-        from tkinter import simpledialog
-        from data import queries
+        from ui import confirm_dialog
         import threading
-        
-        root = queries.get_transient_tk_root()
-        turns = simpledialog.askinteger("Process Multiple Turns", "How many turns to process at once?", minvalue=1, maxvalue=5000)
-        queries.destroy_tk_root(root)
-        
+
+        turns = confirm_dialog.ask_integer("Process Multiple Turns", "How many turns to process at once?", minvalue=1, maxvalue=5000)
+
         if turns:
             self.multi_turns_total = turns
             self.multi_turns_completed = 0
@@ -447,19 +443,14 @@ class Map(GameState):
         self.show_feedback("Maps refreshed!")
 
     def auto_assign_cores(self):
-        import tkinter as tk
-        from tkinter import messagebox
-        from data import queries
-        
+        from ui import confirm_dialog
+
         # Ask for confirmation first before doing anything destructive
-        root = queries.get_transient_tk_root()
-        confirm = messagebox.askyesno(
-            "Confirm Auto-Core", 
-            "Are you sure you want to auto-assign all cores?\nThis will overwrite existing core data for every province on the map based on current ownership.",
-            parent=root
+        confirm = confirm_dialog.ask_yes_no(
+            "Confirm Auto-Core",
+            "Are you sure you want to auto-assign all cores?\nThis will overwrite existing core data for every province on the map based on current ownership."
         )
-        queries.destroy_tk_root(root)
-        
+
         if confirm:
             for province in self.map_data.values():
                 owner = province.get("owner", "Unclaimed")

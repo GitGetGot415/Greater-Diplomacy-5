@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import tkinter as tk
 from tkinter import messagebox, ttk
 from data import queries
+from ui import confirm_dialog
 
 class TurnEditor:
     def __init__(self, root):
@@ -120,7 +121,7 @@ class TurnEditor:
         self.root.destroy()
 
     def reset_to_defaults(self):
-        confirm = messagebox.askyesno("Confirm Reset", "Are you sure you want to clear overrides and reset to defaults? This applies to the current scenario.")
+        confirm = confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to clear overrides and reset to defaults? This applies to the current scenario.", tk_parent=self.root)
         if confirm:
             self.unit_overrides.clear()
             self.building_overrides.clear()

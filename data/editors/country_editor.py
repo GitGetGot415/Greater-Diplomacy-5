@@ -11,6 +11,7 @@ import json
 
 import colorsys
 from data import queries
+from ui import confirm_dialog
 
 PATH = c.COUNTRIES_DATA_PATH
 
@@ -120,7 +121,7 @@ class CountryEditor:
         """Synchronizes all countries to have every tech defined in the template."""
         msg = ("This will add any NEW technologies from your JSON to ALL countries.\n"
                "Existing research levels will NOT be preserved. Proceed?")
-        if not messagebox.askyesno("Confirm Sync", msg):
+        if not confirm_dialog.ask_yes_no("Confirm Sync", msg, tk_parent=self.root):
             return
 
         default_research = self.get_default_research_dict()
@@ -231,7 +232,7 @@ class CountryEditor:
             self.color_preview.config(bg=hex_color)
 
     def delete_country(self, int_id):
-        if messagebox.askyesno("Confirm", f"Delete {int_id}?"):
+        if confirm_dialog.ask_yes_no("Confirm", f"Delete {int_id}?", tk_parent=self.root):
             del self.data[int_id]
             with open(PATH, "w") as f:
                 json.dump(self.data, f, indent=4)

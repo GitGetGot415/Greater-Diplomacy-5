@@ -1,5 +1,5 @@
 import os
-from tkinter import messagebox
+from ui import confirm_dialog
 from gameState import FolderListState
 from ui_elements import Button
 import data.constants as c
@@ -112,13 +112,10 @@ class Select_Base_Map(FolderListState):
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""
-        root = queries.get_transient_tk_root()
-        confirm = messagebox.askyesno(
+        confirm = confirm_dialog.ask_yes_no(
             "Confirm Data Refresh",
-            "Are you sure you want to refresh base map data?\nThis process may take a while.",
-            parent=root
+            "Are you sure you want to refresh base map data?\nThis process may take a while."
         )
-        queries.destroy_tk_root(root)
 
         if confirm:
             queries.refresh_map_directories(self, [c.BASE_MAPS_DIR],
