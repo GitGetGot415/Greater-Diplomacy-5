@@ -41,6 +41,7 @@ from screens.menu_screens.new_game import New_Game
 from screens.menu_screens.settings import Settings
 from screens.menu_screens.credits import Credits
 from screens.menu_screens.music_player import Music_Player
+from screens.menu_screens.view_assets import View_Assets
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
@@ -254,6 +255,7 @@ class Controller:
             "SETTINGS": Settings(self), 
             "CREDITS": Credits(), 
             "MUSIC_PLAYER": Music_Player(self),
+            "VIEW_ASSETS": View_Assets(),
             "SELECT_BASE_MAP": Select_Base_Map(),
             "MAP": None,
             "PRODUCTION": Production_Screen(),

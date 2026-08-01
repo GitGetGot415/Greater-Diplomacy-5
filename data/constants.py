@@ -378,6 +378,8 @@ SIZES = {
     "orders_panel_button_2": (70, 40),
     "left_ui_bar": (120, 50),
     "song": (700, 30),
+    "asset_folder": (200, 36),
+    "asset_file": (270, 22),
     "save_file": (745, 30),
     "small_save_button": (100, 30),
     "diplomatic": (200, 30),
@@ -823,8 +825,9 @@ REBELLION_TERMS = [
 # ==========================================
 
 # Directories
+ASSETS_ROOT_DIR = "assets"
 ASSETS_DIR = "assets/images"
-TERRAINS_DIR = "assets/terrains" 
+TERRAINS_DIR = "assets/terrains"
 BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
