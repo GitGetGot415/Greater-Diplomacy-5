@@ -125,6 +125,15 @@ def process_proactive_llm_tasks(map_screen):
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""
+    # This pass queues diplomacy and revokes lapsed military access, but never
+    # moves a nation between factions, alliances or imperial families -- so the
+    # membership half of the diplomatic picture can be resolved once up front.
+    # Access itself stays live, since section 0.5 below revokes it as it goes.
+    with queries.diplomacy_snapshot(freeze_access=False):
+        _run_basic_proactive_ai(map_screen)
+
+
+def _run_basic_proactive_ai(map_screen):
     active_nations = set(queries.get_living_nations(map_screen.map_data))
     ai_nations = queries.get_active_ai_nations(map_screen)
     
@@ -132,6 +141,10 @@ def process_basic_proactive_ai(map_screen):
     map_screen.proactive_tasks_total = len(ai_nations)
     map_screen.proactive_tasks_completed = 0
     map_screen.loading_status_text = "Evaluating AI Grand Strategy..."
+
+    # Nothing below redraws the map, so the reachability graph is the same for
+    # every nation this pass. Building it once keeps it off the per-enemy path.
+    border_graph = queries.build_national_border_graph(map_screen.map_data, map_screen.id_to_province)
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
@@ -186,7 +199,7 @@ def process_basic_proactive_ai(map_screen):
         if is_already_at_war:
             for enemy in my_enemies:
                 if enemy not in active_nations: continue
-                if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data):
+                if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data, borders=border_graph):
                     if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
                         existing = pending.get(enemy, {})
                         turns = existing.get("turns", 0) if isinstance(existing, dict) else 0

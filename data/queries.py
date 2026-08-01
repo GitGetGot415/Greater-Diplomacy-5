@@ -1,3 +1,5 @@
+import collections
+import contextlib
 import json
 import os
 import re
@@ -14,6 +16,43 @@ import pygame
 
 import data.constants as c
 
+# Faction and alliance membership are pure derived data, but resolving either
+# means scanning every nation -- and AI pathfinding asks for them hundreds of
+# thousands of times per turn. diplomacy_snapshot() memoises those lookups for
+# the length of a pass that only reads them. It is deliberately opt-in and
+# thread-local: outside the block, and on every other thread, these queries
+# recompute exactly as before, so no mutation can ever observe a stale answer.
+_DIPLO_LOCAL = threading.local()
+
+
+@contextlib.contextmanager
+def diplomacy_snapshot(freeze_access=True):
+    """Memoises faction/friendly lookups for the duration of a read-only pass.
+
+    Only wrap code that leaves "faction", "master", "puppets" and "allied_with"
+    alone -- a change to any of those inside the block would be invisible to the
+    rest of it.
+
+    freeze_access additionally memoises the "may I stand on this tile" rule,
+    which also turns on military_access and on queued war declarations; pass
+    False for a pass that edits either while it runs. Nesting is safe, and the
+    inner block reuses the outer snapshot as-is.
+    """
+    if getattr(_DIPLO_LOCAL, "store", None) is not None:
+        yield
+        return
+
+    _DIPLO_LOCAL.store = {
+        "friendly": {},
+        "faction_members": None,
+        "entry": {} if freeze_access else None,
+    }
+    try:
+        yield
+    finally:
+        _DIPLO_LOCAL.store = None
+
+
 def get_imperial_family(nation, nation_data):
     """Returns a set containing the nation, its master (if any), and all related puppets."""
     family = set([nation])
@@ -23,14 +62,34 @@ def get_imperial_family(nation, nation_data):
     family.update(nation_data.get(top_dog, {}).get("puppets", []))
     return family
 
-def get_all_friendly_nations(nation, nation_data):
-    """Unified query to fetch a nation, its faction, imperial family, and allies."""
-    friendly = set(get_imperial_family(nation, nation_data))
+def _compute_friendly_nations(nation, nation_data):
+    friendly = get_imperial_family(nation, nation_data)
     faction = nation_data.get(nation, {}).get("faction", "")
     if faction:
         friendly.update(get_faction_members(faction, nation_data))
     friendly.update(nation_data.get(nation, {}).get("allied_with", []))
     return friendly
+
+def friendly_nations_view(nation, nation_data):
+    """Friendly-nation lookup for membership tests only -- never mutate the result.
+
+    Hands back the snapshot's shared frozenset when one is active, which is what
+    makes the movement rules cheap enough to call once per pathfinding edge.
+    Callers that need their own mutable copy want get_all_friendly_nations.
+    """
+    store = getattr(_DIPLO_LOCAL, "store", None)
+    if store is None:
+        return _compute_friendly_nations(nation, nation_data)
+
+    cached = store["friendly"].get(nation)
+    if cached is None:
+        cached = frozenset(_compute_friendly_nations(nation, nation_data))
+        store["friendly"][nation] = cached
+    return cached
+
+def get_all_friendly_nations(nation, nation_data):
+    """Unified query to fetch a nation, its faction, imperial family, and allies."""
+    return set(friendly_nations_view(nation, nation_data))
 
 def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
     """Standardizes FOW radius expansion."""
@@ -482,7 +541,23 @@ def are_in_same_faction(nation_a, nation_b, nation_data):
 def get_faction_members(faction_name, nation_data):
     """Returns a list of all nations currently in the specified faction."""
     if not faction_name: return []
-    return [n for n, d in list(nation_data.items()) if d.get("faction") == faction_name]
+
+    store = getattr(_DIPLO_LOCAL, "store", None)
+    if store is None:
+        return [n for n, d in list(nation_data.items()) if d.get("faction") == faction_name]
+
+    # Under a snapshot, one pass over nation_data answers every faction instead
+    # of one pass per question. Still hands back a fresh list each time, since
+    # callers do stash and mutate what they get back.
+    index = store["faction_members"]
+    if index is None:
+        index = {}
+        for n, d in list(nation_data.items()):
+            fac = d.get("faction") if isinstance(d, dict) else None
+            if fac:
+                index.setdefault(fac, []).append(n)
+        store["faction_members"] = index
+    return list(index.get(faction_name, ()))
 
 def get_faction_leader(faction_name, nation_data):
     """Returns the leader of the specified faction."""
@@ -596,7 +671,7 @@ def needs_military_access_request(moving_nation, target_owner, nation_data):
     """
     if has_military_access(moving_nation, target_owner, nation_data):
         return False
-    if target_owner in get_all_friendly_nations(moving_nation, nation_data):
+    if target_owner in friendly_nations_view(moving_nation, nation_data):
         return False
     return True
 
@@ -632,13 +707,26 @@ def has_surprise_attack_entry(moving_nation, target_owner, nation_data):
     queued = nation_data.get(moving_nation, {}).get("queued_ai_actions", [])
     return any(q.get("target") == target_owner and q.get("action") == "WAR_DECLARATION" for q in queued)
 
-def _can_enter_owned_tile(moving_nation, target_owner, nation_data):
-    """The shared tail of the naval and land movement rules."""
+def _resolve_owned_tile_entry(moving_nation, target_owner, nation_data):
     if has_surprise_attack_entry(moving_nation, target_owner, nation_data):
         return True
     if has_military_access(moving_nation, target_owner, nation_data):
         return True
-    return target_owner in get_all_friendly_nations(moving_nation, nation_data)
+    return target_owner in friendly_nations_view(moving_nation, nation_data)
+
+def _can_enter_owned_tile(moving_nation, target_owner, nation_data):
+    """The shared tail of the naval and land movement rules."""
+    store = getattr(_DIPLO_LOCAL, "store", None)
+    entry = store["entry"] if store is not None else None
+    if entry is None:
+        return _resolve_owned_tile_entry(moving_nation, target_owner, nation_data)
+
+    # The answer turns on who owns the tile, not which tile it is, so a snapshot
+    # only has to settle it once per nation pairing instead of once per tile.
+    key = (moving_nation, target_owner)
+    if key not in entry:
+        entry[key] = _resolve_owned_tile_entry(moving_nation, target_owner, nation_data)
+    return entry[key]
 
 def can_ships_enter(moving_nation, target_province, nation_data):
     """Centralized rules for naval movement."""
@@ -2346,58 +2434,72 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
 # DIPLOMATIC SPAM/REACHABILITY QUERIES
 # ==========================================
 
-def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, nation_data):
-    """Determines if a nation can physically reach another via land borders (including passable nations) or connected water."""
-    friendly_a = get_all_friendly_nations(nation_a, nation_data)
-    at_war_a = set(nation_data.get(nation_a, {}).get("at_war_with", []))
-    
-    friendly_b = get_all_friendly_nations(target_nation, nation_data)
-    at_war_b = set(nation_data.get(target_nation, {}).get("at_war_with", []))
-    
-    target_faction = nation_data.get(target_nation, {}).get("faction", "")
-    enemy_nations = {target_nation}
-    if target_faction:
-        enemy_nations.update(get_faction_members(target_faction, nation_data))
-        
-    passable_nations = set(friendly_a) | at_war_a | set(friendly_b) | at_war_b | enemy_nations
-    
+def build_national_border_graph(map_data, id_to_province):
+    """Builds the world adjacency graph is_nation_reachable walks.
+
+    Nodes are nation names, plus one "WATER_<id>" node per sea tile. Derived
+    purely from tile ownership and terrain, so a caller asking about several
+    nations in a row should build this once and pass it to every call rather
+    than paying for a full map sweep each time.
+    """
     borders = {}
+
     def add_edge(u, v):
         if u not in borders: borders[u] = set()
         if v not in borders: borders[v] = set()
         borders[u].add(v)
         borders[v].add(u)
-        
+
     for prov_id, prov in map_data.items():
         is_water = is_water_province(prov)
         owner = prov.get("owner")
-        
+
         node_u = f"WATER_{prov_id}" if is_water else owner
         if not node_u: continue
-        
+
         for n_id in prov.get("neighbors", []):
             n_prov = id_to_province.get(n_id)
             if not n_prov: continue
-            
+
             n_is_water = is_water_province(n_prov)
             n_owner = n_prov.get("owner")
-            
+
             node_v = f"WATER_{n_id}" if n_is_water else n_owner
             if not node_v: continue
-            
+
             if node_u != node_v:
                 add_edge(node_u, node_v)
-                
+
+    return borders
+
+def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, nation_data, borders=None):
+    """Determines if a nation can physically reach another via land borders (including passable nations) or connected water."""
+    friendly_a = get_all_friendly_nations(nation_a, nation_data)
+    at_war_a = set(nation_data.get(nation_a, {}).get("at_war_with", []))
+
+    friendly_b = get_all_friendly_nations(target_nation, nation_data)
+    at_war_b = set(nation_data.get(target_nation, {}).get("at_war_with", []))
+
+    target_faction = nation_data.get(target_nation, {}).get("faction", "")
+    enemy_nations = {target_nation}
+    if target_faction:
+        enemy_nations.update(get_faction_members(target_faction, nation_data))
+
+    passable_nations = set(friendly_a) | at_war_a | set(friendly_b) | at_war_b | enemy_nations
+
+    if borders is None:
+        borders = build_national_border_graph(map_data, id_to_province)
+
     visited = set(friendly_a)
-    queue = list(friendly_a)
-    
+    queue = collections.deque(friendly_a)
+
     while queue:
-        curr = queue.pop(0)
-        
+        curr = queue.popleft()
+
         if curr in enemy_nations:
             return True
-            
-        for neighbor in borders.get(curr, []):
+
+        for neighbor in borders.get(curr, ()):
             if neighbor not in visited:
                 is_water_node = str(neighbor).startswith("WATER_")
                 if neighbor in enemy_nations:
@@ -2405,7 +2507,7 @@ def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, natio
                 if is_water_node or neighbor in passable_nations:
                     visited.add(neighbor)
                     queue.append(neighbor)
-                    
+
     return False
 
 def is_ai_diplo_on_cooldown(sender, target, action, nation_data):

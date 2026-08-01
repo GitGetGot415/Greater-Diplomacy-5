@@ -3,10 +3,22 @@ import numpy as np
 import data.constants as c
 from data import queries
 
-def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
-    """
-    Helper function that applies HoI4-style inner borders and gradient shading.
-    Used by Political, Relations, and Cores maps.
+# Brightness applied to each shading band, indexed by the level ids assigned in
+# apply_border_shading: 0 unshaded, then edge_1, edge_3, edge_4, interior.
+_SHADE_FACTORS = (1.0, 0.7, 0.8, 0.6, 0.4)
+
+# Pre-multiplying every possible channel value turns the shading pass into one
+# gather instead of a masked read-multiply-write per band. Built with the same
+# float expression the per-band version used, so the output is bit-identical.
+_SHADE_LUT = np.stack([(np.arange(256) * f).astype(np.uint8) for f in _SHADE_FACTORS])
+
+
+def compute_shading_levels(owner_2d, water_ids):
+    """Works out which shading band every pixel falls in.
+
+    Depends only on how tiles are grouped by owner, never on the colours drawn
+    on top -- which is what lets _build_map_surface reuse one result across the
+    map modes that group tiles the same way.
     """
     # Bridge the black gaps on the OWNER array so internal province borders are ignored.
     filled_owner = np.copy(owner_2d)
@@ -41,20 +53,57 @@ def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
 
     interior = is_land & ~edge_1 & ~edge_2 & ~edge_3 & ~edge_4
 
-    # Unpack back into an RGB 3D array
-    out_3d = np.empty_like(id_array)
+    # The bands are mutually exclusive by construction, so each pixel just
+    # records the row of the brightness table it belongs to.
+    # edge_2 keeps level 0 (100% brightness)
+    level = np.zeros(owner_2d.shape, dtype=np.uint8)
+    level[edge_1] = 1
+    level[edge_3] = 2
+    level[edge_4] = 3
+    level[interior] = 4
+    return level
+
+
+def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
+    """
+    Helper function that applies HoI4-style inner borders and gradient shading.
+    Used by Political, Relations, and Cores maps.
+    """
+    return shade_packed_colors(out_2d, id_array.shape, compute_shading_levels(owner_2d, water_ids))
+
+
+def shade_packed_colors(out_2d, shape_3d, level):
+    """Unpacks packed RGB into channels and applies the shading band brightness."""
+    out_3d = np.empty(shape_3d, dtype=np.uint8)
     out_3d[:, :, 0] = (out_2d >> 16) & 0xFF
     out_3d[:, :, 1] = (out_2d >> 8) & 0xFF
     out_3d[:, :, 2] = out_2d & 0xFF
-    
-    # --- APPLY GRADIENT SHADING ---
-    out_3d[edge_1] = (out_3d[edge_1] * 0.7).astype(np.uint8)
-    # edge_2 remains untouched (100% brightness)
-    out_3d[edge_3] = (out_3d[edge_3] * 0.8).astype(np.uint8)
-    out_3d[edge_4] = (out_3d[edge_4] * 0.6).astype(np.uint8)
-    out_3d[interior] = (out_3d[interior] * 0.4).astype(np.uint8)
-    
-    return out_3d
+    return _SHADE_LUT[level[:, :, None], out_3d]
+
+
+# The edge sweep above is the most expensive part of a rebuild, and several map
+# modes group tiles identically -- political, relations and factions all key off
+# the raw province owner. Caching by that grouping runs the sweep once per
+# distinct layout per turn instead of once per map mode. The key names every
+# province's owner, so a cache hit cannot describe a different world.
+_LEVEL_CACHE = {}
+_LEVEL_CACHE_MAP = None
+_LEVEL_CACHE_LIMIT = 4
+
+
+def _cached_shading_levels(id_map, layout_key, build_owner_2d, water_ids):
+    global _LEVEL_CACHE_MAP
+    if _LEVEL_CACHE_MAP is not id_map:
+        _LEVEL_CACHE.clear()
+        _LEVEL_CACHE_MAP = id_map
+
+    level = _LEVEL_CACHE.get(layout_key)
+    if level is None:
+        if len(_LEVEL_CACHE) >= _LEVEL_CACHE_LIMIT:
+            _LEVEL_CACHE.clear()
+        level = compute_shading_levels(build_owner_2d(), water_ids)
+        _LEVEL_CACHE[layout_key] = level
+    return level
 
 
 def get_id_2d_array(id_map):
@@ -69,41 +118,45 @@ def get_id_2d_array(id_map):
 def _build_map_surface(self, get_owner_and_color):
     """Unified helper to build NumPy map surfaces to prevent array calculation duplication."""
     id_array, id_2d = get_id_2d_array(self.id_map)
+    shape_3d = id_array.shape
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)
     owner_to_int = {}
     next_owner_id = 1
-    
+    owner_seq = []
+
     for color_key, data in self.map_data.items():
         terrain_type = data.get("terrain", "plains")
-        
+
         if terrain_type in c.VISUAL_WATER_MAPPING:
             owner = c.VISUAL_WATER_MAPPING[terrain_type]
-            color = c.COLOR_CHROMA_PINK 
+            color = c.COLOR_CHROMA_PINK
         else:
             owner, color = get_owner_and_color(data)
-            
+
             # THE FIX: Properly indent the colorkey collision check so it ONLY runs on land!
             if tuple(color) == c.COLOR_CHROMA_PINK:
                 color = (254, 0, 255)
-            
+
         if owner not in owner_to_int:
             owner_to_int[owner] = next_owner_id
             next_owner_id += 1
-            
+
         packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
         packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
-        
+
         lut[packed_key] = packed_color
         owner_lut[packed_key] = owner_to_int[owner]
-        
+        owner_seq.append(owner_to_int[owner])
+
     out_2d = lut[id_2d]
-    owner_2d = owner_lut[id_2d]
-    
+
     # Process Shading
     water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
-    out_3d = apply_border_shading(out_2d, owner_2d, id_array, water_ids)
-    
+    layout_key = (tuple(owner_seq), tuple(water_ids))
+    level = _cached_shading_levels(self.id_map, layout_key, lambda: owner_lut[id_2d], water_ids)
+    out_3d = shade_packed_colors(out_2d, shape_3d, level)
+
     new_surf = pygame.Surface(self.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_surf, out_3d)
     
@@ -132,17 +185,25 @@ def refresh_relations_map(self):
     """Rebuilds the relations map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
+    # Scoring a pair walks every province to tally claims, and the answer only
+    # depends on who owns the tile -- so resolve it once per nation, not once
+    # per tile.
+    color_by_owner = {}
+
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        if owner in ["Unclaimed", "None", ""]:
-            color = (255, 255, 255)
-        elif owner == self.player_country:
-            color = (0, 0, 255)
-        else:
-            relation = queries.get_relation_score(owner, self.player_country, self.nation_data, self.id_to_province)
-            color = queries.get_relation_color(relation)
+        color = color_by_owner.get(owner)
+        if color is None:
+            if owner in ["Unclaimed", "None", ""]:
+                color = (255, 255, 255)
+            elif owner == self.player_country:
+                color = (0, 0, 255)
+            else:
+                relation = queries.get_relation_score(owner, self.player_country, self.nation_data, self.id_to_province)
+                color = queries.get_relation_color(relation)
+            color_by_owner[owner] = color
         return owner, color
-        
+
     self.relations_map = _build_map_surface(self, get_data)
     
     if self.map_mode == "RELATIONS":

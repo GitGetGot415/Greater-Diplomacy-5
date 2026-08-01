@@ -3,94 +3,131 @@ import heapq
 import data.constants as c
 from data import queries
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0):
+def build_neighbor_index(id_to_province):
+    """Maps each tile to its neighbours that actually exist on the map.
+
+    Dropping the dangling ids up front is what lets the pathfinder walk an edge
+    without looking the destination province up just to confirm it is real.
+    """
+    return {
+        p_id: [n_id for n_id in prov.get("neighbors", ()) if n_id in id_to_province]
+        for p_id, prov in id_to_province.items()
+    }
+
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if unsafe_waters is None:
         unsafe_waters = {}
-        
-    queue = [(0.0, 0, start_id, [start_id])]
+    if water_ids is None:
+        water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
+    if neighbor_ids is None:
+        neighbor_ids = build_neighbor_index(id_to_province)
+
+    # Partial paths are cons cells -- (tile_id, cell_it_came_from) -- rather than
+    # lists. Extending one is a single tuple instead of copying the whole path,
+    # and branches share their common prefix, which matters because this search
+    # queues hundreds of thousands of candidates per turn.
+    queue = [(0.0, 0, start_id, (start_id, None))]
     visited = {start_id: 0.0}
     valid_paths = []
     found_cost = -1.0
     counter = 1
 
+    # Costs and the depth limit only depend on the unit, so resolve them once.
+    speed = max(1.0, float(unit_speed))
+    land_step = 1.0 if is_ship else 1.0 / speed
+    sea_step = 1.0 * c.AI_SEA_PATH_PENALTY_MULTIPLIER
+    # DEPTH OF 10 SO AI CAN SEE FAR (Scaled by speed)
+    depth_slack = 10.0 / speed
+
     # If already on a target, staying is evaluated as a valid option
     if start_id in target_ids:
-        valid_paths.append((0.0, [start_id]))
+        valid_paths.append((0.0, (start_id, None)))
         found_cost = 0.0
 
     while queue:
         current_cost, _, curr, path = heapq.heappop(queue)
 
-        # Allow search a few tiles deeper than the first found target 
+        # Allow search a few tiles deeper than the first found target
         # so it can accurately discover empty borders further down the line.
-        # DEPTH OF 10 SO AI CAN SEE FAR (Scaled by speed)
-        if found_cost != -1.0 and current_cost > found_cost + (10.0 / max(1.0, float(unit_speed))):
+        if found_cost != -1.0 and current_cost > found_cost + depth_slack:
             break
 
-        prov = id_to_province.get(curr)
-        if not prov: continue
+        neighbors = neighbor_ids.get(curr)
+        if not neighbors: continue
 
-        for n_id in prov.get("neighbors", []):
-            n_prov = id_to_province.get(n_id)
-            if not n_prov: continue
-            
+        curr_is_water = curr in water_ids
+
+        for n_id in neighbors:
             # --- NEW CONVOY AND NAVAL BFS RULE ---
-            curr_is_water = queries.is_water_province(prov)
-            dest_is_water = queries.is_water_province(n_prov)
-            
+            dest_is_water = n_id in water_ids
+
             if is_convoy or is_ship:
                 if not curr_is_water and not dest_is_water:
                     continue # Convoys and Ships on land cannot move to another land tile
-                    
-                if is_ship and not dest_is_water:
-                    # Ships can only enter friendly coastal tiles
-                    if not queries.can_ships_enter(moving_nation, n_prov, nation_data):
-                        continue
-                        
-                if is_convoy and not dest_is_water:
-                    # Convoys landing must obey land border rules
-                    if not queries.can_land_units_enter(moving_nation, n_prov, nation_data):
-                        continue
+
+                if not dest_is_water:
+                    n_prov = id_to_province[n_id]
+
+                    if is_ship:
+                        # Ships can only enter friendly coastal tiles
+                        if not queries.can_ships_enter(moving_nation, n_prov, nation_data):
+                            continue
+
+                    if is_convoy:
+                        # Convoys landing must obey land border rules
+                        if not queries.can_land_units_enter(moving_nation, n_prov, nation_data):
+                            continue
 
             # --- NEW: Cost Calculation for Dijkstra ---
-            if dest_is_water and not is_ship:
-                # Land unit moving over water (Convoy) applies the 2x sea penalty
-                step_cost = 1.0 * c.AI_SEA_PATH_PENALTY_MULTIPLIER
-            else:
-                # Land unit moving over land, or ship moving over water
-                step_cost = 1.0 / max(1.0, float(unit_speed)) if not is_ship else 1.0
+            # Land unit over water (Convoy) pays the sea penalty; everything else
+            # pays its own per-tile rate.
+            step_cost = sea_step if (dest_is_water and not is_ship) else land_step
 
             new_cost = current_cost + step_cost
 
             # --- BLOCK SUICIDE PATHS ---
 
             if n_id in target_ids:
-                valid_paths.append((new_cost, path + [n_id]))
+                valid_paths.append((new_cost, (n_id, path)))
                 if found_cost == -1.0:
                     found_cost = new_cost
 
             if n_id in allowed_prov_ids and (n_id not in visited or new_cost < visited[n_id]):
                 visited[n_id] = new_cost
-                heapq.heappush(queue, (new_cost, counter, n_id, path + [n_id]))
+                heapq.heappush(queue, (new_cost, counter, n_id, (n_id, path)))
                 counter += 1
 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by cost.
     if valid_paths:
-        best_path_tuple = min(valid_paths, key=lambda p: (target_assignments.get(p[1][-1], 0), p[0]))
-        best_path = best_path_tuple[1]
-        
+        # A cell's head is the tile the path ends on.
+        best_cell = min(valid_paths, key=lambda p: (target_assignments.get(p[1][0], 0), p[0]))[1]
+
         # If the best path is just staying where we are, return an empty array so we don't move
-        if best_path[-1] == start_id:
+        if best_cell[0] == start_id:
             return []
-            
+
+        # Unwind the cons chain, which runs destination-first.
+        best_path = []
+        while best_cell is not None:
+            best_path.append(best_cell[0])
+            best_cell = best_cell[1]
+        best_path.reverse()
+
         return best_path[1:]
 
     return []
 
 def process_ai_unit_orders(map_screen):
     """Generates movement orders for AI-controlled units to balance borders, attack, or escort."""
-    
+    # Order generation only reads the diplomatic picture -- it writes unit orders
+    # and nothing else -- so faction and alliance membership can be resolved once
+    # for the whole pass instead of once per pathfinding edge.
+    with queries.diplomacy_snapshot():
+        _generate_unit_orders(map_screen)
+
+
+def _generate_unit_orders(map_screen):
     ai_nations = queries.get_active_ai_nations(map_screen)
 
     # Build a list of which units are where
@@ -98,10 +135,13 @@ def process_ai_unit_orders(map_screen):
     nation_provs = {}
 
     # --- NEW: Pre-calculate allowed pathing IDs to include water for convoys ---
+    # Doubles as the water lookup the pathfinder uses per tile.
     allowed_prov_ids_cache = set()
     for prov in map_screen.map_data.values():
         if queries.is_water_province(prov):
             allowed_prov_ids_cache.add(prov["id"])
+    water_ids = allowed_prov_ids_cache
+    neighbor_ids = build_neighbor_index(map_screen.id_to_province)
 
     for ai_name in ai_nations:
         provs, units = queries.get_nation_provinces_and_units(ai_name, map_screen.map_data)
@@ -572,7 +612,9 @@ def process_ai_unit_orders(map_screen):
                 moving_nation=ai_name, 
                 nation_data=map_screen.nation_data,
                 unsafe_waters=unsafe_waters,
-                unit_speed=unit.get("speed", 1)
+                unit_speed=unit.get("speed", 1),
+                water_ids=water_ids,
+                neighbor_ids=neighbor_ids
             )
 
             if path:
