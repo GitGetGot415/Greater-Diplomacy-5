@@ -43,29 +43,28 @@ class Multiplayer_New(GameState):
         self.go_to("SCENARIO_SETTINGS")
 
     def start_host_setup(self, scenario_name, directory=c.SCENARIOS_CUSTOM_DIR):
-        from tkinter import simpledialog, messagebox
+        from tkinter import messagebox
         import secrets
         from data.io import multiplayer_io
         from screens.menu_screens.map import Map
-
-        root = queries.get_transient_tk_root()
+        from ui import confirm_dialog
 
         import re
         while True:
-            tour_name = simpledialog.askstring("Tournament Name", "Enter a name for this tournament:", parent=root)
+            tour_name = confirm_dialog.ask_string("Tournament Name", "Enter a name for this tournament:")
             if not tour_name or not tour_name.strip(): return
-            
+
             safe_tour_name = re.sub(r'[\\/*?:"<>|]', '', tour_name).strip()
             if not safe_tour_name:
                 safe_tour_name = "Tournament"
-                
+
             tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
             if os.path.exists(tournament_dir):
                 messagebox.showerror("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
                 continue
             break
-            
-        master_key = simpledialog.askstring("Host Key", "Enter a Master Key for this tournament:", parent=root)
+
+        master_key = confirm_dialog.ask_string("Host Key", "Enter a Master Key for this tournament:")
         if not master_key: return
         
         os.makedirs(tournament_dir, exist_ok=True)

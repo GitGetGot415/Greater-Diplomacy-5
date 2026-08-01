@@ -149,8 +149,12 @@ def ask_yes_no(title, message, tk_parent=None, yes_label="Yes", no_label="No"):
     return result
 
 
-def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_parent=None):
-    """Blocking pygame numeric-entry dialog. Returns an int, or None if cancelled."""
+def _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate):
+    """Shared blocking single-line text-entry modal used by ask_integer and ask_string.
+
+    char_allowed(unicode_char, current_text) -> bool decides which typed characters are accepted.
+    validate(text) -> (value, error_message); value is None (with a message) when the text isn't acceptable yet.
+    """
     surface, owns_display = _acquire_surface()
     hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
 
@@ -164,25 +168,12 @@ def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_p
     box_rect = pygame.Rect(0, 0, box_w, box_h)
     box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
 
-    input_rect = pygame.Rect(box_rect.centerx - 100, box_rect.bottom - 110, 200, 40)
+    input_rect = pygame.Rect(box_rect.x + 40, box_rect.bottom - 110, box_w - 80, 40)
     ok_rect = pygame.Rect(box_rect.centerx - 140, box_rect.bottom - 55, 120, 40)
     cancel_rect = pygame.Rect(box_rect.centerx + 20, box_rect.bottom - 55, 120, 40)
 
-    text = str(initial) if initial is not None else ""
+    text = str(initial_text) if initial_text is not None else ""
     error_text = ""
-
-    def _validate():
-        if not text:
-            return None, "Enter a number."
-        try:
-            value = int(text)
-        except ValueError:
-            return None, "Enter a whole number."
-        if minvalue is not None and value < minvalue:
-            return None, f"Minimum is {minvalue}."
-        if maxvalue is not None and value > maxvalue:
-            return None, f"Maximum is {maxvalue}."
-        return value, ""
 
     background = surface.copy()
     clock = pygame.time.Clock()
@@ -198,19 +189,19 @@ def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_p
                     if event.key == pygame.K_ESCAPE:
                         result, waiting = None, False
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        value, error_text = _validate()
-                        if value is not None:
+                        value, error_text = validate(text)
+                        if error_text == "":
                             result, waiting = value, False
                     elif event.key == pygame.K_BACKSPACE:
                         text = text[:-1]
                         error_text = ""
-                    elif event.unicode.isdigit() or (event.unicode == "-" and not text):
+                    elif event.unicode and char_allowed(event.unicode, text):
                         text += event.unicode
                         error_text = ""
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if ok_rect.collidepoint(event.pos):
-                        value, error_text = _validate()
-                        if value is not None:
+                        value, error_text = validate(text)
+                        if error_text == "":
                             result, waiting = value, False
                     elif cancel_rect.collidepoint(event.pos):
                         result, waiting = None, False
@@ -236,7 +227,9 @@ def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_p
             border_color = (220, 80, 80) if error_text else (200, 200, 200)
             pygame.draw.rect(surface, border_color, input_rect, 2)
             input_surf = msg_font.render(text or " ", True, (255, 255, 255))
+            surface.set_clip(input_rect.inflate(-10, -6))
             surface.blit(input_surf, input_surf.get_rect(midleft=(input_rect.x + 10, input_rect.centery)))
+            surface.set_clip(None)
 
             if error_text:
                 err_surf = fonts.get("small").render(error_text, True, (230, 100, 100))
@@ -260,3 +253,40 @@ def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_p
         _release_surface(owns_display)
 
     return result
+
+
+def ask_integer(title, message, minvalue=None, maxvalue=None, initial=None, tk_parent=None):
+    """Blocking pygame numeric-entry dialog. Returns an int, or None if cancelled."""
+
+    def char_allowed(ch, current_text):
+        return ch.isdigit() or (ch == "-" and not current_text)
+
+    def validate(text):
+        if not text:
+            return None, "Enter a number."
+        try:
+            value = int(text)
+        except ValueError:
+            return None, "Enter a whole number."
+        if minvalue is not None and value < minvalue:
+            return None, f"Minimum is {minvalue}."
+        if maxvalue is not None and value > maxvalue:
+            return None, f"Maximum is {maxvalue}."
+        return value, ""
+
+    initial_text = str(initial) if initial is not None else ""
+    return _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate)
+
+
+def ask_string(title, message, initial="", tk_parent=None, allow_empty=True):
+    """Blocking pygame free-text entry dialog. Returns the entered string, or None if cancelled."""
+
+    def char_allowed(ch, current_text):
+        return ch.isprintable()
+
+    def validate(text):
+        if not allow_empty and not text.strip():
+            return None, "This field cannot be empty."
+        return text, ""
+
+    return _run_text_input_dialog(title, message, initial, tk_parent, char_allowed, validate)

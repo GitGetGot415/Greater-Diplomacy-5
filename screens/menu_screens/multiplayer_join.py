@@ -19,7 +19,8 @@ class Multiplayer_Join(GameState):
         ]
 
     def load_tour_file(self):
-        from tkinter import filedialog, simpledialog
+        from tkinter import filedialog
+        from ui import confirm_dialog
 
         root = queries.get_transient_tk_root()
 
@@ -29,8 +30,9 @@ class Multiplayer_Join(GameState):
             filetypes=[("Tournament Files", "*.gd5tour")],
             parent=root
         )
-        key = simpledialog.askstring("Player Key", "Enter your Country Key:", parent=root) if file_path else None
         queries.destroy_tk_root(root)
+
+        key = confirm_dialog.ask_string("Player Key", "Enter your Country Key:") if file_path else None
 
         if not file_path or not key:
             return
