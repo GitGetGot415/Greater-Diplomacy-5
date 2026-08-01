@@ -25,6 +25,8 @@
 - more damaged a unit is, less damage it deals?
 - also maybe if a unit does overkill it can kill a unit before it does other damage? (think about this)
 
+- loading screen for saving if it takes a long time
+
 Immediate concerns:
 - newspaper events???
 - set newspaper events in seperate screen and then fire them from country actions???
