@@ -172,9 +172,15 @@ class _ModalScreen(GameState):
     # -- scroll regions ------------------------------------------------- #
 
     def scroll_attrs(self, name):
-        return {"attr": f"scroll_{name}", "limit_attr": f"max_{name}",
-                "track_attr": f"track_{name}", "handle_attr": f"handle_{name}",
-                "drag_attr": f"drag_{name}"}
+        """Per-region scroll state names.
+
+        Underscore-prefixed so a region can never shadow a method: a region
+        called "events" would otherwise publish its scrollbar handle as
+        self.handle_events and overwrite GameState.handle_events.
+        """
+        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
+                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
+                "drag_attr": f"_drag_{name}"}
 
     def rows_of(self, name, count, top, view_h, row_h=None):
         row_h = row_h or self.ROW_HEIGHT
@@ -1015,7 +1021,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
     def select_nation(self, cid):
         self.target = cid
         self.selected_event = None
-        self.scroll_events = 0
+        self._scroll_events = 0
         self.refresh_ui()
 
     def select_event(self, index):

@@ -780,7 +780,7 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         self.puppet_type = c.PUPPET_TYPE_AUTONOMOUS
 
         for name in self.REGIONS:
-            setattr(self, f"scroll_{name}", 0)
+            setattr(self, f"_scroll_{name}", 0)
 
         self.faction_field = TextField(0, 0, 300, 36, "", label="Faction Name:")
         self._layout()
@@ -809,9 +809,15 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         return self.cols_x + index * (self.COL_W + self.COL_GAP)
 
     def _scroll_attrs(self, name):
-        return {"attr": f"scroll_{name}", "limit_attr": f"max_{name}",
-                "track_attr": f"track_{name}", "handle_attr": f"handle_{name}",
-                "drag_attr": f"drag_{name}"}
+        """Per-region scroll state names.
+
+        Underscore-prefixed so a region can never shadow a method: a region
+        called "events" would otherwise publish its scrollbar handle as
+        self.handle_events and overwrite GameState.handle_events.
+        """
+        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
+                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
+                "drag_attr": f"_drag_{name}"}
 
     @property
     def listening_for(self):
@@ -840,7 +846,7 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
                         if faction and self.map_screen.nation_data.get(n, {}).get("faction", "") == faction}
 
         for name in ("wars", "members", "master"):
-            setattr(self, f"scroll_{name}", 0)
+            setattr(self, f"_scroll_{name}", 0)
         self.refresh_ui()
 
     def toggle_membership(self, group, name):
