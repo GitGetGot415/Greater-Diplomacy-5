@@ -12,6 +12,7 @@ venv/
 !context/**
 !version.txt
 .DS_Store
+.eggs
 
 assets/music/*
 !assets/music/Greater Diplomacy 1/
