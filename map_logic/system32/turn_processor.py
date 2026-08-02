@@ -1,17 +1,25 @@
+import asyncio
 from map_logic.diplomacy import diplomacy_logic
 from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, automation_logic
 from map_logic.system32 import combat_processor, movement_processor, economy_processor, research_processor
 import data.constants as c
 from data import queries
 
-def prepare_turn(self):
-    """Phase 1: Calculate diplomacy and generate AI movement paths."""
+async def prepare_turn(self):
+    """Phase 1: Calculate diplomacy and generate AI movement paths.
+
+    Yields with `await asyncio.sleep(0)` between phases so run_background
+    (data/platform.py) can interleave this with the main render loop -- on
+    web that's what actually lets the loading bar animate and keeps the
+    browser tab/audio scheduling alive instead of freezing for the whole
+    turn; on desktop it's a no-op since this runs on its own thread/loop.
+    """
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
-    
+
     # --- NEW: Check if AI is turned off ---
     ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, self.scenario_settings)
-    
+
 
     if not ai_disabled:
         # --- TACTICAL HIDE ---
@@ -23,48 +31,55 @@ def prepare_turn(self):
         # --- Basic Proactive AI & Grand Strategy ---
         print("[SYSTEM] Running Proactive AI...")
         ai_diplomacy.process_basic_proactive_ai(self)
-        
+        await asyncio.sleep(0)
+
         self.loading_status_text = "Running AI Research..."
         print("[SYSTEM] Running AI Research...")
         ai_research.process_ai_research(self)
-        
+        await asyncio.sleep(0)
+
         self.loading_status_text = "Running AI Economy & Construction..."
         print("[SYSTEM] Running AI Economy & Construction...")
         ai_construction.process_ai_economy_decisions(self)
-        
+        await asyncio.sleep(0)
+
         self.loading_status_text = "Generating AI Movement Orders..."
         print("[SYSTEM] Generating AI Movement Orders...")
-        
+
         ai_movement.process_ai_unit_orders(self)
+        await asyncio.sleep(0)
 
         self.loading_status_text = "Drafting Proactive Responses..."
         print("[SYSTEM] Drafting Proactive Responses...")
         ai_diplomacy.process_proactive_llm_tasks(self)
+        await asyncio.sleep(0)
 
         # --- TACTICAL RESTORE ---
         if is_tactical:
             self.player_unit["owner"] = self.player_country
     else:
         print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
-        
+
         # Since AI is off, we still need to clear proactive tasks to avoid errors
         self.proactive_llm_tasks = []
         self.proactive_tasks_total = 0
         self.proactive_tasks_completed = 0
         self.proactive_llm_tasks_total = 0
         self.proactive_llm_tasks_completed = 0
-        
+
     # --- Process Scripted Events ---
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
     self.loading_status_text = "Running Scripted Events..."
     print("[SYSTEM] Running Scripted Events...")
     ai_diplomacy.process_scripted_events(self)
-    
+    await asyncio.sleep(0)
+
     # MOVED: Diplomacy is now processed AFTER AI movement generation.
     self.loading_status_text = "Processing Pending Diplomacy..."
     print("[SYSTEM] Processing Pending Diplomacy...")
     diplomacy_logic.process_diplomacy_turn(self)
-    
+    await asyncio.sleep(0)
+
     print("--- [PHASE 1] COMPLETE ---")
 
 def snapshot_history(self):
@@ -111,8 +126,12 @@ def snapshot_history(self):
         }
     self.history[turn_idx] = snapshot
 
-def resolve_turn_logic(self): # Renamed from resolve_turn
-    """Executes time, combat, movement, and economy logic (no refreshes)."""
+async def resolve_turn_logic(self): # Renamed from resolve_turn
+    """Executes time, combat, movement, and economy logic (no refreshes).
+
+    Yields with `await asyncio.sleep(0)` between the major sub-phases -- see
+    prepare_turn's docstring for why.
+    """
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     
     # Snapshot original owners for capture logic
@@ -131,26 +150,30 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
     movement_processor.process_disbands(self)
     movement_processor.process_repairs(self)
     movement_processor.process_upgrades(self)
-    
+    await asyncio.sleep(0)
+
     # Process Queues (Deployments) so new units can defend
     print("[SYSTEM] Processing Queues (Deployments)...")
     economy_processor.process_queues(self)
+    await asyncio.sleep(0)
 
     # Pre-Movement Combat Mechanics
     combat_processor.process_bombardments(self)
     combat_processor.process_pinning(self)
     combat_processor.process_meeting_engagements(self)
-    
+
     movement_processor.process_movement(self)
     combat_processor.process_combat(self)
     combat_processor.check_for_post_combat_captures(self)
+    await asyncio.sleep(0)
 
     # Exile any units left standing on foreign soil without a legal right to be there
     movement_processor.process_stranded_units(self)
 
     # Kill orphaned units and ghost wars
     movement_processor.process_dead_nations(self)
-    
+    await asyncio.sleep(0)
+
     # Process Morale updates
     for prov in self.map_data.values():
         for u in prov.get("units", []):
@@ -159,12 +182,14 @@ def resolve_turn_logic(self): # Renamed from resolve_turn
                 u.pop("_in_combat_this_turn", None)
             else:
                 u["morale"] = min(100.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) + 5.0)
-                
+
     print("[SYSTEM] Calculating Economy...")
     economy_processor.process_economy(self)
-    
+    await asyncio.sleep(0)
+
     research_processor.process_national_research(self)
-    
+    await asyncio.sleep(0)
+
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---
         is_multi = self.multi_turns_total > 0

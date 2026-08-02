@@ -319,9 +319,10 @@ class Map(GameState):
         confirm_dialog.ask_integer("Process Multiple Turns", "How many turns to process at once?",
                                    on_turns, minvalue=1, maxvalue=5000)
 
-    def _run_multi_turn_thread(self, turns):
+    async def _run_multi_turn_thread(self, turns):
         from map_logic.system32 import turn_processor
         from map_logic.ai import ai_handler
+        import asyncio
         import traceback
 
         try:
@@ -342,8 +343,12 @@ class Map(GameState):
                 self.responsive_tasks_total = 0
                 self.responsive_tasks_completed = 0
 
-                turn_processor.prepare_turn(self)
-                turn_processor.resolve_turn_logic(self)
+                await turn_processor.prepare_turn(self)
+                await turn_processor.resolve_turn_logic(self)
+                # Extra yield so the multi-turn progress bar (map_renderer.py)
+                # gets at least one render between turns even if a turn's own
+                # internal phases all happened to resolve without yielding.
+                await asyncio.sleep(0)
 
                 # --- ABORT CHECK ---
                 # Can't interrupt a turn mid-computation, so the turn that was
