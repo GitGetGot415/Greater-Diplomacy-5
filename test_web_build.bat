@@ -11,6 +11,14 @@ if not exist "web_stage\build\web\index.html" (
     exit /b 1
 )
 
+:: Kill any server already bound to port 8000 from a previous run of this
+:: script -- two pygbag servers racing for the same port is what causes the
+:: browser to hang forever on "Loading... please wait" (requests get split
+:: unpredictably between the two processes).
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /F >nul 2>&1
+)
+
 echo Starting local web server for the browser build...
 echo Close this window to stop the server.
 echo.
