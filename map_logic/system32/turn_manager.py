@@ -117,7 +117,12 @@ def trigger_ai_thread(map_screen):
     # Map Refresh always executes exactly 7 background render passes now
     map_screen.refresh_tasks_total = 7
     map_screen.refresh_tasks_completed = 0
-    
+
+    # Force the loading screen to actually appear before run_background either
+    # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
+    map_screen.draw(pygame.display.get_surface())
+    pygame.display.flip()
+
     # Fire and forget the background process
     run_background(run_ai_processing_thread, map_screen)
 

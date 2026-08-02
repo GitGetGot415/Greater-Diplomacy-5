@@ -69,7 +69,13 @@ pygame.display.set_caption("Greater Diplomacy 5")
 
 class Controller:
     def __init__(self):
-        pygame.init() 
+        pygame.init()
+        if IS_WEB:
+            # pygame.init() auto-inits the mixer subsystem as one of its defaults,
+            # which creates the browser AudioContext immediately -- before any
+            # click ever happens. Undo that here so init_web_audio() (called from
+            # the first real user gesture in run()) is the actual first mixer init.
+            pygame.mixer.quit()
         pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
         
         self.clock = pygame.time.Clock()
@@ -117,7 +123,10 @@ class Controller:
                 c.USE_SOLOUD = False # Fallback triggered!
 
         # If SoLoud is disabled, or if it failed the try/except block above, boot Pygame.
-        if not c.USE_SOLOUD:
+        # On web, defer this entirely to the first real user gesture (see run()) --
+        # calling pygame.mixer.init() at boot creates the browser AudioContext before
+        # any click, and it never resumes even after later clicks.
+        if not c.USE_SOLOUD and not IS_WEB:
             pygame.mixer.init()
             try:
                 ui_elements.pygame_click_sound = pygame.mixer.Sound(c.SOUND_CLICK_PATH)
@@ -251,7 +260,14 @@ class Controller:
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
         
         self.load_music_data()
-        self.play_random_song()
+        # Browsers block audio until it starts from within a genuine user gesture
+        # (per pygbag's own guidance: "remove startup sounds and/or wait for a
+        # mouse click"). Playing immediately at boot means the browser silently
+        # ignores it and the AudioContext never resumes. Deferred to the first
+        # real input event in run() on web; unaffected on desktop.
+        self._web_audio_unlocked = False
+        if not IS_WEB:
+            self.play_random_song()
 
         self.states = {
             "MENU": Menu(),
@@ -443,6 +459,15 @@ class Controller:
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
 
+    def init_web_audio(self):
+        """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
+        pygame.mixer.init()
+        try:
+            ui_elements.pygame_click_sound = pygame.mixer.Sound(c.SOUND_CLICK_PATH)
+            ui_elements.pygame_slider_sound = pygame.mixer.Sound(c.SOUND_SLIDER_PATH)
+        except:
+            print("Warning: Sound files not found in assets folder")
+
     def build_playlist(self):
         self.playlist = []
         for album in self.active_albums:
@@ -542,6 +567,15 @@ class Controller:
                         self.states["MUSIC_PLAYER"].refresh_ui()
 
             events = pygame.event.get()
+
+            if IS_WEB and not self._web_audio_unlocked:
+                for event in events:
+                    if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                        self._web_audio_unlocked = True
+                        self.init_web_audio()
+                        self.play_random_song()
+                        break
+
             for event in events:
                 if event.type == pygame.QUIT:
                     # Clean up safely before closing

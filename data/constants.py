@@ -887,8 +887,8 @@ FONT_PATH_DATE = "assets/fonts/PixelOperatorMonoHB.ttf"
 FONT_PATH_TOP_COUNTRY = "assets/fonts/PixelOperatorMonoHB.ttf"
 FONT_PATH_RESOURCES = "assets/fonts/W95F.otf"
 
-SOUND_CLICK_PATH = "assets/sounds/slider.wav"
-SOUND_SLIDER_PATH = "assets/sounds/slider.wav"
+SOUND_CLICK_PATH = "assets/sounds/Slider.wav"
+SOUND_SLIDER_PATH = "assets/sounds/Slider.wav"
 
 # JSON Data
 UNIT_DATA_PATH = "data/json/unit_data.json"

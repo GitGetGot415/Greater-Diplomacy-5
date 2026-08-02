@@ -4,6 +4,10 @@ import shutil
 import sys
 import data.constants as c
 
+# Build-time only tools (not needed to run the game itself, so not in requirements.txt,
+# same convention as PyInstaller/py2app for the other two platform builds):
+#   pip install pygbag imageio-ffmpeg
+
 STAGE_DIR = "web_stage"
 
 # main.py ships source (not a frozen binary) into the browser's virtual FS, so unlike
@@ -84,6 +88,38 @@ def main():
         else:
             shutil.copytree(src, dst)
 
+    # 2b. Transcode the official soundtrack from MP3 to OGG for the web bundle only.
+    # Confirmed via real browser testing: this pygame-ce/SDL_mixer WASM build cannot
+    # decode MP3 at all ("Unrecognized audio format"), matching pygame-web's own docs
+    # (https://pygame-web.github.io/wiki/pygbag/ -- only WAV/OGG are reliably
+    # supported). Desktop builds are untouched; only the staged copy is converted.
+    music_dir = os.path.join(STAGE_DIR, "assets", "music")
+    if os.path.exists(music_dir):
+        try:
+            import imageio_ffmpeg
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        except ImportError:
+            print("Warning: imageio-ffmpeg not installed (pip install imageio-ffmpeg) -- "
+                  "skipping MP3->OGG transcode. Music will not play in the web build.")
+            ffmpeg_exe = None
+
+        if ffmpeg_exe:
+            print("Transcoding soundtrack from MP3 to OGG for the web build...")
+            for dirpath, _, filenames in os.walk(music_dir):
+                for fname in filenames:
+                    if not fname.lower().endswith(".mp3"):
+                        continue
+                    src_path = os.path.join(dirpath, fname)
+                    dst_path = os.path.splitext(src_path)[0] + ".ogg"
+                    result = subprocess.run(
+                        [ffmpeg_exe, "-y", "-i", src_path, "-c:a", "libvorbis", "-q:a", "4", dst_path],
+                        capture_output=True,
+                    )
+                    if result.returncode != 0:
+                        print(f"  Failed to transcode {src_path}: {result.stderr.decode(errors='replace')}")
+                        continue
+                    os.remove(src_path)
+
     # saves/ ships empty, same as windows_compilation.py (pygbag's virtual FS persists
     # in-session writes to IndexedDB, so an empty starting folder is all that's needed)
     os.makedirs(os.path.join(STAGE_DIR, "saves"), exist_ok=True)
@@ -111,12 +147,15 @@ def main():
         "--build",
         "--archive",
         "--app_name", "Greater Diplomacy 5",
-        # The official soundtrack ships as .mp3; pygbag's asset scanner flags that as a
-        # "commonly unsupported" browser format and refuses to build otherwise. Modern
-        # browsers do decode mp3 fine, but this hasn't been verified against Pyodide's
-        # bundled SDL2_mixer yet -- if music doesn't actually play in a real browser test,
-        # transcoding assets/music/Greater Diplomacy */*.mp3 to .ogg is the fix.
+        # The soundtrack itself is transcoded to OGG above (confirmed required -- this
+        # WASM build can't decode MP3 at all). This flag just covers any other stray
+        # .mp3 that isn't under assets/music (e.g. an unused leftover asset file) so
+        # the build doesn't fail outright over something that was never played anyway.
         "--disable-sound-format-error",
+        # Default (1) blocks the whole app behind an audio-unlock probe that pygbag's
+        # own code marks buggy for non-interactive scripts (our case) -- it never
+        # resolves and the game never starts. Confirmed via real browser testing.
+        "--ume_block", "0",
     ]
     if os.path.exists(icon_path):
         cmd += ["--icon", icon_path]
