@@ -532,11 +532,13 @@ class FileBrowserScreen(GameState):
 # ---------------------------------------------------------------------- #
 
 def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
-                     confirm_label=None, game_state=None, tk_parent=None):
-    """Blocking browse. Returns the chosen path (or list of paths), None if cancelled.
+                     confirm_label=None, game_state=None, tk_parent=None, on_result=None):
+    """Answers on_result(path) -- or (list of paths), or None if cancelled.
 
-    Usable from the game (a display is already up) and from the standalone
-    map_tools scripts and Tk editor windows (one is created for the duration).
+    Usable from the game (a display is already up, so this hands off to the
+    modal stack and returns immediately) and from the standalone map_tools
+    scripts and Tk editor windows (a window is created for the duration and
+    on_result fires synchronously before this returns -- see run_screen).
     """
     from ui.screen_runner import run_screen
 
@@ -545,5 +547,5 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
                                          lambda picked: result.setdefault("picked", picked),
                                          mode=mode, extensions=extensions,
                                          confirm_label=confirm_label),
+               on_done=lambda screen: on_result(result.get("picked")) if on_result else None,
                tk_parent=tk_parent, caption=title)
-    return result.get("picked")

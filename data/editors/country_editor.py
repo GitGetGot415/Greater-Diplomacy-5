@@ -121,43 +121,47 @@ class CountryEditor:
         """Synchronizes all countries to have every tech defined in the template."""
         msg = ("This will add any NEW technologies from your JSON to ALL countries.\n"
                "Existing research levels will NOT be preserved. Proceed?")
-        if not confirm_dialog.ask_yes_no("Confirm Sync", msg, tk_parent=self.root):
-            return
 
-        default_research = self.get_default_research_dict()
+        def on_confirm(ok):
+            if not ok:
+                return
 
-        for int_id in self.data:
-            # 1. Ensure the 'research' key exists
-            if "research" not in self.data[int_id]:
-                self.data[int_id]["research"] = default_research.copy()
-            else:
-                # 2. Add missing keys from the template to existing research dicts
-                current_res = self.data[int_id]["research"]
-                for tech_key, start_val in default_research.items():
-                    #if tech_key not in current_res:
-                        current_res[tech_key] = start_val
-                        print(f"Added {tech_key} to {int_id}")
+            default_research = self.get_default_research_dict()
 
-            # 3. Ensure other basic keys exist (money, manpower, etc)
-            for key in c.ECON_RESOURCE_KEYS:
-                self.data[int_id].setdefault(key, 0)
-            
-            self.data[int_id].setdefault("at_war_with", [])
-            self.data[int_id].setdefault("allied_with", [])
+            for int_id in self.data:
+                # 1. Ensure the 'research' key exists
+                if "research" not in self.data[int_id]:
+                    self.data[int_id]["research"] = default_research.copy()
+                else:
+                    # 2. Add missing keys from the template to existing research dicts
+                    current_res = self.data[int_id]["research"]
+                    for tech_key, start_val in default_research.items():
+                        #if tech_key not in current_res:
+                            current_res[tech_key] = start_val
+                            print(f"Added {tech_key} to {int_id}")
 
-            self.data[int_id].setdefault("adjective", "")
-            self.data[int_id].setdefault("leader_name", "")
-            self.data[int_id].setdefault("leader_title", "")
-            self.data[int_id].setdefault("flag_data", "")
-            self.data[int_id].setdefault("portrait_data", "")
+                # 3. Ensure other basic keys exist (money, manpower, etc)
+                for key in c.ECON_RESOURCE_KEYS:
+                    self.data[int_id].setdefault(key, 0)
 
-        with open(PATH, "w") as f:
-            json.dump(self.data, f, indent=4)
-            
-        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
-        
-        messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
-        self.refresh_list()
+                self.data[int_id].setdefault("at_war_with", [])
+                self.data[int_id].setdefault("allied_with", [])
+
+                self.data[int_id].setdefault("adjective", "")
+                self.data[int_id].setdefault("leader_name", "")
+                self.data[int_id].setdefault("leader_title", "")
+                self.data[int_id].setdefault("flag_data", "")
+                self.data[int_id].setdefault("portrait_data", "")
+
+            with open(PATH, "w") as f:
+                json.dump(self.data, f, indent=4)
+
+            queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+
+            messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
+            self.refresh_list()
+
+        confirm_dialog.ask_yes_no("Confirm Sync", msg, on_confirm, tk_parent=self.root)
 
     def save_country(self):
         """Saves or updates a country using the dynamic tech template."""
@@ -232,14 +236,18 @@ class CountryEditor:
             self.color_preview.config(bg=hex_color)
 
     def delete_country(self, int_id):
-        if confirm_dialog.ask_yes_no("Confirm", f"Delete {int_id}?", tk_parent=self.root):
+        def on_confirm(ok):
+            if not ok:
+                return
             del self.data[int_id]
             with open(PATH, "w") as f:
                 json.dump(self.data, f, indent=4)
-                
+
             queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
-            
+
             self.refresh_list()
+
+        confirm_dialog.ask_yes_no("Confirm", f"Delete {int_id}?", on_confirm, tk_parent=self.root)
 
     def load_into_editor(self, int_id):
         country = self.data[int_id]

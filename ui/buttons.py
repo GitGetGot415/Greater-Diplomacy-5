@@ -167,24 +167,26 @@ def render_buttons(self):
             from data.io.multiplayer_io import load_move_files
             import os
 
-            file_path = queries.open_file_browser(self, "Select Move File", c.TOURNAMENT_SAVES_DIR,
-                                                  extensions=[".gd5move"])
-            if file_path:
-                cid = self.player_country
-                player_key = getattr(self, 'multiplayer_player_key', '')
-                keys_dict = {cid: player_key}
+            def on_picked(file_path):
+                if file_path:
+                    cid = self.player_country
+                    player_key = getattr(self, 'multiplayer_player_key', '')
+                    keys_dict = {cid: player_key}
 
-                load_move_files(self, [file_path], keys_dict)
-                self.show_feedback(f"Move imported from {os.path.basename(file_path)}")
+                    load_move_files(self, [file_path], keys_dict)
+                    self.show_feedback(f"Move imported from {os.path.basename(file_path)}")
 
-                self.refresh_political_map()
-                self.refresh_factions_map()
-                self.refresh_relations_map()
-                # If economy map refresh is needed we can do it, but Map doesn't have refresh_economy_map so we skip or call refresh_all_maps()
-                self.refresh_cores_map()
-                self.refresh_faction_territories_map()
-                if hasattr(self, 'sync_units_to_data'):
-                    self.sync_units_to_data()
+                    self.refresh_political_map()
+                    self.refresh_factions_map()
+                    self.refresh_relations_map()
+                    # If economy map refresh is needed we can do it, but Map doesn't have refresh_economy_map so we skip or call refresh_all_maps()
+                    self.refresh_cores_map()
+                    self.refresh_faction_territories_map()
+                    if hasattr(self, 'sync_units_to_data'):
+                        self.sync_units_to_data()
+
+            queries.open_file_browser(self, "Select Move File", c.TOURNAMENT_SAVES_DIR,
+                                      extensions=[".gd5move"], on_result=on_picked)
 
         self.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
     else:

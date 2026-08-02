@@ -8,8 +8,12 @@ import data.constants as c
 from ui.file_browser_screen import run_file_browser
 
 # Ask which map to test BEFORE starting Pygame. The browser opens (and tears
-# down) its own window when no display exists yet.
-target_dir = run_file_browser("Select Map to Test", c.BASE_MAPS_DIR, mode="select_folder")
+# down) its own window when no display exists yet, resolving on_result
+# synchronously before run_file_browser returns.
+_picked = {}
+run_file_browser("Select Map to Test", c.BASE_MAPS_DIR, mode="select_folder",
+                 on_result=lambda p: _picked.setdefault("dir", p))
+target_dir = _picked.get("dir")
 
 if not target_dir:
     print("No map selected.")

@@ -9,12 +9,14 @@ from data import queries
 
 def editor_load_map(self):
     """Opens the native folder picker to load a map folder directly into the editor."""
-    path = queries.open_file_browser(self, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
-                                     mode="select_folder")
-    if path:
-        load_map.load_map_assets(self, path)
-        self.refresh_political_map()
-        self.show_feedback("Map Loaded into Editor")
+    def on_picked(path):
+        if path:
+            load_map.load_map_assets(self, path)
+            self.refresh_political_map()
+            self.show_feedback("Map Loaded into Editor")
+
+    queries.open_file_browser(self, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
+                              mode="select_folder", on_result=on_picked)
 
 def _select_brush(self, mode, attr, items, title, prompt, feedback_label="Brush"):
     """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""

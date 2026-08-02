@@ -46,8 +46,11 @@ def get_neighbors(x, y, width, height):
     return adj
 
 def run_generator(progress_var, root):
-    path = run_file_browser("Select Terrain Map", "base_maps",
-                            extensions=[".png", ".jpg", ".jpeg", ".bmp"], tk_parent=root)
+    _picked = {}
+    run_file_browser("Select Terrain Map", "base_maps",
+                     extensions=[".png", ".jpg", ".jpeg", ".bmp"], tk_parent=root,
+                     on_result=lambda p: _picked.setdefault("path", p))
+    path = _picked.get("path")
     if not path: return
 
     # --- Ask for a Map Name and Create a Folder ---

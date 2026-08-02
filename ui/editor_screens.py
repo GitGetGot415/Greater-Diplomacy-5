@@ -165,18 +165,20 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
         self.list_view_h = view_h
 
     def edit(self, cid):
-        _run_pygame_sub_screen(self.map_screen, Starting_Economy_Edit_Screen(self.map_screen, cid))
-        self.refresh_ui()
+        _run_pygame_sub_screen(self.map_screen, Starting_Economy_Edit_Screen(self.map_screen, cid), on_done=self.refresh_ui)
 
     def reset_all(self):
-        if not confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?"):
-            return
-        for cid in self.active_countries:
-            if cid in self.map_screen.nation_data:
-                for res in c.ECON_RESOURCE_KEYS:
-                    self.map_screen.nation_data[cid][res] = 0
-        self.map_screen.show_feedback("Reset starting economy for all nations!")
-        self.done = True
+        def on_confirm(ok):
+            if not ok:
+                return
+            for cid in self.active_countries:
+                if cid in self.map_screen.nation_data:
+                    for res in c.ECON_RESOURCE_KEYS:
+                        self.map_screen.nation_data[cid][res] = 0
+            self.map_screen.show_feedback("Reset starting economy for all nations!")
+            self.done = True
+
+        confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", on_confirm)
 
     def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 40, 30), border_color=(76, 175, 80), border_width=2)
@@ -355,8 +357,7 @@ class Research_List_Screen(MapOverlayScreen):
         for k, v in self.default_research.items():
             base_data.setdefault(k, v)
         screen = Research_Edit_Screen(self.map_screen, title, base_data, queries.get_tech_tree(), on_save)
-        _run_pygame_sub_screen(self.map_screen, screen)
-        self.refresh_ui()
+        _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def edit_country(self, cid):
         base_data = dict(self.map_screen.nation_data.get(cid, {}).get("research", self.default_research))
@@ -398,16 +399,19 @@ class Research_List_Screen(MapOverlayScreen):
             f"exactly as if a random scenario was created in {current_year}.\n\n"
             f"Are you sure you want to force time-appropriate research for all nations?"
         )
-        if not confirm_dialog.ask_yes_no("Force Time Appropriate Research", msg):
-            return
 
-        time_app_res = queries.get_time_appropriate_research(current_year)
-        self.map_screen.default_research = time_app_res.copy()
-        self.default_research = time_app_res.copy()
-        for cid in self.active_countries:
-            self.map_screen.nation_data[cid]["research"] = time_app_res.copy()
-        self.map_screen.show_feedback(f"Forced Time Appropriate Research for {current_year}")
-        self.refresh_ui()
+        def on_confirm(ok):
+            if not ok:
+                return
+            time_app_res = queries.get_time_appropriate_research(current_year)
+            self.map_screen.default_research = time_app_res.copy()
+            self.default_research = time_app_res.copy()
+            for cid in self.active_countries:
+                self.map_screen.nation_data[cid]["research"] = time_app_res.copy()
+            self.map_screen.show_feedback(f"Forced Time Appropriate Research for {current_year}")
+            self.refresh_ui()
+
+        confirm_dialog.ask_yes_no("Force Time Appropriate Research", msg, on_confirm)
 
     def draw_content(self, surface):
         p = self.panel_rect
@@ -695,45 +699,48 @@ class Clear_Map_Screen(MapOverlayScreen):
         if u_val and self.needs_unit_type(): msg += f"\nUnit: {u_val}"
         if r_val and self.needs_resource_type(): msg += f"\nResource: {r_val}"
 
-        if not confirm_dialog.ask_yes_no("Confirm Clear", msg):
-            return
+        def on_confirm(ok):
+            if not ok:
+                return
 
-        map_data = self.map_screen.map_data
-        for prov_id, prov_data in map_data.items():
-            owner = prov_data.get("owner", "Unclaimed")
+            map_data = self.map_screen.map_data
+            for prov_id, prov_data in map_data.items():
+                owner = prov_data.get("owner", "Unclaimed")
 
-            if "countries territory" in opt and owner != c_val:
-                continue
+                if "countries territory" in opt and owner != c_val:
+                    continue
 
-            if "units" in opt:
-                if opt in ("all units", "all units from (x) country"):
-                    if opt == "all units from (x) country":
-                        prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("owner") != c_val]
-                    else:
-                        prov_data["units"] = []
-                elif opt == "all (x) units":
-                    prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("type") != u_val]
-                elif opt == "all (x) units from country (x)":
-                    prov_data["units"] = [u for u in prov_data.get("units", [])
-                                          if not (u.get("type") == u_val and u.get("owner") == c_val)]
+                if "units" in opt:
+                    if opt in ("all units", "all units from (x) country"):
+                        if opt == "all units from (x) country":
+                            prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("owner") != c_val]
+                        else:
+                            prov_data["units"] = []
+                    elif opt == "all (x) units":
+                        prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("type") != u_val]
+                    elif opt == "all (x) units from country (x)":
+                        prov_data["units"] = [u for u in prov_data.get("units", [])
+                                              if not (u.get("type") == u_val and u.get("owner") == c_val)]
 
-            if "buildings" in opt:
-                prov_data["buildings"] = []
+                if "buildings" in opt:
+                    prov_data["buildings"] = []
 
-            if "resources" in opt:
-                if opt in ("all resources", "all resources on (x) countries territory"):
-                    prov_data["resources"] = {}
-                    if "resource" in prov_data:
-                        del prov_data["resource"]
-                elif opt in ("all (x) resources", "all (x) resources on (x) countries territory"):
-                    if isinstance(prov_data.get("resources"), dict) and r_val in prov_data["resources"]:
-                        del prov_data["resources"][r_val]
-                    if prov_data.get("resource", {}).get("type") == r_val:
-                        del prov_data["resource"]
+                if "resources" in opt:
+                    if opt in ("all resources", "all resources on (x) countries territory"):
+                        prov_data["resources"] = {}
+                        if "resource" in prov_data:
+                            del prov_data["resource"]
+                    elif opt in ("all (x) resources", "all (x) resources on (x) countries territory"):
+                        if isinstance(prov_data.get("resources"), dict) and r_val in prov_data["resources"]:
+                            del prov_data["resources"][r_val]
+                        if prov_data.get("resource", {}).get("type") == r_val:
+                            del prov_data["resource"]
 
-        self.map_screen.refresh_all_maps()
-        self.map_screen.show_feedback("Map cleared according to criteria.")
-        self.done = True
+            self.map_screen.refresh_all_maps()
+            self.map_screen.show_feedback("Map cleared according to criteria.")
+            self.done = True
+
+        confirm_dialog.ask_yes_no("Confirm Clear", msg, on_confirm)
 
     def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 20, 20), border_color=(244, 67, 54), border_width=2)

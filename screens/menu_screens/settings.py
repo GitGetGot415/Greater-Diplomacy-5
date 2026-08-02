@@ -210,15 +210,17 @@ class Settings(GameState):
     def edit_setting(self, key):
         """Opens the native picker for a path or colour setting."""
         current = getattr(self, key)
+
+        def on_chosen(chosen):
+            if chosen:
+                self.apply_setting(key, chosen)
+
         if key in self.DIR_FIELDS:
             _const, _default, title = self.DIR_FIELDS[key]
-            chosen = queries.ask_directory(self, title, current)
+            queries.ask_directory(self, title, current, on_chosen)
         else:
             _const, _default_attr, title = self.COLOR_FIELDS[key]
-            chosen = queries.ask_color(self, title, current)
-
-        if chosen:
-            self.apply_setting(key, chosen)
+            queries.ask_color(self, title, current, on_chosen)
 
     def reset_setting(self, key, refresh=True):
         """Restores a path or colour setting to its shipped default."""

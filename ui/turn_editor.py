@@ -119,15 +119,19 @@ class TurnEditorScreen(GameState):
         self.exit_screen()
 
     def reset_to_defaults(self):
-        if not confirm_dialog.ask_yes_no(
-                "Confirm Reset",
-                "Are you sure you want to clear overrides and reset to defaults? "
-                "This applies to the current scenario."):
-            return
-        for tab in self.tabs.values():
-            tab["overrides"].clear()
-            tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
-        self.save_all()
+        def on_confirm(ok):
+            if not ok:
+                return
+            for tab in self.tabs.values():
+                tab["overrides"].clear()
+                tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
+            self.save_all()
+
+        confirm_dialog.ask_yes_no(
+            "Confirm Reset",
+            "Are you sure you want to clear overrides and reset to defaults? "
+            "This applies to the current scenario.",
+            on_confirm)
 
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #
@@ -210,7 +214,7 @@ class TurnEditorScreen(GameState):
 
 
 def open_turn_editor():
-    """Blocking construction-turns editor, usable in-game or standalone."""
+    """Construction-turns editor, usable in-game or standalone (see ui/screen_runner.py)."""
     from ui.screen_runner import run_screen
     run_screen(TurnEditorScreen, caption="Construction Turns Editor")
 

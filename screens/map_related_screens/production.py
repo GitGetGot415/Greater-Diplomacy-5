@@ -705,16 +705,16 @@ class Production_Screen(GameState):
             items.append(SectionHeader(category))
             items.extend(CheckboxItem(name, name, checked=name in current_custom) for name in names)
 
-        picked = queries.open_checkbox_list(
+        def on_picked(picked):
+            if picked is None:
+                return
+            p_data["custom_production_units"] = picked
+            self.refresh_ui()
+
+        queries.open_checkbox_list(
             self, "Manage Custom Production Units",
             "Select researched units to add to the Custom build category:",
-            items, confirm_label="Apply")
-
-        if picked is None:
-            return
-
-        p_data["custom_production_units"] = picked
-        self.refresh_ui()
+            items, on_picked, confirm_label="Apply")
 
     def cancel_order(self, index, q_type):
         queue_key = "building_queue" if q_type == "building" else "unit_queue"

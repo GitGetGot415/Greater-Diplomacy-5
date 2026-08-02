@@ -5,16 +5,19 @@ import data.constants as c
 from ui.checkbox_list_screen import CheckboxItem
 
 
-def load_multiplayer_moves(map_ref):
-    """Multi-select move import. Returns True when files were actually loaded."""
-    files = queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
-                                      mode="open_files", extensions=[".gd5move"])
-    if not files:
-        return False
+def load_multiplayer_moves(map_ref, on_result):
+    """Multi-select move import. Answers on_result(True) when files were actually loaded."""
+    def _on_files(files):
+        if not files:
+            on_result(False)
+            return
 
-    multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
-    map_ref.show_feedback(f"Loaded {len(files)} move files.")
-    return True
+        multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
+        map_ref.show_feedback(f"Loaded {len(files)} move files.")
+        on_result(True)
+
+    queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
+                              mode="open_files", extensions=[".gd5move"], on_result=_on_files)
 
 def export_next_turn(map_ref):
     turn = map_ref.time_manager.total_turns
@@ -66,29 +69,29 @@ def manage_players_panel(map_ref):
         return rows
 
     def on_load_moves(screen):
-        if load_multiplayer_moves(map_ref):
-            screen.set_items(build_rows())
+        load_multiplayer_moves(map_ref, lambda loaded: screen.set_items(build_rows()) if loaded else None)
 
-    skipped = queries.open_checkbox_list(
+    def on_skipped(skipped):
+        if skipped is None:
+            return
+
+        map_ref.multiplayer_protected_countries = set(skipped)
+        skipped_ai_count = len(skipped)
+        submitted_count = len(getattr(map_ref, 'submitted_moves', set()))
+
+        if submitted_count > 0 and skipped_ai_count > 0:
+            map_ref.show_feedback(f"{submitted_count} player move(s) loaded; {skipped_ai_count} country/countries set to skip AI.")
+        elif skipped_ai_count > 0:
+            map_ref.show_feedback(f"{skipped_ai_count} country/countries set to skip AI this turn.")
+        elif submitted_count > 0:
+            map_ref.show_feedback(f"{submitted_count} player move(s) loaded.")
+        else:
+            map_ref.show_feedback("All unsubmitted countries will be controlled by AI this turn.")
+
+    queries.open_checkbox_list(
         map_ref, "Manage Players & Moves",
         "Load player moves, and select countries to skip (skipped countries will have AI disabled):",
-        build_rows(), extra_buttons=[("Load Moves", "light_blue", on_load_moves)])
-
-    if skipped is None:
-        return
-
-    map_ref.multiplayer_protected_countries = set(skipped)
-    skipped_ai_count = len(skipped)
-    submitted_count = len(getattr(map_ref, 'submitted_moves', set()))
-
-    if submitted_count > 0 and skipped_ai_count > 0:
-        map_ref.show_feedback(f"{submitted_count} player move(s) loaded; {skipped_ai_count} country/countries set to skip AI.")
-    elif skipped_ai_count > 0:
-        map_ref.show_feedback(f"{skipped_ai_count} country/countries set to skip AI this turn.")
-    elif submitted_count > 0:
-        map_ref.show_feedback(f"{submitted_count} player move(s) loaded.")
-    else:
-        map_ref.show_feedback("All unsubmitted countries will be controlled by AI this turn.")
+        build_rows(), on_skipped, extra_buttons=[("Load Moves", "light_blue", on_load_moves)])
 
 def manage_keys_panel(map_ref):
     """Queues which countries get a fresh player key on the next export."""
@@ -99,13 +102,14 @@ def manage_keys_panel(map_ref):
                          checked=cid in map_ref.multiplayer_pending_key_regen)
             for cid in _playable_countries(map_ref)]
 
-    queued = queries.open_checkbox_list(
+    def on_queued(queued):
+        if queued is None:
+            return
+
+        map_ref.multiplayer_pending_key_regen = set(queued)
+        map_ref.show_feedback(f"{len(queued)} country key(s) queued for regeneration upon export.")
+
+    queries.open_checkbox_list(
         map_ref, "Regenerate Player Keys",
         "Select countries whose keys should be regenerated upon exporting the turn/map:",
-        rows)
-
-    if queued is None:
-        return
-
-    map_ref.multiplayer_pending_key_regen = set(queued)
-    map_ref.show_feedback(f"{len(queued)} country key(s) queued for regeneration upon export.")
+        rows, on_queued)

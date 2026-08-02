@@ -2780,25 +2780,26 @@ def _clear_phantom_hover(game_state):
     if hasattr(host, "hovered_province"):
         host.hovered_province = None
 
-def open_checkbox_list(game_state, title, prompt, items, confirm_label="Confirm",
+def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_label="Confirm",
                        show_select_all=True, extra_buttons=None, footnote=None):
     """In-engine multi-toggle picker: replaces the scrollable tk.Checkbutton panels.
 
     `items` are ui.checkbox_list_screen CheckboxItem / SectionHeader objects.
-    Blocks and returns the list of checked keys -- empty when nothing was ticked,
-    None when the user cancelled, so the two cases stay distinguishable.
+    Answers on_result with the list of checked keys -- empty when nothing was
+    ticked, None when the user cancelled, so the two cases stay distinguishable.
     """
     from ui.checkbox_list_screen import CheckboxListScreen
     from ui.screen_runner import run_screen
     result = {}
+    def _on_done(screen):
+        _clear_phantom_hover(game_state)
+        on_result(result.get("keys"))
     run_screen(lambda: CheckboxListScreen(game_state, title, prompt, items,
                                           lambda keys: result.setdefault("keys", keys),
                                           confirm_label=confirm_label,
                                           show_select_all=show_select_all,
                                           extra_buttons=extra_buttons, footnote=footnote),
-               caption=title)
-    _clear_phantom_hover(game_state)
-    return result.get("keys")
+               on_done=_on_done, caption=title)
 
 def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
@@ -2808,22 +2809,24 @@ def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     _run_pygame_sub_screen(game_state, screen)
 
 def open_file_browser(game_state, title, start_dir=None, mode="open_file", extensions=None,
-                      on_confirm_callback=None, tk_parent=None):
+                      on_confirm_callback=None, tk_parent=None, on_result=None):
     """In-engine file/folder picker: replaces filedialog.askopenfilename,
     askopenfilenames and askdirectory.
 
     Browses the whole machine -- `start_dir` is only where it opens, never a
     fence. `mode` is "open_file", "open_files" (multi-select) or "select_folder".
-    Blocks and returns the pick (a path, a list of paths, or None when
+    Answers on_result with the pick (a path, a list of paths, or None when
     cancelled); on_confirm_callback, when given, fires only on a real pick.
     """
     from ui.file_browser_screen import run_file_browser
-    picked = run_file_browser(title, start_dir, mode=mode, extensions=extensions,
-                              game_state=game_state, tk_parent=tk_parent)
-    if picked is not None and on_confirm_callback:
-        on_confirm_callback(picked)
-    _clear_phantom_hover(game_state)
-    return picked
+    def _on_result(picked):
+        if picked is not None and on_confirm_callback:
+            on_confirm_callback(picked)
+        _clear_phantom_hover(game_state)
+        if on_result:
+            on_result(picked)
+    run_file_browser(title, start_dir, mode=mode, extensions=extensions,
+                     game_state=game_state, tk_parent=tk_parent, on_result=_on_result)
 
 def copy_to_clipboard(text):
     """Pushes text to the OS clipboard via SDL's clipboard (pygame.scrap)."""
@@ -3023,9 +3026,9 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     from pathlib import Path
     from ui import confirm_dialog
 
-    file_path = open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
-                                  extensions=[".zip"])
-    if file_path:
+    def _after_pick(file_path):
+        if not file_path:
+            return
         target_dir = os.path.join(target_parent_dir, Path(file_path).stem)
         if os.path.exists(target_dir):
             target_dir += "_imported"
@@ -3037,15 +3040,20 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
         except Exception as e:
             confirm_dialog.show_error("Import Error", str(e))
 
-def ask_directory(game_state, title, initialdir):
-    """Native folder picker returning the chosen path, or None if cancelled."""
-    return open_file_browser(game_state, title, initialdir, mode="select_folder")
+    open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
+                      extensions=[".zip"], on_result=_after_pick)
 
-def ask_color(game_state, title, initial):
-    """Native colour picker returning an (r, g, b) tuple, or None if cancelled."""
+def ask_directory(game_state, title, initialdir, on_result):
+    """Native folder picker; answers on_result with the chosen path, or None if cancelled."""
+    open_file_browser(game_state, title, initialdir, mode="select_folder", on_result=on_result)
+
+def ask_color(game_state, title, initial, on_result):
+    """Native colour picker; answers on_result with an (r, g, b) tuple, or None if cancelled."""
+    from ui.color_picker_screen import ColorPickerScreen
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
     result = {}
-    open_color_picker(game_state, title, initial, lambda color: result.setdefault("color", color))
-    return result.get("color")
+    screen = ColorPickerScreen(game_state, title, initial, lambda color: result.setdefault("color", color))
+    _run_pygame_sub_screen(game_state, screen, on_done=lambda: on_result(result.get("color")))
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):
     """

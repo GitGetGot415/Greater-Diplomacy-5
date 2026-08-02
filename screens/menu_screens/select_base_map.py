@@ -112,14 +112,16 @@ class Select_Base_Map(FolderListState):
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""
-        confirm = confirm_dialog.ask_yes_no(
-            "Confirm Data Refresh",
-            "Are you sure you want to refresh base map data?\nThis process may take a while."
-        )
+        def on_confirm(confirm):
+            if confirm:
+                queries.refresh_map_directories(self, [c.BASE_MAPS_DIR],
+                                                success_message="Synced base maps successfully.")
 
-        if confirm:
-            queries.refresh_map_directories(self, [c.BASE_MAPS_DIR],
-                                            success_message="Synced base maps successfully.")
+        confirm_dialog.ask_yes_no(
+            "Confirm Data Refresh",
+            "Are you sure you want to refresh base map data?\nThis process may take a while.",
+            on_confirm
+        )
 
     def export_scenario_zip(self, scenario_name):
         queries.export_dir_as_zip(os.path.join(self.managed_dir, scenario_name),

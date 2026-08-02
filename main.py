@@ -51,6 +51,7 @@ from screens.menu_screens.view_assets import View_Assets
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
+from ui import modal_stack
 from screens.map_related_screens.research import Research_Screen
 from screens.map_related_screens.economy import Economy_Screen
 from screens.map_related_screens.edit_country import Edit_Country_Screen
@@ -588,23 +589,43 @@ class Controller:
                         return
                     os._exit(0) # Instantly kills hanging background threads
 
+            # MODAL STACK: dialogs/prompts/sub-screens (ui/modal_stack.py) take over
+            # events/update/draw from active_state while any are open, instead of
+            # running their own nested blocking loop (see modal_stack.py's docstring
+            # for why -- a nested loop never yields back to asyncio.sleep(0) below).
+            top_modal = modal_stack.active()
+            if top_modal is None:
                 # GLOBAL KEYBOARD HANDLING
-                if event.type == pygame.KEYDOWN and not getattr(self.active_state, "listening_for", None):
-                    if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
-                        self.toggle_fullscreen()
-                    else:
-                        dispatch_global_keys(self.active_state, event)
+                for event in events:
+                    if event.type == pygame.KEYDOWN and not getattr(self.active_state, "listening_for", None):
+                        if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
+                            self.toggle_fullscreen()
+                        else:
+                            dispatch_global_keys(self.active_state, event)
 
-            self.active_state.handle_events(events)
-            self.active_state.update()
-            self.active_state.draw(self.screen)
+                self.active_state.handle_events(events)
+            else:
+                top_modal.handle_events(events)
+
+            # Re-check: handle_events above may have just pushed or popped a modal
+            # (e.g. a button click opened a confirm dialog). Whatever is on top now
+            # is what gets updated/drawn this frame, matching how the old blocking
+            # dialogs took over instantly, within the same call, with no extra frame
+            # of the screen underneath rendering first.
+            top_modal = modal_stack.active()
+            if top_modal is not None:
+                top_modal.update()
+                top_modal.draw(self.screen)
+            else:
+                self.active_state.update()
+                self.active_state.draw(self.screen)
+
+                if self.active_state.done:
+                    self.flip_state()
 
             if self.show_fps:
                 fps_surface = self.fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
                 self.screen.blit(fps_surface, (c.SCREEN_WIDTH - 75, 10))
-
-            if self.active_state.done:
-                self.flip_state()
 
             pygame.display.flip()
             await asyncio.sleep(0)  # yield to the browser tab / event loop every frame

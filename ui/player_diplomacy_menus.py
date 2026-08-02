@@ -7,35 +7,43 @@ from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud
+from ui import modal_stack
 
-def _run_pygame_sub_screen(map_screen, screen_obj):
-    """Runs a blocking PyGame loop that acts like a GameState to bypass the main state machine."""
-    screen_obj.done = False
-    clock = pygame.time.Clock()
-    surface = pygame.display.get_surface()
 
-    while not screen_obj.done:
-        events = pygame.event.get()
+class _SubScreenModal:
+    """Pushed onto the modal stack in place of the old blocking loop that used
+    to bypass the main state machine here. See ui/modal_stack.py for why."""
+
+    def __init__(self, map_screen, screen_obj, on_done):
+        self.map_screen = map_screen
+        self.screen_obj = screen_obj
+        self.on_done = on_done
+        screen_obj.done = False
+
+    def handle_events(self, events):
         for event in events:
-            if event.type == pygame.QUIT:
-                import sys
-                pygame.quit()
-                sys.exit()
             # Mirrors the main loop so sub-screens get BACK/ORDERS for free.
-            dispatch_global_keys(screen_obj, event)
+            dispatch_global_keys(self.screen_obj, event)
+        self.screen_obj.handle_events(events)
 
-        screen_obj.handle_events(events)
-        screen_obj.update()
+    def update(self):
+        self.screen_obj.update()
+        if self.screen_obj.done:
+            modal_stack.pop()
+            # Clear any phantom hovering from the sub-screen
+            self.map_screen.hovered_province = None
+            if self.on_done:
+                self.on_done()
 
+    def draw(self, surface):
         # The background is safely filled by the map rendering itself.
-        screen_obj.draw(surface)
+        self.screen_obj.draw(surface)
 
-        pygame.display.flip()
 
-        clock.tick(c.TARGET_FPS)
-
-    # Clear any phantom hovering from the sub-screen
-    map_screen.hovered_province = None
+def _run_pygame_sub_screen(map_screen, screen_obj, on_done=None):
+    """Pushes screen_obj onto the modal stack until it marks itself done, then
+    calls on_done() if given. Never blocks -- see ui/modal_stack.py."""
+    modal_stack.push(_SubScreenModal(map_screen, screen_obj, on_done))
 
 def build_choice_button(x, y, size, label, enabled, selected, callback):
     """One button in a mutually exclusive option row.
@@ -1040,8 +1048,7 @@ class Puppets_Screen(MapOverlayScreen):
 
     def open_create_puppet(self):
         screen = Create_Integrated_Puppet_Screen(self.map_screen)
-        _run_pygame_sub_screen(self.map_screen, screen)
-        self.refresh_ui()
+        _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def draw_content(self, surface):
         ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2)

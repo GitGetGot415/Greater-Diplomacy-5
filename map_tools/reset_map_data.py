@@ -7,8 +7,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from ui.file_browser_screen import run_file_browser
 
-# Ask the user which base map to reset
-target_dir = run_file_browser("Select Map to Reset", "base_maps", mode="select_folder")
+# Ask the user which base map to reset (resolves synchronously -- see run_file_browser)
+_picked = {}
+run_file_browser("Select Map to Reset", "base_maps", mode="select_folder",
+                 on_result=lambda p: _picked.setdefault("dir", p))
+target_dir = _picked.get("dir")
 
 if not target_dir:
     print("No folder selected. Exiting.")

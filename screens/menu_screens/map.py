@@ -306,17 +306,18 @@ class Map(GameState):
 
     def trigger_multi_turn(self):
         from ui import confirm_dialog
-        import threading
 
-        turns = confirm_dialog.ask_integer("Process Multiple Turns", "How many turns to process at once?", minvalue=1, maxvalue=5000)
+        def on_turns(turns):
+            if turns:
+                self.multi_turns_total = turns
+                self.multi_turns_completed = 0
+                self.multi_turn_abort_requested = False
+                self.ai_is_thinking = True
+                self.loading_status_text = f"Skipping {turns} Turns..."
+                run_background(self._run_multi_turn_thread, turns)
 
-        if turns:
-            self.multi_turns_total = turns
-            self.multi_turns_completed = 0
-            self.multi_turn_abort_requested = False
-            self.ai_is_thinking = True
-            self.loading_status_text = f"Skipping {turns} Turns..."
-            run_background(self._run_multi_turn_thread, turns)
+        confirm_dialog.ask_integer("Process Multiple Turns", "How many turns to process at once?",
+                                   on_turns, minvalue=1, maxvalue=5000)
 
     def _run_multi_turn_thread(self, turns):
         from map_logic.system32 import turn_processor
@@ -446,21 +447,23 @@ class Map(GameState):
     def auto_assign_cores(self):
         from ui import confirm_dialog
 
-        # Ask for confirmation first before doing anything destructive
-        confirm = confirm_dialog.ask_yes_no(
-            "Confirm Auto-Core",
-            "Are you sure you want to auto-assign all cores?\nThis will overwrite existing core data for every province on the map based on current ownership."
-        )
+        def on_confirm(confirm):
+            if confirm:
+                for province in self.map_data.values():
+                    owner = province.get("owner", "Unclaimed")
+                    province["cores"] = [owner] if owner not in ["Unclaimed", "None", "Ocean", "Lakes"] else []
+                self.show_feedback("Auto-assigned all cores!")
+                if self.map_mode == "CORES":
+                    self.refresh_cores_map()
+            else:
+                self.show_feedback("Auto-core cancelled.")
 
-        if confirm:
-            for province in self.map_data.values():
-                owner = province.get("owner", "Unclaimed")
-                province["cores"] = [owner] if owner not in ["Unclaimed", "None", "Ocean", "Lakes"] else []
-            self.show_feedback("Auto-assigned all cores!")
-            if self.map_mode == "CORES":
-                self.refresh_cores_map()
-        else:
-            self.show_feedback("Auto-core cancelled.")
+        # Ask for confirmation first before doing anything destructive
+        confirm_dialog.ask_yes_no(
+            "Confirm Auto-Core",
+            "Are you sure you want to auto-assign all cores?\nThis will overwrite existing core data for every province on the map based on current ownership.",
+            on_confirm
+        )
 
     def exit_to_menu(self): 
         self.show_exit_confirmation = True

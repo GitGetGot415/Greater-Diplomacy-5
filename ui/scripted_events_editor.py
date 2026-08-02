@@ -371,11 +371,21 @@ class _VariablesScreen(_ModalScreen):
 
         usage = self._usage(old["name"])
 
-        if old["type"] in ("int", "double") and new_type == "string" and usage:
-            msg = (f"Changing to string will force all non-equals conditionals to '==' and "
-                   f"non-set actions to 'Set'.\nCountries using: {', '.join(self._nations_used(usage))}\n"
-                   f"Events affected: {len(usage)}\nProceed?")
-            if not confirm_dialog.ask_yes_no("Warning", msg):
+        def _finish_rename_and_save():
+            if old["name"] != new_name and usage:
+                for _nat, ev in usage:
+                    for cond in ev.get("conditions", []):
+                        if cond.get("type") == "Variable" and cond.get("variable") == old["name"]:
+                            cond["variable"] = new_name
+                    for a in ev.get("actions", []):
+                        if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
+                            a["target"] = new_name
+
+            self.variables[idx] = {"name": new_name, "type": new_type, "value": self.value_field.text}
+            self.refresh_ui()
+
+        def _coerce_to_string(ok):
+            if not ok:
                 return
             for _nat, ev in usage:
                 for cond in ev.get("conditions", []):
@@ -386,12 +396,10 @@ class _VariablesScreen(_ModalScreen):
                     if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
                         if a.get("unit_type") != "Set":
                             a["unit_type"] = "Set"
+            _finish_rename_and_save()
 
-        if old["type"] == "string" and new_type in ("int", "double") and usage:
-            msg = (f"Changing to int/double will reset non-numerical condition/action values to '0'.\n"
-                   f"Countries using: {', '.join(self._nations_used(usage))}\n"
-                   f"Events affected: {len(usage)}\nProceed?")
-            if not confirm_dialog.ask_yes_no("Warning", msg):
+        def _coerce_to_numeric(ok):
+            if not ok:
                 return
             for _nat, ev in usage:
                 for cond in ev.get("conditions", []):
@@ -406,18 +414,23 @@ class _VariablesScreen(_ModalScreen):
                             float(a.get("message", "0"))
                         except ValueError:
                             a["message"] = "0"
+            _finish_rename_and_save()
 
-        if old["name"] != new_name and usage:
-            for _nat, ev in usage:
-                for cond in ev.get("conditions", []):
-                    if cond.get("type") == "Variable" and cond.get("variable") == old["name"]:
-                        cond["variable"] = new_name
-                for a in ev.get("actions", []):
-                    if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
-                        a["target"] = new_name
+        if old["type"] in ("int", "double") and new_type == "string" and usage:
+            msg = (f"Changing to string will force all non-equals conditionals to '==' and "
+                   f"non-set actions to 'Set'.\nCountries using: {', '.join(self._nations_used(usage))}\n"
+                   f"Events affected: {len(usage)}\nProceed?")
+            confirm_dialog.ask_yes_no("Warning", msg, _coerce_to_string)
+            return
 
-        self.variables[idx] = {"name": new_name, "type": new_type, "value": self.value_field.text}
-        self.refresh_ui()
+        if old["type"] == "string" and new_type in ("int", "double") and usage:
+            msg = (f"Changing to int/double will reset non-numerical condition/action values to '0'.\n"
+                   f"Countries using: {', '.join(self._nations_used(usage))}\n"
+                   f"Events affected: {len(usage)}\nProceed?")
+            confirm_dialog.ask_yes_no("Warning", msg, _coerce_to_numeric)
+            return
+
+        _finish_rename_and_save()
 
     def delete_var(self):
         if self.selected is None or self.selected >= len(self.variables):
@@ -425,18 +438,28 @@ class _VariablesScreen(_ModalScreen):
         idx = self.selected
         var = self.variables[idx]
         usage = self._usage(var["name"])
+
+        def _finish():
+            self.variables.pop(idx)
+            self.selected = None
+            self.refresh_ui()
+
         if usage:
             msg = (f"Deleting this variable will delete {len(usage)} events across countries: "
                    f"{', '.join(self._nations_used(usage))}.\nProceed?")
-            if not confirm_dialog.ask_yes_no("Warning", msg):
-                return
-            for nat, ev in usage:
-                if ev in self.map_ref.nation_data[nat].get("scripted_events", []):
-                    self.map_ref.nation_data[nat]["scripted_events"].remove(ev)
 
-        self.variables.pop(idx)
-        self.selected = None
-        self.refresh_ui()
+            def on_confirm(ok):
+                if not ok:
+                    return
+                for nat, ev in usage:
+                    if ev in self.map_ref.nation_data[nat].get("scripted_events", []):
+                        self.map_ref.nation_data[nat]["scripted_events"].remove(ev)
+                _finish()
+
+            confirm_dialog.ask_yes_no("Warning", msg, on_confirm)
+            return
+
+        _finish()
 
     def _move(self, delta):
         if self.selected is None:
@@ -658,22 +681,26 @@ class _EventEditScreen(_ModalScreen):
             initial = ()
         if len(initial) != 3:
             initial = (150, 150, 150)
-        chosen = queries.ask_color(self.map_screen, "Choose color", initial)
-        if chosen:
-            row.field.text = f"{int(chosen[0])},{int(chosen[1])},{int(chosen[2])}"
-        self.refresh_ui()
+        def on_chosen(chosen):
+            if chosen:
+                row.field.text = f"{int(chosen[0])},{int(chosen[1])},{int(chosen[2])}"
+            self.refresh_ui()
+
+        queries.ask_color(self.map_screen, "Choose color", initial, on_chosen)
 
     def pick_image(self, row):
-        path = queries.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
-                                         extensions=[".png", ".jpg", ".jpeg", ".bmp"])
-        if path:
-            try:
-                img = pygame.image.load(path).convert_alpha()
-                size = c.PORTRAIT_SIZE if row.type == "Edit Portrait" else c.FLAG_SIZE
-                row.field.text = queries.encode_surf_to_b64(pygame.transform.scale(img, size))
-            except Exception as e:
-                confirm_dialog.show_error("Error", f"Could not load image: {e}")
-        self.refresh_ui()
+        def on_picked(path):
+            if path:
+                try:
+                    img = pygame.image.load(path).convert_alpha()
+                    size = c.PORTRAIT_SIZE if row.type == "Edit Portrait" else c.FLAG_SIZE
+                    row.field.text = queries.encode_surf_to_b64(pygame.transform.scale(img, size))
+                except Exception as e:
+                    confirm_dialog.show_error("Error", f"Could not load image: {e}")
+            self.refresh_ui()
+
+        queries.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
+                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     # -- saving --------------------------------------------------------- #
 

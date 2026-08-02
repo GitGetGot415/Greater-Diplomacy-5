@@ -155,28 +155,32 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback("Failed to export")
 
     def import_flag(self):
-        file_path = queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
-                                              extensions=[".png", ".jpg", ".jpeg", ".bmp"])
-        if file_path:
-            try:
-                new_img = pygame.image.load(file_path).convert()
-                self.flag_surf = pygame.transform.scale(new_img, self.flag_size)
-                self.save_state()
-                self.map_screen.show_feedback("Flag Imported!")
-            except Exception as e:
-                self.map_screen.show_feedback("Failed to import flag.")
+        def on_picked(file_path):
+            if file_path:
+                try:
+                    new_img = pygame.image.load(file_path).convert()
+                    self.flag_surf = pygame.transform.scale(new_img, self.flag_size)
+                    self.save_state()
+                    self.map_screen.show_feedback("Flag Imported!")
+                except Exception as e:
+                    self.map_screen.show_feedback("Failed to import flag.")
+
+        queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
+                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def import_portrait(self):
-        file_path = queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
-                                              extensions=[".png", ".jpg", ".jpeg", ".bmp"])
-        if file_path:
-            try:
-                new_img = pygame.image.load(file_path).convert()
-                self.portrait_surf = pygame.transform.scale(new_img, self.portrait_size)
-                self.save_state()
-                self.map_screen.show_feedback("Portrait Imported!")
-            except Exception as e:
-                self.map_screen.show_feedback("Failed to import portrait.")
+        def on_picked(file_path):
+            if file_path:
+                try:
+                    new_img = pygame.image.load(file_path).convert()
+                    self.portrait_surf = pygame.transform.scale(new_img, self.portrait_size)
+                    self.save_state()
+                    self.map_screen.show_feedback("Portrait Imported!")
+                except Exception as e:
+                    self.map_screen.show_feedback("Failed to import portrait.")
+
+        queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
+                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def refresh_ui(self):
         buttons.render_edit_country_buttons(self)

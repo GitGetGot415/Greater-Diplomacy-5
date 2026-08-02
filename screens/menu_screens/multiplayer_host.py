@@ -27,13 +27,18 @@ class Multiplayer_Host(GameState):
     def load_existing(self):
         from ui import confirm_dialog
 
-        file_path = queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
-                                              extensions=[".gd5tour"])
-        key = confirm_dialog.ask_string("Master Key", "Enter your Master Key:") if file_path else None
+        def after_file(file_path):
+            if not file_path:
+                return
 
-        if not file_path or not key:
-            return
+            def after_key(key):
+                if not key:
+                    return
+                self.selected_tournament_path = file_path
+                self.selected_tournament_key = key
+                self.go_to("MAP")
 
-        self.selected_tournament_path = file_path
-        self.selected_tournament_key = key
-        self.go_to("MAP")
+            confirm_dialog.ask_string("Master Key", "Enter your Master Key:", after_key)
+
+        queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
+                                  extensions=[".gd5tour"], on_result=after_file)

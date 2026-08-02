@@ -137,22 +137,24 @@ class New_Game(GameState):
         import data.constants as c
         from ui.checkbox_list_screen import CheckboxItem
 
-        picked = queries.open_checkbox_list(
+        def on_picked(picked):
+            if picked is None:
+                return
+
+            options = {key: key in picked for key, _label in self.REFRESH_FIELDS}
+
+            dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR]
+            if options["include_custom"]:
+                dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
+
+            queries.refresh_map_directories(self, dirs_to_check,
+                                            success_message="Synced scenarios successfully.", options=options)
+
+        queries.open_checkbox_list(
             self, "Refresh Options", "Select what to forcefully reset:",
             [CheckboxItem(key, label, checked=True) for key, label in self.REFRESH_FIELDS],
+            on_picked,
             footnote="If you don't know what you're doing, this might ruin your saved maps!")
-
-        if picked is None:
-            return
-
-        options = {key: key in picked for key, _label in self.REFRESH_FIELDS}
-
-        dirs_to_check = [c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR]
-        if options["include_custom"]:
-            dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
-
-        queries.refresh_map_directories(self, dirs_to_check,
-                                        success_message="Synced scenarios successfully.", options=options)
 
     def exit_screen(self):
         self.set_sub_state("CATEGORY")
