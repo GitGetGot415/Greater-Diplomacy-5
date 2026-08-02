@@ -10,7 +10,7 @@ import random
 import threading
 import shutil
 import zipfile
-from data.platform import run_background
+from data.platform import run_background, IS_WEB, download_file
 from datetime import datetime
 
 import pygame
@@ -2996,22 +2996,33 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
 # ==========================================
 
 def export_dir_as_zip(source_dir, zip_name, parent=None):
-    """Zips a folder into the user's Downloads directory.
+    """Zips a folder and sends it to the user.
 
     Counterpart to extract_and_flatten_zip, and the single implementation
     behind every "Export" button (saves, scenarios) so the destination and the
     success/error dialogs stay identical.
+
+    Desktop: written straight into the real Downloads folder. Web: there is no
+    real filesystem to write into, so the zip is built in the browser's
+    virtual FS and then handed to platform.download_file(), which uses
+    pygbag's JS bridge to actually push it out to the user's real Downloads
+    folder as a browser download.
     """
     from pathlib import Path
     from ui import confirm_dialog
     try:
-        zip_path = os.path.join(str(Path.home() / "Downloads"), zip_name)
+        zip_path = zip_name if IS_WEB else os.path.join(str(Path.home() / "Downloads"), zip_name)
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root_dir, _dirs, files in os.walk(source_dir):
                 for file in files:
                     full = os.path.join(root_dir, file)
                     zipf.write(full, os.path.relpath(full, source_dir))
-        confirm_dialog.show_success("Export Success", f"Exported to Downloads as {zip_name}", tk_parent=parent)
+
+        if IS_WEB:
+            download_file(zip_path)
+            confirm_dialog.show_success("Export Success", f"{zip_name} downloaded.", tk_parent=parent)
+        else:
+            confirm_dialog.show_success("Export Success", f"Exported to Downloads as {zip_name}", tk_parent=parent)
         return zip_path
     except Exception as e:
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)

@@ -6,6 +6,7 @@ platform string. Import IS_WEB instead of re-checking sys.platform so the
 detection logic only ever lives in one place.
 """
 import asyncio
+import os
 import sys
 import threading
 
@@ -39,3 +40,45 @@ def run_background(fn, *args, **kwargs):
         fn(*args, **kwargs)
     else:
         threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True).start()
+
+
+_download_js_defined = False
+
+
+def download_file(path):
+    """Send a file from the browser's virtual filesystem to the user's real
+    Downloads folder (web only; no-op on desktop, where files are just written
+    to a real path directly).
+
+    `path` is a path inside the virtual FS (e.g. a relative path from the
+    current working directory), not a real host path -- there is no such
+    thing on web.
+
+    pygbag ships a JS helper for exactly this (MM.download(), used by its own
+    built-in xterm "rx" console command), but pygbag 0.9.3's bundled copy has
+    a genuine bug: dl_blob(blob) only declares a `blob` parameter yet
+    references a bare `filename` in its body, so calling MM.download(path)
+    always throws "filename is not defined" (confirmed by pulling pygbag's
+    own pythons.js from its CDN). So instead of relying on their broken
+    helper, we define our own corrected version once via platform.window.eval
+    and call that -- same approach (Blob + temporary <a download> click),
+    minus the bug.
+    """
+    if not IS_WEB:
+        return
+    global _download_js_defined
+    import platform  # stdlib `platform`, patched by pygbag with `.window` on web
+    if not _download_js_defined:
+        platform.window.eval(
+            "window.__gd5_download = function(diskfile, filename) {"
+            "  var blob = new Blob([FS.readFile(diskfile)]);"
+            "  var elem = window.document.createElement('a');"
+            "  elem.href = window.URL.createObjectURL(blob);"
+            "  elem.download = filename;"
+            "  document.body.appendChild(elem);"
+            "  elem.click();"
+            "  document.body.removeChild(elem);"
+            "};"
+        )
+        _download_js_defined = True
+    platform.window.__gd5_download(path, os.path.basename(path))
