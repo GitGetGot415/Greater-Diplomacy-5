@@ -2818,13 +2818,27 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
     Answers on_result with the pick (a path, a list of paths, or None when
     cancelled); on_confirm_callback, when given, fires only on a real pick.
     """
-    from ui.file_browser_screen import run_file_browser
     def _on_result(picked):
         if picked is not None and on_confirm_callback:
             on_confirm_callback(picked)
         _clear_phantom_hover(game_state)
         if on_result:
             on_result(picked)
+
+    if IS_WEB:
+        if mode == "select_folder":
+            # There's no native browser equivalent of "pick a folder on my
+            # real disk" (a browser sandbox has no notion of an arbitrary
+            # host path) -- not supported on web.
+            from ui import confirm_dialog
+            confirm_dialog.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
+            _on_result(None)
+            return
+        from data.platform import pick_upload_file
+        pick_upload_file(_on_result, extensions=extensions, multiple=(mode == "open_files"))
+        return
+
+    from ui.file_browser_screen import run_file_browser
     run_file_browser(title, start_dir, mode=mode, extensions=extensions,
                      game_state=game_state, tk_parent=tk_parent, on_result=_on_result)
 

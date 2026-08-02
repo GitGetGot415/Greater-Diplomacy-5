@@ -82,3 +82,101 @@ def download_file(path):
         )
         _download_js_defined = True
     platform.window.__gd5_download(path, os.path.basename(path))
+
+
+_upload_js_defined = False
+
+
+def pick_upload_file(on_result, extensions=None, multiple=False):
+    """Opens the browser's native file picker (web only) so the user can
+    choose real file(s) from their own machine, then calls on_result with a
+    virtual-FS path (or list of paths, if `multiple`) whose basename(s) match
+    what was picked -- or None/[] if the picker was cancelled. No-op call
+    (immediately on_result(None)) on desktop, where the real file browser is
+    used instead.
+
+    `extensions` is a list like [".zip"], used as the input's `accept` filter.
+
+    Self-contained via platform.window.eval(), same reasoning as
+    download_file: pygbag's own upload path (webbrowser.open_file +
+    EventTarget) relays picked-file data through Python-exec'd, JSON-in-JSON
+    encoded strings we can't fully verify without a live browser -- given we
+    already hit one real bug in pygbag's bundled JS for downloads, this stays
+    in code we control. The wait-for-a-JS-flag polling loop below mirrors the
+    exact pattern pygbag's own boot code already uses to wait for user media
+    engagement (`while not platform.window.MM.UME: await asyncio.sleep(.1)`),
+    confirmed to work in this runtime.
+    """
+    if not IS_WEB:
+        on_result([] if multiple else None)
+        return
+
+    global _upload_js_defined
+    import json
+    import shutil
+    import platform  # stdlib `platform`, patched by pygbag with `.window` on web
+
+    if not _upload_js_defined:
+        platform.window.eval(
+            "window.__gd5_pick_file = function(accept, multiple) {"
+            "  window.__gd5_upload_ready = false;"
+            "  window.__gd5_upload_names = null;"
+            "  var inp = document.createElement('input');"
+            "  inp.type = 'file';"
+            "  inp.accept = accept;"
+            "  inp.multiple = multiple;"
+            "  function finish(names) {"
+            "    window.__gd5_upload_names = names ? JSON.stringify(names) : null;"
+            "    window.__gd5_upload_ready = true;"
+            "  }"
+            "  inp.addEventListener('change', function() {"
+            "    var files = Array.from(inp.files);"
+            "    if (!files.length) { finish(null); return; }"
+            "    var names = []; var remaining = files.length;"
+            "    files.forEach(function(file, idx) {"
+            "      var fr = new FileReader();"
+            "      fr.onload = function() {"
+            "        FS.writeFile('/tmp/gd5_upload_' + idx, new Uint8Array(fr.result));"
+            "        names[idx] = file.name;"
+            "        remaining -= 1;"
+            "        if (remaining === 0) finish(names);"
+            "      };"
+            "      fr.readAsArrayBuffer(file);"
+            "    });"
+            "  }, { once: true });"
+            "  inp.addEventListener('cancel', function() { finish(null); }, { once: true });"
+            "  inp.click();"
+            "};"
+        )
+        _upload_js_defined = True
+
+    accept = ",".join(extensions) if extensions else ""
+    platform.window.__gd5_pick_file(accept, multiple)
+
+    async def _wait_for_upload():
+        # ~120s safety net in case a browser doesn't fire "cancel" on an
+        # abandoned file picker, so this can't hang forever.
+        for _ in range(1200):
+            if platform.window.__gd5_upload_ready:
+                break
+            await asyncio.sleep(0.1)
+
+        names_json = platform.window.__gd5_upload_names
+        if not names_json:
+            on_result([] if multiple else None)
+            return
+
+        names = json.loads(names_json)
+        paths = []
+        for idx, name in enumerate(names):
+            src = f"/tmp/gd5_upload_{idx}"
+            dest = os.path.join("/tmp", name)
+            try:
+                shutil.move(src, dest)
+            except Exception:
+                dest = src
+            paths.append(dest)
+
+        on_result(paths if multiple else paths[0])
+
+    run_background(_wait_for_upload)
