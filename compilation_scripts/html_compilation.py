@@ -2,6 +2,14 @@ import os
 import subprocess
 import shutil
 import sys
+
+# This script lives in compilation_scripts/ but every relative path below (STAGE_DIR,
+# DATA_DIRS, etc.) is meant to resolve against the actual project root, so hop up one
+# level and put the root on sys.path before importing first-party packages.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+os.chdir(REPO_ROOT)
+
 import data.constants as c
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,

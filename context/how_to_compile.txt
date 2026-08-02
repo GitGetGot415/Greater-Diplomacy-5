@@ -5,10 +5,14 @@ MACOS:
 Clean old build
     rm -rf build dist
 Rebuild
-    python3 setup.py py2app
+    python3 compilation_scripts/setup.py py2app
 Test from Terminal to confirm it works
     ./dist/main.app/Contents/MacOS/main
 Turn into zip file with name GD5 MACOS vXX where vXX is the version number
+
+(All of the above is automated by compilation_scripts/windows_compilation.py,
+compilation_scripts/macos_compilation.py, and compilation_scripts/html_compilation.py --
+run those directly instead of the raw commands above.)
 
 ==========
 

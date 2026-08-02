@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Ensure script operates in its own directory
-cd "$(dirname "$0")" || exit 1
+# This script lives in compilation_scripts/, but venv/requirements.txt/main.py are all
+# at the project root, so hop up one level from this script's own directory.
+cd "$(dirname "$0")/.." || exit 1
 
 echo "Starting Greater Diplomacy 5..."
 

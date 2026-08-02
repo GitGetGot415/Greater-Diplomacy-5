@@ -1,11 +1,13 @@
 @echo off
 title GD5 Web Build Server
-cd /d "%~dp0"
+:: This script lives in compilation_scripts/, but web_stage/ and venv/ are both at
+:: the project root, so hop up one level from this script's own directory.
+cd /d "%~dp0.."
 
 if not exist "web_stage\build\web\index.html" (
     echo ============================================================
     echo No web build found yet. Run html_compilation.py first:
-    echo     venv\Scripts\python.exe html_compilation.py
+    echo     venv\Scripts\python.exe compilation_scripts\html_compilation.py
     echo ============================================================
     pause
     exit /b 1

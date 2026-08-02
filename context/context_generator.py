@@ -115,7 +115,7 @@ files_to_skip_but_list = [
     "data/**/*.json",
     "data\editors/**/*.py",
     "soloud.py",
-    "setup.py",
+    "compilation_scripts\setup.py",
     "gameState.py",
     "main.py",
     "ui_elements.py",
@@ -160,8 +160,8 @@ files_to_silently_ignore = [
     "build/**",
     "**/__init__.py",
     "venv/**",
-    "macos_compilation.py",
-    "windows_compilation.py",
+    "compilation_scripts/macos_compilation.py",
+    "compilation_scripts/windows_compilation.py",
     "temp_multiplayer_io.py",
 ]
 

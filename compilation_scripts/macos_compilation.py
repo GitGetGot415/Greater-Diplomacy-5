@@ -3,6 +3,14 @@ import subprocess
 import shutil
 import sys
 import time
+
+# This script lives in compilation_scripts/ but every relative path below (build_dir,
+# dist_dir, etc.) is meant to resolve against the actual project root, so hop up one
+# level and put the root on sys.path before importing first-party packages.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+os.chdir(REPO_ROOT)
+
 import data.constants as c
 
 def remove_dir_safely(dir_path, retries=5, delay=0.2):
@@ -34,7 +42,11 @@ def main():
     
     # 2. Rebuild
     print("Running py2app...")
-    cmd = "python3 setup.py py2app"
+    # setup.py lives alongside this script in compilation_scripts/, but py2app resolves
+    # its DATA_FILES (assets, base_maps, etc.) relative to the CWD it's invoked from --
+    # which is REPO_ROOT thanks to the os.chdir() above, so this still lands dist/build
+    # at the project root exactly like before.
+    cmd = "python3 compilation_scripts/setup.py py2app"
     
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:

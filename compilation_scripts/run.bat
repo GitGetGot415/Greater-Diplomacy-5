@@ -1,8 +1,9 @@
 @echo off
 title Starting Greater Diplomacy 5...
 
-:: Ensure script operates in its own directory
-cd /d "%~dp0"
+:: This script lives in compilation_scripts/, but venv/requirements.txt/main.py are all
+:: at the project root, so hop up one level from this script's own directory.
+cd /d "%~dp0.."
 
 :: 1. Check if virtual environment already exists
 if exist "venv\Scripts\python.exe" goto RUN_GAME
