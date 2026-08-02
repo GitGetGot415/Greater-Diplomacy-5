@@ -197,7 +197,9 @@ FUEL_CONVERSION_RATIO = 0.1 # 10 materials -> 1 fuel
 # AUDIO DEFAULTS
 # ==========================================
 
-USE_SOLOUD = True # Set to False to strictly force Pygame Mixer
+from data.platform import IS_WEB
+
+USE_SOLOUD = not IS_WEB # SoLoud has no browser build; Pygame Mixer is forced on web
 
 DEFAULT_SFX_VOLUME = 1.0
 DEFAULT_MUSIC_VOLUME = 1.0

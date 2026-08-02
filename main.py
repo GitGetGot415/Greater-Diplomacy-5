@@ -1,5 +1,8 @@
+import asyncio
 import os
 import sys
+
+from data.platform import IS_WEB
 
 # py2app / PyInstaller bundle fix: set working directory
 if getattr(sys, 'frozen', False):
@@ -508,7 +511,7 @@ class Controller:
         # Clear any accumulated KEYDOWN events (like F11 being held) that queued up while display was resetting
         pygame.event.clear(pygame.KEYDOWN)
 
-    def run(self):
+    async def run(self):
         while True:
             # --- THE MAGIC CPU FIX ---
             self.clock.tick(self.target_fps) 
@@ -535,8 +538,11 @@ class Controller:
                         self.soloud.deinit()
                     elif not c.USE_SOLOUD:
                         pygame.mixer.quit()
+                    if IS_WEB:
+                        # os._exit() isn't meaningful in a browser tab; just stop the loop.
+                        return
                     os._exit(0) # Instantly kills hanging background threads
-                
+
                 # GLOBAL KEYBOARD HANDLING
                 if event.type == pygame.KEYDOWN and not getattr(self.active_state, "listening_for", None):
                     if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
@@ -554,8 +560,9 @@ class Controller:
 
             if self.active_state.done:
                 self.flip_state()
-                
+
             pygame.display.flip()
+            await asyncio.sleep(0)  # yield to the browser tab / event loop every frame
 
 if __name__ == "__main__":
     try:
@@ -579,9 +586,14 @@ if __name__ == "__main__":
                         target_file.write(content)
 
         game = Controller()
-        game.run()
+        asyncio.run(game.run())
     except Exception:
         import traceback
-        with open(os.path.expanduser("~/GD5_crash.log"), "w") as f:
-            traceback.print_exc(file=f)
-        raise
+        if IS_WEB:
+            # ~/GD5_crash.log isn't reachable from a browser sandbox; the
+            # browser devtools console is where a web player can see this.
+            traceback.print_exc()
+        else:
+            with open(os.path.expanduser("~/GD5_crash.log"), "w") as f:
+                traceback.print_exc(file=f)
+            raise
