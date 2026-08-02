@@ -1,5 +1,5 @@
 import pygame
-import threading
+from data.platform import run_background
 from map_logic.system32 import turn_processor
 from ui import buttons, diplomatic_popups
 from map_logic.ai import ai_handler
@@ -119,7 +119,7 @@ def trigger_ai_thread(map_screen):
     map_screen.refresh_tasks_completed = 0
     
     # Fire and forget the background process
-    threading.Thread(target=run_ai_processing_thread, args=(map_screen,), daemon=True).start()
+    run_background(run_ai_processing_thread, map_screen)
 
 def run_ai_processing_thread(map_screen):
     """This runs in the background. Pygame keeps running!"""

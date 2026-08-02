@@ -10,6 +10,7 @@ import random
 import threading
 import shutil
 import zipfile
+from data.platform import run_background
 from datetime import datetime
 
 import pygame
@@ -2763,7 +2764,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
         screen.is_refreshing = False
 
     # Fire and forget the background process
-    threading.Thread(target=_refresh_thread, daemon=True).start()
+    run_background(_refresh_thread)
 
 def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback):
     """In-engine listbox picker for editor tools and spectators: dims and freezes

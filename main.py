@@ -1,3 +1,14 @@
+# /// script
+# dependencies = [
+#   "numpy",
+# ]
+# ///
+# The block above is PEP 723 metadata read by pygbag: it pre-fetches numpy's
+# WASM wheel before running this script. Without it, pygbag only discovers the
+# missing import mid-execution and retries via a path it marks buggy for
+# non-interactive scripts (main.py), which hangs instead of resuming. Harmless
+# comment for desktop Python.
+
 import asyncio
 import os
 import sys

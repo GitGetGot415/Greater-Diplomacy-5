@@ -1,10 +1,21 @@
 import json
-import requests
 import urllib.parse
 import http.client
 import socket
-from google import genai
-from google.genai import types
+from data.platform import IS_WEB
+
+if not IS_WEB:
+    # Networked LLM AI opponents are desktop-only (see Phase 4 of the web-export
+    # plan): raw sockets/requests/google-genai have no browser-safe path, and
+    # pulling them in on web would otherwise cascade into live, fragile
+    # PyPI installs of requests' whole dependency tree at every fresh page load.
+    import requests
+    from google import genai
+    from google.genai import types
+else:
+    requests = None
+    genai = None
+    types = None
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_prompts

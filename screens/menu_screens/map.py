@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import data.constants as c
 from data import queries
 from data.map import load_map, save_map
+from data.platform import run_background
 
 # Core Game State & Global UI Elements
 from gameState import GameState
@@ -315,7 +316,7 @@ class Map(GameState):
             self.multi_turn_abort_requested = False
             self.ai_is_thinking = True
             self.loading_status_text = f"Skipping {turns} Turns..."
-            threading.Thread(target=self._run_multi_turn_thread, args=(turns,), daemon=True).start()
+            run_background(self._run_multi_turn_thread, turns)
 
     def _run_multi_turn_thread(self, turns):
         from map_logic.system32 import turn_processor

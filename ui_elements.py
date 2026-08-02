@@ -1,5 +1,10 @@
 import pygame
-import pygame.scrap
+try:
+    # Not available in pygame-ce's WASM build; clipboard calls elsewhere already
+    # guard against pygame.scrap being missing with their own try/except.
+    import pygame.scrap
+except Exception:
+    pass
 import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts

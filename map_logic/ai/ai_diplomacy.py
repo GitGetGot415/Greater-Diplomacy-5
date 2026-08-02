@@ -2,6 +2,7 @@ import random
 from map_logic.ai import ai_handler, ai_prompts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
+from data.platform import IS_WEB
 import data.constants as c
 import concurrent.futures
 
@@ -56,10 +57,30 @@ def process_proactive_llm_tasks(map_screen):
             _attach_generated_message(map_screen.nation_data, task, final_msg)
         return
 
+    my_turn_id = ai_handler.CURRENT_TURN_ID
+
+    if IS_WEB:
+        # No real OS threads under Pyodide -- run each task in-line instead of
+        # via ThreadPoolExecutor. With AI networking disabled on web (see
+        # ai_handler's IS_WEB guard), generate_proactive_text returns its
+        # fallback immediately per-task, so this is not a slow path here.
+        for task in tasks:
+            try:
+                llm_msg = ai_handler.generate_proactive_text(map_screen.nation_data, active_nations, task["sender"], task["target"], task["context"], human_players, my_turn_id)
+                final_msg = llm_msg if llm_msg else task["fallback"]
+            except Exception as e:
+                final_msg = task["fallback"]
+            _attach_generated_message(map_screen.nation_data, task, final_msg)
+
+            is_ai_to_human = task["target"] in human_players
+            if current_ai_mode != "OFF":
+                if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
+                    map_screen.proactive_llm_tasks_completed += 1
+        return
+
     # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
     futures = {}
-    my_turn_id = ai_handler.CURRENT_TURN_ID
     for task in tasks:
         future = executor.submit(ai_handler.generate_proactive_text, map_screen.nation_data, active_nations, task["sender"], task["target"], task["context"], human_players, my_turn_id)
         futures[future] = task

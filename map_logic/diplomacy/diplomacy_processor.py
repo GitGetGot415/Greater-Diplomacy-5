@@ -2,6 +2,7 @@ import concurrent.futures
 from map_logic.ai import ai_prompts
 import data.constants as c
 from data import queries
+from data.platform import IS_WEB
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -295,12 +296,36 @@ def process_diplomacy_turn(self):
             for task in ai_tasks:
                 target_ai, sender = task["target"], task["sender"]
                 ai_results[(sender, target_ai, task["action"])] = _get_fallback_ai_result(task)
+        elif IS_WEB:
+            # No real OS threads under Pyodide -- call each task in-line instead
+            # of via ThreadPoolExecutor. AI networking is disabled on web (see
+            # ai_handler's IS_WEB guard), so these calls return their fallback
+            # immediately rather than blocking on a request.
+            my_turn_id = ai_handler.CURRENT_TURN_ID
+            for task in ai_tasks:
+                target_ai, sender = task["target"], task["sender"]
+                try:
+                    if task["action"] in c.UNILATERAL_ACTIONS or task["action"] in c.BILATERAL_ACTIONS:
+                        result = ai_handler.evaluate_diplomatic_proposal(self.nation_data, self.map_data, active_nations_list, target_ai, sender, task["action"], task.get("content", ""), human_players, my_turn_id)
+                    elif task["action"] == "CUSTOM_MSG":
+                        result = ai_handler.process_custom_message(self.nation_data, active_nations_list, target_ai, sender, task["content"], human_players, my_turn_id)
+                    else:
+                        continue
+                    ai_results[(sender, target_ai, task["action"])] = result
+                except Exception as e:
+                    ai_results[(sender, target_ai, task["action"])] = _get_fallback_ai_result(task)
+
+                is_human_related = (sender in human_players or target_ai in human_players)
+                if mode != "OFF":
+                    if immersion == "ABSOLUTE" or (immersion == "FULL" and is_human_related) or (immersion == "LITE" and is_human_related and (task["action"] == "CUSTOM_MSG" or bool(task.get("content", "").strip()))):
+                        self.responsive_tasks_completed += 1
+                        self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})...."
         else:
             max_threads = queries.get_ai_threads()
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
             futures = {}
             my_turn_id = ai_handler.CURRENT_TURN_ID
-            
+
             for task in ai_tasks:
                 target_ai, sender = task["target"], task["sender"]
                 if task["action"] in c.UNILATERAL_ACTIONS or task["action"] in c.BILATERAL_ACTIONS:
@@ -354,7 +379,7 @@ def process_diplomacy_turn(self):
                             self.responsive_tasks_completed += 1
                             self.loading_status_text = f"Processing Global Responses ({self.responsive_tasks_completed}/{self.responsive_tasks_total})..."
         
-        if not self.force_skip_llm:
+        if not self.force_skip_llm and not IS_WEB:
             executor.shutdown(wait=True)
 
 

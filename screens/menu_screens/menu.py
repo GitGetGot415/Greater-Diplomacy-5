@@ -8,6 +8,7 @@ import ui_elements
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
+from data.platform import IS_WEB
 from map_logic.rendering.font_manager import fonts
 
 class Menu(GameState):
@@ -72,7 +73,7 @@ class Menu(GameState):
             })
             current_y += c.MENU_BOTTOM_TEXT_STEP_Y
 
-        self.version_status = "Checking version..."
+        self.version_status = "Checking version..." if not IS_WEB else "Version check unavailable"
         self.version_color = (150, 150, 150) # Grey
 
         # Add refresh button in bottom right, above the text status
@@ -87,10 +88,16 @@ class Menu(GameState):
         )
         self.elements.append(self.refresh_btn)
 
-        # Start version check in background so it doesn't freeze the menu
-        threading.Thread(target=self.check_version, daemon=True).start()
+        # Start version check in background so it doesn't freeze the menu.
+        # Skipped entirely on web: no real OS threads under Pyodide, and the
+        # blocking urllib call it makes has no browser-safe path either, so
+        # there's nothing useful to do here even synchronously.
+        if not IS_WEB:
+            threading.Thread(target=self.check_version, daemon=True).start()
 
     def trigger_version_check(self):
+        if IS_WEB:
+            return
         if self.version_status != "Checking version...":
             self.version_status = "Checking version..."
             self.version_color = (150, 150, 150)
