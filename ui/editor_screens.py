@@ -2,9 +2,9 @@
 
 Each class here is a MapOverlayScreen launched with _run_pygame_sub_screen,
 mirroring the pattern already established in ui/player_diplomacy_menus.py for
-the diplomacy popups. The scripted events editor is intentionally left alone
-(it's still a tkinter window) -- everything else the map editor bottom/side
-bars open lives here or has already been converted to a TableScreen.
+the diplomacy popups. Everything the map editor's bottom/side bars open lives
+here, has become a TableScreen, or -- for the scripted events editor -- has its
+own module.
 """
 import pygame
 import data.constants as c

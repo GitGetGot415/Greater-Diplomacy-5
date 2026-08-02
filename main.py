@@ -10,19 +10,11 @@ if getattr(sys, 'frozen', False):
         # py2app / other
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+import platform
 import pygame
 
-# macOS Tkinter/Pygame NSApplication Clash Fix
-import platform
-try:
-    import tkinter as tk
-    if platform.system() == "Darwin":
-        # Initialize Tkinter FIRST so it claims the macOS NSApplication.
-        # Pygame is polite enough to share, but Tkinter is not.
-        _mac_tk_fix = tk.Tk()
-        _mac_tk_fix.withdraw()
-except Exception:
-    pass  # tkinter not available in bundle — pygame will handle NSApplication
+# The macOS Tkinter/NSApplication claim that used to happen here is gone: no
+# screen the game opens is a Tk window any more, so pygame owns the app outright.
 
 # Tell Python 3.8+ to trust the current folder for DLLs
 if os.name == 'nt':

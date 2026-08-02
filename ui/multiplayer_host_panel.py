@@ -5,10 +5,10 @@ import data.constants as c
 from ui.checkbox_list_screen import CheckboxItem
 
 
-def load_multiplayer_moves(map_ref, tk_parent=None):
+def load_multiplayer_moves(map_ref):
     """Multi-select move import. Returns True when files were actually loaded."""
     files = queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
-                                      mode="open_files", extensions=[".gd5move"], tk_parent=tk_parent)
+                                      mode="open_files", extensions=[".gd5move"])
     if not files:
         return False
 

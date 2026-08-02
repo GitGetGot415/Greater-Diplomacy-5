@@ -2824,48 +2824,6 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
     _clear_phantom_hover(game_state)
     return picked
 
-# ==========================================
-# TKINTER DIALOG HELPERS
-# ==========================================
-
-def create_tk_window(title=None, geometry=None):
-    """Creates a top-most Tk root for the scripted events editor.
-
-    The one place a Tk window is born, and the only tool left that needs one --
-    every other dialog, picker and editor is a pygame screen now.
-    """
-    import tkinter as tk
-    root = tk.Tk()
-    if title:
-        root.title(title)
-    if geometry:
-        root.geometry(geometry)
-    root.attributes("-topmost", True)
-    return root
-
-def create_managed_tk_window(game_state, title, geometry):
-    """Standardizes the creation of floating editor tool windows with automatic menu state management."""
-    root = create_tk_window(title, geometry)
-    game_state.menu_active = True
-    
-    def close_menu():
-        game_state.menu_active = False
-        root.destroy()
-        
-    root.protocol("WM_DELETE_WINDOW", close_menu)
-    return root, close_menu
-
-def run_tk_loop(game_state, root):
-    """Standardizes the Pygame-safe Tkinter event loop."""
-    import tkinter as tk
-    while getattr(game_state, 'menu_active', True) and not getattr(game_state, 'done', False) and root.winfo_exists():
-        try:
-            root.update()
-            pygame.event.pump()
-            pygame.time.wait(c.CPU_LIMITER)
-        except (tk.TclError, Exception):
-            break
-
 def copy_to_clipboard(text):
     """Pushes text to the OS clipboard via SDL's clipboard (pygame.scrap)."""
     try:

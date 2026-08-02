@@ -1,36 +1,69 @@
-import tkinter as tk
-from tkinter import ttk, colorchooser
-import pygame
-import os
-import tempfile
+"""Native pygame port of the tkinter Scripted Events Editor.
+
+The structure of the original is kept intact: a main window with nations down
+the left and that nation's events on the right, an event window holding a
+scrolling stack of conditional rows above a stack of action rows, plus the
+Variables editor and the Help popup it opened.
+
+Where the original used a ttk.Combobox, a row here shows the current value on a
+button that opens the shared modal list picker -- the same thing a dropdown
+does, using the picker every other converted tool already uses.
+"""
 import re
+import pygame
+from gameState import GameState
 import data.constants as c
 from data import queries
 from map_logic.system32.time_handler import TimeHandler
+from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
+from ui.bars import ui_bars
+from ui.table_screen import truncate
+from ui_elements import Button, TextField
 
-def open_scripted_events_editor(self):
-    active_countries = queries.get_living_nations(self.map_data)
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
-        return
+# ==========================================
+# OPTION LISTS
+# ==========================================
 
-    if not hasattr(self, 'script_variables'):
-        self.script_variables = []
+COND_TYPES = [
+    "Turn Number", "Variable", "At War With", "Is At War", "In Faction With",
+    "Not In Faction With", "Is In Faction", "Is Faction Leader", "Has Truce With",
+    "At Peace With", "Is At Peace", "Random (0.00 - 1.00)", "Received Action",
+    "Country Exists", "Country Doesn't Exist", "Occupying Core Of",
+    "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims",
+    "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering",
+    "Not Bordering", "True", "False",
+]
 
-    root, close_menu = queries.create_managed_tk_window(self, "Scripted Events Editor", "650x550")
+CHAIN_OPS = ["AND", "OR", "XOR", "NOR", "NAND"]
+NUMERIC_OPS = ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
+TURN_OPS = ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
+RECEIVED_ACTIONS = ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACTION",
+                    "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"]
+TRIGGER_TYPES = ["AI Only", "Player Only", "Both"]
 
-    def show_scripted_events_help():
-        """Spawns a read-only popup explaining the scripting engine."""
-        help_win = tk.Toplevel(root)
-        help_win.title("Scripted Events Help")
-        help_win.geometry("800x900")
-        help_win.attributes("-topmost", True)
-        
-        text_widget = tk.Text(help_win, wrap="word", font=("Arial", 10))
-        text_widget.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        help_text = """ === EVENT TYPE ===
+# Condition types whose value is a comma-separated list of nation IDs.
+TARGET_LIST_TYPES = ["At War With", "In Faction With", "Not In Faction With", "Has Truce With",
+                     "At Peace With", "Country Exists", "Country Doesn't Exist",
+                     "Occupying Claims Of", "Occupying All Claims"]
+# Condition types that take a single nation ID, or blank to mean the event's owner.
+SELF_OR_TARGET_TYPES = ["Is AI Controlled", "Is Player Controlled", "Is At War",
+                        "Is At Peace", "Is In Faction", "Is Faction Leader"]
+
+EDIT_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
+                "Edit Color", "Edit Flag", "Edit Portrait"]
+ACT_TYPES = ["Declare War", "Join Faction", "Create Faction", "Invite to Faction",
+             "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message",
+             "Queue Claims", "Revoke Claims", "Revoke All Claims", "Give Territory",
+             "Spawn Unit", "Set Variable"] + EDIT_ACTIONS
+# Actions that only write a plain text value onto the event's owner.
+TEXT_ONLY_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
+                     "Queue Claims", "Revoke Claims"]
+VAR_MATH_OPS = ["Set", "Add", "Subtract", "Multiply", "Divide"]
+
+VAR_TYPES = ["int", "double", "string"]
+
+HELP_TEXT = """ === EVENT TYPE ===
 - AI Only: Event fires only if this country is controlled by an AI
 - Player Only: Event fires only if this country is controlled by a player
 - Both: Event fires if this country is controlled by either an AI or a player
@@ -77,832 +110,1032 @@ def open_scripted_events_editor(self):
 
 The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
 It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails"""
-        
-        text_widget.insert("1.0", help_text)
-        text_widget.config(state="disabled") # Make read-only
 
-    # UI Layout
-    left_frame = tk.Frame(root, width=200)
-    left_frame.pack(side="left", fill="y", padx=10, pady=10)
-    right_frame = tk.Frame(root)
-    right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-    tk.Label(left_frame, text="Nations:", font=("Arial", 12, "bold")).pack()
-    scrollbar = tk.Scrollbar(left_frame)
-    scrollbar.pack(side="right", fill="y")
-    nation_list = tk.Listbox(left_frame, yscrollcommand=scrollbar.set, exportselection=False)
-    nation_list.pack(fill="both", expand=True)
-    scrollbar.config(command=nation_list.yview)
+# ==========================================
+# SHARED CHROME
+# ==========================================
 
-    for i in sorted(active_countries):
-        nation_list.insert(tk.END, i)
+class _ModalScreen(GameState):
+    """A dimmed freeze-frame behind a bordered panel -- the shape every converted
+    tool window in ui/ uses. Subclasses fill in draw_body() and refresh_ui()."""
+    PANEL_SIZE = (1240, 680)
+    PAD = 16
+    ROW_HEIGHT = 34
 
-    title_lbl = tk.Label(right_frame, text="Select a nation...", font=("Arial", 14, "bold"))
-    title_lbl.pack(pady=5)
+    def __init__(self, game_state, title):
+        super().__init__()
+        # Only used to resolve custom keybinds (BACK/ORDERS) and to host sub-pickers.
+        self.map_screen = getattr(game_state, "map_screen", None) or game_state
+        self.title = title
 
-    events_frame = tk.Frame(right_frame)
-    events_frame.pack(fill="both", expand=True, pady=5)
-    
-    events_scroll = tk.Scrollbar(events_frame)
-    events_scroll.pack(side="right", fill="y")
-    events_listbox = tk.Listbox(events_frame, yscrollcommand=events_scroll.set)
-    events_listbox.pack(side="left", fill="both", expand=True)
-    events_scroll.config(command=events_listbox.yview)
+        surface = pygame.display.get_surface()
+        self.background = surface.copy() if surface else None
 
-    current_target = [None]
+        self.panel_rect = pygame.Rect(0, 0, *self.PANEL_SIZE)
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
 
-    def refresh_events_list():
-        events_listbox.delete(0, tk.END)
-        target = current_target[0]
-        if not target: return
-        events = self.nation_data.get(target, {}).get("scripted_events", [])
-        for i, evt in enumerate(events):
-            # Backwards compatibility parsing
-            if "conditions" not in evt:
-                evt["conditions"] = [{
-                    "type": evt.get("condition_type", "Turn Number"),
-                    "operator": "==",
-                    "value": evt.get("condition_val", ""),
-                    "chain": "AND"
-                }]
-                evt["fire_once"] = True
-                
-            conds = evt["conditions"]
-            cond_strs = []
-            
-            for idx, c_dict in enumerate(conds):
-                prefix = "" if idx == 0 else f" {c_dict.get('chain', 'AND')} "
-                if c_dict.get("type") == "Turn Number":
-                    cond_strs.append(f"{prefix}Turn {c_dict.get('operator', '==')} {c_dict.get('value')}")
-                elif c_dict.get("type") == "Variable":
-                    cond_strs.append(f"{prefix}Var {c_dict.get('variable', '')} {c_dict.get('operator', '==')} {c_dict.get('value')}")
-                else:
-                    cond_strs.append(f"{prefix}{c_dict.get('type')} {c_dict.get('value')}")
-            
-            full_cond_str = "".join(cond_strs)
-            if len(full_cond_str) > 40:
-                full_cond_str = full_cond_str[:37] + "..."
-                
-            actions = evt.get("actions", [])
-            if not actions and "action_type" in evt:
-                actions = [{"type": evt["action_type"], "target": evt.get("action_target", "None")}]
-                
-            act_strs = []
-            for a in actions:
-                a_type = a.get('type')
-                if a_type == "Send Custom Message":
-                    act_strs.append(f"MSG to '{a.get('target')}'")
-                elif a_type in ["Edit Name", "Edit Leader Name", "Edit Leader Title", "Edit Color", "Edit Flag", "Edit Portrait"]:
-                    act_strs.append(f"{a_type}: '{a.get('message')}'")
-                elif a_type == "Queue Claims":
-                    act_strs.append(f"Queue Claims on Provs: '{a.get('message')}'")
-                elif a_type == "Revoke Claims":
-                    act_strs.append(f"Revoke Claims on Provs: '{a.get('message')}'")
-                elif a_type == "Revoke All Claims":
-                    act_strs.append(f"Revoke All Claims for '{a.get('target')}'")
-                elif a_type == "Give Territory":
-                    act_strs.append(f"Give Territory to '{a.get('target')}'")
-                elif a_type == "Spawn Unit":
-                    act_strs.append(f"Spawn {a.get('unit_type', 'Unit')} for '{a.get('target')}'")
-                elif a_type == "Set Variable":
-                    act_strs.append(f"Set Var '{a.get('target')}' {a.get('unit_type', '')} {a.get('message')}")
-                else:
-                    act_strs.append(f"{a_type} '{a.get('target')}'")
-                    
-            act_str = f"Then {', '.join(act_strs)}"
-            if len(act_str) > 40:
-                act_str = act_str[:37] + "..."
-                
-            once_str = " [Once]" if evt.get("fire_once", True) else " [Repeat]"
-            
-            events_listbox.insert(tk.END, f"{i+1}. If {full_cond_str} -> {act_str}{once_str}")
+    # -- widgets -------------------------------------------------------- #
 
-    def load_nation_data(event):
-        sel = nation_list.curselection()
-        if not sel: return
-        target = nation_list.get(sel[0])
-        current_target[0] = target
-        title_lbl.config(text=f"Events for: {target}")
-        refresh_events_list()
+    def _assign(self, attr, value):
+        """Sets an attribute and re-renders -- the callback shape combos and toggles want."""
+        setattr(self, attr, value)
+        self.refresh_ui()
 
-    nation_list.bind("<<ListboxSelect>>", load_nation_data)
+    def _sized(self, btn, width):
+        btn.rect.width = width
+        return btn
 
-    def get_expected_date_string(turns_str):
-        nums = re.findall(r'\d+', turns_str)
-        if not nums: return ""
-        
-        date_strs = []
-        for num in nums[:2]: # Max 2 for BETWEEN intervals
-            t = int(num)
-            temp_time = TimeHandler(start_year=self.time_manager.year)
-            temp_time.day = self.time_manager.day
-            temp_time.month_index = self.time_manager.month_index
-            dpt = self.scenario_settings.get("base_days_per_turn", c.DEFAULT_DAYS_PER_TURN)
-            
-            temp_time.process_time(t * dpt)
-            date_strs.append(temp_time.get_date_string())
-            
-        return " / ".join(date_strs)
+    def button(self, x, y, width, color, text, callback, preset="list_row"):
+        return self._sized(Button(x, y, preset, color, text, callback, font_preset="button_small"), width)
 
-    def open_event_window(event_idx=None):
-        target = current_target[0]
-        if not target:
-            confirm_dialog.show_warning("Warning", "Select a nation first.", tk_parent=root)
+    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue"):
+        """A combobox: shows the current value, opens the shared modal list picker."""
+        label = truncate(str(value) if str(value) else "-", max(4, (width - 14) // 9))
+        return self.button(x, y, width, color, label,
+                           lambda: self._choose(title, options, on_pick))
+
+    def _choose(self, title, options, on_pick):
+        options = list(options)
+        if not options:
+            confirm_dialog.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
+            return
+        queries.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
+        self.refresh_ui()
+
+    def toggle(self, x, y, width, checked, text, callback):
+        label = truncate(f"[{'X' if checked else '  '}] {text}", max(4, (width - 14) // 9))
+        btn = self.button(x, y, width, "green" if checked else "grey", label, callback)
+        btn.is_selected = checked
+        return btn
+
+    # -- scroll regions ------------------------------------------------- #
+
+    def scroll_attrs(self, name):
+        return {"attr": f"scroll_{name}", "limit_attr": f"max_{name}",
+                "track_attr": f"track_{name}", "handle_attr": f"handle_{name}",
+                "drag_attr": f"drag_{name}"}
+
+    def rows_of(self, name, count, top, view_h, row_h=None):
+        row_h = row_h or self.ROW_HEIGHT
+        attrs = self.scroll_attrs(name)
+        return self.layout_list_rows(count, row_h, top, view_h=view_h, cull_top=top - 1,
+                                     cull_bottom=top + view_h - row_h + 2,
+                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"])
+
+    def route_scroll(self, event, regions):
+        """Wheel goes to whichever region the cursor is over; scrollbar presses and
+        drags are offered to all of them, which each ignore what is not theirs."""
+        if event.type == pygame.MOUSEWHEEL:
+            pos = pygame.mouse.get_pos()
+            for name, rect in regions.items():
+                if rect.collidepoint(pos):
+                    self.handle_list_scroll(event, **self.scroll_attrs(name))
+                    return
+            return
+        for name in regions:
+            if self.handle_list_scroll(event, **self.scroll_attrs(name)):
+                return
+
+    # -- drawing -------------------------------------------------------- #
+
+    def label(self, surface, text, pos, color=(170, 170, 210), preset="small"):
+        surface.blit(fonts.get(preset).render(text, True, color), pos)
+
+    def draw_body(self, surface):
+        pass
+
+    def draw(self, surface):
+        if self.background:
+            surface.blit(self.background, (0, 0))
+        else:
+            surface.fill((20, 20, 28))
+        ui_bars.draw_fullscreen_overlay(surface, 210)
+
+        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(35, 35, 45),
+                               border_color=(100, 150, 255), border_width=3)
+        ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 12, "heading2")
+
+        self.draw_body(surface)
+        for el in self.elements:
+            el.draw(surface)
+
+
+def _run(screen):
+    from ui.screen_runner import run_screen
+    return run_screen(screen)
+
+
+# ==========================================
+# HELP POPUP
+# ==========================================
+
+class _HelpScreen(_ModalScreen):
+    PANEL_SIZE = (1020, 660)
+    LINE_H = 20
+
+    def __init__(self, game_state):
+        super().__init__(game_state, "Scripted Events Help")
+        p = self.panel_rect
+        self.body_top = p.y + 56
+        self.view_h = p.bottom - 70 - self.body_top
+
+        font = fonts.get("normal")
+        self.lines = []
+        for raw in HELP_TEXT.split("\n"):
+            self.lines.extend(confirm_dialog._wrap_text(raw, font, p.width - 2 * self.PAD - 30) or [""])
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [Button(p.centerx - 50, p.bottom - 56, "small", "red", "Close", self.exit_screen)]
+        # Nothing is clickable in the body, so the text drives the scroll limit alone.
+        self.max_scroll = min(0, self.view_h - len(self.lines) * self.LINE_H)
+
+    def additional_events(self, event):
+        self.handle_list_scroll(event)
+
+    def draw_body(self, surface):
+        p = self.panel_rect
+        font = fonts.get("normal")
+        clip = surface.get_clip()
+        surface.set_clip(pygame.Rect(p.x + 4, self.body_top, p.width - 8, self.view_h))
+        y = self.body_top + self.scroll_y
+        for line in self.lines:
+            if self.body_top - self.LINE_H < y < self.body_top + self.view_h:
+                color = c.COLOR_GOLD_HIGHLIGHT if line.strip().startswith("===") else (220, 220, 220)
+                surface.blit(font.render(line, True, color), (p.x + self.PAD, y))
+            y += self.LINE_H
+        surface.set_clip(clip)
+        self.draw_list_scrollbar(surface, p.right - 26, self.body_top, self.view_h)
+
+
+# ==========================================
+# VARIABLES EDITOR
+# ==========================================
+
+class _VariablesScreen(_ModalScreen):
+    PANEL_SIZE = (960, 580)
+    LIST_W = 400
+
+    def __init__(self, game_state, map_ref):
+        super().__init__(game_state, "Variables Editor")
+        self.map_ref = map_ref
+        self.selected = None
+
+        p = self.panel_rect
+        self.list_x = p.x + self.PAD
+        self.list_top = p.y + 82
+        self.list_view_h = p.bottom - 20 - self.list_top
+
+        self.form_x = self.list_x + self.LIST_W + 24
+        self.name_field = TextField(self.form_x, p.y + 104, 380, 36)
+        self.value_field = TextField(self.form_x, p.y + 236, 380, 36)
+        self.var_type = "int"
+        self.name_field.text = ""
+        self.value_field.text = "0"
+
+        self.refresh_ui()
+
+    @property
+    def variables(self):
+        return self.map_ref.script_variables
+
+    @property
+    def listening_for(self):
+        return self.name_field.active or self.value_field.active
+
+    # -- selection ------------------------------------------------------ #
+
+    def select(self, index):
+        self.selected = index
+        v = self.variables[index]
+        self.name_field.text = str(v["name"])
+        self.var_type = v["type"]
+        self.value_field.text = str(v["value"])
+        self.name_field.active = self.value_field.active = False
+        self.refresh_ui()
+
+    # -- usage ---------------------------------------------------------- #
+
+    def _usage(self, var_name):
+        """Every (nation, event) pair that reads or writes this variable."""
+        usage = []
+        for nat, ndata in self.map_ref.nation_data.items():
+            for ev in ndata.get("scripted_events", []):
+                used = any(cond.get("type") == "Variable" and cond.get("variable") == var_name
+                           for cond in ev.get("conditions", []))
+                used = used or any(a.get("type") == "Set Variable" and a.get("target") == var_name
+                                   for a in ev.get("actions", []))
+                if used:
+                    usage.append((nat, ev))
+        return usage
+
+    @staticmethod
+    def _nations_used(usage):
+        return list({u[0] for u in usage})
+
+    # -- actions -------------------------------------------------------- #
+
+    def add_var(self):
+        name = self.name_field.text.strip()
+        if not name:
+            return
+        if any(v["name"] == name for v in self.variables):
+            confirm_dialog.show_error("Error", "Variable name must be unique.")
+            return
+        self.variables.append({"name": name, "type": self.var_type, "value": self.value_field.text})
+        self.refresh_ui()
+
+    def update_var(self):
+        if self.selected is None or self.selected >= len(self.variables):
+            return
+        idx = self.selected
+        old = self.variables[idx]
+        new_name = self.name_field.text.strip()
+        new_type = self.var_type
+        if not new_name:
             return
 
-        edit_win = tk.Toplevel(root)
-        edit_win.title(f"{'Edit' if event_idx is not None else 'Add'} Event: {target}")
-        edit_win.geometry("800x650")
-        edit_win.attributes("-topmost", True)
-        
+        if old["name"] != new_name:
+            for i, v in enumerate(self.variables):
+                if v["name"] == new_name and i != idx:
+                    confirm_dialog.show_error("Error", "Variable name must be unique.")
+                    return
+
+        usage = self._usage(old["name"])
+
+        if old["type"] in ("int", "double") and new_type == "string" and usage:
+            msg = (f"Changing to string will force all non-equals conditionals to '==' and "
+                   f"non-set actions to 'Set'.\nCountries using: {', '.join(self._nations_used(usage))}\n"
+                   f"Events affected: {len(usage)}\nProceed?")
+            if not confirm_dialog.ask_yes_no("Warning", msg):
+                return
+            for _nat, ev in usage:
+                for cond in ev.get("conditions", []):
+                    if cond.get("type") == "Variable" and cond.get("variable") == old["name"]:
+                        if cond.get("operator") not in ("==", "!="):
+                            cond["operator"] = "=="
+                for a in ev.get("actions", []):
+                    if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
+                        if a.get("unit_type") != "Set":
+                            a["unit_type"] = "Set"
+
+        if old["type"] == "string" and new_type in ("int", "double") and usage:
+            msg = (f"Changing to int/double will reset non-numerical condition/action values to '0'.\n"
+                   f"Countries using: {', '.join(self._nations_used(usage))}\n"
+                   f"Events affected: {len(usage)}\nProceed?")
+            if not confirm_dialog.ask_yes_no("Warning", msg):
+                return
+            for _nat, ev in usage:
+                for cond in ev.get("conditions", []):
+                    if cond.get("type") == "Variable" and cond.get("variable") == old["name"]:
+                        try:
+                            float(cond.get("value", "0"))
+                        except ValueError:
+                            cond["value"] = "0"
+                for a in ev.get("actions", []):
+                    if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
+                        try:
+                            float(a.get("message", "0"))
+                        except ValueError:
+                            a["message"] = "0"
+
+        if old["name"] != new_name and usage:
+            for _nat, ev in usage:
+                for cond in ev.get("conditions", []):
+                    if cond.get("type") == "Variable" and cond.get("variable") == old["name"]:
+                        cond["variable"] = new_name
+                for a in ev.get("actions", []):
+                    if a.get("type") == "Set Variable" and a.get("target") == old["name"]:
+                        a["target"] = new_name
+
+        self.variables[idx] = {"name": new_name, "type": new_type, "value": self.value_field.text}
+        self.refresh_ui()
+
+    def delete_var(self):
+        if self.selected is None or self.selected >= len(self.variables):
+            return
+        idx = self.selected
+        var = self.variables[idx]
+        usage = self._usage(var["name"])
+        if usage:
+            msg = (f"Deleting this variable will delete {len(usage)} events across countries: "
+                   f"{', '.join(self._nations_used(usage))}.\nProceed?")
+            if not confirm_dialog.ask_yes_no("Warning", msg):
+                return
+            for nat, ev in usage:
+                if ev in self.map_ref.nation_data[nat].get("scripted_events", []):
+                    self.map_ref.nation_data[nat]["scripted_events"].remove(ev)
+
+        self.variables.pop(idx)
+        self.selected = None
+        self.refresh_ui()
+
+    def _move(self, delta):
+        if self.selected is None:
+            return
+        idx = self.selected
+        new_idx = idx + delta
+        if 0 <= new_idx < len(self.variables):
+            self.variables.insert(new_idx, self.variables.pop(idx))
+            self.selected = new_idx
+            self.refresh_ui()
+
+    # -- rendering ------------------------------------------------------ #
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen)]
+
+        for i, y in self.rows_of("vars", len(self.variables), self.list_top, self.list_view_h, row_h=30):
+            v = self.variables[i]
+            btn = self.button(self.list_x, y, self.LIST_W - 24, "blue",
+                              truncate(f"{v['name']} ({v['type']}) = {v['value']}", 40),
+                              lambda idx=i: self.select(idx))
+            btn.is_selected = i == self.selected
+            self.elements.append(btn)
+
+        self.elements += [self.name_field, self.value_field]
+        self.elements.append(self.combo(self.form_x, p.y + 170, 380, self.var_type, VAR_TYPES,
+                                        "Variable Type", lambda v: self._assign("var_type", v)))
+
+        row_y = p.y + 300
+        for i, (label, color, cb) in enumerate((("Add", "blue", self.add_var),
+                                                ("Update", "orange", self.update_var),
+                                                ("Delete", "red", self.delete_var))):
+            self.elements.append(self.button(self.form_x + i * 128, row_y, 120, color, label, cb))
+
+        self.elements.append(self.button(self.form_x, row_y + 44, 184, "light_blue", "Move Up ^",
+                                         lambda: self._move(-1)))
+        self.elements.append(self.button(self.form_x + 192, row_y + 44, 184, "light_blue", "Move Down v",
+                                         lambda: self._move(1)))
+
+    def additional_events(self, event):
+        self.route_scroll(event, {"vars": pygame.Rect(self.list_x, self.list_top,
+                                                      self.LIST_W, self.list_view_h)})
+
+    def draw_body(self, surface):
+        p = self.panel_rect
+        self.label(surface, "Variables:", (self.list_x, self.list_top - 20))
+        self.label(surface, "Name:", (self.form_x, p.y + 84))
+        self.label(surface, "Type:", (self.form_x, p.y + 150))
+        self.label(surface, "Starting Value:", (self.form_x, p.y + 216))
+
+        if not self.variables:
+            self.label(surface, "No variables yet.", (self.list_x + 4, self.list_top + 6), (150, 150, 150))
+
+        self.draw_list_scrollbar(surface, self.list_x + self.LIST_W - 18, self.list_top,
+                                 self.list_view_h, **self.scroll_attrs("vars"))
+
+
+# ==========================================
+# EVENT WINDOW
+# ==========================================
+
+class _CondRow:
+    """One conditional, holding a live TextField for its value."""
+    def __init__(self, data=None):
+        data = data or {}
+        self.chain = data.get("chain", "AND")
+        self.type = data.get("type", "Turn Number")
+        self.variable = data.get("variable", "")
+        self.operator = data.get("operator", "==")
+        self.field = TextField(0, 0, 140, 28, str(data.get("value", "")))
+
+    def to_dict(self):
+        return {"chain": self.chain, "type": self.type, "variable": self.variable,
+                "operator": self.operator, "value": self.field.text}
+
+
+class _ActRow:
+    """One action. `field` is the single message store the original kept in msg_var:
+    the colour string and the image base64 live in it too, and the entry is simply
+    not shown for the action types that write it through a picker instead."""
+    def __init__(self, data=None):
+        data = data or {}
+        self.type = data.get("type", "Declare War")
+        self.target = data.get("target", "None")
+        self.unit_type = data.get("unit_type", "Infantry Type 1910")
+        self.ai_generate = bool(data.get("ai_generate", False))
+        self.field = TextField(0, 0, 220, 28, str(data.get("message", "")))
+
+    def to_dict(self):
+        return {"type": self.type, "target": self.target, "unit_type": self.unit_type,
+                "message": self.field.text, "ai_generate": self.ai_generate}
+
+
+class _EventEditScreen(_ModalScreen):
+    LIST_VIEW_H = 204
+
+    def __init__(self, game_state, map_ref, target, event_idx=None):
+        verb = "Edit" if event_idx is not None else "Add"
+        super().__init__(game_state, f"{verb} Event: {target}")
+        self.map_ref = map_ref
+        self.target = target
+        self.event_idx = event_idx
+        self.saved = False
+
         event_data = {}
         if event_idx is not None:
-            event_data = self.nation_data[target]["scripted_events"][event_idx]
-            if "conditions" not in event_data:
-                event_data["conditions"] = [{
-                    "type": event_data.get("condition_type", "Turn Number"),
-                    "operator": "==",
-                    "value": event_data.get("condition_val", ""),
-                    "chain": "AND"
-                }]
-                event_data["fire_once"] = True
-                
-        conds_data = event_data.get("conditions", [{"chain": "AND", "type": "Turn Number", "operator": "==", "value": ""}])
-        
+            event_data = map_ref.nation_data[target]["scripted_events"][event_idx]
+            _upgrade_legacy_event(event_data)
+
+        conds_data = event_data.get("conditions") or [{"chain": "AND", "type": "Turn Number",
+                                                       "operator": "==", "value": ""}]
         acts_data = event_data.get("actions", [])
         if not acts_data and "action_type" in event_data:
             acts_data = [{"type": event_data["action_type"], "target": event_data.get("action_target", "None")}]
 
-        # --- Top controls ---
-        top_frame = tk.Frame(edit_win)
-        top_frame.pack(fill="x", padx=10, pady=5)
-        
-        help_btn = tk.Button(top_frame, text="Help / Info", command=show_scripted_events_help, bg="#2196F3", fg="white", font=("Arial", 9, "bold"))
-        help_btn.pack(side="right", padx=10)
-        
-        fire_once_var = tk.BooleanVar(value=event_data.get("fire_once", True))
-        tk.Checkbutton(top_frame, text="Single-Time Event (Fire Only Once)", variable=fire_once_var).pack(anchor="w")
-        
-        trigger_type_var = tk.StringVar(value=event_data.get("trigger_type", "AI Only"))
-        ttk.Combobox(top_frame, textvariable=trigger_type_var, values=["AI Only", "Player Only", "Both"], state="readonly", width=12).pack(side="left", padx=10)
-        
-        # --- Conditions Frame ---
-        tk.Label(edit_win, text="Conditionals:", font=("Arial", 10, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
-        
-        cond_container = tk.Frame(edit_win)
-        cond_container.pack(fill="both", expand=True, padx=10, pady=2)
-        
-        cond_canvas = tk.Canvas(cond_container, height=180)
-        cond_scroll = tk.Scrollbar(cond_container, orient="vertical", command=cond_canvas.yview)
-        cond_frame = tk.Frame(cond_canvas)
-        
-        cond_frame.bind("<Configure>", lambda e: cond_canvas.configure(scrollregion=cond_canvas.bbox("all")))
-        cond_canvas.create_window((0, 0), window=cond_frame, anchor="nw")
-        cond_canvas.configure(yscrollcommand=cond_scroll.set)
-        
-        cond_scroll.pack(side="right", fill="y")
-        cond_canvas.pack(side="left", fill="both", expand=True)
-        
-        row_objects = []
-        
-        def repack_conditions():
-            for ro in row_objects:
-                ro["frame"].pack_forget()
-            for ro in row_objects:
-                ro["frame"].pack(fill="x", pady=2, padx=2)
+        self.conds = [_CondRow(d) for d in conds_data]
+        self.acts = [_ActRow(d) for d in acts_data]
+        self.fire_once = event_data.get("fire_once", True)
+        self.trigger_type = event_data.get("trigger_type", "AI Only")
 
-        def move_up(r_obj):
-            idx = row_objects.index(r_obj)
-            if idx > 1: # Prevents moving above the primary IF condition
-                row_objects.insert(idx - 1, row_objects.pop(idx))
-                repack_conditions()
+        self.countries = sorted(queries.get_living_nations(map_ref.map_data))
+        self.unit_types = list(queries.get_unit_library().keys())
 
-        def move_down(r_obj):
-            idx = row_objects.index(r_obj)
-            if idx > 0 and idx < len(row_objects) - 1: # Prevents the IF condition from moving down
-                row_objects.insert(idx + 1, row_objects.pop(idx))
-                repack_conditions()
+        p = self.panel_rect
+        self.list_x = p.x + self.PAD
+        self.cond_top = p.y + 126
+        self.act_top = p.y + 362
+        self.btn_col_x = p.right - self.PAD - 100
+        self._previews = []
 
-        def add_condition_row(c_data=None):
-            if c_data is None:
-                c_data = {"chain": "AND", "type": "Turn Number", "operator": "==", "value": ""}
-                
-            row_frame = tk.Frame(cond_frame, relief="ridge", bd=2)
-            row_frame.pack(fill="x", pady=2, padx=2)
-            
-            is_first = (len(row_objects) == 0)
-            
-            chain_var = tk.StringVar(value=c_data.get("chain", "AND"))
-            if not is_first:
-                ttk.Combobox(row_frame, textvariable=chain_var, values=["AND", "OR", "XOR", "NOR", "NAND"], width=5, state="readonly").pack(side="left", padx=2)
+        self.refresh_ui()
+
+    @property
+    def variables(self):
+        return self.map_ref.script_variables
+
+    @property
+    def listening_for(self):
+        return any(r.field.active for r in self.conds) or any(r.field.active for r in self.acts)
+
+    # -- condition semantics -------------------------------------------- #
+
+    def _date_string(self, turns_str):
+        """The in-game date(s) a turn number lands on, as the original showed in grey."""
+        nums = re.findall(r'\d+', turns_str)
+        if not nums:
+            return ""
+        tm = self.map_ref.time_manager
+        dpt = self.map_ref.scenario_settings.get("base_days_per_turn", c.DEFAULT_DAYS_PER_TURN)
+        out = []
+        for num in nums[:2]:  # Max 2 for BETWEEN intervals
+            temp_time = TimeHandler(start_year=tm.year)
+            temp_time.day = tm.day
+            temp_time.month_index = tm.month_index
+            temp_time.process_time(int(num) * dpt)
+            out.append(temp_time.get_date_string())
+        return " / ".join(out)
+
+    def cond_options(self, row):
+        """Operator choices and the grey hint for a row -- the original's update_row()."""
+        ctype = row.type
+        if ctype == "Variable":
+            var_type = next((v["type"] for v in self.variables if v["name"] == row.variable), "string")
+            return (NUMERIC_OPS if var_type in ("int", "double") else ["==", "!="]), ""
+        if ctype in ("Turn Number", "Random (0.00 - 1.00)"):
+            hint = ""
+            if ctype == "Turn Number":
+                dates = self._date_string(row.field.text)
+                hint = f"({dates})" if dates else ""
+            return TURN_OPS, hint
+        if ctype == "Received Action":
+            return RECEIVED_ACTIONS, "(Sender Nation ID)"
+        if ctype in TARGET_LIST_TYPES:
+            return ["=="], "(Target Nation IDs, comma separated)"
+        if ctype in ("True", "False"):
+            return ["=="], ""
+        if ctype == "Occupying All Cores Of":
+            return ["==", "!="], "(Target Nation IDs, comma separated)"
+        if ctype == "Occupying Tile":
+            return ["==", "!="], "(Tile IDs, comma separated)"
+        if ctype in SELF_OR_TARGET_TYPES:
+            return ["=="], "(Target Nation ID, or blank for self)"
+        return ["=="], "(Target Nation ID, comma separated)"
+
+    # -- row edits ------------------------------------------------------ #
+
+    def _set(self, row, attr, value):
+        setattr(row, attr, value)
+        self.refresh_ui()
+
+    def _move_row(self, rows, row, delta, pin_first):
+        idx = rows.index(row)
+        new_idx = idx + delta
+        # The primary IF condition is pinned to the top, as in the original.
+        low = 1 if pin_first else 0
+        if idx >= low and low <= new_idx < len(rows):
+            rows.insert(new_idx, rows.pop(idx))
+            self.refresh_ui()
+
+    def _remove_row(self, rows, row):
+        rows.remove(row)
+        self.refresh_ui()
+
+    def add_condition(self):
+        self.conds.append(_CondRow())
+        self.refresh_ui()
+
+    def add_action(self):
+        self.acts.append(_ActRow())
+        self.refresh_ui()
+
+    # -- action pickers ------------------------------------------------- #
+
+    def pick_color(self, row):
+        try:
+            initial = tuple(int(v) for v in row.field.text.split(","))[:3]
+        except ValueError:
+            initial = ()
+        if len(initial) != 3:
+            initial = (150, 150, 150)
+        chosen = queries.ask_color(self.map_screen, "Choose color", initial)
+        if chosen:
+            row.field.text = f"{int(chosen[0])},{int(chosen[1])},{int(chosen[2])}"
+        self.refresh_ui()
+
+    def pick_image(self, row):
+        path = queries.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
+                                         extensions=[".png", ".jpg", ".jpeg", ".bmp"])
+        if path:
+            try:
+                img = pygame.image.load(path).convert_alpha()
+                size = c.PORTRAIT_SIZE if row.type == "Edit Portrait" else c.FLAG_SIZE
+                row.field.text = queries.encode_surf_to_b64(pygame.transform.scale(img, size))
+            except Exception as e:
+                confirm_dialog.show_error("Error", f"Could not load image: {e}")
+        self.refresh_ui()
+
+    # -- saving --------------------------------------------------------- #
+
+    def save_event(self):
+        new_event = {
+            "conditions": [r.to_dict() for r in self.conds],
+            "actions": [r.to_dict() for r in self.acts],
+            "fire_once": self.fire_once,
+            "trigger_type": self.trigger_type,
+        }
+        target_data = self.map_ref.nation_data.setdefault(self.target, {})
+        events_list = target_data.setdefault("scripted_events", [])
+        if self.event_idx is not None:
+            events_list[self.event_idx] = new_event
+        else:
+            events_list.append(new_event)
+
+        self.saved = True
+        self.exit_screen()
+
+    # -- layout --------------------------------------------------------- #
+
+    def _row_controls(self, rows, row, index, y, pin_first):
+        """The ^ / v / X column every row carries on its right-hand end."""
+        out = []
+        if pin_first and index == 0:
+            return out
+        out.append(self.button(self.btn_col_x, y + 2, 30, "light_blue", "^",
+                               lambda: self._move_row(rows, row, -1, pin_first), preset="tiny_square"))
+        out.append(self.button(self.btn_col_x + 34, y + 2, 30, "light_blue", "v",
+                               lambda: self._move_row(rows, row, 1, pin_first), preset="tiny_square"))
+        out.append(self.button(self.btn_col_x + 68, y + 2, 30, "red", "X",
+                               lambda: self._remove_row(rows, row), preset="tiny_square"))
+        return out
+
+    def _build_cond_row(self, row, index, y):
+        els = []
+        x = self.list_x
+        if index == 0:
+            els.append(self.button(x, y + 2, 76, "grey", "IF", lambda: None))
+            els[-1].apply_state(enabled=False)
+        else:
+            els.append(self.combo(x, y + 2, 76, row.chain, CHAIN_OPS, "Chain",
+                                  lambda v: self._set(row, "chain", v), color="orange"))
+        x += 82
+
+        els.append(self.combo(x, y + 2, 200, row.type, COND_TYPES, "Condition Type",
+                              lambda v: self._set(row, "type", v)))
+        x += 206
+
+        if row.type == "Variable":
+            els.append(self.combo(x, y + 2, 170, row.variable or "-",
+                                  [v["name"] for v in self.variables], "Variable",
+                                  lambda v: self._set(row, "variable", v)))
+            x += 176
+
+        ops, hint = self.cond_options(row)
+        if row.operator not in ops:
+            row.operator = ops[0]
+        els.append(self.combo(x, y + 2, 155, row.operator, ops, "Operator",
+                              lambda v: self._set(row, "operator", v)))
+        x += 161
+
+        row.field.rect.topleft = (x, y + 3)
+        els.append(row.field)
+        x += 146
+
+        self._hints.append((hint, x, y))
+        els += self._row_controls(self.conds, row, index, y, pin_first=True)
+        return els
+
+    def _build_act_row(self, row, index, y):
+        els = [self.combo(self.list_x, y + 2, 200, row.type, ACT_TYPES, "Action Type",
+                          lambda v: self._set(row, "type", v))]
+        x = self.list_x + 206
+        t = row.type
+
+        def target_combo(options, title="Target"):
+            nonlocal x
+            els.append(self.combo(x, y + 2, 180, row.target, options, title,
+                                  lambda v: self._set(row, "target", v)))
+            x += 186
+
+        def message_field():
+            nonlocal x
+            row.field.rect.topleft = (x, y + 3)
+            els.append(row.field)
+            x += 226
+
+        def flag_toggle(text):
+            nonlocal x
+            els.append(self.toggle(x, y + 2, 160, row.ai_generate, text,
+                                   lambda: self._set(row, "ai_generate", not row.ai_generate)))
+            x += 166
+
+        if t == "Set Variable":
+            target_combo([v["name"] for v in self.variables], "Variable")
+            var_type = next((v["type"] for v in self.variables if v["name"] == row.target), "string")
+            if var_type in ("int", "double"):
+                modes = VAR_MATH_OPS
             else:
-                tk.Label(row_frame, text=" IF ", width=5).pack(side="left", padx=2)
-                
-            type_var = tk.StringVar(value=c_data.get("type", "Turn Number"))
-            var_name_var = tk.StringVar(value=c_data.get("variable", ""))
-            op_var = tk.StringVar(value=c_data.get("operator", "=="))
-            val_var = tk.StringVar(value=c_data.get("value", ""))
-            
-            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=["Turn Number", "Variable", "At War With", "Is At War", "In Faction With", "Not In Faction With", "Is In Faction", "Is Faction Leader", "Has Truce With", "At Peace With", "Is At Peace", "Random (0.00 - 1.00)", "Received Action", "Country Exists", "Country Doesn't Exist", "Occupying Core Of", "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims", "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering", "Not Bordering", "True", "False"], width=18, state="readonly")
-            type_cb.pack(side="left", padx=2)
-            
-            var_name_cb = ttk.Combobox(row_frame, textvariable=var_name_var, width=15, state="readonly")
-            
-            op_cb = ttk.Combobox(row_frame, textvariable=op_var, width=19, state="readonly")
-            op_cb.pack(side="left", padx=2)
-            
-            val_ent = tk.Entry(row_frame, textvariable=val_var, width=15)
-            val_ent.pack(side="left", padx=2)
-            
-            date_lbl = tk.Label(row_frame, text="", fg="gray", width=30, anchor="w")
-            date_lbl.pack(side="left", padx=2)
-            
-            def update_row(*args):
-                ctype = type_var.get()
-                var_name_cb.pack_forget()
-                if ctype == "Variable":
-                    var_name_cb.config(values=[v["name"] for v in self.script_variables])
-                    var_name_cb.pack(side="left", padx=2, before=op_cb)
-                    
-                    var_type = "string"
-                    for v in self.script_variables:
-                        if v["name"] == var_name_var.get():
-                            var_type = v["type"]
-                            break
-                            
-                    if var_type in ["int", "double"]:
-                        op_cb.config(values=["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"])
-                        if op_var.get() not in ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]: op_var.set("==")
-                    else:
-                        op_cb.config(values=["==", "!="])
-                        if op_var.get() not in ["==", "!="]: op_var.set("==")
-                    date_lbl.config(text="")
-                elif ctype in ["Turn Number", "Random (0.00 - 1.00)"]:
-                    op_cb.config(values=["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"])
-                    if op_var.get() not in ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]:
-                        op_var.set("==")
-                    
-                    if ctype == "Turn Number":
-                        d_str = get_expected_date_string(val_var.get())
-                        if d_str:
-                            date_lbl.config(text=f"({d_str})")
-                        else:
-                            date_lbl.config(text="")
-                    else:
-                        date_lbl.config(text="")
-                elif ctype == "Received Action":
-                    op_cb.config(values=["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACTION", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"])
-                    if op_var.get() not in ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACTION", "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"]:
-                        op_var.set("WAR_DECLARATION")
-                    date_lbl.config(text="(Sender Nation ID)")
-                elif ctype in ["At War With", "In Faction With", "Not In Faction With", "Has Truce With", "At Peace With", "Country Exists", "Country Doesn't Exist", "Occupying Claims Of", "Occupying All Claims"]:
-                    op_cb.config(values=["=="])
-                    op_var.set("==")
-                    date_lbl.config(text="(Target Nation IDs, comma separated)")
-                elif ctype in ["True", "False"]:
-                    op_cb.config(values=["=="])
-                    op_var.set("==")
-                    date_lbl.config(text="")
-                elif ctype == "Occupying All Cores Of":
-                    op_cb.config(values=["==", "!="])
-                    if op_var.get() not in ["==", "!="]: op_var.set("==")
-                    date_lbl.config(text="(Target Nation IDs, comma separated)")
-                elif ctype == "Occupying Tile":
-                    op_cb.config(values=["==", "!="])
-                    if op_var.get() not in ["==", "!="]: op_var.set("==")
-                    date_lbl.config(text="(Tile IDs, comma separated)")
-                elif ctype in ["Is AI Controlled", "Is Player Controlled", "Is At War", "Is At Peace", "Is In Faction", "Is Faction Leader"]:
-                    op_cb.config(values=["=="])
-                    op_var.set("==")
-                    date_lbl.config(text="(Target Nation ID, or blank for self)")
-                else:
-                    op_cb.config(values=["=="])
-                    op_var.set("==")
-                    date_lbl.config(text="(Target Nation ID, comma separated)")
-            
-            type_var.trace_add("write", update_row)
-            var_name_var.trace_add("write", update_row)
-            val_var.trace_add("write", update_row)
-            update_row()
-            
-            row_obj = {
-                "frame": row_frame,
-                "chain_var": chain_var,
-                "type_var": type_var,
-                "var_name_var": var_name_var,
-                "op_var": op_var,
-                "val_var": val_var
-            }
-            
-            def remove_self():
-                row_frame.destroy()
-                row_objects.remove(row_obj)
-                
-            if not is_first:
-                tk.Button(row_frame, text="X", fg="white", bg="red", command=remove_self).pack(side="right", padx=2)
-                tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_down(r)).pack(side="right", padx=1)
-                tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_up(r)).pack(side="right", padx=1)
-                
-            row_objects.append(row_obj)
-            
-        for c_data in conds_data:
-            add_condition_row(c_data)
+                modes = ["Set"]
+                row.unit_type = "Set"
+            if row.unit_type not in modes:
+                row.unit_type = modes[0]
+            els.append(self.combo(x, y + 2, 250, row.unit_type, modes, "Operation",
+                                  lambda v: self._set(row, "unit_type", v)))
+            x += 256
+            message_field()
+        elif t == "Send Custom Message":
+            target_combo(["None"] + self.countries)
+            message_field()
+            flag_toggle("AI Msg")
+        elif t == "Edit Color":
+            row.target = "None"
+            els.append(self.button(x, y + 2, 130, "purple", "Pick Color", lambda: self.pick_color(row)))
+            x += 136
+            self._previews.append(("color", row.field.text, pygame.Rect(x, y + 3, 60, 28)))
+            x += 66
+        elif t in ("Edit Flag", "Edit Portrait"):
+            row.target = "None"
+            els.append(self.button(x, y + 2, 150, "purple", "Browse Image", lambda: self.pick_image(row)))
+            x += 156
+            kind = "portrait" if t == "Edit Portrait" else "flag"
+            self._previews.append((kind, row.field.text, pygame.Rect(x, y + 2, 46, 30)))
+            x += 52
+        elif t in TEXT_ONLY_ACTIONS:
+            row.target = "None"
+            message_field()
+        elif t == "Revoke All Claims":
+            target_combo(["None"] + self.countries)
+        elif t == "Give Territory":
+            target_combo(["None"] + self.countries)
+            message_field()
+            flag_toggle("Must Control")
+        elif t == "Spawn Unit":
+            target_combo(["None"] + self.countries)
+            # unit_type doubles as the Set Variable operation, so a row switched over
+            # from that can arrive holding "Add"/"Set"; snap it back to a real unit.
+            if row.unit_type not in self.unit_types and self.unit_types:
+                row.unit_type = self.unit_types[0]
+            els.append(self.combo(x, y + 2, 250, row.unit_type, self.unit_types, "Unit Type",
+                                  lambda v: self._set(row, "unit_type", v)))
+            x += 256
+            message_field()
+            flag_toggle("Must Control")
+        else:
+            target_combo(["None"] + self.countries)
+            message_field()
+            flag_toggle("AI Msg")
 
-        # --- Actions Frame ---
-        tk.Label(edit_win, text="Actions:", font=("Arial", 10, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
-        
-        act_container = tk.Frame(edit_win)
-        act_container.pack(fill="both", expand=True, padx=10, pady=2)
-        
-        act_canvas = tk.Canvas(act_container, height=180)
-        act_scroll = tk.Scrollbar(act_container, orient="vertical", command=act_canvas.yview)
-        act_frame = tk.Frame(act_canvas)
-        
-        act_frame.bind("<Configure>", lambda e: act_canvas.configure(scrollregion=act_canvas.bbox("all")))
-        act_canvas.create_window((0, 0), window=act_frame, anchor="nw")
-        act_canvas.configure(yscrollcommand=act_scroll.set)
-        
-        act_scroll.pack(side="right", fill="y")
-        act_canvas.pack(side="left", fill="both", expand=True)
-        
-        act_row_objects = []
-        
-        def repack_actions():
-            for ro in act_row_objects:
-                ro["frame"].pack_forget()
-            for ro in act_row_objects:
-                ro["frame"].pack(fill="x", pady=2, padx=2)
+        els += self._row_controls(self.acts, row, index, y, pin_first=False)
+        return els
 
-        def move_act_up(r_obj):
-            idx = act_row_objects.index(r_obj)
-            if idx > 0:
-                act_row_objects.insert(idx - 1, act_row_objects.pop(idx))
-                repack_actions()
+    def refresh_ui(self):
+        p = self.panel_rect
+        self._hints = []
+        self._previews = []
 
-        def move_act_down(r_obj):
-            idx = act_row_objects.index(r_obj)
-            if idx < len(act_row_objects) - 1:
-                act_row_objects.insert(idx + 1, act_row_objects.pop(idx))
-                repack_actions()
+        self.elements = [
+            self.toggle(p.x + self.PAD, p.y + 56, 380, self.fire_once, "Single-Time Event (Fire Only Once)",
+                        lambda: self._assign("fire_once", not self.fire_once)),
+            self.combo(p.x + 410, p.y + 56, 240, f"Trigger: {self.trigger_type}", TRIGGER_TYPES,
+                       "Trigger Type", lambda v: self._assign("trigger_type", v)),
+            self.button(p.right - self.PAD - 170, p.y + 56, 170, "blue", "Help / Info", self.show_help),
+        ]
 
-        def add_action_row(a_data=None):
-            if a_data is None:
-                a_data = {"type": "Declare War", "target": "None", "message": ""}
-                
-            row_frame = tk.Frame(act_frame, relief="ridge", bd=2)
-            row_frame.pack(fill="x", pady=2, padx=2)
-            
-            type_var = tk.StringVar(value=a_data.get("type", "Declare War"))
-            target_var = tk.StringVar(value=a_data.get("target", "None"))
-            msg_var = tk.StringVar(value=a_data.get("message", ""))
-            ai_var = tk.BooleanVar(value=a_data.get("ai_generate", False))
-            unit_type_var = tk.StringVar(value=a_data.get("unit_type", "Infantry Type 1910"))
-            
-            edit_options = ["Edit Name", "Edit Leader Name", "Edit Leader Title", "Edit Color", "Edit Flag", "Edit Portrait"]
-            all_options = ["Declare War", "Join Faction", "Create Faction", "Invite to Faction", "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message", "Queue Claims", "Revoke Claims", "Revoke All Claims", "Give Territory", "Spawn Unit", "Set Variable"] + edit_options
-            
-            type_cb = ttk.Combobox(row_frame, textvariable=type_var, values=all_options, width=18, state="readonly")
-            type_cb.pack(side="left", padx=5)
-            
-            target_cb = ttk.Combobox(row_frame, textvariable=target_var, values=["None"] + sorted(active_countries), width=18)
-            
-            unit_types = list(queries.get_unit_library().keys())
-            unit_type_cb = ttk.Combobox(row_frame, textvariable=unit_type_var, values=unit_types, width=30, state="readonly")
-            
-            msg_ent = tk.Entry(row_frame, textvariable=msg_var, width=20)
-            ai_cb = tk.Checkbutton(row_frame, text="AI Msg", variable=ai_var)
-            
-            def do_pick_color():
-                color_code = colorchooser.askcolor(title="Choose color")[0]
-                if color_code:
-                    msg_var.set(f"{int(color_code[0])},{int(color_code[1])},{int(color_code[2])}")
-                    update_act_row()
+        for i, y in self.rows_of("conds", len(self.conds), self.cond_top, self.LIST_VIEW_H):
+            self.elements += self._build_cond_row(self.conds[i], i, y)
 
-            def do_pick_image():
-                filepath = queries.open_file_browser(None, "Select Image", c.ASSETS_DIR,
-                                                     extensions=[".png", ".jpg", ".jpeg", ".bmp"],
-                                                     tk_parent=edit_win)
-                if filepath:
-                    try:
-                        img = pygame.image.load(filepath).convert_alpha()
-                        is_port = type_var.get() == "Edit Portrait"
-                        size = c.PORTRAIT_SIZE if is_port else c.FLAG_SIZE
-                        img = pygame.transform.scale(img, size)
-                        b64_str = queries.encode_surf_to_b64(img)
-                        msg_var.set(b64_str)
-                        update_act_row()
-                    except Exception as e:
-                        confirm_dialog.show_error("Error", f"Could not load image: {e}", tk_parent=edit_win)
+        for i, y in self.rows_of("acts", len(self.acts), self.act_top, self.LIST_VIEW_H):
+            self.elements += self._build_act_row(self.acts[i], i, y)
 
-            pick_color_btn = tk.Button(row_frame, text="Pick Color", command=do_pick_color)
-            pick_img_btn = tk.Button(row_frame, text="Browse Image", command=do_pick_image)
-            preview_lbl = tk.Label(row_frame, width=4, height=1)
+        btn_y = p.bottom - 62
+        self.elements += [
+            self.button(p.x + self.PAD, btn_y, 200, "blue", "Add Conditional", self.add_condition, preset="medium"),
+            self.button(p.x + self.PAD + 210, btn_y, 200, "purple", "Add Action", self.add_action, preset="medium"),
+            self.button(p.x + self.PAD + 430, btn_y, 120, "red", "Cancel", self.exit_screen, preset="medium"),
+            self.button(p.right - self.PAD - 200, btn_y, 200, "green", "Save Event", self.save_event, preset="medium"),
+        ]
 
-            row_obj = {
-                "frame": row_frame,
-                "type_var": type_var,
-                "target_var": target_var,
-                "unit_type_var": unit_type_var,
-                "msg_var": msg_var,
-                "ai_var": ai_var
-            }
-            
-            def update_act_row(*args):
-                t = type_var.get()
-                
-                # Unpack everything first to clear the slate
-                target_cb.pack_forget()
-                unit_type_cb.pack_forget()
-                msg_ent.pack_forget()
-                ai_cb.pack_forget()
-                pick_color_btn.pack_forget()
-                pick_img_btn.pack_forget()
-                preview_lbl.pack_forget()
+    def show_help(self):
+        _run(_HelpScreen(self.map_screen))
+        self.refresh_ui()
 
-                if t == "Set Variable":
-                    target_cb.config(values=[v["name"] for v in self.script_variables])
-                    target_cb.pack(side="left", padx=5)
-                    
-                    var_type = "string"
-                    for v in self.script_variables:
-                        if v["name"] == target_var.get():
-                            var_type = v["type"]
-                            break
-                            
-                    if var_type in ["int", "double"]:
-                        unit_type_cb.config(values=["Set", "Add", "Subtract", "Multiply", "Divide"])
-                    else:
-                        unit_type_cb.config(values=["Set"])
-                        if unit_type_var.get() != "Set": unit_type_var.set("Set")
-                        
-                    unit_type_cb.pack(side="left", padx=5)
-                    msg_ent.pack(side="left", padx=5)
-                elif t == "Send Custom Message":
-                    target_cb.config(values=["None"] + sorted(active_countries))
-                    target_cb.pack(side="left", padx=5)
-                    msg_ent.pack(side="left", padx=5)
-                    ai_cb.pack(side="left", padx=5)
-                elif t == "Edit Color":
-                    target_var.set("None")
-                    pick_color_btn.pack(side="left", padx=5)
-                    preview_lbl.pack(side="left", padx=5)
-                    try:
-                        c_val = msg_var.get()
-                        if c_val:
-                            r,g,b = map(int, c_val.split(','))
-                            preview_lbl.config(bg=f"#{r:02x}{g:02x}{b:02x}", image='', width=4, height=1)
-                        else:
-                            preview_lbl.config(bg='gray', image='', width=4, height=1)
-                    except:
-                        preview_lbl.config(bg='gray', image='', width=4, height=1)
-                elif t in ["Edit Flag", "Edit Portrait"]:
-                    target_var.set("None")
-                    pick_img_btn.pack(side="left", padx=5)
-                    preview_lbl.pack(side="left", padx=5)
-                    
-                    b64_str = msg_var.get()
-                    if b64_str:
-                        is_port = (t == "Edit Portrait")
-                        size = c.PORTRAIT_SIZE if is_port else c.FLAG_SIZE
-                        
-                        # Utilize the queries handler to resolve default imagery and scale appropriately
-                        surf = queries.decode_b64_to_surf(b64_str, size, is_portrait=is_port, country_name=target)
-                        
-                        # Temporarily swap standard pygame bytes to disk so Tkinter can read them
-                        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".png")
-                        os.close(tmp_fd)
-                        pygame.image.save(surf, tmp_path)
-                        
-                        try:
-                            img = tk.PhotoImage(file=tmp_path)
-                            preview_lbl.config(image=img, width=size[0], height=size[1], bg='white')
-                            preview_lbl.image = img # Crucial: Save reference so garbage collector doesn't eat the image
-                        except Exception:
-                            preview_lbl.config(bg='gray', image='', width=4, height=1)
-                            
-                        os.remove(tmp_path)
-                    else:
-                        preview_lbl.config(bg='gray', image='', width=4, height=1)
-                elif t in ["Edit Name", "Edit Leader Name", "Edit Leader Title", "Queue Claims", "Revoke Claims"]:
-                    target_var.set("None")
-                    msg_ent.pack(side="left", padx=5)
-                elif t == "Revoke All Claims":
-                    target_cb.config(values=["None"] + sorted(active_countries))
-                    target_cb.pack(side="left", padx=5)
-                elif t == "Give Territory":
-                    target_cb.config(values=["None"] + sorted(active_countries))
-                    target_cb.pack(side="left", padx=5)
-                    msg_ent.pack(side="left", padx=5)
-                    ai_cb.config(text="Must Control")
-                    ai_cb.pack(side="left", padx=5)
-                elif t == "Spawn Unit":
-                    target_cb.config(values=["None"] + sorted(active_countries))
-                    target_cb.pack(side="left", padx=5)
-                    unit_type_cb.config(values=unit_types)
-                    unit_type_cb.pack(side="left", padx=5)
-                    msg_ent.pack(side="left", padx=5)
-                    ai_cb.config(text="Must Control")
-                    ai_cb.pack(side="left", padx=5)
-                else:
-                    target_cb.config(values=["None"] + sorted(active_countries))
-                    target_cb.pack(side="left", padx=5)
-                    msg_ent.pack(side="left", padx=5)
-                    ai_cb.config(text="AI Msg")
-                    ai_cb.pack(side="left", padx=5)
-                    
-            type_var.trace_add("write", update_act_row)
-            target_var.trace_add("write", update_act_row)
-            update_act_row()
-            
-            def remove_self():
-                row_frame.destroy()
-                act_row_objects.remove(row_obj)
-                
-            tk.Button(row_frame, text="X", fg="white", bg="red", command=remove_self).pack(side="right", padx=5)
-            tk.Button(row_frame, text="v", fg="black", command=lambda r=row_obj: move_act_down(r)).pack(side="right", padx=1)
-            tk.Button(row_frame, text="^", fg="black", command=lambda r=row_obj: move_act_up(r)).pack(side="right", padx=1)
-            act_row_objects.append(row_obj)
+    def additional_events(self, event):
+        self.route_scroll(event, {
+            "conds": pygame.Rect(self.list_x, self.cond_top, self.panel_rect.width - 40, self.LIST_VIEW_H),
+            "acts": pygame.Rect(self.list_x, self.act_top, self.panel_rect.width - 40, self.LIST_VIEW_H),
+        })
 
-        for a_data in acts_data:
-            add_action_row(a_data)
+    def draw_body(self, surface):
+        p = self.panel_rect
+        self.label(surface, "Conditionals:", (self.list_x, self.cond_top - 20), preset="normal")
+        self.label(surface, "Actions:", (self.list_x, self.act_top - 20), preset="normal")
 
-        def save_event():
-            final_conds = []
-            for ro in row_objects:
-                final_conds.append({
-                    "chain": ro["chain_var"].get(),
-                    "type": ro["type_var"].get(),
-                    "variable": ro["var_name_var"].get(),
-                    "operator": ro["op_var"].get(),
-                    "value": ro["val_var"].get()
-                })
-                
-            final_acts = []
-            for ro in act_row_objects:
-                final_acts.append({
-                    "type": ro["type_var"].get(),
-                    "target": ro["target_var"].get(),
-                    "unit_type": ro.get("unit_type_var").get() if "unit_type_var" in ro else "Infantry Type 1910",
-                    "message": ro["msg_var"].get(),
-                    "ai_generate": ro["ai_var"].get()
-                })
-                
-            new_event = {
-                "conditions": final_conds,
-                "actions": final_acts,
-                "fire_once": fire_once_var.get(),
-                "trigger_type": trigger_type_var.get()
-            }
-            
-            target_data = self.nation_data.setdefault(target, {})
-            events_list = target_data.setdefault("scripted_events", [])
-            
-            if event_idx is not None:
-                events_list[event_idx] = new_event
+        for band_top in (self.cond_top, self.act_top):
+            pygame.draw.rect(surface, (26, 26, 34),
+                             pygame.Rect(p.x + 8, band_top - 4, p.width - 16, self.LIST_VIEW_H + 8))
+
+        small = fonts.get("small")
+        for hint, x, y in self._hints:
+            if hint:
+                surface.blit(small.render(hint, True, (150, 150, 165)),
+                             (x, y + self.ROW_HEIGHT // 2 - 8))
+
+        for kind, payload, rect in self._previews:
+            self._draw_preview(surface, kind, payload, rect)
+
+        if not self.acts:
+            self.label(surface, "No actions yet -- add one below.",
+                       (self.list_x + 4, self.act_top + 8), (150, 150, 150))
+
+        self.draw_list_scrollbar(surface, p.right - 26, self.cond_top, self.LIST_VIEW_H,
+                                 **self.scroll_attrs("conds"))
+        self.draw_list_scrollbar(surface, p.right - 26, self.act_top, self.LIST_VIEW_H,
+                                 **self.scroll_attrs("acts"))
+
+    def _draw_preview(self, surface, kind, payload, rect):
+        """Swatch for Edit Color, thumbnail for Edit Flag/Portrait.
+
+        The tkinter version had to round-trip the surface through a temp PNG to
+        show it; pygame just blits it.
+        """
+        if kind == "color":
+            try:
+                colour = tuple(int(v) for v in payload.split(","))[:3]
+            except (ValueError, AttributeError):
+                colour = (128, 128, 128)
+            pygame.draw.rect(surface, colour if len(colour) == 3 else (128, 128, 128), rect)
+            pygame.draw.rect(surface, (255, 255, 255), rect, 1)
+            return
+
+        size = c.PORTRAIT_SIZE if kind == "portrait" else c.FLAG_SIZE
+        try:
+            surf = queries.decode_b64_to_surf(payload, size, is_portrait=(kind == "portrait"),
+                                              country_name=self.target)
+            scale = min(rect.width / surf.get_width(), rect.height / surf.get_height())
+            thumb = pygame.transform.smoothscale(surf, (max(1, int(surf.get_width() * scale)),
+                                                        max(1, int(surf.get_height() * scale))))
+            surface.blit(thumb, thumb.get_rect(center=rect.center))
+        except Exception:
+            pygame.draw.rect(surface, (128, 128, 128), rect)
+        pygame.draw.rect(surface, (255, 255, 255), rect, 1)
+
+
+def _upgrade_legacy_event(evt):
+    """Folds a pre-conditions-list event into the modern shape, in place."""
+    if "conditions" not in evt:
+        evt["conditions"] = [{
+            "type": evt.get("condition_type", "Turn Number"),
+            "operator": "==",
+            "value": evt.get("condition_val", ""),
+            "chain": "AND",
+        }]
+        evt["fire_once"] = True
+
+
+# ==========================================
+# MAIN EDITOR
+# ==========================================
+
+class Scripted_Events_Editor_Screen(_ModalScreen):
+    NAT_W = 260
+
+    def __init__(self, map_ref):
+        super().__init__(map_ref, "Scripted Events Editor")
+        self.map_ref = map_ref
+        self.countries = sorted(queries.get_living_nations(map_ref.map_data))
+        self.target = None
+        self.selected_event = None
+
+        p = self.panel_rect
+        self.nat_x = p.x + self.PAD
+        self.nations_top = p.y + 112
+        self.nations_view_h = 500
+
+        self.events_x = self.nat_x + self.NAT_W + 40
+        self.events_top = p.y + 130
+        self.events_view_h = 490
+
+        self.refresh_ui()
+
+    def _events(self):
+        if not self.target:
+            return []
+        return self.map_ref.nation_data.get(self.target, {}).setdefault("scripted_events", [])
+
+    # -- summaries ------------------------------------------------------ #
+
+    def _event_summary(self, evt, index):
+        """The one-line description the original listbox showed, verbatim."""
+        _upgrade_legacy_event(evt)
+
+        cond_strs = []
+        for idx, c_dict in enumerate(evt["conditions"]):
+            prefix = "" if idx == 0 else f" {c_dict.get('chain', 'AND')} "
+            if c_dict.get("type") == "Turn Number":
+                cond_strs.append(f"{prefix}Turn {c_dict.get('operator', '==')} {c_dict.get('value')}")
+            elif c_dict.get("type") == "Variable":
+                cond_strs.append(f"{prefix}Var {c_dict.get('variable', '')} "
+                                 f"{c_dict.get('operator', '==')} {c_dict.get('value')}")
             else:
-                events_list.append(new_event)
-                
-            refresh_events_list()
-            edit_win.destroy()
+                cond_strs.append(f"{prefix}{c_dict.get('type')} {c_dict.get('value')}")
 
-        bot_frame = tk.Frame(edit_win)
-        bot_frame.pack(fill="x", pady=10, padx=10)
-        
-        tk.Button(bot_frame, text="Add Conditional", command=add_condition_row, bg="#2196F3", fg="white").pack(side="left", padx=5)
-        tk.Button(bot_frame, text="Add Action", command=add_action_row, bg="#9C27B0", fg="white").pack(side="left", padx=5)
-        tk.Button(bot_frame, text="Save Event", command=save_event, bg="#4CAF50", fg="white").pack(side="right", padx=5)
+        full_cond_str = "".join(cond_strs)
+        if len(full_cond_str) > 40:
+            full_cond_str = full_cond_str[:37] + "..."
 
-    def edit_event():
-        sel = events_listbox.curselection()
-        if not sel: return
-        open_event_window(sel[0])
+        actions = evt.get("actions", [])
+        if not actions and "action_type" in evt:
+            actions = [{"type": evt["action_type"], "target": evt.get("action_target", "None")}]
 
-    def remove_event():
-        target = current_target[0]
-        sel = events_listbox.curselection()
-        if not target or not sel: return
-        
-        idx = sel[0]
-        data = self.nation_data.get(target, {})
-        events = data.get("scripted_events", [])
-        if 0 <= idx < len(events):
-            events.pop(idx)
-            refresh_events_list()
+        act_strs = []
+        for a in actions:
+            a_type = a.get("type")
+            if a_type == "Send Custom Message":
+                act_strs.append(f"MSG to '{a.get('target')}'")
+            elif a_type in EDIT_ACTIONS:
+                act_strs.append(f"{a_type}: '{a.get('message')}'")
+            elif a_type == "Queue Claims":
+                act_strs.append(f"Queue Claims on Provs: '{a.get('message')}'")
+            elif a_type == "Revoke Claims":
+                act_strs.append(f"Revoke Claims on Provs: '{a.get('message')}'")
+            elif a_type == "Revoke All Claims":
+                act_strs.append(f"Revoke All Claims for '{a.get('target')}'")
+            elif a_type == "Give Territory":
+                act_strs.append(f"Give Territory to '{a.get('target')}'")
+            elif a_type == "Spawn Unit":
+                act_strs.append(f"Spawn {a.get('unit_type', 'Unit')} for '{a.get('target')}'")
+            elif a_type == "Set Variable":
+                act_strs.append(f"Set Var '{a.get('target')}' {a.get('unit_type', '')} {a.get('message')}")
+            else:
+                act_strs.append(f"{a_type} '{a.get('target')}'")
 
-    def move_event_up():
-        target = current_target[0]
-        sel = events_listbox.curselection()
-        if not target or not sel: return
-        idx = sel[0]
-        if idx > 0:
-            events = self.nation_data[target]["scripted_events"]
-            events.insert(idx - 1, events.pop(idx))
-            refresh_events_list()
-            events_listbox.selection_set(idx - 1)
+        act_str = f"Then {', '.join(act_strs)}"
+        if len(act_str) > 40:
+            act_str = act_str[:37] + "..."
 
-    def move_event_down():
-        target = current_target[0]
-        sel = events_listbox.curselection()
-        if not target or not sel: return
-        idx = sel[0]
-        events = self.nation_data[target]["scripted_events"]
-        if idx < len(events) - 1:
-            events.insert(idx + 1, events.pop(idx))
-            refresh_events_list()
-            events_listbox.selection_set(idx + 1)
-            
-    def open_variables_editor():
-        var_win = tk.Toplevel(root)
-        var_win.title("Variables Editor")
-        var_win.geometry("500x400")
-        var_win.attributes("-topmost", True)
-        
-        left = tk.Frame(var_win)
-        left.pack(side="left", fill="y", padx=10, pady=10)
-        right = tk.Frame(var_win)
-        right.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-        
-        tk.Label(left, text="Variables:", font=("Arial", 10, "bold")).pack()
-        v_scroll = tk.Scrollbar(left)
-        v_scroll.pack(side="right", fill="y")
-        v_list = tk.Listbox(left, yscrollcommand=v_scroll.set, exportselection=False)
-        v_list.pack(fill="both", expand=True)
-        v_scroll.config(command=v_list.yview)
-        
-        name_var = tk.StringVar()
-        type_var = tk.StringVar(value="int")
-        val_var = tk.StringVar(value="0")
-        
-        def refresh_vlist():
-            v_list.delete(0, tk.END)
-            for v in self.script_variables:
-                v_list.insert(tk.END, f"{v['name']} ({v['type']}) = {v['value']}")
-                
-        refresh_vlist()
-        
-        tk.Label(right, text="Name:").pack(anchor="w")
-        tk.Entry(right, textvariable=name_var).pack(fill="x", pady=2)
-        
-        tk.Label(right, text="Type:").pack(anchor="w")
-        ttk.Combobox(right, textvariable=type_var, values=["int", "double", "string"], state="readonly").pack(fill="x", pady=2)
-        
-        tk.Label(right, text="Starting Value:").pack(anchor="w")
-        tk.Entry(right, textvariable=val_var).pack(fill="x", pady=2)
-        
-        def on_vselect(event):
-            sel = v_list.curselection()
-            if not sel: return
-            v = self.script_variables[sel[0]]
-            name_var.set(v["name"])
-            type_var.set(v["type"])
-            val_var.set(v["value"])
-            
-        v_list.bind("<<ListboxSelect>>", on_vselect)
-        
-        def get_usage(var_name):
-            usage = []
-            for nat, ndata in self.nation_data.items():
-                for idx, ev in enumerate(ndata.get("scripted_events", [])):
-                    used = False
-                    for cond in ev.get("conditions", []):
-                        if cond.get("type") == "Variable" and cond.get("variable") == var_name: used = True
-                    for a in ev.get("actions", []):
-                        if a.get("type") == "Set Variable" and a.get("target") == var_name: used = True
-                    if used: usage.append((nat, ev))
-            return usage
+        once_str = " [Once]" if evt.get("fire_once", True) else " [Repeat]"
+        return f"{index + 1}. If {full_cond_str} -> {act_str}{once_str}"
 
-        def get_nations_used(usage):
-            return list(set([u[0] for u in usage]))
-            
-        def add_var():
-            n = name_var.get().strip()
-            if not n: return
-            for v in self.script_variables:
-                if v["name"] == n:
-                    confirm_dialog.show_error("Error", "Variable name must be unique.", tk_parent=var_win)
-                    return
-            self.script_variables.append({
-                "name": n, "type": type_var.get(), "value": val_var.get()
-            })
-            refresh_vlist()
+    # -- actions -------------------------------------------------------- #
 
-        def update_var():
-            sel = v_list.curselection()
-            if not sel: return
-            idx = sel[0]
-            old_v = self.script_variables[idx]
-            new_n = name_var.get().strip()
-            new_t = type_var.get()
-            
-            if not new_n: return
-            if old_v["name"] != new_n:
-                for i, v in enumerate(self.script_variables):
-                    if v["name"] == new_n and i != idx:
-                        confirm_dialog.show_error("Error", "Variable name must be unique.", tk_parent=var_win)
-                        return
-                        
-            usage = get_usage(old_v["name"])
-            
-            if old_v["type"] in ["int", "double"] and new_t == "string" and usage:
-                nations = get_nations_used(usage)
-                msg = f"Changing to string will force all non-equals conditionals to '==' and non-set actions to 'Set'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
-                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
-                for nat, ev in usage:
-                    for cond in ev.get("conditions", []):
-                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
-                            if cond.get("operator") not in ["==", "!="]: cond["operator"] = "=="
-                    for a in ev.get("actions", []):
-                        if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
-                            if a.get("unit_type") != "Set": a["unit_type"] = "Set"
-                            
-            if old_v["type"] == "string" and new_t in ["int", "double"] and usage:
-                nations = get_nations_used(usage)
-                msg = f"Changing to int/double will reset non-numerical condition/action values to '0'.\nCountries using: {', '.join(nations)}\nEvents affected: {len(usage)}\nProceed?"
-                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
-                for nat, ev in usage:
-                    for cond in ev.get("conditions", []):
-                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
-                            try:
-                                float(cond.get("value", "0"))
-                            except ValueError:
-                                cond["value"] = "0"
-                    for a in ev.get("actions", []):
-                        if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
-                            try:
-                                float(a.get("message", "0"))
-                            except ValueError:
-                                a["message"] = "0"
-                                
-            if old_v["name"] != new_n and usage:
-                for nat, ev in usage:
-                    for cond in ev.get("conditions", []):
-                        if cond.get("type") == "Variable" and cond.get("variable") == old_v["name"]:
-                            cond["variable"] = new_n
-                    for a in ev.get("actions", []):
-                        if a.get("type") == "Set Variable" and a.get("target") == old_v["name"]:
-                            a["target"] = new_n
+    def select_nation(self, cid):
+        self.target = cid
+        self.selected_event = None
+        self.scroll_events = 0
+        self.refresh_ui()
 
-            self.script_variables[idx] = {"name": new_n, "type": new_t, "value": val_var.get()}
-            refresh_vlist()
-            refresh_events_list()
+    def select_event(self, index):
+        self.selected_event = index
+        self.refresh_ui()
 
-        def delete_var():
-            sel = v_list.curselection()
-            if not sel: return
-            idx = sel[0]
-            v = self.script_variables[idx]
-            usage = get_usage(v["name"])
-            if usage:
-                nations = get_nations_used(usage)
-                msg = f"Deleting this variable will delete {len(usage)} events across countries: {', '.join(nations)}.\nProceed?"
-                if not confirm_dialog.ask_yes_no("Warning", msg, tk_parent=var_win): return
-                for nat, ev in usage:
-                    if ev in self.nation_data[nat]["scripted_events"]:
-                        self.nation_data[nat]["scripted_events"].remove(ev)
-                        
-            self.script_variables.pop(idx)
-            refresh_vlist()
-            refresh_events_list()
-            
-        def move_v_up():
-            sel = v_list.curselection()
-            if not sel: return
-            idx = sel[0]
-            if idx > 0:
-                vs = self.script_variables
-                vs.insert(idx - 1, vs.pop(idx))
-                refresh_vlist()
-                v_list.selection_set(idx - 1)
+    def open_event(self, event_idx=None):
+        if not self.target:
+            confirm_dialog.show_warning("Warning", "Select a nation first.")
+            return
+        _run(_EventEditScreen(self.map_screen, self.map_ref, self.target, event_idx))
+        self.refresh_ui()
 
-        def move_v_down():
-            sel = v_list.curselection()
-            if not sel: return
-            idx = sel[0]
-            vs = self.script_variables
-            if idx < len(vs) - 1:
-                vs.insert(idx + 1, vs.pop(idx))
-                refresh_vlist()
-                v_list.selection_set(idx + 1)
-                
-        btn_f = tk.Frame(right)
-        btn_f.pack(fill="x", pady=10)
-        tk.Button(btn_f, text="Add", command=add_var, bg="#2196F3", fg="white").pack(side="left", padx=2, expand=True, fill="x")
-        tk.Button(btn_f, text="Update", command=update_var, bg="#FF9800", fg="black").pack(side="left", padx=2, expand=True, fill="x")
-        tk.Button(btn_f, text="Delete", command=delete_var, bg="#f44336", fg="white").pack(side="left", padx=2, expand=True, fill="x")
-        
-        mv_f = tk.Frame(right)
-        mv_f.pack(fill="x", pady=2)
-        tk.Button(mv_f, text="Move Up ^", command=move_v_up).pack(side="left", expand=True, fill="x", padx=2)
-        tk.Button(mv_f, text="Move Down v", command=move_v_down).pack(side="left", expand=True, fill="x", padx=2)
+    def edit_event(self):
+        if self.selected_event is not None:
+            self.open_event(self.selected_event)
 
-    tk.Button(left_frame, text="Variables", command=open_variables_editor, bg="#4CAF50", fg="white").pack(fill="x", pady=(5,0))
+    def remove_event(self):
+        events = self._events()
+        idx = self.selected_event
+        if idx is None or not (0 <= idx < len(events)):
+            return
+        events.pop(idx)
+        self.selected_event = None
+        self.refresh_ui()
 
-    btn_frame = tk.Frame(right_frame)
-    btn_frame.pack(fill="x", pady=5)
-    tk.Button(btn_frame, text="Add New Event", command=lambda: open_event_window(None), bg="#2196F3", fg="white").pack(side="left", expand=True, fill="x", padx=2)
-    tk.Button(btn_frame, text="Edit", command=edit_event, bg="#FF9800", fg="black").pack(side="left", expand=True, fill="x", padx=2)
-    tk.Button(btn_frame, text="^", command=move_event_up, bg="#d9e1f2", fg="black").pack(side="left", expand=False, fill="x", padx=2)
-    tk.Button(btn_frame, text="v", command=move_event_down, bg="#d9e1f2", fg="black").pack(side="left", expand=False, fill="x", padx=2)
-    tk.Button(btn_frame, text="Remove", command=remove_event, bg="#f44336", fg="white").pack(side="right", expand=True, fill="x", padx=2)
+    def move_event(self, delta):
+        events = self._events()
+        idx = self.selected_event
+        if idx is None:
+            return
+        new_idx = idx + delta
+        if 0 <= new_idx < len(events):
+            events.insert(new_idx, events.pop(idx))
+            self.selected_event = new_idx
+            self.refresh_ui()
 
-    queries.run_tk_loop(self, root)
+    def open_variables(self):
+        _run(_VariablesScreen(self.map_screen, self.map_ref))
+        self.refresh_ui()
+
+    # -- rendering ------------------------------------------------------ #
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [Button(self.nat_x, p.y + 46, "small", "red", "Back", self.exit_screen)]
+
+        for i, y in self.rows_of("nations", len(self.countries), self.nations_top,
+                                 self.nations_view_h, row_h=30):
+            cid = self.countries[i]
+            btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
+                              lambda cc=cid: self.select_nation(cc))
+            btn.is_selected = cid == self.target
+            self.elements.append(btn)
+
+        self.elements.append(self.button(self.nat_x, self.nations_top + self.nations_view_h + 12,
+                                         self.NAT_W - 24, "green", "Variables", self.open_variables))
+
+        events = self._events()
+        row_w = p.right - self.PAD - self.events_x - 20
+        for i, y in self.rows_of("events", len(events), self.events_top, self.events_view_h):
+            btn = self.button(self.events_x, y, row_w, "blue",
+                              truncate(self._event_summary(events[i], i), row_w // 9),
+                              lambda idx=i: self.select_event(idx))
+            btn.is_selected = i == self.selected_event
+            self.elements.append(btn)
+
+        btn_y = p.bottom - 62
+        has_sel = self.selected_event is not None
+        add_btn = self.button(self.events_x, btn_y, 200, "blue", "Add New Event",
+                              lambda: self.open_event(None), preset="medium")
+        self.elements.append(add_btn)
+
+        for x_off, width, colour, label, cb in ((210, 110, "orange", "Edit", self.edit_event),
+                                                (330, 60, "light_blue", "^", lambda: self.move_event(-1)),
+                                                (398, 60, "light_blue", "v", lambda: self.move_event(1))):
+            btn = self.button(self.events_x + x_off, btn_y, width, colour, label, cb, preset="medium")
+            btn.apply_state(enabled=has_sel, color=colour)
+            self.elements.append(btn)
+
+        remove_btn = self.button(p.right - self.PAD - 160, btn_y, 160, "red", "Remove",
+                                 self.remove_event, preset="medium")
+        remove_btn.apply_state(enabled=has_sel, color="red")
+        self.elements.append(remove_btn)
+
+    def additional_events(self, event):
+        self.route_scroll(event, {
+            "nations": pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h),
+            "events": pygame.Rect(self.events_x, self.events_top,
+                                  self.panel_rect.right - self.events_x, self.events_view_h),
+        })
+
+    def draw_body(self, surface):
+        p = self.panel_rect
+        self.label(surface, "Nations:", (self.nat_x, self.nations_top - 20))
+        pygame.draw.line(surface, (70, 70, 95), (self.events_x - 20, p.y + 46),
+                         (self.events_x - 20, p.bottom - 16), 1)
+
+        heading = "Select a nation..." if not self.target else f"Events for: {self.target}"
+        surface.blit(fonts.get("heading2").render(heading, True, c.COLOR_GOLD_HIGHLIGHT),
+                     (self.events_x, p.y + 88))
+
+        if self.target and not self._events():
+            self.label(surface, "No events for this nation yet.",
+                       (self.events_x + 4, self.events_top + 8), (150, 150, 150))
+
+        self.draw_list_scrollbar(surface, self.nat_x + self.NAT_W - 18, self.nations_top,
+                                 self.nations_view_h, **self.scroll_attrs("nations"))
+        self.draw_list_scrollbar(surface, p.right - 26, self.events_top, self.events_view_h,
+                                 **self.scroll_attrs("events"))
+
+
+def open_scripted_events_editor(self):
+    active_countries = queries.get_living_nations(self.map_data)
+    if not active_countries:
+        self.show_feedback("No active countries on map!")
+        return
+
+    if not hasattr(self, 'script_variables'):
+        self.script_variables = []
+
+    _run(Scripted_Events_Editor_Screen(self))
+    self.hovered_province = None
