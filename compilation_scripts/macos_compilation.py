@@ -72,21 +72,27 @@ def main():
 
     # 3. Zipping the app
     zip_name = f"GD5 MACOS {c.GAME_VERSION}"
-    print(f"Zipping {dist_dir} into {zip_name}.zip...")
-    
-    # Zip the contents of dist (which is main.app)
-    shutil.make_archive(zip_name, 'zip', dist_dir)
-    
     zip_filename = f"{zip_name}.zip"
+    print(f"Zipping {dist_dir} into {zip_filename}...")
+
     dst_zip_path = os.path.join(dist_dir, zip_filename)
-    
-    # If there's an existing zip in dist, remove it before moving the new one
+
+    # If there's an existing zip in dist, remove it before creating the new one
     if os.path.exists(dst_zip_path):
         os.remove(dst_zip_path)
-        
-    # Move the zip into the dist directory
-    shutil.move(zip_filename, dst_zip_path)
-    print(f"Moved {zip_filename} into {dist_dir}/.")
+
+    # Use ditto, not shutil.make_archive (Python's zipfile module), to zip main.app.
+    # zipfile flattens the symlinks inside the .app bundle (e.g. Python.framework's
+    # Versions/Current) into plain file copies, which invalidates py2app's ad-hoc code
+    # signature. A downloaded/re-extracted app with a broken signature is exactly what
+    # makes Gatekeeper report "main is damaged and can't be opened" with no bypass
+    # option, instead of the normal "unidentified developer" prompt.
+    app_path = os.path.join(dist_dir, "main.app")
+    result = subprocess.run(["ditto", "-c", "-k", "--keepParent", app_path, dst_zip_path])
+    if result.returncode != 0:
+        print("ditto zipping failed.")
+        sys.exit(result.returncode)
+    print(f"Created {zip_filename} in {dist_dir}/.")
     
     print("\nCompilation and zipping finished successfully.")
     print("To test the application, you can run the following command in terminal:")
