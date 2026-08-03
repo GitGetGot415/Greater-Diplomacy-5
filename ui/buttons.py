@@ -432,7 +432,7 @@ def update_button_states(map_screen):
 
     else:
         viewing_ai = map_screen.viewing_ai_moves
-        is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing
+        is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving
 
         # Hide/disable the button if we are thinking
         map_screen.btn_next_turn.visible = not is_sel and not is_thinking

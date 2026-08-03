@@ -107,8 +107,11 @@ def draw_map_screen(self, surface):
     # If we render thousands of units, arrows, and buildings at 60 FPS while the AI is thinking,
     # the Python GIL chokes the background thread and makes turn processing take forever!
     # By short-circuiting the render loop here, we save massive amounts of CPU time.
-    if self.ai_is_thinking or self.is_refreshing:
-        loading_screen.draw_turn_loading_screen(self, surface)
+    if self.ai_is_thinking or self.is_refreshing or self.is_saving:
+        if self.is_saving:
+            loading_screen.draw_simple_refresh_bar(surface, self.loading_status_text, self.save_progress_completed, self.save_progress_total)
+        else:
+            loading_screen.draw_turn_loading_screen(self, surface)
         ui_bars.draw_ui_bars(self, surface)
         if not self.selection_mode:
             flag_renderer.draw_flag(self, surface)

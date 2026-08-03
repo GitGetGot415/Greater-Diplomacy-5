@@ -51,6 +51,9 @@ class Map(GameState):
         self.ai_is_thinking = False
         self.ai_processing_complete = False
         self.is_refreshing = False
+        self.is_saving = False
+        self.save_progress_completed = 0
+        self.save_progress_total = 5
         self.thread_error = None
         self.force_skip_llm = False
 
@@ -419,8 +422,20 @@ class Map(GameState):
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
         self.show_feedback("Map Unlocked")
 
-    def save_map_data(self): 
-        save_map.save_map_data(self)
+    def save_map_data(self):
+        if self.is_saving:
+            return # Already saving, ignore duplicate clicks
+        self.is_saving = True
+        self.loading_status_text = "Saving Game..."
+        self.save_progress_completed = 0
+        self.save_progress_total = 5
+
+        # Force the loading screen to actually appear before run_background either
+        # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
+        self.draw(pygame.display.get_surface())
+        pygame.display.flip()
+
+        run_background(save_map.save_map_data, self)
 
     def refresh_political_map(self): refresh_map.refresh_political_map(self)
     def refresh_relations_map(self): refresh_map.refresh_relations_map(self)

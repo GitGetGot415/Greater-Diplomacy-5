@@ -44,6 +44,10 @@ def handle_map_events(self, event):
                 self.cancel_exit()
         return # Block all other map events while confirming
         
+    # --- SAVING HIJACK ---
+    if self.is_saving:
+        return # Block all other map events while saving!
+
     # --- AI THINKING HIJACK ---
     if self.ai_is_thinking:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
