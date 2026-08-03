@@ -177,7 +177,6 @@ class Faction_Territories_Screen(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (20, 20, 40)
         self.map_screen = None
 
     def start_view(self, map_ref):
@@ -187,6 +186,15 @@ class Faction_Territories_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+
+    def draw_background(self, surface):
+        # Same live flat/checkerboard ocean background as the main map
+        # (see Map_Screen.draw_background) instead of the generic always-on
+        # checkerboard every other bg_image_path-less screen gets.
+        if self.map_screen:
+            self.map_screen.draw_background(surface)
+        else:
+            super().draw_background(surface)
 
     def additional_draw(self, surface):
         if not self.map_screen: return
