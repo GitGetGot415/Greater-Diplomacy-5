@@ -6,6 +6,7 @@ import secrets
 from cryptography.fernet import Fernet
 import data.constants as c
 from data import queries
+from data.platform import sync_persisted_dir
 
 def hash_key(key):
     return hashlib.sha256(key.encode('utf-8')).hexdigest()
@@ -89,7 +90,12 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
             if cid in active_owners:
                 name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
                 f.write(f"{name} (ID {cid}): {key}\n")
-                
+
+    # Web only: mirror the whole tournament_saves tree into IndexedDB so it
+    # survives closing the tab (output_dir is always somewhere under this
+    # root). No-op on desktop.
+    sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+
     return keys_path, all_keys_path
 
 def export_tournament(map_ref, file_path, master_key, keys_dict):
@@ -239,7 +245,11 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
         json.dump(payload, f, indent=4)
-        
+
+    # Web only: mirror the .gd5tour (and any regen-keys txt above) into
+    # IndexedDB so it survives closing the tab. No-op on desktop.
+    sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+
     print(f"Tournament file exported to {file_path}")
     return keys_path, all_keys_path
 
@@ -342,6 +352,10 @@ def export_move_file(map_ref, file_path, player_key):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
         json.dump(payload, f, indent=4)
+
+    # Web only: mirror the .gd5move into IndexedDB so it survives closing the
+    # tab. No-op on desktop.
+    sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
 
 def load_move_files(map_ref, move_file_paths, keys_dict):
     """
