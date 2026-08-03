@@ -24,12 +24,12 @@ def _lerp(a, b, t):
     return a + (b - a) * t
 
 class Menu(GameState):
-    # Intro animation timings, in ms. Banner drops from above, sign slides in
+    # Intro animation timings, in ms. Title drops from above, sign slides in
     # from the right. Buttons/text rise straight up from below the screen;
     # BUTTON_INTRO_CASCADE_MS is spread across them by vertical position, so
     # rows nearer the top start sooner and lower rows start later, then each
     # takes BUTTON_INTRO_DURATION_MS to arrive.
-    BANNER_INTRO_MS = 900
+    TITLE_INTRO_MS = 900
     SIGN_INTRO_MS = 900
     # Hildehrand slides in from the same edge as the sign, just slightly
     # after it, so the two don't read as one flat block arriving together.
@@ -107,24 +107,24 @@ class Menu(GameState):
         self._hildehrand_draw_pos = (self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery)
 
         try:
-            raw_banner = pygame.image.load("assets/backgrounds/GD5 Banner.png").convert_alpha()
-            banner_width = min(raw_banner.get_width(), c.SCREEN_WIDTH - 80)
-            banner_scale = banner_width / raw_banner.get_width()
-            banner_size = (banner_width, int(raw_banner.get_height() * banner_scale))
-            self.banner_image = pygame.transform.smoothscale(raw_banner, banner_size)
-            self.banner_rect = self.banner_image.get_rect()
-            self.banner_rect.centerx = c.SCREEN_WIDTH // 2
-            self.banner_rect.top = 20
+            raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
+            title_width = min(raw_title.get_width(), c.SCREEN_WIDTH - 80)
+            title_scale = title_width / raw_title.get_width()
+            title_size = (title_width, int(raw_title.get_height() * title_scale))
+            self.title_image = pygame.transform.smoothscale(raw_title, title_size)
+            self.title_rect = self.title_image.get_rect()
+            self.title_rect.left = 20
+            self.title_rect.top = 20
         except Exception as e:
-            print(f"Failed to load the banner image: {e}")
-            self.banner_image = None
-            self.banner_rect = None
+            print(f"Failed to load the title image: {e}")
+            self.title_image = None
+            self.title_rect = None
 
-        # Intro animation clock; banner/sign/buttons/text all ease in relative
+        # Intro animation clock; title/sign/buttons/text all ease in relative
         # to this timestamp. Draw positions default to the resting spot until
         # the first update() tick moves them off-screen to start the intro.
         self.intro_start_ticks = pygame.time.get_ticks()
-        self._banner_draw_pos = self.banner_rect.topleft if self.banner_rect else (0, 0)
+        self._title_draw_pos = self.title_rect.topleft if self.title_rect else (0, 0)
         self._sign_draw_pos = self.sign_rect.topleft if self.sign_rect else (0, 0)
 
         # (y offset from centre, label, colour, icon, destination state) — one row
@@ -294,16 +294,16 @@ class Menu(GameState):
                     queries.play_click_sound()
 
     def update(self):
-        # Drives the whole intro: banner drops from above, the sign slides in
+        # Drives the whole intro: title drops from above, the sign slides in
         # from the right, and every button/text row rises straight up from
         # below the screen (hidden until its delay elapses), eased with
         # _ease_out_expo so each arrives fast then settles.
         elapsed = pygame.time.get_ticks() - self.intro_start_ticks
 
-        if self.banner_rect:
-            t = _ease_out_expo(elapsed / self.BANNER_INTRO_MS)
-            start_y = -self.banner_rect.height
-            self._banner_draw_pos = (self.banner_rect.x, int(_lerp(start_y, self.banner_rect.y, t)))
+        if self.title_rect:
+            t = _ease_out_expo(elapsed / self.TITLE_INTRO_MS)
+            start_y = -self.title_rect.height
+            self._title_draw_pos = (self.title_rect.x, int(_lerp(start_y, self.title_rect.y, t)))
 
         if self.sign_rect:
             t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
@@ -332,8 +332,8 @@ class Menu(GameState):
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
     def additional_draw(self, surface):
-        if getattr(self, "banner_image", None):
-            surface.blit(self.banner_image, self._banner_draw_pos)
+        if getattr(self, "title_image", None):
+            surface.blit(self.title_image, self._title_draw_pos)
 
         if getattr(self, "sign_image", None):
             surface.blit(self.sign_image, self._sign_draw_pos)
