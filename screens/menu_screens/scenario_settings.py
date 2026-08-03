@@ -66,7 +66,7 @@ TOGGLE_ROWS = [
     ("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack",
      "Lets armies attack on the same turn as a war declaration instead of making them wait until the other size receives it, catching the enemy by surprise."),
     ("disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions",
-     "Turns off the internal political faction system for every country."),
+     "Disables the internal political faction system for every country."),
     ("battle_royale", c.DEFAULT_BATTLE_ROYALE, "Battle Royale",
      "Starts every country at war with every other country from turn one."),
     ("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, "Bounce Tiebreaker",

@@ -75,7 +75,6 @@ class Orders_Screen(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (20, 20, 40)
         self.target_province = None
         self.map_screen = None
         self.selected_unit_index = None
@@ -829,6 +828,16 @@ class Orders_Screen(GameState):
 
                 if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
                     pygame.draw.circle(surface, color, (int(sx), int(sy)), TARGET_MARKER_RADIUS, TARGET_MARKER_THICKNESS)
+
+    def draw_background(self, surface):
+        # Defer to Map_Screen's own background (flat fill or checkerboard,
+        # per the Settings toggle, tinted to the live zoom-based ocean color)
+        # instead of the generic always-on checkerboard every other screen
+        # without a bg_image_path gets -- Orders is just the map plus a panel.
+        if self.map_screen:
+            self.map_screen.draw_background(surface)
+        else:
+            super().draw_background(surface)
 
     def additional_draw(self, surface):
         if not self.map_screen or not self.target_province:
