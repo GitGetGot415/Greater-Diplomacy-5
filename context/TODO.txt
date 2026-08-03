@@ -46,6 +46,10 @@ Immediate concerns:
 
 - slider volume specifically?
 
+- make it so that the automation button is disabled when in tactical mode
+- ability to port gd4 saves into gd5
+- web version seems to have the claims screen be a bit laggy, what might be causing that
+
 could you make it so that when damage is actually dealt to units, it's spread out only amongst units that are actually in combat instead of literally every enemy unit on that tile?
 maybe units deal less damage the less hp they have...
 this would mean that units basically swap out with other units when they have less hp...

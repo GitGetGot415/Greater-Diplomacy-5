@@ -490,7 +490,7 @@ def update_button_states(map_screen):
         
         # --- TACTICAL MODE LOCKDOWNS ---
         if map_screen.tactical_mode:
-            for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit):
+            for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit, map_screen.btn_gp_automation):
                 btn.apply_state(enabled=False)
         else:
             if bool(my_faction):
