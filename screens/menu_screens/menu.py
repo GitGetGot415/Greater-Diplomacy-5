@@ -8,6 +8,7 @@ import ui_elements
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
+from data import queries
 from data.platform import IS_WEB
 from map_logic.rendering.font_manager import fonts
 
@@ -77,7 +78,7 @@ class Menu(GameState):
         # pixel art stays crisp instead of blurring. Both variants share a
         # fixed anchor point so swapping between them never shifts layout.
         self._hildehrand_anchor_centery = self.sign_rect.centery if self.sign_rect else c.SCREEN_HEIGHT // 2
-        self.hildehrand_variant = "F"
+        self.hildehrand_variant = queries.get_hildehrand_choice()
         try:
             hild_scale_factor = 2
 
@@ -223,6 +224,7 @@ class Menu(GameState):
 
     def toggle_hildehrand(self):
         self.hildehrand_variant = "M" if self.hildehrand_variant == "F" else "F"
+        queries.save_cached_json("hildehrand_choice", {"variant": self.hildehrand_variant})
 
     def trigger_version_check(self):
         if IS_WEB:

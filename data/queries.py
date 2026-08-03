@@ -199,7 +199,8 @@ _JSON_CACHE = {
     "tech_tree": {"path": c.RESEARCH_TEMPLATE_PATH, "data": None},
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
     "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None},
-    "starting_song": {"path": c.STARTING_SONG_PATH, "data": None}
+    "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
+    "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None}
 }
 
 def scenario_has_scripted_events(nation_data):
@@ -382,6 +383,12 @@ def get_starting_song():
     """Returns the pinned boot-up track path, or None if it's set to random."""
     data = _load_cached_json("starting_song")
     return data.get("track") if isinstance(data, dict) else None
+
+def get_hildehrand_choice():
+    """Returns the remembered Hildehrand portrait variant ("F" or "M"), defaulting to "F"."""
+    data = _load_cached_json("hildehrand_choice")
+    variant = data.get("variant") if isinstance(data, dict) else None
+    return variant if variant in ("F", "M") else "F"
 
 def get_time_appropriate_research(start_year):
     """Calculates time-appropriate research level mapping for a given start year."""

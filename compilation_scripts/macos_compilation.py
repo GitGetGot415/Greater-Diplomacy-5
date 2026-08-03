@@ -64,7 +64,7 @@ def main():
     # Reset scenario/global settings to {} so the build falls back to the game's
     # built-in defaults instead of carrying over whatever the dev machine had set
     resources_json_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources", "data", "json")
-    for settings_file in ("scenario_settings.json", "settings_config.json", "starting_song.json"):
+    for settings_file in ("scenario_settings.json", "settings_config.json", "starting_song.json", "hildehrand_choice.json"):
         settings_path = os.path.join(resources_json_dir, settings_file)
         if os.path.exists(resources_json_dir):
             with open(settings_path, "w") as f:
