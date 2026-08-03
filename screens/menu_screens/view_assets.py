@@ -5,6 +5,7 @@ from pathlib import Path
 from gameState import GameState
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
+from data.platform import IS_WEB, download_file
 import data.constants as c
 
 # ==========================================
@@ -276,13 +277,19 @@ class View_Assets(GameState):
 
         src = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, self.current_file)
         try:
-            downloads_dir = str(Path.home() / "Downloads")
-            os.makedirs(downloads_dir, exist_ok=True)
-            # copy() (not copy2()) so the download gets today's mtime instead of
-            # inheriting the source asset's, which can be months old and would
-            # otherwise bury it in a Downloads folder sorted by date modified.
-            shutil.copy(src, os.path.join(downloads_dir, self.current_file))
-            self.download_status = "Saved to Downloads"
+            if IS_WEB:
+                # No real filesystem to copy into on web -- push the asset (already
+                # in pygbag's virtual FS) out via the browser download bridge instead.
+                download_file(src)
+                self.download_status = "Downloaded"
+            else:
+                downloads_dir = str(Path.home() / "Downloads")
+                os.makedirs(downloads_dir, exist_ok=True)
+                # copy() (not copy2()) so the download gets today's mtime instead of
+                # inheriting the source asset's, which can be months old and would
+                # otherwise bury it in a Downloads folder sorted by date modified.
+                shutil.copy(src, os.path.join(downloads_dir, self.current_file))
+                self.download_status = "Saved to Downloads"
             self.download_status_color = c.COLOR_SUCCESS_GREEN
         except Exception as e:
             self.download_status = f"Failed to save: {e}"

@@ -10,8 +10,6 @@
 
 - claims screen seems to be somewhat laggy, what might be causing that?
 
-- downloading stuff when viewing assets from the web build dooesn't seem to work
-
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there
@@ -61,8 +59,6 @@ this would mean that units basically swap out with other units when they have le
 
 - ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
-- web version? (tkinter will have to be edited...)
-
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
@@ -109,8 +105,6 @@ idk:
 - 55815440+GitGetGot415@users.noreply.github.com
 
 Vague content ideas NOT THAT IMPORTANT BUT COULD PROBABLY BE LOOKED AT:
-- resource income multiplier should be a thing
-
 - if ai has integrated puppets automatically siphon as many resources off them as possible???
 
 - opinion modifier should maybe do more than just affect ai attitudes? (more likely to declare war, less likely to accept peace for example?)
@@ -131,7 +125,7 @@ so there could be 1 slider for minimum and 1 slider for maximum
 - ai should be able to sign non-agression pacts that prevent wars
 
 - destroyers, dreadnoughts, battleships, and aircraft carriers should be able to give a bonus to invasions (perhaps a % increase to damage or something)
-- forts (if country holds territory they keeo forts) (this might make core removal on fortified territory... difficult)
+- forts (if country holds territory they keep forts) (this might make core removal on fortified territory... difficult)
 
 - for some reason skipping multiple turns in spectator mode seems to make scripted events not happen correctly
 - countries that should've accepted certain requests don't accept them
