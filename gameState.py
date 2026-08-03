@@ -135,7 +135,21 @@ class GameState:
             self.scroll_by(event, attr, limit_attr, self.list_scroll_speed if speed is None else speed)
             return True
 
-        if content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr):
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            # A grab on the handle/track and a content-drag can both arm on the
+            # same mouse-down when the content rect overlaps the scrollbar (the
+            # usual case). Clear the handle/track flag here, unconditionally,
+            # before the content-drag branch below can return early and skip it
+            # -- otherwise it's left stuck True and the handle free-follows the
+            # mouse on every later motion until another drag happens to mask it.
+            setattr(self, drag_attr, False)
+
+        # invert=True here because this list also has a real scrollbar (below):
+        # handle_content_drag defaults to touch-pan feel (drag down reveals
+        # earlier rows), but the scrollbar/wheel on the same scroll_y move the
+        # opposite way (down reveals later rows). Grabbing the list body has to
+        # agree with dragging its own scrollbar, not fight it.
+        if content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr, invert=True):
             return True
 
         track = getattr(self, track_attr, None)
@@ -154,8 +168,6 @@ class GameState:
                 setattr(self, drag_attr, True) # Clicking the bare track jumps to that spot
                 snap_to(event.pos[1])
                 return True
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            setattr(self, drag_attr, False)
         elif event.type == pygame.MOUSEMOTION and getattr(self, drag_attr, False):
             snap_to(event.pos[1])
             return True

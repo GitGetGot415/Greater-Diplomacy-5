@@ -287,16 +287,21 @@ class Slider:
     def handle_event(self, event):
         if not self.visible: return 
         
-        if event.type == pygame.MOUSEBUTTONDOWN and self.handle_rect.collidepoint(event.pos):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.handle_rect.collidepoint(event.pos):
             if self.click_guard is not None and not self.click_guard():
                 return
             self.dragging = True
             self.last_display_string = self.get_display_string()
 
-        elif event.type == pygame.MOUSEBUTTONUP:
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.dragging = False
-            
+
         elif event.type == pygame.MOUSEMOTION and self.dragging:
+            if not pygame.mouse.get_pressed()[0]:
+                # The button-up event was missed (e.g. a focus hiccup) -- don't
+                # let the handle keep free-following the cursor forever.
+                self.dragging = False
+                return
             raw_x = max(self.rect.left, min(event.pos[0], self.rect.right))
             raw_ratio = (raw_x - self.rect.left) / self.rect.width
             max_ratio = self.allowed_max / self.visual_max if self.visual_max > 0 else 1.0
