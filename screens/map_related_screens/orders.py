@@ -586,7 +586,7 @@ class Orders_Screen(GameState):
         # Dragging the scrollbar handle (or the panel's own content) takes
         # priority over camera panning/hover.
         if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)
-                                                  or getattr(self, "content_drag_state", None) is not None):
+                                                  or self.is_content_dragging("scroll_y")):
             self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
                                     content_rect_attr="scroll_content_rect")
             return

@@ -107,6 +107,22 @@ class GameState:
     def handle_back_key(self):
         self.exit_screen()
 
+    def content_drag_attr_name(self, attr="scroll_y"):
+        """Name of the per-pane content-drag state attribute for a given scroll
+        attr. Content-drag state must be keyed per-pane (not a single shared
+        `content_drag_state`) so a screen with multiple independent scrolling
+        panes -- e.g. the music player's album/track columns, or view_assets'
+        folder/file/preview columns -- doesn't have a drag armed in one pane's
+        content area picked up by a different pane on the next MOUSEMOTION."""
+        return f"_content_drag_state_{attr}"
+
+    def is_content_dragging(self, attr="scroll_y"):
+        """Whether a content-drag (see handle_content_drag) is currently armed
+        for the given pane's scroll attr. Callers that gate MOUSEMOTION routing
+        on drag state (rather than going through handle_list_scroll every frame)
+        should use this instead of reading `content_drag_state` directly."""
+        return getattr(self, self.content_drag_attr_name(attr), None) is not None
+
     def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None):
         """Applies a wheel event to a negative-range scroll offset and clamps it."""
         step = event.y * (self.scroll_speed if speed is None else speed)
@@ -165,9 +181,19 @@ class GameState:
         # mouse instead of tracking it -- so it visibly falls behind the longer
         # you drag. Clearing content_drag_state here keeps the two gestures from
         # fighting over the same motion events.
+        #
+        # Keyed off `attr` (unique per pane) rather than a single shared
+        # "content_drag_state" -- a screen with more than one scrolling pane
+        # (e.g. the music player's album/track columns) would otherwise have
+        # every pane's content-drag arm/read the *same* attribute, so a drag
+        # started in one pane's content area gets picked up by whichever pane
+        # happens to be checked first on the next MOUSEMOTION, moving a
+        # completely different scrollbar than the one under the mouse.
+        content_drag_attr = self.content_drag_attr_name(attr)
         if grabbing_scrollbar or getattr(self, drag_attr, False):
-            self.content_drag_state = None
-        elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr, invert=True):
+            setattr(self, content_drag_attr, None)
+        elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr,
+                                                             drag_attr=content_drag_attr, invert=True):
             return True
 
         if not track:
@@ -572,7 +598,7 @@ class MapOverlayScreen(GameState):
             return
 
         if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)
-                                                  or getattr(self, "content_drag_state", None) is not None):
+                                                  or self.is_content_dragging()):
             self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
             return
 
