@@ -1,6 +1,7 @@
 import pygame
 from gameState import GameState
 import data.constants as c
+from ui.bars import ui_bars
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
@@ -213,7 +214,9 @@ class Messages_Screen(GameState):
         
         # --- Handle Draft Delete Clicks ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if hasattr(self, 'draft_edit_rects') and not is_tactical:
+            # Guarded to the visible message pane so a delete box scrolled
+            # behind the compose box (clipped, no longer drawn) can't fire.
+            if hasattr(self, 'draft_edit_rects') and not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
                         
@@ -316,45 +319,50 @@ class Messages_Screen(GameState):
             history_contacts.add(self.selected_recipient)
 
         y_off = 80 + self.contact_scroll_y
-        
+        self.scroll_content_rect = pygame.Rect(0, 80, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - 80)
+
         if self.show_all_contacts:
             btn = Button(20, y_off, "medium", "red", "Cancel", self.toggle_add_contact)
+            btn.is_scrollable = True
             self.elements.append(btn)
             y_off += 60
 
             display_list = [n for n in playable if n not in history_contacts]
             for country in display_list:
                 btn = Button(20, y_off, "medium", "grey", country, lambda c_name=country: self.select_new_contact(c_name))
+                btn.is_scrollable = True
                 self.elements.append(btn)
                 y_off += 60
         else:
             btn = Button(20, y_off, "medium", "blue", "+ Add Contact", self.toggle_add_contact)
+            btn.is_scrollable = True
             self.elements.append(btn)
             y_off += 60
 
             display_list = [n for n in playable if n in history_contacts]
             for country in display_list:
                 color = "green" if self.selected_recipient == country else "grey"
-                
+
                 unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
-                
+
                 # Treat unanswered requests as an unread notification
                 incoming_action, incoming_turns = queries.get_diplomatic_status(country, self.map_screen.player_country, self.map_screen.nation_data)
                 pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, country, self.map_screen.nation_data)
-                
+
                 if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                     if not (pending_action.startswith("ACCEPT_") or pending_action.startswith("REJECT_")):
                         unread += 1
-                
+
                 display_text = f"{country} ({unread})" if unread > 0 else country
                 if unread > 0 and self.selected_recipient != country:
-                    color = "red" 
+                    color = "red"
 
                 btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name))
+                btn.is_scrollable = True
                 self.elements.append(btn)
                 y_off += 60
 
-        absolute_height = y_off - self.contact_scroll_y 
+        absolute_height = y_off - self.contact_scroll_y
         self.max_contact_scroll = min(0, c.SCREEN_HEIGHT - absolute_height - 20)
 
         if self.selected_recipient:
@@ -577,66 +585,69 @@ class Messages_Screen(GameState):
         current_y = input_rect.y - bottom_padding + self.scroll_y
         self.draft_edit_rects = []
         
-        # Render iterating backwards (Newest -> Oldest), drawing bottom -> up
-        for p_msg in processed_messages:
-            msg = p_msg["msg_data"]
-            lines = p_msg["lines"]
-            box_height = p_msg["box_height"]
-            box_width = p_msg["box_width"]
+        msg_pane_rect = pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, input_rect.y)
+        with ui_bars.clip_scroll_region(surface, msg_pane_rect,
+                                        draw_top=self.scroll_y < self.max_msg_scroll, draw_bottom=self.scroll_y != 0):
+            # Render iterating backwards (Newest -> Oldest), drawing bottom -> up
+            for p_msg in processed_messages:
+                msg = p_msg["msg_data"]
+                lines = p_msg["lines"]
+                box_height = p_msg["box_height"]
+                box_width = p_msg["box_width"]
 
-            current_y -= box_height
+                current_y -= box_height
             
-            # Culling check - don't draw boxes rendering completely off the top or bottom of the screen
-            if current_y + box_height < 0 or current_y > c.SCREEN_HEIGHT:
-                current_y -= 15
-                continue 
+                # Culling check - don't draw boxes rendering completely off the top or bottom of the screen
+                if current_y + box_height < 0 or current_y > c.SCREEN_HEIGHT:
+                    current_y -= 15
+                    continue 
 
-            is_player = msg['is_player']
-            is_draft = msg.get('is_draft', False)
-            is_diplo = msg.get('is_diplo', False)
-            date_str = msg.get("date", "")
+                is_player = msg['is_player']
+                is_draft = msg.get('is_draft', False)
+                is_diplo = msg.get('is_diplo', False)
+                date_str = msg.get("date", "")
 
-            draw_y = current_y
+                draw_y = current_y
             
-            # --- Render Date Header ---
-            if date_str:
-                date_surf = font_tiny.render(date_str, True, (130, 130, 150))
+                # --- Render Date Header ---
+                if date_str:
+                    date_surf = font_tiny.render(date_str, True, (130, 130, 150))
+                    if is_player:
+                        surface.blit(date_surf, (c.SCREEN_WIDTH - date_surf.get_width() - 30, draw_y))
+                    else:
+                        surface.blit(date_surf, (MSG_LEFT_PANE_W + 30, draw_y))
+                    draw_y += 20 # Push the physical bubble down 20px so it sits under the text
+
+                # Only color the physical bubble, excluding the space we reserved for the date
+                bubble_h = box_height - (25 if date_str else 0)
+
                 if is_player:
-                    surface.blit(date_surf, (c.SCREEN_WIDTH - date_surf.get_width() - 30, draw_y))
-                else:
-                    surface.blit(date_surf, (MSG_LEFT_PANE_W + 30, draw_y))
-                draw_y += 20 # Push the physical bubble down 20px so it sits under the text
-
-            # Only color the physical bubble, excluding the space we reserved for the date
-            bubble_h = box_height - (25 if date_str else 0)
-
-            if is_player:
-                box_x = c.SCREEN_WIDTH - box_width - 30
-                color = MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER
+                    box_x = c.SCREEN_WIDTH - box_width - 30
+                    color = MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER
                 
-                if is_draft:
-                    del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
-                    self.draft_edit_rects.append((del_rect, msg['draft_idx']))
+                    if is_draft:
+                        del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
+                        self.draft_edit_rects.append((del_rect, msg['draft_idx']))
                     
-                    if not self.map_screen.tactical_mode:
-                        pygame.draw.rect(surface, (150, 0, 0), del_rect, border_radius=5)
-                        surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
-            else:
-                box_x = MSG_LEFT_PANE_W + 30
-                color = MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI
+                        if not self.map_screen.tactical_mode:
+                            pygame.draw.rect(surface, (150, 0, 0), del_rect, border_radius=5)
+                            surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
+                else:
+                    box_x = MSG_LEFT_PANE_W + 30
+                    color = MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI
 
-            bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
-            pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
+                bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
+                pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
             
-            if is_draft:
-                pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 2, border_radius=10)
+                if is_draft:
+                    pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 2, border_radius=10)
             
-            ly = draw_y + 10
-            for l in lines:
-                surface.blit(font_small.render(l, True, (255, 255, 255)), (box_x + 15, ly))
-                ly += 20
+                ly = draw_y + 10
+                for l in lines:
+                    surface.blit(font_small.render(l, True, (255, 255, 255)), (box_x + 15, ly))
+                    ly += 20
                 
-            current_y -= 15 
+                current_y -= 15 
 
     def exit_screen(self):
         self.save_current_draft()

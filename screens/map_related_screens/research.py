@@ -167,7 +167,9 @@ class Research_Screen(GameState):
         # --- Timeline Variables ---
         self.scroll_x = 0
         self.target_scroll_x = 0
+        self.min_scroll_x = self.max_scroll_x = 0
         self.pixels_per_year = c.RESEARCH_TIMELINE_SPACING
+        self.scroll_content_rect = pygame.Rect(0, HEADER_HEIGHT, c.SCREEN_WIDTH, c.SCREEN_HEIGHT - HEADER_HEIGHT)
 
         self.setup_nodes()
 
@@ -261,9 +263,13 @@ class Research_Screen(GameState):
         if self.current_category in ["INFANTRY", "TANKS", "NAVY", "INDUSTRY"] and not self.active_modal:
             if event.type == pygame.MOUSEWHEEL:
                 self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
-            elif event.type == pygame.MOUSEMOTION and event.buttons[2]:
-                self.target_scroll_x += event.rel[0]
-                self.scroll_x += event.rel[0]
+
+            # Content-drag targets target_scroll_x, same as the wheel, and lets
+            # update()'s existing lerp ease scroll_x the rest of the way -- matches
+            # every other scrollable list instead of this being the one screen
+            # dragged with the right mouse button.
+            self.handle_content_drag(event, attr="target_scroll_x", rect_attr="scroll_content_rect",
+                                     lo=self.min_scroll_x, hi=self.max_scroll_x, refresh=False, axis="x")
 
             # --- Clamp user input immediately ---
             self.enforce_scroll_bounds()
@@ -804,11 +810,11 @@ class Research_Screen(GameState):
         if self.map_screen:
             current_year = self.map_screen.time_manager.year
             # Negative scroll moves the camera to future years (right), positive to past years (left)
-            min_scroll_x = -((c.END_YEAR - current_year) * self.pixels_per_year)
-            max_scroll_x = -((c.START_YEAR - current_year) * self.pixels_per_year)
-            
-            self.target_scroll_x = max(min_scroll_x, min(self.target_scroll_x, max_scroll_x))
-            self.scroll_x = max(min_scroll_x, min(self.scroll_x, max_scroll_x))
+            self.min_scroll_x = -((c.END_YEAR - current_year) * self.pixels_per_year)
+            self.max_scroll_x = -((c.START_YEAR - current_year) * self.pixels_per_year)
+
+            self.target_scroll_x = max(self.min_scroll_x, min(self.target_scroll_x, self.max_scroll_x))
+            self.scroll_x = max(self.min_scroll_x, min(self.scroll_x, self.max_scroll_x))
 
     def additional_draw(self, surface):
         if not self.map_screen: return

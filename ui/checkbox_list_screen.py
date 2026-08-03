@@ -150,12 +150,13 @@ class CheckboxListScreen(GameState):
             x += tool_w + 8
 
         row_w, _row_h = c.SIZES["checkbox_row"]
+        cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - self.ROW_HEIGHT + 2
+        self.scroll_content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         self._row_layout = list(self.layout_list_rows(
             len(self.items), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
             # Cull a row as soon as it would hang past the bottom of the view,
             # since the list height is derived from the panel and rarely divides evenly.
-            cull_top=self.list_top - 1,
-            cull_bottom=self.list_top + self.list_view_h - self.ROW_HEIGHT + 2))
+            cull_top=cull_top, cull_bottom=cull_bottom))
 
         for i, y in self._row_layout:
             item = self.items[i]
@@ -166,6 +167,8 @@ class CheckboxListScreen(GameState):
                          f"{mark} {item.label}", lambda it=item: self.toggle(it),
                          font_preset="button_small")
             btn.is_selected = item.checked
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
 
         btn_y = p.bottom - 52
@@ -175,7 +178,7 @@ class CheckboxListScreen(GameState):
                                     self.confirm_label, self._confirm))
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw(self, surface):
         if self.background:
@@ -201,22 +204,29 @@ class CheckboxListScreen(GameState):
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
         for el in self.elements:
-            el.draw(surface)
+            if not getattr(el, "is_scrollable", False):
+                el.draw(surface)
 
         # Section labels and per-row status text sit over the rows, so they are
-        # drawn after the buttons rather than as part of them.
+        # drawn after the buttons (both clipped/cropped together at the list boundary).
         header_font = fonts.get("normal")
         note_font = fonts.get("small")
         row_w, _row_h = c.SIZES["checkbox_row"]
-        for i, row_y in self._row_layout:
-            item = self.items[i]
-            if isinstance(item, SectionHeader):
-                surf = header_font.render(item.label, True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(surf, (self.row_x + 4, row_y + 5))
-            elif item.note:
-                surf = note_font.render(item.note, True, item.note_color)
-                surface.blit(surf, surf.get_rect(midright=(self.row_x + row_w - 10,
-                                                           row_y + self.ROW_HEIGHT // 2)))
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for el in self.elements:
+                if getattr(el, "is_scrollable", False):
+                    el.draw(surface)
+
+            for i, row_y in self._row_layout:
+                item = self.items[i]
+                if isinstance(item, SectionHeader):
+                    surf = header_font.render(item.label, True, c.COLOR_GOLD_HIGHLIGHT)
+                    surface.blit(surf, (self.row_x + 4, row_y + 5))
+                elif item.note:
+                    surf = note_font.render(item.note, True, item.note_color)
+                    surface.blit(surf, surf.get_rect(midright=(self.row_x + row_w - 10,
+                                                               row_y + self.ROW_HEIGHT // 2)))
 
         if self.footnote:
             surf = note_font.render(self.footnote, True, (230, 180, 120))

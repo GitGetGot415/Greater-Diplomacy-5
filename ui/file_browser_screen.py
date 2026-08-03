@@ -432,10 +432,11 @@ class FileBrowserScreen(GameState):
         self._rows = rows
 
         row_w, _row_h = c.SIZES["browser_row"]
+        cull_top, cull_bottom = self.list_top - 1, self.list_top + self.LIST_VIEW_H - 20
+        self.scroll_content_rect = pygame.Rect(self.list_x, self.list_top, row_w, self.LIST_VIEW_H)
         for i, y in self.layout_list_rows(len(rows), self.ROW_HEIGHT, self.list_top,
                                           view_h=self.LIST_VIEW_H,
-                                          cull_top=self.list_top - 1,
-                                          cull_bottom=self.list_top + self.LIST_VIEW_H - 20):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             name, kind = rows[i]
             color = {"up": "yellow", "dir": "orange", "file": "blue"}[kind]
             btn = Button(self.list_x, y, "browser_row", color, self._row_label(name, kind, row_w - 20),
@@ -443,6 +444,8 @@ class FileBrowserScreen(GameState):
             if kind == "file":
                 full = self._full_path(name)
                 btn.is_selected = full in self.selected if self.mode == "open_files" else full == self.selected_file
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
 
         # -- Bottom bar
@@ -477,7 +480,7 @@ class FileBrowserScreen(GameState):
         self.elements.append(confirm_btn)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def _selection_summary(self):
         if self.mode == "select_folder":
@@ -515,7 +518,14 @@ class FileBrowserScreen(GameState):
                                                    self.list_top + self.LIST_VIEW_H // 2)))
 
         for el in self.elements:
-            el.draw(surface)
+            if not getattr(el, "is_scrollable", False):
+                el.draw(surface)
+
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for el in self.elements:
+                if getattr(el, "is_scrollable", False):
+                    el.draw(surface)
 
         # Drawn over the (empty) path field rather than into it, so the hint never
         # has to be cleared back out of the user's typed text.

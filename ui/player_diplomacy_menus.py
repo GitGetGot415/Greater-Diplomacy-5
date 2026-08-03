@@ -449,121 +449,120 @@ class Claims_Screen(MapOverlayScreen):
         self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
         
         clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, viewport_h)
-        old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
+        self.scroll_content_rect = clip_rect
+        with ui_bars.clip_scroll_region(surface, clip_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            y_off = self.panel_rect.y + 100 + self.scroll_y
         
-        y_off = self.panel_rect.y + 100 + self.scroll_y
-        
-        if self.view_mode == "GLOBAL":
-            surface.blit(sub_font.render("All Map Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
-            y_off += 30
+            if self.view_mode == "GLOBAL":
+                surface.blit(sub_font.render("All Map Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
+                y_off += 30
             
-            if not global_claims_list:
-                surface.blit(tiny_font.render("No claims on the map.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-            else:
-                for item in global_claims_list:
-                    nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                    color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
+                if not global_claims_list:
+                    surface.blit(tiny_font.render("No claims on the map.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                else:
+                    for item in global_claims_list:
+                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
+                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
                     
-                    txt = tiny_font.render(f"- Prov {item['prov_id']} ({nation_name})", True, color)
-                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                    y_off += 25
+                        txt = tiny_font.render(f"- Prov {item['prov_id']} ({nation_name})", True, color)
+                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                        y_off += 25
 
-        elif self.view_mode == "YOURS":
-            surface.blit(sub_font.render("Queued Claims:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
-            y_off += 30
+            elif self.view_mode == "YOURS":
+                surface.blit(sub_font.render("Queued Claims:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
+                y_off += 30
             
-            if not queue:
-                surface.blit(tiny_font.render("No claims queued.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-                y_off += 25
-            else:
-                for q in queue:
-                    prov = self.map_screen.id_to_province.get(q["prov_id"])
-                    owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                    owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                    txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, (200, 200, 200))
-                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                if not queue:
+                    surface.blit(tiny_font.render("No claims queued.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
                     y_off += 25
+                else:
+                    for q in queue:
+                        prov = self.map_screen.id_to_province.get(q["prov_id"])
+                        owner = prov.get("owner", "Unknown") if prov else "Unknown"
+                        owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
+                        txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, (200, 200, 200))
+                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                        y_off += 25
                     
-            y_off += 10
+                y_off += 10
             
-            surface.blit(sub_font.render("Active Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
-            y_off += 30
+                surface.blit(sub_font.render("Active Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
+                y_off += 30
             
-            if not display_claims:
-                surface.blit(tiny_font.render("No active claims.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-            else:
-                for pid in display_claims:
-                    prov = self.map_screen.id_to_province.get(pid)
-                    owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                    owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
+                if not display_claims:
+                    surface.blit(tiny_font.render("No active claims.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                else:
+                    for pid in display_claims:
+                        prov = self.map_screen.id_to_province.get(pid)
+                        owner = prov.get("owner", "Unknown") if prov else "Unknown"
+                        owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
                     
-                    is_core = pid in core_ids
-                    revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
+                        is_core = pid in core_ids
+                        revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
                     
-                    if revoke_item:
-                        status_text = f" (Revoking in {revoke_item['turns_left']})"
-                        color = (255, 100, 100)
-                    elif is_core:
-                        status_text = " (Auto-Claimed Core)"
-                        color = (255, 150, 200)
-                    else:
-                        status_text = ""
-                        color = (200, 200, 200)
+                        if revoke_item:
+                            status_text = f" (Revoking in {revoke_item['turns_left']})"
+                            color = (255, 100, 100)
+                        elif is_core:
+                            status_text = " (Auto-Claimed Core)"
+                            color = (255, 150, 200)
+                        else:
+                            status_text = ""
+                            color = (200, 200, 200)
 
-                    txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
-                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                    y_off += 25
-        else:
-            queued_foreign = [item for item in foreign_claims_list if item["type"] == "QUEUE"]
-            active_foreign = [item for item in foreign_claims_list if item["type"] != "QUEUE"]
-            
-            surface.blit(sub_font.render("Actively Justifying:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
-            y_off += 30
-            
-            if not queued_foreign:
-                surface.blit(tiny_font.render("No nations are actively justifying claims on you.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-                y_off += 25
+                        txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
+                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                        y_off += 25
             else:
-                for item in queued_foreign:
-                    nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                    color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
-                    
-                    txt_str = f"- Prov {item['prov_id']} ({nation_name}): Actively Justifying ({item['turns']}t)"
-                    if item["prov_id"] in return_ids:
-                        txt_str += f" (Returning in 1 turn)"
-                        color = c.COLOR_SUCCESS_GREEN
-                        
-                    txt = tiny_font.render(txt_str, True, color)
-                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                    y_off += 25
-                    
-            y_off += 10
+                queued_foreign = [item for item in foreign_claims_list if item["type"] == "QUEUE"]
+                active_foreign = [item for item in foreign_claims_list if item["type"] != "QUEUE"]
             
-            surface.blit(sub_font.render("Claims on You:", True, (255, 100, 100)), (self.panel_rect.x + 20, y_off))
-            y_off += 30
+                surface.blit(sub_font.render("Actively Justifying:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
+                y_off += 30
             
-            if not active_foreign:
-                surface.blit(tiny_font.render("No foreign claims on your territory.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
-            else:
-                for item in active_foreign:
-                    nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                    color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
-                    
-                    if item["type"] == "CORE":
-                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Auto-Claimed Core"
-                    else:
-                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Active Claim"
-                        
-                    if item["prov_id"] in return_ids:
-                        txt_str += f" (Returning in 1 turn)"
-                        color = c.COLOR_SUCCESS_GREEN
-                        
-                    txt = tiny_font.render(txt_str, True, color)
-                    surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                if not queued_foreign:
+                    surface.blit(tiny_font.render("No nations are actively justifying claims on you.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
                     y_off += 25
+                else:
+                    for item in queued_foreign:
+                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
+                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
                     
-        surface.set_clip(old_clip)
+                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Actively Justifying ({item['turns']}t)"
+                        if item["prov_id"] in return_ids:
+                            txt_str += f" (Returning in 1 turn)"
+                            color = c.COLOR_SUCCESS_GREEN
+                        
+                        txt = tiny_font.render(txt_str, True, color)
+                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                        y_off += 25
+                    
+                y_off += 10
+            
+                surface.blit(sub_font.render("Claims on You:", True, (255, 100, 100)), (self.panel_rect.x + 20, y_off))
+                y_off += 30
+            
+                if not active_foreign:
+                    surface.blit(tiny_font.render("No foreign claims on your territory.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                else:
+                    for item in active_foreign:
+                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
+                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
+                    
+                        if item["type"] == "CORE":
+                            txt_str = f"- Prov {item['prov_id']} ({nation_name}): Auto-Claimed Core"
+                        else:
+                            txt_str = f"- Prov {item['prov_id']} ({nation_name}): Active Claim"
+                        
+                        if item["prov_id"] in return_ids:
+                            txt_str += f" (Returning in 1 turn)"
+                            color = c.COLOR_SUCCESS_GREEN
+                        
+                        txt = tiny_font.render(txt_str, True, color)
+                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
+                        y_off += 25
+                    
 
         # Draw a custom scrollbar if the content exceeds the box height
         self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
@@ -955,6 +954,10 @@ class Puppets_Screen(MapOverlayScreen):
 
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
 
+        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90,
+                                               self.panel_rect.width - 10, self.panel_rect.height - 100)
+        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+
         y_pos = self.panel_rect.y + 100 + self.scroll_y
         for idx, p in enumerate(puppets):
             p_data = self.map_screen.nation_data.get(p, {})
@@ -967,34 +970,29 @@ class Puppets_Screen(MapOverlayScreen):
             btn_up = Button(self.panel_rect.x + 15, y_pos, "tiny_square", "blue", "^", lambda i=idx: self.move_puppet(i, -1), font_preset="normal")
             if idx == 0:
                 btn_up.apply_state(enabled=False)
-            self.elements.append(btn_up)
 
             btn_down = Button(self.panel_rect.x + 15, y_pos + 35, "tiny_square", "blue", "v", lambda i=idx: self.move_puppet(i, 1), font_preset="normal")
             if idx == len(puppets) - 1:
                 btn_down.apply_state(enabled=False)
-            self.elements.append(btn_down)
 
             rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
             rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
             btn_release = Button(self.panel_rect.x + 750, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
-            self.elements.append(btn_release)
-            
+
             # --- Make all buttons visible but greyscaled out if requirements aren't met ---
-            
+
             # Edit Button
             btn_edit = Button(self.panel_rect.x + 570, y_pos, "puppet_option", "blue", "Edit", lambda nation=p: self.edit_puppet(nation), font_preset="normal")
             if p_type != c.PUPPET_TYPE_INTEGRATED:
                 btn_edit.apply_state(enabled=False, text="Can't Edit!")
-            self.elements.append(btn_edit)
-            
+
             # Annex Button
             anx_txt = "Undo Annex" if pending_action == "ANNEX_PUPPET" else "Annex"
             anx_col = "orange" if pending_action == "ANNEX_PUPPET" else "red"
             btn_annex = Button(self.panel_rect.x + 570, y_pos + 45, "puppet_option", anx_col, anx_txt, lambda nation=p: self.queue_annex(nation), font_preset="normal")
             if p_type != c.PUPPET_TYPE_INTEGRATED:
                 btn_annex.apply_state(enabled=False, text="Can't Annex!")
-            self.elements.append(btn_annex)
-            
+
             # Take Puppets Button
             take_txt = "Undo Take" if pending_action == "TAKE_PUPPETS" else "Take Puppets"
             btn_take = Button(self.panel_rect.x + 750, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
@@ -1003,15 +1001,20 @@ class Puppets_Screen(MapOverlayScreen):
                 btn_take.apply_state(enabled=False,
                                      text="Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED
                                      else "They have 0 Puppets!")
-            self.elements.append(btn_take)
-            
-            # if you ever want to add this
-            s_man = Slider(self.panel_rect.x + 200, y_pos + 50, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-            s_mat = Slider(self.panel_rect.x + 320, y_pos + 50, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-            s_fuel = Slider(self.panel_rect.x + 440, y_pos + 50, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+
+            row_els = [btn_up, btn_down, btn_release, btn_edit, btn_annex, btn_take]
+
             if p_type == c.PUPPET_TYPE_INTEGRATED:
-                self.elements.extend([s_man, s_mat, s_fuel])
-            
+                s_man = Slider(self.panel_rect.x + 200, y_pos + 50, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+                s_mat = Slider(self.panel_rect.x + 320, y_pos + 50, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+                s_fuel = Slider(self.panel_rect.x + 440, y_pos + 50, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+                row_els += [s_man, s_mat, s_fuel]
+
+            for el in row_els:
+                el.is_scrollable = True
+                el.click_guard = row_guard
+            self.elements.extend(row_els)
+
             y_pos += self.y_space_between_puppets
             
         self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
@@ -1064,49 +1067,48 @@ class Puppets_Screen(MapOverlayScreen):
             master_txt = fonts.get("normal").render(f"You are {prefix} {p_type.lower()} puppet of: {master_name}", True, (255, 150, 150))
             surface.blit(master_txt, (self.panel_rect.centerx - master_txt.get_width()//2, self.panel_rect.y + 60))
 
-        clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, self.panel_rect.height - 100)
-        old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
-        
+        clip_rect = self.scroll_content_rect or pygame.Rect(
+            self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, self.panel_rect.height - 100)
+
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
         if not puppets:
             txt = font_body.render("You currently control no subjects.", True, (150, 150, 150))
             surface.blit(txt, (self.panel_rect.centerx - txt.get_width()//2, self.panel_rect.y + 130))
         else:
-            y_pos = self.panel_rect.y + 100 + self.scroll_y
-            for p in puppets:
-                p_data = self.map_screen.nation_data.get(p, {})
-                p_name = p_data.get("name", p)
-                p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
-                
-                # Formatted Puppet Sub-text
-                name_txt = font_body.render(p_name, True, (255, 255, 255))
-                type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
-                
-                surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
-                surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
-                
-                # Show siphoned amounts below sliders
-                if p_type == c.PUPPET_TYPE_INTEGRATED:
-                    econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
-                    if len(econ_tuple) == 3:
-                        _, _, breakdown = econ_tuple
-                        siphoned_man = abs(breakdown.get('manpower', {}).get('siphon', 0))
-                        siphoned_mats = abs(breakdown.get('materials', {}).get('siphon', 0))
-                        siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
-                        
-                        tiny_font = fonts.get("tiny")
-                        man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, (200, 200, 200))
-                        mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, (200, 200, 200))
-                        fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, (200, 200, 200))
-                        
-                        surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
-                        surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))
-                        surface.blit(fuel_txt, (self.panel_rect.x + 440, y_pos + 75))
+            with ui_bars.clip_scroll_region(surface, clip_rect,
+                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                y_pos = self.panel_rect.y + 100 + self.scroll_y
+                for p in puppets:
+                    p_data = self.map_screen.nation_data.get(p, {})
+                    p_name = p_data.get("name", p)
+                    p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
 
-                y_pos += self.y_space_between_puppets
+                    # Formatted Puppet Sub-text
+                    name_txt = font_body.render(p_name, True, (255, 255, 255))
+                    type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
 
-        surface.set_clip(old_clip)
+                    surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
+                    surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
+
+                    # Show siphoned amounts below sliders
+                    if p_type == c.PUPPET_TYPE_INTEGRATED:
+                        econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
+                        if len(econ_tuple) == 3:
+                            _, _, breakdown = econ_tuple
+                            siphoned_man = abs(breakdown.get('manpower', {}).get('siphon', 0))
+                            siphoned_mats = abs(breakdown.get('materials', {}).get('siphon', 0))
+                            siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
+
+                            tiny_font = fonts.get("tiny")
+                            man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, (200, 200, 200))
+                            mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, (200, 200, 200))
+                            fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, (200, 200, 200))
+
+                            surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
+                            surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))
+                            surface.blit(fuel_txt, (self.panel_rect.x + 440, y_pos + 75))
+
+                    y_pos += self.y_space_between_puppets
 
 class Create_Integrated_Puppet_Screen(MapOverlayScreen):
     overlay_alpha = 0
@@ -1137,7 +1139,11 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
         self.elements.append(Button(self.panel_rect.centerx - 100, self.panel_rect.y + 60, "medium", btn_keep_cores_color, btn_keep_cores_text, self.toggle_keep_cores))
         
         y_pos = self.panel_rect.y + 120 + self.scroll_y
-        
+
+        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 110,
+                                               self.panel_rect.width - 10, self.panel_rect.height - 120)
+        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+
         queue = self.map_screen.nation_data.get(self.player, {}).get("release_puppet_queue", [])
         queued_cores = [q["core_nation"] for q in queue]
 
@@ -1176,6 +1182,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                         btn.apply_state(enabled=False, text="No Land")
 
                 btn.is_scrollable = True
+                btn.click_guard = row_guard
                 btn.base_y = y_pos - self.scroll_y
                 self.elements.append(btn)
             y_pos += 50
@@ -1225,32 +1232,32 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
 
         tiny_font = fonts.get("normal")
 
-        clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 110, self.panel_rect.width - 10, self.panel_rect.height - 120)
-        old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
-        
-        y_off = self.panel_rect.y + 120 + self.scroll_y
+        clip_rect = self.scroll_content_rect or pygame.Rect(
+            self.panel_rect.x + 5, self.panel_rect.y + 110, self.panel_rect.width - 10, self.panel_rect.height - 120)
+
         if not self.valid_subjects:
+            y_off = self.panel_rect.y + 120 + self.scroll_y
             surface.blit(tiny_font.render("No potential subjects available.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
         else:
-            for subject in self.valid_subjects:
-                try:
-                    if subject in self.map_screen.nation_data:
-                        subject_name = self.map_screen.nation_data[subject].get("name", subject)
-                    else:
-                        from data.io import country_io
-                        subject_name = country_io.get_country_stats(subject).get("name", subject)
-                except Exception:
-                    subject_name = subject
+            with ui_bars.clip_scroll_region(surface, clip_rect,
+                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                y_off = self.panel_rect.y + 120 + self.scroll_y
+                for subject in self.valid_subjects:
+                    try:
+                        if subject in self.map_screen.nation_data:
+                            subject_name = self.map_screen.nation_data[subject].get("name", subject)
+                        else:
+                            from data.io import country_io
+                            subject_name = country_io.get_country_stats(subject).get("name", subject)
+                    except Exception:
+                        subject_name = subject
 
-                is_queued = subject in queued_cores
-                color = c.COLOR_GOLD_HIGHLIGHT if is_queued else (200, 200, 200)
-                status = " (Queued)" if is_queued else ""
-                txt = tiny_font.render(f"- {subject_name}{status}", True, color)
-                surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))
-                y_off += 50
-
-        surface.set_clip(old_clip)
+                    is_queued = subject in queued_cores
+                    color = c.COLOR_GOLD_HIGHLIGHT if is_queued else (200, 200, 200)
+                    status = " (Queued)" if is_queued else ""
+                    txt = tiny_font.render(f"- {subject_name}{status}", True, color)
+                    surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))
+                    y_off += 50
 
         if self.max_scroll < 0:
             viewport_h = self.panel_rect.height - 110

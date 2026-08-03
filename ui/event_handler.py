@@ -74,6 +74,16 @@ def handle_map_events(self, event):
         if self.raised_rect.collidepoint(mx, my) or self.ui_background_rect.collidepoint(mx, my):
             on_ui = True
 
+    # Buildings/Garrison, Diplomatic Info and the queue overlay sit on top of the
+    # map at fixed screen rects, so treat them like any other UI bar: mousedown/
+    # hover/camera-pan shouldn't reach through them to the map underneath.
+    panel_rects = (getattr(self, 'sidebar_scroll_rect', None),
+                   getattr(self, 'diplomatic_scroll_rect', None),
+                   getattr(self, 'queue_scroll_rect', None))
+    if self.selected_province and not self.selection_mode:
+        if any(r and r.collidepoint(mx, my) for r in panel_rects):
+            on_ui = True
+
     # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
     # Lets the mouse wheel scroll long Buildings/Garrison, Diplomatic Info, and
     # queue-overlay lists instead of always zooming the map camera. Only
@@ -99,6 +109,24 @@ def handle_map_events(self, event):
         if queue_rect and queue_rect.collidepoint(mx, my):
             max_scroll = getattr(self, 'queue_scroll_max', 0)
             self.queue_scroll_y = max(0, min(getattr(self, 'queue_scroll_y', 0) - event.y * recruit_ui.MAP_QUEUE_SCROLL_STEP, max_scroll))
+            return
+
+    # --- SCROLLABLE INFO PANEL DRAG INTERCEPT ---
+    # Lets the same three panels be grabbed and dragged directly, alongside the
+    # wheel scrolling above -- see GameState.handle_content_drag.
+    if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
+            and self.selected_province and not self.selection_mode):
+        if self.handle_content_drag(event, attr="sidebar_scroll_y", rect_attr="sidebar_scroll_rect",
+                                    drag_attr="sidebar_drag_state", lo=0, hi=getattr(self, "sidebar_scroll_max", 0),
+                                    invert=True):
+            return
+        if self.handle_content_drag(event, attr="diplomatic_scroll_y", rect_attr="diplomatic_scroll_rect",
+                                    drag_attr="diplomatic_drag_state", lo=0, hi=getattr(self, "diplomatic_scroll_max", 0),
+                                    invert=True):
+            return
+        if self.handle_content_drag(event, attr="queue_scroll_y", rect_attr="queue_scroll_rect",
+                                    drag_attr="queue_drag_state", lo=0, hi=getattr(self, "queue_scroll_max", 0),
+                                    invert=True):
             return
 
     # 2. Camera Controls (Always allow these so you can move while editing!)

@@ -80,7 +80,7 @@ class TableScreen(GameState):
             x += col.width
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw(self, surface):
         surface.fill(self.bg_color)
@@ -104,26 +104,30 @@ class TableScreen(GameState):
 
         view_h = c.SCREEN_HEIGHT - self.ROW_TOP - 20
         row_font = fonts.get("small")
-        for i, y in self.layout_list_rows(len(self.rows), self.ROW_HEIGHT, self.ROW_TOP, view_h=view_h,
-                                          cull_top=self.ROW_TOP - 10, cull_bottom=c.SCREEN_HEIGHT - 10):
-            row = self.rows[i]
-            if i % 2 == 0:
-                stripe = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
-                pygame.draw.rect(surface, (35, 38, 45), stripe)
+        clip_rect = pygame.Rect(self.table_x, self.ROW_TOP - 10, self.total_w, c.SCREEN_HEIGHT - (self.ROW_TOP - 10) - 10)
+        self.scroll_content_rect = clip_rect
+        with ui_bars.clip_scroll_region(surface, clip_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for i, y in self.layout_list_rows(len(self.rows), self.ROW_HEIGHT, self.ROW_TOP, view_h=view_h,
+                                              cull_top=self.ROW_TOP - 10, cull_bottom=c.SCREEN_HEIGHT - 10):
+                row = self.rows[i]
+                if i % 2 == 0:
+                    stripe = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
+                    pygame.draw.rect(surface, (35, 38, 45), stripe)
 
-            x = self.table_x
-            for col in self.columns:
-                text = col.fmt(row.get(col.key, ""))
-                cell_surf = row_font.render(text, True, (220, 220, 220))
-                mid_y = y + self.ROW_HEIGHT // 2
-                if col.align == "left":
-                    rect = cell_surf.get_rect(midleft=(x + 6, mid_y))
-                elif col.align == "right":
-                    rect = cell_surf.get_rect(midright=(x + col.width - 6, mid_y))
-                else:
-                    rect = cell_surf.get_rect(center=(x + col.width // 2, mid_y))
-                surface.blit(cell_surf, rect)
-                x += col.width
+                x = self.table_x
+                for col in self.columns:
+                    text = col.fmt(row.get(col.key, ""))
+                    cell_surf = row_font.render(text, True, (220, 220, 220))
+                    mid_y = y + self.ROW_HEIGHT // 2
+                    if col.align == "left":
+                        rect = cell_surf.get_rect(midleft=(x + 6, mid_y))
+                    elif col.align == "right":
+                        rect = cell_surf.get_rect(midright=(x + col.width - 6, mid_y))
+                    else:
+                        rect = cell_surf.get_rect(center=(x + col.width // 2, mid_y))
+                    surface.blit(cell_surf, rect)
+                    x += col.width
 
         self.draw_list_scrollbar(surface, min(c.SCREEN_WIDTH - 25, self.table_x + self.total_w + 10),
                                  self.ROW_TOP, view_h)

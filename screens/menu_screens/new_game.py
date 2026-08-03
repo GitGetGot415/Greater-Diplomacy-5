@@ -1,4 +1,5 @@
 import os
+import pygame
 from gameState import GameState
 from ui_elements import Button
 import data.constants as c
@@ -78,11 +79,13 @@ class New_Game(GameState):
         scenarios = os.listdir(scenario_dir)
 
         # Standard centered layout for all playable scenarios
+        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
         for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
-            self.elements.append(
-                Button("centered", btn_y, "new_game", "blue", scenarios[i],
-                       lambda n=scenarios[i], d=scenario_dir: self.start_scenario(n, d))
-            )
+            btn = Button("centered", btn_y, "new_game", "blue", scenarios[i],
+                        lambda n=scenarios[i], d=scenario_dir: self.start_scenario(n, d))
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
+            self.elements.append(btn)
 
     def update(self):
         super().update()
@@ -93,7 +96,7 @@ class New_Game(GameState):
 
     def additional_events(self, event):
         if self.sub_state != "CATEGORY":
-            self.handle_list_scroll(event)
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def handle_events(self, events):
         # GameState.handle_events already dispatches additional_events, so this

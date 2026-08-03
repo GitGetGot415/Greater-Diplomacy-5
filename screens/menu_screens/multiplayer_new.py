@@ -29,11 +29,13 @@ class Multiplayer_New(GameState):
             os.makedirs(scenario_dir)
         scenarios = os.listdir(scenario_dir)
 
+        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
         for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
-            self.elements.append(
-                Button("centered", btn_y, "large", "blue", scenarios[i],
-                       lambda n=scenarios[i], d=scenario_dir: self.start_host_setup(n, d))
-            )
+            btn = Button("centered", btn_y, "large", "blue", scenarios[i],
+                        lambda n=scenarios[i], d=scenario_dir: self.start_host_setup(n, d))
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
+            self.elements.append(btn)
 
     def scenario_settings(self):
         # Point Scenario_Settings back here, the same way New_Game claims it,
@@ -104,7 +106,7 @@ class Multiplayer_New(GameState):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.exit_screen()
 
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
         self.draw_list_scrollbar(surface, 40, 160, c.SCREEN_HEIGHT - 200)

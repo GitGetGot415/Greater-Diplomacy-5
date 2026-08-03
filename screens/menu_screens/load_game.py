@@ -1,5 +1,6 @@
 import os
 import json
+import pygame
 from ui import confirm_dialog
 from data import queries
 from gameState import FolderListState
@@ -38,6 +39,7 @@ class Load_Game(FolderListState):
         ]
 
         folders = self.list_folders()
+        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
         for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
             folder = folders[i]
             # The row being renamed or deleted is replaced by its prompt
@@ -45,12 +47,15 @@ class Load_Game(FolderListState):
                 continue
 
             for x, size, color, label, handler in self.ROW_BUTTONS:
-                self.elements.append(Button(x, btn_y, size, color, label or folder,
-                                            lambda f=folder, h=handler: getattr(self, h)(f)))
+                btn = Button(x, btn_y, size, color, label or folder,
+                            lambda f=folder, h=handler: getattr(self, h)(f))
+                btn.is_scrollable = True
+                btn.click_guard = self.scroll_click_guard
+                self.elements.append(btn)
 
     def additional_events(self, event):
         if not self.handle_name_prompt_event(event):
-            self.handle_list_scroll(event)
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
         if self.renaming_item:

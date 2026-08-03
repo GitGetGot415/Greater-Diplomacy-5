@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
-from gameState import GameState, ScreenLayer
+from gameState import GameState
+from ui.bars import ui_bars
 from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats, draw_time_stat, draw_stat_separator
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
@@ -160,10 +161,8 @@ class Production_Screen(GameState):
         return btn
 
     def refresh_ui(self):
-        # The back button doesn't scroll, so it is built here but registered at the
-        # very end of refresh_ui -- see the ScreenLayer note down there.
         self.btn_back = Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)
-        self.elements = []
+        self.elements = [self.btn_back]
 
         current_buildings = self.target_province.get("buildings", [])
         building_queue = self.target_province.get("building_queue", [])
@@ -545,12 +544,7 @@ class Production_Screen(GameState):
         # Calculate maximum scroll distance
         self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + SCROLL_BOTTOM_PAD)
 
-        # Drawn after the unit list so it covers any scrollable button sliding past it.
-        self.elements.append(ScreenLayer(self, "draw_chrome"))
-
-        # Back sits at (20, 20), inside the header band draw_chrome fills, so it has
-        # to be registered after the chrome or it gets painted over and vanishes.
-        self.elements.append(self.btn_back)
+        self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
     def start_coring(self):
         owner = self.target_province.get("owner")
@@ -744,6 +738,15 @@ class Production_Screen(GameState):
             self.target_scroll_y += event.y * SCROLL_WHEEL_STEP
             self.enforce_scroll_bounds()
 
+        # Content-drag targets target_scroll_y (not scroll_y) so a drag eases in
+        # exactly like the wheel does, via the same lerp in update(). refresh=False
+        # since update() already repositions every is_scrollable button off
+        # base_y + scroll_y each frame -- no need to rebuild the whole list per pixel.
+        if self.handle_content_drag(event, attr="target_scroll_y", rect_attr="scroll_content_rect",
+                                    lo=-self.max_scroll, hi=0, refresh=False):
+            self.enforce_scroll_bounds()
+            return
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.map_screen.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION:
                 return
@@ -755,71 +758,76 @@ class Production_Screen(GameState):
 
     def additional_draw(self, surface):
         if not self.target_province: return
-        
+
+        # Fixed header + resource HUD, drawn first now that the scrolling content
+        # below is genuinely clipped to scroll_content_rect instead of needing a
+        # chrome layer painted over it afterwards to hide whatever slid behind it.
+        self.draw_chrome(surface)
+
         # --- DRAW SCROLLING CONTENT ---
         # Every section is the same panel + label, so they are painted from the
         # SECTION_PANELS table rather than seven near-identical blocks.
         scroll = int(self.scroll_y)
         heading_font = fonts.get("heading2")
 
-        for prefix, label, fill, border, text_color in SECTION_PANELS:
-            start_y = getattr(self, f"{prefix}_start_y", 0)
-            end_y = getattr(self, f"{prefix}_end_y", 0)
-            if end_y <= start_y:
-                continue
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > -self.max_scroll):
+            for prefix, label, fill, border, text_color in SECTION_PANELS:
+                start_y = getattr(self, f"{prefix}_start_y", 0)
+                end_y = getattr(self, f"{prefix}_end_y", 0)
+                if end_y <= start_y:
+                    continue
 
-            panel = pygame.Rect(PANEL_X, start_y + scroll - PANEL_PAD_TOP,
-                                PANEL_WIDTH, end_y - start_y + PANEL_PAD_TOP)
-            pygame.draw.rect(surface, fill, panel)
-            pygame.draw.rect(surface, border, panel, 2)
-            surface.blit(heading_font.render(label, True, text_color),
-                         (PANEL_LABEL_X, start_y + scroll + PANEL_LABEL_OFFSET_Y))
+                panel = pygame.Rect(PANEL_X, start_y + scroll - PANEL_PAD_TOP,
+                                    PANEL_WIDTH, end_y - start_y + PANEL_PAD_TOP)
+                pygame.draw.rect(surface, fill, panel)
+                pygame.draw.rect(surface, border, panel, 2)
+                surface.blit(heading_font.render(label, True, text_color),
+                             (PANEL_LABEL_X, start_y + scroll + PANEL_LABEL_OFFSET_Y))
 
-        # Stats Bars -- everything packed onto a single line, per-section
-        # colors preserved but labels dropped, so it fits within the bar
-        # instead of running off-screen.
-        bar_font = fonts.get("small")
-        for base_rect, stats, base_y, bar_type in self.active_bars:
-            bar_rect = pygame.Rect(base_rect.x, base_y + scroll, base_rect.width, base_rect.height)
-            pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
-            pygame.draw.rect(surface, BAR_BORDER_COLOR, bar_rect, 1)
+            # Stats Bars -- everything packed onto a single line, per-section
+            # colors preserved but labels dropped, so it fits within the bar
+            # instead of running off-screen.
+            bar_font = fonts.get("small")
+            for base_rect, stats, base_y, bar_type in self.active_bars:
+                bar_rect = pygame.Rect(base_rect.x, base_y + scroll, base_rect.width, base_rect.height)
+                pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
+                pygame.draw.rect(surface, BAR_BORDER_COLOR, bar_rect, 1)
 
-            text_y = bar_rect.y + (bar_rect.height - bar_font.get_height()) // 2
-            x = bar_rect.x + BAR_TEXT_PAD_X
+                text_y = bar_rect.y + (bar_rect.height - bar_font.get_height()) // 2
+                x = bar_rect.x + BAR_TEXT_PAD_X
 
-            if bar_type == "BUILDING":
-                t = max(1, stats.get('time', 1))
-                x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
-                x = draw_stat_separator(surface, bar_font, x, text_y)
-                x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
-                x = draw_stat_separator(surface, bar_font, x, text_y)
-                draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, BAR_YIELD_COLOR, is_yield=True)
-            else:
-                t = max(1, stats.get('production_time', 1))
-                x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
-                x = draw_stat_separator(surface, bar_font, x, text_y)
-                x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
-                x = draw_stat_separator(surface, bar_font, x, text_y)
-                x = draw_combat_stats(
-                    surface, bar_font, "",
-                    stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0),
-                    x, text_y, BAR_STAT_COLOR, labeled=False
-                )
-
-                if 'bombard_attack' in stats:
+                if bar_type == "BUILDING":
+                    t = max(1, stats.get('time', 1))
+                    x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
                     x = draw_stat_separator(surface, bar_font, x, text_y)
-                    draw_bombardment_stats(
-                        surface, bar_font,
-                        stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
-                        x, text_y, BAR_STAT_COLOR, base_text="", labeled=False
+                    x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                    x = draw_stat_separator(surface, bar_font, x, text_y)
+                    draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, BAR_YIELD_COLOR, is_yield=True)
+                else:
+                    t = max(1, stats.get('production_time', 1))
+                    x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                    x = draw_stat_separator(surface, bar_font, x, text_y)
+                    x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
+                    x = draw_stat_separator(surface, bar_font, x, text_y)
+                    x = draw_combat_stats(
+                        surface, bar_font, "",
+                        stats.get('attack', 0), stats.get('defense', 0), stats.get('health', 0), stats.get('speed', 0),
+                        x, text_y, BAR_STAT_COLOR, labeled=False
                     )
 
+                    if 'bombard_attack' in stats:
+                        x = draw_stat_separator(surface, bar_font, x, text_y)
+                        draw_bombardment_stats(
+                            surface, bar_font,
+                            stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
+                            x, text_y, BAR_STAT_COLOR, base_text="", labeled=False
+                        )
+
     def draw_chrome(self, surface):
-        """Fixed header + resource HUD. Drawn by ProductionChromeOverlay, the very
-        last element each frame, so it sits on top of any scrolled-behind buttons."""
+        """Fixed header + resource HUD."""
         if not self.target_province: return
 
-        # Header overlay block hides scrolling units that go too high
         pygame.draw.rect(surface, self.bg_color, (0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT))
         title_font = fonts.get("heading1")
 

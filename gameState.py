@@ -71,6 +71,13 @@ class GameState:
     scroll_track_rect = None
     scroll_handle_rect = None
 
+    # Content click-and-drag state (see handle_content_drag) and the rect/guard
+    # a scrollable list publishes for it -- kept separate from the scrollbar's
+    # own drag state above since both gestures can be live on the same list.
+    scroll_content_rect = None
+    content_drag_state = None
+    scroll_click_guard = None
+
     def __init__(self):
         self.done = False
         self.next_state = None
@@ -114,15 +121,21 @@ class GameState:
 
     def handle_list_scroll(self, event, speed=None, attr="scroll_y", limit_attr="max_scroll",
                            track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                           drag_attr="is_dragging_scrollbar"):
+                           drag_attr="is_dragging_scrollbar", content_rect_attr=None):
         """Drives a scrollable list: wheel, scrollbar grab, drag and release.
 
         Track geometry is read off the rect the screen published when it drew
         its scrollbar, so there is nothing to keep in sync by hand. Returns True
         when the event was consumed, so callers can skip their own handling.
+
+        Pass `content_rect_attr` (the same rect the list clips to) to also let
+        the user grab the list body itself and drag it -- see handle_content_drag.
         """
         if event.type == pygame.MOUSEWHEEL:
             self.scroll_by(event, attr, limit_attr, self.list_scroll_speed if speed is None else speed)
+            return True
+
+        if content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr):
             return True
 
         track = getattr(self, track_attr, None)
@@ -149,6 +162,67 @@ class GameState:
 
         return False
 
+    def _cancel_pressed_elements(self):
+        """Un-arms any button caught mid-press once a drag is confirmed, so the
+        eventual mouse-up doesn't also fire its click."""
+        for el in self.elements:
+            if getattr(el, "is_pressed", False):
+                el.is_pressed = False
+
+    def handle_content_drag(self, event, attr="scroll_y", limit_attr="max_scroll",
+                            rect_attr="scroll_content_rect", drag_attr="content_drag_state",
+                            lo=None, hi=None, threshold=6, invert=False, refresh=True, axis="y"):
+        """Lets the user grab a scrollable region's own content and drag it,
+        alongside whatever wheel/scrollbar-handle scrolling it already has.
+
+        A small pixel threshold has to be crossed before a press is treated as
+        a drag (and any button pressed under the cursor gets un-armed), so an
+        ordinary click on a button inside the list still registers normally.
+        Content tracks the mouse 1:1 via `event.rel`, like a touch/trackpad pan.
+        `axis="x"` drags horizontally (a timeline) instead of the usual vertical list.
+
+        `lo`/`hi` bound the resulting value; by default `hi` is 0 and `lo` is
+        the list's own `max_scroll`-style limit (the mixin's usual negative-range
+        convention where the offset is added to a row's y). Pass explicit bounds
+        for screens using a 0..max convention instead -- and if that convention
+        *subtracts* the offset from content's y (as the map HUD panels do), pass
+        `invert=True` so dragging down still pulls content down, not up.
+        Pass `refresh=False` for a screen whose `update()` already repositions
+        scrolled elements every frame off `attr` alone (e.g. a base_y + scroll_y
+        offset), so a full refresh_ui() rebuild isn't needed on every drag pixel.
+        Returns True when the event was consumed as a drag.
+        """
+        rect = getattr(self, rect_attr, None)
+        if not rect:
+            return False
+
+        idx = 0 if axis == "x" else 1
+        state = getattr(self, drag_attr, None)  # None, or [origin, armed]
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and rect.collidepoint(event.pos):
+            setattr(self, drag_attr, [event.pos[idx], False])
+            return False
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and state is not None:
+            setattr(self, drag_attr, None)
+            return state[1]
+        if event.type == pygame.MOUSEMOTION and state is not None:
+            origin, armed = state
+            if not armed:
+                if abs(event.pos[idx] - origin) < threshold:
+                    return False
+                armed = state[1] = True
+                self._cancel_pressed_elements()
+            limit = getattr(self, limit_attr, 0)
+            low = limit if lo is None else lo
+            high = 0 if hi is None else hi
+            delta = -event.rel[idx] if invert else event.rel[idx]
+            setattr(self, attr, max(low, min(high, getattr(self, attr, 0) + delta)))
+            if refresh:
+                self.refresh_ui()
+            return True
+
+        return False
+
     def refresh_ui(self):
         pass
 
@@ -158,12 +232,22 @@ class GameState:
 
     def layout_list_rows(self, count, row_h, top, view_h=None, pad=0,
                          cull_top=100, cull_bottom=None,
-                         attr="scroll_y", limit_attr="max_scroll"):
+                         attr="scroll_y", limit_attr="max_scroll",
+                         guard_attr="scroll_click_guard"):
         """Sets the scroll limit for a list and yields (index, y) for visible rows.
 
         Every folder/scenario list in the menus is built this way: derive the
         scroll floor from the total content height, then walk the rows applying
-        the offset and skipping anything off-screen.
+        the offset. A row is included as soon as any part of it overlaps
+        [cull_top, cull_bottom], not just its top corner, so pair this with
+        `ui_bars.clip_scroll_region` (or a manual set_clip at the same bounds)
+        around wherever the row actually gets drawn -- otherwise a row that's
+        only partially in view will render uncropped past the boundary.
+
+        Also publishes `guard_attr`: a callable a scrolled button/field can set
+        as its `click_guard` so a click landing in that cropped sliver (still
+        inside the row's own rect, but outside the visible boundary) doesn't
+        fire.
         """
         if view_h is None:
             view_h = c.SCREEN_HEIGHT - 200
@@ -172,20 +256,21 @@ class GameState:
 
         setattr(self, limit_attr, min(0, view_h - (count * row_h) - pad))
         scroll = getattr(self, attr, 0)
+        setattr(self, guard_attr, lambda: cull_top <= pygame.mouse.get_pos()[1] <= cull_bottom)
 
         for i in range(count):
             y = top + (i * row_h) + scroll
-            if cull_top < y < cull_bottom:
+            if y + row_h > cull_top and y < cull_bottom:
                 yield i, y
 
     def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15,
                             attr="scroll_y", limit_attr="max_scroll",
                             track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                            drag_attr=None):
+                            drag_attr=None, content_rect_attr=None):
         """Draws the list scrollbar and publishes its rects for handle_list_scroll.
 
-        Accepts (and ignores) drag_attr so a screen can keep one dict of
-        attribute names and hand it to both this and handle_list_scroll.
+        Accepts (and ignores) drag_attr/content_rect_attr so a screen can keep
+        one dict of attribute names and hand it to both this and handle_list_scroll.
         """
         track, handle = ui_bars.draw_standard_scrollbar(
             surface, getattr(self, attr, 0), getattr(self, limit_attr, 0),
@@ -221,12 +306,34 @@ class GameState:
         self.draw_title(surface)
         self.additional_draw(surface)
 
-        # 3. Draw UI buttons on the very top
-        for el in self.elements:
-            el.draw(surface)
+        # 3. Draw UI buttons on the very top. Anything a screen marked
+        # is_scrollable (built inside a layout_list_rows loop) is cropped to
+        # scroll_content_rect and drawn last, so it's cleanly cut off at that
+        # boundary instead of popping in/out at an untracked pixel.
+        self.draw_elements(surface)
 
         # 4. Green status text, for every screen that hangs off the map
         self.draw_feedback(surface)
+
+    def draw_elements(self, surface):
+        scrollable = []
+        for el in self.elements:
+            if getattr(el, "is_scrollable", False):
+                scrollable.append(el)
+            else:
+                el.draw(surface)
+
+        if not scrollable:
+            return
+
+        if self.scroll_content_rect:
+            with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                for el in scrollable:
+                    el.draw(surface)
+        else:
+            for el in scrollable:
+                el.draw(surface)
 
     def draw_feedback(self, surface):
         if self.map_screen:
@@ -399,15 +506,17 @@ class MapOverlayScreen(GameState):
     def additional_events(self, event):
         # Scrollbar grab/drag/release always takes priority over camera panning,
         # so click-to-scroll works the same way it does on the standalone menu screens.
+        # content_rect_attr also lets the panel's own content be grabbed and dragged.
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
-            if self.handle_list_scroll(event):
+            if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
                 return
 
         if event.type not in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
             return
 
-        if event.type == pygame.MOUSEMOTION and getattr(self, "is_dragging_scrollbar", False):
-            self.handle_list_scroll(event)
+        if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)
+                                                  or getattr(self, "content_drag_state", None) is not None):
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
             return
 
         on_ui = self.is_over_ui()
@@ -430,9 +539,7 @@ class MapOverlayScreen(GameState):
 
         self.draw_content(surface)
 
-        for el in self.elements:
-            if el.visible:
-                el.draw(surface)
+        self.draw_elements(surface)
         self.draw_feedback(surface)
 
     def draw_content(self, surface):

@@ -1,5 +1,6 @@
 import pygame
 import os
+from contextlib import contextmanager
 import data.constants as c
 
 # Cache the images using a tuple (filename, scale, directory) as the key
@@ -33,6 +34,31 @@ def draw_standard_scrollbar(surface, scroll_y, max_scroll, track_x, track_y, vie
     pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
     
     return track_rect, handle_rect
+
+@contextmanager
+def clip_scroll_region(surface, rect, line_color=(90, 90, 100), draw_top=True, draw_bottom=True):
+    """Standard boundary for every scrollable region: real set_clip cropping,
+    with a thin line marking the edge(s) that still have content beyond them.
+
+    Replaces the old mix of "just don't draw rows past a pixel threshold"
+    (which pops a whole row in/out at once) and each screen hand-rolling its
+    own set_clip + border. `draw_top`/`draw_bottom` should reflect whether
+    that side actually has hidden content (e.g. `scroll_y != 0` for the top,
+    `scroll_y > max_scroll` for the bottom), matching how the scrollbar handle
+    itself already only appears when there's something to scroll.
+
+    Usage: `with ui_bars.clip_scroll_region(surface, rect, draw_top=..., draw_bottom=...): ...draw rows...`
+    """
+    old_clip = surface.get_clip()
+    surface.set_clip(rect)
+    try:
+        yield
+    finally:
+        surface.set_clip(old_clip)
+        if draw_top:
+            pygame.draw.line(surface, line_color, (rect.left, rect.top), (rect.right, rect.top), 1)
+        if draw_bottom:
+            pygame.draw.line(surface, line_color, (rect.left, rect.bottom - 1), (rect.right, rect.bottom - 1), 1)
 
 def draw_fullscreen_overlay(surface, alpha=180):
     """Draws a semi-transparent black overlay across the entire screen."""

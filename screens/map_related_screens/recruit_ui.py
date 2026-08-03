@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
+from ui.bars import ui_bars
 
 # ==========================================
 # LAYOUT
@@ -155,21 +156,20 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
         scroll_max = getattr(map_screen, 'queue_scroll_max', 0)
         scroll_offset = max(0, min(getattr(map_screen, 'queue_scroll_y', 0), scroll_max))
 
-    surface.set_clip(body_rect)
-
     content_bottom = body_top
-    for queue_list, start_x in columns:
-        if not queue_list:
-            surface.blit(font.render("(Queue Empty)", True, MUTED_TEXT_COLOR), (start_x, body_top - scroll_offset))
-            continue
+    scroll_max = getattr(map_screen, 'queue_scroll_max', 0) if map_screen is not None else 0
+    with ui_bars.clip_scroll_region(surface, body_rect,
+                                    draw_top=scroll_offset != 0, draw_bottom=scroll_offset < scroll_max):
+        for queue_list, start_x in columns:
+            if not queue_list:
+                surface.blit(font.render("(Queue Empty)", True, MUTED_TEXT_COLOR), (start_x, body_top - scroll_offset))
+                continue
 
-        for i, item in enumerate(queue_list):
-            y_pos = body_top - scroll_offset + (i * ROW_STEP_Y)
-            surface.blit(small_font.render(get_queue_entry_text(item), True, QUEUE_TEXT_COLOR), (start_x, y_pos))
+            for i, item in enumerate(queue_list):
+                y_pos = body_top - scroll_offset + (i * ROW_STEP_Y)
+                surface.blit(small_font.render(get_queue_entry_text(item), True, QUEUE_TEXT_COLOR), (start_x, y_pos))
 
-        content_bottom = max(content_bottom, body_top + len(queue_list) * ROW_STEP_Y)
-
-    surface.set_clip(None)
+            content_bottom = max(content_bottom, body_top + len(queue_list) * ROW_STEP_Y)
 
     if map_screen is not None:
         content_height = content_bottom - body_top

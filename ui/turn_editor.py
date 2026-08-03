@@ -151,15 +151,18 @@ class TurnEditorScreen(GameState):
             self.elements.append(btn)
 
         names = self.tab["names"]
+        cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - self.ROW_HEIGHT + 2
+        self.scroll_content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         self._row_layout = list(self.layout_list_rows(
             len(names), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
-            cull_top=self.list_top - 1,
-            cull_bottom=self.list_top + self.list_view_h - self.ROW_HEIGHT + 2))
+            cull_top=cull_top, cull_bottom=cull_bottom))
 
         for i, y in self._row_layout:
             btype = names[i]
             field = TextField(p.right - self.PAD - 130, y, 100, 28, self.tab["values"][btype], numeric=True)
             field.turn_key = btype
+            field.is_scrollable = True
+            field.click_guard = self.scroll_click_guard
             self.elements.append(field)
 
         btn_y = p.bottom - 52
@@ -169,7 +172,7 @@ class TurnEditorScreen(GameState):
                                     "Reset to Defaults", self.reset_to_defaults))
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw(self, surface):
         if self.background:
@@ -190,25 +193,32 @@ class TurnEditorScreen(GameState):
         surface.blit(turns_hdr, turns_hdr.get_rect(midright=(p.right - self.PAD - 30, self.list_top - 12)))
 
         names = self.tab["names"]
-        for i, y in self._row_layout:
-            btype = names[i]
-            if i % 2 == 0:
-                pygame.draw.rect(surface, (44, 44, 56),
-                                 pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
-
-            label = font.render(btype, True, (225, 225, 225))
-            surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + self.ROW_HEIGHT // 2)))
-
-            default = self.tab["defaults"][btype]
-            hint = small.render(f"default: {default}", True, (150, 150, 165))
-            surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 145, y + self.ROW_HEIGHT // 2)))
-
         if not names:
             msg = font.render("Nothing to edit.", True, (200, 200, 200))
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
         for el in self.elements:
-            el.draw(surface)
+            if not getattr(el, "is_scrollable", False):
+                el.draw(surface)
+
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for i, y in self._row_layout:
+                btype = names[i]
+                if i % 2 == 0:
+                    pygame.draw.rect(surface, (44, 44, 56),
+                                     pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
+
+                label = font.render(btype, True, (225, 225, 225))
+                surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + self.ROW_HEIGHT // 2)))
+
+                default = self.tab["defaults"][btype]
+                hint = small.render(f"default: {default}", True, (150, 150, 165))
+                surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 145, y + self.ROW_HEIGHT // 2)))
+
+            for el in self.elements:
+                if getattr(el, "is_scrollable", False):
+                    el.draw(surface)
 
         self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)
 

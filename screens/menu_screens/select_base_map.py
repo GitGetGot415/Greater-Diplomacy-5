@@ -1,4 +1,5 @@
 import os
+import pygame
 from ui import confirm_dialog
 from gameState import FolderListState
 from ui_elements import Button
@@ -82,24 +83,27 @@ class Select_Base_Map(FolderListState):
             directory = c.BASE_MAPS_DIR
 
         names = self.list_folders(directory)
+        cull_bottom = c.SCREEN_HEIGHT - self.ROW_CULL_BOTTOM_MARGIN
+        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, cull_bottom - 100)
         rows = self.layout_list_rows(len(names), self.ROW_HEIGHT, self.ROW_TOP, pad=20,
-                                    cull_bottom=c.SCREEN_HEIGHT - self.ROW_CULL_BOTTOM_MARGIN)
+                                    cull_bottom=cull_bottom)
 
         for i, btn_y in rows:
             name = names[i]
 
             # Base maps are read-only: one centred button and nothing to manage
             if not is_custom:
-                self.elements.append(
-                    Button("centered", btn_y, "new_game", "blue", name,
-                           lambda n=name: self.start_editor_with_map(n, c.BASE_MAPS_DIR))
-                )
+                btn = Button("centered", btn_y, "new_game", "blue", name,
+                            lambda n=name: self.start_editor_with_map(n, c.BASE_MAPS_DIR))
+                btn.is_scrollable = True
+                btn.click_guard = self.scroll_click_guard
+                self.elements.append(btn)
                 continue
 
             if self.is_row_hidden(name):
                 continue
 
-            self.elements.extend([
+            row_buttons = [
                 Button(c.SCREEN_WIDTH // 2 - 250, btn_y, "new_game", "blue", name,
                        lambda n=name: self.start_editor_with_map(n, c.SCENARIOS_CUSTOM_DIR)),
                 Button(c.SCREEN_WIDTH // 2 + 70, btn_y + 5, "small", "grey", "Rename",
@@ -108,7 +112,11 @@ class Select_Base_Map(FolderListState):
                        lambda n=name: self.export_scenario_zip(n)),
                 Button(c.SCREEN_WIDTH // 2 + 310, btn_y + 5, "small_square", "red", "X",
                        lambda n=name: self.start_delete(n)),
-            ])
+            ]
+            for btn in row_buttons:
+                btn.is_scrollable = True
+                btn.click_guard = self.scroll_click_guard
+            self.elements.extend(row_buttons)
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""
@@ -151,7 +159,7 @@ class Select_Base_Map(FolderListState):
             if self.handle_name_prompt_event(event):
                 continue
 
-            self.handle_list_scroll(event)
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
             super().handle_events([event])
 
     def additional_draw(self, surface):

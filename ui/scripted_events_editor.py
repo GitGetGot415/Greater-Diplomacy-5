@@ -180,14 +180,15 @@ class _ModalScreen(GameState):
         """
         return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
                 "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}"}
+                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
 
     def rows_of(self, name, count, top, view_h, row_h=None):
         row_h = row_h or self.ROW_HEIGHT
         attrs = self.scroll_attrs(name)
         return self.layout_list_rows(count, row_h, top, view_h=view_h, cull_top=top - 1,
                                      cull_bottom=top + view_h - row_h + 2,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"])
+                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
+                                     guard_attr=f"_guard_{name}")
 
     def route_scroll(self, event, regions):
         """Wheel goes to whichever region the cursor is over; scrollbar presses and
@@ -223,8 +224,7 @@ class _ModalScreen(GameState):
         ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 12, "heading2")
 
         self.draw_body(surface)
-        for el in self.elements:
-            el.draw(surface)
+        self.draw_elements(surface)
 
 
 def _run(screen):
@@ -259,20 +259,21 @@ class _HelpScreen(_ModalScreen):
         self.max_scroll = min(0, self.view_h - len(self.lines) * self.LINE_H)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw_body(self, surface):
         p = self.panel_rect
         font = fonts.get("normal")
-        clip = surface.get_clip()
-        surface.set_clip(pygame.Rect(p.x + 4, self.body_top, p.width - 8, self.view_h))
-        y = self.body_top + self.scroll_y
-        for line in self.lines:
-            if self.body_top - self.LINE_H < y < self.body_top + self.view_h:
-                color = c.COLOR_GOLD_HIGHLIGHT if line.strip().startswith("===") else (220, 220, 220)
-                surface.blit(font.render(line, True, color), (p.x + self.PAD, y))
-            y += self.LINE_H
-        surface.set_clip(clip)
+        clip_rect = pygame.Rect(p.x + 4, self.body_top, p.width - 8, self.view_h)
+        self.scroll_content_rect = clip_rect
+        with ui_bars.clip_scroll_region(surface, clip_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            y = self.body_top + self.scroll_y
+            for line in self.lines:
+                if y + self.LINE_H > self.body_top and y < self.body_top + self.view_h:
+                    color = c.COLOR_GOLD_HIGHLIGHT if line.strip().startswith("===") else (220, 220, 220)
+                    surface.blit(font.render(line, True, color), (p.x + self.PAD, y))
+                y += self.LINE_H
         self.draw_list_scrollbar(surface, p.right - 26, self.body_top, self.view_h)
 
 
@@ -477,12 +478,16 @@ class _VariablesScreen(_ModalScreen):
         p = self.panel_rect
         self.elements = [Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen)]
 
+        self._content_vars = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
+        self.scroll_content_rect = self._content_vars
         for i, y in self.rows_of("vars", len(self.variables), self.list_top, self.list_view_h, row_h=30):
             v = self.variables[i]
             btn = self.button(self.list_x, y, self.LIST_W - 24, "blue",
                               truncate(f"{v['name']} ({v['type']}) = {v['value']}", 40),
                               lambda idx=i: self.select(idx))
             btn.is_selected = i == self.selected
+            btn.is_scrollable = True
+            btn.click_guard = self._guard_vars
             self.elements.append(btn)
 
         self.elements += [self.name_field, self.value_field]
@@ -868,11 +873,24 @@ class _EventEditScreen(_ModalScreen):
             self.button(p.right - self.PAD - 170, p.y + 56, 170, "blue", "Help / Info", self.show_help),
         ]
 
+        self._content_conds = pygame.Rect(self.list_x, self.cond_top, self.panel_rect.width - 40, self.LIST_VIEW_H)
+        self._content_acts = pygame.Rect(self.list_x, self.act_top, self.panel_rect.width - 40, self.LIST_VIEW_H)
+
         for i, y in self.rows_of("conds", len(self.conds), self.cond_top, self.LIST_VIEW_H):
-            self.elements += self._build_cond_row(self.conds[i], i, y)
+            row_els = self._build_cond_row(self.conds[i], i, y)
+            for el in row_els:
+                el.is_scrollable = True
+                el.pane = "conds"
+                el.click_guard = self._guard_conds
+            self.elements += row_els
 
         for i, y in self.rows_of("acts", len(self.acts), self.act_top, self.LIST_VIEW_H):
-            self.elements += self._build_act_row(self.acts[i], i, y)
+            row_els = self._build_act_row(self.acts[i], i, y)
+            for el in row_els:
+                el.is_scrollable = True
+                el.pane = "acts"
+                el.click_guard = self._guard_acts
+            self.elements += row_els
 
         btn_y = p.bottom - 62
         self.elements += [
@@ -887,10 +905,22 @@ class _EventEditScreen(_ModalScreen):
         self.refresh_ui()
 
     def additional_events(self, event):
-        self.route_scroll(event, {
-            "conds": pygame.Rect(self.list_x, self.cond_top, self.panel_rect.width - 40, self.LIST_VIEW_H),
-            "acts": pygame.Rect(self.list_x, self.act_top, self.panel_rect.width - 40, self.LIST_VIEW_H),
-        })
+        self.route_scroll(event, {"conds": self._content_conds, "acts": self._content_acts})
+
+    def draw_elements(self, surface):
+        """Conditionals and actions scroll independently -- see
+        View_Assets.draw_elements for the same pattern with three panes."""
+        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
+        for name, rect in (("conds", self._content_conds), ("acts", self._content_acts)):
+            scroll = getattr(self, f"_scroll_{name}", 0)
+            limit = getattr(self, f"_max_{name}", 0)
+            region_els = [el for el in self.elements if getattr(el, "pane", None) == name]
+            with ui_bars.clip_scroll_region(surface, rect, draw_top=scroll != 0, draw_bottom=scroll > limit):
+                for el in region_els:
+                    el.draw(surface)
+
+        for el in fixed:
+            el.draw(surface)
 
     def draw_body(self, surface):
         p = self.panel_rect
@@ -902,13 +932,19 @@ class _EventEditScreen(_ModalScreen):
                              pygame.Rect(p.x + 8, band_top - 4, p.width - 16, self.LIST_VIEW_H + 8))
 
         small = fonts.get("small")
-        for hint, x, y in self._hints:
-            if hint:
-                surface.blit(small.render(hint, True, (150, 150, 165)),
-                             (x, y + self.ROW_HEIGHT // 2 - 8))
+        scroll_conds, max_conds = getattr(self, "_scroll_conds", 0), getattr(self, "_max_conds", 0)
+        with ui_bars.clip_scroll_region(surface, self._content_conds,
+                                        draw_top=scroll_conds != 0, draw_bottom=scroll_conds > max_conds):
+            for hint, x, y in self._hints:
+                if hint:
+                    surface.blit(small.render(hint, True, (150, 150, 165)),
+                                 (x, y + self.ROW_HEIGHT // 2 - 8))
 
-        for kind, payload, rect in self._previews:
-            self._draw_preview(surface, kind, payload, rect)
+        scroll_acts, max_acts = getattr(self, "_scroll_acts", 0), getattr(self, "_max_acts", 0)
+        with ui_bars.clip_scroll_region(surface, self._content_acts,
+                                        draw_top=scroll_acts != 0, draw_bottom=scroll_acts > max_acts):
+            for kind, payload, rect in self._previews:
+                self._draw_preview(surface, kind, payload, rect)
 
         if not self.acts:
             self.label(surface, "No actions yet -- add one below.",
@@ -1096,12 +1132,19 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         p = self.panel_rect
         self.elements = [Button(self.nat_x, p.y + 46, "small", "red", "Back", self.exit_screen)]
 
+        self._content_nations = pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h)
+        self._content_events = pygame.Rect(self.events_x, self.events_top,
+                                           self.panel_rect.right - self.events_x, self.events_view_h)
+
         for i, y in self.rows_of("nations", len(self.countries), self.nations_top,
                                  self.nations_view_h, row_h=30):
             cid = self.countries[i]
             btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
                               lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
+            btn.is_scrollable = True
+            btn.pane = "nations"
+            btn.click_guard = self._guard_nations
             self.elements.append(btn)
 
         self.elements.append(self.button(self.nat_x, self.nations_top + self.nations_view_h + 12,
@@ -1114,6 +1157,9 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
                               truncate(self._event_summary(events[i], i), row_w // 9),
                               lambda idx=i: self.select_event(idx))
             btn.is_selected = i == self.selected_event
+            btn.is_scrollable = True
+            btn.pane = "events"
+            btn.click_guard = self._guard_events
             self.elements.append(btn)
 
         btn_y = p.bottom - 62
@@ -1135,11 +1181,22 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         self.elements.append(remove_btn)
 
     def additional_events(self, event):
-        self.route_scroll(event, {
-            "nations": pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h),
-            "events": pygame.Rect(self.events_x, self.events_top,
-                                  self.panel_rect.right - self.events_x, self.events_view_h),
-        })
+        self.route_scroll(event, {"nations": self._content_nations, "events": self._content_events})
+
+    def draw_elements(self, surface):
+        """Nations and events scroll independently -- see
+        View_Assets.draw_elements for the same pattern with three panes."""
+        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
+        for name, rect in (("nations", self._content_nations), ("events", self._content_events)):
+            scroll = getattr(self, f"_scroll_{name}", 0)
+            limit = getattr(self, f"_max_{name}", 0)
+            region_els = [el for el in self.elements if getattr(el, "pane", None) == name]
+            with ui_bars.clip_scroll_region(surface, rect, draw_top=scroll != 0, draw_bottom=scroll > limit):
+                for el in region_els:
+                    el.draw(surface)
+
+        for el in fixed:
+            el.draw(surface)
 
     def draw_body(self, surface):
         p = self.panel_rect

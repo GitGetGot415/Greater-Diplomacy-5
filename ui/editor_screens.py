@@ -155,12 +155,17 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
         row_top = p.y + 90
         view_h = p.height - 110
         row_x = p.centerx - (c.SIZES["list_row"][0] // 2)
+        cull_top, cull_bottom = p.y + 80, p.bottom - 20
+        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=p.y + 80, cull_bottom=p.bottom - 20):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             cid = self.active_countries[i]
             is_modified = any(self.map_screen.nation_data.get(cid, {}).get(res, 0) != 0 for res in c.ECON_RESOURCE_KEYS)
             label = f"[MODIFIED] {cid}" if is_modified else cid
-            self.elements.append(Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit(cc)))
+            btn = Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit(cc))
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
+            self.elements.append(btn)
 
         self.list_view_h = view_h
 
@@ -237,19 +242,25 @@ class Research_Edit_Screen(MapOverlayScreen):
 
         row_top = p.y + 70
         view_h = p.height - 140
+        cull_top, cull_bottom = p.y + 60, p.bottom - 70
+        self.scroll_content_rect = pygame.Rect(p.x + 5, cull_top, p.width - 10, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
-                                          cull_top=p.y + 60, cull_bottom=p.bottom - 70):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             tech = self.techs[i]
             kind = self.tech_state[tech]
             if kind[0] == "checkbox":
                 checked = kind[1]
                 btn = Button(p.right - 100, y, "tiny_square", "green" if checked else "grey",
                             "ON" if checked else "OFF", lambda t=tech: self.toggle_checkbox(t), font_preset="tiny")
+                btn.is_scrollable = True
+                btn.click_guard = self.scroll_click_guard
                 self.elements.append(btn)
             else:
                 _, text, _max_lvl = kind
                 field = TextField(p.right - 160, y, 100, 30, text, numeric=True)
                 field.tech_key = tech
+                field.is_scrollable = True
+                field.click_guard = self.scroll_click_guard
                 self.elements.append(field)
 
         self.list_view_h = view_h
@@ -277,22 +288,22 @@ class Research_Edit_Screen(MapOverlayScreen):
 
         font = fonts.get("normal")
         small_font = fonts.get("small")
-        clip_rect = pygame.Rect(p.x + 5, p.y + 60, p.width - 10, p.height - 140)
-        old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
-
         row_top = p.y + 70
         view_h = p.height - 140
-        for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
-                                          cull_top=p.y + 60, cull_bottom=p.bottom - 70):
-            tech = self.techs[i]
-            label = font.render(tech.replace("_", " ").title(), True, (220, 220, 220))
-            surface.blit(label, (p.x + 20, y + 4))
+        clip_rect = self.scroll_content_rect or pygame.Rect(p.x + 5, p.y + 60, p.width - 10, p.height - 140)
 
-            kind = self.tech_state[tech]
-            if kind[0] == "entry":
-                hint = small_font.render(f"(0-{kind[2]})", True, (150, 150, 150))
-                surface.blit(hint, (p.right - 250, y + 8))
+        with ui_bars.clip_scroll_region(surface, clip_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
+                                              cull_top=p.y + 60, cull_bottom=p.bottom - 70):
+                tech = self.techs[i]
+                label = font.render(tech.replace("_", " ").title(), True, (220, 220, 220))
+                surface.blit(label, (p.x + 20, y + 4))
+
+                kind = self.tech_state[tech]
+                if kind[0] == "entry":
+                    hint = small_font.render(f"(0-{kind[2]})", True, (150, 150, 150))
+                    surface.blit(hint, (p.right - 250, y + 8))
 
         surface.set_clip(old_clip)
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
@@ -341,14 +352,18 @@ class Research_List_Screen(MapOverlayScreen):
         view_h = p.height - 190
         row_x = p.x + 20
         row_w = p.width - 40
+        cull_top, cull_bottom = p.y + 160, p.bottom - 20
+        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=p.y + 160, cull_bottom=p.bottom - 20):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             cid = self.active_countries[i]
             c_res = self.map_screen.nation_data.get(cid, {}).get("research", {})
             is_diff = any(c_res.get(k, v) != v for k, v in self.default_research.items())
             label = f"[MODIFIED] {cid}" if is_diff else cid
             btn = Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit_country(cc))
             btn.rect.width = row_w
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
 
         self.list_view_h = view_h
@@ -455,8 +470,10 @@ class Convoy_Converter_Screen(MapOverlayScreen):
         view_h = p.height - 140
         row_x = p.x + 20
         row_w = p.width - 40
+        cull_top, cull_bottom = p.y + 60, p.bottom - 70
+        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
-                                          cull_top=p.y + 60, cull_bottom=p.bottom - 70):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             unit = units[i]
             name = unit.get("original_type", unit.get("type", "Unknown"))
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
@@ -465,6 +482,8 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             label = f"{'[X]' if checked else '[ ]'} {name} {suffix}"
             btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
             btn.rect.width = row_w
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
 
         self.list_view_h = view_h
@@ -812,6 +831,11 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         for i, name in enumerate(("wars", "members", "master")):
             self.regions[name] = pygame.Rect(self._col_x(i), self.lists_top, self.COL_W, self.LIST_VIEW_H)
 
+        # Published per-region so _scroll_attrs's content_rect_attr can point
+        # handle_content_drag/draw_elements at each region's own rect by name.
+        for name, rect in self.regions.items():
+            setattr(self, f"_content_{name}", rect)
+
     def _col_x(self, index):
         return self.cols_x + index * (self.COL_W + self.COL_GAP)
 
@@ -824,7 +848,7 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         """
         return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
                 "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}"}
+                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
 
     @property
     def listening_for(self):
@@ -938,7 +962,8 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         return self.layout_list_rows(count, self.ROW_HEIGHT, top, view_h=view_h,
                                      cull_top=top - 1,
                                      cull_bottom=top + view_h - self.ROW_HEIGHT + 2,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"])
+                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
+                                     guard_attr=f"_guard_{name}")
 
     def _columns(self):
         """(region, header, rows, is_checked, on_click) for the three right-hand lists."""
@@ -960,6 +985,8 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
             btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
                             lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
+            btn.pane = "nations"
+            btn.click_guard = self._guard_nations
             self.elements.append(btn)
 
         if not self.target:
@@ -975,6 +1002,8 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
                 btn = self._row(col_x, y, self.COL_W - 24, "green" if checked else "blue", label,
                                 lambda n=name, cb=on_click: cb(n))
                 btn.is_selected = checked
+                btn.pane = region
+                btn.click_guard = getattr(self, f"_guard_{region}")
                 self.elements.append(btn)
 
         self.faction_field.rect.topleft = (self.cols_x + 130, self.row_a_y)
@@ -1007,6 +1036,22 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         for name in self.REGIONS:
             if self.handle_list_scroll(event, **self._scroll_attrs(name)):
                 return
+
+    def draw_elements(self, surface):
+        """Four independent scrolling regions (nations + the three columns),
+        each cropped to its own rect -- see View_Assets.draw_elements for the
+        same pattern with three panes."""
+        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
+        for name, rect in self.regions.items():
+            scroll = getattr(self, f"_scroll_{name}", 0)
+            limit = getattr(self, f"_max_{name}", 0)
+            region_els = [el for el in self.elements if getattr(el, "pane", None) == name]
+            with ui_bars.clip_scroll_region(surface, rect, draw_top=scroll != 0, draw_bottom=scroll > limit):
+                for el in region_els:
+                    el.draw(surface)
+
+        for el in fixed:
+            el.draw(surface)
 
     def draw_content(self, surface):
         p = self.panel_rect

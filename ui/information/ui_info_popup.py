@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from ui.bars import ui_bars
 
 # ==========================================
 # CONTENT LIMITS
@@ -45,50 +46,48 @@ def draw_unit_info(self, surface):
         body_top = body_rect.y
         y_offset = body_top - scroll_offset
 
-        surface.set_clip(body_rect)
+        with ui_bars.clip_scroll_region(surface, body_rect,
+                                        draw_top=scroll_offset != 0, draw_bottom=scroll_offset < scroll_max):
+            faction_name = self.nation_data.get(owner, {}).get("faction", "")
 
-        faction_name = self.nation_data.get(owner, {}).get("faction", "")
-
-        if not faction_name:
-            surface.blit(self.small_font.render("No Faction", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
-            y_offset += 30
-        else:
-            surface.blit(self.small_font.render(faction_name, True, c.COLOR_SUCCESS_GREEN), (dip_rect.x + 10, y_offset))
-            y_offset += 20
-
-            members = queries.get_faction_members(faction_name, self.nation_data)
-            for m in members:
-                m_display = self.nation_data.get(m, {}).get("name", m)
-                surface.blit(self.small_font.render(f" - {m_display}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+            if not faction_name:
+                surface.blit(self.small_font.render("No Faction", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
+                y_offset += 30
+            else:
+                surface.blit(self.small_font.render(faction_name, True, c.COLOR_SUCCESS_GREEN), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
-        # --- MAP PUPPET HIERARCHY ---
-        master = self.nation_data.get(owner, {}).get("master", "")
-        if master:
-            m_disp = self.nation_data.get(master, {}).get("name", master)
-            surface.blit(self.small_font.render(f"Master: {m_disp}", True, (255, 150, 150)), (dip_rect.x + 10, y_offset))
-            y_offset += 20
+                members = queries.get_faction_members(faction_name, self.nation_data)
+                for m in members:
+                    m_display = self.nation_data.get(m, {}).get("name", m)
+                    surface.blit(self.small_font.render(f" - {m_display}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    y_offset += 20
 
-        puppets = self.nation_data.get(owner, {}).get("puppets", [])
-        if puppets:
-            surface.blit(self.small_font.render("Puppets:", True, c.COLOR_GOLD_HIGHLIGHT), (dip_rect.x + 10, y_offset))
-            y_offset += 20
-            for p in puppets:
-                p_disp = self.nation_data.get(p, {}).get("name", p)
-                surface.blit(self.small_font.render(f" - {p_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+            # --- MAP PUPPET HIERARCHY ---
+            master = self.nation_data.get(owner, {}).get("master", "")
+            if master:
+                m_disp = self.nation_data.get(master, {}).get("name", master)
+                surface.blit(self.small_font.render(f"Master: {m_disp}", True, (255, 150, 150)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
-        # Keep war info so players know who this nation is fighting
-        wars = queries.get_enemies(owner, self.nation_data)
-        if wars:
-            surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (dip_rect.x + 10, y_offset))
-            y_offset += 20
-            for w in wars:
-                w_disp = self.nation_data.get(w, {}).get("name", w)
-                surface.blit(self.small_font.render(f" - {w_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+            puppets = self.nation_data.get(owner, {}).get("puppets", [])
+            if puppets:
+                surface.blit(self.small_font.render("Puppets:", True, c.COLOR_GOLD_HIGHLIGHT), (dip_rect.x + 10, y_offset))
                 y_offset += 20
+                for p in puppets:
+                    p_disp = self.nation_data.get(p, {}).get("name", p)
+                    surface.blit(self.small_font.render(f" - {p_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    y_offset += 20
 
-        surface.set_clip(None)
+            # Keep war info so players know who this nation is fighting
+            wars = queries.get_enemies(owner, self.nation_data)
+            if wars:
+                surface.blit(self.small_font.render("At War With:", True, (255, 100, 100)), (dip_rect.x + 10, y_offset))
+                y_offset += 20
+                for w in wars:
+                    w_disp = self.nation_data.get(w, {}).get("name", w)
+                    surface.blit(self.small_font.render(f" - {w_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    y_offset += 20
 
         # Re-derive the scroll limit from what was actually drawn this frame.
         content_height = (y_offset + scroll_offset) - body_top

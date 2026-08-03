@@ -3,6 +3,7 @@ import os
 import shutil
 from pathlib import Path
 from gameState import GameState
+from ui.bars import ui_bars
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file
@@ -304,6 +305,10 @@ class View_Assets(GameState):
     def refresh_ui(self):
         self.elements = []
 
+        self.folder_content_rect = pygame.Rect(0, HEADER_H, FOLDER_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self.file_content_rect = pygame.Rect(FOLDER_PANE_W, HEADER_H, FILE_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self.preview_content_rect = pygame.Rect(PREVIEW_X, HEADER_H, PREVIEW_W, c.SCREEN_HEIGHT - HEADER_H)
+
         # --- Left: Folders (Scrolling) ---
         y = HEADER_H + self.folder_scroll_y
         folder_content_h = 0
@@ -314,6 +319,7 @@ class View_Assets(GameState):
 
             btn = Button(20, y, "asset_folder", color, folder, cb)
             btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= HEADER_H
+            btn.pane = "folder"
             self.elements.append(btn)
             y += FOLDER_ROW_H
             folder_content_h += FOLDER_ROW_H
@@ -334,6 +340,7 @@ class View_Assets(GameState):
 
             btn = Button(FOLDER_PANE_W + 15, y, "asset_file", color, label, cb, font_preset=FILE_FONT_PRESET)
             btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= HEADER_H
+            btn.pane = "file"
             self.elements.append(btn)
             y += FILE_ROW_H
             file_content_h += FILE_ROW_H
@@ -355,13 +362,13 @@ class View_Assets(GameState):
     PANES = {
         "folder": dict(attr="folder_scroll_y", limit_attr="max_folder_scroll",
                         track_attr="folder_track_rect", handle_attr="folder_handle_rect",
-                        drag_attr="folder_dragging"),
+                        drag_attr="folder_dragging", content_rect_attr="folder_content_rect"),
         "file": dict(attr="file_scroll_y", limit_attr="max_file_scroll",
                      track_attr="file_track_rect", handle_attr="file_handle_rect",
-                     drag_attr="file_dragging"),
+                     drag_attr="file_dragging", content_rect_attr="file_content_rect"),
         "preview": dict(attr="preview_scroll_y", limit_attr="max_preview_scroll",
                         track_attr="preview_track_rect", handle_attr="preview_handle_rect",
-                        drag_attr="preview_dragging"),
+                        drag_attr="preview_dragging", content_rect_attr="preview_content_rect"),
     }
 
     def additional_events(self, event):
@@ -378,6 +385,29 @@ class View_Assets(GameState):
         for pane in self.PANES.values():
             if self.handle_list_scroll(event, **pane):
                 return
+
+    def draw_elements(self, surface):
+        """Overrides the base single-region clip: folder and file rows each
+        crop to their own pane, since this screen has two lists on screen
+        at once instead of the usual one."""
+        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
+        folder_btns = [el for el in self.elements if getattr(el, "pane", None) == "folder"]
+        file_btns = [el for el in self.elements if getattr(el, "pane", None) == "file"]
+
+        with ui_bars.clip_scroll_region(surface, self.folder_content_rect,
+                                        draw_top=self.folder_scroll_y != 0,
+                                        draw_bottom=self.folder_scroll_y > self.max_folder_scroll):
+            for el in folder_btns:
+                el.draw(surface)
+
+        with ui_bars.clip_scroll_region(surface, self.file_content_rect,
+                                        draw_top=self.file_scroll_y != 0,
+                                        draw_bottom=self.file_scroll_y > self.max_file_scroll):
+            for el in file_btns:
+                el.draw(surface)
+
+        for el in fixed:
+            el.draw(surface)
 
     def additional_draw(self, surface):
         # Pane backgrounds
@@ -408,12 +438,14 @@ class View_Assets(GameState):
     def _draw_text_preview(self, surface):
         font = fonts.get(PREVIEW_TEXT_FONT)
         line_h = self.preview_line_h
-        cull_bottom = c.SCREEN_HEIGHT + line_h
 
-        y = HEADER_H + PREVIEW_MARGIN + self.preview_scroll_y
-        for line in self.preview_lines:
-            if HEADER_H - line_h < y < cull_bottom:
-                if line:
-                    text_surf = font.render(line, True, (220, 220, 220))
-                    surface.blit(text_surf, (PREVIEW_X + PREVIEW_MARGIN, y))
-            y += line_h
+        with ui_bars.clip_scroll_region(surface, self.preview_content_rect,
+                                        draw_top=self.preview_scroll_y != 0,
+                                        draw_bottom=self.preview_scroll_y > self.max_preview_scroll):
+            y = HEADER_H + PREVIEW_MARGIN + self.preview_scroll_y
+            for line in self.preview_lines:
+                if y + line_h > HEADER_H and y < c.SCREEN_HEIGHT:
+                    if line:
+                        text_surf = font.render(line, True, (220, 220, 220))
+                        surface.blit(text_surf, (PREVIEW_X + PREVIEW_MARGIN, y))
+                y += line_h

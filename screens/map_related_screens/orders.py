@@ -160,6 +160,9 @@ class Orders_Screen(GameState):
         total_content_h = len(player_units) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
 
+        self.scroll_content_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
+        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+
         # --- Select All & Clear Orders Buttons ---
         if player_units:
             if len(player_units) > 1:
@@ -317,7 +320,11 @@ class Orders_Screen(GameState):
                 if is_tactical_other:
                     for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard]:
                         b.apply_state(enabled=False)
-            
+
+                for b in (btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard):
+                    b.is_scrollable = True
+                    b.click_guard = row_guard
+
             display_index += 1
 
     def start_renaming(self, index):
@@ -539,14 +546,20 @@ class Orders_Screen(GameState):
                 return
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for rect, idx in self.cancel_rects:
-                    if rect.collidepoint(event.pos):
-                        self.cancel_unit_order(idx)
-                        return
+                # Guarded to the visible panel so a cancel box scrolled behind
+                # the panel's edge (clipped, no longer drawn) can't fire.
+                panel_rect = getattr(self, 'scroll_content_rect', None)
+                if panel_rect is None or panel_rect.collidepoint(event.pos):
+                    for rect, idx in self.cancel_rects:
+                        if rect.collidepoint(event.pos):
+                            self.cancel_unit_order(idx)
+                            return
 
-            # --- Scrollbar click/drag (grab the handle or jump via the track) ---
+            # --- Scrollbar click/drag (grab the handle or jump via the track),
+            # or grab the panel's own content and drag it directly ---
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
-                if self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y"):
+                if self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
+                                           content_rect_attr="scroll_content_rect"):
                     return
 
             # --- Handle Mousewheel Scrolling ---
@@ -554,27 +567,28 @@ class Orders_Screen(GameState):
                 # Only scroll if mouse is over the orders panel
                 mx, my = pygame.mouse.get_pos()
                 units = self.target_province.get("units", [])
-                
+
                 if self.map_screen.tactical_mode:
                     player_units = [u for u in units if u is self.map_screen.player_unit]
                 else:
                     player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-                
+
                 # Check for collision if units exist
                 if player_units:
                     bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
                     if bg_rect.collidepoint(mx, my):
-                        self.scroll_y += event.y * WHEEL_SCROLL_STEP
-                        self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
-                        self.refresh_ui()
+                        self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y", speed=WHEEL_SCROLL_STEP)
 
             super().handle_events([event])
             self.additional_events(event)
 
     def additional_events(self, event):
-        # Dragging the scrollbar handle takes priority over camera panning/hover.
-        if event.type == pygame.MOUSEMOTION and getattr(self, "is_dragging_scrollbar", False):
-            self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y")
+        # Dragging the scrollbar handle (or the panel's own content) takes
+        # priority over camera panning/hover.
+        if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)
+                                                  or getattr(self, "content_drag_state", None) is not None):
+            self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
+                                    content_rect_attr="scroll_content_rect")
             return
 
         mx, my = pygame.mouse.get_pos()
@@ -840,54 +854,58 @@ class Orders_Screen(GameState):
             )
 
         display_index = 0
-        for i, unit in enumerate(units):
-            if unit.get("owner") != self.map_screen.player_country:
-                continue
+        content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
+            self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
+        with ui_bars.clip_scroll_region(surface, content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
+            for i, unit in enumerate(units):
+                if unit.get("owner") != self.map_screen.player_country:
+                    continue
 
-            y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
-            
-            # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
-            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
-                hp = int(unit.get("health", 0))
-                m_hp = int(unit.get("max_health", 0))
-                
-                name_txt = unit.get("custom_name", unit.get("type", "Unit"))
-                name_surf = small_font.render(name_txt, True, (255, 255, 255))
-                surface.blit(name_surf, (UNIT_NAME_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
+                y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
 
-                stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
-                txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
-                
-                surface.blit(txt_surf, (UNIT_STATS_X, y_pos + UNIT_STATS_OFFSET_Y))
+                # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
+                if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
+                    hp = int(unit.get("health", 0))
+                    m_hp = int(unit.get("max_health", 0))
 
-                if self.renaming_unit_index == i:
-                    box_rect = pygame.Rect(ACTION_START_X + RENAME_BOX_OFFSET_X, y_pos, *RENAME_BOX_SIZE)
-                    pygame.draw.rect(surface, (60, 60, 80), box_rect)
-                    pygame.draw.rect(surface, (150, 150, 150), box_rect, 1)
-                    txt = small_font.render(self.rename_text + "|", True, (255, 255, 255))
-                    surface.blit(txt, (box_rect.x + 5, box_rect.y + 4))
+                    name_txt = unit.get("custom_name", unit.get("type", "Unit"))
+                    name_surf = small_font.render(name_txt, True, (255, 255, 255))
+                    surface.blit(name_surf, (UNIT_NAME_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
 
-                order = unit.get("order", {})
-                path = order.get("path", [])
+                    stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
+                    txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
 
-                # An active path and an active barrage show the same footer
-                # line plus a cancel box, so they share one draw call.
-                if path:
-                    self.draw_order_footer(surface, small_font, i, y_pos,
-                                           f"PATH: {' -> '.join(map(str, path))}", (255, 255, 0))
+                    surface.blit(txt_surf, (UNIT_STATS_X, y_pos + UNIT_STATS_OFFSET_Y))
 
-                    # Split draw using the helper function
-                    overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
+                    if self.renaming_unit_index == i:
+                        box_rect = pygame.Rect(ACTION_START_X + RENAME_BOX_OFFSET_X, y_pos, *RENAME_BOX_SIZE)
+                        pygame.draw.rect(surface, (60, 60, 80), box_rect)
+                        pygame.draw.rect(surface, (150, 150, 150), box_rect, 1)
+                        txt = small_font.render(self.rename_text + "|", True, (255, 255, 255))
+                        surface.blit(txt, (box_rect.x + 5, box_rect.y + 4))
 
-                elif order.get("type") == "BOMBARD":
-                    target_id = order.get("target_id")
-                    self.draw_order_footer(surface, small_font, i, y_pos,
-                                           f"BOMBARDING: {target_id}", BOMBARD_TARGET_COLOR)
+                    order = unit.get("order", {})
+                    path = order.get("path", [])
 
-                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                    overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
+                    # An active path and an active barrage show the same footer
+                    # line plus a cancel box, so they share one draw call.
+                    if path:
+                        self.draw_order_footer(surface, small_font, i, y_pos,
+                                               f"PATH: {' -> '.join(map(str, path))}", (255, 255, 0))
 
-            display_index += 1
+                        # Split draw using the helper function
+                        overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
+
+                    elif order.get("type") == "BOMBARD":
+                        target_id = order.get("target_id")
+                        self.draw_order_footer(surface, small_font, i, y_pos,
+                                               f"BOMBARDING: {target_id}", BOMBARD_TARGET_COLOR)
+
+                        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                        overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
+
+                display_index += 1
 
         # --- Bombardment Targeting Preview ---
         if self.bombarding_unit_index is not None and self.bombarding_unit_index < len(units):

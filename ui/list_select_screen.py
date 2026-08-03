@@ -49,17 +49,22 @@ class ListSelectScreen(GameState):
         view_h = self.panel_rect.height - self.ROW_TOP - 30
         row_x = self.panel_rect.centerx - (c.SIZES["list_row"][0] // 2)
 
+        cull_top, cull_bottom = self.panel_rect.y + 60, self.panel_rect.bottom - 20
+        self.scroll_content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width, cull_bottom - cull_top)
+
         for i, y in self.layout_list_rows(len(self.items), self.ROW_HEIGHT, row_top, view_h=view_h,
-                                          cull_top=self.panel_rect.y + 60, cull_bottom=self.panel_rect.bottom - 20):
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
             item = self.items[i]
             label = item if len(item) <= self.ROW_LABEL_MAX_CHARS else item[:self.ROW_LABEL_MAX_CHARS - 3] + "..."
             btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
             if item == self.SEPARATOR:
                 btn.apply_state(enabled=False)
+            btn.is_scrollable = True
+            btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw(self, surface):
         if self.background:
@@ -74,7 +79,14 @@ class ListSelectScreen(GameState):
         surface.blit(prompt_surf, prompt_surf.get_rect(center=(self.panel_rect.centerx, self.panel_rect.y + 75)))
 
         for el in self.elements:
-            el.draw(surface)
+            if not getattr(el, "is_scrollable", False):
+                el.draw(surface)
+
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for el in self.elements:
+                if getattr(el, "is_scrollable", False):
+                    el.draw(surface)
 
         self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.ROW_TOP,
                                  self.panel_rect.height - self.ROW_TOP - 30)

@@ -247,7 +247,8 @@ class Slider:
         self.callback = callback
         self.dragging = False
         self.visible = True
-        
+        self.click_guard = None
+
         # --- COMBINED TRACKERS ---
         self.last_display_string = self.get_display_string()
         self.last_sound_tick = 0
@@ -287,9 +288,11 @@ class Slider:
         if not self.visible: return 
         
         if event.type == pygame.MOUSEBUTTONDOWN and self.handle_rect.collidepoint(event.pos):
+            if self.click_guard is not None and not self.click_guard():
+                return
             self.dragging = True
-            self.last_display_string = self.get_display_string() 
-            
+            self.last_display_string = self.get_display_string()
+
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False
             
@@ -336,6 +339,7 @@ class TextField:
         self.label = label
         self.active = False
         self.visible = True
+        self.click_guard = None
 
     def _valid_char(self, ch):
         if self.numeric:
@@ -353,7 +357,10 @@ class TextField:
             return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.active = self.rect.collidepoint(event.pos)
+            if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
+                self.active = True
+            else:
+                self.active = False
             return
 
         if not self.active or event.type != pygame.KEYDOWN:
