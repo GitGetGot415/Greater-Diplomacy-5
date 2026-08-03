@@ -70,6 +70,7 @@ class Settings(GameState):
 
         self.ai_threads = self.controller.ai_threads
         self.show_fps = self.controller.show_fps
+        self.checkerboard_water = self.controller.checkerboard_water
 
         for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
             setattr(self, key, getattr(self.controller, key))
@@ -103,6 +104,13 @@ class Settings(GameState):
     def toggle_fps(self):
         self.show_fps = not self.show_fps
         self.controller.show_fps = self.show_fps
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
+    def toggle_checkerboard_water(self):
+        self.checkerboard_water = not self.checkerboard_water
+        self.controller.checkerboard_water = self.checkerboard_water
+        c.CHECKERBOARD_WATER = self.checkerboard_water
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 

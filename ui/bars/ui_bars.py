@@ -6,6 +6,10 @@ import data.constants as c
 # Cache the images using a tuple (filename, scale, directory) as the key
 _ui_images_cache = {}
 
+# Recolored checkerboard tiles, cached by target bg_color so each screen only
+# pays the generation cost once
+_checkerboard_cache = {}
+
 # ==========================================
 # UNIFIED UI HELPERS
 # ==========================================
@@ -115,6 +119,60 @@ def get_ui_image(filename, scale=1.0, directory=c.ASSETS_DIR):
             _ui_images_cache[cache_key] = fallback
             
     return _ui_images_cache[cache_key]
+
+def get_checkerboard_tile(base_color):
+    """Builds (and caches) a checkerboard tile tinted to base_color.
+
+    The on-disk template (CHECKERBOARD_TEMPLATE_FILE) is plain red -- it's
+    only sampled to learn the brightness ratio between its two squares and
+    its seam line versus its base square. Those ratios are then applied to
+    base_color via uniform per-channel scaling, which changes value without
+    touching hue, so every screen gets a checkerboard in its own bg_color
+    rather than the template's literal red.
+
+    base_color is quantized before use so callers with a continuously
+    changing color (the Map screen's zoom-driven ocean tint) can't grow the
+    cache without bound -- a couple of shades of visual precision buys an
+    always-small cache.
+    """
+    quantized = tuple(min(255, max(0, round(ch / 4) * 4)) for ch in base_color)
+    cache_key = quantized
+    if cache_key in _checkerboard_cache:
+        return _checkerboard_cache[cache_key]
+    base_color = quantized
+
+    template = get_ui_image(c.CHECKERBOARD_TEMPLATE_FILE, directory=c.BACKGROUNDS_DIR)
+    square = template.get_width() // 2
+
+    color_a = template.get_at((square // 2, square // 2))[:3]
+    color_b = template.get_at((square + square // 2, square // 2))[:3]
+    seam = template.get_at((square, square // 2))[:3]
+
+    def brightness(color):
+        return sum(color) / 3.0
+
+    base_brightness = brightness(color_a) or 1.0
+    ratio_b = brightness(color_b) / base_brightness
+    ratio_seam = brightness(seam) / base_brightness
+
+    def scale(color, ratio):
+        return tuple(min(255, max(0, int(ch * ratio))) for ch in color)
+
+    shade_a = tuple(base_color)
+    shade_b = scale(base_color, ratio_b)
+    shade_seam = scale(base_color, ratio_seam)
+
+    tile_size = square * 2
+    tile = pygame.Surface((tile_size, tile_size))
+    for row in range(2):
+        for col in range(2):
+            color = shade_a if (row + col) % 2 == 0 else shade_b
+            tile.fill(color, (col * square, row * square, square, square))
+    pygame.draw.line(tile, shade_seam, (0, square), (tile_size, square))
+    pygame.draw.line(tile, shade_seam, (square, 0), (square, tile_size))
+
+    _checkerboard_cache[cache_key] = tile
+    return tile
 
 def draw_textured_rect(surface, rect, image, mode="tile"):
     """Fills the target rect with an image by either tiling or stretching it."""

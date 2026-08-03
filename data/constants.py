@@ -104,6 +104,12 @@ CREDITS_DATA = [
 
 SHOW_FPS = False
 
+# Whether the Map screen's ocean uses the scrolling checkerboard pattern
+# (see GameState.draw_checkerboard_background) instead of a flat fill. Off by
+# default since it can visually read as unusual water for players who don't
+# expect it.
+CHECKERBOARD_WATER = False
+
 GAME_VERSION = "v21"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
@@ -878,8 +884,14 @@ DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
 PROVINCE_BG_FILE = "Province.png"
 SETTINGS_BG_FILE = "Settings.png"
 MENU_BG_FILE = "Menu.png"
-MENU_CHECKERBOARD_FILE = "Menu_Checkerboard.png"
-MENU_CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
+
+# Scrolling checkerboard drawn behind any screen that has no bg_image_path
+# (see GameState.draw_checkerboard_background). The on-disk file is a plain
+# red template -- it exists only to define the light/dark contrast ratio
+# between squares; at runtime it's recolored to match each screen's own
+# bg_color instead of being drawn red.
+CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
+CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
 
 FLAG_SIZE = (60, 40)
 PORTRAIT_SIZE = (60, 60)

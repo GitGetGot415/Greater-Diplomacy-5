@@ -324,15 +324,35 @@ class GameState:
 
     def draw_background(self, surface):
         """Fills the screen behind everything else. Override for a custom look
-        (e.g. Menu's scrolling checkerboard) instead of duplicating draw()."""
+        instead of duplicating draw()."""
         if self.bg_image_path:
             bg_img = ui_bars.get_ui_image(self.bg_image_path, directory=c.BACKGROUNDS_DIR)
             if bg_img.get_size() != surface.get_size():
                 bg_img = pygame.transform.scale(bg_img, surface.get_size())
             surface.blit(bg_img, (0, 0))
         else:
-            # Pull from constants instead of hardcoding
-            surface.fill(getattr(self, 'bg_color', c.DEFAULT_BG_COLOR))
+            # Screens with no dedicated bg_image_path get an endlessly
+            # scrolling checkerboard tinted to their own bg_color instead of
+            # a flat fill -- see ui_bars.get_checkerboard_tile.
+            self.draw_checkerboard_background(surface, getattr(self, 'bg_color', c.DEFAULT_BG_COLOR))
+
+    def draw_checkerboard_background(self, surface, base_color):
+        # Draw the tile in a grid slightly larger than the screen, offset by a
+        # time-based amount that grows down and to the right. Since the tile
+        # is seamless, wrapping the offset back to 0 every tile-length makes
+        # the motion loop forever with no seam.
+        tile = ui_bars.get_checkerboard_tile(base_color)
+        tile_w, tile_h = tile.get_size()
+
+        elapsed = pygame.time.get_ticks() / 1000.0
+        offset_x = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % tile_w)
+        offset_y = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % tile_h)
+
+        start_x = -offset_x - tile_w
+        start_y = -offset_y - tile_h
+        for y in range(start_y, surface.get_height() + tile_h, tile_h):
+            for x in range(start_x, surface.get_width() + tile_w, tile_w):
+                surface.blit(tile, (x, y))
 
     def draw(self, surface):
         # 1. Fill background or draw background image

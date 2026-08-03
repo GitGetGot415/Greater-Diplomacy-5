@@ -81,7 +81,8 @@ EDIT_COUNTRY_NULL_COLOR_Y = 105
 # --- Settings screen ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 250
 SETTINGS_BACK_POS = (50, 50)
-SETTINGS_FULLSCREEN_Y = 100
+SETTINGS_FULLSCREEN_Y = 40
+SETTINGS_CHECKERBOARD_WATER_Y = 100
 SETTINGS_FPS_TOGGLE_Y = 160
 SETTINGS_DRAG_KEY_Y = 220
 SETTINGS_PLAYER_SLIDER_Y = 340
@@ -787,6 +788,8 @@ def render_settings_buttons(settings_screen):
     settings_screen.elements = [
         Button(*SETTINGS_BACK_POS, "small", "red", "Back", settings_screen.save_and_go_back),
         Button(keybind_x, SETTINGS_FULLSCREEN_Y, "medium", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
+        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, "medium", "green" if settings_screen.checkerboard_water else "red",
+               f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_button_toggle}", settings_screen.toggle_drag_button),

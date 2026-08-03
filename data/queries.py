@@ -363,7 +363,8 @@ def save_global_settings(controller):
         controller.saves_dir,
         controller.custom_scenarios_dir,
         controller.ocean_light_color,
-        controller.ocean_dark_color
+        controller.ocean_dark_color,
+        checkerboard_water=controller.checkerboard_water
     )
 
 def get_ai_threads():

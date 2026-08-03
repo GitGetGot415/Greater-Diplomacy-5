@@ -249,6 +249,9 @@ class Controller:
         self.tournament_saves_dir = loaded_data[24] if len(loaded_data) > 24 else c.TOURNAMENT_SAVES_DIR
         c.TOURNAMENT_SAVES_DIR = self.tournament_saves_dir
 
+        self.checkerboard_water = loaded_data[25] if len(loaded_data) > 25 else c.CHECKERBOARD_WATER
+        c.CHECKERBOARD_WATER = self.checkerboard_water
+
         # 3. Apply volume to global sounds on boot
         ui_elements.global_sfx_volume = self.sfx_volume
         ui_elements.global_sfx_pitch = self.sfx_pitch

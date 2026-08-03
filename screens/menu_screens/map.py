@@ -581,7 +581,17 @@ class Map(GameState):
             if owner == self.player_country or has_player_units:
                 self.change_state("ORDERS")
 
-    def additional_draw(self, surface): 
+    def draw_background(self, surface):
+        # bg_color here is the dynamic ocean color (see update()), so the
+        # generic checkerboard fallback would checkerboard the ocean itself.
+        # Gate that behind the opt-in Settings toggle; default is a flat fill
+        # so gameplay water looks like water unless the player asks otherwise.
+        if c.CHECKERBOARD_WATER:
+            super().draw_background(surface)
+        else:
+            surface.fill(self.bg_color)
+
+    def additional_draw(self, surface):
         map_renderer.draw_map_screen(self, surface)
 
     def draw(self, surface):
