@@ -11,7 +11,41 @@ import data.constants as c
 from data.platform import IS_WEB
 from map_logic.rendering.font_manager import fonts
 
+def _ease_out_expo(t):
+    """Fast start that eases into the resting position: 1 - 2^-10t."""
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    return 1 - pow(2, -10 * t)
+
+def _lerp(a, b, t):
+    return a + (b - a) * t
+
 class Menu(GameState):
+    # Intro animation timings, in ms. Banner drops from above, sign slides in
+    # from the right. Buttons/text rise straight up from below the screen;
+    # BUTTON_INTRO_CASCADE_MS is spread across them by vertical position, so
+    # rows nearer the top start sooner and lower rows start later, then each
+    # takes BUTTON_INTRO_DURATION_MS to arrive.
+    BANNER_INTRO_MS = 900
+    SIGN_INTRO_MS = 900
+    BUTTON_INTRO_DURATION_MS = 500
+    BUTTON_INTRO_CASCADE_MS = 650
+    # How far below the screen bottom rows start from, so they're fully
+    # hidden (not just off their mark) until their delay elapses.
+    BUTTON_INTRO_START_MARGIN = 60
+
+    @staticmethod
+    def _stagger_by_y(target_ys, cascade_ms):
+        """Maps each y position to a start delay: smaller y (higher on
+        screen) gets a smaller delay, larger y gets a larger delay."""
+        min_y, max_y = min(target_ys), max(target_ys)
+        spread = max_y - min_y
+        if spread <= 0:
+            return lambda y: 0.0
+        return lambda y: (y - min_y) / spread * cascade_ms
+
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40) # Midnight Blue
@@ -27,9 +61,34 @@ class Menu(GameState):
             
             new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
             self.sign_image = pygame.transform.scale(raw_image, new_size)
+            self.sign_rect = self.sign_image.get_rect()
+            self.sign_rect.right = c.SCREEN_WIDTH - 40
+            self.sign_rect.centery = c.SCREEN_HEIGHT // 2
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
+            self.sign_rect = None
+
+        try:
+            raw_banner = pygame.image.load("assets/backgrounds/GD5 Banner.png").convert_alpha()
+            banner_width = min(raw_banner.get_width(), c.SCREEN_WIDTH - 80)
+            banner_scale = banner_width / raw_banner.get_width()
+            banner_size = (banner_width, int(raw_banner.get_height() * banner_scale))
+            self.banner_image = pygame.transform.smoothscale(raw_banner, banner_size)
+            self.banner_rect = self.banner_image.get_rect()
+            self.banner_rect.centerx = c.SCREEN_WIDTH // 2
+            self.banner_rect.top = 20
+        except Exception as e:
+            print(f"Failed to load the banner image: {e}")
+            self.banner_image = None
+            self.banner_rect = None
+
+        # Intro animation clock; banner/sign/buttons/text all ease in relative
+        # to this timestamp. Draw positions default to the resting spot until
+        # the first update() tick moves them off-screen to start the intro.
+        self.intro_start_ticks = pygame.time.get_ticks()
+        self._banner_draw_pos = self.banner_rect.topleft if self.banner_rect else (0, 0)
+        self._sign_draw_pos = self.sign_rect.topleft if self.sign_rect else (0, 0)
 
         # (y offset from centre, label, colour, icon, destination state) — one row
         # per menu entry, so adding a screen is a single line here.
@@ -70,7 +129,9 @@ class Menu(GameState):
                 "main_text": main_text,
                 "url": url,
                 "link_rect": link_rect,
-                "main_rect": main_rect
+                "main_rect": main_rect,
+                "_intro_target_main_y": main_rect.y,
+                "_intro_target_link_y": link_rect.y,
             })
             current_y += c.MENU_BOTTOM_TEXT_STEP_Y
 
@@ -88,6 +149,19 @@ class Menu(GameState):
             font_preset="small"
         )
         self.elements.append(self.refresh_btn)
+
+        # Cascade the rise-in by vertical position: rows near the top of the
+        # screen start first, rows near the bottom start last.
+        all_target_ys = [btn.rect.y for btn in self.elements] + \
+                         [item["_intro_target_main_y"] for item in self.bottom_texts]
+        delay_for_y = self._stagger_by_y(all_target_ys, self.BUTTON_INTRO_CASCADE_MS)
+
+        for btn in self.elements:
+            btn._intro_target_y = btn.rect.y
+            btn._intro_delay = delay_for_y(btn.rect.y)
+
+        for item in self.bottom_texts:
+            item["_intro_delay"] = delay_for_y(item["_intro_target_main_y"])
 
         # Start version check in background so it doesn't freeze the menu.
         # Skipped entirely on web: no real OS threads under Pyodide, and the
@@ -158,17 +232,47 @@ class Menu(GameState):
             for item in self.bottom_texts:
                 if item["url"] and item["link_text"] and item["link_rect"].collidepoint(event.pos):
                     webbrowser.open(item["url"])
-                    
+
                     # Play the UI click sound for auditory feedback
                     from data import queries
                     queries.play_click_sound()
 
+    def update(self):
+        # Drives the whole intro: banner drops from above, the sign slides in
+        # from the right, and every button/text row rises straight up from
+        # below the screen (hidden until its delay elapses), eased with
+        # _ease_out_expo so each arrives fast then settles.
+        elapsed = pygame.time.get_ticks() - self.intro_start_ticks
+
+        if self.banner_rect:
+            t = _ease_out_expo(elapsed / self.BANNER_INTRO_MS)
+            start_y = -self.banner_rect.height
+            self._banner_draw_pos = (self.banner_rect.x, int(_lerp(start_y, self.banner_rect.y, t)))
+
+        if self.sign_rect:
+            t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
+            start_x = c.SCREEN_WIDTH + 40
+            self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
+
+        rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
+
+        for btn in self.elements:
+            local_elapsed = elapsed - btn._intro_delay
+            t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
+            btn.rect.y = int(_lerp(rise_start_y, btn._intro_target_y, t))
+
+        for item in self.bottom_texts:
+            local_elapsed = elapsed - item["_intro_delay"]
+            t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
+            item["main_rect"].y = int(_lerp(rise_start_y, item["_intro_target_main_y"], t))
+            item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
+
     def additional_draw(self, surface):
+        if getattr(self, "banner_image", None):
+            surface.blit(self.banner_image, self._banner_draw_pos)
+
         if getattr(self, "sign_image", None):
-            img_rect = self.sign_image.get_rect()
-            img_rect.right = c.SCREEN_WIDTH - 40
-            img_rect.centery = c.SCREEN_HEIGHT // 2
-            surface.blit(self.sign_image, img_rect)
+            surface.blit(self.sign_image, self._sign_draw_pos)
 
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
