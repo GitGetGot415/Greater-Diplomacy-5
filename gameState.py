@@ -322,8 +322,9 @@ class GameState:
             ui_bars.draw_centered_title(surface, text, self.title_y,
                                         self.title_preset, shadow=self.title_shadow)
 
-    def draw(self, surface):
-        # 1. Fill background or draw background image
+    def draw_background(self, surface):
+        """Fills the screen behind everything else. Override for a custom look
+        (e.g. Menu's scrolling checkerboard) instead of duplicating draw()."""
         if self.bg_image_path:
             bg_img = ui_bars.get_ui_image(self.bg_image_path, directory=c.BACKGROUNDS_DIR)
             if bg_img.get_size() != surface.get_size():
@@ -332,6 +333,10 @@ class GameState:
         else:
             # Pull from constants instead of hardcoding
             surface.fill(getattr(self, 'bg_color', c.DEFAULT_BG_COLOR))
+
+    def draw(self, surface):
+        # 1. Fill background or draw background image
+        self.draw_background(surface)
 
         # 2. Centred header, then the specific screen content (Map, UI Bars)
         # Keeping both BEFORE elements fixes the layering

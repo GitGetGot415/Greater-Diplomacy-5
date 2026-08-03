@@ -10,12 +10,14 @@ from ui_elements import Button
 import data.constants as c
 from data.platform import IS_WEB
 from map_logic.rendering.font_manager import fonts
+from ui.bars import ui_bars
 
 class Menu(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40) # Midnight Blue
-        self.bg_image_path = c.MENU_BG_FILE 
+        # No bg_image_path: the menu draws an endlessly scrolling checkerboard
+        # instead (see draw_background), so the static Menu.png is unused here.
 
         try:
             raw_image = pygame.image.load("assets/images/The Sign.png").convert_alpha()
@@ -150,6 +152,24 @@ class Menu(GameState):
         except Exception:
             self.version_status = f"Version: {c.GAME_VERSION} (Error checking)"
             self.version_color = (255, 100, 100) # Red
+
+    def draw_background(self, surface):
+        # Endlessly scrolling checkerboard: draw the tile in a grid slightly
+        # larger than the screen, offset by a time-based amount that grows down
+        # and to the right. Since the tile is seamless, wrapping the offset back
+        # to 0 every tile-length makes the motion loop forever with no seam.
+        tile = ui_bars.get_ui_image(c.MENU_CHECKERBOARD_FILE, directory=c.BACKGROUNDS_DIR)
+        tile_w, tile_h = tile.get_size()
+
+        elapsed = pygame.time.get_ticks() / 1000.0
+        offset_x = int((elapsed * c.MENU_CHECKERBOARD_SCROLL_SPEED) % tile_w)
+        offset_y = int((elapsed * c.MENU_CHECKERBOARD_SCROLL_SPEED) % tile_h)
+
+        start_x = -offset_x - tile_w
+        start_y = -offset_y - tile_h
+        for y in range(start_y, c.SCREEN_HEIGHT + tile_h, tile_h):
+            for x in range(start_x, c.SCREEN_WIDTH + tile_w, tile_w):
+                surface.blit(tile, (x, y))
 
     def additional_events(self, event):
         # We hook into mouse clicks here to make the hyperlinks functional

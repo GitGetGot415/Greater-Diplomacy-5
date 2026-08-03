@@ -878,6 +878,8 @@ DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
 PROVINCE_BG_FILE = "Province.png"
 SETTINGS_BG_FILE = "Settings.png"
 MENU_BG_FILE = "Menu.png"
+MENU_CHECKERBOARD_FILE = "Menu_Checkerboard.png"
+MENU_CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
 
 FLAG_SIZE = (60, 40)
 PORTRAIT_SIZE = (60, 60)
