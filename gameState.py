@@ -144,15 +144,32 @@ class GameState:
             # mouse on every later motion until another drag happens to mask it.
             setattr(self, drag_attr, False)
 
+        track = getattr(self, track_attr, None)
+        handle = getattr(self, handle_attr, None)
+        grabbing_scrollbar = (event.type == pygame.MOUSEBUTTONDOWN and track
+                              and ((handle and handle.collidepoint(event.pos))
+                                   or track.collidepoint(event.pos)))
+
         # invert=True here because this list also has a real scrollbar (below):
         # handle_content_drag defaults to touch-pan feel (drag down reveals
         # earlier rows), but the scrollbar/wheel on the same scroll_y move the
         # opposite way (down reveals later rows). Grabbing the list body has to
         # agree with dragging its own scrollbar, not fight it.
-        if content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr, invert=True):
+        #
+        # But a click that lands on the scrollbar itself must never be allowed
+        # to arm (or keep driving) the content-drag: content-drag moves scroll_y
+        # 1:1 with mouse pixels in *content* space, while the handle is supposed
+        # to snap to the mouse's ratio *along the track*. Since the content is
+        # usually much taller than the track, letting content-drag win once it
+        # crosses its arm threshold makes the handle crawl far slower than the
+        # mouse instead of tracking it -- so it visibly falls behind the longer
+        # you drag. Clearing content_drag_state here keeps the two gestures from
+        # fighting over the same motion events.
+        if grabbing_scrollbar or getattr(self, drag_attr, False):
+            self.content_drag_state = None
+        elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr, invert=True):
             return True
 
-        track = getattr(self, track_attr, None)
         if not track:
             return False
 
@@ -160,7 +177,6 @@ class GameState:
             self.snap_scroll(mouse_y, track.top, track.height, attr, limit_attr)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            handle = getattr(self, handle_attr, None)
             if handle and handle.collidepoint(event.pos):
                 setattr(self, drag_attr, True) # Grabbing the handle drags from where it sits
                 return True
