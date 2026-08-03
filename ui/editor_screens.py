@@ -305,7 +305,6 @@ class Research_Edit_Screen(MapOverlayScreen):
                     hint = small_font.render(f"(0-{kind[2]})", True, (150, 150, 150))
                     surface.blit(hint, (p.right - 250, y + 8))
 
-        surface.set_clip(old_clip)
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
 
 class Research_List_Screen(MapOverlayScreen):
