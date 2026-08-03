@@ -492,6 +492,7 @@ class Edit_Country_Screen(GameState):
             surface.blit(normal_font.render(label_text, True, (200, 200, 200)), (input_box_x, y_pos - 20))
             rect = pygame.Rect(input_box_x, y_pos, 300, 40)
             color = (200, 255, 200) if self.active_input == input_state else (100, 100, 100)
+            pygame.draw.rect(surface, (0, 0, 0), rect)
             pygame.draw.rect(surface, color, rect, 2)
             surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (input_box_x + 10, y_pos + 10))
 

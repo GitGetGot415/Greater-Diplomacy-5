@@ -105,8 +105,8 @@ class Automation_Screen(GameState):
                 self.handle_back_key()
 
     def draw(self, surface):
-        surface.fill(self.bg_color)
-        
+        self.draw_background(surface)
+
         # Panel Background
         pygame.draw.rect(surface, (40, 45, 50), self.panel_rect)
         pygame.draw.rect(surface, c.COLOR_DIM_BORDER, self.panel_rect, 3)
