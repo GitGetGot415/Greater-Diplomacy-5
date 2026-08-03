@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 import data.constants as c
 from data import queries
+from data.platform import sync_persisted_dir
 
 async def save_map_data(self, save_name=None):
     """Saves logical data and visual state. Runs as a background coroutine (see
@@ -63,6 +64,11 @@ async def save_map_data(self, save_name=None):
         pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
         pygame.image.save(self.cores_map, os.path.join(save_path, "cores.png"))
         self.save_progress_completed = 5
+
+        if not self.is_editor:
+            # Web only: mirror the new save into IndexedDB so it survives closing
+            # the tab (pygbag's in-memory FS otherwise loses it). No-op on desktop.
+            sync_persisted_dir(c.SAVES_DIR)
 
         self.show_feedback(f"Exported: {save_name} to {save_path}" if self.is_editor else f"Saved: {save_name} to {save_path}")
     except Exception as e:

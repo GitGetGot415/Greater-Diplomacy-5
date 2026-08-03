@@ -128,8 +128,11 @@ def main():
                         continue
                     os.remove(src_path)
 
-    # saves/ ships empty, same as windows_compilation.py (pygbag's virtual FS persists
-    # in-session writes to IndexedDB, so an empty starting folder is all that's needed)
+    # saves/ ships empty, same as windows_compilation.py. Saves made in the browser
+    # build persist across reloads via data/platform.py's own IndexedDB mirroring
+    # (restored/synced from main.py, save_map.py, gameState.py, queries.py) -- not
+    # anything pygbag provides automatically; its bundled WASM runtime only links
+    # MEMFS in, so without that, an empty starting folder would stay empty forever.
     os.makedirs(os.path.join(STAGE_DIR, "saves"), exist_ok=True)
 
     # Reset runtime-state JSON to defaults, identical to windows_compilation.py, so the

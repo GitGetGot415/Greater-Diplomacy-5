@@ -3,6 +3,7 @@ import shutil
 import pygame
 import data.constants as c
 from data import queries
+from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
 def resolve_keybind(state, action, default):
@@ -476,6 +477,7 @@ class FolderListState(GameState):
             new_path = os.path.join(self.managed_dir, name)
             if not os.path.exists(new_path):
                 os.rename(old_path, new_path)
+                sync_persisted_dir(self.managed_dir)
         self.cancel_rename()
 
     def cancel_rename(self):
@@ -491,6 +493,7 @@ class FolderListState(GameState):
             path = os.path.join(self.managed_dir, self.deleting_item)
             if os.path.exists(path):
                 shutil.rmtree(path)
+                sync_persisted_dir(self.managed_dir)
         self.cancel_delete()
 
     def cancel_delete(self):

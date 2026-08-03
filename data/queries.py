@@ -10,7 +10,7 @@ import random
 import threading
 import shutil
 import zipfile
-from data.platform import run_background, IS_WEB, download_file
+from data.platform import run_background, IS_WEB, download_file, sync_persisted_dir
 from datetime import datetime
 
 import pygame
@@ -3076,6 +3076,9 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
             target_dir += "_imported"
         try:
             extract_and_flatten_zip(file_path, target_dir)
+            # Web only: mirror the imported save into IndexedDB (no-op unless
+            # target_parent_dir is one of the persisted directories).
+            sync_persisted_dir(target_parent_dir)
             confirm_dialog.show_success("Import Success", "Imported successfully.")
             if on_success:
                 on_success()
