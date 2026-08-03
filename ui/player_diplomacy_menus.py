@@ -236,6 +236,68 @@ class Claims_Screen(MapOverlayScreen):
             btn.is_selected = (self.view_mode == mode)
             self.elements.append(btn)
 
+        self._refresh_claims_data()
+
+    def _refresh_claims_data(self):
+        """Rebuilds the claims lists consumed by draw_content. Only called from
+        refresh_ui() (on init, view-mode switch, or a claim/queue mutation) rather
+        than every frame, since none of this data changes while the screen is open
+        except through those actions."""
+        data = self.map_screen.nation_data.get(self.player, {})
+        self.claims = data.get("claims", [])
+        self.queue = data.get("claim_queue", [])
+        self.revoke_queue = data.get("revoke_queue", [])
+        self.return_queue = data.get("return_queue", [])
+        self.revoke_ids = [rq["prov_id"] for rq in self.revoke_queue]
+        self.return_ids = [rq["prov_id"] for rq in self.return_queue]
+
+        self.core_ids = []
+        self.foreign_claims_list = []
+        self.foreign_claims_map = {}
+        self.global_claims_list = []
+        self.display_claims = []
+
+        if self.view_mode == "YOURS":
+            self.core_ids = [prov["id"] for prov in self.map_screen.map_data.values()
+                              if self.player in prov.get("cores", [])
+                              and prov.get("owner") != self.player
+                              and prov.get("owner") not in c.UNPLAYABLE_NATIONS]
+            self.display_claims = self.claims + [c_id for c_id in self.core_ids if c_id not in self.claims]
+
+        elif self.view_mode == "THEIRS":
+            for n, d in self.map_screen.nation_data.items():
+                if n == self.player or n in c.UNPLAYABLE_NATIONS: continue
+
+                for pid in d.get("claims", []):
+                    prov = self.map_screen.id_to_province.get(pid)
+                    if prov and prov.get("owner") == self.player:
+                        info = {"nation": n, "type": "CLAIM", "turns": 0, "prov_id": pid}
+                        self.foreign_claims_list.append(info)
+                        self.foreign_claims_map.setdefault(pid, []).append(info)
+
+                for prov in self.map_screen.map_data.values():
+                    if prov.get("owner") == self.player and n in prov.get("cores", []) and prov["id"] not in d.get("claims", []):
+                        info = {"nation": n, "type": "CORE", "turns": 0, "prov_id": prov["id"]}
+                        self.foreign_claims_list.append(info)
+                        self.foreign_claims_map.setdefault(prov["id"], []).append(info)
+
+                for q in d.get("claim_queue", []):
+                    if q.get("turns_left", 0) < c.CLAIM_TURN_NON_CORE: # Don't show if made this turn
+                        pid = q["prov_id"]
+                        prov = self.map_screen.id_to_province.get(pid)
+                        if prov and prov.get("owner") == self.player:
+                            info = {"nation": n, "type": "QUEUE", "turns": q["turns_left"], "prov_id": pid}
+                            self.foreign_claims_list.append(info)
+                            self.foreign_claims_map.setdefault(pid, []).append(info)
+
+            self.foreign_claims_list.sort(key=lambda x: (x["prov_id"], x["nation"]))
+
+        elif self.view_mode == "GLOBAL":
+            for n, d in self.map_screen.nation_data.items():
+                if n in c.UNPLAYABLE_NATIONS and n != "None": continue
+                for pid in d.get("claims", []):
+                    self.global_claims_list.append({"nation": n, "prov_id": pid})
+            self.global_claims_list.sort(key=lambda x: (x["nation"], x["prov_id"]))
 
     def additional_events(self, event):
         super().additional_events(event)
@@ -339,59 +401,20 @@ class Claims_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def draw_content(self, surface):
-        # Draw territorial highlights
-        data = self.map_screen.nation_data.get(self.player, {})
-        claims = data.get("claims", [])
-        queue = data.get("claim_queue", [])
-        revoke_queue = data.get("revoke_queue", [])
-        return_queue = data.get("return_queue", [])
-        
-        revoke_ids = [rq["prov_id"] for rq in revoke_queue]
-        return_ids = [rq["prov_id"] for rq in return_queue]
-        
-        # Identify foreign cores for the distinct pink rendering
-        core_ids = [prov["id"] for prov in self.map_screen.map_data.values() 
-                    if self.player in prov.get("cores", []) 
-                    and prov.get("owner") != self.player 
-                    and prov.get("owner") not in c.UNPLAYABLE_NATIONS]
-                    
-        foreign_claims_list = []
-        foreign_claims_map = {}
-        for n, d in self.map_screen.nation_data.items():
-            if n == self.player or n in c.UNPLAYABLE_NATIONS: continue
-            
-            for pid in d.get("claims", []):
-                prov = self.map_screen.id_to_province.get(pid)
-                if prov and prov.get("owner") == self.player:
-                    info = {"nation": n, "type": "CLAIM", "turns": 0, "prov_id": pid}
-                    foreign_claims_list.append(info)
-                    foreign_claims_map.setdefault(pid, []).append(info)
-                    
-            for prov in self.map_screen.map_data.values():
-                if prov.get("owner") == self.player and n in prov.get("cores", []) and prov["id"] not in d.get("claims", []):
-                    info = {"nation": n, "type": "CORE", "turns": 0, "prov_id": prov["id"]}
-                    foreign_claims_list.append(info)
-                    foreign_claims_map.setdefault(prov["id"], []).append(info)
-                    
-            for q in d.get("claim_queue", []):
-                if q.get("turns_left", 0) < c.CLAIM_TURN_NON_CORE: # Don't show if made this turn
-                    pid = q["prov_id"]
-                    prov = self.map_screen.id_to_province.get(pid)
-                    if prov and prov.get("owner") == self.player:
-                        info = {"nation": n, "type": "QUEUE", "turns": q["turns_left"], "prov_id": pid}
-                        foreign_claims_list.append(info)
-                        foreign_claims_map.setdefault(pid, []).append(info)
-        
-        foreign_claims_list.sort(key=lambda x: (x["prov_id"], x["nation"]))
-        
-        global_claims_list = []
+        # Draw territorial highlights (data is rebuilt in _refresh_claims_data(),
+        # not here, since it only changes on claim mutations / view-mode switches)
+        claims = self.claims
+        queue = self.queue
+        revoke_queue = self.revoke_queue
+        return_queue = self.return_queue
+        revoke_ids = self.revoke_ids
+        return_ids = self.return_ids
+        core_ids = self.core_ids
+        foreign_claims_list = self.foreign_claims_list
+        foreign_claims_map = self.foreign_claims_map
+        global_claims_list = self.global_claims_list
+
         if self.view_mode == "GLOBAL":
-            for n, d in self.map_screen.nation_data.items():
-                if n in c.UNPLAYABLE_NATIONS and n != "None": continue
-                for pid in d.get("claims", []):
-                    global_claims_list.append({"nation": n, "prov_id": pid})
-            global_claims_list.sort(key=lambda x: (x["nation"], x["prov_id"]))
-            
             for item in global_claims_list:
                 color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
                 overlay_renderer.draw_map_highlight(surface, self.map_screen, item["prov_id"], color, base_radius=4)
@@ -435,8 +458,8 @@ class Claims_Screen(MapOverlayScreen):
         title = font.render("Territory Claims", True, (255, 255, 255))
         surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
         
-        display_claims = claims + [c_id for c_id in core_ids if c_id not in claims]
-        
+        display_claims = self.display_claims
+
         if self.view_mode == "GLOBAL":
             content_h = 40 + (len(global_claims_list) * 25 if global_claims_list else 25)
         elif self.view_mode == "YOURS":
