@@ -12,8 +12,6 @@
 - edit cost for units editor? (also please fix the basic factories time to build issue not working)
 - information for what scenario setting does
 
-- claims screen seems to be somewhat laggy, what might be causing that?
-
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there
@@ -23,7 +21,6 @@
 - lesser diplomacy
 - ...but it's publically available on github
 - ...and the files for it can be integrated onto here...?????
-- ??????????????
 - idk figure it out
 
 - artillery should be able to pierce defense so it isn't made completely useless by it
