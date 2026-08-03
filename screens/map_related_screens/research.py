@@ -744,8 +744,11 @@ class Research_Screen(GameState):
                 y_off += MODAL_LINE_STEP_Y
                 
             elif entity in self.building_library:
-                s = self.building_library[entity]
-                
+                if entity == "Basic Factory" and self.map_screen and self.map_screen.player_country != "None":
+                    s = queries.get_building_cost(entity, self.map_screen.player_country, self.map_screen.map_data, self.building_library)
+                else:
+                    s = self.building_library[entity]
+
                 txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
                 surface.blit(font_small.render(txt1, True, (200, 200, 200)), (text_x, y_off))
                 y_off += MODAL_LINE_STEP_Y

@@ -1180,7 +1180,11 @@ def generate_rebellion_name(cores_on_tile, nation_data):
     return rebel_id, final_name
 
 def get_building_cost(b_name, nation, map_data, bldg_lib):
-    """Dynamically scales the building cost, bypassing the JSON for Basic Factories."""
+    """Dynamically scales the building cost, bypassing the JSON for Basic Factories.
+
+    Time is left untouched -- it comes straight from bldg_lib, so it already
+    reflects both the recipes.py default and any Construction Turns Editor override.
+    """
     stats = bldg_lib.get(b_name, {}).copy()
     if b_name == "Basic Factory":
         count = get_factory_count(nation, map_data)
@@ -1188,7 +1192,6 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
         stats["cost_materials"] = x * 2
         stats["cost_manpower"] = x
         stats["cost_fuel"] = 0
-        stats["time"] = c.BASIC_FACTORY_TURNS
     return stats
 
 def _modify_resources(nation_data_block, costs_dict, is_refund=False):

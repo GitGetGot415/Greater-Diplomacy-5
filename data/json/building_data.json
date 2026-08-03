@@ -1,5 +1,5 @@
 {
-    "Basic Factory": {"time": 6, "group": "industry", "req": "null", "cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0, "prod_materials": 500, "prod_manpower": 0, "prod_fuel": 0},
+    "Basic Factory": {"time": 20, "group": "industry", "req": "null", "cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0, "prod_materials": 500, "prod_manpower": 0, "prod_fuel": 0},
     "Factory Lvl 1": {"time": 12, "group": "industry", "req": "Basic Factory", "cost_materials": 30000, "cost_manpower": 0, "cost_fuel": 1000, "prod_materials": 1000, "prod_manpower": 0, "prod_fuel": 10},
     "Factory Lvl 2": {"time": 12, "group": "industry", "req": "Factory Lvl 1", "cost_materials": 30000, "cost_manpower": 0, "cost_fuel": 1000, "prod_materials": 2000, "prod_manpower": 0, "prod_fuel": 20},
     "Factory Lvl 3": {"time": 12, "group": "industry", "req": "Factory Lvl 2", "cost_materials": 30000, "cost_manpower": 0, "cost_fuel": 1000, "prod_materials": 3000, "prod_manpower": 0, "prod_fuel": 30},

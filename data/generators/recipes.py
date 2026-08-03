@@ -367,7 +367,9 @@ BUILDING_CHAINS = [
         # pre-existing quirk in the data file, preserved intentionally.
         base_req="null",
         base_stats={
-            "time": 6, "group": "industry", "cost_materials": 0, "cost_manpower": 0,
+            # cost_* stay 0 -- Basic Factory cost is computed dynamically from
+            # factory count in queries.get_building_cost(), not read from here.
+            "time": 20, "group": "industry", "cost_materials": 0, "cost_manpower": 0,
             "cost_fuel": 0, "prod_materials": 500, "prod_manpower": 0, "prod_fuel": 0,
         },
         level_prefix="Factory Lvl",
