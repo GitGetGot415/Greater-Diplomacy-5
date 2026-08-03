@@ -125,6 +125,9 @@ class TurnEditorScreen(GameState):
             for tab in self.tabs.values():
                 tab["overrides"].clear()
                 tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
+            # Drop the on-screen fields so save_all's _sync_entries() can't pull
+            # their stale (pre-reset) text back over the defaults we just set.
+            self.elements = []
             self.save_all()
 
         confirm_dialog.ask_yes_no(
