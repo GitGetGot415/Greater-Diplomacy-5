@@ -249,10 +249,14 @@ class GameState:
         inside the row's own rect, but outside the visible boundary) doesn't
         fire.
         """
-        if view_h is None:
-            view_h = c.SCREEN_HEIGHT - 200
         if cull_bottom is None:
             cull_bottom = c.SCREEN_HEIGHT - 50
+        if view_h is None:
+            # Derived from where rows actually get culled, not a magic constant --
+            # keeps max_scroll in lockstep with wherever the caller's clip rect
+            # ends, so the last row can always be scrolled fully into view instead
+            # of stopping short of the boundary it's drawn against.
+            view_h = cull_bottom - top
 
         setattr(self, limit_attr, min(0, view_h - (count * row_h) - pad))
         scroll = getattr(self, attr, 0)
