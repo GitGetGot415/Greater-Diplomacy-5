@@ -198,7 +198,8 @@ _JSON_CACHE = {
     "building_library": {"path": c.BUILDING_DATA_PATH, "data": None},
     "tech_tree": {"path": c.RESEARCH_TEMPLATE_PATH, "data": None},
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
-    "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None}
+    "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None},
+    "starting_song": {"path": c.STARTING_SONG_PATH, "data": None}
 }
 
 def scenario_has_scripted_events(nation_data):
@@ -375,6 +376,11 @@ def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")
 def get_country_data(): return _load_cached_json("country_data")
 def get_active_albums(): return _load_cached_json("active_albums")
+
+def get_starting_song():
+    """Returns the pinned boot-up track path, or None if it's set to random."""
+    data = _load_cached_json("starting_song")
+    return data.get("track") if isinstance(data, dict) else None
 
 def get_time_appropriate_research(start_year):
     """Calculates time-appropriate research level mapping for a given start year."""

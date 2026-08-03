@@ -138,6 +138,7 @@ def main():
         (os.path.join("data", "json", "active_albums.json"), "[]"),
         (os.path.join("data", "json", "scenario_settings.json"), "{}"),
         (os.path.join("data", "json", "settings_config.json"), "{}"),
+        (os.path.join("data", "json", "starting_song.json"), "{}"),
     ]:
         path = os.path.join(STAGE_DIR, rel)
         if os.path.exists(os.path.dirname(path)):

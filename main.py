@@ -258,6 +258,7 @@ class Controller:
         self.active_albums = []
         self.playlist = []
         self.now_playing = "None"
+        self.starting_song = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
         
         self.load_music_data()
@@ -268,7 +269,7 @@ class Controller:
         # real input event in run() on web; unaffected on desktop.
         self._web_audio_unlocked = False
         if not IS_WEB:
-            self.play_random_song()
+            self.play_startup_song()
 
         self.states = {
             "MENU": Menu(),
@@ -457,8 +458,26 @@ class Controller:
         self.active_albums = [a for a in self.active_albums if a in self.all_albums]
         self.build_playlist()
 
+        # Load the pinned boot-up track, if any, and drop it if its file has
+        # since been deleted or renamed. Independent of active_albums, since
+        # it's meant to play at boot regardless of which albums are toggled on.
+        self.starting_song = queries.get_starting_song()
+        all_tracks = {track for tracks in self.all_albums.values() for track in tracks}
+        if self.starting_song not in all_tracks:
+            self.starting_song = None
+
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
+
+    def save_starting_song(self):
+        queries.save_cached_json("starting_song", {"track": self.starting_song})
+
+    def play_startup_song(self):
+        """Plays the pinned starting song if one is set, else falls back to random."""
+        if self.starting_song:
+            self.play_specific_song(self.starting_song)
+        else:
+            self.play_random_song()
 
     def init_web_audio(self):
         """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
@@ -574,7 +593,7 @@ class Controller:
                     if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
                         self._web_audio_unlocked = True
                         self.init_web_audio()
-                        self.play_random_song()
+                        self.play_startup_song()
                         break
 
             for event in events:

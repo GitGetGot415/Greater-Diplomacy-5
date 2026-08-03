@@ -61,6 +61,22 @@ class TopBarOverlay:
         surface.blit(font_norm.render(np_text, True, c.COLOR_GOLD_HIGHLIGHT), (MUSIC_LEFT_PANE_W + 20, 30))
 
 
+class StartingSongOverlay:
+    """Fixed HUD label showing which track (if any) is pinned to play on boot."""
+    def __init__(self, controller):
+        self.controller = controller
+        self.visible = True
+
+    def handle_event(self, event):
+        pass
+
+    def draw(self, surface):
+        font = fonts.get("normal")
+        name = os.path.basename(self.controller.starting_song) if self.controller.starting_song else "None (Random)"
+        text = f"Starting Song: {name}"
+        surface.blit(font.render(text, True, c.COLOR_GOLD_HIGHLIGHT), (c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 150))
+
+
 class MusicScrubber:
     """A dedicated interactive UI slider specifically for scrubbing music playback."""
     def __init__(self, x, y, width, height, callback):
@@ -282,6 +298,21 @@ class Music_Player(GameState):
         # --- 5. Reset Audio Button ---
         reset_y = 300 if c.USE_SOLOUD else 240
         self.elements.append(Button(slider_x, reset_y, "medium", "red", "Reset to Default", self.reset_audio_defaults))
+
+        # --- 6. Starting Song Selector (Bottom Right) ---
+        # Pins whichever track is currently playing so it always opens the
+        # game, independent of which albums happen to be toggled active.
+        self.elements.append(StartingSongOverlay(self.controller))
+
+        set_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 130, "medium", "blue",
+                                "Set as Starting Song", self.set_starting_song)
+        set_start_btn.disabled = (self.controller.now_playing == "None")
+        self.elements.append(set_start_btn)
+
+        reset_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 70, "medium", "red",
+                                  "Reset Starting Song", self.reset_starting_song)
+        reset_start_btn.disabled = not self.controller.starting_song
+        self.elements.append(reset_start_btn)
 
     def play_track(self, track_path=None):
         """Helper to play a track and instantly update the UI colors."""
@@ -579,6 +610,18 @@ class Music_Player(GameState):
         
     def save_audio_settings(self):
         queries.save_global_settings(self.controller)
+
+    # --- STARTING SONG ACTIONS ---
+    def set_starting_song(self):
+        if self.controller.now_playing and self.controller.now_playing != "None":
+            self.controller.starting_song = self.controller.now_playing
+            self.controller.save_starting_song()
+            self.refresh_ui()
+
+    def reset_starting_song(self):
+        self.controller.starting_song = None
+        self.controller.save_starting_song()
+        self.refresh_ui()
 
     # --- PLAYLIST ACTIONS ---
     def toggle_album(self, album):

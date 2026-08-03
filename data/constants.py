@@ -897,6 +897,7 @@ RESEARCH_TEMPLATE_PATH = "data/json/research_template.json"
 BUILDING_DATA_PATH = "data/json/building_data.json"
 SETTINGS_CONFIG_PATH = "data/json/settings_config.json"
 ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
+STARTING_SONG_PATH = "data/json/starting_song.json"
 
 # ==========================================
 # HISTORY & SAVING SETTINGS
