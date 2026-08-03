@@ -8,6 +8,10 @@
 
 - check the recent issues coming from playtesting
 
+- if no claims, add option to generate claims
+- edit cost for units editor? (also please fix the basic factories time to build issue not working)
+- information for what scenario setting does
+
 - claims screen seems to be somewhat laggy, what might be causing that?
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
