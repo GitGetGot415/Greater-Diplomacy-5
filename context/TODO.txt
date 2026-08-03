@@ -8,6 +8,8 @@
 
 - check the recent issues coming from playtesting
 
+- claims screen seems to be somewhat laggy, what might be causing that?
+
 - downloading stuff when viewing assets from the web build dooesn't seem to work
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
