@@ -23,3 +23,13 @@ second, now go into your downloaded gd5 folder and run `pip install -r requireme
 
 third, whenever you want to check if there's an update, run `git pull`. if it says "Already up to date.", you are at the latest version. If not it will
 automatically upd everything to latest version on github.
+
+## For MacOS Users
+When installing Greater Diplomacy 5, and double clicking "main" artifact that is extracted from packaged on itch.io zip it might display this popup
+
+"“main” is damaged and can’t be opened. You should move it to the Bin." with no option to start anyways.
+
+The fix:
+
+For every instalation Greater Diplomacy 5, this command needs to be ran:
+xattr -dr com.apple.quarantine /path/to/the/GD5/main.app
