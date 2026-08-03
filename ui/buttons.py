@@ -233,7 +233,7 @@ def render_buttons(self):
     # Route everyone to the native Pygame screen so they can see map highlights
     self.btn_gp_claims = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "pink", "Claims", lambda: player_diplomacy_actions.open_claims_menu(self), image=icons.get("paper"), show_text=True)
     
-    self.btn_gp_puppets = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "pink", "Puppets", lambda: player_diplomacy_actions.open_puppets_menu(self), image=icons.get("faction"), show_text=True)
+    self.btn_gp_puppets = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "pink", "Puppets", lambda: player_diplomacy_actions.open_puppets_menu(self), image=icons.get("puppet"), show_text=True)
     
     # NEW: Automation Button
     def open_automation_screen():
@@ -242,7 +242,7 @@ def render_buttons(self):
         screen = Automation_Screen(self)
         _run_pygame_sub_screen(self, screen)
         
-    self.btn_gp_automation = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "pink", "Automation", open_automation_screen, image=icons.get("settings"), show_text=True)
+    self.btn_gp_automation = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "pink", "Automation", open_automation_screen, show_text=True)
 
     # Register the Slider below the new Automation button
     slider_y = int(start_y_val + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)
