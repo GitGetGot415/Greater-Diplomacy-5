@@ -307,7 +307,14 @@ async def restore_persisted_dir(root):
         return
     import platform
     _ensure_persist_js()
-    platform.window.__gd5_persist_pull(root)
+    # Absolute, not the bare "saves"/"tournament_saves" passed in: pygbag's cwd
+    # has been observed to drift during play (e.g. while loading an asset by a
+    # relative path), confirmed by pulling FS.cwd() mid-session in a real
+    # browser -- a relative root here would silently start reading/writing
+    # under whatever directory happened to be current instead of the repo
+    # root. Resolving once, right here, keeps push and pull pointed at the
+    # same place regardless of what cwd does elsewhere.
+    platform.window.__gd5_persist_pull(os.path.abspath(root))
     for _ in range(200):  # ~20s safety net, mirrors the upload-picker pattern above
         if platform.window.__gd5_persist_pull_ready:
             break
@@ -328,4 +335,7 @@ def sync_persisted_dir(root):
         return
     import platform
     _ensure_persist_js()
-    platform.window.__gd5_persist_push(root)
+    # See the matching comment in restore_persisted_dir: resolve to an
+    # absolute path so this can't silently target the wrong directory if
+    # cwd has drifted since boot.
+    platform.window.__gd5_persist_push(os.path.abspath(root))
