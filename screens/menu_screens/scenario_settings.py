@@ -1,52 +1,98 @@
+import pygame
 from gameState import GameState
 from ui_elements import Button, Slider, parse_pos
 import data.constants as c
 from data import queries
+from ui import confirm_dialog
 
 # ==========================================
 # LAYOUT
 # ==========================================
+# Everything lives on one screen now: the general scenario rules on the left,
+# the AI-specific rules boxed off on the right so they still read as their own
+# section, and the two screen-opening actions (reset / turn editor) footered
+# below both columns. Only "Edit Construction Turns" still opens a sub-screen.
 
 BACK_BTN_POS = (20, 20)
 
-# Everything in the centre column, top to bottom.
-FOG_ROW_Y = 160
-DAYS_PER_TURN_ROW_Y = 480
-RESET_ROW_Y = 600
+ROW_H = 46
+INFO_GAP = 10  # gap between an info button's right edge and its setting button's left edge
+# Half the leftover height between a "scenario_setting_button" (36px) and the
+# smaller "scenario_setting_info" square (32px), so the two line up on center.
+INFO_Y_NUDGE = (c.SIZES["scenario_setting_button"][1] - c.SIZES["scenario_setting_info"][1]) // 2
 
-# The fog intensity slider rides alongside the fog toggle on the first row,
-# which is why that toggle is the only one nudged left of centre.
-FOG_TOGGLE_X = "centered-120"
-FOG_SLIDER_X = "centered+120"
-FOG_SLIDER_WIDTH = 180
-FOG_SLIDER_Y = FOG_ROW_Y + 15
+# --- Left column: general scenario rules ---
+LEFT_TOP_Y = 110
+LEFT_BTN_X = 330
+LEFT_INFO_X = LEFT_BTN_X - c.SIZES["scenario_setting_info"][0] - INFO_GAP
 
-# Side buttons that open their own sub-screens.
-SIDE_BTN_X = 80
-SIDE_BTN_AI_Y = 360
-SIDE_BTN_TURN_EDITOR_Y = 420
+# The fog intensity slider rides alongside the fog toggle on its row.
+FOG_SLIDER_X = 545
+FOG_SLIDER_WIDTH = 170
+FOG_SLIDER_Y_OFFSET = 8
+
+# --- Right column: AI settings, boxed off to keep it visually distinct ---
+AI_PANEL_TOP = 85
+AI_PANEL_BOTTOM = 310
+AI_HEADER_Y = 95
+AI_TOP_Y = 140
+AI_BTN_X = 800
+AI_INFO_X = AI_BTN_X - c.SIZES["scenario_setting_info"][0] - INFO_GAP
+AI_PANEL_RECT = pygame.Rect(AI_INFO_X - 20, AI_PANEL_TOP,
+                            (AI_BTN_X + c.SIZES["scenario_setting_button"][0] + 20) - (AI_INFO_X - 20),
+                            AI_PANEL_BOTTOM - AI_PANEL_TOP)
+
+SLIDER_WIDTH = 180
+AI_SLIDER_Y_OFFSET = 8
+
+# --- Footer actions, centred under both columns ---
+DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 6 * ROW_H
+RESET_ROW_Y = 470
+TURN_EDITOR_ROW_Y = 530
 
 # ==========================================
 # TOGGLES
 # ==========================================
 
-# (y, settings key, default constant, label). One entry per on/off scenario
-# rule: adding a row here gives it a button, a working toggle and a reset entry.
+# (settings key, default constant, label, tooltip). One entry per on/off
+# scenario rule: adding a row here gives it a button, a toggle, an info
+# button and a reset entry, in that order down the left column.
 TOGGLE_ROWS = [
-    (FOG_ROW_Y, "fog_of_war", c.DEFAULT_FOG_OF_WAR, "Fog of War"),
-    (240, "casus_belli_required", c.DEFAULT_CASUS_BELLI, "Casus Belli Required"),
-    (300, "surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack"),
-    (360, "disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions"),
-    (420, "battle_royale", c.DEFAULT_BATTLE_ROYALE, "Battle Royale"),
-    (540, "bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, "Bounce Tiebreaker"),
+    ("fog_of_war", c.DEFAULT_FOG_OF_WAR, "Fog of War",
+     "Hides territory and units you can't currently see. Use the slider "
+     "beside it to set how strong the effect is: Lite, Normal, or Extreme."),
+    ("casus_belli_required", c.DEFAULT_CASUS_BELLI, "Casus Belli Required",
+     "Requires a valid justification (casus belli) before a country can declare war on another."),
+    ("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack",
+     "Lets armies attack on the same turn as a war declaration instead of making them wait until the other size receives it, catching the enemy by surprise."),
+    ("disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions",
+     "Turns off the internal political faction system for every country."),
+    ("battle_royale", c.DEFAULT_BATTLE_ROYALE, "Battle Royale",
+     "Starts every country at war with every other country from turn one."),
+    ("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, "Bounce Tiebreaker",
+     "When equally-matched attackers contest a province, this makes the move bounce "
+     "instead of letting chance decide who takes it."),
 ]
+
+DAYS_PER_TURN_TOOLTIP = "Sets how many in-game days pass with each turn you take."
 
 # Slider stops for fog_of_war_strength, as (saved value, slider position).
 FOG_STRENGTH_STEPS = [("lite", 0.0), ("normal", 1.0), ("extreme", 2.0)]
 
+# Highest number of turns the "wait before war" AI slider can reach.
+MAX_TURNS_BEFORE_WAR = 100.0
+
+AI_TOGGLE_TOOLTIP = ("Turns AI-controlled countries on or off. With AI off, "
+                     "other countries take no actions on their turns.")
+AI_TURNS_TOOLTIP = ("Minimum number of turns from the start of the game the AI "
+                    "will wait before it's allowed to declare war.")
+AI_CHANCE_TOOLTIP = "Chance each turn that an AI meeting the conditions for war actually declares it."
+
 
 class Scenario_Settings(GameState):
     back_state = "NEW_GAME" # Track which screen to return to
+    title = "Scenario Settings"
+    title_y = 30
 
     def __init__(self):
         super().__init__()
@@ -58,34 +104,49 @@ class Scenario_Settings(GameState):
         self.refresh_ui()
 
     def default_settings(self):
-        """Every scenario rule this screen owns, at its constants.py default."""
-        defaults = {key: default for _y, key, default, _label in TOGGLE_ROWS}
+        """Every scenario and AI rule this screen owns, at its constants.py default."""
+        defaults = {key: default for key, default, _label, _tip in TOGGLE_ROWS}
         defaults["fog_of_war_strength"] = c.DEFAULT_FOG_OF_WAR_STRENGTH
         defaults["use_scripted_events"] = c.DEFAULT_USE_SCRIPTED_EVENTS
         defaults["days_per_turn"] = "Default"
+        defaults["ai_disabled"] = c.DEFAULT_AI_DISABLED
+        defaults["turns_to_wait_before_war"] = c.TURNS_TO_WAIT_BEFORE_WAR
+        defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
         return defaults
+
+    def info_button(self, x, y, tooltip_title, tooltip_text):
+        return Button(x, y + INFO_Y_NUDGE, "scenario_setting_info", "light_blue", "?",
+                     lambda: confirm_dialog.show_info(tooltip_title, tooltip_text))
 
     def refresh_ui(self):
         self.elements = [Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)]
 
-        for y, key, default, label in TOGGLE_ROWS:
+        for i, (key, default, label, tooltip) in enumerate(TOGGLE_ROWS):
+            y = LEFT_TOP_Y + i * ROW_H
             is_on = queries.get_scenario_flag(key, default, self.settings)
-            x = FOG_TOGGLE_X if key == "fog_of_war" else "centered"
+            self.elements.append(self.info_button(LEFT_INFO_X, y, label, tooltip))
             self.elements.append(
-                Button(x, y, "medium", "green" if is_on else "red",
+                Button(LEFT_BTN_X, y, "scenario_setting_button", "green" if is_on else "red",
                        f"{label}: {'ON' if is_on else 'OFF'}",
-                       lambda k=key, d=default: self.toggle(k, d))
+                       lambda k=key, d=default: self.toggle(k, d), font_preset="button_small")
             )
 
         self.elements.append(self.build_fog_slider())
 
         dpt_val = self.settings.get("days_per_turn", "Default")
+        self.elements.append(self.info_button(LEFT_INFO_X, DAYS_PER_TURN_ROW_Y, "Days Per Turn", DAYS_PER_TURN_TOOLTIP))
+        self.elements.append(
+            Button(LEFT_BTN_X, DAYS_PER_TURN_ROW_Y, "scenario_setting_button", "blue",
+                   f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn, font_preset="button_small")
+        )
+
+        self.elements.extend(self.build_ai_section())
+
         self.elements.extend([
-            Button("centered", DAYS_PER_TURN_ROW_Y, "medium", "blue",
-                   f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn),
-            Button("centered", RESET_ROW_Y, "medium", "grey", "Reset to Defaults", self.reset_defaults),
-            Button(SIDE_BTN_X, SIDE_BTN_AI_Y, "medium", "blue", "AI Specific Settings", self.open_ai_settings),
-            Button(SIDE_BTN_X, SIDE_BTN_TURN_EDITOR_Y, "medium", "purple", "Edit Construction Turns", self.open_turn_editor),
+            Button("centered", RESET_ROW_Y, "scenario_setting_button", "grey", "Reset to Defaults",
+                   self.reset_defaults, font_preset="button_small"),
+            Button("centered", TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple", "Edit Construction Turns",
+                   self.open_turn_editor, font_preset="button_small"),
         ])
 
     def build_fog_slider(self):
@@ -95,7 +156,7 @@ class Scenario_Settings(GameState):
         max_value = FOG_STRENGTH_STEPS[-1][1]
 
         def label_for(name):
-            return f"Intensity: {name.title()}"
+            return f"Fog Intensity: {name.title()}"
 
         def on_slide(val):
             # Snap to whichever stop the handle landed nearest
@@ -104,13 +165,50 @@ class Scenario_Settings(GameState):
             self.fog_slider.text = label_for(name)
             queries.save_scenario_settings(self.settings)
 
-        slider_x = parse_pos(FOG_SLIDER_X, c.SCREEN_WIDTH, FOG_SLIDER_WIDTH)
-        self.fog_slider = Slider(slider_x, FOG_SLIDER_Y, FOG_SLIDER_WIDTH, label_for(strength),
-                                 value, on_slide, visual_max=max_value, allowed_max=max_value)
+        fog_y = LEFT_TOP_Y # fog is always the first toggle row
+        self.fog_slider = Slider(FOG_SLIDER_X, fog_y + FOG_SLIDER_Y_OFFSET, FOG_SLIDER_WIDTH,
+                                 label_for(strength), value, on_slide,
+                                 visual_max=max_value, allowed_max=max_value)
         return self.fog_slider
+
+    def build_ai_section(self):
+        ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, self.settings)
+
+        elements = [
+            self.info_button(AI_INFO_X, AI_TOP_Y, "AI", AI_TOGGLE_TOOLTIP),
+            Button(AI_BTN_X, AI_TOP_Y, "scenario_setting_button", "red" if ai_disabled else "green",
+                   "AI: OFF" if ai_disabled else "AI: ON", self.toggle_ai_disabled, font_preset="button_small"),
+            self.info_button(AI_INFO_X, AI_TOP_Y + ROW_H, "Turns Before War", AI_TURNS_TOOLTIP),
+            self.build_ai_slider("turns_slider", AI_TOP_Y + ROW_H, "turns_to_wait_before_war",
+                                 c.TURNS_TO_WAIT_BEFORE_WAR, MAX_TURNS_BEFORE_WAR,
+                                 lambda v: f"Turns Before War: {int(v)}", int),
+            self.info_button(AI_INFO_X, AI_TOP_Y + 2 * ROW_H, "War Chance", AI_CHANCE_TOOLTIP),
+            self.build_ai_slider("chance_slider", AI_TOP_Y + 2 * ROW_H, "ai_war_declaration_chance",
+                                 c.AI_WAR_DECLARATION_CHANCE, 1.0,
+                                 lambda v: f"War Chance: {v:.2f}", float),
+        ]
+        return elements
+
+    def build_ai_slider(self, attr, y, key, default, max_value, label_for, cast):
+        value = float(self.settings.get(key, default))
+
+        def on_slide(val):
+            self.settings[key] = cast(val)
+            getattr(self, attr).text = label_for(val)
+            queries.save_scenario_settings(self.settings)
+
+        slider = Slider(AI_BTN_X, y + AI_SLIDER_Y_OFFSET, SLIDER_WIDTH,
+                        label_for(value), value, on_slide,
+                        visual_max=max_value, allowed_max=max_value)
+        setattr(self, attr, slider)
+        return slider
 
     def toggle(self, key, default):
         queries.toggle_scenario_flag(self.settings, key, default)
+        self.refresh_ui()
+
+    def toggle_ai_disabled(self):
+        queries.toggle_scenario_flag(self.settings, "ai_disabled", c.DEFAULT_AI_DISABLED)
         self.refresh_ui()
 
     def open_turn_editor(self):
@@ -119,9 +217,6 @@ class Scenario_Settings(GameState):
             open_turn_editor()
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
-
-    def open_ai_settings(self):
-        self.go_to("AI_SETTINGS")
 
     def cycle_days_per_turn(self):
         options = c.DAYS_PER_TURN_OPTIONS
@@ -135,3 +230,20 @@ class Scenario_Settings(GameState):
         self.settings.update(self.default_settings())
         queries.save_scenario_settings(self.settings)
         self.refresh_ui()
+
+    def additional_draw(self, surface):
+        from map_logic.rendering.font_manager import fonts
+
+        left_center_x = LEFT_INFO_X + (LEFT_BTN_X + c.SIZES["scenario_setting_button"][0] - LEFT_INFO_X) // 2
+        header_font = fonts.get("heading2")
+        left_header = header_font.render("Scenario Rules", True, (230, 230, 230))
+        surface.blit(left_header, left_header.get_rect(midtop=(left_center_x, 70)))
+
+        # Boxed panel keeps the AI settings reading as their own distinct section.
+        panel = pygame.Surface(AI_PANEL_RECT.size, pygame.SRCALPHA)
+        panel.fill((255, 255, 255, 18))
+        surface.blit(panel, AI_PANEL_RECT.topleft)
+        pygame.draw.rect(surface, (150, 150, 220), AI_PANEL_RECT, 2, border_radius=6)
+
+        ai_header = header_font.render("AI Settings", True, (230, 230, 255))
+        surface.blit(ai_header, ai_header.get_rect(midtop=(AI_PANEL_RECT.centerx, AI_HEADER_Y)))
