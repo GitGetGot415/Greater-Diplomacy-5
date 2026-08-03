@@ -217,6 +217,10 @@ DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default pl
 
 UI_LEFT_OFFSET = 160
 
+# How far (in screen pixels) to shift the camera left when a province is selected,
+# so the orders panel doesn't cover the unit the camera just centered on.
+ORDERS_PANEL_CAMERA_X_OFFSET = 250
+
 # --- UI Component Heights ---
 TOP_UI_HEIGHT = 60
 BOT_UI_HEIGHT = 60

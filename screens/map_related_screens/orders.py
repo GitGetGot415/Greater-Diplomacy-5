@@ -8,6 +8,7 @@ from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud
+from map_logic.camera import camera_handler
 
 # ==========================================
 # LAYOUT
@@ -100,6 +101,11 @@ class Orders_Screen(GameState):
         self.scroll_y = 0
         self.bombarding_unit_index = None
 
+        # Shift the camera left so this panel doesn't cover the unit it's showing orders for.
+        camera_handler.center_camera_on_province(
+            self.map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            self.map_screen.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
+
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
         
@@ -118,6 +124,15 @@ class Orders_Screen(GameState):
                 self.selected_unit_index = None
             
         self.refresh_ui()
+
+    def exit_screen(self):
+        # Undo the left shift applied in start_with_province so the map isn't
+        # left off-center once the orders panel is gone.
+        if self.map_screen and self.target_province:
+            camera_handler.center_camera_on_province(
+                self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+                self.map_screen.total_ui_h)
+        super().exit_screen()
 
     def select_unit(self, index):
         if self.map_screen.tactical_mode:

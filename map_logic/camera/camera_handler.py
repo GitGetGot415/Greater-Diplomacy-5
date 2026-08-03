@@ -100,10 +100,15 @@ def get_dynamic_ocean_color(camera, min_zoom):
 
     return (r, g, b)
 
-def center_camera_on_province(camera_obj, province_center, screen_width, screen_height, total_ui_h):
-    """Calculates and snaps the camera to the selected province based on current zoom."""
+def center_camera_on_province(camera_obj, province_center, screen_width, screen_height, total_ui_h, x_offset=0):
+    """Calculates and snaps the camera to the selected province based on current zoom.
+
+    x_offset shifts the camera left by that many screen pixels (at the current zoom),
+    which pushes the province rendering to the right on screen -- used to keep the
+    selected unit clear of the orders panel that occupies the left side of the screen.
+    """
     cx, cy = province_center
-    tx = cx - (screen_width / camera_obj.zoom / 2)
+    tx = cx - (screen_width / camera_obj.zoom / 2) - (x_offset / camera_obj.zoom)
     ty = cy - ((screen_height - total_ui_h) / (camera_obj.zoom * getattr(camera_obj, 'tilt_factor', 1.0)) / 2)
     
     camera_obj.target_pos = pygame.Vector2(tx, ty)
