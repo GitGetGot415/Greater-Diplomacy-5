@@ -30,6 +30,9 @@ class Menu(GameState):
     # takes BUTTON_INTRO_DURATION_MS to arrive.
     BANNER_INTRO_MS = 900
     SIGN_INTRO_MS = 900
+    # Hildehrand slides in from the same edge as the sign, just slightly
+    # after it, so the two don't read as one flat block arriving together.
+    HILDEHRAND_INTRO_DELAY_MS = 150
     BUTTON_INTRO_DURATION_MS = 500
     BUTTON_INTRO_CASCADE_MS = 650
     # How far below the screen bottom rows start from, so they're fully
@@ -62,12 +65,45 @@ class Menu(GameState):
             new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
             self.sign_image = pygame.transform.scale(raw_image, new_size)
             self.sign_rect = self.sign_image.get_rect()
-            self.sign_rect.right = c.SCREEN_WIDTH - 40
+            self.sign_rect.right = c.SCREEN_WIDTH - 180
             self.sign_rect.centery = c.SCREEN_HEIGHT // 2
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
             self.sign_rect = None
+
+        # Hildehrand stands to the right of the sign, scaled the same
+        # nearest-neighbour way as The Sign.png (not smoothscale) so the
+        # pixel art stays crisp instead of blurring. Both variants share a
+        # fixed anchor point so swapping between them never shifts layout.
+        self._hildehrand_anchor_centery = self.sign_rect.centery if self.sign_rect else c.SCREEN_HEIGHT // 2
+        self.hildehrand_variant = "F"
+        try:
+            hild_scale_factor = 2
+
+            def _load_scaled(path, factor):
+                raw = pygame.image.load(path).convert_alpha()
+                size = (int(raw.get_width() * factor), int(raw.get_height() * factor))
+                return pygame.transform.scale(raw, size)
+
+            self.hildehrand_images = {
+                "F": _load_scaled("assets/images/Hildehrand F.png", hild_scale_factor),
+                "M": _load_scaled("assets/images/Hildehrand M.png", hild_scale_factor),
+            }
+            hild_max_width = max(img.get_width() for img in self.hildehrand_images.values())
+            self.hildehrand_height = max(img.get_height() for img in self.hildehrand_images.values())
+
+            # Sit just right of the sign, but never spill past the screen edge.
+            desired_left = (self.sign_rect.right + 20) if self.sign_rect else (c.SCREEN_WIDTH - hild_max_width - 20)
+            hild_left = min(desired_left, c.SCREEN_WIDTH - hild_max_width - 10)
+            self._hildehrand_anchor_centerx = hild_left + hild_max_width // 2
+        except Exception as e:
+            print(f"Failed to load the Hildehrand images: {e}")
+            self.hildehrand_images = None
+            self.hildehrand_height = 180
+            self._hildehrand_anchor_centerx = (self.sign_rect.right + 90) if self.sign_rect else (c.SCREEN_WIDTH - 150)
+
+        self._hildehrand_draw_pos = (self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery)
 
         try:
             raw_banner = pygame.image.load("assets/backgrounds/GD5 Banner.png").convert_alpha()
@@ -150,6 +186,21 @@ class Menu(GameState):
         )
         self.elements.append(self.refresh_btn)
 
+        # Small toggle button beneath Hildehrand, swapping between the F/M
+        # portraits. Joins the same rise-from-bottom cascade as every other
+        # menu button (see below) rather than animating on its own.
+        swap_btn_width = c.SIZES["puppet_option"][0]
+        self.swap_hildehrand_btn = Button(
+            self._hildehrand_anchor_centerx - swap_btn_width // 2,
+            self._hildehrand_anchor_centery + self.hildehrand_height // 2 + 15,
+            "puppet_option",
+            "purple",
+            "Swap Hildehrand",
+            self.toggle_hildehrand,
+            font_preset="small",
+        )
+        self.elements.append(self.swap_hildehrand_btn)
+
         # Cascade the rise-in by vertical position: rows near the top of the
         # screen start first, rows near the bottom start last.
         all_target_ys = [btn.rect.y for btn in self.elements] + \
@@ -169,6 +220,9 @@ class Menu(GameState):
         # there's nothing useful to do here even synchronously.
         if not IS_WEB:
             threading.Thread(target=self.check_version, daemon=True).start()
+
+    def toggle_hildehrand(self):
+        self.hildehrand_variant = "M" if self.hildehrand_variant == "F" else "F"
 
     def trigger_version_check(self):
         if IS_WEB:
@@ -254,6 +308,14 @@ class Menu(GameState):
             start_x = c.SCREEN_WIDTH + 40
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
+        if getattr(self, "hildehrand_images", None):
+            img = self.hildehrand_images[self.hildehrand_variant]
+            rest_rect = img.get_rect(center=(self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery))
+            local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
+            t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
+            start_x = c.SCREEN_WIDTH + 40
+            self._hildehrand_draw_pos = (int(_lerp(start_x, rest_rect.x, t)), rest_rect.y)
+
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
 
         for btn in self.elements:
@@ -273,6 +335,9 @@ class Menu(GameState):
 
         if getattr(self, "sign_image", None):
             surface.blit(self.sign_image, self._sign_draw_pos)
+
+        if getattr(self, "hildehrand_images", None):
+            surface.blit(self.hildehrand_images[self.hildehrand_variant], self._hildehrand_draw_pos)
 
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
