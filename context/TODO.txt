@@ -8,6 +8,8 @@
 
 - check the recent issues coming from playtesting
 
+- downloading stuff when viewing assets from the web build dooesn't seem to work
+
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there
