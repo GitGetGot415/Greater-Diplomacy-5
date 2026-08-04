@@ -176,7 +176,7 @@ class Controller:
             "save": symbol_loader.get_symbol("Save", 2),
             "core": symbol_loader.get_symbol("Star", 2),
             "resource": symbol_loader.get_symbol("Iron", 2),
-            "faction": symbol_loader.get_symbol("Shield", 1.5),
+            "faction": symbol_loader.get_symbol("Faction", 2),
             "puppet": symbol_loader.get_symbol("Pawn", 2),
             "music": symbol_loader.get_symbol("Music", 1),
             "settings": symbol_loader.get_symbol("Gear", 1.0),
