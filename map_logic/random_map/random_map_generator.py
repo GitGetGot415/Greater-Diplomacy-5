@@ -170,7 +170,11 @@ def randomize_all_provinces(map_screen, settings):
             prov["buildings"].append(random.choice(allowed_recruitment))
 
     # --- Step D: Guarantee Minimum Buildings (Balanced by Tech) ---
-    best_factory = allowed_factories[-1] if allowed_factories else c.DEFAULT_STARTING_FACTORY
+    # No fallback to c.DEFAULT_STARTING_FACTORY here: an empty allowed_factories
+    # means basic_factory (and every factory tier) is disabled for this
+    # scenario, and nations should end up with no factory at all rather than
+    # one hardcoded in regardless.
+    best_factory = allowed_factories[-1] if allowed_factories else None
     best_recruitment = allowed_recruitment[-1] if allowed_recruitment else None
     min_factories_required = c.RANDOM_SCENARIO_MIN_FACTORIES
 
@@ -200,14 +204,14 @@ def randomize_all_provinces(map_screen, settings):
             if any("Recruitment" in b for b in bldgs): recruitment_provs.append(prov)
 
         # 1. Guarantee Minimum Factories (RANDOM_SCENARIO_MIN_FACTORIES unless 1 tile big)
-        target_factory_count = min(min_factories_required, len(owned_provs))
-        
+        target_factory_count = min(min_factories_required, len(owned_provs)) if allowed_factories else 0
+
         while len(factory_provs) < target_factory_count:
             no_fac_provs = [p for p in owned_provs if p not in factory_provs]
             if not no_fac_provs: break # Failsafe
-            
+
             target_prov = random.choice(no_fac_provs)
-            fac_to_place = random.choice(allowed_factories) if allowed_factories else best_factory
+            fac_to_place = random.choice(allowed_factories)
             target_prov.setdefault("buildings", []).append(fac_to_place)
             
             # Guarantee it gets a recruitment center if unlocked
@@ -317,16 +321,18 @@ def randomize_all_provinces(map_screen, settings):
                 current_navy_ratio = navy_count / max(1, total_units)
 
                 unit_to_buy = None
-                
-                # GUARANTEE GROUND ARMY FIRST
-                if inf_count < c.RANDOM_SCENARIO_MIN_INFANTRY:
+
+                # GUARANTEE GROUND ARMY FIRST (unless Infantry itself was disabled --
+                # fall through to whatever else is still buildable instead of
+                # stalling the whole purchase loop on a unit that doesn't exist)
+                if inf_count < c.RANDOM_SCENARIO_MIN_INFANTRY and best_inf:
                     unit_to_buy = best_inf
                 elif current_navy_ratio < target_navy_ratio and best_navy:
                     unit_to_buy = best_navy
                 elif best_tank and (inf_count / max(1, tank_count)) > dynamic_tank_ratio:
                     unit_to_buy = best_tank
                 else:
-                    unit_to_buy = best_inf
+                    unit_to_buy = best_inf or best_tank or best_navy
 
                 if not unit_to_buy: break
 
@@ -346,7 +352,7 @@ def randomize_all_provinces(map_screen, settings):
                     else: inf_count += 1
                 else:
                     # If we couldn't afford the preferred unit (like an expensive tank/ship), fallback to infantry
-                    if unit_to_buy != best_inf:
+                    if unit_to_buy != best_inf and best_inf:
                         stats = unit_library.get(best_inf, {})
                         u_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
                         u_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
@@ -364,9 +370,14 @@ def randomize_all_provinces(map_screen, settings):
                         break
 
             # Guarantee at least 1 unit to prevent a totally defenseless nation
+            # -- but only if something is actually buildable; a scenario that
+            # disabled every unit family should spawn nations with nothing,
+            # not a unit type that no longer exists in the library.
             if not units_to_spawn:
-                units_to_spawn.append(best_inf)
-                inf_count += 1
+                fallback_unit = best_inf or best_tank or best_navy
+                if fallback_unit:
+                    units_to_spawn.append(fallback_unit)
+                    inf_count += 1
 
             # GUARANTEE COASTAL FACTORY IF NAVY SPAWNS
             if navy_count > 0 and coastal_provs:
@@ -376,9 +387,9 @@ def randomize_all_provinces(map_screen, settings):
                         has_coastal_factory = True
                         break
                     
-                if not has_coastal_factory:
+                if not has_coastal_factory and allowed_factories:
                     # Inject a factory into the first coastal province to validate the ships
-                    fac_to_place = random.choice(allowed_factories) if allowed_factories else c.DEFAULT_STARTING_FACTORY
+                    fac_to_place = random.choice(allowed_factories)
                     coastal_provs[0].setdefault("buildings", []).append(fac_to_place)
                     
                     # Also spawn a random level recruitment center

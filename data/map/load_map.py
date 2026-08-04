@@ -109,6 +109,14 @@ def load_map_assets(self, load_path):
         if not getattr(self, 'selection_mode', False):
             self.scenario_settings = save_meta["scenario_settings"]
             queries.apply_global_scenario_flags(self.scenario_settings)
+            # Unlike playthrough-defining settings (fog of war, casus belli, ...)
+            # which are frozen into the save on purpose, disabled units/buildings
+            # are closer to a content toggle -- continuing an existing save should
+            # still pick up whatever the Turn Editor's disable list currently says
+            # rather than whatever was baked in the moment this save was created,
+            # or re-enabling something has no effect short of starting a new game.
+            self.scenario_settings["unit_disabled"] = scenario_settings.get("unit_disabled", []) if scenario_settings else []
+            self.scenario_settings["building_disabled"] = scenario_settings.get("building_disabled", []) if scenario_settings else []
         else:
             # Inject built-in scenario constants that shouldn't be wiped by the user's UI settings
             if "base_days_per_turn" in save_meta["scenario_settings"]:
@@ -164,12 +172,18 @@ def load_map_assets(self, load_path):
             disabled_tech_keys.add(tech_key)
         del building_lib[name]
 
-    if disabled_tech_keys:
-        tech_tree = queries.get_tech_tree()
-        with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
-            tech_tree.clear()
-            tech_tree.update(json.load(f))
+    # Always reload tech_tree fresh from disk first, exactly like unit_lib/
+    # building_lib above -- otherwise re-enabling a previously-disabled tech
+    # leaves it pruned forever (this block would only ever repair keys that
+    # are *currently* disabled, never undo a prune from an earlier load where
+    # they weren't), and it'd keep looking that way until the app restarts
+    # and the cache gets rebuilt from scratch.
+    tech_tree = queries.get_tech_tree()
+    with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
+        tech_tree.clear()
+        tech_tree.update(json.load(f))
 
+    if disabled_tech_keys:
         for key in disabled_tech_keys:
             tech_tree.pop(key, None)
 

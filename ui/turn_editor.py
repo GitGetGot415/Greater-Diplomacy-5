@@ -7,6 +7,7 @@ override, so defaults keep tracking the unit/building libraries.
 """
 import sys
 import os
+import json
 
 # Add the parent directory (project root) to the Python path so this stays runnable standalone
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -33,12 +34,24 @@ class TurnEditorScreen(GameState):
         self.title = "Construction Turns Editor"
 
         self.settings = queries.get_scenario_settings() or {}
+
+        # Read straight off disk rather than queries._load_cached_json(): that
+        # cache is the SAME dict object load_map.py prunes in place for a
+        # loaded game's disabled units/buildings, so after playing a game with
+        # something disabled, the cached library would be missing it entirely
+        # -- its row would vanish from this editor with no way to click it
+        # back on. This editor always needs the full, unpruned list.
+        with open(c.UNIT_DATA_PATH, "r") as f:
+            full_unit_library = json.load(f)
+        with open(c.BUILDING_DATA_PATH, "r") as f:
+            full_building_library = json.load(f)
+
         self.tabs = {
-            "unit": self._build_tab(queries._load_cached_json("unit_library") or {},
+            "unit": self._build_tab(full_unit_library,
                                     self.settings.setdefault("unit_turn_overrides", {}),
                                     self.settings.setdefault("unit_disabled", []),
                                     "production_time", "Unit Type"),
-            "building": self._build_tab(queries._load_cached_json("building_library") or {},
+            "building": self._build_tab(full_building_library,
                                         self.settings.setdefault("building_turn_overrides", {}),
                                         self.settings.setdefault("building_disabled", []),
                                         "time", "Building Type"),

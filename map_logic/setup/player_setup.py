@@ -24,11 +24,15 @@ def select_tactical_unit(map_screen, province):
         # SPAWN A BLANK UNIT
         nation_data = map_screen.nation_data.get(owner, {})
         unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(), queries.get_unit_library(), allow_fuel_units=False)
-        
+
+        if unit_type is None:
+            map_screen.show_feedback("No buildable unit available to spawn (Infantry may be disabled for this scenario)")
+            return
+
         # Enforce default year if they literally have nothing
         if unit_type == f"Infantry Type {c.START_YEAR}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
-            
+
         new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library())
         new_unit["_is_tactical_ghost"] = True # Tag it so we can delete it if they cancel
         

@@ -440,7 +440,11 @@ def get_time_appropriate_research(start_year):
 
     res = res_template.copy()
     res.update(baseline_tech)
-    return res
+    # DEFAULT_1910_TECH is a hardcoded starting kit unaware of per-scenario
+    # disables -- drop anything that isn't actually in the (possibly pruned)
+    # tech tree so a disabled tech's default level doesn't get handed back out
+    # to every randomly generated nation.
+    return {tech: lvl for tech, lvl in res.items() if tech in struct}
 
 
 # ==========================================
@@ -937,8 +941,13 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
             found = check_upgrade(tech, fmt)
             if found: return found
 
-    # Fallback to standard (fuel-free) infantry
-    return check_upgrade("infantry_type", "Infantry Type {}") or f"Infantry Type {c.START_YEAR}"
+    # Fallback to standard (fuel-free) infantry -- but only if that's actually
+    # buildable. A scenario that disabled Infantry entirely removes every
+    # "Infantry Type <year>" entry from unit_library, so blindly returning the
+    # START_YEAR name here would hand callers a unit that doesn't exist,
+    # silently falling back to placeholder stats when they build it.
+    default_name = f"Infantry Type {c.START_YEAR}"
+    return check_upgrade("infantry_type", "Infantry Type {}") or (default_name if default_name in unit_library else None)
 
 def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     """Determines if a higher level of the current unit type is unlocked and returns its name."""

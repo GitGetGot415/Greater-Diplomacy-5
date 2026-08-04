@@ -372,7 +372,13 @@ def process_ai_economy_decisions(map_screen):
                 cost_mat = unit_stats.get("cost_materials", 0)
                 cost_man = unit_stats.get("cost_manpower", 0)
                 cost_fuel = unit_stats.get("cost_fuel", 0)
-            
+
+            # Nothing buildable at all (e.g. every unit family this nation could
+            # field has been disabled for the scenario) -- stop for this nation
+            # this turn instead of proceeding with a unit name that doesn't exist.
+            if not unit_name_to_build:
+                break
+
             # Find a province capable of recruiting (Exclude tiles in combat AND non-cores)
             if queries.get_base_unit_name(unit_name_to_build) == "Militia":
                 factory_provs = [p for p in my_provs if queries.has_industry(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and ai_name in p.get("cores", [])]
