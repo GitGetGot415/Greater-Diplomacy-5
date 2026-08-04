@@ -38,8 +38,9 @@ ACTION_COL_RENAME = 200
 ACTION_COL_UPGRADE = 260
 ACTION_COL_BOMBARD = 320
 
-# Inline rename box, anchored off the rename button's column.
-RENAME_BOX_OFFSET_X = ACTION_COL_RENAME + 80
+# Inline rename box, anchored 80px right of wherever the rename button currently sits
+# (its column moves to ACTION_COL_CONVERT while actively renaming).
+RENAME_BOX_GAP_X = 80
 RENAME_BOX_SIZE = (120, 25)
 
 # Path / bombardment footer inside a unit row.
@@ -291,9 +292,13 @@ class Orders_Screen(GameState):
                 self.elements.append(btn_repair)
 
                 if self.renaming_unit_index == i:
-                    btn_rename = Button(x_pos + ACTION_COL_RENAME, y_pos, "orders_panel_button_2", "green", "Save Name", lambda idx=i: self.save_unit_name(idx), font_preset="normal")
+                    # Slide over to the convert button's column (which is hidden while
+                    # renaming) so Save Name / the text box aren't crammed at the edge.
+                    rename_col = ACTION_COL_CONVERT
+                    btn_rename = Button(x_pos + rename_col, y_pos, "orders_panel_button_2", "green", "Save Name", lambda idx=i: self.save_unit_name(idx), font_preset="normal")
                 else:
-                    btn_rename = Button(x_pos + ACTION_COL_RENAME, y_pos, "orders_panel_button_2", "blue", "Rename", lambda idx=i: self.start_renaming(idx), font_preset="normal")
+                    rename_col = ACTION_COL_RENAME
+                    btn_rename = Button(x_pos + rename_col, y_pos, "orders_panel_button_2", "blue", "Rename", lambda idx=i: self.start_renaming(idx), font_preset="normal")
 
                 self.elements.append(btn_rename)
 
@@ -334,6 +339,12 @@ class Orders_Screen(GameState):
                 if is_tactical_other:
                     for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard]:
                         b.apply_state(enabled=False)
+
+                # While this unit is being renamed, hide the other action buttons so the
+                # inline name box has a clear row to itself instead of overlapping them.
+                if self.renaming_unit_index == i:
+                    for b in (btn_conv, btn_disband, btn_repair, btn_upgrade, btn_bombard):
+                        b.apply_state(visible=False)
 
                 for b in (btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard):
                     b.is_scrollable = True
@@ -903,7 +914,11 @@ class Orders_Screen(GameState):
                     surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
 
                     if self.renaming_unit_index == i:
-                        box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + RENAME_BOX_OFFSET_X, y_pos, *RENAME_BOX_SIZE)
+                        # Buttons are built in refresh_ui() off a y_pos that includes
+                        # UNIT_ICON_OFFSET_Y; match that here so the box lines up with them.
+                        # Save Name sits at ACTION_COL_CONVERT while renaming (see refresh_ui);
+                        # keep the box glued to its right edge.
+                        box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + ACTION_COL_CONVERT + RENAME_BOX_GAP_X, y_pos + UNIT_ICON_OFFSET_Y, *RENAME_BOX_SIZE)
                         pygame.draw.rect(surface, (60, 60, 80), box_rect)
                         pygame.draw.rect(surface, (150, 150, 150), box_rect, 1)
                         txt = small_font.render(self.rename_text + "|", True, (255, 255, 255))
