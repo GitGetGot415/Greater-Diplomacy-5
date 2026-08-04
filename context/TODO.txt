@@ -77,7 +77,6 @@ other things:
 - added Aruba, Chechnya, Curacao, French Polynesia, North Macedonia, Slovenia, Trinidad and Tobago, and Bahrain
 - ability to turn landkreuzers and railguns off because realism (barbarossa)
 
-
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
 - ai will always reject unless they're an integrated puppet
