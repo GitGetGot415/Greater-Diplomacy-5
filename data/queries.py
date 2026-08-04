@@ -373,6 +373,20 @@ def get_ai_threads():
 
 # --- REFACTORED GETTERS (No paths needed here anymore!) ---
 def get_settings(): return _load_cached_json("settings")
+
+def get_keybind(action, default):
+    """Resolves a rebindable action (e.g. "BACK") straight from saved settings.
+
+    Reads the persisted keybind rather than any particular screen's in-memory
+    controller, since most screens never get a controller reference wired up.
+    """
+    name = get_settings().get("keybinds", {}).get(action)
+    if not name:
+        return default
+    try:
+        return pygame.key.key_code(name)
+    except Exception:
+        return default
 def get_unit_library(): return _load_cached_json("unit_library")
 def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")

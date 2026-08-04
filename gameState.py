@@ -7,12 +7,13 @@ from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
 def resolve_keybind(state, action, default):
-    """Finds a keybind by checking the state, then its map_screen, for a controller."""
-    for host in (state, getattr(state, "map_screen", None)):
-        controller = getattr(host, "controller", None)
-        if controller:
-            return controller.keybinds.get(action, default)
-    return default
+    """Resolves a rebindable action's pygame key code.
+
+    Delegates to the persisted settings rather than state.controller -- most
+    screens never get a controller reference wired up, so that chain was
+    silently falling back to `default` almost everywhere.
+    """
+    return queries.get_keybind(action, default)
 
 def dispatch_global_keys(state, event):
     """Routes BACK/ORDERS presses to a state's handlers.
@@ -517,7 +518,7 @@ class FolderListState(GameState):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     self.confirm_delete()
-                elif event.key == pygame.K_ESCAPE:
+                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                     self.cancel_delete()
             return True
 

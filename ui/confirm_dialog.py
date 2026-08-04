@@ -17,10 +17,16 @@ that shape (see ui/modal_stack.py for the full rationale):
 Call sites always look the same either way: `ask_yes_no(title, msg, on_result=...)`.
 """
 import pygame
+from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
 
 _STANDALONE_SIZE = (520, 320)
+
+
+def _back_key():
+    """The rebound BACK key, so these dialogs dismiss on it same as everything else."""
+    return queries.get_keybind("BACK", pygame.K_ESCAPE)
 
 
 def _hide_tk_chain(tk_widget):
@@ -111,7 +117,7 @@ class _YesNoModal:
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y):
                     self._finish(True)
-                elif event.key in (pygame.K_ESCAPE, pygame.K_n):
+                elif event.key in (pygame.K_ESCAPE, pygame.K_n, _back_key()):
                     self._finish(False)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.yes_rect.collidepoint(event.pos):
@@ -231,7 +237,7 @@ class _TextInputModal:
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if event.key in (pygame.K_ESCAPE, _back_key()):
                     self._finish(None)
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     value, self.error_text = self.validate(self.text)
@@ -416,7 +422,7 @@ class _MessageModal:
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE):
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
                     self._finish()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):

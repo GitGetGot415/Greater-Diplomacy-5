@@ -1,5 +1,5 @@
 import pygame
-from gameState import GameState
+from gameState import GameState, resolve_keybind
 import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, process_text_input
@@ -119,7 +119,7 @@ class Faction_Screen(GameState):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     self.confirm_rename()
-                elif event.key == pygame.K_ESCAPE:
+                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                     self.cancel_rename()
                 else:
                     self.new_faction_name, _ = process_text_input(event, self.new_faction_name, max_length=40)

@@ -12,6 +12,9 @@
 - edit cost for units editor? (also please fix the basic factories time to build issue not working)
 - information for what scenario setting does
 
+- edit construction turns also allows for the editing of how much said unit costs to produce?
+- diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
+
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there

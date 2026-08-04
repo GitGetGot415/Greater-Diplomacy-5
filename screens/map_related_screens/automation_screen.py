@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
-from gameState import GameState
+from gameState import GameState, resolve_keybind
 from map_logic.ai.automation_logic import (
     automate_player_construction, clear_player_construction,
     automate_player_movement, clear_player_movement,
@@ -98,10 +98,7 @@ class Automation_Screen(GameState):
 
     def additional_events(self, event):
         if event.type == pygame.KEYDOWN:
-            back_key = pygame.K_ESCAPE
-            if hasattr(self.map_screen, 'controller'):
-                back_key = self.map_screen.controller.keybinds.get("BACK", pygame.K_ESCAPE)
-            if event.key == back_key:
+            if event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                 self.handle_back_key()
 
     def draw(self, surface):

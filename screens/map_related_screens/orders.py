@@ -1,6 +1,6 @@
 import pygame
 import data.constants as c
-from gameState import GameState
+from gameState import GameState, resolve_keybind
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from data import queries
@@ -552,7 +552,7 @@ class Orders_Screen(GameState):
             if event.type == pygame.KEYDOWN and self.renaming_unit_index is not None:
                 if event.key == pygame.K_RETURN:
                     self.save_unit_name(self.renaming_unit_index)
-                elif event.key == pygame.K_ESCAPE:
+                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                     self.renaming_unit_index = None
                     self.refresh_ui()
                 else:

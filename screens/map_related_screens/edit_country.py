@@ -3,7 +3,7 @@ import pygame
 import os
 from pathlib import Path
 import unicodedata
-from gameState import GameState
+from gameState import GameState, resolve_keybind
 from ui_elements import process_text_input
 import ui_elements
 from map_logic.rendering.font_manager import fonts
@@ -291,7 +291,7 @@ class Edit_Country_Screen(GameState):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         self.force_exit_to_map()
-                    elif event.key == pygame.K_ESCAPE:
+                    elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                         self.show_unsaved_confirmation = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mx, my = event.pos
@@ -308,7 +308,7 @@ class Edit_Country_Screen(GameState):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         self.confirm_reset()
-                    elif event.key == pygame.K_ESCAPE:
+                    elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                         self.cancel_reset()
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mx, my = event.pos

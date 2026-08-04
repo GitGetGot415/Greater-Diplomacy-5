@@ -103,9 +103,6 @@ class Multiplayer_New(GameState):
         ask_tour_name()
 
     def additional_events(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.exit_screen()
-
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
