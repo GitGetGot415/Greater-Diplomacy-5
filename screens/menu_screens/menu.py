@@ -53,8 +53,7 @@ class Menu(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40) # Midnight Blue
-        # No bg_image_path: GameState.draw_background falls back to a
-        # checkerboard tinted to bg_color, so the static Menu.png is unused.
+        # GameState.draw_background falls back to a checkerboard tinted to bg_color
 
         try:
             raw_image = pygame.image.load("assets/images/The Sign.png").convert_alpha()

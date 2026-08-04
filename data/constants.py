@@ -894,7 +894,6 @@ DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
 PROVINCE_BG_FILE = "Province.png"
 SETTINGS_BG_FILE = "Settings.png"
-MENU_BG_FILE = "Menu.png"
 
 # Scrolling checkerboard drawn behind any screen that has no bg_image_path
 # (see GameState.draw_checkerboard_background). The on-disk file is a plain
