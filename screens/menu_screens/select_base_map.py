@@ -14,6 +14,13 @@ class Select_Base_Map(FolderListState):
     ROW_TOP = 150
     ROW_CULL_BOTTOM_MARGIN = 120
 
+    # sub_state -> (button/header label, data.constants directory attribute name)
+    # for browsing maps that live in other scenario directories.
+    OTHER_MAP_CATEGORIES = {
+        "OTHER_HISTORICAL": ("Historical Scenarios", "SCENARIOS_HISTORICAL_DIR"),
+        "OTHER_ALTERNATE": ("Alternate Scenarios", "SCENARIOS_ALTERNATE_DIR"),
+    }
+
     def __init__(self):
         super().__init__()
         self.bg_color = (40, 20, 60)
@@ -36,7 +43,15 @@ class Select_Base_Map(FolderListState):
         return c.SCENARIOS_CUSTOM_DIR
 
     def get_title(self):
-        return "EDIT EXISTING MAP" if self.sub_state == "CUSTOM_MAPS" else "CREATE NEW MAP FROM BASE"
+        if self.sub_state == "CUSTOM_MAPS":
+            return "EDIT EXISTING MAP"
+        if self.sub_state == "BASE_MAPS":
+            return "CREATE NEW MAP FROM BASE"
+        if self.sub_state == "OTHER_CATEGORY":
+            return "EDIT MAP FROM OTHER DIRECTORY"
+        if self.sub_state in self.OTHER_MAP_CATEGORIES:
+            return self.OTHER_MAP_CATEGORIES[self.sub_state][0].upper()
+        return ""
 
     def set_sub_state(self, state):
         self.sub_state = state
@@ -63,17 +78,36 @@ class Select_Base_Map(FolderListState):
 
     def refresh_ui(self):
         self.elements = []
+
+        if self.sub_state == "OTHER_CATEGORY":
+            self.elements = [Button(20, 20, "small", "red", "Back",
+                                    lambda: self.set_sub_state("CUSTOM_MAPS"))]
+            for i, (state, (label, _attr)) in enumerate(self.OTHER_MAP_CATEGORIES.items()):
+                self.elements.append(
+                    Button("centered", 220 + i * 100, "large", "blue", label,
+                           lambda s=state: self.set_sub_state(s)))
+            return
+
         is_custom = self.sub_state == "CUSTOM_MAPS"
+        is_other_list = self.sub_state in self.OTHER_MAP_CATEGORIES
 
         if is_custom:
             self.elements.extend([
                 Button(20, 20, "small", "red", "Back", self.exit_screen),
                 Button(160, 20, "medium", "green", "Import .zip",
                        lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
-                Button("centered", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
+                Button("centered-160", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
                        lambda: self.set_sub_state("BASE_MAPS")),
+                Button("centered+160", c.SCREEN_HEIGHT - 100, "large", "orange", "Edit Existing Map",
+                       lambda: self.set_sub_state("OTHER_CATEGORY")),
             ])
             directory = c.SCENARIOS_CUSTOM_DIR
+        elif is_other_list:
+            _label, attr = self.OTHER_MAP_CATEGORIES[self.sub_state]
+            directory = getattr(c, attr)
+            self.elements.extend([
+                Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("OTHER_CATEGORY")),
+            ])
         else:
             self.elements.extend([
                 Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CUSTOM_MAPS")),
@@ -91,10 +125,13 @@ class Select_Base_Map(FolderListState):
         for i, btn_y in rows:
             name = names[i]
 
-            # Base maps are read-only: one centred button and nothing to manage
+            # Base maps and maps from other scenario directories are read-only
+            # here: one centred button that opens the map into the editor as
+            # a copy (saving from the editor always writes a new map, it
+            # never overwrites the original).
             if not is_custom:
                 btn = Button("centered", btn_y, "new_game", "blue", name,
-                            lambda n=name: self.start_editor_with_map(n, c.BASE_MAPS_DIR))
+                            lambda n=name, d=directory: self.start_editor_with_map(n, d))
                 btn.is_scrollable = True
                 btn.click_guard = self.scroll_click_guard
                 self.elements.append(btn)
@@ -145,9 +182,13 @@ class Select_Base_Map(FolderListState):
         super().exit_screen()
 
     def handle_back_key(self):
-        # Escape steps back out of the base-map list before it leaves the screen.
+        # Escape steps back up the sub-state tree before it leaves the screen.
         if self.sub_state == "BASE_MAPS":
             self.set_sub_state("CUSTOM_MAPS")
+        elif self.sub_state == "OTHER_CATEGORY":
+            self.set_sub_state("CUSTOM_MAPS")
+        elif self.sub_state in self.OTHER_MAP_CATEGORIES:
+            self.set_sub_state("OTHER_CATEGORY")
         else:
             self.exit_screen()
 
@@ -159,11 +200,13 @@ class Select_Base_Map(FolderListState):
             if self.handle_name_prompt_event(event):
                 continue
 
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+            if self.sub_state != "OTHER_CATEGORY":
+                self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
             super().handle_events([event])
 
     def additional_draw(self, surface):
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
+        if self.sub_state != "OTHER_CATEGORY":
+            self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
 
         if self.renaming_item:
             names = self.list_folders()
