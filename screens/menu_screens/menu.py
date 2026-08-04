@@ -204,11 +204,11 @@ class Menu(GameState):
 
         # Small toggle button beneath Hildehrand, swapping between the F/M
         # portraits.
-        swap_btn_width = c.SIZES["puppet_option"][0]
+        swap_btn_width = c.SIZES["swap_hildehrand"][0]
         self.swap_hildehrand_btn = Button(
             self._hildehrand_anchor_centerx - swap_btn_width // 2,
             self._hildehrand_anchor_centery + self.hildehrand_height // 2 + 15,
-            "puppet_option",
+            "swap_hildehrand",
             "purple",
             "Swap Hildehrand",
             self.toggle_hildehrand,

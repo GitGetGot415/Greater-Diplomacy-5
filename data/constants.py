@@ -391,6 +391,7 @@ SIZES = {
     "orders": (100, 50),
     "small": (100, 40),
     "puppet_option": (100, 30),
+    "swap_hildehrand": (120, 30),
     "top_orders_panel_button": (90, 40),
     "orders_panel_button": (60, 40),
     "orders_panel_button_2": (60, 40),
