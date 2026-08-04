@@ -16,21 +16,21 @@ from map_logic.camera import camera_handler
 
 BACK_BTN_X = 50
 TOP_BTN_ROW_Y = 90
-TOP_BTN_START_X = 100
+TOP_BTN_OFFSET_X = 20
 TOP_BTN_STEP_X = 100
 
 # Per-unit row: icon button on the left, then the action buttons.
-UNIT_ICON_X = 100
+UNIT_ICON_OFFSET_X = 20
 UNIT_ROW_TEXT_OFFSET_Y = -5
-UNIT_NAME_X = 90
-UNIT_STATS_X = 160
+UNIT_NAME_OFFSET_X = 10
+UNIT_STATS_OFFSET_X = 80
 UNIT_STATS_OFFSET_Y = 15
 UNIT_ICON_OFFSET_Y = 15
 
-# X of each action button, measured from ACTION_START_X. Every entry after the
-# first is an "orders_panel_button_2"; the conversion button is the wider
+# X of each action button, measured from ACTION_START_OFFSET_X. Every entry after
+# the first is an "orders_panel_button_2"; the conversion button is the wider
 # "orders_panel_button", which is why the first gap is bigger than the rest.
-ACTION_START_X = 280
+ACTION_START_OFFSET_X = 200
 ACTION_COL_CONVERT = 0
 ACTION_COL_DISBAND = 85
 ACTION_COL_REPAIR = 160
@@ -43,15 +43,15 @@ RENAME_BOX_OFFSET_X = ACTION_COL_RENAME + 80
 RENAME_BOX_SIZE = (120, 25)
 
 # Path / bombardment footer inside a unit row.
-PATH_TEXT_X = 140
+PATH_TEXT_OFFSET_X = 60
 PATH_ROW_OFFSET_Y = -20
-CANCEL_BOX_X = 100
+CANCEL_BOX_OFFSET_X = 20
 CANCEL_BOX_OFFSET_Y = -25
 CANCEL_BOX_SIZE = 25
 
 PANEL_BG_COLOR = (30, 30, 50)
 PANEL_BORDER_COLOR = (100, 100, 250)
-SCROLLBAR_X = 70
+SCROLLBAR_OFFSET_X = -10
 SCROLLBAR_WIDTH = 10
 
 TARGET_MARKER_RADIUS = 12
@@ -66,7 +66,7 @@ UNIT_ICON_ZOOM = 1.5
 
 class Orders_Screen(GameState):
     back_state = "MAP"
-    PANEL_X = 80
+    PANEL_X = 20
     # Wide enough to cover the whole button row (Bombard is the rightmost),
     # so clicking a button never doubles as a click on the map underneath.
     PANEL_WIDTH = 690
@@ -181,15 +181,15 @@ class Orders_Screen(GameState):
         if player_units:
             if len(player_units) > 1:
                 all_color = "grey" if is_tactical else ("blue" if self.selected_unit_index == "ALL" else "grey")
-                btn_all = Button(TOP_BTN_START_X, TOP_BTN_ROW_Y, "top_orders_panel_button", all_color, "Select All", lambda: self.select_unit("ALL"), font_preset="normal")
+                btn_all = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", all_color, "Select All", lambda: self.select_unit("ALL"), font_preset="normal")
                 if is_tactical: btn_all.disabled = True
                 self.elements.append(btn_all)
-                
-                btn_clear = Button(TOP_BTN_START_X + TOP_BTN_STEP_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
+
+                btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X + TOP_BTN_STEP_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
                 self.elements.append(btn_clear)
             else:
                 # If there's only 1 unit, just put the clear orders button where select all would have been
-                btn_clear = Button(TOP_BTN_START_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
+                btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
                 self.elements.append(btn_clear)
 
         display_index = 0
@@ -210,7 +210,7 @@ class Orders_Screen(GameState):
                 unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM), "medium_square")
 
                 # Create the button with the icon and set show_text=False
-                btn_sel = Button(UNIT_ICON_X, y_pos, "medium_square", color, "", 
+                btn_sel = Button(self.PANEL_X + UNIT_ICON_OFFSET_X, y_pos, "medium_square", color, "",
                                 lambda idx=i: self.select_unit(idx), 
                                 image=unit_icon, 
                                 show_text=False)
@@ -229,7 +229,7 @@ class Orders_Screen(GameState):
                 is_truck = unit_name.startswith("Truck")
                 is_naval = queries.is_naval_unit(unit_name)
 
-                x_pos = ACTION_START_X
+                x_pos = self.PANEL_X + ACTION_START_OFFSET_X
 
                 # 2. Inline Convoy Conversion Button
                 if order_type == "CONVERT":
@@ -796,9 +796,9 @@ class Orders_Screen(GameState):
     def draw_order_footer(self, surface, font, unit_index, y_pos, text, color):
         """Draws a unit row's order line (path or barrage) and its cancel box."""
         footer_y = y_pos + self.row_height
-        surface.blit(font.render(text, True, color), (PATH_TEXT_X, footer_y + PATH_ROW_OFFSET_Y))
+        surface.blit(font.render(text, True, color), (self.PANEL_X + PATH_TEXT_OFFSET_X, footer_y + PATH_ROW_OFFSET_Y))
 
-        cancel_rect = pygame.Rect(CANCEL_BOX_X, footer_y + CANCEL_BOX_OFFSET_Y, CANCEL_BOX_SIZE, CANCEL_BOX_SIZE)
+        cancel_rect = pygame.Rect(self.PANEL_X + CANCEL_BOX_OFFSET_X, footer_y + CANCEL_BOX_OFFSET_Y, CANCEL_BOX_SIZE, CANCEL_BOX_SIZE)
         pygame.draw.rect(surface, (150, 0, 0), cancel_rect)
         x_label = font.render("X", True, (255, 255, 255))
         surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
@@ -874,7 +874,7 @@ class Orders_Screen(GameState):
             
             # --- NEW: Scroll Bar Rendering ---
             self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll_y, SCROLLBAR_X, self.panel_top, self.panel_max_h, width=SCROLLBAR_WIDTH
+                surface, self.scroll_y, self.max_scroll_y, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top, self.panel_max_h, width=SCROLLBAR_WIDTH
             )
 
         display_index = 0
@@ -895,15 +895,15 @@ class Orders_Screen(GameState):
 
                     name_txt = unit.get("custom_name", unit.get("type", "Unit"))
                     name_surf = small_font.render(name_txt, True, (255, 255, 255))
-                    surface.blit(name_surf, (UNIT_NAME_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
+                    surface.blit(name_surf, (self.PANEL_X + UNIT_NAME_OFFSET_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
 
                     stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
                     txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
 
-                    surface.blit(txt_surf, (UNIT_STATS_X, y_pos + UNIT_STATS_OFFSET_Y))
+                    surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
 
                     if self.renaming_unit_index == i:
-                        box_rect = pygame.Rect(ACTION_START_X + RENAME_BOX_OFFSET_X, y_pos, *RENAME_BOX_SIZE)
+                        box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + RENAME_BOX_OFFSET_X, y_pos, *RENAME_BOX_SIZE)
                         pygame.draw.rect(surface, (60, 60, 80), box_rect)
                         pygame.draw.rect(surface, (150, 150, 150), box_rect, 1)
                         txt = small_font.render(self.rename_text + "|", True, (255, 255, 255))

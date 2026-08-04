@@ -94,11 +94,17 @@ CREDITS_DATA = [
         ]
     },
     {
-        "main_text": "Contributors: ", 
+        "main_text": "GitHub Contributors: ", 
         "people": [
             {"link_text": "litbrb", "url": "https://github.com/litbrb"},
             {"link_text": "github-advanced-security[bot]", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}
         ]
+    },
+    {
+            "main_text": "Map Makers: ", 
+            "people": [
+                {"link_text": "neptune2019"},
+            ]
     },
 ]
 
@@ -219,7 +225,7 @@ UI_LEFT_OFFSET = 160
 
 # How far (in screen pixels) to shift the camera left when a province is selected,
 # so the orders panel doesn't cover the unit the camera just centered on.
-ORDERS_PANEL_CAMERA_X_OFFSET = 250
+ORDERS_PANEL_CAMERA_X_OFFSET = 150
 
 # --- UI Component Heights ---
 TOP_UI_HEIGHT = 60
