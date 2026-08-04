@@ -131,6 +131,7 @@ class New_Game(GameState):
         ("reset_adjectives", "Adjectives"),
         ("reset_leaders", "Leader Names & Titles"),
         ("reset_flags", "Flags & Portraits"),
+        ("reset_resources", "Starting Money (Manpower/Materials/Fuel)"),
         ("include_custom", "Include Scenarios in Custom/Editor Dir"),
     ]
 

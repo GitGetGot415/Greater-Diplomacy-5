@@ -2682,6 +2682,9 @@ def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, n
 
 def refresh_map_directories(screen, dirs_to_check, success_message="Data refreshed successfully!", options=None):
     """Headlessly instantiates maps on a background thread to prevent UI freezing."""
+    # An empty dict behaves the same as None below (every lookup defaults to True),
+    # so this also keeps refresh_nation_data's own default-options branch out of play.
+    options = options or {}
     # Count total maps first
     total_maps = 0
     valid_scenarios = []
@@ -2733,11 +2736,12 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 print(f"refreshed {name}")
 
                 # Set all playable country resources to 0 before compounding income calculations
-                for nation_name, stats in temp_map_context.nation_data.items():
-                    if nation_name != "GLOBAL_EVENTS" and nation_name not in c.UNPLAYABLE_NATIONS:
-                        stats["manpower"] = 0
-                        stats["materials"] = 0
-                        stats["fuel"] = 0
+                if options.get("reset_resources", True):
+                    for nation_name, stats in temp_map_context.nation_data.items():
+                        if nation_name != "GLOBAL_EVENTS" and nation_name not in c.UNPLAYABLE_NATIONS:
+                            stats["manpower"] = 0
+                            stats["materials"] = 0
+                            stats["fuel"] = 0
 
                 # 3. Clean country flags/portraits inside memory before serializing
                 scrub_default_images(temp_map_context.nation_data)

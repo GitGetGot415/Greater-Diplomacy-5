@@ -41,7 +41,7 @@ ACTION_COL_BOMBARD = 300
 # Inline rename box, anchored 80px right of wherever the rename button currently sits
 # (its column moves to ACTION_COL_CONVERT while actively renaming).
 RENAME_BOX_GAP_X = 80
-RENAME_BOX_SIZE = (120, 25)
+RENAME_BOX_SIZE = (240, 25)
 
 # Path / bombardment footer inside a unit row.
 PATH_TEXT_OFFSET_X = 60
