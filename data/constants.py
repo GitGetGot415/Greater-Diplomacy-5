@@ -392,7 +392,7 @@ SIZES = {
     "small": (100, 40),
     "puppet_option": (160, 30),
     "top_orders_panel_button": (90, 40),
-    "orders_panel_button": (80, 40),
+    "orders_panel_button": (60, 40),
     "orders_panel_button_2": (60, 40),
     "left_ui_bar": (120, 50),
     "song": (700, 30),
