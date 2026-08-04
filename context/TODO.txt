@@ -16,6 +16,7 @@
 - diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
 - mark all as read option
 - modloader thing but in game so you don't have to download the github
+- option to also ignore the starting resources that countries already have when refreshing
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
