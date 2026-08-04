@@ -225,7 +225,7 @@ UI_LEFT_OFFSET = 160
 
 # How far (in screen pixels) to shift the camera left when a province is selected,
 # so the orders panel doesn't cover the unit the camera just centered on.
-ORDERS_PANEL_CAMERA_X_OFFSET = 150
+ORDERS_PANEL_CAMERA_X_OFFSET = 0
 
 # --- UI Component Heights ---
 TOP_UI_HEIGHT = 60
@@ -393,7 +393,7 @@ SIZES = {
     "puppet_option": (160, 30),
     "top_orders_panel_button": (90, 40),
     "orders_panel_button": (80, 40),
-    "orders_panel_button_2": (70, 40),
+    "orders_panel_button_2": (60, 40),
     "left_ui_bar": (120, 50),
     "song": (700, 30),
     "asset_folder": (200, 36),

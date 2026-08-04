@@ -18,6 +18,10 @@
 - modloader thing but in game so you don't have to download the github
 - option to also ignore the starting resources that countries already have when refreshing
 
+RESEARCH STUFF:
+- button to just set all scenarios to have default research for the specific era they're in
+- ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
+
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
 - you can just click the unit from the tile and then get a list of all units there
@@ -62,11 +66,10 @@ this would mean that units basically swap out with other units when they have le
 - gurella units? (kaiserin's suggestion)
 - give control of factories to other countries temporarially or permenantly
 - ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
+- !!!able to edit scenarios in directories that aren't in the map editor folder but like in game
 
 - BARBAROSSA SUGGESTIONS:
 - ability to turn landkreuzers and railguns off because realism
-
-- ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for

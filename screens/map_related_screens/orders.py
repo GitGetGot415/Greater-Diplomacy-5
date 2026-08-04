@@ -32,11 +32,11 @@ UNIT_ICON_OFFSET_Y = 15
 # "orders_panel_button", which is why the first gap is bigger than the rest.
 ACTION_START_OFFSET_X = 200
 ACTION_COL_CONVERT = 0
-ACTION_COL_DISBAND = 85
-ACTION_COL_REPAIR = 160
-ACTION_COL_RENAME = 235
-ACTION_COL_UPGRADE = 310
-ACTION_COL_BOMBARD = 385
+ACTION_COL_DISBAND = 80
+ACTION_COL_REPAIR = 140
+ACTION_COL_RENAME = 200
+ACTION_COL_UPGRADE = 260
+ACTION_COL_BOMBARD = 320
 
 # Inline rename box, anchored off the rename button's column.
 RENAME_BOX_OFFSET_X = ACTION_COL_RENAME + 80
@@ -69,7 +69,7 @@ class Orders_Screen(GameState):
     PANEL_X = 20
     # Wide enough to cover the whole button row (Bombard is the rightmost),
     # so clicking a button never doubles as a click on the map underneath.
-    PANEL_WIDTH = 690
+    PANEL_WIDTH = 600
     PANEL_TRANSPARENCY = 255
     bottom_vanish_y = 20
 
