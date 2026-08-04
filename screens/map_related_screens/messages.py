@@ -240,21 +240,23 @@ class Messages_Screen(GameState):
                         self.refresh_ui()
                         return
 
-        # --- Scrolling Logic ---
-        if event.type == pygame.MOUSEWHEEL:
-            if mx < MSG_LEFT_PANE_W:
-                self.contact_scroll_y += event.y * 30
-                self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
-                self.refresh_ui() 
-            else:
-                self.scroll_y += event.y * 40
-                self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
+        # --- Contact List Scrolling (wheel, scrollbar-handle drag, content drag) ---
+        if event.type == pygame.MOUSEWHEEL and mx < MSG_LEFT_PANE_W:
+            self.scroll_by(event, attr="contact_scroll_y", limit_attr="max_contact_scroll", speed=30)
+        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            if self.handle_list_scroll(event, attr="contact_scroll_y", limit_attr="max_contact_scroll",
+                                        track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect",
+                                        drag_attr="is_dragging_contacts", content_rect_attr="scroll_content_rect"):
+                return
 
-        # --- Drag to Scroll Logic ---
+        # --- Message Thread Scrolling ---
+        if event.type == pygame.MOUSEWHEEL and mx >= MSG_LEFT_PANE_W:
+            self.scroll_y += event.y * 40
+            self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
+
+        # --- Drag to Scroll Logic (message thread only) ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if mx < MSG_LEFT_PANE_W:
-                self.is_dragging_contacts = True
-            elif self.selected_recipient and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
+            if self.selected_recipient and mx >= MSG_LEFT_PANE_W and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
                 # Ensure we aren't dragging when we're actually trying to click 'Delete Draft'
                 clicked_del = False
                 if hasattr(self, 'draft_edit_rects'):
@@ -264,17 +266,12 @@ class Messages_Screen(GameState):
                             break
                 if not clicked_del:
                     self.is_dragging_messages = True
-        
+
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.is_dragging_contacts = False
             self.is_dragging_messages = False
-            
+
         elif event.type == pygame.MOUSEMOTION:
-            if self.is_dragging_contacts:
-                self.contact_scroll_y += event.rel[1]
-                self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
-                self.refresh_ui() 
-            elif self.is_dragging_messages:
+            if self.is_dragging_messages:
                 self.scroll_y -= event.rel[1] # Subtract so dragging down pulls up newer messages
                 self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
                 
@@ -295,7 +292,7 @@ class Messages_Screen(GameState):
         
         active_nations = set([prov.get("owner") for prov in self.map_screen.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
         playable = [country for country, d in self.map_screen.nation_data.items() if d.get("is_playable") and country != self.map_screen.player_country and country in active_nations]
-        playable.sort()
+        playable.sort(key=lambda country: self.map_screen.nation_data.get(country, {}).get("name", country))
 
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         inbox = p_data.get("inbox", [])
@@ -470,6 +467,10 @@ class Messages_Screen(GameState):
         left_pane_rect = pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
         pygame.draw.rect(surface, MSG_BG_LIGHT, left_pane_rect)
         pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, 0), (MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+
+        self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, 80, c.SCREEN_HEIGHT - 80, width=10,
+                                 attr="contact_scroll_y", limit_attr="max_contact_scroll",
+                                 track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
 
         if not self.selected_recipient:
             txt = font_med.render("Select a nation to view communications.", True, (150, 150, 150))
