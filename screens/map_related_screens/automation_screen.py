@@ -49,13 +49,13 @@ class Automation_Screen(GameState):
             # 1. Automate Next Turn Checkbox
             is_checked = self.map_screen.nation_data[self.player]["automation"].get(key, False)
             chk_col = "green" if is_checked else "grey"
-            btn_chk = Button(self.panel_rect.x + 50, y_pos, "puppet_option", chk_col, "Automate Next Turn", lambda k=key: self.toggle_automation(k), font_preset="normal")
+            btn_chk = Button(self.panel_rect.x + 50, y_pos, "automation_option", chk_col, "Automate Next Turn", lambda k=key: self.toggle_automation(k), font_preset="normal")
             
             # 2. Clear Button
-            btn_clr = Button(self.panel_rect.x + 300, y_pos, "puppet_option", "orange", "Clear", lambda f=clear_func: self.request_confirmation("Clear moves? This will refund/pause everything.", f), font_preset="normal")
+            btn_clr = Button(self.panel_rect.x + 300, y_pos, "automation_option", "orange", "Clear", lambda f=clear_func: self.request_confirmation("Clear moves? This will refund/pause everything.", f), font_preset="normal")
             
             # 3. Automate This Turn Button
-            btn_run = Button(self.panel_rect.x + 550, y_pos, "puppet_option", "blue", "Automate This Turn", lambda f=auto_func: self.request_confirmation("Automate this turn? May overwrite your current queue/moves.", f), font_preset="normal")
+            btn_run = Button(self.panel_rect.x + 550, y_pos, "automation_option", "blue", "Automate This Turn", lambda f=auto_func: self.request_confirmation("Automate this turn? May overwrite your current queue/moves.", f), font_preset="normal")
             
             self.elements.extend([btn_chk, btn_clr, btn_run])
             
@@ -64,8 +64,8 @@ class Automation_Screen(GameState):
         # If confirmation is active, add confirmation buttons
         if self.confirm_action:
             c_y = c.SCREEN_HEIGHT // 2
-            self.elements.append(Button(c.SCREEN_WIDTH//2 - 250, c_y, "puppet_option", "red", "Cancel", self.cancel_confirmation, font_preset="normal"))
-            self.elements.append(Button(c.SCREEN_WIDTH//2 + 50, c_y, "puppet_option", "green", "Confirm", self.execute_confirmation, font_preset="normal"))
+            self.elements.append(Button(c.SCREEN_WIDTH//2 - 250, c_y, "automation_option", "red", "Cancel", self.cancel_confirmation, font_preset="normal"))
+            self.elements.append(Button(c.SCREEN_WIDTH//2 + 50, c_y, "automation_option", "green", "Confirm", self.execute_confirmation, font_preset="normal"))
 
     def toggle_automation(self, key):
         if not self.confirm_action and self.is_valid_player:
