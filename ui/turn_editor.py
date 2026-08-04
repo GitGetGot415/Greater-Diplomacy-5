@@ -171,8 +171,14 @@ class TurnEditorScreen(GameState):
         names = self.tab["names"]
         cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - self.ROW_HEIGHT + 2
         self.scroll_content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
+        # Don't pass view_h explicitly here -- it would let layout_list_rows compute
+        # max_scroll against the full (taller) list_view_h while cull_bottom (used
+        # to decide what's actually visible/clickable) is shorter by ROW_HEIGHT-2,
+        # leaving the last row permanently a sliver short of being scrollable into
+        # view. Omitting it makes the function derive view_h from cull_bottom
+        # itself, so the scroll limit and the visible boundary agree.
         self._row_layout = list(self.layout_list_rows(
-            len(names), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
+            len(names), self.ROW_HEIGHT, self.list_top,
             cull_top=cull_top, cull_bottom=cull_bottom))
 
         disabled_set = self.tab["disabled_set"]

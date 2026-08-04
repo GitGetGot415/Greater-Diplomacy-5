@@ -271,6 +271,19 @@ def load_map_assets(self, load_path):
     if self.random_settings and "base_days_per_turn" in self.random_settings:
         self.scenario_settings["base_days_per_turn"] = self.random_settings["base_days_per_turn"]
 
+    if disabled_tech_keys:
+        # Every country template starts with a handful of techs pre-researched
+        # (e.g. "infantry_type": 1, so basic Infantry is buildable turn one) --
+        # if one of those is now disabled, that stale level has to go too, or
+        # code that resolves "current researched year" from it (e.g.
+        # get_infantry_family_year) falls back to a phantom unit name that was
+        # just deleted from the library.
+        for nation in self.nation_data.values():
+            research = nation.get("research")
+            if research:
+                for key in disabled_tech_keys:
+                    research.pop(key, None)
+
     _load_default_images(self)
     # --- THE FIX: Use .get() with a fallback color ---
     self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
