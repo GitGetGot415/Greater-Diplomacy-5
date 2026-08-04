@@ -62,6 +62,8 @@ could you make it so that when damage is actually dealt to units, it's spread ou
 maybe units deal less damage the less hp they have...
 this would mean that units basically swap out with other units when they have less hp...
 
+- figure out how to make scenarios take up less space
+
 - KAISERIN SUGGESTIONS:
 - gurella units? (kaiserin's suggestion)
 - give control of factories to other countries temporarially or permenantly

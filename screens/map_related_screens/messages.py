@@ -329,7 +329,8 @@ class Messages_Screen(GameState):
 
             display_list = [n for n in playable if n not in history_contacts]
             for country in display_list:
-                btn = Button(20, y_off, "medium", "grey", country, lambda c_name=country: self.select_new_contact(c_name))
+                display_name = self.map_screen.nation_data.get(country, {}).get("name", country)
+                btn = Button(20, y_off, "medium", "grey", display_name, lambda c_name=country: self.select_new_contact(c_name))
                 btn.is_scrollable = True
                 self.elements.append(btn)
                 y_off += 60
@@ -353,7 +354,8 @@ class Messages_Screen(GameState):
                     if not (pending_action.startswith("ACCEPT_") or pending_action.startswith("REJECT_")):
                         unread += 1
 
-                display_text = f"{country} ({unread})" if unread > 0 else country
+                display_name = self.map_screen.nation_data.get(country, {}).get("name", country)
+                display_text = f"{display_name} ({unread})" if unread > 0 else display_name
                 if unread > 0 and self.selected_recipient != country:
                     color = "red"
 
