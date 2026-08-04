@@ -67,17 +67,32 @@ class Menu(GameState):
             self.sign_image = pygame.transform.scale(raw_image, new_size)
             self.sign_rect = self.sign_image.get_rect()
             self.sign_rect.right = c.SCREEN_WIDTH - 180
-            self.sign_rect.centery = c.SCREEN_HEIGHT // 2
+            self.sign_rect.centery = (c.SCREEN_HEIGHT // 2) + 10
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
             self.sign_rect = None
 
+        # The ground sits directly beneath the sign's post, scaled the same
+        # as the sign so the pixel art matches, and rides along with the
+        # sign's slide-in as a single unit rather than animating on its own.
+        try:
+            raw_ground = pygame.image.load("assets/images/The Ground.png").convert_alpha()
+            ground_size = (int(raw_ground.get_width() * scale_factor), int(raw_ground.get_height() * scale_factor))
+            self.ground_image = pygame.transform.scale(raw_ground, ground_size)
+            self.ground_rect = self.ground_image.get_rect()
+            self.ground_rect.left = 900
+            self.ground_rect.top = 460
+        except Exception as e:
+            print(f"Failed to load the ground image: {e}")
+            self.ground_image = None
+            self.ground_rect = None
+
         # Hildehrand stands to the right of the sign, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
         # pixel art stays crisp instead of blurring. Both variants share a
         # fixed anchor point so swapping between them never shifts layout.
-        self._hildehrand_anchor_centery = self.sign_rect.centery if self.sign_rect else c.SCREEN_HEIGHT // 2
+        self._hildehrand_anchor_centery = c.SCREEN_HEIGHT // 2
         self.hildehrand_variant = queries.get_hildehrand_choice()
         try:
             hild_scale_factor = 2
@@ -126,6 +141,7 @@ class Menu(GameState):
         self.intro_start_ticks = pygame.time.get_ticks()
         self._title_draw_pos = self.title_rect.topleft if self.title_rect else (0, 0)
         self._sign_draw_pos = self.sign_rect.topleft if self.sign_rect else (0, 0)
+        self._ground_draw_pos = self.ground_rect.topleft if self.ground_rect else (0, 0)
 
         # (y offset from centre, label, colour, icon, destination state) — one row
         # per menu entry, so adding a screen is a single line here.
@@ -310,6 +326,9 @@ class Menu(GameState):
             start_x = c.SCREEN_WIDTH + 40
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
+            if self.ground_rect:
+                self._ground_draw_pos = (int(_lerp(start_x, self.ground_rect.x, t)), self.ground_rect.y)
+
         if getattr(self, "hildehrand_images", None):
             img = self.hildehrand_images[self.hildehrand_variant]
             rest_rect = img.get_rect(center=(self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery))
@@ -334,6 +353,9 @@ class Menu(GameState):
     def additional_draw(self, surface):
         if getattr(self, "title_image", None):
             surface.blit(self.title_image, self._title_draw_pos)
+
+        if getattr(self, "ground_image", None):
+            surface.blit(self.ground_image, self._ground_draw_pos)
 
         if getattr(self, "sign_image", None):
             surface.blit(self.sign_image, self._sign_draw_pos)
