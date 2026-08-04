@@ -68,8 +68,13 @@ this would mean that units basically swap out with other units when they have le
 - gurella units? (kaiserin's suggestion)
 - give control of factories to other countries temporarially or permenantly
 - ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
-- !!!able to edit scenarios in directories that aren't in the map editor folder but like in game
-- !!!names not being correct when in messages (uses id instead of nations current name)
+
+FIXED: MENTION IN NEXT RELEASE
+- able to edit scenarios in directories that aren't in the map editor folder but like in game
+- names not being correct when in messages (uses id instead of nations current name)
+
+other things:
+- added Aruba, Chechnya, Curacao, French Polynesia, North Macedonia, Slovenia, Trinidad and Tobago, and Bahrain
 
 - BARBAROSSA SUGGESTIONS:
 - ability to turn landkreuzers and railguns off because realism
