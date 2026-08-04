@@ -167,7 +167,7 @@ class Controller:
         ui_elements.UI_ICONS = {
             "unit": symbol_loader.get_symbol("Infantry", 2),
             "industry": symbol_loader.get_symbol("Factory", 2),
-            "star": symbol_loader.get_symbol("Star", 2),
+            "blank": symbol_loader.get_symbol("Nothing", 1),
             "terrain": symbol_loader.get_symbol("Mountains", 1.5),
             "political": symbol_loader.get_symbol("Flag", 1.5),
             "relations": symbol_loader.get_symbol("Heart", 2),
