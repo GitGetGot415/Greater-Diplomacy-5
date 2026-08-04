@@ -107,16 +107,13 @@ def load_map_assets(self, load_path):
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.
     if save_meta and "scenario_settings" in save_meta:
         if not getattr(self, 'selection_mode', False):
+            # Scenario settings -- including unit/building disables -- only ever
+            # apply when starting a NEW scenario. A save already in progress
+            # keeps exactly what was baked in at creation, full stop; the Turn
+            # Editor's current state (whatever it's since been changed to) must
+            # never reach back into an already-played save.
             self.scenario_settings = save_meta["scenario_settings"]
             queries.apply_global_scenario_flags(self.scenario_settings)
-            # Unlike playthrough-defining settings (fog of war, casus belli, ...)
-            # which are frozen into the save on purpose, disabled units/buildings
-            # are closer to a content toggle -- continuing an existing save should
-            # still pick up whatever the Turn Editor's disable list currently says
-            # rather than whatever was baked in the moment this save was created,
-            # or re-enabling something has no effect short of starting a new game.
-            self.scenario_settings["unit_disabled"] = scenario_settings.get("unit_disabled", []) if scenario_settings else []
-            self.scenario_settings["building_disabled"] = scenario_settings.get("building_disabled", []) if scenario_settings else []
         else:
             # Inject built-in scenario constants that shouldn't be wiped by the user's UI settings
             if "base_days_per_turn" in save_meta["scenario_settings"]:
