@@ -2764,7 +2764,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
             try:
                 screen.refresh_status = f"Syncing: {name}..."
                 # 1. Instantiate Map with standard singleplayer configurations to pull existing meta/map data into memory
-                temp_map_context = Map(load_path=scenario_path, is_scenario=True)
+                temp_map_context = Map(load_path=scenario_path, is_scenario=True, skip_initial_income=True)
 
                 # --- BUG FIX: Restore scenario settings wiped by selection_mode ---
                 meta_path = os.path.join(scenario_path, "meta.json")

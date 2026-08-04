@@ -116,7 +116,7 @@ SHOW_FPS = False
 # expect it.
 CHECKERBOARD_WATER = False
 
-GAME_VERSION = "v22"
+GAME_VERSION = "v23"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
 # --- TACTICAL MODE CONSTANTS ---

@@ -28,7 +28,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering.country_names import update_country_centers as calc_country_centers
 
 class Map(GameState):
-    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None):
+    def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         super().__init__()
 
         self.history_turn = history_turn
@@ -197,7 +197,7 @@ class Map(GameState):
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        if self.time_manager.total_turns == 0 and not self.is_editor:
+        if self.time_manager.total_turns == 0 and not self.is_editor and not skip_initial_income:
             from map_logic.system32 import economy_processor
             economy_processor.process_economy(self)
 
