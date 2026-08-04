@@ -4,6 +4,7 @@ from map_logic.system32 import loading_screen
 from ui import minimap
 from data import queries
 import data.constants as c
+import ui_elements
 from map_logic.rendering.font_manager import fonts
 from ui.bars import flag_renderer
 from ui.information import tooltip, ui_info_popup as unit_info_popup
@@ -340,29 +341,22 @@ def draw_map_screen(self, surface):
 def draw_badges(self, surface):
     """Draws notification badges on top of buttons after the main UI renders."""
     if not self.selection_mode and not self.hide_raised_rect:
-        
+
         # Get counts
         unread_msgs = queries.get_unread_message_count(self.player_country, self.nation_data)
         free_research = queries.has_free_research_slots(self.player_country, self.nation_data)
         incoming_claims = queries.get_incoming_justifications_count(self.player_country, self.nation_data, self.id_to_province)
-        
-        badge_font = fonts.get("tiny")
-        
+
         def draw_badge(btn, text):
             if not btn.visible: return
-            # Draw badge in the top right corner of the button
-            bx, by = btn.rect.right - 10, btn.rect.top + 10
-            pygame.draw.circle(surface, c.MSG_NOTIFICATION_COLOR, (bx, by), 12)
-            pygame.draw.circle(surface, (255, 255, 255), (bx, by), 12, 1)
-            txt_surf = badge_font.render(str(text), True, (255, 255, 255))
-            surface.blit(txt_surf, txt_surf.get_rect(center=(bx, by)))
+            ui_elements.draw_notification_badge(surface, btn.rect, str(text))
 
         # Draw the badges on the respective buttons
         if unread_msgs > 0:
             draw_badge(self.btn_gp_msgs, unread_msgs)
-            
+
         if free_research:
             draw_badge(self.btn_gp_rd, "!")
-            
+
         if incoming_claims > 0:
             draw_badge(self.btn_gp_claims, incoming_claims)

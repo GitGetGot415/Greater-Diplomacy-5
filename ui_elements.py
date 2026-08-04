@@ -69,6 +69,22 @@ def scale_icon(icon_name, size):
         return None
     return pygame.transform.smoothscale(icon_surf, (size, size))
 
+def draw_notification_badge(surface, rect, text, color=None):
+    """Draws the small red circle + text badge used to flag a button (unread
+    counts, "you have a free research slot", "this scenario setting isn't at
+    its default", ...). Single shared implementation so every badge in the
+    game looks and behaves the same.
+    """
+    color = color or c.MSG_NOTIFICATION_COLOR
+    bx, by = rect.right - 10, rect.top + 10
+    radius = max(12, 9 + 3 * (len(text) - 1))
+    pygame.draw.circle(surface, color, (bx, by), radius)
+    pygame.draw.circle(surface, (255, 255, 255), (bx, by), radius, 1)
+
+    font = fonts.get("tiny")
+    txt_surf = font.render(text, True, (255, 255, 255))
+    surface.blit(txt_surf, txt_surf.get_rect(center=(bx, by)))
+
 class Button:
     # UPDATED: Added font_preset parameter defaulting to "button"
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button"):
@@ -94,6 +110,9 @@ class Button:
         self.is_selected = False
         self.disabled = False
         self.notification_count = 0
+        # Overrides notification_count's digit text with an arbitrary string
+        # (e.g. "!"). Same badge, just not a count.
+        self.notification_text = None
 
         # Optional callable: when set, a click only registers (sound + callback)
         # if it returns True. Lets a button stay visible/clickable-looking while
@@ -196,17 +215,11 @@ class Button:
         elif self.text and not self.image:
             self.draw_label(surface, self.text, center=self.rect.center)
 
-        if getattr(self, 'notification_count', 0) > 0:
-            count_str = str(self.notification_count)
-            bubble_radius = max(10, 8 + len(count_str) * 3)
-            bubble_center = (self.rect.right - 5, self.rect.top + 5)
-            pygame.draw.circle(surface, (220, 20, 20), bubble_center, bubble_radius)
-            pygame.draw.circle(surface, (255, 255, 255), bubble_center, bubble_radius, 1)
-
-            notif_font = fonts.get("small")
-            count_surf = notif_font.render(count_str, True, (255, 255, 255))
-            count_rect = count_surf.get_rect(center=bubble_center)
-            surface.blit(count_surf, count_rect)
+        badge_text = getattr(self, 'notification_text', None)
+        if not badge_text and getattr(self, 'notification_count', 0) > 0:
+            badge_text = str(self.notification_count)
+        if badge_text:
+            draw_notification_badge(surface, self.rect, badge_text)
 
     def draw_gradient_rect(self, surface, color, rect):
         hi = 30

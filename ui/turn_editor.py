@@ -26,6 +26,7 @@ class TurnEditorScreen(GameState):
     ROW_HEIGHT = 34
     PAD = 20
     LIST_TOP_OFF = 120
+    CHECK_SIZE = 30
 
     def __init__(self):
         super().__init__()
@@ -35,9 +36,11 @@ class TurnEditorScreen(GameState):
         self.tabs = {
             "unit": self._build_tab(queries._load_cached_json("unit_library") or {},
                                     self.settings.setdefault("unit_turn_overrides", {}),
+                                    self.settings.setdefault("unit_disabled", []),
                                     "production_time", "Unit Type"),
             "building": self._build_tab(queries._load_cached_json("building_library") or {},
                                         self.settings.setdefault("building_turn_overrides", {}),
+                                        self.settings.setdefault("building_disabled", []),
                                         "time", "Building Type"),
         }
         self.active_tab = "unit"
@@ -54,7 +57,7 @@ class TurnEditorScreen(GameState):
 
         self.refresh_ui()
 
-    def _build_tab(self, library, overrides, turn_key, label):
+    def _build_tab(self, library, overrides, disabled_list, turn_key, label):
         """Collapses a library to its base types, each with a default and a current value.
 
         Variants of one base type ("Infantry Type 1936/1939/...") always shared a
@@ -70,7 +73,8 @@ class TurnEditorScreen(GameState):
             values[btype] = str(overrides.get(btype, defaults[btype]))
 
         return {"label": label, "names": sorted(base_types, key=str.lower),
-                "defaults": defaults, "values": values, "overrides": overrides}
+                "defaults": defaults, "values": values, "overrides": overrides,
+                "disabled_set": set(disabled_list)}
 
     # ------------------------------------------------------------------ #
     #                               EDITING                              #
@@ -98,6 +102,14 @@ class TurnEditorScreen(GameState):
         self.scroll_y = 0
         self.refresh_ui()
 
+    def toggle_disabled(self, btype):
+        disabled_set = self.tab["disabled_set"]
+        if btype in disabled_set:
+            disabled_set.discard(btype)
+        else:
+            disabled_set.add(btype)
+        self.refresh_ui()
+
     def save_all(self):
         self._sync_entries()
         for tab in self.tabs.values():
@@ -114,6 +126,8 @@ class TurnEditorScreen(GameState):
 
         self.settings["unit_turn_overrides"] = self.tabs["unit"]["overrides"]
         self.settings["building_turn_overrides"] = self.tabs["building"]["overrides"]
+        self.settings["unit_disabled"] = sorted(self.tabs["unit"]["disabled_set"])
+        self.settings["building_disabled"] = sorted(self.tabs["building"]["disabled_set"])
         queries.save_scenario_settings(self.settings)
         confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.")
         self.exit_screen()
@@ -124,6 +138,7 @@ class TurnEditorScreen(GameState):
                 return
             for tab in self.tabs.values():
                 tab["overrides"].clear()
+                tab["disabled_set"].clear()
                 tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
             # Drop the on-screen fields so save_all's _sync_entries() can't pull
             # their stale (pre-reset) text back over the defaults we just set.
@@ -160,13 +175,23 @@ class TurnEditorScreen(GameState):
             len(names), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
             cull_top=cull_top, cull_bottom=cull_bottom))
 
+        disabled_set = self.tab["disabled_set"]
+        check_x = p.right - self.PAD - 34
         for i, y in self._row_layout:
             btype = names[i]
-            field = TextField(p.right - self.PAD - 130, y, 100, 28, self.tab["values"][btype], numeric=True)
+            field = TextField(check_x - 10 - 100, y, 100, 28, self.tab["values"][btype], numeric=True)
             field.turn_key = btype
             field.is_scrollable = True
             field.click_guard = self.scroll_click_guard
             self.elements.append(field)
+
+            is_enabled = btype not in disabled_set
+            check_btn = Button(check_x, y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2, "tiny_square",
+                               "green" if is_enabled else "red", "ON" if is_enabled else "OFF",
+                               lambda bt=btype: self.toggle_disabled(bt), font_preset="button_small")
+            check_btn.is_scrollable = True
+            check_btn.click_guard = self.scroll_click_guard
+            self.elements.append(check_btn)
 
         btn_y = p.bottom - 52
         self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Back", self.exit_screen))
@@ -192,8 +217,11 @@ class TurnEditorScreen(GameState):
         font = fonts.get("normal")
         small = fonts.get("small")
         surface.blit(small.render(self.tab["label"], True, (170, 170, 210)), (p.x + self.PAD, self.list_top - 20))
+        check_x = p.right - self.PAD - 34
         turns_hdr = small.render("Turns to Construct", True, (170, 170, 210))
-        surface.blit(turns_hdr, turns_hdr.get_rect(midright=(p.right - self.PAD - 30, self.list_top - 12)))
+        surface.blit(turns_hdr, turns_hdr.get_rect(midright=(check_x - 10, self.list_top - 12)))
+        enabled_hdr = small.render("Enabled", True, (170, 170, 210))
+        surface.blit(enabled_hdr, enabled_hdr.get_rect(center=(check_x + self.CHECK_SIZE // 2, self.list_top - 12)))
 
         names = self.tab["names"]
         if not names:
@@ -217,7 +245,7 @@ class TurnEditorScreen(GameState):
 
                 default = self.tab["defaults"][btype]
                 hint = small.render(f"default: {default}", True, (150, 150, 165))
-                surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 145, y + self.ROW_HEIGHT // 2)))
+                surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 159, y + self.ROW_HEIGHT // 2)))
 
             for el in self.elements:
                 if getattr(el, "is_scrollable", False):
@@ -226,10 +254,14 @@ class TurnEditorScreen(GameState):
         self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)
 
 
-def open_turn_editor():
-    """Construction-turns editor, usable in-game or standalone (see ui/screen_runner.py)."""
+def open_turn_editor(on_done=None):
+    """Construction-turns editor, usable in-game or standalone (see ui/screen_runner.py).
+
+    `on_done` lets a caller (e.g. Scenario Settings) refresh itself once the
+    editor closes, since it runs as a non-blocking modal (see ui/modal_stack.py).
+    """
     from ui.screen_runner import run_screen
-    run_screen(TurnEditorScreen, caption="Construction Turns Editor")
+    run_screen(TurnEditorScreen, on_done=on_done, caption="Construction Turns Editor")
 
 
 if __name__ == "__main__":

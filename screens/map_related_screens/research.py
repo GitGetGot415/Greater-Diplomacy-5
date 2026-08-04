@@ -317,6 +317,11 @@ class Research_Screen(GameState):
         self.active_modal = None
         self.scroll_x = 0
         self.target_scroll_x = 0
+        # Research_Screen is a singleton built once at boot (see main.py), but the
+        # scenario's tech_tree can be pruned (disabled units/buildings) on every
+        # map load -- rebuild self.nodes from whatever tech_tree looks like now,
+        # instead of the stale set of keys computed at startup.
+        self.setup_nodes()
         self.enforce_scroll_bounds()
         self.refresh_ui()
 

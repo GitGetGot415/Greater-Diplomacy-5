@@ -1,6 +1,7 @@
 import pygame
 import json
 import os
+import re
 import copy
 from map_logic.system32.time_handler import TimeHandler
 from data.io import country_io
@@ -140,6 +141,44 @@ def load_map_assets(self, load_path):
             if btype in overrides:
                 data[time_key] = overrides[btype]
 
+    # --- APPLY DISABLED UNITS/BUILDINGS ---
+    # A disabled base type is simply dropped from its library, which is already
+    # how the rest of the codebase treats "doesn't exist" for buildability
+    # (see the building filter below, and is_unit_unlocked's bare library
+    # membership checks) -- there is no separate buildable/researchable flag.
+    # Every tech key a removed variant would have unlocked is collected so the
+    # tech tree can be pruned to match.
+    disabled_units = set(self.scenario_settings.get("unit_disabled", []))
+    disabled_buildings = set(self.scenario_settings.get("building_disabled", []))
+    disabled_tech_keys = set()
+
+    for name in [n for n in unit_lib if queries.get_base_item_name(n) in disabled_units]:
+        tech_key = queries.get_unit_tech_key(queries.get_base_unit_name(name))
+        if tech_key:
+            disabled_tech_keys.add(tech_key)
+        del unit_lib[name]
+
+    for name in [n for n in building_lib if queries.get_base_item_name(n) in disabled_buildings]:
+        tech_key, _lvl = queries.get_building_required_tech(name)
+        if tech_key:
+            disabled_tech_keys.add(tech_key)
+        del building_lib[name]
+
+    if disabled_tech_keys:
+        tech_tree = queries.get_tech_tree()
+        with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
+            tech_tree.clear()
+            tech_tree.update(json.load(f))
+
+        for key in disabled_tech_keys:
+            tech_tree.pop(key, None)
+
+        # Any other tech that required a now-disabled tech has that leaf
+        # bypassed (assumed fulfilled) rather than becoming permanently stuck.
+        for tech_data in tech_tree.values():
+            tech_data["req"] = queries.strip_disabled_tech_requirements(
+                tech_data.get("req", {}), disabled_tech_keys)
+
     if load_path:
         history_path = os.path.join(load_path, "history.json")
         if os.path.exists(history_path):
@@ -277,7 +316,17 @@ def load_map_assets(self, load_path):
 
     # Load building library to scrub removed buildings (like fuel refineries) from old saves
     bldg_lib = queries.get_building_library()
-    
+
+    def _unit_base_type(unit):
+        """Resolves a stored unit's real type down to its turn-editor base type,
+        unwrapping Convoy/Truck transports the same way sync_units_to_data does."""
+        u_type = unit.get("original_type") or unit.get("type", "")
+        if u_type.startswith("Convoy (") or u_type.startswith("Truck ("):
+            match = re.search(r'\((.*?)\)', u_type)
+            if match:
+                u_type = match.group(1).strip()
+        return queries.get_base_item_name(u_type)
+
     for k, v in self.raw_json_data.items():
         color_tuple = tuple(map(int, k.strip("()").split(",")))
         
@@ -296,7 +345,8 @@ def load_map_assets(self, load_path):
         # ---------------------
 
         v["cores"] = v.get("cores", [])
-        v["units"] = v.get("units", [])
+        # Removes any starting instance of a unit type this scenario has disabled.
+        v["units"] = [u for u in v.get("units", []) if _unit_base_type(u) not in disabled_units]
         v["unit_queue"] = v.get("unit_queue", [])
         v["building_queue"] = v.get("building_queue", [])
         

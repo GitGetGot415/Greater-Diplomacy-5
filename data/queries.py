@@ -282,6 +282,15 @@ def get_days_per_turn(scenario_settings):
     except ValueError:
         return c.DEFAULT_DAYS_PER_TURN
 
+def scenario_has_construction_customizations(settings):
+    """True if the Construction Turns Editor has anything set away from its
+    defaults (a turn override or a disabled unit/building), for the badge on
+    its entry-point button in Scenario Settings."""
+    if not settings:
+        return False
+    return bool(settings.get("unit_turn_overrides") or settings.get("building_turn_overrides")
+                or settings.get("unit_disabled") or settings.get("building_disabled"))
+
 def save_scenario_settings(data):
     cache_obj = _JSON_CACHE["scenario_settings"]
     
@@ -1029,6 +1038,35 @@ def walk_tech_requirements(reqs):
                 yield from walk_tech_requirements(sub)
         else:
             yield key, val
+
+def strip_disabled_tech_requirements(reqs, disabled_techs):
+    """Rebuilds a req block with every leaf naming a disabled tech bypassed
+    (treated as already satisfied), so a scenario that disables a unit/building
+    never leaves some other tech permanently unresearchable behind it.
+
+    Mirrors the OR/AND walk in check_tech_requirements/walk_tech_requirements,
+    but returns a smaller req tree instead of a bool: a satisfied AND clause is
+    dropped, and an OR satisfied by one clause collapses the whole group.
+    """
+    if not reqs or not disabled_techs:
+        return reqs or {}
+
+    if "OR" in reqs:
+        subs = [strip_disabled_tech_requirements(sub, disabled_techs) for sub in reqs["OR"]]
+        if any(not sub for sub in subs):
+            return {}
+        return {"OR": subs}
+
+    if "AND" in reqs:
+        subs = [strip_disabled_tech_requirements(sub, disabled_techs) for sub in reqs["AND"]]
+        subs = [sub for sub in subs if sub]
+        if not subs:
+            return {}
+        if len(subs) == 1:
+            return subs[0]
+        return {"AND": subs}
+
+    return {k: v for k, v in reqs.items() if k not in disabled_techs}
 
 def is_training_troops(province):
     """Returns True if the province has any troops in its deployment queue."""

@@ -142,11 +142,15 @@ class Scenario_Settings(GameState):
 
         self.elements.extend(self.build_ai_section())
 
+        turn_editor_btn = Button("centered", TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
+                                 "Edit Construction Turns", self.open_turn_editor, font_preset="button_small")
+        if queries.scenario_has_construction_customizations(self.settings):
+            turn_editor_btn.notification_text = "!"
+
         self.elements.extend([
             Button("centered", RESET_ROW_Y, "scenario_setting_button", "grey", "Reset to Defaults",
                    self.reset_defaults, font_preset="button_small"),
-            Button("centered", TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple", "Edit Construction Turns",
-                   self.open_turn_editor, font_preset="button_small"),
+            turn_editor_btn,
         ])
 
     def build_fog_slider(self):
@@ -214,7 +218,9 @@ class Scenario_Settings(GameState):
     def open_turn_editor(self):
         try:
             from ui.turn_editor import open_turn_editor
-            open_turn_editor()
+            # Re-reads settings once the editor closes so the "!" badge reflects
+            # whatever was actually saved (or cleared, on cancel/back).
+            open_turn_editor(on_done=lambda screen: self.refresh_ui())
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
 
