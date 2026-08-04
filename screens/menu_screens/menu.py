@@ -204,8 +204,7 @@ class Menu(GameState):
         self.elements.append(self.refresh_btn)
 
         # Small toggle button beneath Hildehrand, swapping between the F/M
-        # portraits. Joins the same rise-from-bottom cascade as every other
-        # menu button (see below) rather than animating on its own.
+        # portraits.
         swap_btn_width = c.SIZES["puppet_option"][0]
         self.swap_hildehrand_btn = Button(
             self._hildehrand_anchor_centerx - swap_btn_width // 2,
@@ -218,6 +217,12 @@ class Menu(GameState):
         )
         self.elements.append(self.swap_hildehrand_btn)
 
+        # These two sit on the right edge alongside Hildehrand/the sign, so
+        # they slide in from the right instead of joining the rise-from-bottom
+        # cascade below.
+        self.refresh_btn._intro_from_right = True
+        self.swap_hildehrand_btn._intro_from_right = True
+
         # Cascade the rise-in by vertical position: rows near the top of the
         # screen start first, rows near the bottom start last.
         all_target_ys = [btn.rect.y for btn in self.elements] + \
@@ -226,10 +231,16 @@ class Menu(GameState):
 
         for btn in self.elements:
             btn._intro_target_y = btn.rect.y
+            btn._intro_target_x = btn.rect.x
             btn._intro_delay = delay_for_y(btn.rect.y)
 
         for item in self.bottom_texts:
             item["_intro_delay"] = delay_for_y(item["_intro_target_main_y"])
+
+        # The version text isn't a Button, so it rides the same right-edge
+        # slide-in as the refresh button just above it, sharing its delay.
+        self._version_text_intro_delay = self.refresh_btn._intro_delay
+        self._version_draw_pos = (0, 0)
 
         # Start version check in background so it doesn't freeze the menu.
         # Skipped entirely on web: no real OS threads under Pyodide, and the
@@ -338,11 +349,23 @@ class Menu(GameState):
             self._hildehrand_draw_pos = (int(_lerp(start_x, rest_rect.x, t)), rest_rect.y)
 
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
+        slide_start_x = c.SCREEN_WIDTH + 40
 
         for btn in self.elements:
             local_elapsed = elapsed - btn._intro_delay
             t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
-            btn.rect.y = int(_lerp(rise_start_y, btn._intro_target_y, t))
+            if getattr(btn, "_intro_from_right", False):
+                btn.rect.x = int(_lerp(slide_start_x, btn._intro_target_x, t))
+            else:
+                btn.rect.y = int(_lerp(rise_start_y, btn._intro_target_y, t))
+
+        version_font = fonts.get("heading2")
+        v_width = version_font.size(self.version_status)[0]
+        target_v_x = c.SCREEN_WIDTH - v_width - 20
+        v_y = c.SCREEN_HEIGHT - version_font.get_height() - 10
+        local_elapsed = elapsed - self._version_text_intro_delay
+        t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
+        self._version_draw_pos = (int(_lerp(slide_start_x, target_v_x, t)), v_y)
 
         for item in self.bottom_texts:
             local_elapsed = elapsed - item["_intro_delay"]
@@ -383,8 +406,5 @@ class Menu(GameState):
                     pygame.draw.line(surface, link_color, (item["link_rect"].left, item["link_rect"].bottom - 2), (item["link_rect"].right, item["link_rect"].bottom - 2), 2)
 
         # --- Draw Version Text (Bottom Right) ---
-        version_font = fonts.get("heading2")
-        v_width = version_font.size(self.version_status)[0]
-        v_x = c.SCREEN_WIDTH - v_width - 20
-        v_y = c.SCREEN_HEIGHT - version_font.get_height() - 10
+        v_x, v_y = self._version_draw_pos
         fonts.draw_text_with_shadow(surface, self.version_status, v_x, v_y, "heading2", self.version_color)
