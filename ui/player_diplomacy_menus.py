@@ -1000,7 +1000,7 @@ class Puppets_Screen(MapOverlayScreen):
 
             rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
             rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
-            btn_release = Button(self.panel_rect.x + 750, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
+            btn_release = Button(self.panel_rect.x + 680, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
 
             # --- Make all buttons visible but greyscaled out if requirements aren't met ---
 
@@ -1018,7 +1018,7 @@ class Puppets_Screen(MapOverlayScreen):
 
             # Take Puppets Button
             take_txt = "Undo Take" if pending_action == "TAKE_PUPPETS" else "Take Puppets"
-            btn_take = Button(self.panel_rect.x + 750, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
+            btn_take = Button(self.panel_rect.x + 680, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
             has_puppets = len(p_data.get("puppets", [])) > 0
             if p_type != c.PUPPET_TYPE_INTEGRATED or not has_puppets:
                 btn_take.apply_state(enabled=False,
