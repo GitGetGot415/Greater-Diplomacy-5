@@ -231,7 +231,7 @@ class Claims_Screen(MapOverlayScreen):
 
         # This row greys the inactive entries rather than showing them blue
         for x, y, mode, label in modes:
-            btn = Button(x, y, "medium", "blue" if self.view_mode == mode else "grey", label,
+            btn = Button(x, y, "brick", "blue" if self.view_mode == mode else "grey", label,
                          lambda m=mode: self.set_view_mode(m))
             btn.is_selected = (self.view_mode == mode)
             self.elements.append(btn)
