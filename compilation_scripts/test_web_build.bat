@@ -29,6 +29,8 @@ echo.
 :: server below (which blocks this window until closed) time to come up.
 start "" cmd /c "timeout /t 3 /nobreak >nul && start "" http://localhost:8000/"
 
-.\venv\Scripts\python.exe -m pygbag --app_name "Greater Diplomacy 5" --disable-sound-format-error --ume_block 0 web_stage
+:: --template must match html_compilation.py's build, or this regenerates index.html
+:: from pygbag's stock template and undoes the aspect-ratio fix in web_index.tmpl.
+.\venv\Scripts\python.exe -m pygbag --app_name "Greater Diplomacy 5" --disable-sound-format-error --ume_block 0 --template compilation_scripts\web_index.tmpl web_stage
 
 pause

@@ -154,11 +154,19 @@ def main():
     # 3. Invoke pygbag in build-only (non-interactive) mode against the staged dir.
     # pygbag writes its output to <STAGE_DIR>/build/web/, and can zip it directly via --archive.
     icon_path = os.path.join(STAGE_DIR, "assets", "icon", "icon.png")
+    # Custom index.html template: pygbag's own default.tmpl stretches the canvas to fill
+    # its container (width:100%; height:100%) with no aspect-ratio lock, and its resize JS
+    # derives the aspect ratio from the canvas's width/height attributes, which start out
+    # hardcoded to 1x1 and only get corrected once pygame.display.set_mode() runs -- a race
+    # that can bake in a square canvas. web_index.tmpl forces the real 16:9 ratio via CSS
+    # with !important so it wins regardless of that race. See web_index.tmpl for detail.
+    template_path = os.path.join("compilation_scripts", "web_index.tmpl")
     print("Running pygbag...")
     cmd = [
         sys.executable, "-m", "pygbag",
         "--build",
         "--archive",
+        "--template", template_path,
         "--app_name", "Greater Diplomacy 5",
         # The soundtrack itself is transcoded to OGG above (confirmed required -- this
         # WASM build can't decode MP3 at all). This flag just covers any other stray
