@@ -59,6 +59,10 @@ this would mean that units basically swap out with other units when they have le
 
 - figure out how to make scenarios take up less space
 
+- peace screen, claims screen, war screen, why aren't those in the screens folder?
+- release a country and then play as them
+- if has only puppets maybe don't form a faction?
+
 CUSTOMIZATION!!!
 - allow for more customization of the edit construction turns box, also the ability to save and load presets for unit costs
 
