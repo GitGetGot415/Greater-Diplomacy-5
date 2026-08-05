@@ -28,12 +28,21 @@ TIMELINE_YEAR_LABEL_OFFSET_Y = -40
 TIMELINE_YEAR_PADDING = 5     # Extra years drawn either side of the viewport
 NODE_ROW_HALF_HEIGHT = 30     # Half a standard 60px node; the row's centre line
 
-# Active research slots box, bottom-left over the timeline.
+# Horizontal scrollbar spanning the full width along the very bottom of the
+# screen, letting the whole START_YEAR..END_YEAR timeline be dragged at once.
+HSCROLLBAR_HEIGHT = 16
+HSCROLLBAR_MARGIN_X = 20
+HSCROLLBAR_MARGIN_BOTTOM = 8
+
+# Active research slots box, bottom-left over the timeline. Sits above the
+# scrollbar's footprint (height + bottom margin) plus a small gap, so its
+# whole box is shifted up rather than merely clipped at the bottom.
 HUD_SLOT_STEP_Y = 25
 HUD_BASE_HEIGHT = 80
 HUD_X = 20
 HUD_WIDTH = 400
 HUD_BOTTOM_PAD = 20
+HUD_SCROLLBAR_CLEARANCE = HSCROLLBAR_HEIGHT + HSCROLLBAR_MARGIN_BOTTOM + 10
 HUD_TITLE_X = 30
 HUD_TITLE_OFFSET_Y = 10
 HUD_SLOT_TEXT_X = 40
@@ -171,6 +180,11 @@ class Research_Screen(GameState):
         self.pixels_per_year = c.RESEARCH_TIMELINE_SPACING
         self.scroll_content_rect = pygame.Rect(0, HEADER_HEIGHT, c.SCREEN_WIDTH, c.SCREEN_HEIGHT - HEADER_HEIGHT)
 
+        # --- Timeline scrollbar drag state ---
+        self.hscroll_track_rect = None
+        self.hscroll_handle_rect = None
+        self.is_dragging_hscrollbar = False
+
         self.setup_nodes()
 
     def handle_events(self, events):
@@ -233,7 +247,8 @@ class Research_Screen(GameState):
     def hud_slots_rect(self):
         """Screen-space rect of the ACTIVE RESEARCH SLOTS box drawn over the timeline."""
         hud_height = HUD_BASE_HEIGHT + (c.RESEARCH_SLOTS * HUD_SLOT_STEP_Y)
-        return pygame.Rect(HUD_X, c.SCREEN_HEIGHT - hud_height, HUD_WIDTH, hud_height - HUD_BOTTOM_PAD)
+        top_y = c.SCREEN_HEIGHT - hud_height - HUD_SCROLLBAR_CLEARANCE
+        return pygame.Rect(HUD_X, top_y, HUD_WIDTH, hud_height - HUD_BOTTOM_PAD)
 
     def _sync_tech_node_positions(self):
         """Slides tech-node buttons with the timeline scroll. They stay visible
@@ -264,17 +279,70 @@ class Research_Screen(GameState):
             if event.type == pygame.MOUSEWHEEL:
                 self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
 
-            # Content-drag targets target_scroll_x, same as the wheel, and lets
-            # update()'s existing lerp ease scroll_x the rest of the way -- matches
-            # every other scrollable list instead of this being the one screen
-            # dragged with the right mouse button.
-            self.handle_content_drag(event, attr="target_scroll_x", rect_attr="scroll_content_rect",
-                                     lo=self.min_scroll_x, hi=self.max_scroll_x, refresh=False, axis="x")
+            # A grab on the scrollbar itself takes priority over dragging the
+            # timeline content -- otherwise a mouse-down on the bar would arm
+            # both gestures and fight over the same motion events.
+            if not self.handle_timeline_scrollbar(event):
+                # Content-drag targets target_scroll_x, same as the wheel, and lets
+                # update()'s existing lerp ease scroll_x the rest of the way -- matches
+                # every other scrollable list instead of this being the one screen
+                # dragged with the right mouse button.
+                self.handle_content_drag(event, attr="target_scroll_x", rect_attr="scroll_content_rect",
+                                         lo=self.min_scroll_x, hi=self.max_scroll_x, refresh=False, axis="x")
 
             # --- Clamp user input immediately ---
             self.enforce_scroll_bounds()
 
             self._sync_tech_node_positions()
+
+    def handle_timeline_scrollbar(self, event):
+        """Drag-to-scroll on the horizontal scrollbar track/handle at the
+        bottom of the screen. Mirrors GameState.handle_list_scroll's
+        grab/drag/snap pattern, but against scroll_x's own signed min/max-year
+        range instead of the mixin's fixed 0..negative-max convention -- so it
+        drives target_scroll_x directly rather than going through that helper.
+        Returns True when the event was consumed.
+        """
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            was_dragging = self.is_dragging_hscrollbar
+            self.is_dragging_hscrollbar = False
+            if was_dragging:
+                return True
+
+        track = self.hscroll_track_rect
+        handle = self.hscroll_handle_rect
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and track:
+            if handle and handle.collidepoint(event.pos):
+                self.is_dragging_hscrollbar = True  # Grabbing the handle drags from where it sits
+                self._cancel_pressed_elements()
+                return True
+            if track.collidepoint(event.pos):
+                self.is_dragging_hscrollbar = True  # Clicking the bare track jumps to that spot
+                self._cancel_pressed_elements()
+                self.snap_timeline_scroll(event.pos[0])
+                return True
+        elif event.type == pygame.MOUSEMOTION and self.is_dragging_hscrollbar:
+            self.snap_timeline_scroll(event.pos[0])
+            return True
+
+        return False
+
+    def snap_timeline_scroll(self, mouse_x):
+        """Jumps target_scroll_x to wherever the scrollbar handle was dragged.
+
+        year_to_x's scroll_x convention runs backwards from a left-to-right
+        scrollbar (scroll_x is most positive at the timeline's START_YEAR end
+        and most negative at its END_YEAR end -- see year_to_x), so the
+        min/max passed to the generic horizontal-scrollbar math are negated
+        and swapped to land the handle at the correct end.
+        """
+        track = self.hscroll_track_rect
+        if not track:
+            return
+        value = ui_bars.calculate_scroll_snap_horizontal(
+            mouse_x, -self.max_scroll_x, -self.min_scroll_x, track.x, track.width)
+        self.target_scroll_x = -value
 
     def tech_year(self, tech_key, lvl):
         """The year a year-tiered tech reaches this level."""
@@ -377,6 +445,7 @@ class Research_Screen(GameState):
             self.draw_tech_nodes(res_levels, queue)
             # Drawn last so it covers any tech-node button still sliding past it.
             self.elements.append(ScreenLayer(self, "draw_hud_slots"))
+            self.elements.append(ScreenLayer(self, "draw_timeline_scrollbar"))
 
     def get_button_size(self, tech_key, display_name):
         """Picks a node's button size from NODE_SIZE_RULES (first match wins)."""
@@ -591,16 +660,15 @@ class Research_Screen(GameState):
                 process_req(req_k, req_v)
 
     def draw_hud_slots(self, surface):
-        hud_height = HUD_BASE_HEIGHT + (c.RESEARCH_SLOTS * HUD_SLOT_STEP_Y)
         hud_rect = self.hud_slots_rect()
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
         hud_font = fonts.get("button")
-        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (HUD_TITLE_X, c.SCREEN_HEIGHT - hud_height + HUD_TITLE_OFFSET_Y))
+        surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y))
 
         queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
         for i in range(c.RESEARCH_SLOTS):
-            y_off = c.SCREEN_HEIGHT - hud_height + HUD_FIRST_SLOT_OFFSET_Y + (i * HUD_SLOT_STEP_Y)
+            y_off = hud_rect.top + HUD_FIRST_SLOT_OFFSET_Y + (i * HUD_SLOT_STEP_Y)
             if i < len(queue):
                 p = queue[i]
                 tech_name = p['tech_name'].replace('_',' ').title()
@@ -612,6 +680,21 @@ class Research_Screen(GameState):
                 surface.blit(hud_font.render(txt, True, c.COLOR_SUCCESS_GREEN), (HUD_SLOT_TEXT_X, y_off))
             else:
                 surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (HUD_SLOT_TEXT_X, y_off))
+
+    def draw_timeline_scrollbar(self, surface):
+        """Full-width scrollbar along the very bottom of the screen, so the
+        entire START_YEAR..END_YEAR timeline can be dragged in one go instead
+        of only via the wheel or a drag on the (much narrower) node area."""
+        track_x = HSCROLLBAR_MARGIN_X
+        track_y = c.SCREEN_HEIGHT - HSCROLLBAR_MARGIN_BOTTOM - HSCROLLBAR_HEIGHT
+        track_w = c.SCREEN_WIDTH - (2 * HSCROLLBAR_MARGIN_X)
+
+        # See snap_timeline_scroll for why this is negated/swapped.
+        track, handle = ui_bars.draw_standard_scrollbar_horizontal(
+            surface, -self.scroll_x, -self.max_scroll_x, -self.min_scroll_x,
+            track_x, track_y, track_w, HSCROLLBAR_HEIGHT)
+        self.hscroll_track_rect = track
+        self.hscroll_handle_rect = handle
 
     def draw_subscreen_modal(self, surface):
         ui_bars.draw_fullscreen_overlay(surface, MODAL_ALPHA)

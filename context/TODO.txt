@@ -7,14 +7,14 @@
 - check the recent issues coming from playtesting
 
 - if no claims, add option to generate claims
-- edit cost for units editor? (also please fix the basic factories time to build issue not working)
-- information for what scenario setting does
+- edit cost for units editor?
 
 - edit construction turns also allows for the editing of how much said unit costs to produce?
 - diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
 - mark all as read option
 - modloader thing but in game so you don't have to download the github
-- option to also ignore the starting resources that countries already have when refreshing
+
+- ability to swap between a turn based game to a real time one, like paradox games (WARNING: VERY AMBITIOUS)
 
 RESEARCH STUFF:
 - button to just set all scenarios to have default research for the specific era they're in

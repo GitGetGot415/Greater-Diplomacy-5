@@ -36,7 +36,40 @@ def draw_standard_scrollbar(surface, scroll_y, max_scroll, track_x, track_y, vie
     
     handle_rect = pygame.Rect(track_x, handle_y, width, handle_h)
     pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
-    
+
+    return track_rect, handle_rect
+
+def calculate_scroll_snap_horizontal(mouse_x, min_value, max_value, track_x, track_w):
+    """Horizontal counterpart to calculate_scroll_snap. Unlike the vertical
+    version's fixed 0..max_scroll convention, min_value/max_value are passed
+    explicitly so callers with their own signed scroll ranges (e.g. a
+    timeline that can scroll both earlier and later than its start) can
+    reuse the same drag-to-position math."""
+    if max_value <= min_value: return min_value
+    span = max_value - min_value
+    handle_w = max(30, int(track_w * (track_w / (track_w + span))))
+    rel_x = mouse_x - track_x - (handle_w / 2)
+    max_x = track_w - handle_w
+    ratio = max(0.0, min(1.0, rel_x / max(1, max_x)))
+    return min_value + ratio * span
+
+def draw_standard_scrollbar_horizontal(surface, value, min_value, max_value, track_x, track_y, track_w, height=15):
+    """Horizontal counterpart to draw_standard_scrollbar -- see
+    calculate_scroll_snap_horizontal for why the range is passed explicitly
+    instead of assuming 0..max_scroll."""
+    if max_value <= min_value:
+        return None, None
+    track_rect = pygame.Rect(track_x, track_y, track_w, height)
+    pygame.draw.rect(surface, (50, 50, 60), track_rect)
+
+    span = max_value - min_value
+    handle_w = max(30, int(track_w * (track_w / (track_w + span))))
+    ratio = (value - min_value) / span
+    handle_x = track_x + ratio * (track_w - handle_w)
+
+    handle_rect = pygame.Rect(handle_x, track_y, handle_w, height)
+    pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+
     return track_rect, handle_rect
 
 @contextmanager

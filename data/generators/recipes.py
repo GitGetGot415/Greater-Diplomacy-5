@@ -208,29 +208,29 @@ UNIT_SECTIONS = [
             # speed steps: I=2, II-IV=3, V+=4
             "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]),
             "cost_materials": linear(3000, 200), "cost_manpower": const(1000),
-            "cost_fuel": const(100), "production_time": const(4),
+            "cost_fuel": linear(100, 5), "production_time": const(4),
         }),
         UnitFamily("Light Tank", roman_suffixes(24), {
             "health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10),
             # speed steps: I-III=2, IV+=3
             "speed": piecewise([(0, 2, 0), (3, 3, 0)]),
             "cost_materials": linear(5000, 500), "cost_manpower": const(1000),
-            "cost_fuel": const(150), "production_time": const(5),
+            "cost_fuel": linear(150, 5), "production_time": const(5),
         }),
         UnitFamily("Medium Tank", roman_suffixes(4), {
             "health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25),
             "speed": const(2), "cost_materials": linear(9000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": const(200), "production_time": const(6),
+            "cost_fuel": linear(200, 10), "production_time": const(6),
         }),
         UnitFamily("Heavy Tank", roman_suffixes(4), {
             "health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50),
             "speed": const(1), "cost_materials": linear(12000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": const(200), "production_time": const(6),
+            "cost_fuel": linear(200, 10), "production_time": const(6),
         }),
         UnitFamily("Super Heavy Tank", roman_suffixes(5), {
                     "health":  const(5000), "attack":  const(5000), "defense": linear(600, 100),
                     "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000),
-                    "cost_fuel": const(200), "production_time": const(6),
+                    "cost_fuel": linear(240, 20), "production_time": const(6),
         }),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
@@ -257,7 +257,7 @@ UNIT_SECTIONS = [
         UnitFamily("Main Battle Tank", roman_suffixes(14), {
             "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
             "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": const(200), "production_time": const(6),
+            "cost_fuel": linear(240, 10), "production_time": const(6),
         }),
         # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
         # Two standalone guns (not a leveled family) - stats equal the old 5-level
