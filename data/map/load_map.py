@@ -394,6 +394,18 @@ def load_map_assets(self, load_path):
         self.map_data[color_tuple] = v
         self.id_to_province[v["id"]] = v
 
+    # --- CONVOY/TRUCK DEFENSE FIX ---
+    # Older saves may have baked in a nonzero defense (inherited from whatever
+    # unit was converted) onto Convoy/Truck transports. Transports should
+    # always have 0 defense, so force it regardless of save version.
+    for province in self.map_data.values():
+        for unit in province.get("units", []):
+            u_type = unit.get("type", "")
+            if u_type.startswith("Convoy ("):
+                unit["defense"] = c.CONVOY_DEF
+            elif u_type.startswith("Truck ("):
+                unit["defense"] = c.TRUCK_DEF
+
     # --- VERSION MIGRATION ---
     # Old (or version-less) saves carry unit stats baked in from whatever
     # balance patch they were created under. Rescale them to match the

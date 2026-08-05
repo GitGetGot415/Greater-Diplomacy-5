@@ -114,20 +114,23 @@ def process_conversions(self):
                         unit["original_speed"] = unit.get("speed", 1)
                         unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
                         unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
-                        
+                        unit["original_defense"] = unit.get("defense", c.DEFAULT_UNIT_DEF)
+
                         pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
-                        
+
                         unit["type"] = f"{target} ({unit['type']})"
                         unit["speed"] = 1
-                        
+
                         if target == "Convoy":
                             unit["naval_unit"] = True
                             unit["max_health"] = c.CONVOY_MAX_HP
                             unit["attack"] = c.CONVOY_ATK
+                            unit["defense"] = c.CONVOY_DEF
                         else:
                             unit["naval_unit"] = False
                             unit["max_health"] = c.TRUCK_MAX_HP
                             unit["attack"] = c.TRUCK_ATK
+                            unit["defense"] = c.TRUCK_DEF
                             
                         unit["health"] = unit["max_health"] * pct
                     else:

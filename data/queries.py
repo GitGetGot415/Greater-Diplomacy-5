@@ -2285,11 +2285,12 @@ def revert_transport(unit):
     unit["speed"] = unit.get("original_speed", 1)
     unit["max_health"] = unit.get("original_max_health", c.DEFAULT_UNIT_HP)
     unit["attack"] = unit.get("original_attack", c.DEFAULT_UNIT_ATK)
+    unit["defense"] = unit.get("original_defense", c.DEFAULT_UNIT_DEF)
 
     unit["health"] = unit["max_health"] * pct
     unit["naval_unit"] = is_naval_unit(unit["type"])
 
-    for key in ["original_type", "original_speed", "original_max_health", "original_attack"]:
+    for key in ["original_type", "original_speed", "original_max_health", "original_attack", "original_defense"]:
         if key in unit: del unit[key]
 
 def has_units_in_province(nation, province):

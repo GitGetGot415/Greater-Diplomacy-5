@@ -602,6 +602,8 @@ CONVOY_MAX_HP = 1000
 TRUCK_MAX_HP = 1000
 CONVOY_ATK = 100
 TRUCK_ATK = 100
+CONVOY_DEF = 0
+TRUCK_DEF = 0
 TRUCK_CONVERT_TURNS = 3
 
 # ==========================================
