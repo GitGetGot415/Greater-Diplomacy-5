@@ -14,6 +14,10 @@ from data import queries
 MSG_LEFT_PANE_W = 280
 MSG_INPUT_H = 80
 
+# Top of the scrollable contact list. Pushed down from the header row to make
+# room for the fixed Exit / Mark All Read buttons above it.
+MSG_CONTACT_LIST_TOP_Y = 120
+
 # Diplomacy buttons sit in a row above the compose box.
 MSG_DIPLO_BTN_ROW_OFFSET_Y = -60
 MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
@@ -208,6 +212,19 @@ class Messages_Screen(GameState):
         self.drafts = []
         self.refresh_ui()
 
+    def mark_all_read(self):
+        """Marks every received message as read.
+
+        Unanswered incoming requests are excluded: their "unread" status is
+        derived from the pending diplomatic state (not the message's read
+        flag), so they only clear once the player actually responds.
+        """
+        if not self.map_screen: return
+        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        for msg in p_data.get("inbox", []):
+            msg["read"] = True
+        self.refresh_ui()
+
     def additional_events(self, event):
         mx, my = pygame.mouse.get_pos()
         is_tactical = self.map_screen.tactical_mode
@@ -285,6 +302,7 @@ class Messages_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen)]
+        self.elements.append(Button(20, 70, "small", "blue", "Mark All Read", self.mark_all_read))
         if self.selected_recipient:
             self.elements.append(Button(130, 20, "small", "orange", "Mark Unread", self.mark_thread_unread))
 
@@ -315,8 +333,8 @@ class Messages_Screen(GameState):
         if self.selected_recipient:
             history_contacts.add(self.selected_recipient)
 
-        y_off = 80 + self.contact_scroll_y
-        self.scroll_content_rect = pygame.Rect(0, 80, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - 80)
+        y_off = MSG_CONTACT_LIST_TOP_Y + self.contact_scroll_y
+        self.scroll_content_rect = pygame.Rect(0, MSG_CONTACT_LIST_TOP_Y, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y)
 
         if self.show_all_contacts:
             btn = Button(20, y_off, "medium", "red", "Cancel", self.toggle_add_contact)
@@ -468,7 +486,7 @@ class Messages_Screen(GameState):
         pygame.draw.rect(surface, MSG_BG_LIGHT, left_pane_rect)
         pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, 0), (MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
 
-        self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, 80, c.SCREEN_HEIGHT - 80, width=10,
+        self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y, width=10,
                                  attr="contact_scroll_y", limit_attr="max_contact_scroll",
                                  track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
 
