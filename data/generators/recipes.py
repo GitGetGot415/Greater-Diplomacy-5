@@ -142,7 +142,7 @@ UNIT_SECTIONS = [
         UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
-            "cost_fuel": const(50), "production_time": const(2),
+            "cost_fuel": linear(20, 1), "production_time": const(2),
         }),
         # Same reasoning as Motorized Infantry Type above for health/attack/range.
         # Defense keeps its old linear(100, 5) ramp starting exactly at 1940 (index
@@ -152,7 +152,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
-            "cost_fuel": const(50), "production_time": const(2),
+            "cost_fuel": linear(20, 1), "production_time": const(2),
         }),
         # Identical to Mechanized Infantry Type in every stat except double attack
         # and double cost_materials - the premium tier Armored Personnel Carriers
@@ -161,7 +161,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(150, 15),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(4000, 40), "cost_manpower": const(1000),
-            "cost_fuel": const(50), "production_time": const(3),
+            "cost_fuel": linear(20, 1), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),
@@ -293,7 +293,7 @@ UNIT_SECTIONS = [
         UnitFamily("Destroyer", roman_suffixes(26), {
             "health": linear(1200, 200), "attack": linear(600, 200), "defense": linear(100, 10),
             "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
-            "cost_fuel": const(300), "production_time": const(8),
+            "cost_fuel": linear(300, 10), "production_time": const(8),
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
             "health": linear(600, 100),
@@ -301,7 +301,7 @@ UNIT_SECTIONS = [
             "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000),
-            "cost_fuel": const(200), "production_time": const(6),
+            "cost_fuel": linear(200, 5), "production_time": const(6),
         }, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
@@ -309,7 +309,7 @@ UNIT_SECTIONS = [
             "health": linear(400, 200), "attack": linear(400, 100), "defense": linear(100, 10),
             "bombard_attack": linear(300, 40),
             "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
-            "cost_fuel": const(500), "production_time": const(10),
+            "cost_fuel": linear(500, 25), "production_time": const(10),
         }, naval_unit=True),
     ],
 ]
