@@ -4,3 +4,6 @@ compilation_scripts\run.bat
 MACOS/LINUX:
 chmod +x compilation_scripts/run.sh
 ./compilation_scripts/run.sh
+
+MACOS WEB BUILD:
+./compilation_scripts/test_web_build.sh
