@@ -61,6 +61,32 @@ jobs:
           pip install -r requirements.txt
           pip install py2app
 
+      - name: Generate pygame_icon.icns for py2app
+        # py2app's built-in pygame recipe unconditionally bundles
+        # freesansbold.ttf and pygame_icon.icns from the installed pygame
+        # package. pygame-ce (what requirements.txt pins) ships
+        # pygame_icon_mac.bmp but not the .icns upstream pygame has, so the
+        # recipe's copy step fails with FileNotFoundError. Build a real
+        # .icns from pygame-ce's own bmp so py2app has something valid to
+        # bundle instead of erroring out.
+        run: |
+          PGDIR=$(python3 -c "import pygame, os; print(os.path.dirname(pygame.__file__))")
+          ICNS_PATH="$PGDIR/pygame_icon.icns"
+          if [ -f "$ICNS_PATH" ]; then
+            echo "pygame_icon.icns already present, skipping."
+          else
+            ICONSET=$(mktemp -d)/pygame_icon.iconset
+            mkdir -p "$ICONSET"
+            sips -s format png "$PGDIR/pygame_icon_mac.bmp" --out /tmp/pgicon_base.png
+            for sz in 16 32 128 256 512; do
+              sips -z $sz $sz /tmp/pgicon_base.png --out "$ICONSET/icon_${sz}x${sz}.png"
+              dbl=$((sz * 2))
+              sips -z $dbl $dbl /tmp/pgicon_base.png --out "$ICONSET/icon_${sz}x${sz}@2x.png"
+            done
+            iconutil -c icns "$ICONSET" -o "$ICNS_PATH"
+            echo "Generated $ICNS_PATH"
+          fi
+
       - name: Run macOS compilation script
         run: python3 compilation_scripts/macos_compilation.py
 
