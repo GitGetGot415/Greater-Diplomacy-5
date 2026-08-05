@@ -7,9 +7,19 @@ The rules being pinned down:
   * only proposals with the same outcome merge (faction invite x join request,
     call to arms x join wars) -- military access is one-way and must not
   * queued text is delivered exactly once
+
+Run it however you like -- straight from the editor's "Run Python File in
+Terminal", via run_tests.py in the repo root, or with
+`python -m unittest discover -s tests -t .`.
 """
 
+import os
+import sys
 import unittest
+
+# Running this file directly puts tests/ on the path rather than the repo root,
+# so put the root back before importing anything from the game.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen
 
