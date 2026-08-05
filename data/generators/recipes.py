@@ -293,7 +293,7 @@ UNIT_SECTIONS = [
         UnitFamily("Destroyer", roman_suffixes(26), {
             "health": linear(1200, 200), "attack": linear(600, 200), "defense": linear(100, 10),
             "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
-            "cost_fuel": linear(300, 10), "production_time": const(8),
+            "cost_fuel": linear(300, 5), "production_time": const(8),
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
             "health": linear(600, 100),
