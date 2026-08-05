@@ -17,6 +17,7 @@ that shape (see ui/modal_stack.py for the full rationale):
 Call sites always look the same either way: `ask_yes_no(title, msg, on_result=...)`.
 """
 import pygame
+import webbrowser
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
@@ -520,3 +521,170 @@ def show_warning(title, message, tk_parent=None, on_result=None):
 
 def show_error(title, message, tk_parent=None, on_result=None):
     show_message(title, message, tk_parent=tk_parent, kind="error", on_result=on_result)
+
+
+_LINK_COLOR = (100, 100, 255)
+_LINK_HOVER_COLOR = (255, 255, 0)
+
+
+class _PersonInfoModal:
+    """Popup for a Credits entry: a title, an optional free-text info section,
+    and an optional list of clickable links below it."""
+
+    def __init__(self, surface, name, info_text, links, on_result, align="center"):
+        self.on_result = on_result
+        self.background = surface.copy()
+        self._resolved = False
+        self.align = align if align in ("left", "center", "right") else "center"
+
+        self.title_font = fonts.get("heading2")
+        self.msg_font = fonts.get("normal")
+        self.link_font = fonts.get("normal")
+        self.btn_font = fonts.get("button")
+
+        box_w = min(560, surface.get_width() - 40)
+        content_w = box_w - 80
+        self.lines = _wrap_text(info_text, self.msg_font, content_w) if info_text else []
+        self.links = links or []
+
+        text_h = len(self.lines) * (self.msg_font.get_height() + 2)
+        links_h = len(self.links) * (self.link_font.get_height() + 8)
+        box_h = 110 + text_h + (20 if self.links else 0) + links_h + 70
+        box_h = max(220, box_h)
+
+        self.box_rect = pygame.Rect(0, 0, box_w, box_h)
+        self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
+
+        self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
+
+        self.name = name
+        self.text_y_start = self.box_rect.y + 75
+
+        left_x = self.box_rect.x + 40
+        right_x = self.box_rect.right - 40
+
+        self.link_rects = []
+        y = self.text_y_start + text_h + (20 if self.links else 0)
+        for link in self.links:
+            text = link.get("text", "")
+            w = self.link_font.size(text)[0]
+            if self.align == "left":
+                x = left_x
+            elif self.align == "right":
+                x = right_x - w
+            else:
+                x = self.box_rect.centerx - w // 2
+            rect = pygame.Rect(x, y, w, self.link_font.get_height())
+            self.link_rects.append(rect)
+            y += self.link_font.get_height() + 8
+
+    def handle_events(self, events):
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
+                    self._finish()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.ok_rect.collidepoint(event.pos):
+                    self._finish()
+                    return
+                for rect, link in zip(self.link_rects, self.links):
+                    if link.get("url") and rect.collidepoint(event.pos):
+                        webbrowser.open(link["url"])
+                        return
+
+    def update(self):
+        if self._resolved:
+            modal_stack.pop()
+            if self.on_result:
+                self.on_result()
+
+    def _finish(self):
+        self._resolved = True
+
+    def draw(self, surface):
+        surface.blit(self.background, (0, 0))
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        pygame.draw.rect(surface, (40, 40, 40), self.box_rect)
+        pygame.draw.rect(surface, _KIND_ACCENTS["info"], self.box_rect, 3)
+
+        title_surf = self.title_font.render(self.name, True, (255, 255, 255))
+        surface.blit(title_surf, title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + 35)))
+
+        y = self.text_y_start
+        left_x = self.box_rect.x + 40
+        right_x = self.box_rect.right - 40
+        for line in self.lines:
+            line_surf = self.msg_font.render(line, True, (210, 210, 210))
+            if self.align == "left":
+                rect = line_surf.get_rect(midleft=(left_x, y))
+            elif self.align == "right":
+                rect = line_surf.get_rect(midright=(right_x, y))
+            else:
+                rect = line_surf.get_rect(center=(self.box_rect.centerx, y))
+            surface.blit(line_surf, rect)
+            y += self.msg_font.get_height() + 2
+
+        mx, my = pygame.mouse.get_pos()
+        for rect, link in zip(self.link_rects, self.links):
+            text = link.get("text", "")
+            has_url = bool(link.get("url"))
+            is_hovered = has_url and rect.collidepoint(mx, my)
+            color = _LINK_HOVER_COLOR if is_hovered else (_LINK_COLOR if has_url else (200, 200, 200))
+            text_surf = self.link_font.render(text, True, color)
+            surface.blit(text_surf, rect.topleft)
+            if is_hovered:
+                pygame.draw.line(surface, color, (rect.left, rect.bottom), (rect.right, rect.bottom), 2)
+
+        hovered_ok = self.ok_rect.collidepoint(mx, my)
+        accent = _KIND_ACCENTS["info"]
+        ok_color = tuple(min(255, ch + 40) for ch in accent) if hovered_ok else accent
+        pygame.draw.rect(surface, ok_color, self.ok_rect, border_radius=4)
+        ok_surf = self.btn_font.render("Close", True, (255, 255, 255))
+        surface.blit(ok_surf, ok_surf.get_rect(center=self.ok_rect.center))
+
+
+def _show_person_info_standalone(name, info_text, links, align, tk_parent, on_result):
+    surface, owns_display = _acquire_surface()
+    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
+
+    modal = _PersonInfoModal(surface, name, info_text, links, None, align)
+    clock = pygame.time.Clock()
+    waiting = True
+
+    try:
+        while waiting:
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.QUIT:
+                    waiting = False
+            modal.handle_events(events)
+            if modal._resolved:
+                waiting = False
+
+            modal.draw(surface)
+            pygame.display.flip()
+            clock.tick(60)
+    finally:
+        _show_tk_chain(hidden_tk)
+        _release_surface(owns_display)
+
+    if on_result:
+        on_result()
+
+
+def show_person_info(name, info_text="", links=None, align="center", tk_parent=None, on_result=None):
+    """Popup with free-text info about `name`, plus a list of clickable links below it.
+
+    links is a list of {"text": str, "url": str} dicts; each renders as its own
+    clickable line and opens its url in a browser when clicked. align controls
+    the info text's horizontal alignment: "left", "center" (default), or "right".
+    """
+    surface = pygame.display.get_surface()
+    if surface is None:
+        _show_person_info_standalone(name, info_text, links, align, tk_parent, on_result)
+        return
+
+    modal_stack.push(_PersonInfoModal(surface, name, info_text, links, on_result, align))

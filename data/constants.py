@@ -86,26 +86,65 @@ CORE_CONSTRUCTION_TURNS = 24
 
 REMOVE_CORE_TURNS = 2
 
+# Each person may have "info" (free-text bio shown in the popup) and/or "links"
+# (a list of {"text", "url"} shown as clickable lines below the info text).
+# A person with neither is rendered as plain, non-clickable text.
 CREDITS_DATA = [
     {
-        "main_text": "Lead Developer: ", 
+        "main_text": "Lead Developer: ",
         "people": [
-            {"link_text": "GitGetGot415", "url": "https://github.com/GitGetGot415"}
+            {
+                "link_text": "GitGetGot415",
+                "info": "Owns the repository",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+            }
         ]
     },
     {
-        "main_text": "GitHub Contributors: ", 
-        "people": [
-            {"link_text": "litbrb", "url": "https://github.com/litbrb"},
-            {"link_text": "github-advanced-security[bot]", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}
-        ]
-    },
-    {
-            "main_text": "Map Makers: ", 
+            "main_text": "Music: ",
             "people": [
-                {"link_text": "neptune2019"},
+                {
+                    "link_text": "GitGetGot415",
+                    "info": "Made all the music",
+                    "align": "left",
+                    "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+                }
             ]
+        },
+    {
+        "main_text": "GitHub Contributors: ",
+        "people": [
+            {
+                "link_text": "litbrb",
+                "info": (
+                    "Added:\n"
+                    "- Submarines\n"
+                    "- Terrain art\n"
+                    "- Icons for: Credits, Load Game, Map Editor, New Game"
+                ),
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
+            },
+            {
+                "link_text": "github-advanced-security[bot]",
+                "info": "Improved encryption for tournaments",
+                "align": "left",
+                "links": [{"text": "Docs", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}]
+            }
+        ]
     },
+    {
+            "main_text": "Map Makers: ",
+            "people": [
+                {
+                    "link_text": "neptune2019",
+                    "info": ("Maps Added:\n"
+                    "- Kaiserreich Alpha"),
+                    "align": "left",
+                },
+            ]
+    }
 ]
 
 SHOW_FPS = False
