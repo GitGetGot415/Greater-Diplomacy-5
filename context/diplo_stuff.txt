@@ -20,3 +20,24 @@ turn 0.5: request message is sent
 turn 1: [B] receives request message from [A], accepts request and sends acceptance back to [A]
 turn 1.5: acceptance message is sent
 turn 2: [A] receives acceptance message, [A] is now officially accepted into the faction
+
+if two bilateral requests are sent to each other, they shouldn't overwrite each other
+you SHOULD get something like this:
+
+turn 0: [A] writes trade deal to country [B]
+turn 0: [B] request millitary access from country [A]
+turn 0.5: both messages are sent
+turn 1: [A] receives the millitary access request from [B], either accepts or declines it
+turn 1: [B] receives the trade deal from [A], either accepts it or declines it
+turn 1.5: both messages are sent
+turn 2: [A] receives acceptance or declining of trade deal, [B] receives acceptance or declining of millitary access
+
+if something else happens, like one of these messages getting overriden, that shouldn't be the case
+
+the one exception though is if both are requesting something that if accepted will lead to the same outcome
+
+for example, [A] asking [B] to join their war, and [B] asking [A] if they can join in their war
+another example, [A] inviting [B] to their faction, and [B] requesting to join the faction of [A]
+
+however, do keep in mind that things like [A] requesting millitary access from [B] and [B] requesting millitary access from [A] don't lead to the same outcome because millitary access is a one way thing
+it's possible for a country to let another country into it's borders but also not be allowed into the other countries borders
