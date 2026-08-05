@@ -50,6 +50,57 @@ def clear_pending(nation_data, player_name, target_name, only_actions=None):
     del pending[target_name]
     return True
 
+# ==========================================
+# DIPLOMATIC RESPONSE ACCESS
+# ==========================================
+# Answers to incoming proposals live in their own dict rather than in
+# pending_diplomacy. The two are genuinely independent: a nation can have an
+# offer travelling towards someone while also answering an offer travelling the
+# other way, and neither may quietly overwrite the other.
+#
+#   nation_data[me]["diplo_responses"][sender] = {
+#       "verdict": "ACCEPT" | "REJECT",
+#       "action": "<the action being answered>",
+#       "message": "<reply text>",
+#       "parameters": {...},   # copied from their request (trades, peace terms)
+#   }
+#
+# Responses carry no "turns": they resolve on the turn they are queued.
+
+RESPONSE_ACCEPT = "ACCEPT"
+RESPONSE_REJECT = "REJECT"
+
+def get_response_map(nation_data, player_name, writable=False):
+    """The player's whole queued-response dict. writable=True creates it."""
+    if writable:
+        return nation_data.setdefault(player_name, {}).setdefault("diplo_responses", {})
+    return nation_data.get(player_name, {}).get("diplo_responses", {})
+
+def get_response(nation_data, player_name, sender_name):
+    """The response queued for sender_name, always as a dict ({} if none)."""
+    info = get_response_map(nation_data, player_name).get(sender_name)
+    return info if isinstance(info, dict) else {}
+
+def get_response_status(nation_data, player_name, sender_name):
+    """Unpacks a queued response. Returns (verdict, action), both "" if none."""
+    info = get_response(nation_data, player_name, sender_name)
+    return info.get("verdict", ""), info.get("action", "")
+
+def set_response(nation_data, player_name, sender_name, verdict, action, **extra):
+    """Queues an answer to sender_name's proposal. Overwrites any earlier answer."""
+    entry = {"verdict": verdict, "action": action, "message": ""}
+    entry.update(extra)
+    get_response_map(nation_data, player_name, writable=True)[sender_name] = entry
+    return entry
+
+def clear_response(nation_data, player_name, sender_name):
+    """Removes a queued response. Returns True when something was removed."""
+    responses = get_response_map(nation_data, player_name)
+    if sender_name not in responses:
+        return False
+    del responses[sender_name]
+    return True
+
 def queue_text_message(nation_data, player_name, target_name, content):
     if player_name not in nation_data:
         return "Cannot send messages as this entity."

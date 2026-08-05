@@ -98,7 +98,7 @@ def conquer_province(self, province, new_owner):
                         n_data["master"] = ""
                         n_data["puppet_type"] = ""
                         
-                    for dict_key in ["relations", "truces", "diplo_cooldowns", "wargoals", "pending_diplomacy", "draft_lists"]:
+                    for dict_key in ["relations", "truces", "diplo_cooldowns", "wargoals", "pending_diplomacy", "draft_lists", "diplo_responses"]:
                         if old_owner in n_data.get(dict_key, {}):
                             del n_data[dict_key][old_owner]
                             

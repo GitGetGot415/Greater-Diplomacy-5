@@ -13,6 +13,9 @@ turn 1.5: msg2 is sent
 turn 2: msg2 is received by original sender
 
 maybe add testcases for each potential diplomatic action?
+
+Run with python -m unittest discover -s tests -t .
+
 each test case should return how long it takes for each statement to send and what happens, one example could be of a faction join request, returning something simmilar to this:
 
 turn 0: [A] writes request to join faction of [B]

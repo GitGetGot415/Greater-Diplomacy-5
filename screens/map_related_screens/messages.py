@@ -100,46 +100,41 @@ class Messages_Screen(GameState):
                 self.compose_text = ""
                 
             existing = pending_dict.get(self.selected_recipient, {})
+            if not isinstance(existing, dict):
+                # Legacy saves stored a bare action string
+                existing = {"action": existing, "turns": 0}
+
             action_str = ""
-            turns_val = 0
-            existing_msg = ""
-            existing_params = None
-            
+            existing_action = existing.get("action") or ""
+
             # Preserve existing formal diplomatic actions if they exist
-            if isinstance(existing, dict):
-                if existing.get("action") and not existing.get("action").startswith("MSG:"):
-                    action_str = existing.get("action")
-                    turns_val = existing.get("turns", 0)
-                    existing_msg = existing.get("message", "")
-                    existing_params = existing.get("parameters", None)
-            
+            if existing_action and not existing_action.startswith("MSG:"):
+                action_str = existing_action
+
+            # Rebuild from the original entry so fields this screen doesn't care
+            # about (timer, cached_members) survive a trip through the compose box.
+            def _rebuild(action, message):
+                entry = dict(existing)
+                entry["action"] = action
+                entry["turns"] = existing.get("turns", 0)
+                entry["message"] = message
+                return entry
+
             if self.drafts:
                 # Use a newline character so the renderer knows to split them back into multiple bubbles later
                 combined_text = "\n".join(self.drafts)
-                if not action_str:
-                    action_str = f"MSG:{combined_text}"
-                    
-                pending_dict[self.selected_recipient] = {
-                    "action": action_str,
-                    "turns": turns_val,
-                    "message": combined_text if not action_str or action_str.startswith("MSG:") else existing_msg
-                }
-                if existing_params is not None:
-                    pending_dict[self.selected_recipient]["parameters"] = existing_params
+                if action_str:
+                    pending_dict[self.selected_recipient] = _rebuild(action_str, existing.get("message", ""))
+                else:
+                    pending_dict[self.selected_recipient] = _rebuild(f"MSG:{combined_text}", combined_text)
                 draft_lists[self.selected_recipient] = self.drafts.copy()
             else:
                 # No drafts. Preserve formal actions.
                 if action_str:
-                    pending_dict[self.selected_recipient] = {
-                        "action": action_str,
-                        "turns": turns_val,
-                        "message": existing_msg
-                    }
-                    if existing_params is not None:
-                        pending_dict[self.selected_recipient]["parameters"] = existing_params
+                    pending_dict[self.selected_recipient] = _rebuild(action_str, existing.get("message", ""))
                 else:
                     diplomacy_logic.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
-                
+
                 if self.selected_recipient in draft_lists:
                     del draft_lists[self.selected_recipient]
 
@@ -330,6 +325,16 @@ class Messages_Screen(GameState):
             elif target in playable and queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
                 history_contacts.add(target)
 
+        # Anyone waiting on our answer, plus anyone we've already answered. Without
+        # this a request whose message went astray would raise the unread badge
+        # while having no row here to click -- a notification with nowhere to go.
+        for sender in queries.get_pending_request_senders(self.map_screen.player_country, self.map_screen.nation_data):
+            if sender in playable:
+                history_contacts.add(sender)
+        for sender in diplomacy_messages.get_response_map(self.map_screen.nation_data, self.map_screen.player_country):
+            if sender in playable:
+                history_contacts.add(sender)
+
         if self.selected_recipient:
             history_contacts.add(self.selected_recipient)
 
@@ -361,13 +366,10 @@ class Messages_Screen(GameState):
 
                 unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
 
-                # Treat unanswered requests as an unread notification
-                incoming_action, incoming_turns = queries.get_diplomatic_status(country, self.map_screen.player_country, self.map_screen.nation_data)
-                pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, country, self.map_screen.nation_data)
-
-                if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
-                    if not (pending_action.startswith("ACCEPT_") or pending_action.startswith("REJECT_")):
-                        unread += 1
+                # Treat unanswered requests as an unread notification. Shares its
+                # rule with the map screen's badge so the two always agree.
+                if queries.has_unanswered_request(self.map_screen.player_country, country, self.map_screen.nation_data):
+                    unread += 1
 
                 display_name = self.map_screen.nation_data.get(country, {}).get("name", country)
                 display_text = f"{display_name} ({unread})" if unread > 0 else display_name
@@ -420,55 +422,38 @@ class Messages_Screen(GameState):
                 self.elements.append(Button(btn_x - 130, btn_y, "small", "green", "Trade", self.open_trade))
 
             # --- Bilateral Accept/Reject Buttons ---
+            # An answer never competes with our own outgoing offer any more, so
+            # there is no "busy" state to grey these out for.
             incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
-            pending_action, pending_turns = queries.get_diplomatic_status(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
-            
-            orig_incoming = incoming_action.replace("ACCEPT_", "").replace("REJECT_", "") if (incoming_action.startswith("ACCEPT_") or incoming_action.startswith("REJECT_")) else incoming_action
-            
-            show_buttons = incoming_turns > 0
-            # If they accepted our mutual request on the same turn (hotseat), we should still show buttons
-            if (incoming_action.startswith("ACCEPT_") or incoming_action.startswith("REJECT_")):
-                if pending_action in (orig_incoming, f"ACCEPT_{orig_incoming}", f"REJECT_{orig_incoming}"):
-                    show_buttons = True
-                
-            if show_buttons and orig_incoming in c.BILATERAL_ACTIONS:
-                action_name = orig_incoming.replace("_", " ").title()
+            queued_verdict, queued_action = diplomacy_messages.get_response_status(
+                self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+
+            if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
+                action_name = incoming_action.replace("_", " ").title()
                 btn_y_diplo = c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y
-                
-                is_peace = orig_incoming in ["PEACE_TREATY", "CEASEFIRE"]
-                
+                answered = (queued_action == incoming_action)
+
+                is_peace = incoming_action in ["PEACE_TREATY", "CEASEFIRE"]
+
+                def _peace_btn(slot):
+                    return Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot, btn_y_diplo,
+                                  "medium", "yellow", "View Peace Treaty",
+                                  lambda: self.view_peace_treaty(self.selected_recipient))
+
                 if is_tactical:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
                     if is_peace:
-                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
-                elif pending_action == f"ACCEPT_{orig_incoming}":
+                        self.elements.append(_peace_btn(2))
+                elif answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
-                elif pending_action == f"REJECT_{orig_incoming}":
+                elif answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
                 else:
-                    # Check if the player is busy doing something else (e.g., WAR_DECLARATION)
-                    is_busy = False
-                    if pending_action:
-                        if pending_action.startswith("MSG:"):
-                            is_busy = False
-                        elif pending_action == orig_incoming:
-                            is_busy = False
-                        elif pending_action in c.BILATERAL_ACTIONS and orig_incoming in c.BILATERAL_ACTIONS:
-                            is_busy = False
-                        else:
-                            is_busy = True
-                    
-                    if is_busy:
-                        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", f"Accept {action_name}", lambda: None))
-                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", f"Reject {action_name}", lambda: None))
-                        if is_peace:
-                            self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "grey", "View Peace Treaty", lambda: None))
-                    else:
-                        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
-                        self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
-                        if is_peace:
-                            self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y_diplo, "medium", "yellow", "View Peace Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
+                    self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
+                    if is_peace:
+                        self.elements.append(_peace_btn(2))
 
     def open_trade(self):
         self.save_current_draft()

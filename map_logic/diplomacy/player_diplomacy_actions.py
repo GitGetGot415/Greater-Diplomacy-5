@@ -123,86 +123,80 @@ def handle_specific_action(map_screen, action_type):
     map_screen.mail_input_active = False
     map_screen.show_feedback(msg)
 
+def _answer_incoming_request(map_screen, target, verdict, custom_msg):
+    """Shared plumbing for the Accept / Reject buttons.
+
+    Answers live in their own channel, so queueing one never disturbs an offer we
+    already have travelling towards the same nation.
+    """
+    action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
+    if incoming_turns <= 0 or action not in c.BILATERAL_ACTIONS:
+        return None
+
+    # Re-clicking the same verdict is an undo, handled inside the toggle.
+    queued_verdict, queued_action = diplomacy_logic.get_response_status(
+        map_screen.nation_data, map_screen.player_country, target)
+    is_undo = (queued_verdict == verdict and queued_action == action)
+
+    if custom_msg is None:
+        custom_msg = map_screen.mail_draft_text.strip()
+
+    # The terms belong to their offer -- carry them so nothing is lost.
+    their_pending = map_screen.nation_data.get(target, {}).get("pending_diplomacy", {}).get(map_screen.player_country, {})
+    params = their_pending.get("parameters") if isinstance(their_pending, dict) else None
+
+    msg = diplomacy_logic.toggle_diplomatic_response(
+        map_screen.nation_data, map_screen.player_country, target,
+        verdict, action, custom_msg, parameters=params)
+
+    if not is_undo:
+        map_screen.mail_draft_text = ""
+        map_screen.mail_input_active = False
+    map_screen.refresh_diplomacy_maps()
+    map_screen.show_feedback(msg)
+    return msg
+
+
 def handle_accept_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of accepting an incoming proposal."""
     if not target:
         target = map_screen.selected_province.get("owner")
-        
-    action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
-    
-    orig_action = action.replace("ACCEPT_", "").replace("REJECT_", "") if (action.startswith("ACCEPT_") or action.startswith("REJECT_")) else action
-    
-    # If we are UNDOING the acceptance:
-    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, target, map_screen.nation_data)
-    if pending_action == f"ACCEPT_{orig_action}" and pending_turns == 0:
-        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"ACCEPT_{orig_action}", "")
-        map_screen.show_feedback(msg)
-        return
 
-    if incoming_turns > 0 or action.startswith("ACCEPT_") or action.startswith("REJECT_"):
+    action, _turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
+
+    # Undoing an acceptance needs no eligibility check -- it only removes a queued answer.
+    queued_verdict, queued_action = diplomacy_logic.get_response_status(
+        map_screen.nation_data, map_screen.player_country, target)
+    if not (queued_verdict == diplomacy_logic.RESPONSE_ACCEPT and queued_action == action):
         my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
-        i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
-        
-        if orig_action == "FACTION_INVITE":
+
+        if action == "FACTION_INVITE":
             if my_faction:
                 map_screen.show_feedback("Must leave your current faction first!")
                 return
-        elif orig_action == "JOIN_FACTION_REQ":
-            if not i_am_leader:
+        elif action == "JOIN_FACTION_REQ":
+            # They are joining OUR faction, so having one is a requirement, not a blocker.
+            if not queries.is_faction_leader(map_screen.player_country, map_screen.nation_data):
                 map_screen.show_feedback("You are no longer the leader, cannot accept!")
                 return
-        elif orig_action == "CREATE_FACTION":
-                if my_faction:
-                    map_screen.show_feedback("Must leave your current faction first!")
-                    return
-        elif orig_action in ["JOIN_WARS", "CALL_TO_ARMS"]:
+        elif action == "CREATE_FACTION":
+            if my_faction:
+                map_screen.show_feedback("Must leave your current faction first!")
+                return
+        elif action in ["JOIN_WARS", "CALL_TO_ARMS"]:
             if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
                 map_screen.show_feedback("You must be in the same faction to do this!")
                 return
 
-        if custom_msg is None:
-            custom_msg = map_screen.mail_draft_text.strip()
-            
-        diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"ACCEPT_{orig_action}", custom_msg)
-        
-        map_screen.mail_draft_text = ""
-        map_screen.mail_input_active = False
-        map_screen.refresh_diplomacy_maps()
-        map_screen.show_feedback(f"Acceptance queued: {orig_action.replace('_', ' ').title()}")
+    _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_ACCEPT, custom_msg)
 
 
 def handle_reject_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of rejecting an incoming proposal."""
     if not target:
         target = map_screen.selected_province.get("owner")
-        
-    action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
-    orig_action = action.replace("ACCEPT_", "") if action.startswith("ACCEPT_") else action
-
-    # If we are UNDOING the rejection:
-    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, target, map_screen.nation_data)
-    if pending_action == f"REJECT_{orig_action}" and pending_turns == 0:
-        msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"REJECT_{orig_action}", "")
-        map_screen.show_feedback(msg)
-        return
-
-    if incoming_turns > 0 or action.startswith("ACCEPT_") or action.startswith("REJECT_"):
-        if custom_msg is None:
-            custom_msg = map_screen.mail_draft_text.strip()
-            
-        orig_action = action.replace("ACCEPT_", "").replace("REJECT_", "") if (action.startswith("ACCEPT_") or action.startswith("REJECT_")) else action
-            
-        # Copy parameters from their original request so we don't lose them if they overwrite it
-        their_pending = map_screen.nation_data.get(target, {}).get("pending_diplomacy", {}).get(map_screen.player_country, {})
-        params = their_pending.get("parameters") if isinstance(their_pending, dict) else None
-        
-        diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, f"REJECT_{orig_action}", custom_msg, parameters=params)
-        
-        map_screen.mail_draft_text = ""
-        map_screen.mail_input_active = False
-        map_screen.refresh_diplomacy_maps()
-        map_screen.show_feedback(f"Rejection queued: {orig_action.replace('_', ' ').title()}")
+    _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_REJECT, custom_msg)
 
 def handle_join_wars(map_screen):
     target = map_screen.selected_province.get("owner")

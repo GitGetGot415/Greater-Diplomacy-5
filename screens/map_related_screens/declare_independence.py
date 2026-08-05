@@ -98,6 +98,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
             "at_war_with": [old_tag] if old_tag not in c.UNPLAYABLE_NATIONS else [],
             "allied_with": [],
             "pending_diplomacy": {},
+            "diplo_responses": {},
             "claims": [],
             "claim_queue": [],
             "revoke_queue": [],

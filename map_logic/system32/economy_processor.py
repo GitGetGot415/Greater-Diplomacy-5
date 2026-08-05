@@ -142,6 +142,7 @@ def process_queues(self):
                             "at_war_with": [current_owner],
                             "allied_with": [],
                             "pending_diplomacy": {},
+                            "diplo_responses": {},
                             "claims": [],
                             "claim_queue": [],
                             "revoke_queue": [],

@@ -6,7 +6,10 @@ from data.platform import IS_WEB
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.diplomacy.diplomacy_messages import get_pending_action, send_message
+from map_logic.diplomacy.diplomacy_messages import (
+    get_pending_action, send_message, get_response, get_response_map,
+    set_response, clear_response, RESPONSE_ACCEPT, RESPONSE_REJECT
+)
 from map_logic.diplomacy.diplomacy_agreements import (
     finalize_war, finalize_neutral, execute_peace_treaty, finalize_create_faction,
     finalize_disband_faction, finalize_faction_join, finalize_faction_leave,
@@ -14,22 +17,27 @@ from map_logic.diplomacy.diplomacy_agreements import (
 )
 
 def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
+    """Queues (or cancels) an OUTGOING proposal aimed at target_name.
+
+    Answers to their proposals are a separate channel entirely -- see
+    toggle_diplomatic_response -- so the two can never overwrite each other.
+    """
     pending = nation_data[player_name].setdefault("pending_diplomacy", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
-    
+
     if current_action == action_type:
         info = pending.get(target_name, {})
         if isinstance(info, dict) and info.get("turns", 0) > 0:
             return "Cannot undo! The diplomat has already crossed their borders."
-            
+
         # --- NEW: Refund trade escrow if the sender cancels a drafted trade ---
         if current_action == "TRADE":
             params = info.get("parameters", {})
             queries.cancel_trade_escrow(nation_data[player_name], params)
-            
+
         del pending[target_name]
         return f"Undo {action_type.replace('_', ' ').title()}"
-        
+
     elif current_action is not None:
         # NEW: Allow upgrading a drafted text message into a formal diplomatic action
         info = pending.get(target_name, {})
@@ -41,27 +49,22 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
                 custom_msg = info.get("action")[4:]
         elif is_unilateral and isinstance(info, dict) and info.get("turns", 0) > 0:
             pass # Safe to overwrite an executed unilateral action
-        elif action_type.startswith("ACCEPT_") or action_type.startswith("REJECT_"):
-            if current_action == "TRADE":
-                params = info.get("parameters", {})
-                queries.cancel_trade_escrow(nation_data[player_name], params)
-            pass # Allow accepting/rejecting incoming requests even if we have an outgoing one
         else:
             # Prevents declaring war while an alliance request is pending, etc.
             return "A diplomatic action is already pending with this nation!"
-            
+
     # --- THE FIX: Prevent multiple faction requests ---
-    faction_actions = ["CREATE_FACTION", "JOIN_FACTION_REQ", "ACCEPT_CREATE_FACTION", "ACCEPT_FACTION_INVITE", "ACCEPT_JOIN_FACTION_REQ"]
+    faction_actions = ["CREATE_FACTION", "JOIN_FACTION_REQ"]
     if action_type in faction_actions:
         if nation_data[player_name].get("faction", ""):
             return "Cannot do this while already in a faction!"
-        
+
         for other_target, info in pending.items():
             act = info.get("action", "") if isinstance(info, dict) else info
             if act in faction_actions and other_target != target_name:
                 return "You already have a pending faction request!"
     # ------------------------------------------------
-        
+
     pending[target_name] = {
         "action": action_type,
         "turns": 0,
@@ -71,6 +74,30 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
     if parameters:
         pending[target_name]["parameters"] = parameters
     return "Message drafted. Will send at end of turn."
+
+def toggle_diplomatic_response(nation_data, player_name, sender_name, verdict, action, custom_msg="", parameters=None):
+    """Queues (or undoes) an answer to sender_name's incoming proposal.
+
+    Lives in nation_data[player]["diplo_responses"], never in pending_diplomacy,
+    so answering someone leaves any offer we have travelling towards them intact.
+    Re-queuing the same verdict clears it, which is how the Undo buttons work.
+    """
+    existing = get_response(nation_data, player_name, sender_name)
+    verb = "Accept" if verdict == RESPONSE_ACCEPT else "Reject"
+    noun = "Acceptance" if verdict == RESPONSE_ACCEPT else "Rejection"
+    action_label = action.replace('_', ' ').title()
+
+    if existing.get("verdict") == verdict and existing.get("action") == action:
+        # Undoing a rejection puts their offer back in play. Nothing to refund
+        # here -- a trade's escrow belongs to the sender and was never touched.
+        clear_response(nation_data, player_name, sender_name)
+        return f"Undo {verb} {action_label}"
+
+    extra = {"message": custom_msg}
+    if parameters is not None:
+        extra["parameters"] = parameters
+    set_response(nation_data, player_name, sender_name, verdict, action, **extra)
+    return f"{noun} queued: {action_label}"
 
 def process_diplomacy_turn(self):
     # --- DECAY TEMPORARY MODIFIERS & TRUCES ---
@@ -141,6 +168,9 @@ def process_diplomacy_turn(self):
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---
     nations = list(self.nation_data.keys())
     
+    # Proposals that a simultaneous declaration of war makes moot.
+    WAR_CANCELS = ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "CREATE_FACTION"]
+
     def _resolve_cross_action(nation_a, nation_b, a_data, b_data, msg_key):
         """Helper to cleanly resolve contradictory simultaneous requests and strip them from the queue."""
         msg = ai_prompts.AI_FALLBACK_RESPONSES[msg_key]
@@ -148,7 +178,17 @@ def process_diplomacy_turn(self):
         send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
         if a_data and nation_b in a_data: del a_data[nation_b]
         if b_data and nation_a in b_data: del b_data[nation_a]
-        
+
+    def _war_cancels_response(declarer, victim):
+        """A declaration of war voids any answer the victim had queued for the declarer."""
+        resp = get_response(self.nation_data, victim, declarer)
+        if not resp or resp.get("action") not in WAR_CANCELS:
+            return
+        action_name = resp.get("action", "").split('_')[0].lower()
+        msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
+        send_message(self, declarer, victim, msg, "DIPLOMACY")
+        clear_response(self.nation_data, victim, declarer)
+
     for i in range(len(nations)):
         for j in range(i + 1, len(nations)):
             nation_a = nations[i]
@@ -159,13 +199,21 @@ def process_diplomacy_turn(self):
             
             a_info = a_data.get(nation_b)
             b_info = b_data.get(nation_a)
-            
+
+            # A declaration of war also voids whatever answer the other side had
+            # queued for us. Responses live outside pending_diplomacy now, so they
+            # need checking even when only one side has a pending action.
+            if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
+                _war_cancels_response(nation_a, nation_b)
+            if isinstance(b_info, dict) and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
+                _war_cancels_response(nation_b, nation_a)
+
             if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
                isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
-                
+
                 a_action = a_info.get("action")
                 b_action = b_info.get("action")
-                
+
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
                     finalize_faction_join(self.map_data, self.nation_data, nation_b, nation_a)
                     log_global_event(self.nation_data, f"{nation_a} and {nation_b} have united their factions!")
@@ -175,14 +223,14 @@ def process_diplomacy_turn(self):
                     finalize_faction_join(self.map_data, self.nation_data, nation_a, nation_b)
                     _resolve_cross_action(nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
                     
-                elif a_action == "WAR_DECLARATION" and b_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "ACCEPT_FACTION_INVITE", "ACCEPT_JOIN_FACTION_REQ", "ACCEPT_CREATE_FACTION", "CREATE_FACTION"]:
-                    action_name = b_action.replace("ACCEPT_", "").split('_')[0].lower()
+                elif a_action == "WAR_DECLARATION" and b_action in WAR_CANCELS:
+                    action_name = b_action.split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                     send_message(self, nation_a, nation_b, msg, "DIPLOMACY")
-                    del b_data[nation_a] 
-                    
-                elif b_action == "WAR_DECLARATION" and a_action in ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "ACCEPT_FACTION_INVITE", "ACCEPT_JOIN_FACTION_REQ", "ACCEPT_CREATE_FACTION", "CREATE_FACTION"]:
-                    action_name = a_action.replace("ACCEPT_", "").split('_')[0].lower()
+                    del b_data[nation_a]
+
+                elif b_action == "WAR_DECLARATION" and a_action in WAR_CANCELS:
+                    action_name = a_action.split('_')[0].lower()
                     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                     send_message(self, nation_b, nation_a, msg, "DIPLOMACY")
                     del a_data[nation_b]
@@ -423,7 +471,9 @@ def process_diplomacy_turn(self):
             elif ai_action == "WAR_DECLARATION" and queries.has_active_truce(country_name, act_target, self.nation_data):
                 print(f"[AI GUARDRAIL] Aborting {ai_action}: Truce active.")
                 ai_action = "NONE"
-            else:
+            elif ai_action not in c.BILATERAL_ACTIONS:
+                # Unilateral moves have no answer to wait for, so they still rate-limit
+                # on the way out. Proposals are rate-limited when they get turned down.
                 queries.set_ai_diplo_cooldown(country_name, act_target, ai_action, self.nation_data)
 
         if ai_action == "WAR_DECLARATION":
@@ -468,13 +518,137 @@ def process_diplomacy_turn(self):
             log_global_event(self.nation_data, f"RUMOR: Internal shuffling suggests {country_name} is preparing further diplomatic moves regarding {f_up_target}...")
 
 
+    def _decline_cooldown(sender, target, action):
+        """Records that `target` said no, so the AI waits before asking again.
+
+        Stamped when a proposal actually fails rather than when it is sent, so a
+        nation keeps offering help every turn until it is genuinely turned down.
+        """
+        if action in c.BILATERAL_ACTIONS:
+            queries.set_ai_diplo_cooldown(sender, target, action, self.nation_data)
+
+    # PASS 0.5: QUEUED ANSWERS TO INCOMING PROPOSALS (Turns == 0)
+    # Runs ahead of Pass 1 so a deal we accepted is settled before our own fresh
+    # offers go out this turn. Each side's answer resolves on its own -- two
+    # nations answering each other never share a slot, so nothing is clobbered
+    # and one-way agreements (military access) stay one-way.
+    for country_name, data in list(self.nation_data.items()):
+        if not isinstance(data, dict):
+            continue
+
+        responses = get_response_map(self.nation_data, country_name)
+        for sender, resp in list(responses.items()):
+            if not isinstance(resp, dict):
+                del responses[sender]
+                continue
+
+            verdict = resp.get("verdict", "")
+            orig_action = resp.get("action", "")
+            custom_msg = resp.get("message", "")
+
+            # The terms being agreed to belong to whoever made the offer.
+            their_request = self.nation_data.get(sender, {}).get("pending_diplomacy", {}).get(country_name, {})
+            if not isinstance(their_request, dict):
+                their_request = {}
+            params = their_request.get("parameters", resp.get("parameters"))
+
+            if verdict == RESPONSE_ACCEPT:
+                fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+                msg_text = custom_msg if custom_msg else fallback_msg
+
+                if orig_action == "FACTION_INVITE":
+                    if not self.nation_data[country_name].get("faction", ""):
+                        finalize_faction_join(self.map_data, self.nation_data, sender, country_name)
+                    else:
+                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_ALREADY_IN")
+                elif orig_action == "JOIN_FACTION_REQ":
+                    if not self.nation_data[sender].get("faction", ""):
+                        finalize_faction_join(self.map_data, self.nation_data, country_name, sender)
+                    else:
+                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_JOIN_ALREADY_IN")
+                elif orig_action == "CREATE_FACTION":
+                    if not self.nation_data[country_name].get("faction", "") and not self.nation_data[sender].get("faction", ""):
+                        finalize_create_faction(self.map_data, self.nation_data, sender)
+                        finalize_faction_join(self.map_data, self.nation_data, sender, country_name)
+                    else:
+                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("CREATE_FACTION_CONFLICT")
+                elif orig_action == "CEASEFIRE":
+                    finalize_neutral(self.nation_data, country_name, sender)
+                elif orig_action == "PEACE_TREATY":
+                    treaty_type = params if params else c.PEACE_WHITE_PEACE
+                    execute_peace_treaty(self.map_data, self.nation_data, sender, country_name, treaty_type, self)
+                    msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_PEACE")
+
+                elif orig_action == "TRADE":
+                    trade_params = params if isinstance(params, dict) else {}
+                    queries.execute_trade_transfer(self.nation_data[sender], self.nation_data[country_name], trade_params)
+
+                    puppet_state = trade_params.get("puppet_state", "NONE")
+                    if puppet_state == "SENDER":
+                        from map_logic.diplomacy.diplomacy_agreements import assign_puppet
+                        assign_puppet(self.map_data, self.nation_data, sender, country_name)
+                    elif puppet_state == "RECEIVER":
+                        from map_logic.diplomacy.diplomacy_agreements import assign_puppet
+                        assign_puppet(self.map_data, self.nation_data, country_name, sender)
+
+                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_TRADE")
+                elif orig_action == "CALL_TO_ARMS":
+                    join_faction_wars(self.map_data, self.nation_data, country_name, sender)
+                    log_global_event(self.nation_data, f"ESCALATION: {country_name} answered the call to arms of {sender}!")
+                elif orig_action == "JOIN_WARS":
+                    join_faction_wars(self.map_data, self.nation_data, sender, country_name)
+                    log_global_event(self.nation_data, f"ESCALATION: {sender} has joined the wars of {country_name}!")
+                elif orig_action == "REQ_MILITARY_ACCESS":
+                    # We are granting the sender passage through OUR territory.
+                    # Deliberately one-way: they get no say over our own passage.
+                    my_access = self.nation_data.get(country_name, {}).setdefault("military_access", [])
+                    if sender not in my_access:
+                        my_access.append(sender)
+
+                    shared_enemy = bool(
+                        set(self.nation_data.get(country_name, {}).get("at_war_with", [])) &
+                        set(self.nation_data.get(sender, {}).get("at_war_with", []))
+                    )
+                    if shared_enemy:
+                        self.nation_data[country_name].setdefault("military_access_reasons", {})[sender] = "war"
+
+                    msg_text = custom_msg if custom_msg else "We accept your request for military access."
+
+                send_message(self, country_name, sender, msg_text, "DIPLOMACY")
+
+                if msg_text == custom_msg or "accepted" in msg_text.lower():
+                    log_global_event(self.nation_data, f"Diplomatic agreement reached between {country_name} and {sender}.")
+
+            else:
+                fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+                msg_text = custom_msg if custom_msg else fallback_msg
+
+                # --- REFUND REJECTED TRADE ESCROW (it is the proposer's) ---
+                if orig_action == "TRADE" and sender in self.nation_data:
+                    queries.cancel_trade_escrow(self.nation_data[sender], params if isinstance(params, dict) else {})
+
+                send_message(self, country_name, sender, msg_text, "DIPLOMACY")
+                _decline_cooldown(sender, country_name, orig_action)
+
+            # Their request has now been answered either way.
+            their_pending = self.nation_data.get(sender, {}).get("pending_diplomacy", {})
+            their_entry = their_pending.get(country_name)
+            if isinstance(their_entry, dict) and their_entry.get("action") == orig_action:
+                del their_pending[country_name]
+
+            del responses[sender]
+
     # PASS 1: IMMEDIATE ACTIONS (Turns == 0)
     for country_name, data in list(self.nation_data.items()):
-        if not isinstance(data, dict): 
+        if not isinstance(data, dict):
             continue
-            
+
         pending = data.get("pending_diplomacy", {})
         actions_to_clear = []
+        # Targets whose drafted text already went out via the MSG: branch below.
+        # The draft_lists flush at the end of this loop would otherwise deliver
+        # the very same text a second time.
+        msg_delivered = set()
 
         for target, info in list(pending.items()):
             action = info.get("action", "")
@@ -582,134 +756,16 @@ def process_diplomacy_turn(self):
                 # DELIVER messages to inbox on Turn 0
                 elif action.startswith("MSG:"):
                     send_message(self, country_name, target, action[4:], "TEXT")
-                
-                # --- PROCESS ACCEPT / REJECT INSTANTLY ON TURN 0 ---
-                elif action.startswith("ACCEPT_"):
-                    orig_action = action.replace("ACCEPT_", "")
-                    other_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
-                    
-                    # Always execute ACCEPT_. The other person's action might have been cleared if they were processed first.
-                    if True:
-                        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
-                        msg_text = custom_msg if custom_msg else fallback_msg
-                        
-                        if orig_action == "FACTION_INVITE":
-                            if not self.nation_data[country_name].get("faction", ""):
-                                finalize_faction_join(self.map_data, self.nation_data, target, country_name)
-                            else:
-                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_ALREADY_IN")
-                        elif orig_action == "JOIN_FACTION_REQ":
-                            if not self.nation_data[target].get("faction", ""):
-                                finalize_faction_join(self.map_data, self.nation_data, country_name, target)
-                            else:
-                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_JOIN_ALREADY_IN")
-                        elif orig_action == "CREATE_FACTION":
-                            if not self.nation_data[country_name].get("faction", "") and not self.nation_data[target].get("faction", ""):
-                                finalize_create_faction(self.map_data, self.nation_data, target)
-                                finalize_faction_join(self.map_data, self.nation_data, target, country_name)
-                            else:
-                                msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("CREATE_FACTION_CONFLICT")
-                        elif orig_action == "CEASEFIRE":
-                            finalize_neutral(self.nation_data, country_name, target)
-                        elif orig_action == "PEACE_TREATY":
-                            treaty_type = info.get("parameters", info.get("message", c.PEACE_WHITE_PEACE))
-                            execute_peace_treaty(self.map_data, self.nation_data, target, country_name, treaty_type, self)
-                            msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_PEACE")
-                            
-                        # --- NEW: EXECUTE APPROVED TRADE ---
-                        elif orig_action == "TRADE":
-                            params = info.get("parameters", {})
-                            c_data = self.nation_data[country_name]
-                            t_data = self.nation_data[target]
+                    msg_delivered.add(target)
 
-                            queries.execute_trade_transfer(t_data, c_data, params)
-
-                            puppet_state = params.get("puppet_state", "NONE")
-                            if puppet_state == "SENDER":
-                                from map_logic.diplomacy.diplomacy_agreements import assign_puppet
-                                assign_puppet(self.map_data, self.nation_data, target, country_name)
-                            elif puppet_state == "RECEIVER":
-                                from map_logic.diplomacy.diplomacy_agreements import assign_puppet
-                                assign_puppet(self.map_data, self.nation_data, country_name, target)
-
-                            msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_TRADE")
-                        elif orig_action == "CALL_TO_ARMS":
-                            join_faction_wars(self.map_data, self.nation_data, country_name, target)
-                        elif orig_action == "JOIN_WARS":
-                            join_faction_wars(self.map_data, self.nation_data, target, country_name)
-                            log_global_event(self.nation_data, f"ESCALATION: {target} has joined the wars of {country_name}!")
-                        elif orig_action == "REQ_MILITARY_ACCESS":
-                            # Target is granting access to country_name
-                            target_list = self.nation_data.get(country_name, {}).setdefault("military_access", [])
-                            if target not in target_list:
-                                target_list.append(target)
-
-                            shared_enemy = bool(
-                                set(self.nation_data.get(country_name, {}).get("at_war_with", [])) &
-                                set(self.nation_data.get(target, {}).get("at_war_with", []))
-                            )
-                            if shared_enemy:
-                                self.nation_data[country_name].setdefault("military_access_reasons", {})[target] = "war"
-
-                            # If they ALSO accepted our request, grant them access to us too!
-                            if other_pending.get("action") == action:
-                                my_list = self.nation_data.get(target, {}).setdefault("military_access", [])
-                                if country_name not in my_list:
-                                    my_list.append(country_name)
-                                if shared_enemy:
-                                    self.nation_data[target].setdefault("military_access_reasons", {})[country_name] = "war"
-
-                            msg_text = custom_msg if custom_msg else "We accept your request for military access."
-
-                        
-                        send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                        if other_pending.get("action") == action:
-                            send_message(self, target, country_name, msg_text, "DIPLOMACY")
-                            
-                        if msg_text == custom_msg or "accepted" in msg_text.lower():
-                            log_global_event(self.nation_data, f"Diplomatic agreement reached between {country_name} and {target}.")
-                        
-                        # Clear the original request from the sender
-                        if target in self.nation_data and "pending_diplomacy" in self.nation_data[target]:
-                            if self.nation_data[target]["pending_diplomacy"].get(country_name, {}).get("action") == orig_action:
-                                del self.nation_data[target]["pending_diplomacy"][country_name]
-                    
-                    actions_to_clear.append(target)
-                    
-                elif action.startswith("REJECT_"):
-                    orig_action = action.replace("REJECT_", "")
-                    other_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
-                    
-                    if isinstance(other_pending, dict) and other_pending.get("action") in (orig_action, f"ACCEPT_{orig_action}", action):
-                        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
-                        msg_text = custom_msg if custom_msg else fallback_msg
-                        
-                        # --- NEW: REFUND REJECTED TRADE ESCROW ---
-                        if orig_action == "TRADE":
-                            params = other_pending.get("parameters", {})
-                            queries.cancel_trade_escrow(self.nation_data[target], params)
-                            
-                            # If they ALSO rejected our trade, refund our escrow too!
-                            if other_pending.get("action") == action:
-                                my_pending = self.nation_data.get(country_name, {}).get("pending_diplomacy", {}).get(target, {})
-                                my_params = my_pending.get("parameters", {})
-                                queries.cancel_trade_escrow(self.nation_data[country_name], my_params)
-                            
-                        send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                        if other_pending.get("action") == action:
-                            send_message(self, target, country_name, msg_text, "DIPLOMACY")
-                            
-                        # Clear the original request from the sender
-                        if target in self.nation_data and "pending_diplomacy" in self.nation_data[target]:
-                            if self.nation_data[target]["pending_diplomacy"].get(country_name, {}).get("action") == orig_action:
-                                del self.nation_data[target]["pending_diplomacy"][country_name]
-                                
-                    actions_to_clear.append(target)
-                
                 elif action == "FACTION_INVITE":
                     msg_text = custom_msg if custom_msg else "We invite your nation to join our faction."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
-                    
+
+                elif action == "JOIN_FACTION_REQ":
+                    msg_text = custom_msg if custom_msg else "We formally request to join your faction."
+                    send_message(self, country_name, target, msg_text, "DIPLOMACY")
+
                 elif action == "REQ_MILITARY_ACCESS":
                     msg_text = custom_msg if custom_msg else "We formally request military access to move our troops through your territory."
                     send_message(self, country_name, target, msg_text, "DIPLOMACY")
@@ -759,7 +815,14 @@ def process_diplomacy_turn(self):
                             send_message(self, country_name, m, msg_text, "DIPLOMACY")
                             
                     finalize_faction_leave(self.nation_data, country_name)
-                    
+
+                elif action in c.BILATERAL_ACTIONS:
+                    # Catch-all so a bilateral action added to constants.py without
+                    # its own branch above still reaches the other side's inbox
+                    # instead of silently advancing to turns=1 with no message.
+                    msg_text = custom_msg if custom_msg else f"We propose {action.replace('_', ' ').lower()}."
+                    send_message(self, country_name, target, msg_text, "DIPLOMACY")
+
                 # Cleanup or increment
                 if target in actions_to_clear:
                     pass # It was executed entirely on turn 0, so we skip the increment
@@ -773,11 +836,13 @@ def process_diplomacy_turn(self):
             if t in pending:
                 del pending[t]
 
-        # DELIVER and clear text drafts stored in draft_lists for Turn 0
+        # DELIVER and clear text drafts stored in draft_lists for Turn 0.
+        # Only drafts riding alongside a FORMAL action land here -- when the text
+        # is all there is, the MSG: branch above already sent it.
         draft_lists = data.get("draft_lists", {})
         if draft_lists:
             for d_target, d_messages in list(draft_lists.items()):
-                if d_messages:
+                if d_messages and d_target not in msg_delivered:
                     combined_msg = "\n".join(d_messages)
                     send_message(self, country_name, d_target, combined_msg, "TEXT")
             data["draft_lists"] = {}
@@ -856,16 +921,18 @@ def process_diplomacy_turn(self):
 
                 elif action in c.BILATERAL_ACTIONS:
                     if is_human_target:
-                        # Check if the target has queued an ACCEPT or REJECT for this specific action
-                        target_pending = self.nation_data.get(target, {}).get("pending_diplomacy", {}).get(country_name, {})
-                        target_action = target_pending.get("action", "") if isinstance(target_pending, dict) else ""
-                        
-                        if target_action in [f"ACCEPT_{action}", f"REJECT_{action}"]:
-                            # Target has responded, allow their Turn 0 processing to handle it
+                        # A queued answer is resolved by Pass 0.5, which also deletes
+                        # this entry -- so if we still see it here, they answered
+                        # something else or nothing at all.
+                        target_resp = get_response(self.nation_data, target, country_name)
+
+                        if target_resp.get("action") == action:
+                            # Answer is in hand, let Pass 0.5 settle it next tick
                             info["turns"] += 1
                         else:
                             # Auto-decline since the human player did not respond immediately on their turn
                             send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                            _decline_cooldown(country_name, target, action)
                             actions_to_clear.append(target)
                     else:
                         reply_dict = ai_results.get((country_name, target, action), {})
@@ -930,20 +997,22 @@ def process_diplomacy_turn(self):
                             if action == "TRADE":
                                 params = info.get("parameters", {})
                                 queries.cancel_trade_escrow(self.nation_data[country_name], params)
+                            _decline_cooldown(country_name, target, action)
 
                         send_message(self, target, country_name, message, "DIPLOMACY")
                         actions_to_clear.append(target)
 
             elif turns > 1:
-                # Auto-decline if ignored for 0 turns (applies to both AI and Human targets)
-                if turns >= 0 and action in c.BILATERAL_ACTIONS:
-                    
+                # Auto-decline anything that outlived its response window
+                if action in c.BILATERAL_ACTIONS:
+
                     # --- NEW: REFUND TIMED OUT TRADE ESCROW ---
                     if action == "TRADE":
                         params = info.get("parameters", {})
                         queries.cancel_trade_escrow(self.nation_data[country_name], params)
-                        
+
                     send_message(self, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                    _decline_cooldown(country_name, target, action)
                     actions_to_clear.append(target)
                 else:
                     info["turns"] += 1

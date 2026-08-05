@@ -1804,6 +1804,29 @@ def get_incoming_justifications_count(nation, nation_data, id_to_province):
                     count += 1
     return count
 
+def has_unanswered_request(nation, other_nation, nation_data):
+    """True if other_nation has a live proposal waiting on nation's answer.
+
+    The single source of truth for "this contact needs your attention" -- the map
+    badge and the per-contact badge in the messages screen both read it, so they
+    can never disagree about what is outstanding.
+    """
+    req = nation_data.get(other_nation, {}).get("pending_diplomacy", {}).get(nation)
+    if not isinstance(req, dict):
+        return False
+    if req.get("turns", 0) <= 0 or req.get("action", "") not in c.BILATERAL_ACTIONS:
+        return False
+
+    # Already answered this turn -- the reply just hasn't been processed yet.
+    my_response = nation_data.get(nation, {}).get("diplo_responses", {}).get(other_nation)
+    if isinstance(my_response, dict) and my_response.get("verdict"):
+        return False
+    return True
+
+def get_pending_request_senders(nation, nation_data):
+    """Every nation currently waiting on an answer from `nation`."""
+    return [other for other in nation_data if other != nation and has_unanswered_request(nation, other, nation_data)]
+
 def get_unread_message_count(nation, nation_data):
     """Returns the total number of unread messages and unanswered requests for a nation."""
     # If the user is the spectator, count unread messages across ALL playable nations
@@ -1813,55 +1836,15 @@ def get_unread_message_count(nation, nation_data):
             if n_data.get("is_playable", False):
                 inbox = n_data.get("inbox", [])
                 total_unread += sum(1 for msg in inbox if not msg.get("spectator_read", False))
-                
-                my_pending = n_data.get("pending_diplomacy", {})
-                for other_nation, other_data in list(nation_data.items()):
-                    if other_nation == n_name: continue
-                    req = other_data.get("pending_diplomacy", {}).get(n_name)
-                    if isinstance(req, dict):
-                        req_action = req.get("action", "")
-                        orig_req_action = req_action.replace("ACCEPT_", "").replace("REJECT_", "")
-                        
-                        show_notification = False
-                        if req.get("turns", 0) > 0 and orig_req_action in c.BILATERAL_ACTIONS:
-                            show_notification = True
-                        elif (req_action.startswith("ACCEPT_") or req_action.startswith("REJECT_")):
-                            my_action = my_pending.get(other_nation, {}).get("action", "")
-                            if my_action == orig_req_action:
-                                show_notification = True
-                                
-                        if show_notification:
-                            my_response = my_pending.get(other_nation)
-                            if not (isinstance(my_response, dict) and (my_response.get("action", "").startswith("ACCEPT_") or my_response.get("action", "").startswith("REJECT_"))):
-                                total_unread += 1
+                total_unread += len(get_pending_request_senders(n_name, nation_data))
         return total_unread
-        
+
     # Standard logic for normal players
     inbox = nation_data.get(nation, {}).get("inbox", [])
     # Ignore messages where the sender is the nation itself
     unread_count = sum(1 for msg in inbox if not msg.get("read", False) and msg.get("sender") != nation)
-    
-    my_pending = nation_data.get(nation, {}).get("pending_diplomacy", {})
-    for other_nation, other_data in list(nation_data.items()):
-        if other_nation == nation: continue
-        req = other_data.get("pending_diplomacy", {}).get(nation)
-        if isinstance(req, dict):
-            req_action = req.get("action", "")
-            orig_req_action = req_action.replace("ACCEPT_", "").replace("REJECT_", "")
-            
-            show_notification = False
-            if req.get("turns", 0) > 0 and orig_req_action in c.BILATERAL_ACTIONS:
-                show_notification = True
-            elif (req_action.startswith("ACCEPT_") or req_action.startswith("REJECT_")):
-                my_action = my_pending.get(other_nation, {}).get("action", "")
-                if my_action == orig_req_action:
-                    show_notification = True
-                    
-            if show_notification:
-                my_response = my_pending.get(other_nation)
-                if not (isinstance(my_response, dict) and (my_response.get("action", "").startswith("ACCEPT_") or my_response.get("action", "").startswith("REJECT_"))):
-                    unread_count += 1
-                
+    unread_count += len(get_pending_request_senders(nation, nation_data))
+
     return unread_count
 
 def has_free_research_slots(nation, nation_data):

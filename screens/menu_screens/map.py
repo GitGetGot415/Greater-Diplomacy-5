@@ -192,6 +192,25 @@ class Map(GameState):
             data.setdefault("at_war_with", [])
             data.setdefault("allied_with", [])
             data.setdefault("pending_diplomacy", {})
+            responses = data.setdefault("diplo_responses", {})
+
+            # Older saves parked answers in the outgoing-proposal slot, where they
+            # overwrote whatever offer was already travelling to that nation. Move
+            # them across so they resolve on the response channel instead.
+            for other, info in list(data["pending_diplomacy"].items()):
+                act = info.get("action", "") if isinstance(info, dict) else info
+                if not isinstance(act, str):
+                    continue
+                for prefix, verdict in (("ACCEPT_", "ACCEPT"), ("REJECT_", "REJECT")):
+                    if act.startswith(prefix):
+                        responses[other] = {
+                            "verdict": verdict,
+                            "action": act[len(prefix):],
+                            "message": info.get("message", "") if isinstance(info, dict) else "",
+                            "parameters": info.get("parameters") if isinstance(info, dict) else None,
+                        }
+                        del data["pending_diplomacy"][other]
+                        break
 
         self.update_country_centers()
 
