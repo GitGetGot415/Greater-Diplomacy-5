@@ -54,7 +54,14 @@ def main():
         sys.exit(result.returncode)
         
     print("py2app finished successfully.")
-    
+
+    # Create empty saves/tournament_saves dirs in the bundle, mirroring the
+    # Windows build: the app expects these to exist relative to its cwd, but
+    # any saves already on this dev machine must NOT be bundled.
+    resources_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources")
+    for d in ("saves", "tournament_saves"):
+        os.makedirs(os.path.join(resources_dir, d), exist_ok=True)
+
     # Overwrite active_albums.json with [] so the build doesn't carry over local settings
     active_albums_path = os.path.join(dist_dir, "main.app", "Contents", "Resources", "data", "json", "active_albums.json")
     if os.path.exists(os.path.dirname(active_albums_path)):
