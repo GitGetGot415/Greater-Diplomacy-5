@@ -88,22 +88,51 @@ def main():
     if os.path.exists(dst_zip_path):
         os.remove(dst_zip_path)
 
+    # Stage main.app alongside a README so both land as siblings at the zip's
+    # top level (see the README.md notes on py2app's ad-hoc signature below).
+    package_dir = os.path.join(dist_dir, "package")
+    if os.path.exists(package_dir):
+        remove_dir_safely(package_dir)
+    os.makedirs(package_dir, exist_ok=True)
+    shutil.move(os.path.join(dist_dir, "main.app"), os.path.join(package_dir, "main.app"))
+
+    readme_path = os.path.join(package_dir, "README.txt")
+    with open(readme_path, "w") as f:
+        f.write(
+            "Greater Diplomacy 5 - macOS Build\n\n"
+            "When you double-click main.app, macOS may show:\n"
+            '"main is damaged and can\'t be opened. You should move it to the Bin."\n'
+            "with no option to open it anyway.\n\n"
+            "This isn't actual corruption: the app isn't signed with a paid Apple\n"
+            "Developer certificate, and macOS quarantines and blocks any downloaded,\n"
+            "non-notarized app this way.\n\n"
+            "The fix - open Terminal and run:\n"
+            "    xattr -dr com.apple.quarantine /path/to/main.app\n\n"
+            "(drag main.app into the Terminal window after typing the command to fill\n"
+            "in the path automatically), then double-click main.app as normal.\n"
+        )
+
     # Use ditto, not shutil.make_archive (Python's zipfile module), to zip main.app.
     # zipfile flattens the symlinks inside the .app bundle (e.g. Python.framework's
     # Versions/Current) into plain file copies, which invalidates py2app's ad-hoc code
     # signature. A downloaded/re-extracted app with a broken signature is exactly what
     # makes Gatekeeper report "main is damaged and can't be opened" with no bypass
-    # option, instead of the normal "unidentified developer" prompt.
-    app_path = os.path.join(dist_dir, "main.app")
-    result = subprocess.run(["ditto", "-c", "-k", "--keepParent", app_path, dst_zip_path])
+    # option, instead of the normal "unidentified developer" prompt (see README.txt
+    # above, and the "For MacOS Users" section in the repo's README.md).
+    #
+    # package_dir (not app_path) is the ditto source, and --keepParent is omitted:
+    # ditto archives a given directory's *contents* at the zip's root, so main.app
+    # and README.txt end up as siblings at the top level exactly as before, instead
+    # of nested inside an extra "package/" folder.
+    result = subprocess.run(["ditto", "-c", "-k", package_dir, dst_zip_path])
     if result.returncode != 0:
         print("ditto zipping failed.")
         sys.exit(result.returncode)
     print(f"Created {zip_filename} in {dist_dir}/.")
-    
+
     print("\nCompilation and zipping finished successfully.")
     print("To test the application, you can run the following command in terminal:")
-    print("    ./dist/main.app/Contents/MacOS/main\n")
+    print("    ./dist/package/main.app/Contents/MacOS/main\n")
 
 if __name__ == "__main__":
     main()
