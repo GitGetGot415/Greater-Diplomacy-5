@@ -106,10 +106,15 @@ def main():
             "This isn't actual corruption: the app isn't signed with a paid Apple\n"
             "Developer certificate, and macOS quarantines and blocks any downloaded,\n"
             "non-notarized app this way.\n\n"
-            "The fix - open Terminal and run:\n"
-            "    xattr -dr com.apple.quarantine /path/to/main.app\n\n"
-            "(drag main.app into the Terminal window after typing the command to fill\n"
-            "in the path automatically), then double-click main.app as normal.\n"
+            "The fix:\n"
+            "  1. Open Terminal.\n"
+            "  2. Type the following, including the trailing space, but do NOT press\n"
+            "     Enter yet:\n"
+            "         xattr -dr com.apple.quarantine \n"
+            "  3. Drag main.app from Finder into the Terminal window. This inserts its\n"
+            "     path for you - don't type a path in yourself.\n"
+            "  4. Press Enter.\n"
+            "  5. Double-click main.app as normal.\n"
         )
 
     # Use ditto, not shutil.make_archive (Python's zipfile module), to zip main.app.
