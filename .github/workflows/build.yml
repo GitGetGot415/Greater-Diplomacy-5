@@ -69,6 +69,12 @@ jobs:
         # recipe's copy step fails with FileNotFoundError. Build a real
         # .icns from pygame-ce's own bmp so py2app has something valid to
         # bundle instead of erroring out.
+        env:
+          # pygame prints a "Hello from the pygame community" / version
+          # banner to stdout on import. Without suppressing it, that text
+          # gets captured by $(...) along with the dirname below, turning
+          # PGDIR into a multi-line garbage path that sips silently rejects.
+          PYGAME_HIDE_SUPPORT_PROMPT: '1'
         run: |
           PGDIR=$(python3 -c "import pygame, os; print(os.path.dirname(pygame.__file__))")
           ICNS_PATH="$PGDIR/pygame_icon.icns"
