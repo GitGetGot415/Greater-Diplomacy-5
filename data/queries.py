@@ -1824,8 +1824,14 @@ def has_unanswered_request(nation, other_nation, nation_data):
     return True
 
 def get_pending_request_senders(nation, nation_data):
-    """Every nation currently waiting on an answer from `nation`."""
-    return [other for other in nation_data if other != nation and has_unanswered_request(nation, other, nation_data)]
+    """Every nation currently waiting on an answer from `nation`.
+
+    Iterates a snapshot of the keys: this runs from the badge-drawing path, which
+    can land mid-turn while nation_data is still growing (faction war maps, newly
+    released nations), and a live iterator would blow up there.
+    """
+    return [other for other in list(nation_data)
+            if other != nation and has_unanswered_request(nation, other, nation_data)]
 
 def get_unread_message_count(nation, nation_data):
     """Returns the total number of unread messages and unanswered requests for a nation."""

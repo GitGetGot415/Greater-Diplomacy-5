@@ -318,8 +318,10 @@ class Messages_Screen(GameState):
             else:
                 history_contacts.add(sender)
 
+        # These all iterate snapshots -- a turn can still be resolving while this
+        # screen rebuilds, and a live iterator would trip over the changes.
         pending = diplomacy_messages.get_pending_map(self.map_screen.nation_data, self.map_screen.player_country)
-        for target, p_info in pending.items():
+        for target, p_info in list(pending.items()):
             if target in playable and isinstance(p_info, dict) and p_info.get("action"):
                 history_contacts.add(target)
             elif target in playable and queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
@@ -331,7 +333,7 @@ class Messages_Screen(GameState):
         for sender in queries.get_pending_request_senders(self.map_screen.player_country, self.map_screen.nation_data):
             if sender in playable:
                 history_contacts.add(sender)
-        for sender in diplomacy_messages.get_response_map(self.map_screen.nation_data, self.map_screen.player_country):
+        for sender in list(diplomacy_messages.get_response_map(self.map_screen.nation_data, self.map_screen.player_country)):
             if sender in playable:
                 history_contacts.add(sender)
 

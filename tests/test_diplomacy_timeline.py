@@ -345,6 +345,38 @@ class UnreadBadgeTests(unittest.TestCase):
         # A message the player can actually open backs the notification
         self.assertTrue(game.inbound("A", "B"))
 
+    def test_badge_survives_nation_data_growing_mid_scan(self):
+        """Badges are drawn mid-turn, while nation_data is still being added to.
+
+        Multi-turn processing yields to the event loop between phases, so a draw
+        can land while the engine is inserting keys (faction war maps, nations
+        released by a peace deal). Reading a live iterator crashed there.
+        """
+        from data import queries
+
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        game.set_faction("Pact", "A")
+        game.propose("B", "A", "JOIN_FACTION_REQ", message="We ask to join.")
+        game.run_turn()
+
+        class GrowingNationData(dict):
+            """Inserts a key the first time it is read, as a live turn would."""
+            def __init__(self, *args):
+                super().__init__(*args)
+                self.grown = False
+
+            def get(self, key, default=None):
+                if not self.grown:
+                    self.grown = True
+                    self["FACTION_WAR_MAPS"] = {}
+                return super().get(key, default)
+
+        live = GrowingNationData(game.nation_data)
+
+        self.assertIn("B", queries.get_pending_request_senders("A", live))
+        self.assertGreaterEqual(queries.get_unread_message_count("A", live), 1)
+        self.assertGreaterEqual(queries.get_unread_message_count("Spectator", live), 1)
+
     def test_answering_clears_the_notification(self):
         from data import queries
 
