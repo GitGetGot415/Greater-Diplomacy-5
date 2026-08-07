@@ -6,6 +6,7 @@
             "day": 1,
             "name": "United States of America",
             "adjective": "American",
+            "color": null,
             "leader_name": "William McKinley",
             "leader_title": "President"
         },
@@ -15,6 +16,7 @@
             "day": 14,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Theodore Roosevelt",
             "leader_title": "President"
         },
@@ -24,6 +26,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "William Howard Taft",
             "leader_title": "President"
         },
@@ -33,6 +36,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Woodrow Wilson",
             "leader_title": "President"
         },
@@ -42,6 +46,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Warren G. Harding",
             "leader_title": "President"
         },
@@ -51,6 +56,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Calvin Coolidge",
             "leader_title": "President"
         },
@@ -60,6 +66,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Herbert Hoover",
             "leader_title": "President"
         },
@@ -69,6 +76,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Franklin D. Roosevelt",
             "leader_title": "President"
         },
@@ -78,6 +86,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Harry S. Truman",
             "leader_title": "President"
         },
@@ -87,6 +96,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Dwight D. Eisenhower",
             "leader_title": "President"
         },
@@ -96,6 +106,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "John F. Kennedy",
             "leader_title": "President"
         },
@@ -105,6 +116,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Lyndon B. Johnson",
             "leader_title": "President"
         },
@@ -114,6 +126,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Richard Nixon",
             "leader_title": "President"
         },
@@ -123,6 +136,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gerald Ford",
             "leader_title": "President"
         },
@@ -132,6 +146,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Jimmy Carter",
             "leader_title": "President"
         },
@@ -141,6 +156,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ronald Reagan",
             "leader_title": "President"
         },
@@ -150,6 +166,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "George H. W. Bush",
             "leader_title": "President"
         },
@@ -159,6 +176,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bill Clinton",
             "leader_title": "President"
         },
@@ -168,6 +186,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "George W. Bush",
             "leader_title": "President"
         },
@@ -177,6 +196,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Barack Obama",
             "leader_title": "President"
         },
@@ -186,6 +206,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Donald Trump",
             "leader_title": "President"
         },
@@ -195,6 +216,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Joe Biden",
             "leader_title": "President"
         },
@@ -204,6 +226,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Donald Trump",
             "leader_title": "President"
         }
@@ -215,6 +238,7 @@
             "day": 1,
             "name": "Canada",
             "adjective": "Canadian",
+            "color": null,
             "leader_name": "Wilfrid Laurier",
             "leader_title": "Prime Minister"
         },
@@ -224,6 +248,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Robert Borden",
             "leader_title": "Prime Minister"
         },
@@ -233,6 +258,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Arthur Meighen",
             "leader_title": "Prime Minister"
         },
@@ -242,6 +268,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "William Lyon Mackenzie King",
             "leader_title": "Prime Minister"
         },
@@ -251,6 +278,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Arthur Meighen",
             "leader_title": "Prime Minister"
         },
@@ -260,6 +288,7 @@
             "day": 25,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "William Lyon Mackenzie King",
             "leader_title": "Prime Minister"
         },
@@ -269,6 +298,7 @@
             "day": 7,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "R. B. Bennett",
             "leader_title": "Prime Minister"
         },
@@ -278,6 +308,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "William Lyon Mackenzie King",
             "leader_title": "Prime Minister"
         },
@@ -287,6 +318,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Louis St. Laurent",
             "leader_title": "Prime Minister"
         },
@@ -296,6 +328,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "John Diefenbaker",
             "leader_title": "Prime Minister"
         },
@@ -305,6 +338,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Lester B. Pearson",
             "leader_title": "Prime Minister"
         },
@@ -314,6 +348,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Pierre Trudeau",
             "leader_title": "Prime Minister"
         },
@@ -323,6 +358,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Joe Clark",
             "leader_title": "Prime Minister"
         },
@@ -332,6 +368,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Pierre Trudeau",
             "leader_title": "Prime Minister"
         },
@@ -341,6 +378,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "John Turner",
             "leader_title": "Prime Minister"
         },
@@ -350,6 +388,7 @@
             "day": 17,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Brian Mulroney",
             "leader_title": "Prime Minister"
         },
@@ -359,6 +398,7 @@
             "day": 25,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Kim Campbell",
             "leader_title": "Prime Minister"
         },
@@ -368,6 +408,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Jean Chretien",
             "leader_title": "Prime Minister"
         },
@@ -377,6 +418,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Paul Martin",
             "leader_title": "Prime Minister"
         },
@@ -386,6 +428,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stephen Harper",
             "leader_title": "Prime Minister"
         },
@@ -395,6 +438,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Justin Trudeau",
             "leader_title": "Prime Minister"
         },
@@ -404,6 +448,7 @@
             "day": 14,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mark Carney",
             "leader_title": "Prime Minister"
         }
@@ -415,6 +460,7 @@
             "day": 1,
             "name": "France",
             "adjective": "French",
+            "color": null,
             "leader_name": "Emile Loubet",
             "leader_title": "President"
         },
@@ -424,6 +470,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Armand Fallieres",
             "leader_title": "President"
         },
@@ -433,6 +480,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Raymond Poincare",
             "leader_title": "President"
         },
@@ -442,6 +490,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Paul Deschanel",
             "leader_title": "President"
         },
@@ -451,6 +500,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Alexandre Millerand",
             "leader_title": "President"
         },
@@ -460,6 +510,7 @@
             "day": 13,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gaston Doumergue",
             "leader_title": "President"
         },
@@ -469,6 +520,7 @@
             "day": 13,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Paul Doumer",
             "leader_title": "President"
         },
@@ -478,6 +530,7 @@
             "day": 7,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Albert Lebrun",
             "leader_title": "President"
         },
@@ -487,6 +540,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Charles de Gaulle",
             "leader_title": "Leader of Free France"
         },
@@ -496,6 +550,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Charles de Gaulle",
             "leader_title": "President of the Provisional Government"
         },
@@ -505,6 +560,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Vincent Auriol",
             "leader_title": "President"
         },
@@ -514,6 +570,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Rene Coty",
             "leader_title": "President"
         },
@@ -523,6 +580,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Charles de Gaulle",
             "leader_title": "President"
         },
@@ -532,6 +590,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Georges Pompidou",
             "leader_title": "President"
         },
@@ -541,6 +600,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Valery Giscard d'Estaing",
             "leader_title": "President"
         },
@@ -550,6 +610,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Francois Mitterrand",
             "leader_title": "President"
         },
@@ -559,6 +620,7 @@
             "day": 17,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Jacques Chirac",
             "leader_title": "President"
         },
@@ -568,6 +630,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Nicolas Sarkozy",
             "leader_title": "President"
         },
@@ -577,6 +640,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Francois Hollande",
             "leader_title": "President"
         },
@@ -586,6 +650,7 @@
             "day": 14,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Emmanuel Macron",
             "leader_title": "President"
         }
@@ -597,6 +662,7 @@
             "day": 1,
             "name": "United Kingdom",
             "adjective": "British",
+            "color": null,
             "leader_name": "Lord Salisbury",
             "leader_title": "Prime Minister"
         },
@@ -606,6 +672,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Arthur Balfour",
             "leader_title": "Prime Minister"
         },
@@ -615,6 +682,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Henry Campbell-Bannerman",
             "leader_title": "Prime Minister"
         },
@@ -624,6 +692,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "H. H. Asquith",
             "leader_title": "Prime Minister"
         },
@@ -633,6 +702,7 @@
             "day": 7,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "David Lloyd George",
             "leader_title": "Prime Minister"
         },
@@ -642,6 +712,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bonar Law",
             "leader_title": "Prime Minister"
         },
@@ -651,6 +722,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stanley Baldwin",
             "leader_title": "Prime Minister"
         },
@@ -660,6 +732,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ramsay MacDonald",
             "leader_title": "Prime Minister"
         },
@@ -669,6 +742,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stanley Baldwin",
             "leader_title": "Prime Minister"
         },
@@ -678,6 +752,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ramsay MacDonald",
             "leader_title": "Prime Minister"
         },
@@ -687,6 +762,7 @@
             "day": 7,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stanley Baldwin",
             "leader_title": "Prime Minister"
         },
@@ -696,6 +772,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Neville Chamberlain",
             "leader_title": "Prime Minister"
         },
@@ -705,6 +782,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Winston Churchill",
             "leader_title": "Prime Minister"
         },
@@ -714,6 +792,7 @@
             "day": 26,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Clement Attlee",
             "leader_title": "Prime Minister"
         },
@@ -723,6 +802,7 @@
             "day": 26,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Winston Churchill",
             "leader_title": "Prime Minister"
         },
@@ -732,6 +812,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Anthony Eden",
             "leader_title": "Prime Minister"
         },
@@ -741,6 +822,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Harold Macmillan",
             "leader_title": "Prime Minister"
         },
@@ -750,6 +832,7 @@
             "day": 19,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Alec Douglas-Home",
             "leader_title": "Prime Minister"
         },
@@ -759,6 +842,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Harold Wilson",
             "leader_title": "Prime Minister"
         },
@@ -768,6 +852,7 @@
             "day": 19,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Edward Heath",
             "leader_title": "Prime Minister"
         },
@@ -777,6 +862,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Harold Wilson",
             "leader_title": "Prime Minister"
         },
@@ -786,6 +872,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "James Callaghan",
             "leader_title": "Prime Minister"
         },
@@ -795,6 +882,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Margaret Thatcher",
             "leader_title": "Prime Minister"
         },
@@ -804,6 +892,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "John Major",
             "leader_title": "Prime Minister"
         },
@@ -813,6 +902,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Tony Blair",
             "leader_title": "Prime Minister"
         },
@@ -822,6 +912,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gordon Brown",
             "leader_title": "Prime Minister"
         },
@@ -831,6 +922,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "David Cameron",
             "leader_title": "Prime Minister"
         },
@@ -840,6 +932,7 @@
             "day": 13,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Theresa May",
             "leader_title": "Prime Minister"
         },
@@ -849,6 +942,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Boris Johnson",
             "leader_title": "Prime Minister"
         },
@@ -858,6 +952,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Liz Truss",
             "leader_title": "Prime Minister"
         },
@@ -867,6 +962,7 @@
             "day": 25,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Rishi Sunak",
             "leader_title": "Prime Minister"
         },
@@ -876,6 +972,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Keir Starmer",
             "leader_title": "Prime Minister"
         }
@@ -887,6 +984,7 @@
             "day": 1,
             "name": "German Empire",
             "adjective": "German",
+            "color": null,
             "leader_name": "Wilhelm II",
             "leader_title": "Kaiser"
         },
@@ -896,6 +994,7 @@
             "day": 9,
             "name": "Weimar Republic",
             "adjective": "",
+            "color": null,
             "leader_name": "Friedrich Ebert",
             "leader_title": "Chancellor"
         },
@@ -905,6 +1004,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Friedrich Ebert",
             "leader_title": "President"
         },
@@ -914,6 +1014,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Paul von Hindenburg",
             "leader_title": "President"
         },
@@ -923,6 +1024,7 @@
             "day": 30,
             "name": "Germany",
             "adjective": "",
+            "color": null,
             "leader_name": "Adolf Hitler",
             "leader_title": "Chancellor"
         },
@@ -932,6 +1034,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Adolf Hitler",
             "leader_title": "Fuhrer"
         },
@@ -941,6 +1044,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Karl Doenitz",
             "leader_title": "President"
         },
@@ -950,6 +1054,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "None (Allied Occupation)",
             "leader_title": "N/A"
         },
@@ -959,6 +1064,7 @@
             "day": 15,
             "name": "West Germany",
             "adjective": "",
+            "color": null,
             "leader_name": "Konrad Adenauer",
             "leader_title": "Chancellor"
         },
@@ -968,6 +1074,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ludwig Erhard",
             "leader_title": "Chancellor"
         },
@@ -977,6 +1084,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Kurt Georg Kiesinger",
             "leader_title": "Chancellor"
         },
@@ -986,6 +1094,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Willy Brandt",
             "leader_title": "Chancellor"
         },
@@ -995,6 +1104,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Helmut Schmidt",
             "leader_title": "Chancellor"
         },
@@ -1004,6 +1114,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Helmut Kohl",
             "leader_title": "Chancellor"
         },
@@ -1013,6 +1124,7 @@
             "day": 3,
             "name": "Germany",
             "adjective": "",
+            "color": null,
             "leader_name": "Helmut Kohl",
             "leader_title": "Chancellor"
         },
@@ -1022,6 +1134,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gerhard Schroeder",
             "leader_title": "Chancellor"
         },
@@ -1031,6 +1144,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Angela Merkel",
             "leader_title": "Chancellor"
         },
@@ -1040,6 +1154,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Olaf Scholz",
             "leader_title": "Chancellor"
         },
@@ -1049,6 +1164,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Friedrich Merz",
             "leader_title": "Chancellor"
         }
@@ -1060,6 +1176,7 @@
             "day": 1,
             "name": "Switzerland",
             "adjective": "Swiss",
+            "color": null,
             "leader_name": "",
             "leader_title": "President of the Swiss Confederation (rotates annually among the Federal Council)"
         }
@@ -1071,6 +1188,7 @@
             "day": 1,
             "name": "Belgium",
             "adjective": "Belgian",
+            "color": null,
             "leader_name": "Leopold II",
             "leader_title": "King of the Belgians"
         },
@@ -1080,6 +1198,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Albert I",
             "leader_title": "King of the Belgians"
         },
@@ -1089,6 +1208,7 @@
             "day": 17,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Leopold III",
             "leader_title": "King of the Belgians"
         },
@@ -1098,6 +1218,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Prince Charles",
             "leader_title": "Regent"
         },
@@ -1107,6 +1228,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Leopold III",
             "leader_title": "King of the Belgians"
         },
@@ -1116,6 +1238,7 @@
             "day": 17,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Baudouin",
             "leader_title": "King of the Belgians"
         },
@@ -1125,6 +1248,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Albert II",
             "leader_title": "King of the Belgians"
         },
@@ -1134,6 +1258,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Philippe",
             "leader_title": "King of the Belgians"
         }
@@ -1145,6 +1270,7 @@
             "day": 1,
             "name": "Netherlands",
             "adjective": "Dutch",
+            "color": null,
             "leader_name": "Wilhelmina",
             "leader_title": "Queen"
         },
@@ -1154,6 +1280,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Juliana",
             "leader_title": "Queen"
         },
@@ -1163,6 +1290,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Beatrix",
             "leader_title": "Queen"
         },
@@ -1172,6 +1300,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Willem-Alexander",
             "leader_title": "King"
         }
@@ -1183,6 +1312,7 @@
             "day": 1,
             "name": "Sweden",
             "adjective": "Swedish",
+            "color": null,
             "leader_name": "Oscar II",
             "leader_title": "King"
         },
@@ -1192,6 +1322,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gustaf V",
             "leader_title": "King"
         },
@@ -1201,6 +1332,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gustaf VI Adolf",
             "leader_title": "King"
         },
@@ -1210,6 +1342,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Carl XVI Gustaf",
             "leader_title": "King"
         }
@@ -1221,6 +1354,7 @@
             "day": 6,
             "name": "Finland",
             "adjective": "Finnish",
+            "color": null,
             "leader_name": "Pehr Evind Svinhufvud",
             "leader_title": "Chairman of the Senate"
         },
@@ -1230,6 +1364,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Carl Gustaf Emil Mannerheim",
             "leader_title": "Regent"
         },
@@ -1239,6 +1374,7 @@
             "day": 25,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Kaarlo Juho Stahlberg",
             "leader_title": "President"
         },
@@ -1248,6 +1384,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Lauri Kristian Relander",
             "leader_title": "President"
         },
@@ -1257,6 +1394,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Pehr Evind Svinhufvud",
             "leader_title": "President"
         },
@@ -1266,6 +1404,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Kyosti Kallio",
             "leader_title": "President"
         },
@@ -1275,6 +1414,7 @@
             "day": 19,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Risto Ryti",
             "leader_title": "President"
         },
@@ -1284,6 +1424,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Carl Gustaf Emil Mannerheim",
             "leader_title": "President"
         },
@@ -1293,6 +1434,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Juho Kusti Paasikivi",
             "leader_title": "President"
         },
@@ -1302,6 +1444,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Urho Kekkonen",
             "leader_title": "President"
         },
@@ -1311,6 +1454,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mauno Koivisto",
             "leader_title": "President"
         },
@@ -1320,6 +1464,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Martti Ahtisaari",
             "leader_title": "President"
         },
@@ -1329,6 +1474,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Tarja Halonen",
             "leader_title": "President"
         },
@@ -1338,6 +1484,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Sauli Niinisto",
             "leader_title": "President"
         },
@@ -1347,6 +1494,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Alexander Stubb",
             "leader_title": "President"
         }
@@ -1358,6 +1506,7 @@
             "day": 18,
             "name": "Norway",
             "adjective": "Norwegian",
+            "color": null,
             "leader_name": "Haakon VII",
             "leader_title": "King"
         },
@@ -1367,6 +1516,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Olav V",
             "leader_title": "King"
         },
@@ -1376,6 +1526,7 @@
             "day": 17,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Harald V",
             "leader_title": "King"
         }
@@ -1387,6 +1538,7 @@
             "day": 1,
             "name": "Romania",
             "adjective": "Romanian",
+            "color": null,
             "leader_name": "Carol I",
             "leader_title": "King"
         },
@@ -1396,6 +1548,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ferdinand I",
             "leader_title": "King"
         },
@@ -1405,6 +1558,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Michael I",
             "leader_title": "King"
         },
@@ -1414,6 +1568,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Carol II",
             "leader_title": "King"
         },
@@ -1423,6 +1578,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ion Antonescu",
             "leader_title": "Conducator"
         },
@@ -1432,6 +1588,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Michael I",
             "leader_title": "King"
         },
@@ -1441,6 +1598,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Constantin Ion Parhon",
             "leader_title": "President of the Presidium"
         },
@@ -1450,6 +1608,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Petru Groza",
             "leader_title": "President of the Presidium"
         },
@@ -1459,6 +1618,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gheorghe Gheorghiu-Dej",
             "leader_title": "President of the State Council"
         },
@@ -1468,6 +1628,7 @@
             "day": 19,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Nicolae Ceausescu",
             "leader_title": "First Secretary"
         },
@@ -1477,6 +1638,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Nicolae Ceausescu",
             "leader_title": "President"
         },
@@ -1486,6 +1648,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ion Iliescu",
             "leader_title": "President"
         },
@@ -1495,6 +1658,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Emil Constantinescu",
             "leader_title": "President"
         },
@@ -1504,6 +1668,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ion Iliescu",
             "leader_title": "President"
         },
@@ -1513,6 +1678,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Traian Basescu",
             "leader_title": "President"
         },
@@ -1522,6 +1688,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Klaus Iohannis",
             "leader_title": "President"
         },
@@ -1531,6 +1698,7 @@
             "day": 26,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Nicusor Dan",
             "leader_title": "President"
         }
@@ -1542,6 +1710,7 @@
             "day": 1,
             "name": "Bulgaria",
             "adjective": "Bulgarian",
+            "color": null,
             "leader_name": "Ferdinand I",
             "leader_title": "Prince"
         },
@@ -1551,6 +1720,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ferdinand I",
             "leader_title": "Tsar"
         },
@@ -1560,6 +1730,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Boris III",
             "leader_title": "Tsar"
         },
@@ -1569,6 +1740,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Simeon II",
             "leader_title": "Tsar (regency)"
         },
@@ -1578,6 +1750,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Georgi Dimitrov",
             "leader_title": "Prime Minister"
         },
@@ -1587,6 +1760,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Vulko Chervenkov",
             "leader_title": "First Secretary"
         },
@@ -1596,6 +1770,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Todor Zhivkov",
             "leader_title": "First Secretary"
         },
@@ -1605,6 +1780,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Petar Mladenov",
             "leader_title": "President"
         },
@@ -1614,6 +1790,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Zhelyu Zhelev",
             "leader_title": "President"
         },
@@ -1623,6 +1800,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Petar Stoyanov",
             "leader_title": "President"
         },
@@ -1632,6 +1810,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Georgi Parvanov",
             "leader_title": "President"
         },
@@ -1641,6 +1820,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Rosen Plevneliev",
             "leader_title": "President"
         },
@@ -1650,6 +1830,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Rumen Radev",
             "leader_title": "President"
         }
@@ -1661,6 +1842,7 @@
             "day": 1,
             "name": "Ottoman Empire",
             "adjective": "Ottoman",
+            "color": null,
             "leader_name": "Abdul Hamid II",
             "leader_title": "Sultan"
         },
@@ -1670,6 +1852,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mehmed V",
             "leader_title": "Sultan"
         },
@@ -1679,6 +1862,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mehmed VI",
             "leader_title": "Sultan"
         },
@@ -1688,6 +1872,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mustafa Kemal",
             "leader_title": "President of the Grand National Assembly"
         },
@@ -1697,6 +1882,7 @@
             "day": 29,
             "name": "Turkey",
             "adjective": "Turkish",
+            "color": null,
             "leader_name": "Mustafa Kemal Ataturk",
             "leader_title": "President"
         },
@@ -1706,6 +1892,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ismet Inonu",
             "leader_title": "President"
         },
@@ -1715,6 +1902,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Celal Bayar",
             "leader_title": "President"
         },
@@ -1724,6 +1912,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Cemal Gursel",
             "leader_title": "President"
         },
@@ -1733,6 +1922,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Cevdet Sunay",
             "leader_title": "President"
         },
@@ -1742,6 +1932,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Fahri Koruturk",
             "leader_title": "President"
         },
@@ -1751,6 +1942,7 @@
             "day": 14,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Kenan Evren",
             "leader_title": "President"
         },
@@ -1760,6 +1952,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Turgut Ozal",
             "leader_title": "President"
         },
@@ -1769,6 +1962,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Suleyman Demirel",
             "leader_title": "President"
         },
@@ -1778,6 +1972,7 @@
             "day": 16,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ahmet Necdet Sezer",
             "leader_title": "President"
         },
@@ -1787,6 +1982,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Abdullah Gul",
             "leader_title": "President"
         },
@@ -1796,6 +1992,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Recep Tayyip Erdogan",
             "leader_title": "President"
         }
@@ -1807,6 +2004,7 @@
             "day": 29,
             "name": "Italy",
             "adjective": "Italian",
+            "color": null,
             "leader_name": "Victor Emmanuel III",
             "leader_title": "King"
         },
@@ -1816,6 +2014,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Benito Mussolini",
             "leader_title": "Prime Minister"
         },
@@ -1825,6 +2024,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Benito Mussolini",
             "leader_title": "Il Duce"
         },
@@ -1834,6 +2034,7 @@
             "day": 25,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Pietro Badoglio",
             "leader_title": "Prime Minister"
         },
@@ -1843,6 +2044,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ivanoe Bonomi",
             "leader_title": "Prime Minister"
         },
@@ -1852,6 +2054,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Alcide De Gasperi",
             "leader_title": "Prime Minister"
         },
@@ -1861,6 +2064,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Enrico De Nicola",
             "leader_title": "Provisional Head of State"
         },
@@ -1870,6 +2074,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Luigi Einaudi",
             "leader_title": "President"
         },
@@ -1879,6 +2084,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Giovanni Gronchi",
             "leader_title": "President"
         },
@@ -1888,6 +2094,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Antonio Segni",
             "leader_title": "President"
         },
@@ -1897,6 +2104,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Giuseppe Saragat",
             "leader_title": "President"
         },
@@ -1906,6 +2114,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Giovanni Leone",
             "leader_title": "President"
         },
@@ -1915,6 +2124,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Sandro Pertini",
             "leader_title": "President"
         },
@@ -1924,6 +2134,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Francesco Cossiga",
             "leader_title": "President"
         },
@@ -1933,6 +2144,7 @@
             "day": 28,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Oscar Luigi Scalfaro",
             "leader_title": "President"
         },
@@ -1942,6 +2154,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Carlo Azeglio Ciampi",
             "leader_title": "President"
         },
@@ -1951,6 +2164,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Giorgio Napolitano",
             "leader_title": "President"
         },
@@ -1960,6 +2174,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Sergio Mattarella",
             "leader_title": "President"
         }
@@ -1971,6 +2186,7 @@
             "day": 28,
             "name": "Albania",
             "adjective": "Albanian",
+            "color": null,
             "leader_name": "Ismail Qemali",
             "leader_title": "Head of the Provisional Government"
         },
@@ -1980,6 +2196,7 @@
             "day": 7,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Wilhelm of Wied",
             "leader_title": "Prince of Albania"
         },
@@ -1989,6 +2206,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ahmet Zogu",
             "leader_title": "President"
         },
@@ -1998,6 +2216,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Zog I",
             "leader_title": "King"
         },
@@ -2007,6 +2226,7 @@
             "day": 12,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Victor Emmanuel III of Italy",
             "leader_title": "King (Italian protectorate)"
         },
@@ -2016,6 +2236,7 @@
             "day": 8,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "",
             "leader_title": "German Occupation (no unified government)"
         },
@@ -2025,6 +2246,7 @@
             "day": 29,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Enver Hoxha",
             "leader_title": "First Secretary"
         },
@@ -2034,6 +2256,7 @@
             "day": 13,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ramiz Alia",
             "leader_title": "First Secretary"
         },
@@ -2043,6 +2266,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ramiz Alia",
             "leader_title": "President"
         },
@@ -2052,6 +2276,7 @@
             "day": 9,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Sali Berisha",
             "leader_title": "President"
         },
@@ -2061,6 +2286,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Rexhep Meidani",
             "leader_title": "President"
         },
@@ -2070,6 +2296,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Alfred Moisiu",
             "leader_title": "President"
         },
@@ -2079,6 +2306,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bamir Topi",
             "leader_title": "President"
         },
@@ -2088,6 +2316,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bujar Nishani",
             "leader_title": "President"
         },
@@ -2097,6 +2326,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ilir Meta",
             "leader_title": "President"
         },
@@ -2106,6 +2336,7 @@
             "day": 24,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bajram Begaj",
             "leader_title": "President"
         }
@@ -2117,6 +2348,7 @@
             "day": 27,
             "name": "Kingdom of Poland",
             "adjective": "Polish",
+            "color": null,
             "leader_name": "Regency Council",
             "leader_title": "Regents (collective head of state)"
         },
@@ -2126,6 +2358,7 @@
             "day": 22,
             "name": "Poland",
             "adjective": "",
+            "color": null,
             "leader_name": "Jozef Pilsudski",
             "leader_title": "Chief of State"
         },
@@ -2135,6 +2368,7 @@
             "day": 11,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Gabriel Narutowicz",
             "leader_title": "President"
         },
@@ -2144,6 +2378,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stanislaw Wojciechowski",
             "leader_title": "President"
         },
@@ -2153,6 +2388,7 @@
             "day": 4,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Ignacy Moscicki",
             "leader_title": "President"
         },
@@ -2162,6 +2398,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Wladyslaw Raczkiewicz",
             "leader_title": "President (government-in-exile)"
         },
@@ -2171,6 +2408,7 @@
             "day": 1,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Boleslaw Bierut",
             "leader_title": "Chairman of the National Council"
         },
@@ -2180,6 +2418,7 @@
             "day": 5,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Boleslaw Bierut",
             "leader_title": "President"
         },
@@ -2189,6 +2428,7 @@
             "day": 15,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Boleslaw Bierut",
             "leader_title": "First Secretary"
         },
@@ -2198,6 +2438,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Edward Ochab",
             "leader_title": "First Secretary"
         },
@@ -2207,6 +2448,7 @@
             "day": 21,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Wladyslaw Gomulka",
             "leader_title": "First Secretary"
         },
@@ -2216,6 +2458,7 @@
             "day": 20,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Edward Gierek",
             "leader_title": "First Secretary"
         },
@@ -2225,6 +2468,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Stanislaw Kania",
             "leader_title": "First Secretary"
         },
@@ -2234,6 +2478,7 @@
             "day": 18,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Wojciech Jaruzelski",
             "leader_title": "First Secretary"
         },
@@ -2243,6 +2488,7 @@
             "day": 19,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Wojciech Jaruzelski",
             "leader_title": "President"
         },
@@ -2252,6 +2498,7 @@
             "day": 22,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Lech Walesa",
             "leader_title": "President"
         },
@@ -2261,6 +2508,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Aleksander Kwasniewski",
             "leader_title": "President"
         },
@@ -2270,6 +2518,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Lech Kaczynski",
             "leader_title": "President"
         },
@@ -2279,6 +2528,7 @@
             "day": 10,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Bronislaw Komorowski",
             "leader_title": "President"
         },
@@ -2288,6 +2538,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Andrzej Duda",
             "leader_title": "President"
         },
@@ -2297,6 +2548,7 @@
             "day": 6,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Karol Nawrocki",
             "leader_title": "President"
         }
@@ -2308,6 +2560,7 @@
             "day": 1,
             "name": "German Empire",
             "adjective": "German",
+            "color": null,
             "leader_name": "Wilhelm II",
             "leader_title": "Kaiser"
         }
@@ -2319,6 +2572,7 @@
             "day": 30,
             "name": "Germany",
             "adjective": "",
+            "color": null,
             "leader_name": "Adolf Hitler",
             "leader_title": "Chancellor"
         },
@@ -2328,6 +2582,7 @@
             "day": 2,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Adolf Hitler",
             "leader_title": "Fuhrer"
         },
@@ -2337,6 +2592,7 @@
             "day": 30,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Karl Doenitz",
             "leader_title": "President"
         },
@@ -2346,6 +2602,7 @@
             "day": 23,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "None (Allied Occupation)",
             "leader_title": "N/A"
         }
@@ -2357,6 +2614,7 @@
             "day": 1,
             "name": "Ottoman Empire",
             "adjective": "Ottoman",
+            "color": null,
             "leader_name": "Abdul Hamid II",
             "leader_title": "Sultan"
         },
@@ -2366,6 +2624,7 @@
             "day": 27,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mehmed V",
             "leader_title": "Sultan"
         },
@@ -2375,6 +2634,7 @@
             "day": 3,
             "name": "",
             "adjective": "",
+            "color": null,
             "leader_name": "Mehmed VI",
             "leader_title": "Sultan"
         }
@@ -2386,6 +2646,7 @@
             "day": 1,
             "name": "Vichy France",
             "adjective": "French",
+            "color": null,
             "leader_name": "Philippe Petain",
             "leader_title": "President"
         }

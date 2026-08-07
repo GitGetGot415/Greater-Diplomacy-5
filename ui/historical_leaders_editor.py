@@ -224,7 +224,12 @@ class Historical_Leaders_Editor(GameState):
             entry["color"] = list(rgb)
             self.refresh_ui()
 
-        queries.open_color_picker(self, f"{self.active_country} Colour", current, on_pick)
+        queries.open_color_picker(self, f"{self.active_country} Color", current, on_pick)
+
+    def clear_color(self, entry):
+        self._sync_entries()
+        entry["color"] = None
+        self.refresh_ui()
 
     def save(self):
         self._sync_entries()
@@ -308,6 +313,15 @@ class Historical_Leaders_Editor(GameState):
         swatch.pane = "timeline"
         swatch.click_guard = self._guard_timeline
         self.elements.append(swatch)
+
+        clear_btn = Button(fx["color"] + COLOR_SWATCH_SIZE + 8, row1_y - 1, "tiny_square", "orange", "Clear",
+                           lambda e=entry: self.clear_color(e), font_preset="button_small")
+        clear_btn.rect.size = (60, COLOR_SWATCH_SIZE)
+        if not color:
+            clear_btn.apply_state(enabled=False)
+        clear_btn.pane = "timeline"
+        clear_btn.click_guard = self._guard_timeline
+        self.elements.append(clear_btn)
 
         # Kept well clear of the card's own right edge (timeline_rect.right - 20,
         # see the card_rect built in draw_elements) and the scrollbar track
@@ -404,7 +418,7 @@ class Historical_Leaders_Editor(GameState):
 
                 row1_y, row2_y = y + ROW1_Y_OFFSET, y + ROW2_Y_OFFSET
                 for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),
-                                   ("name", "Name"), ("adjective", "Adjective"), ("color", "Colour")):
+                                   ("name", "Name"), ("adjective", "Adjective"), ("color", "Color")):
                     cap = tiny.render(label, True, (150, 190, 150))
                     surface.blit(cap, (fx[key], row1_y - 15))
                 for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title")):
