@@ -27,8 +27,14 @@ PAD = 20
 TOP_Y = 100
 ROSTER_W = 300
 ROSTER_ROW_H = 36
-ENTRY_ROW_H = 110
+ENTRY_ROW_H = 150
 FIELD_H = 32
+COLOR_SWATCH_SIZE = 34
+# Vertical offsets of each entry card's two field rows, relative to the
+# card's own top -- kept well apart so the date/name/adjective/color row
+# reads as clearly separate from the leader row below it.
+ROW1_Y_OFFSET = 26
+ROW2_Y_OFFSET = 92
 
 # Display convention: month is shown/edited as 1-12, matching how the rest of
 # the editors (e.g. ui/editor_screens.py's Editor_Date_Screen) present dates
@@ -97,7 +103,7 @@ class Historical_Leaders_Editor(GameState):
         tx = self.timeline_rect.x + 12
         self.field_x = {
             "year": tx, "month": tx + 62, "day": tx + 116,
-            "name": tx + 172, "adjective": tx + 334,
+            "name": tx + 172, "adjective": tx + 334, "color": tx + 506,
             "leader_name": tx, "leader_title": tx + 300,
         }
 
@@ -188,11 +194,17 @@ class Historical_Leaders_Editor(GameState):
             last = entries[-1]
             entry = {k: last.get(k, "") for k in
                      ("year", "month", "day", "name", "adjective", "leader_name", "leader_title")}
+            entry["color"] = last.get("color")
         else:
             base = queries.get_country_data().get(self.active_country, {})
             entry = _new_entry()
             entry["name"] = base.get("name", self.active_country)
             entry["adjective"] = base.get("adjective", "")
+            # Colour starts unset (None) rather than pre-filled from the
+            # country's current colour -- existing countries keep whatever
+            # colour they already have until someone deliberately opens the
+            # swatch and picks one for this entry.
+            entry["color"] = None
 
         entries.append(entry)
         self.refresh_ui()
@@ -202,6 +214,17 @@ class Historical_Leaders_Editor(GameState):
         entries = self.data.get(self.active_country, [])
         entries[:] = [e for e in entries if e is not entry]
         self.refresh_ui()
+
+    def pick_color(self, entry):
+        self._sync_entries()
+        current = entry.get("color") or queries.get_country_data().get(
+            self.active_country, {}).get("color", [150, 150, 150])
+
+        def on_pick(rgb):
+            entry["color"] = list(rgb)
+            self.refresh_ui()
+
+        queries.open_color_picker(self, f"{self.active_country} Colour", current, on_pick)
 
     def save(self):
         self._sync_entries()
@@ -217,12 +240,22 @@ class Historical_Leaders_Editor(GameState):
                     confirm_dialog.show_error(
                         "Invalid Date", f"{country} has a non-numeric date in its timeline -- fix it before saving.")
                     return
+                color = e.get("color")
+                if isinstance(color, (list, tuple)) and len(color) == 3:
+                    try:
+                        color = [max(0, min(255, int(v))) for v in color]
+                    except (TypeError, ValueError):
+                        color = None
+                else:
+                    color = None
+
                 parsed.append({
                     "year": year,
                     "month": max(1, min(12, month)),
                     "day": max(1, min(30, day)),
                     "name": str(e.get("name", "")).strip(),
                     "adjective": str(e.get("adjective", "")).strip(),
+                    "color": color,
                     "leader_name": str(e.get("leader_name", "")).strip(),
                     "leader_title": str(e.get("leader_title", "")).strip(),
                 })
@@ -248,8 +281,8 @@ class Historical_Leaders_Editor(GameState):
 
     def _build_entry_row(self, entry, y):
         fx = self.field_x
-        row1_y = y + 22
-        row2_y = y + 62
+        row1_y = y + ROW1_Y_OFFSET
+        row2_y = y + ROW2_Y_OFFSET
 
         def mk(key, x, y_pos, w, numeric=False):
             field = TextField(x, y_pos, w, FIELD_H, str(entry.get(key, "")), numeric=numeric)
@@ -267,7 +300,19 @@ class Historical_Leaders_Editor(GameState):
         self.elements.append(mk("leader_name", fx["leader_name"], row2_y, 280, False))
         self.elements.append(mk("leader_title", fx["leader_title"], row2_y, 280, False))
 
-        del_btn = Button(self.timeline_rect.right - 40, row1_y - 4, "tiny_square", "red", "X",
+        color = entry.get("color")
+        swatch = Button(fx["color"], row1_y - 1, "tiny_square", "grey", "",
+                        lambda e=entry: self.pick_color(e), show_text=False)
+        swatch.rect.size = (COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE)
+        swatch.set_colors(tuple(color) if color else (55, 60, 65))
+        swatch.pane = "timeline"
+        swatch.click_guard = self._guard_timeline
+        self.elements.append(swatch)
+
+        # Kept well clear of the card's own right edge (timeline_rect.right - 20,
+        # see the card_rect built in draw_elements) and the scrollbar track
+        # beside it -- previously this sat past the card's edge entirely.
+        del_btn = Button(self.timeline_rect.right - 65, row1_y - 4, "tiny_square", "red", "X",
                          lambda e=entry: self.delete_entry(e), font_preset="button_small")
         del_btn.pane = "timeline"
         del_btn.click_guard = self._guard_timeline
@@ -303,7 +348,9 @@ class Historical_Leaders_Editor(GameState):
             self.elements.append(rm_btn)
 
         if self.active_country:
-            self.elements.append(Button(self.timeline_rect.right - 180, self.timeline_rect.y - 40,
+            # "editor_ui" is 300px wide -- anchored off timeline_rect.right so
+            # the whole button stays on screen instead of running past it.
+            self.elements.append(Button(self.timeline_rect.right - 310, self.timeline_rect.y - 40,
                                         "editor_ui", "green", "+ Add Entry", self.add_entry))
 
         entries = self.data.get(self.active_country, []) if self.active_country else []
@@ -355,9 +402,9 @@ class Historical_Leaders_Editor(GameState):
                 pygame.draw.rect(surface, (35, 45, 35), card_rect, border_radius=4)
                 pygame.draw.rect(surface, (80, 110, 80), card_rect, 1, border_radius=4)
 
-                row1_y, row2_y = y + 22, y + 62
+                row1_y, row2_y = y + ROW1_Y_OFFSET, y + ROW2_Y_OFFSET
                 for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),
-                                   ("name", "Name"), ("adjective", "Adjective")):
+                                   ("name", "Name"), ("adjective", "Adjective"), ("color", "Colour")):
                     cap = tiny.render(label, True, (150, 190, 150))
                     surface.blit(cap, (fx[key], row1_y - 15))
                 for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title")):

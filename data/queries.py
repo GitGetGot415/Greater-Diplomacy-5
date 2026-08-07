@@ -427,24 +427,25 @@ def _historical_entry_date(entry):
     return (_as_int(entry.get("year", 0)), _as_int(entry.get("month", 0)), _as_int(entry.get("day", 0)))
 
 def apply_historical_leader_timeline(nation_data, year, month, day):
-    """Overrides name/adjective/leader_name/leader_title on every nation that has
-    a saved historical timeline entry at or before (year, month, day).
+    """Overrides name/adjective/color/leader_name/leader_title on every nation
+    that has a saved historical timeline entry at or before (year, month, day).
 
     Called every time a scenario under scenarios/historical loads (including
     the Data Refresh sync pass), so a country's identity always reflects
     whatever the Historical Leaders Editor last saved for that scenario's own
     date -- editing the timeline later re-applies on the next load with no
-    need to touch any scenario file by hand. Each of the four fields is
-    resolved independently to the latest entry (at or before the date) that
-    actually set it, so a later entry can change just the leader without
-    blanking out an earlier entry's name/adjective.
+    need to touch any scenario file by hand. Each field is resolved
+    independently to the latest entry (at or before the date) that actually
+    set it, so a later entry can change just the leader without blanking out
+    an earlier entry's name/adjective/color. A country with no colour set on
+    any applicable entry keeps whatever colour it already had.
     """
     timeline = get_historical_leader_timeline()
     if not timeline:
         return
 
     current = (_as_int(year), _as_int(month), _as_int(day))
-    fields = ("name", "adjective", "leader_name", "leader_title")
+    fields = ("name", "adjective", "color", "leader_name", "leader_title")
 
     for country, entries in timeline.items():
         if not entries or country not in nation_data:
