@@ -145,14 +145,15 @@ class Menu(GameState):
         # (y offset from centre, label, colour, icon, destination state) — one row
         # per menu entry, so adding a screen is a single line here.
         menu_items = [
-            ("- 125", "New Game",     "green",  "new_game",   "NEW_GAME"),
-            ("- 75",  "Load Game",    "yellow", "load_game",  "LOAD_GAME"),
-            ("- 25",  "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
-            ("+ 25",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-            ("+ 75",  "Credits",      "purple", "credits",    "CREDITS"),
-            ("+ 125", "Music Player", "blue",   "music",      "MUSIC_PLAYER"),
-            ("+ 175", "Settings",     "grey",   "settings",   "SETTINGS"),
-            ("+ 225", "View Assets",  "pink",   "brush",      "VIEW_ASSETS"),
+            ("- 175", "New Game",     "green",  "new_game",   "NEW_GAME"),
+            ("- 125",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
+            ("- 75",  "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
+            ("- 25",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
+            ("+ 25",  "Credits",      "purple", "credits",    "CREDITS"),
+            ("+ 75", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
+            ("+ 125", "Settings",     "grey",   "settings",   "SETTINGS"),
+            ("+ 175", "View Assets",  "pink",   "brush",      "VIEW_ASSETS"),
+            ("+ 225", "Mods",         "light_blue", "mods",   "MODS"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,

@@ -48,6 +48,7 @@ from screens.menu_screens.settings import Settings
 from screens.menu_screens.credits import Credits
 from screens.menu_screens.music_player import Music_Player
 from screens.menu_screens.view_assets import View_Assets
+from screens.menu_screens.mods import Mods
 from screens.map_related_screens.orders import Orders_Screen
 from data.io import keybind_io
 from map_logic.rendering import symbol_loader
@@ -199,6 +200,7 @@ class Controller:
             "map_editor": symbol_loader.get_symbol("Map Editor", 1),
             "credits": symbol_loader.get_symbol("Credits", 1),
             "clock": symbol_loader.get_symbol("Clock", 1.6),
+            "mods": symbol_loader.get_symbol("Hammer", 1.5),
         }
 
         # 1. Define Hardcoded Defaults
@@ -283,6 +285,7 @@ class Controller:
             "CREDITS": Credits(), 
             "MUSIC_PLAYER": Music_Player(self),
             "VIEW_ASSETS": View_Assets(),
+            "MODS": Mods(),
             "SELECT_BASE_MAP": Select_Base_Map(),
             "MAP": None,
             "PRODUCTION": Production_Screen(),

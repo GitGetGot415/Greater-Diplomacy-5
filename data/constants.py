@@ -931,6 +931,7 @@ SCENARIOS_HISTORICAL_DIR = "scenarios/historical"
 SCENARIOS_ALTERNATE_DIR = "scenarios/alternate"
 SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
 BASE_MAPS_DIR = "base_maps"
+MODS_DIR = "mods"
 
 # Default Map Assets
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
