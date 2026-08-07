@@ -13,6 +13,11 @@
 - diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
 - modloader thing but in game so you don't have to download the github
 
+for historical scenarios, ability to add in settings for every scenario in there, such as:
+- name of a country at what specific time
+- (note: germany should probably just use the germany tag)
+- set a map for every scenario and a resource map for such 
+
 - ability to swap between a turn based game to a real time one, like paradox games (WARNING: VERY AMBITIOUS)
 
 RESEARCH STUFF:

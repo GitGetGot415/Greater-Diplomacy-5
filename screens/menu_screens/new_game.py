@@ -73,6 +73,12 @@ class New_Game(GameState):
             settings_btn,
         ]
 
+        if self.sub_state == "HISTORICAL":
+            self.elements.append(
+                Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
+                      self.open_historical_leaders_editor)
+            )
+
         scenario_dir = self.scenario_dir
         if not os.path.exists(scenario_dir):
             os.makedirs(scenario_dir)
@@ -117,6 +123,10 @@ class New_Game(GameState):
         from screens.menu_screens.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "NEW_GAME"
         self.go_to("SCENARIO_SETTINGS")
+
+    def open_historical_leaders_editor(self):
+        from ui.historical_leaders_editor import open_historical_leaders_editor
+        open_historical_leaders_editor(on_done=lambda screen: self.refresh_ui())
 
     def start_scenario(self, scenario_name, directory):
         self.selected_save_path = os.path.join(directory, scenario_name)

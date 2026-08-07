@@ -330,6 +330,14 @@ def load_map_assets(self, load_path):
         self.script_variables = []
         self.time_manager = TimeHandler(start_year=c.START_YEAR)
 
+    # --- HISTORICAL LEADERS TIMELINE ---
+    # Only scenarios launched straight out of scenarios/historical get the
+    # Historical Leaders Editor's dated overrides -- alternate/custom/random
+    # maps and in-progress saves (which live under saves/) are untouched.
+    if load_path and c.SCENARIOS_HISTORICAL_DIR.replace("\\", "/") in str(load_path).replace("\\", "/"):
+        tm = self.time_manager
+        queries.apply_historical_leader_timeline(self.nation_data, tm.year, tm.month_index, tm.day)
+
     # --- 5. Province Processing ---
     json_path = os.path.join(load_path, "map_data.json")
     if not os.path.exists(json_path):

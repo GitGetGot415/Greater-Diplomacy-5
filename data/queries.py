@@ -200,7 +200,8 @@ _JSON_CACHE = {
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
     "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None},
     "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
-    "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None}
+    "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None},
+    "historical_leaders": {"path": c.HISTORICAL_LEADERS_PATH, "data": None},
 }
 
 def scenario_has_scripted_events(nation_data):
@@ -400,6 +401,54 @@ def get_unit_library(): return _load_cached_json("unit_library")
 def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")
 def get_country_data(): return _load_cached_json("country_data")
+def get_historical_leader_timeline(): return _load_cached_json("historical_leaders")
+
+def save_historical_leader_timeline(data):
+    """Persists the Historical Leaders Editor's data (country -> sorted list of
+    dated {name, adjective, leader_name, leader_title} entries)."""
+    save_cached_json("historical_leaders", data)
+
+def _historical_entry_date(entry):
+    return (entry.get("year", 0), entry.get("month", 0), entry.get("day", 0))
+
+def apply_historical_leader_timeline(nation_data, year, month, day):
+    """Overrides name/adjective/leader_name/leader_title on every nation that has
+    a saved historical timeline entry at or before (year, month, day).
+
+    Called every time a scenario under scenarios/historical loads (including
+    the Data Refresh sync pass), so a country's identity always reflects
+    whatever the Historical Leaders Editor last saved for that scenario's own
+    date -- editing the timeline later re-applies on the next load with no
+    need to touch any scenario file by hand. Each of the four fields is
+    resolved independently to the latest entry (at or before the date) that
+    actually set it, so a later entry can change just the leader without
+    blanking out an earlier entry's name/adjective.
+    """
+    timeline = get_historical_leader_timeline()
+    if not timeline:
+        return
+
+    current = (year, month, day)
+    fields = ("name", "adjective", "leader_name", "leader_title")
+
+    for country, entries in timeline.items():
+        if not entries or country not in nation_data:
+            continue
+
+        applicable = sorted(
+            (e for e in entries if _historical_entry_date(e) <= current),
+            key=_historical_entry_date,
+        )
+        if not applicable:
+            continue
+
+        data = nation_data[country]
+        for field in fields:
+            for entry in reversed(applicable):
+                value = entry.get(field, "")
+                if value:
+                    data[field] = value
+                    break
 def get_active_albums(): return _load_cached_json("active_albums")
 
 def get_starting_song():
@@ -2771,6 +2820,14 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # 2. Execute the official resync pipeline
                 temp_map_context.refresh_nation_data(options=options)
                 print(f"refreshed {name}")
+
+                # Re-apply the historical timeline on top -- refresh_nation_data
+                # just reset name/adjective/leader fields to their generic base
+                # template, which would otherwise blank out anything the
+                # Historical Leaders Editor set for this scenario's date.
+                if c.SCENARIOS_HISTORICAL_DIR.replace("\\", "/") in scenario_dir.replace("\\", "/"):
+                    tm = temp_map_context.time_manager
+                    apply_historical_leader_timeline(temp_map_context.nation_data, tm.year, tm.month_index, tm.day)
 
                 # Set all playable country resources to 0 before compounding income calculations
                 if options.get("reset_resources", True):

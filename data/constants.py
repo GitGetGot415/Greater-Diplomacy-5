@@ -970,6 +970,7 @@ SETTINGS_CONFIG_PATH = "data/json/settings_config.json"
 ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
+HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
 
 # ==========================================
 # HISTORY & SAVING SETTINGS

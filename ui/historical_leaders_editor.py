@@ -1,0 +1,403 @@
+"""Historical Leaders Editor: a dated timeline of name/adjective/leader_name/
+leader_title per country, saved to data/json/historical_leaders.json.
+
+Left column is the working roster of countries being tracked; the right
+column -- much wider, since each row holds seven fields -- lists the active
+country's timeline as editable cards, one per dated entry. An entry applies
+from its own date onward until a later entry supersedes it, field by field
+independently (see queries.apply_historical_leader_timeline).
+
+Saving here doesn't touch any scenario file directly: data/map/load_map.py
+re-applies the saved timeline to every scenario under scenarios/historical
+at load time, keyed off that scenario's own date, so edits made here always
+take effect the next time a historical scenario is opened.
+"""
+import copy
+import pygame
+from gameState import GameState
+import data.constants as c
+from data import queries
+from ui import confirm_dialog
+from ui.bars import ui_bars
+from ui.table_screen import truncate
+from ui_elements import Button, TextField
+from map_logic.rendering.font_manager import fonts
+
+PAD = 20
+TOP_Y = 100
+ROSTER_W = 300
+ROSTER_ROW_H = 36
+ENTRY_ROW_H = 110
+FIELD_H = 32
+
+# Display convention: month is shown/edited as 1-12, matching how the rest of
+# the editors (e.g. ui/editor_screens.py's Editor_Date_Screen) present dates
+# to a human. Storage (both the in-memory working buffer here and the saved
+# JSON) keeps that same 1-12 value -- only queries.apply_historical_leader_timeline
+# converts down to TimeHandler's 0-based month_index when it compares against
+# a scenario's live date.
+
+
+def _new_entry(year=c.START_YEAR):
+    return {"year": year, "month": 1, "day": 1,
+            "name": "", "adjective": "", "leader_name": "", "leader_title": ""}
+
+
+def _date_key(entry):
+    def as_int(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+    return (as_int(entry.get("year", 0)), as_int(entry.get("month", 0)), as_int(entry.get("day", 0)))
+
+
+class Historical_Leaders_Editor(GameState):
+    back_state = "NEW_GAME"
+    title = "Historical Leaders & Names"
+
+    def __init__(self):
+        super().__init__()
+        self.bg_color = (20, 35, 20)
+
+        raw = queries.get_historical_leader_timeline()
+        self.data = {country: sorted((dict(e) for e in entries), key=_date_key)
+                    for country, entries in copy.deepcopy(raw).items()}
+        self.roster = sorted(self.data.keys())
+        self.active_country = self.roster[0] if self.roster else None
+
+        self._scroll_roster = 0
+        self._scroll_timeline = 0
+        self._max_roster = 0
+        self._max_timeline = 0
+        self._entry_layout = []
+
+        self.refresh_ui()
+
+    @property
+    def listening_for(self):
+        """Keeps the global BACK keybind from closing the editor mid-edit."""
+        return any(getattr(el, "active", False) for el in self.elements)
+
+    # ------------------------------------------------------------------ #
+    #                               LAYOUT                                #
+    # ------------------------------------------------------------------ #
+
+    def _layout(self):
+        bottom = c.SCREEN_HEIGHT - PAD - 70
+        self.roster_rect = pygame.Rect(PAD, TOP_Y, ROSTER_W, bottom - TOP_Y)
+
+        timeline_x = PAD + ROSTER_W + 30
+        self.timeline_rect = pygame.Rect(timeline_x, TOP_Y, c.SCREEN_WIDTH - timeline_x - PAD, bottom - TOP_Y)
+
+        self.regions = {"roster": self.roster_rect, "timeline": self.timeline_rect}
+        for name, rect in self.regions.items():
+            setattr(self, f"_content_{name}", rect)
+
+        tx = self.timeline_rect.x + 12
+        self.field_x = {
+            "year": tx, "month": tx + 62, "day": tx + 116,
+            "name": tx + 172, "adjective": tx + 334,
+            "leader_name": tx, "leader_title": tx + 300,
+        }
+
+    def _scroll_attrs(self, name):
+        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
+                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
+                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
+
+    def _rows_of(self, name, count, top, view_h, row_h):
+        attrs = self._scroll_attrs(name)
+        return self.layout_list_rows(count, row_h, top, view_h=view_h,
+                                     cull_top=top - 1, cull_bottom=top + view_h - row_h + 2,
+                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
+                                     guard_attr=f"_guard_{name}")
+
+    # ------------------------------------------------------------------ #
+    #                          FIELD <-> DATA SYNC                       #
+    # ------------------------------------------------------------------ #
+
+    def _sync_entries(self):
+        """Pulls live text out of on-screen fields before they get rebuilt or saved."""
+        for el in self.elements:
+            entry = getattr(el, "entry_ref", None)
+            if entry is not None:
+                entry[el.entry_key] = el.text
+
+    # ------------------------------------------------------------------ #
+    #                               ACTIONS                               #
+    # ------------------------------------------------------------------ #
+
+    def select_country(self, country):
+        self._sync_entries()
+        self.active_country = country
+        self._scroll_timeline = 0
+        self.refresh_ui()
+
+    def add_country(self):
+        self._sync_entries()
+        all_playable = sorted(name for name, stats in queries.get_country_data().items()
+                              if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS)
+        available = [n for n in all_playable if n not in self.data]
+        if not available:
+            confirm_dialog.show_info("Add Country", "Every playable country is already being tracked.")
+            return
+
+        def on_pick(country):
+            self.data[country] = []
+            self.roster = sorted(self.data.keys())
+            self.active_country = country
+            self._scroll_roster = 0
+            self._scroll_timeline = 0
+            self.refresh_ui()
+
+        queries.open_listbox_selector(self, "Add Country", "Choose a country to track:", available, on_pick)
+
+    def remove_country(self, country):
+        def on_confirm(ok):
+            if not ok:
+                return
+            self.data.pop(country, None)
+            self.roster = sorted(self.data.keys())
+            if self.active_country == country:
+                self.active_country = self.roster[0] if self.roster else None
+            self.refresh_ui()
+
+        count = len(self.data.get(country, []))
+        confirm_dialog.ask_yes_no(
+            "Remove Country",
+            f"Stop tracking {country} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
+            f"This isn't written to disk until you Save Timeline.",
+            on_confirm)
+
+    def add_entry(self):
+        if not self.active_country:
+            return
+        self._sync_entries()
+        entries = self.data[self.active_country]
+
+        if entries:
+            last = entries[-1]
+            entry = {k: last.get(k, "") for k in
+                     ("year", "month", "day", "name", "adjective", "leader_name", "leader_title")}
+        else:
+            base = queries.get_country_data().get(self.active_country, {})
+            entry = _new_entry()
+            entry["name"] = base.get("name", self.active_country)
+            entry["adjective"] = base.get("adjective", "")
+
+        entries.append(entry)
+        self.refresh_ui()
+
+    def delete_entry(self, entry):
+        self._sync_entries()
+        entries = self.data.get(self.active_country, [])
+        entries[:] = [e for e in entries if e is not entry]
+        self.refresh_ui()
+
+    def save(self):
+        self._sync_entries()
+        cleaned = {}
+        for country, entries in self.data.items():
+            parsed = []
+            for e in entries:
+                try:
+                    year = int(e.get("year") or 0)
+                    month = int(e.get("month") or 0)
+                    day = int(e.get("day") or 0)
+                except (TypeError, ValueError):
+                    confirm_dialog.show_error(
+                        "Invalid Date", f"{country} has a non-numeric date in its timeline -- fix it before saving.")
+                    return
+                parsed.append({
+                    "year": year,
+                    "month": max(1, min(12, month)),
+                    "day": max(1, min(30, day)),
+                    "name": str(e.get("name", "")).strip(),
+                    "adjective": str(e.get("adjective", "")).strip(),
+                    "leader_name": str(e.get("leader_name", "")).strip(),
+                    "leader_title": str(e.get("leader_title", "")).strip(),
+                })
+            parsed.sort(key=_date_key)
+            if parsed:
+                cleaned[country] = parsed
+
+        queries.save_historical_leader_timeline(cleaned)
+        self.data = cleaned
+        self.roster = sorted(self.data.keys())
+        if self.active_country not in self.data:
+            self.active_country = self.roster[0] if self.roster else None
+
+        confirm_dialog.show_success(
+            "Saved",
+            "Historical timeline saved. Every historical scenario will now show these names, "
+            "adjectives and leaders automatically, based on each scenario's own date.")
+        self.refresh_ui()
+
+    # ------------------------------------------------------------------ #
+    #                              BUILD UI                               #
+    # ------------------------------------------------------------------ #
+
+    def _build_entry_row(self, entry, y):
+        fx = self.field_x
+        row1_y = y + 22
+        row2_y = y + 62
+
+        def mk(key, x, y_pos, w, numeric=False):
+            field = TextField(x, y_pos, w, FIELD_H, str(entry.get(key, "")), numeric=numeric)
+            field.entry_ref = entry
+            field.entry_key = key
+            field.pane = "timeline"
+            field.click_guard = self._guard_timeline
+            return field
+
+        self.elements.append(mk("year", fx["year"], row1_y, 52, True))
+        self.elements.append(mk("month", fx["month"], row1_y, 44, True))
+        self.elements.append(mk("day", fx["day"], row1_y, 44, True))
+        self.elements.append(mk("name", fx["name"], row1_y, 152, False))
+        self.elements.append(mk("adjective", fx["adjective"], row1_y, 152, False))
+        self.elements.append(mk("leader_name", fx["leader_name"], row2_y, 280, False))
+        self.elements.append(mk("leader_title", fx["leader_title"], row2_y, 280, False))
+
+        del_btn = Button(self.timeline_rect.right - 40, row1_y - 4, "tiny_square", "red", "X",
+                         lambda e=entry: self.delete_entry(e), font_preset="button_small")
+        del_btn.pane = "timeline"
+        del_btn.click_guard = self._guard_timeline
+        self.elements.append(del_btn)
+
+    def refresh_ui(self):
+        self._layout()
+
+        self.elements = [
+            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            Button(self.roster_rect.x, self.roster_rect.y - 40, "editor_ui", "green",
+                  "+ Add Country", self.add_country),
+            Button(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 60, "medium", "green",
+                  "Save Timeline", self.save),
+        ]
+
+        for i, y in self._rows_of("roster", len(self.roster), self.roster_rect.y,
+                                  self.roster_rect.height, ROSTER_ROW_H):
+            country = self.roster[i]
+            label = f"{country} ({len(self.data.get(country, []))})"
+            btn = Button(self.roster_rect.x, y, "list_row", "green" if country == self.active_country else "blue",
+                        truncate(label, 28), lambda cc=country: self.select_country(cc), font_preset="button_small")
+            btn.rect.width = self.roster_rect.width - 40
+            btn.is_selected = country == self.active_country
+            btn.pane = "roster"
+            btn.click_guard = self._guard_roster
+            self.elements.append(btn)
+
+            rm_btn = Button(self.roster_rect.right - 34, y + 3, "tiny_square", "red", "x",
+                            lambda cc=country: self.remove_country(cc), font_preset="button_small")
+            rm_btn.pane = "roster"
+            rm_btn.click_guard = self._guard_roster
+            self.elements.append(rm_btn)
+
+        if self.active_country:
+            self.elements.append(Button(self.timeline_rect.right - 180, self.timeline_rect.y - 40,
+                                        "editor_ui", "green", "+ Add Entry", self.add_entry))
+
+        entries = self.data.get(self.active_country, []) if self.active_country else []
+        self._entry_layout = []
+        for i, y in self._rows_of("timeline", len(entries), self.timeline_rect.y,
+                                  self.timeline_rect.height, ENTRY_ROW_H):
+            entry = entries[i]
+            self._entry_layout.append((entry, y))
+            self._build_entry_row(entry, y)
+
+    # ------------------------------------------------------------------ #
+    #                             EVENTS                                  #
+    # ------------------------------------------------------------------ #
+
+    def additional_events(self, event):
+        if event.type == pygame.MOUSEWHEEL:
+            pos = pygame.mouse.get_pos()
+            for name, rect in self.regions.items():
+                if rect.collidepoint(pos):
+                    self.handle_list_scroll(event, **self._scroll_attrs(name))
+                    return
+            return
+
+        for name in ("roster", "timeline"):
+            if self.handle_list_scroll(event, **self._scroll_attrs(name)):
+                return
+
+    # ------------------------------------------------------------------ #
+    #                             RENDERING                               #
+    # ------------------------------------------------------------------ #
+
+    def draw_elements(self, surface):
+        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
+
+        roster_scroll, roster_limit = getattr(self, "_scroll_roster", 0), getattr(self, "_max_roster", 0)
+        with ui_bars.clip_scroll_region(surface, self.roster_rect,
+                                        draw_top=roster_scroll != 0, draw_bottom=roster_scroll > roster_limit):
+            for el in self.elements:
+                if getattr(el, "pane", None) == "roster":
+                    el.draw(surface)
+
+        tl_scroll, tl_limit = getattr(self, "_scroll_timeline", 0), getattr(self, "_max_timeline", 0)
+        with ui_bars.clip_scroll_region(surface, self.timeline_rect,
+                                        draw_top=tl_scroll != 0, draw_bottom=tl_scroll > tl_limit):
+            tiny = fonts.get("tiny")
+            fx = self.field_x
+            for entry, y in self._entry_layout:
+                card_rect = pygame.Rect(self.timeline_rect.x, y, self.timeline_rect.width - 20, ENTRY_ROW_H - 10)
+                pygame.draw.rect(surface, (35, 45, 35), card_rect, border_radius=4)
+                pygame.draw.rect(surface, (80, 110, 80), card_rect, 1, border_radius=4)
+
+                row1_y, row2_y = y + 22, y + 62
+                for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),
+                                   ("name", "Name"), ("adjective", "Adjective")):
+                    cap = tiny.render(label, True, (150, 190, 150))
+                    surface.blit(cap, (fx[key], row1_y - 15))
+                for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title")):
+                    cap = tiny.render(label, True, (150, 190, 150))
+                    surface.blit(cap, (fx[key], row2_y - 15))
+
+            for el in self.elements:
+                if getattr(el, "pane", None) == "timeline":
+                    el.draw(surface)
+
+        for el in fixed:
+            el.draw(surface)
+
+    def additional_draw(self, surface):
+        p = self.roster_rect
+        small = fonts.get("small")
+        surface.blit(small.render(f"Countries Tracked ({len(self.roster)})", True, (170, 210, 170)),
+                    (p.x, p.y - 20))
+
+        if not self.roster:
+            msg = fonts.get("normal").render("Add a country to begin.", True, (200, 200, 200))
+            surface.blit(msg, (p.x + 4, p.y + 6))
+
+        pygame.draw.line(surface, (70, 95, 70), (self.timeline_rect.x - 15, TOP_Y),
+                         (self.timeline_rect.x - 15, self.roster_rect.bottom), 1)
+
+        header = fonts.get("heading2").render(
+            f"Timeline: {self.active_country}" if self.active_country else "Select a country",
+            True, c.COLOR_GOLD_HIGHLIGHT if self.active_country else (200, 200, 200))
+        surface.blit(header, (self.timeline_rect.x, self.timeline_rect.y - 40))
+
+        if self.active_country and not self.data.get(self.active_country):
+            msg = fonts.get("normal").render(
+                "No entries yet -- Add Entry sets when this country's name/adjective/leader take effect.",
+                True, (200, 200, 200))
+            surface.blit(msg, (self.timeline_rect.x + 4, self.timeline_rect.y + 6))
+
+        hint = fonts.get("small").render(
+            "Each entry applies from its date onward until a later entry overrides that field. "
+            "Blank fields keep whatever the previous entry set.", True, (170, 170, 170))
+        surface.blit(hint, (PAD, c.SCREEN_HEIGHT - 40))
+
+        self.draw_list_scrollbar(surface, self.roster_rect.right - 8, self.roster_rect.y,
+                                 self.roster_rect.height, **self._scroll_attrs("roster"))
+        self.draw_list_scrollbar(surface, self.timeline_rect.right - 8, self.timeline_rect.y,
+                                 self.timeline_rect.height, **self._scroll_attrs("timeline"))
+
+
+def open_historical_leaders_editor(on_done=None):
+    from ui.screen_runner import run_screen
+    run_screen(Historical_Leaders_Editor, on_done=on_done, caption="Historical Leaders & Names")
