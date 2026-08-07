@@ -3216,11 +3216,12 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
                       extensions=[".zip"], on_result=_after_pick)
 
-def import_gd5mod_file(game_state, on_success=None):
-    """Prompts for a .GD5MOD file and copies it into mods/, after a warning that
+def import_mod_file(game_state, on_success=None):
+    """Prompts for a .py mod file and copies it into mods/, after a warning that
     it can run arbitrary code with the user's own permissions on next launch --
-    a .GD5MOD replaces a whole Python module (see mod_loader.py), so this isn't
-    a sandboxed config format even though it looks like one.
+    a mod's first line just names the whole Python module it replaces (see
+    mod_loader.py), so picking one isn't a sandboxed action even though the
+    file itself looks like ordinary source.
 
     The mod is enabled by default (mod_loader.is_mod_enabled falls back to True
     for anything with no entry yet) but doesn't take effect until the game is
@@ -3255,12 +3256,12 @@ def import_gd5mod_file(game_state, on_success=None):
             "This mod replaces part of the game's own code and can run "
             "arbitrary code with your full user permissions the next time "
             "you launch the game -- it is not a sandboxed config file.\n\n"
-            "Only install .GD5MOD files from sources you trust.",
+            "Only install mods from sources you trust.",
             lambda confirmed: _do_copy(file_path) if confirmed else None,
         )
 
-    open_file_browser(game_state, "Select .GD5MOD File", str(Path.home() / "Downloads"),
-                      extensions=[".GD5MOD"], on_result=_after_pick)
+    open_file_browser(game_state, "Select Mod (.py) File", str(Path.home() / "Downloads"),
+                      extensions=[".py"], on_result=_after_pick)
 
 def ask_directory(game_state, title, initialdir, on_result):
     """Native folder picker; answers on_result with the chosen path, or None if cancelled."""

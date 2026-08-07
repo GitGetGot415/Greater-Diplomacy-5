@@ -1,10 +1,13 @@
-"""Applies .GD5MOD source patches before the rest of the game imports.
+"""Applies .py source-patch mods before the rest of the game imports.
 
-A .GD5MOD file's first line names a project-relative .py file to replace
-(e.g. "data/queries.py"); everything after that line is the replacement
-source for that module. Unlike the old design, the target file on disk is
-never written to -- an enabled mod's source is substituted in at import
-time via a sys.meta_path finder, so disabling or deleting a .GD5MOD just
+A mod is a plain, syntactically valid .py file living in mods/: its first
+line is a comment naming the project-relative file it replaces (e.g.
+"#data/queries.py"), and the rest is that module's replacement source --
+normally started as a copy of the real file, so IDE syntax highlighting,
+linting and accurate line numbers in tracebacks all work exactly like
+editing the game itself. Unlike the old .GD5MOD design, the target file on
+disk is never written to -- an enabled mod's source is substituted in at
+import time via a sys.meta_path finder, so disabling or deleting a mod just
 reverts to the real file on the next launch, with nothing to restore and
 no risk of losing the original.
 
@@ -29,10 +32,11 @@ STATE_PATH = os.path.join(MODS_DIR, "enabled_mods.json")
 
 
 def mod_files():
-    """Every .GD5MOD file in mods/, sorted for a deterministic scan order."""
+    """Every .py mod file in mods/, sorted for a deterministic scan order."""
     if not os.path.isdir(MODS_DIR):
         return []
-    return sorted(f for f in os.listdir(MODS_DIR) if f.lower().endswith(".gd5mod"))
+    return sorted(f for f in os.listdir(MODS_DIR)
+                  if f.lower().endswith(".py") and os.path.isfile(os.path.join(MODS_DIR, f)))
 
 
 def _load_state():
@@ -52,7 +56,7 @@ def _save_state(state):
 
 
 def is_mod_enabled(filename):
-    # A .GD5MOD dropped in by hand, with no entry yet, defaults to enabled --
+    # A mod dropped in by hand, with no entry yet, defaults to enabled --
     # matches the old drop-in-and-go behavior for anyone not using the UI.
     return _load_state().get(filename, True)
 
@@ -84,7 +88,13 @@ def _resolve_target(rel_path):
     module_name = _path_to_module_name(rel_path)
     if not module_name:
         return None, None
-    abs_target = os.path.normpath(os.path.join(BASE_DIR, rel_path))
+    # Rebuilt from module_name's parts (always "/"-delimited, per
+    # _path_to_module_name) rather than joining rel_path directly -- a mod
+    # written on Windows arrives with backslashes, which os.path.join treats
+    # as a literal filename character on macOS/Linux instead of a separator,
+    # so joining rel_path as-is would look for a file that can't exist there.
+    parts = module_name.split(".")
+    abs_target = os.path.normpath(os.path.join(BASE_DIR, *parts[:-1], parts[-1] + ".py"))
     try:
         if os.path.commonpath([BASE_DIR, abs_target]) != BASE_DIR:
             return None, None
@@ -96,14 +106,21 @@ def _resolve_target(rel_path):
 
 
 def read_mod(filename):
-    """(target_rel_path, source_text) for a .GD5MOD file. Raises ValueError on
-    an empty or otherwise malformed file instead of letting a bad mod crash
-    the caller with an IndexError."""
+    """(target_rel_path, source_text) for a mod file. source_text is the
+    *entire* file, first line included -- it's left in place as an ordinary
+    comment rather than stripped, so a compile error inside the mod reports
+    the same line number the user sees in their editor. Raises ValueError on
+    an empty file or a first line that isn't a "#path" comment, instead of
+    letting a bad mod crash the caller with an IndexError."""
     with open(os.path.join(MODS_DIR, filename), "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    if not lines or not lines[0].strip():
-        raise ValueError("missing target file on the first line")
-    return lines[0].strip(), "".join(lines[1:])
+        text = f.read()
+    first_line = text.split("\n", 1)[0].strip()
+    if not first_line.startswith("#"):
+        raise ValueError('first line must be a "#path/to/target.py" comment')
+    target = first_line[1:].strip()
+    if not target:
+        raise ValueError("missing target file after the '#' on the first line")
+    return target, text
 
 
 def describe_mod(filename):
@@ -134,6 +151,14 @@ class _ModSourceLoader(importlib.abc.Loader):
         self.origin = origin
 
     def exec_module(self, module):
+        # Set before exec (not left to importlib's own has_location/spec
+        # machinery, which doesn't kick in for a plain Loader like this one)
+        # so __file__ is already there both for the mod's own top-level code
+        # and for the module afterwards -- several screens (map.py, the
+        # editors, the file browser) read __file__ for asset-relative paths,
+        # and would break without it even though the code actually came from
+        # the mod instead of disk.
+        module.__file__ = self.origin
         code = compile(self.source, self.origin, "exec")
         exec(code, module.__dict__)
 
@@ -154,7 +179,7 @@ class _ModFinder(importlib.abc.MetaPathFinder):
 
 
 def install():
-    """Builds the override table from every enabled, valid .GD5MOD and installs
+    """Builds the override table from every enabled, valid mod and installs
     the import finder. Safe to call even with a corrupt state file or a
     garbage mod dropped in by hand -- anything that doesn't check out is
     skipped with a console message rather than blocking the game from

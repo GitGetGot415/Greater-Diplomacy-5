@@ -14,8 +14,8 @@ import os
 import sys
 
 # Must run before any project module is imported below -- see mod_loader's
-# own docstring for why. Applies enabled .GD5MOD source patches in memory
-# only; nothing on disk is touched.
+# own docstring for why. Applies enabled .py mods in memory only; nothing on
+# disk is touched.
 import mod_loader
 mod_loader.install()
 

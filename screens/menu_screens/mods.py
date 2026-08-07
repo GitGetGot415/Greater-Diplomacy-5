@@ -8,7 +8,7 @@ import data.constants as c
 import mod_loader
 
 class Mods(FolderListState):
-    """Import/list/toggle/delete screen for .GD5MOD source patches.
+    """Import/list/toggle/delete screen for .py source-patch mods.
 
     mod_loader.py applies enabled mods at process start by substituting their
     source in for the target module's real file -- nothing on disk is ever
@@ -33,10 +33,9 @@ class Mods(FolderListState):
         return c.MODS_DIR
 
     def list_folders(self, directory=None):
-        directory = self.managed_dir if directory is None else directory
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        return sorted(f for f in os.listdir(directory) if f.lower().endswith(".gd5mod"))
+        # mod_loader.mod_files() is the single source of truth for what
+        # counts as a mod (also creates mods/ if it's missing).
+        return mod_loader.mod_files()
 
     def toggle_mod(self, filename):
         info = mod_loader.describe_mod(filename)
@@ -70,8 +69,8 @@ class Mods(FolderListState):
     def refresh_ui(self):
         self.elements = [
             Button(20, 20, "small", "red", "Back", self.exit_screen),
-            Button(160, 20, "medium", "green", "Import .GD5MOD",
-                   lambda: queries.import_gd5mod_file(self, self.refresh_ui)),
+            Button(160, 20, "medium", "green", "Import Mod (.py)",
+                   lambda: queries.import_mod_file(self, self.refresh_ui)),
         ]
 
         self._row_subtext = []
