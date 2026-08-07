@@ -2300,5 +2300,83 @@
             "leader_name": "Karol Nawrocki",
             "leader_title": "President"
         }
+    ],
+    "German Empire": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "German Empire",
+            "adjective": "German",
+            "leader_name": "Wilhelm II",
+            "leader_title": "Kaiser"
+        }
+    ],
+    "German Reich": [
+        {
+            "year": 1933,
+            "month": 1,
+            "day": 30,
+            "name": "Germany",
+            "adjective": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1934,
+            "month": 8,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Fuhrer"
+        },
+        {
+            "year": 1945,
+            "month": 4,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Karl Doenitz",
+            "leader_title": "President"
+        },
+        {
+            "year": 1945,
+            "month": 5,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "None (Allied Occupation)",
+            "leader_title": "N/A"
+        }
+    ],
+    "Ottoman Empire": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Ottoman Empire",
+            "adjective": "Ottoman",
+            "leader_name": "Abdul Hamid II",
+            "leader_title": "Sultan"
+        },
+        {
+            "year": 1909,
+            "month": 4,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mehmed V",
+            "leader_title": "Sultan"
+        },
+        {
+            "year": 1918,
+            "month": 7,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mehmed VI",
+            "leader_title": "Sultan"
+        }
     ]
 }
