@@ -9,6 +9,8 @@
 - if no claims, add option to generate claims
 - edit cost for units editor?
 
+- color or colour???
+
 - edit construction turns also allows for the editing of how much said unit costs to produce?
 - diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
 - modloader thing but in game so you don't have to download the github
