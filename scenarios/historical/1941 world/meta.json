@@ -1,6 +1,6 @@
 {
     "version": "v24",
-    "generated_at": "2026-08-04T22:24:59.293399",
+    "generated_at": "2026-08-07T18:22:00.081810",
     "date": {
         "day": 15,
         "month": 5,
@@ -382,8 +382,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Fuhrer",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -431,8 +431,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Charles de Gaulle",
+            "leader_title": "Leader of Free France",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -496,8 +496,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Philippe Petain",
+            "leader_title": "President",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -572,8 +572,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Franklin D. Roosevelt",
+            "leader_title": "President",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -638,7 +638,7 @@
             "diplo_responses": {}
         },
         "German Reich": {
-            "name": "German Reich",
+            "name": "Germany",
             "color": [
                 64,
                 0,
@@ -690,8 +690,8 @@
                 "United Kingdom"
             ],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Fuhrer",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -897,8 +897,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Wilhelm II",
+            "leader_title": "Kaiser",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -995,8 +995,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "William Lyon Mackenzie King",
+            "leader_title": "Prime Minister",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1194,8 +1194,8 @@
                 "United Kingdom"
             ],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Benito Mussolini",
+            "leader_title": "Il Duce",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1272,8 +1272,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Boris III",
+            "leader_title": "Tsar",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1337,8 +1337,8 @@
                 "Soviet Union"
             ],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Ion Antonescu",
+            "leader_title": "Conducator",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1452,8 +1452,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Leopold III",
+            "leader_title": "King of the Belgians",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1504,8 +1504,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Wilhelmina",
+            "leader_title": "Queen",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1720,8 +1720,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Gustaf V",
+            "leader_title": "King",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -1963,8 +1963,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Ismet Inonu",
+            "leader_title": "President",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -2012,8 +2012,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Mehmed VI",
+            "leader_title": "Sultan",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -2147,8 +2147,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Haakon VII",
+            "leader_title": "King",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -2254,8 +2254,8 @@
                 "Slovakia"
             ],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Winston Churchill",
+            "leader_title": "Prime Minister",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -3145,8 +3145,8 @@
                 "Soviet Union"
             ],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Risto Ryti",
+            "leader_title": "President",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -3348,7 +3348,7 @@
             "at_war_with": [],
             "allied_with": [],
             "leader_name": "",
-            "leader_title": "",
+            "leader_title": "President of the Swiss Confederation (rotates annually among the Federal Council)",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -4077,8 +4077,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Wladyslaw Raczkiewicz",
+            "leader_title": "President (government-in-exile)",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -4273,8 +4273,8 @@
             "is_playable": true,
             "at_war_with": [],
             "allied_with": [],
-            "leader_name": "",
-            "leader_title": "",
+            "leader_name": "Victor Emmanuel III of Italy",
+            "leader_title": "King (Italian protectorate)",
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
@@ -40479,7 +40479,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 100
+            },
             "buildings": []
         },
         "(19, 0, 0)": {
@@ -40492,7 +40494,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": [
                 "Basic Factory"
             ]
@@ -40712,7 +40716,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(31, 0, 0)": {
@@ -42309,7 +42315,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(138, 0, 0)": {
@@ -47416,7 +47424,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(165, 1, 0)": {
@@ -54172,7 +54182,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(49, 3, 0)": {
@@ -56499,7 +56511,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {
-                "Oil": 50
+                "Oil": 100
             },
             "buildings": [
                 "Factory Lvl 1"
@@ -62390,7 +62402,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {
-                "Oil": 50
+                "Oil": 150
             },
             "buildings": []
         },
@@ -65253,7 +65265,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(174, 5, 0)": {

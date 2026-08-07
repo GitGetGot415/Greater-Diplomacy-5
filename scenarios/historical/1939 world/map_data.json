@@ -576,7 +576,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 100
+        },
         "cores": [
             "Alaska"
         ],
@@ -609,7 +611,9 @@
         "buildings": [
             "Basic Factory"
         ],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Alaska"
         ],
@@ -998,7 +1002,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Alaska"
         ],
@@ -4715,7 +4721,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Dominion of Canada"
         ],
@@ -15408,7 +15416,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "United States of America"
         ],
@@ -30486,7 +30496,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "United States of America"
         ],
@@ -34742,7 +34754,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "United States of America"
         ],
@@ -35992,7 +36006,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Oil": 100
+        },
         "cores": [
             "United States of America"
         ],
@@ -39436,7 +39452,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "United States of America"
         ],
@@ -48014,7 +48032,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "United States of America"
         ],
@@ -49114,7 +49134,7 @@
         "orders": [],
         "buildings": [],
         "resources": {
-            "Oil": 50
+            "Oil": 150
         },
         "cores": [
             "United States of America"
@@ -54126,7 +54146,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "United States of America"
         ],
