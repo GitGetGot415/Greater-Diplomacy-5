@@ -590,6 +590,296 @@
             "leader_title": "President"
         }
     ],
+    "United Kingdom": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "United Kingdom",
+            "adjective": "British",
+            "leader_name": "Lord Salisbury",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1902,
+            "month": 7,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Arthur Balfour",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1905,
+            "month": 12,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Henry Campbell-Bannerman",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1908,
+            "month": 4,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "H. H. Asquith",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1916,
+            "month": 12,
+            "day": 7,
+            "name": "",
+            "adjective": "",
+            "leader_name": "David Lloyd George",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1922,
+            "month": 10,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bonar Law",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1923,
+            "month": 5,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stanley Baldwin",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1924,
+            "month": 1,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ramsay MacDonald",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1924,
+            "month": 11,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stanley Baldwin",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1929,
+            "month": 6,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ramsay MacDonald",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1935,
+            "month": 6,
+            "day": 7,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stanley Baldwin",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1937,
+            "month": 5,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Neville Chamberlain",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1940,
+            "month": 5,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Winston Churchill",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1945,
+            "month": 7,
+            "day": 26,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Clement Attlee",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1951,
+            "month": 10,
+            "day": 26,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Winston Churchill",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1955,
+            "month": 4,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Anthony Eden",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1957,
+            "month": 1,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Harold Macmillan",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1963,
+            "month": 10,
+            "day": 19,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Alec Douglas-Home",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1964,
+            "month": 10,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Harold Wilson",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1970,
+            "month": 6,
+            "day": 19,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Edward Heath",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1974,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Harold Wilson",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1976,
+            "month": 4,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "James Callaghan",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1979,
+            "month": 5,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Margaret Thatcher",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1990,
+            "month": 11,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "John Major",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1997,
+            "month": 5,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Tony Blair",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2007,
+            "month": 6,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gordon Brown",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2010,
+            "month": 5,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "David Cameron",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2016,
+            "month": 7,
+            "day": 13,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Theresa May",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2019,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Boris Johnson",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2022,
+            "month": 9,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Liz Truss",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2022,
+            "month": 10,
+            "day": 25,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Rishi Sunak",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2024,
+            "month": 7,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Keir Starmer",
+            "leader_title": "Prime Minister"
+        }
+    ],
     "Germany": [
         {
             "year": 1900,

@@ -107,8 +107,16 @@ class Historical_Leaders_Editor(GameState):
                 "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
 
     def _rows_of(self, name, count, top, view_h, row_h):
+        # view_h is NOT forwarded to layout_list_rows: passing it explicitly
+        # would let it compute max_scroll against the full (taller) view_h
+        # while cull_bottom -- which actually gates clicks -- is shorter by
+        # row_h-2, leaving the last row a permanent sliver short of being
+        # clickable once fully scrolled into view. Omitting it makes the
+        # function derive its own view_h from cull_bottom instead, so the
+        # scroll limit and the clickable boundary always agree (see the
+        # matching comment in ui/turn_editor.py's refresh_ui).
         attrs = self._scroll_attrs(name)
-        return self.layout_list_rows(count, row_h, top, view_h=view_h,
+        return self.layout_list_rows(count, row_h, top,
                                      cull_top=top - 1, cull_bottom=top + view_h - row_h + 2,
                                      attr=attrs["attr"], limit_attr=attrs["limit_attr"],
                                      guard_attr=f"_guard_{name}")
