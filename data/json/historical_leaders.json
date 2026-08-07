@@ -2378,5 +2378,16 @@
             "leader_name": "Mehmed VI",
             "leader_title": "Sultan"
         }
+    ],
+    "Vichy France": [
+        {
+            "year": 1940,
+            "month": 1,
+            "day": 1,
+            "name": "Vichy France",
+            "adjective": "French",
+            "leader_name": "Philippe Petain",
+            "leader_title": "President"
+        }
     ]
 }

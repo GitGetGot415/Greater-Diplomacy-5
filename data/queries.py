@@ -408,8 +408,23 @@ def save_historical_leader_timeline(data):
     dated {name, adjective, leader_name, leader_title} entries)."""
     save_cached_json("historical_leaders", data)
 
+def _as_int(value, default=0):
+    """Best-effort int coercion for a timeline date component.
+
+    Entry dates are meant to be plain ints on disk (the editor's own Save
+    enforces that), but this is a hot path hit on every historical scenario
+    load -- a stray string (hand-edited JSON, a future format change, a bug
+    upstream) must never crash the whole game with a str/int comparison
+    TypeError. Anything that can't be read as a number quietly falls back to
+    `default` instead.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
 def _historical_entry_date(entry):
-    return (entry.get("year", 0), entry.get("month", 0), entry.get("day", 0))
+    return (_as_int(entry.get("year", 0)), _as_int(entry.get("month", 0)), _as_int(entry.get("day", 0)))
 
 def apply_historical_leader_timeline(nation_data, year, month, day):
     """Overrides name/adjective/leader_name/leader_title on every nation that has
@@ -428,7 +443,7 @@ def apply_historical_leader_timeline(nation_data, year, month, day):
     if not timeline:
         return
 
-    current = (year, month, day)
+    current = (_as_int(year), _as_int(month), _as_int(day))
     fields = ("name", "adjective", "leader_name", "leader_title")
 
     for country, entries in timeline.items():
