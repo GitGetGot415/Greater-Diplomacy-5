@@ -13,6 +13,12 @@ import asyncio
 import os
 import sys
 
+# Must run before any project module is imported below -- see mod_loader's
+# own docstring for why. Applies enabled .GD5MOD source patches in memory
+# only; nothing on disk is touched.
+import mod_loader
+mod_loader.install()
+
 from data.platform import IS_WEB, restore_persisted_dir
 
 # py2app / PyInstaller bundle fix: set working directory
@@ -661,30 +667,12 @@ async def _bootstrap():
     if IS_WEB:
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+        await restore_persisted_dir(c.MODS_DIR)
     game = Controller()
     await game.run()
 
 if __name__ == "__main__":
     try:
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-        for filename in os.listdir(BASE_DIR):
-            if filename.endswith(".GD5MOD"):
-                with open(os.path.join(BASE_DIR, filename), "r") as mod:
-                    lines = mod.readlines()
-
-                    target = os.path.join(BASE_DIR, lines[0].strip()) # Get the first line (target file)
-                    content = "".join(lines[1:]) # Get everything after the first line (content to be inserted)
-
-                    target = os.path.join(BASE_DIR, os.path.basename(target)) # Make it safe (So it stays in the gd5 directory)
-
-                    if not os.path.isfile(target):
-                        print(f".GD5MOD file {target} not found; continuing")
-                        continue
-
-                    with open(target, "w") as target_file:
-                        target_file.write(content)
-
         asyncio.run(_bootstrap())
     except Exception:
         import traceback

@@ -3216,6 +3216,52 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
                       extensions=[".zip"], on_result=_after_pick)
 
+def import_gd5mod_file(game_state, on_success=None):
+    """Prompts for a .GD5MOD file and copies it into mods/, after a warning that
+    it can run arbitrary code with the user's own permissions on next launch --
+    a .GD5MOD replaces a whole Python module (see mod_loader.py), so this isn't
+    a sandboxed config format even though it looks like one.
+
+    The mod is enabled by default (mod_loader.is_mod_enabled falls back to True
+    for anything with no entry yet) but doesn't take effect until the game is
+    restarted -- Python only imports a module once per process, so anything
+    already running has already loaded the unmodded version.
+    """
+    from pathlib import Path
+    from ui import confirm_dialog
+
+    def _do_copy(file_path):
+        target_name = os.path.basename(file_path)
+        os.makedirs(c.MODS_DIR, exist_ok=True)
+        dest = os.path.join(c.MODS_DIR, target_name)
+        if os.path.exists(dest):
+            stem, ext = os.path.splitext(target_name)
+            dest = os.path.join(c.MODS_DIR, f"{stem}_imported{ext}")
+        try:
+            shutil.copy2(file_path, dest)
+            sync_persisted_dir(c.MODS_DIR)
+            confirm_dialog.show_success("Import Success",
+                "Mod imported. Restart the game for it to take effect.")
+            if on_success:
+                on_success()
+        except Exception as e:
+            confirm_dialog.show_error("Import Error", str(e))
+
+    def _after_pick(file_path):
+        if not file_path:
+            return
+        confirm_dialog.ask_yes_no(
+            "Install Mod?",
+            "This mod replaces part of the game's own code and can run "
+            "arbitrary code with your full user permissions the next time "
+            "you launch the game -- it is not a sandboxed config file.\n\n"
+            "Only install .GD5MOD files from sources you trust.",
+            lambda confirmed: _do_copy(file_path) if confirmed else None,
+        )
+
+    open_file_browser(game_state, "Select .GD5MOD File", str(Path.home() / "Downloads"),
+                      extensions=[".GD5MOD"], on_result=_after_pick)
+
 def ask_directory(game_state, title, initialdir, on_result):
     """Native folder picker; answers on_result with the chosen path, or None if cancelled."""
     open_file_browser(game_state, title, initialdir, mode="select_folder", on_result=on_result)

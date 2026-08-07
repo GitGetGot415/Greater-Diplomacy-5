@@ -292,7 +292,7 @@ def _persisted_roots():
     # Lazy import: data.constants imports IS_WEB from this module, so this
     # module can't import data.constants back at top level.
     import data.constants as c
-    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR)
+    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR)
 
 
 async def restore_persisted_dir(root):
