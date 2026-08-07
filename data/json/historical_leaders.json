@@ -1,13 +1,2014 @@
 {
     "United States of America": [
         {
-            "year": 1910,
+            "year": 1900,
             "month": 1,
             "day": 1,
             "name": "United States of America",
             "adjective": "American",
+            "leader_name": "William McKinley",
+            "leader_title": "President"
+        },
+        {
+            "year": 1901,
+            "month": 9,
+            "day": 14,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Theodore Roosevelt",
+            "leader_title": "President"
+        },
+        {
+            "year": 1909,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "William Howard Taft",
+            "leader_title": "President"
+        },
+        {
+            "year": 1913,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
             "leader_name": "Woodrow Wilson",
-            "leader_title": ""
+            "leader_title": "President"
+        },
+        {
+            "year": 1921,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Warren G. Harding",
+            "leader_title": "President"
+        },
+        {
+            "year": 1923,
+            "month": 8,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Calvin Coolidge",
+            "leader_title": "President"
+        },
+        {
+            "year": 1929,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Herbert Hoover",
+            "leader_title": "President"
+        },
+        {
+            "year": 1933,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Franklin D. Roosevelt",
+            "leader_title": "President"
+        },
+        {
+            "year": 1945,
+            "month": 4,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Harry S. Truman",
+            "leader_title": "President"
+        },
+        {
+            "year": 1953,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Dwight D. Eisenhower",
+            "leader_title": "President"
+        },
+        {
+            "year": 1961,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "John F. Kennedy",
+            "leader_title": "President"
+        },
+        {
+            "year": 1963,
+            "month": 11,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Lyndon B. Johnson",
+            "leader_title": "President"
+        },
+        {
+            "year": 1969,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Richard Nixon",
+            "leader_title": "President"
+        },
+        {
+            "year": 1974,
+            "month": 8,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gerald Ford",
+            "leader_title": "President"
+        },
+        {
+            "year": 1977,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Jimmy Carter",
+            "leader_title": "President"
+        },
+        {
+            "year": 1981,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ronald Reagan",
+            "leader_title": "President"
+        },
+        {
+            "year": 1989,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "George H. W. Bush",
+            "leader_title": "President"
+        },
+        {
+            "year": 1993,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bill Clinton",
+            "leader_title": "President"
+        },
+        {
+            "year": 2001,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "George W. Bush",
+            "leader_title": "President"
+        },
+        {
+            "year": 2009,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Barack Obama",
+            "leader_title": "President"
+        },
+        {
+            "year": 2017,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Donald Trump",
+            "leader_title": "President"
+        },
+        {
+            "year": 2021,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Joe Biden",
+            "leader_title": "President"
+        },
+        {
+            "year": 2025,
+            "month": 1,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Donald Trump",
+            "leader_title": "President"
+        }
+    ],
+    "Canada": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Canada",
+            "adjective": "Canadian",
+            "leader_name": "Wilfrid Laurier",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1911,
+            "month": 10,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Robert Borden",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1920,
+            "month": 7,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Arthur Meighen",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1921,
+            "month": 12,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "William Lyon Mackenzie King",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1926,
+            "month": 6,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Arthur Meighen",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1926,
+            "month": 9,
+            "day": 25,
+            "name": "",
+            "adjective": "",
+            "leader_name": "William Lyon Mackenzie King",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1930,
+            "month": 8,
+            "day": 7,
+            "name": "",
+            "adjective": "",
+            "leader_name": "R. B. Bennett",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1935,
+            "month": 10,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "William Lyon Mackenzie King",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1948,
+            "month": 11,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Louis St. Laurent",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1957,
+            "month": 6,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "John Diefenbaker",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1963,
+            "month": 4,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Lester B. Pearson",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1968,
+            "month": 4,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Pierre Trudeau",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1979,
+            "month": 6,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Joe Clark",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1980,
+            "month": 3,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Pierre Trudeau",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1984,
+            "month": 6,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "John Turner",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1984,
+            "month": 9,
+            "day": 17,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Brian Mulroney",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1993,
+            "month": 6,
+            "day": 25,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Kim Campbell",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1993,
+            "month": 11,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Jean Chretien",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2003,
+            "month": 12,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Paul Martin",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2006,
+            "month": 2,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stephen Harper",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2015,
+            "month": 11,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Justin Trudeau",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 2025,
+            "month": 3,
+            "day": 14,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mark Carney",
+            "leader_title": "Prime Minister"
+        }
+    ],
+    "France": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "France",
+            "adjective": "French",
+            "leader_name": "Emile Loubet",
+            "leader_title": "President"
+        },
+        {
+            "year": 1906,
+            "month": 1,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Armand Fallieres",
+            "leader_title": "President"
+        },
+        {
+            "year": 1913,
+            "month": 2,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Raymond Poincare",
+            "leader_title": "President"
+        },
+        {
+            "year": 1920,
+            "month": 2,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Paul Deschanel",
+            "leader_title": "President"
+        },
+        {
+            "year": 1920,
+            "month": 9,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Alexandre Millerand",
+            "leader_title": "President"
+        },
+        {
+            "year": 1924,
+            "month": 6,
+            "day": 13,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gaston Doumergue",
+            "leader_title": "President"
+        },
+        {
+            "year": 1931,
+            "month": 6,
+            "day": 13,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Paul Doumer",
+            "leader_title": "President"
+        },
+        {
+            "year": 1932,
+            "month": 5,
+            "day": 7,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Albert Lebrun",
+            "leader_title": "President"
+        },
+        {
+            "year": 1940,
+            "month": 6,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Charles de Gaulle",
+            "leader_title": "Leader of Free France"
+        },
+        {
+            "year": 1944,
+            "month": 6,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Charles de Gaulle",
+            "leader_title": "President of the Provisional Government"
+        },
+        {
+            "year": 1947,
+            "month": 1,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Vincent Auriol",
+            "leader_title": "President"
+        },
+        {
+            "year": 1954,
+            "month": 1,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Rene Coty",
+            "leader_title": "President"
+        },
+        {
+            "year": 1959,
+            "month": 1,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Charles de Gaulle",
+            "leader_title": "President"
+        },
+        {
+            "year": 1969,
+            "month": 6,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Georges Pompidou",
+            "leader_title": "President"
+        },
+        {
+            "year": 1974,
+            "month": 5,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Valery Giscard d'Estaing",
+            "leader_title": "President"
+        },
+        {
+            "year": 1981,
+            "month": 5,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Francois Mitterrand",
+            "leader_title": "President"
+        },
+        {
+            "year": 1995,
+            "month": 5,
+            "day": 17,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Jacques Chirac",
+            "leader_title": "President"
+        },
+        {
+            "year": 2007,
+            "month": 5,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Nicolas Sarkozy",
+            "leader_title": "President"
+        },
+        {
+            "year": 2012,
+            "month": 5,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Francois Hollande",
+            "leader_title": "President"
+        },
+        {
+            "year": 2017,
+            "month": 5,
+            "day": 14,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Emmanuel Macron",
+            "leader_title": "President"
+        }
+    ],
+    "Germany": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "German Empire",
+            "adjective": "German",
+            "leader_name": "Wilhelm II",
+            "leader_title": "Kaiser"
+        },
+        {
+            "year": 1918,
+            "month": 11,
+            "day": 9,
+            "name": "Weimar Republic",
+            "adjective": "",
+            "leader_name": "Friedrich Ebert",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1919,
+            "month": 2,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Friedrich Ebert",
+            "leader_title": "President"
+        },
+        {
+            "year": 1925,
+            "month": 5,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Paul von Hindenburg",
+            "leader_title": "President"
+        },
+        {
+            "year": 1933,
+            "month": 1,
+            "day": 30,
+            "name": "Germany",
+            "adjective": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1934,
+            "month": 8,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Adolf Hitler",
+            "leader_title": "Fuhrer"
+        },
+        {
+            "year": 1945,
+            "month": 4,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Karl Doenitz",
+            "leader_title": "President"
+        },
+        {
+            "year": 1945,
+            "month": 5,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "None (Allied Occupation)",
+            "leader_title": "N/A"
+        },
+        {
+            "year": 1949,
+            "month": 9,
+            "day": 15,
+            "name": "West Germany",
+            "adjective": "",
+            "leader_name": "Konrad Adenauer",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1963,
+            "month": 10,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ludwig Erhard",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1966,
+            "month": 12,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Kurt Georg Kiesinger",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1969,
+            "month": 10,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Willy Brandt",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1974,
+            "month": 5,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Helmut Schmidt",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1982,
+            "month": 10,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Helmut Kohl",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1990,
+            "month": 10,
+            "day": 3,
+            "name": "Germany",
+            "adjective": "",
+            "leader_name": "Helmut Kohl",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 1998,
+            "month": 10,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gerhard Schroeder",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 2005,
+            "month": 11,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Angela Merkel",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 2021,
+            "month": 12,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Olaf Scholz",
+            "leader_title": "Chancellor"
+        },
+        {
+            "year": 2025,
+            "month": 5,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Friedrich Merz",
+            "leader_title": "Chancellor"
+        }
+    ],
+    "Switzerland": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Switzerland",
+            "adjective": "Swiss",
+            "leader_name": "",
+            "leader_title": "President of the Swiss Confederation (rotates annually among the Federal Council)"
+        }
+    ],
+    "Belgium": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Belgium",
+            "adjective": "Belgian",
+            "leader_name": "Leopold II",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 1909,
+            "month": 12,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Albert I",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 1934,
+            "month": 2,
+            "day": 17,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Leopold III",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 1944,
+            "month": 9,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Prince Charles",
+            "leader_title": "Regent"
+        },
+        {
+            "year": 1950,
+            "month": 7,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Leopold III",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 1951,
+            "month": 7,
+            "day": 17,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Baudouin",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 1993,
+            "month": 8,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Albert II",
+            "leader_title": "King of the Belgians"
+        },
+        {
+            "year": 2013,
+            "month": 7,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Philippe",
+            "leader_title": "King of the Belgians"
+        }
+    ],
+    "Netherlands": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Netherlands",
+            "adjective": "Dutch",
+            "leader_name": "Wilhelmina",
+            "leader_title": "Queen"
+        },
+        {
+            "year": 1948,
+            "month": 9,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Juliana",
+            "leader_title": "Queen"
+        },
+        {
+            "year": 1980,
+            "month": 4,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Beatrix",
+            "leader_title": "Queen"
+        },
+        {
+            "year": 2013,
+            "month": 4,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Willem-Alexander",
+            "leader_title": "King"
+        }
+    ],
+    "Sweden": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Sweden",
+            "adjective": "Swedish",
+            "leader_name": "Oscar II",
+            "leader_title": "King"
+        },
+        {
+            "year": 1907,
+            "month": 12,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gustaf V",
+            "leader_title": "King"
+        },
+        {
+            "year": 1950,
+            "month": 10,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gustaf VI Adolf",
+            "leader_title": "King"
+        },
+        {
+            "year": 1973,
+            "month": 9,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Carl XVI Gustaf",
+            "leader_title": "King"
+        }
+    ],
+    "Finland": [
+        {
+            "year": 1917,
+            "month": 12,
+            "day": 6,
+            "name": "Finland",
+            "adjective": "Finnish",
+            "leader_name": "Pehr Evind Svinhufvud",
+            "leader_title": "Chairman of the Senate"
+        },
+        {
+            "year": 1918,
+            "month": 12,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Carl Gustaf Emil Mannerheim",
+            "leader_title": "Regent"
+        },
+        {
+            "year": 1919,
+            "month": 7,
+            "day": 25,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Kaarlo Juho Stahlberg",
+            "leader_title": "President"
+        },
+        {
+            "year": 1925,
+            "month": 3,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Lauri Kristian Relander",
+            "leader_title": "President"
+        },
+        {
+            "year": 1931,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Pehr Evind Svinhufvud",
+            "leader_title": "President"
+        },
+        {
+            "year": 1937,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Kyosti Kallio",
+            "leader_title": "President"
+        },
+        {
+            "year": 1940,
+            "month": 12,
+            "day": 19,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Risto Ryti",
+            "leader_title": "President"
+        },
+        {
+            "year": 1944,
+            "month": 8,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Carl Gustaf Emil Mannerheim",
+            "leader_title": "President"
+        },
+        {
+            "year": 1946,
+            "month": 3,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Juho Kusti Paasikivi",
+            "leader_title": "President"
+        },
+        {
+            "year": 1956,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Urho Kekkonen",
+            "leader_title": "President"
+        },
+        {
+            "year": 1982,
+            "month": 1,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mauno Koivisto",
+            "leader_title": "President"
+        },
+        {
+            "year": 1994,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Martti Ahtisaari",
+            "leader_title": "President"
+        },
+        {
+            "year": 2000,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Tarja Halonen",
+            "leader_title": "President"
+        },
+        {
+            "year": 2012,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Sauli Niinisto",
+            "leader_title": "President"
+        },
+        {
+            "year": 2024,
+            "month": 3,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Alexander Stubb",
+            "leader_title": "President"
+        }
+    ],
+    "Norway": [
+        {
+            "year": 1905,
+            "month": 11,
+            "day": 18,
+            "name": "Norway",
+            "adjective": "Norwegian",
+            "leader_name": "Haakon VII",
+            "leader_title": "King"
+        },
+        {
+            "year": 1957,
+            "month": 9,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Olav V",
+            "leader_title": "King"
+        },
+        {
+            "year": 1991,
+            "month": 1,
+            "day": 17,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Harald V",
+            "leader_title": "King"
+        }
+    ],
+    "Romania": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Romania",
+            "adjective": "Romanian",
+            "leader_name": "Carol I",
+            "leader_title": "King"
+        },
+        {
+            "year": 1914,
+            "month": 10,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ferdinand I",
+            "leader_title": "King"
+        },
+        {
+            "year": 1927,
+            "month": 7,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Michael I",
+            "leader_title": "King"
+        },
+        {
+            "year": 1930,
+            "month": 6,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Carol II",
+            "leader_title": "King"
+        },
+        {
+            "year": 1940,
+            "month": 9,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ion Antonescu",
+            "leader_title": "Conducator (Leader)"
+        },
+        {
+            "year": 1944,
+            "month": 8,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Michael I",
+            "leader_title": "King"
+        },
+        {
+            "year": 1947,
+            "month": 12,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Constantin Ion Parhon",
+            "leader_title": "President of the Presidium"
+        },
+        {
+            "year": 1952,
+            "month": 6,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Petru Groza",
+            "leader_title": "President of the Presidium"
+        },
+        {
+            "year": 1958,
+            "month": 1,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gheorghe Gheorghiu-Dej",
+            "leader_title": "President of the State Council"
+        },
+        {
+            "year": 1965,
+            "month": 3,
+            "day": 19,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Nicolae Ceausescu",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1974,
+            "month": 3,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Nicolae Ceausescu",
+            "leader_title": "President"
+        },
+        {
+            "year": 1989,
+            "month": 12,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ion Iliescu",
+            "leader_title": "President"
+        },
+        {
+            "year": 1996,
+            "month": 11,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Emil Constantinescu",
+            "leader_title": "President"
+        },
+        {
+            "year": 2000,
+            "month": 12,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ion Iliescu",
+            "leader_title": "President"
+        },
+        {
+            "year": 2004,
+            "month": 12,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Traian Basescu",
+            "leader_title": "President"
+        },
+        {
+            "year": 2014,
+            "month": 12,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Klaus Iohannis",
+            "leader_title": "President"
+        },
+        {
+            "year": 2025,
+            "month": 5,
+            "day": 26,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Nicusor Dan",
+            "leader_title": "President"
+        }
+    ],
+    "Bulgaria": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Bulgaria",
+            "adjective": "Bulgarian",
+            "leader_name": "Ferdinand I",
+            "leader_title": "Prince"
+        },
+        {
+            "year": 1908,
+            "month": 10,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ferdinand I",
+            "leader_title": "Tsar"
+        },
+        {
+            "year": 1918,
+            "month": 10,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Boris III",
+            "leader_title": "Tsar"
+        },
+        {
+            "year": 1943,
+            "month": 8,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Simeon II",
+            "leader_title": "Tsar (regency)"
+        },
+        {
+            "year": 1946,
+            "month": 9,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Georgi Dimitrov",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1949,
+            "month": 7,
+            "day": 2,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Vulko Chervenkov",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1954,
+            "month": 3,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Todor Zhivkov",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1989,
+            "month": 11,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Petar Mladenov",
+            "leader_title": "President"
+        },
+        {
+            "year": 1990,
+            "month": 8,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Zhelyu Zhelev",
+            "leader_title": "President"
+        },
+        {
+            "year": 1997,
+            "month": 1,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Petar Stoyanov",
+            "leader_title": "President"
+        },
+        {
+            "year": 2002,
+            "month": 1,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Georgi Parvanov",
+            "leader_title": "President"
+        },
+        {
+            "year": 2012,
+            "month": 1,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Rosen Plevneliev",
+            "leader_title": "President"
+        },
+        {
+            "year": 2017,
+            "month": 1,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Rumen Radev",
+            "leader_title": "President"
+        }
+    ],
+    "Turkey": [
+        {
+            "year": 1900,
+            "month": 1,
+            "day": 1,
+            "name": "Ottoman Empire",
+            "adjective": "Ottoman",
+            "leader_name": "Abdul Hamid II",
+            "leader_title": "Sultan"
+        },
+        {
+            "year": 1909,
+            "month": 4,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mehmed V",
+            "leader_title": "Sultan"
+        },
+        {
+            "year": 1918,
+            "month": 7,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mehmed VI",
+            "leader_title": "Sultan"
+        },
+        {
+            "year": 1922,
+            "month": 11,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Mustafa Kemal",
+            "leader_title": "President of the Grand National Assembly"
+        },
+        {
+            "year": 1923,
+            "month": 10,
+            "day": 29,
+            "name": "Turkey",
+            "adjective": "Turkish",
+            "leader_name": "Mustafa Kemal Ataturk",
+            "leader_title": "President"
+        },
+        {
+            "year": 1938,
+            "month": 11,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ismet Inonu",
+            "leader_title": "President"
+        },
+        {
+            "year": 1950,
+            "month": 5,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Celal Bayar",
+            "leader_title": "President"
+        },
+        {
+            "year": 1960,
+            "month": 5,
+            "day": 27,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Cemal Gursel",
+            "leader_title": "President"
+        },
+        {
+            "year": 1966,
+            "month": 3,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Cevdet Sunay",
+            "leader_title": "President"
+        },
+        {
+            "year": 1973,
+            "month": 4,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Fahri Koruturk",
+            "leader_title": "President"
+        },
+        {
+            "year": 1980,
+            "month": 9,
+            "day": 14,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Kenan Evren",
+            "leader_title": "President"
+        },
+        {
+            "year": 1989,
+            "month": 11,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Turgut Ozal",
+            "leader_title": "President"
+        },
+        {
+            "year": 1993,
+            "month": 5,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Suleyman Demirel",
+            "leader_title": "President"
+        },
+        {
+            "year": 2000,
+            "month": 5,
+            "day": 16,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ahmet Necdet Sezer",
+            "leader_title": "President"
+        },
+        {
+            "year": 2007,
+            "month": 8,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Abdullah Gul",
+            "leader_title": "President"
+        },
+        {
+            "year": 2014,
+            "month": 8,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Recep Tayyip Erdogan",
+            "leader_title": "President"
+        }
+    ],
+    "Italy": [
+        {
+            "year": 1900,
+            "month": 7,
+            "day": 29,
+            "name": "Italy",
+            "adjective": "Italian",
+            "leader_name": "Victor Emmanuel III",
+            "leader_title": "King"
+        },
+        {
+            "year": 1922,
+            "month": 10,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Benito Mussolini",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1925,
+            "month": 12,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Benito Mussolini",
+            "leader_title": "Duce (Head of Government)"
+        },
+        {
+            "year": 1943,
+            "month": 7,
+            "day": 25,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Pietro Badoglio",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1944,
+            "month": 6,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ivanoe Bonomi",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1945,
+            "month": 12,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Alcide De Gasperi",
+            "leader_title": "Prime Minister"
+        },
+        {
+            "year": 1946,
+            "month": 6,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Enrico De Nicola",
+            "leader_title": "Provisional Head of State"
+        },
+        {
+            "year": 1948,
+            "month": 5,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Luigi Einaudi",
+            "leader_title": "President"
+        },
+        {
+            "year": 1955,
+            "month": 5,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Giovanni Gronchi",
+            "leader_title": "President"
+        },
+        {
+            "year": 1962,
+            "month": 5,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Antonio Segni",
+            "leader_title": "President"
+        },
+        {
+            "year": 1964,
+            "month": 12,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Giuseppe Saragat",
+            "leader_title": "President"
+        },
+        {
+            "year": 1971,
+            "month": 12,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Giovanni Leone",
+            "leader_title": "President"
+        },
+        {
+            "year": 1978,
+            "month": 7,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Sandro Pertini",
+            "leader_title": "President"
+        },
+        {
+            "year": 1985,
+            "month": 7,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Francesco Cossiga",
+            "leader_title": "President"
+        },
+        {
+            "year": 1992,
+            "month": 5,
+            "day": 28,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Oscar Luigi Scalfaro",
+            "leader_title": "President"
+        },
+        {
+            "year": 1999,
+            "month": 5,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Carlo Azeglio Ciampi",
+            "leader_title": "President"
+        },
+        {
+            "year": 2006,
+            "month": 5,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Giorgio Napolitano",
+            "leader_title": "President"
+        },
+        {
+            "year": 2015,
+            "month": 2,
+            "day": 3,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Sergio Mattarella",
+            "leader_title": "President"
+        }
+    ],
+    "Albania": [
+        {
+            "year": 1912,
+            "month": 11,
+            "day": 28,
+            "name": "Albania",
+            "adjective": "Albanian",
+            "leader_name": "Ismail Qemali",
+            "leader_title": "Head of the Provisional Government"
+        },
+        {
+            "year": 1914,
+            "month": 3,
+            "day": 7,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Wilhelm of Wied",
+            "leader_title": "Prince of Albania"
+        },
+        {
+            "year": 1925,
+            "month": 1,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ahmet Zogu",
+            "leader_title": "President"
+        },
+        {
+            "year": 1928,
+            "month": 9,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Zog I",
+            "leader_title": "King"
+        },
+        {
+            "year": 1939,
+            "month": 4,
+            "day": 12,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Victor Emmanuel III of Italy",
+            "leader_title": "King (Italian protectorate)"
+        },
+        {
+            "year": 1943,
+            "month": 9,
+            "day": 8,
+            "name": "",
+            "adjective": "",
+            "leader_name": "",
+            "leader_title": "German Occupation (no unified government)"
+        },
+        {
+            "year": 1944,
+            "month": 11,
+            "day": 29,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Enver Hoxha",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1985,
+            "month": 4,
+            "day": 13,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ramiz Alia",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1991,
+            "month": 4,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ramiz Alia",
+            "leader_title": "President"
+        },
+        {
+            "year": 1992,
+            "month": 4,
+            "day": 9,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Sali Berisha",
+            "leader_title": "President"
+        },
+        {
+            "year": 1997,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Rexhep Meidani",
+            "leader_title": "President"
+        },
+        {
+            "year": 2002,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Alfred Moisiu",
+            "leader_title": "President"
+        },
+        {
+            "year": 2007,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bamir Topi",
+            "leader_title": "President"
+        },
+        {
+            "year": 2012,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bujar Nishani",
+            "leader_title": "President"
+        },
+        {
+            "year": 2017,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ilir Meta",
+            "leader_title": "President"
+        },
+        {
+            "year": 2022,
+            "month": 7,
+            "day": 24,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bajram Begaj",
+            "leader_title": "President"
+        }
+    ],
+    "Poland": [
+        {
+            "year": 1917,
+            "month": 10,
+            "day": 27,
+            "name": "Kingdom of Poland",
+            "adjective": "Polish",
+            "leader_name": "Regency Council",
+            "leader_title": "Regents (collective head of state)"
+        },
+        {
+            "year": 1918,
+            "month": 11,
+            "day": 22,
+            "name": "Poland",
+            "adjective": "",
+            "leader_name": "Jozef Pilsudski",
+            "leader_title": "Chief of State"
+        },
+        {
+            "year": 1922,
+            "month": 12,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Gabriel Narutowicz",
+            "leader_title": "President"
+        },
+        {
+            "year": 1922,
+            "month": 12,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stanislaw Wojciechowski",
+            "leader_title": "President"
+        },
+        {
+            "year": 1926,
+            "month": 6,
+            "day": 4,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Ignacy Moscicki",
+            "leader_title": "President"
+        },
+        {
+            "year": 1939,
+            "month": 9,
+            "day": 30,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Wladyslaw Raczkiewicz",
+            "leader_title": "President (government-in-exile)"
+        },
+        {
+            "year": 1945,
+            "month": 1,
+            "day": 1,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Boleslaw Bierut",
+            "leader_title": "Chairman of the National Council"
+        },
+        {
+            "year": 1947,
+            "month": 2,
+            "day": 5,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Boleslaw Bierut",
+            "leader_title": "President"
+        },
+        {
+            "year": 1948,
+            "month": 12,
+            "day": 15,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Boleslaw Bierut",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1956,
+            "month": 3,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Edward Ochab",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1956,
+            "month": 10,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Wladyslaw Gomulka",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1970,
+            "month": 12,
+            "day": 20,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Edward Gierek",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1980,
+            "month": 9,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Stanislaw Kania",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1981,
+            "month": 10,
+            "day": 18,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Wojciech Jaruzelski",
+            "leader_title": "First Secretary"
+        },
+        {
+            "year": 1989,
+            "month": 7,
+            "day": 19,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Wojciech Jaruzelski",
+            "leader_title": "President"
+        },
+        {
+            "year": 1990,
+            "month": 12,
+            "day": 22,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Lech Walesa",
+            "leader_title": "President"
+        },
+        {
+            "year": 1995,
+            "month": 12,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Aleksander Kwasniewski",
+            "leader_title": "President"
+        },
+        {
+            "year": 2005,
+            "month": 12,
+            "day": 23,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Lech Kaczynski",
+            "leader_title": "President"
+        },
+        {
+            "year": 2010,
+            "month": 4,
+            "day": 10,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Bronislaw Komorowski",
+            "leader_title": "President"
+        },
+        {
+            "year": 2015,
+            "month": 8,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Andrzej Duda",
+            "leader_title": "President"
+        },
+        {
+            "year": 2025,
+            "month": 8,
+            "day": 6,
+            "name": "",
+            "adjective": "",
+            "leader_name": "Karol Nawrocki",
+            "leader_title": "President"
         }
     ]
 }
