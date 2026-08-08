@@ -645,10 +645,13 @@ class Historical_Leaders_Editor(GameState):
                 True, (200, 200, 200))
             surface.blit(msg, (self.timeline_rect.x + 4, self.timeline_rect.y + 6))
 
-        hint = fonts.get("small").render(
-            "Each entry applies from its date onward until a later entry overrides that field. "
+        hint_line1 = fonts.get("small").render(
+            "Each entry applies from its date onward until a later entry overrides that field.",
+            True, (170, 170, 170))
+        hint_line2 = fonts.get("small").render(
             "Blank fields keep whatever the previous entry set.", True, (170, 170, 170))
-        surface.blit(hint, (PAD, c.SCREEN_HEIGHT - 40))
+        surface.blit(hint_line1, (PAD, c.SCREEN_HEIGHT - 40))
+        surface.blit(hint_line2, (PAD, c.SCREEN_HEIGHT - 24))
 
         self.draw_list_scrollbar(surface, self.roster_rect.right - 8, self.roster_rect.y,
                                  self.roster_rect.height, **self._scroll_attrs("roster"))
