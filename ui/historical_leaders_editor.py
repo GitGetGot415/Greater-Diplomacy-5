@@ -346,6 +346,21 @@ class Historical_Leaders_Editor(GameState):
     #                              BUILD UI                               #
     # ------------------------------------------------------------------ #
 
+    def _effective_field(self, entries, entry, field):
+        """Resolves what this entry will actually render as once applied in
+        play, mirroring queries.apply_historical_leader_timeline: the entry's
+        own value if it set one, else the latest earlier entry's value, else
+        None -- same fall-through so the swatch preview never lies about
+        what a blank field on this entry actually means."""
+        value = None
+        for e in sorted(entries, key=_date_key):
+            v = e.get(field)
+            if v:
+                value = v
+            if e is entry:
+                break
+        return value
+
     def _preview_surf(self, b64_data, size, is_portrait, target_size):
         """Decodes a flag/portrait entry (None falls back to the country's
         normal appearance, same as an unset field does in play) and scales
@@ -354,7 +369,7 @@ class Historical_Leaders_Editor(GameState):
                                           country_name=self.active_country)
         return pygame.transform.smoothscale(full, target_size)
 
-    def _build_entry_row(self, entry, y):
+    def _build_entry_row(self, entry, y, entries):
         fx = self.field_x
         row1_y = y + ROW1_Y_OFFSET
         row2_y = y + ROW2_Y_OFFSET
@@ -398,7 +413,8 @@ class Historical_Leaders_Editor(GameState):
             ("portrait", c.PORTRAIT_SIZE, True, PORTRAIT_PREVIEW_SIZE, self.pick_portrait, self.clear_portrait),
         ):
             has_override = bool(entry.get(f"{key}_data"))
-            preview = self._preview_surf(entry.get(f"{key}_data"), size, is_portrait, preview_size)
+            effective = self._effective_field(entries, entry, f"{key}_data")
+            preview = self._preview_surf(effective, size, is_portrait, preview_size)
 
             img_btn = Button(fx[key], row2_y - 1, "tiny_square", "grey", "",
                              lambda e=entry, cb=pick_cb: cb(e), image=preview, show_text=False)
@@ -466,7 +482,7 @@ class Historical_Leaders_Editor(GameState):
                                   self.timeline_rect.height, ENTRY_ROW_H):
             entry = entries[i]
             self._entry_layout.append((entry, y))
-            self._build_entry_row(entry, y)
+            self._build_entry_row(entry, y, entries)
 
     # ------------------------------------------------------------------ #
     #                             EVENTS                                  #
