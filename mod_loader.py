@@ -16,6 +16,11 @@ main.py): Python only executes a module's top-level code once per process
 and caches the result in sys.modules, so installing the finder any later
 would miss every module already imported by that point.
 
+Every mod is also either sandboxed or unsandboxed (sandboxed by default --
+see set_mod_sandboxed()/is_mod_sandboxed()). A sandboxed mod's own code
+can't touch the filesystem or spawn processes/sockets; see the "Sandboxing"
+section below for how and how well that's enforced.
+
 Deliberately dependency-free (stdlib only) so it can run as the very first
 thing main.py does, before anything else -- including data.constants -- has
 loaded.
@@ -89,20 +94,52 @@ def _save_state(state):
         json.dump(state, f, indent=2)
 
 
+def _entry(filename):
+    """The per-mod state dict, normalizing the legacy format (enabled_mods.json
+    used to map filename -> a plain enabled bool, from before mods could be
+    individually sandboxed) into {"enabled": ..., "sandboxed": ...}."""
+    raw = _load_state().get(filename)
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, bool):
+        return {"enabled": raw}
+    return {}
+
+
 def is_mod_enabled(filename):
     # A mod dropped in by hand, with no entry yet, defaults to enabled --
     # matches the old drop-in-and-go behavior for anyone not using the UI.
-    return _load_state().get(filename, True)
+    return _entry(filename).get("enabled", True)
+
+
+def is_mod_sandboxed(filename):
+    # No entry yet (freshly imported, or dropped in by hand) defaults to
+    # sandboxed -- mods should be opt-in to filesystem/process access, not
+    # opt-out.
+    return _entry(filename).get("sandboxed", True)
+
+
+def _set_field(filename, key, value):
+    state = _load_state()
+    entry = state.get(filename)
+    entry = dict(entry) if isinstance(entry, dict) else {}
+    entry[key] = value
+    state[filename] = entry
+    _save_state(state)
 
 
 def set_mod_enabled(filename, enabled):
     """enabled=None clears the entry entirely (used when a mod is deleted)."""
-    state = _load_state()
     if enabled is None:
+        state = _load_state()
         state.pop(filename, None)
-    else:
-        state[filename] = enabled
-    _save_state(state)
+        _save_state(state)
+        return
+    _set_field(filename, "enabled", enabled)
+
+
+def set_mod_sandboxed(filename, sandboxed):
+    _set_field(filename, "sandboxed", sandboxed)
 
 
 def _path_to_module_name(rel_path):
@@ -162,7 +199,8 @@ def describe_mod(filename):
     current enabled state. Never raises -- a bad mod just comes back invalid
     with an explanation in "error"."""
     info = {"target": None, "module": None, "valid": False, "error": None,
-            "enabled": is_mod_enabled(filename), "active": is_mod_active(filename)}
+            "enabled": is_mod_enabled(filename), "active": is_mod_active(filename),
+            "sandboxed": is_mod_sandboxed(filename)}
     try:
         target, _source = read_mod(filename)
         info["target"] = target
@@ -179,10 +217,69 @@ def describe_mod(filename):
     return info
 
 
+# --- Sandboxing -------------------------------------------------------
+#
+# A sandboxed mod's own code shouldn't be able to touch the filesystem or
+# spawn processes/sockets. Stripping dangerous names out of its builtins
+# doesn't actually hold up: every other already-imported module's
+# __dict__["__builtins__"] still points at the real, unrestricted builtins,
+# so a mod could get back to the real open() just by importing something
+# harmless and reading it off there.
+#
+# sys.addaudithook() (PEP 578) does hold up -- it intercepts these
+# operations at the C level no matter what name or module was used to reach
+# them, and once installed it can't be removed from Python. The hook below
+# only blocks the call when the *direct* Python caller of the audited
+# operation is a sandboxed mod's own code (marked via a sentinel key in its
+# module dict, i.e. every frame of every function that mod defines). If a
+# sandboxed mod calls into other, already-existing game code that does file
+# I/O as part of its normal job, that's the existing code's own business --
+# not a new capability the mod introduced -- so it's left alone.
+#
+# This is a best-effort guard against careless or lazily malicious mods, not
+# a hardened security boundary: a sufficiently determined mod could still
+# find another way to reach the filesystem through CPython internals. Only
+# install mods -- sandboxed or not -- from sources you trust.
+
+_SANDBOX_BLOCKED_EVENTS = {
+    "open", "os.remove", "os.rmdir", "os.removedirs", "os.rename", "os.replace",
+    "os.mkdir", "os.makedirs", "os.truncate", "os.chmod", "os.chown", "os.chflags",
+    "os.lchflags", "os.link", "os.symlink", "os.listdir", "os.scandir", "os.system",
+    "os.popen", "os.spawn", "os.exec", "os.fork", "os.forkpty", "os.posix_spawn",
+    "os.kill", "os.killpg", "os.putenv", "os.unsetenv", "os.startfile",
+    "subprocess.Popen", "shutil.rmtree", "shutil.copyfile", "shutil.copytree",
+    "shutil.move",
+}
+_SANDBOX_BLOCKED_PREFIXES = ("socket.", "ctypes.")
+_SANDBOX_MARKER = "__gd5_mod_sandbox__"
+_audit_hook_installed = False
+
+
+def _sandbox_audit_hook(event, args):
+    if event not in _SANDBOX_BLOCKED_EVENTS and not event.startswith(_SANDBOX_BLOCKED_PREFIXES):
+        return
+    # frame 0 is this hook itself; frame 1 is whatever Python code directly
+    # invoked the audited operation.
+    caller = sys._getframe(1)
+    if caller is not None and caller.f_globals.get(_SANDBOX_MARKER):
+        raise PermissionError(
+            f"'{event}' is disabled because this mod is running sandboxed -- "
+            "switch it to Unsandboxed on the Mods screen if it needs file/system access."
+        )
+
+
+def _install_sandbox_audit_hook():
+    global _audit_hook_installed
+    if not _audit_hook_installed:
+        sys.addaudithook(_sandbox_audit_hook)
+        _audit_hook_installed = True
+
+
 class _ModSourceLoader(importlib.abc.Loader):
-    def __init__(self, source, origin):
+    def __init__(self, source, origin, sandboxed):
         self.source = source
         self.origin = origin
+        self.sandboxed = sandboxed
 
     def exec_module(self, module):
         # Set before exec (not left to importlib's own has_location/spec
@@ -193,6 +290,11 @@ class _ModSourceLoader(importlib.abc.Loader):
         # and would break without it even though the code actually came from
         # the mod instead of disk.
         module.__file__ = self.origin
+        if self.sandboxed:
+            # Lives in the module's own globals, so every function this mod
+            # defines carries it forever (as f_globals), for as long as
+            # anything -- mod code or later game code -- calls into them.
+            module.__dict__[_SANDBOX_MARKER] = True
         code = compile(self.source, self.origin, "exec")
         exec(code, module.__dict__)
 
@@ -202,14 +304,14 @@ class _ModSourceLoader(importlib.abc.Loader):
 
 class _ModFinder(importlib.abc.MetaPathFinder):
     def __init__(self, overrides):
-        self.overrides = overrides  # module_name -> (source, origin_path)
+        self.overrides = overrides  # module_name -> (source, origin_path, sandboxed)
 
     def find_spec(self, fullname, path, target=None):
         entry = self.overrides.get(fullname)
         if entry is None:
             return None
-        source, origin = entry
-        return importlib.util.spec_from_loader(fullname, _ModSourceLoader(source, origin), origin=origin)
+        source, origin, sandboxed = entry
+        return importlib.util.spec_from_loader(fullname, _ModSourceLoader(source, origin, sandboxed), origin=origin)
 
 
 def install():
@@ -241,10 +343,12 @@ def install():
                 print(f"Skipping mod '{filename}': {target} is already patched by another enabled mod")
                 continue
 
-            overrides[module_name] = (source, abs_target)
+            overrides[module_name] = (source, abs_target, is_mod_sandboxed(filename))
             _active_mods.add(filename)
 
         if overrides:
+            if any(sandboxed for _source, _origin, sandboxed in overrides.values()):
+                _install_sandbox_audit_hook()
             sys.meta_path.insert(0, _ModFinder(overrides))
     except Exception as e:
         print(f"Mod loading failed, continuing without mods: {e}")

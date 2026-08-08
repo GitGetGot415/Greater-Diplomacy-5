@@ -3268,13 +3268,17 @@ def import_mod_file(game_state, on_success=None):
     """Prompts for a .py mod file and copies it into mods/, after a warning that
     it can run arbitrary code with the user's own permissions on next launch --
     a mod's first line just names the whole Python module it replaces (see
-    mod_loader.py), so picking one isn't a sandboxed action even though the
-    file itself looks like ordinary source.
+    mod_loader.py). Picking one isn't a fully sandboxed action even though the
+    file itself looks like ordinary source: mods are sandboxed by *default*
+    (mod_loader.is_mod_sandboxed falls back to True for anything with no entry
+    yet, matching the Mods screen's default for a freshly imported mod), which
+    blocks filesystem/process access but is a best-effort guard, not a
+    hardened security boundary -- see mod_loader.py's "Sandboxing" section.
 
-    The mod is enabled by default (mod_loader.is_mod_enabled falls back to True
-    for anything with no entry yet) but doesn't take effect until the game is
-    restarted -- Python only imports a module once per process, so anything
-    already running has already loaded the unmodded version.
+    The mod is also enabled by default (mod_loader.is_mod_enabled falls back
+    to True for anything with no entry yet) but doesn't take effect until the
+    game is restarted -- Python only imports a module once per process, so
+    anything already running has already loaded the unmodded version.
     """
     from pathlib import Path
     from ui import confirm_dialog
@@ -3301,9 +3305,10 @@ def import_mod_file(game_state, on_success=None):
             return
         confirm_dialog.ask_yes_no(
             "Install Mod?",
-            "This mod replaces part of the game's own code and can run "
-            "arbitrary code with your full user permissions the next time "
-            "you launch the game -- it is not a sandboxed config file.\n\n"
+            "This mod replaces part of the game's own code. It will run "
+            "sandboxed by default (no file or process access, see the Mods "
+            "screen to change that) -- but sandboxing is a best-effort guard, "
+            "not a hard security boundary.\n\n"
             "Only install mods from sources you trust.",
             lambda confirmed: _do_copy(file_path) if confirmed else None,
         )

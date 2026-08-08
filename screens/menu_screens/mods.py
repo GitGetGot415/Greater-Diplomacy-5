@@ -16,6 +16,11 @@ class Mods(FolderListState):
     real file next launch. Nothing here can affect the game that's already
     running: Python only imports a module once per process, so every change
     made on this screen needs a restart to take effect.
+
+    Each mod is also independently sandboxed or unsandboxed (sandboxed by
+    default): a sandboxed mod's own code can't touch the filesystem or spawn
+    processes/sockets, only replace behavior. See mod_loader.py's "Sandboxing"
+    section for what that does and doesn't protect against.
     """
     back_state = "MENU"
     title = "MODS"
@@ -54,6 +59,11 @@ class Mods(FolderListState):
                     mod_loader.set_mod_enabled(other, False)
 
         mod_loader.set_mod_enabled(filename, new_enabled)
+        queries.sync_persisted_dir(self.managed_dir)
+        self.refresh_ui()
+
+    def toggle_sandbox(self, filename):
+        mod_loader.set_mod_sandboxed(filename, not mod_loader.is_mod_sandboxed(filename))
         queries.sync_persisted_dir(self.managed_dir)
         self.refresh_ui()
 
@@ -105,11 +115,20 @@ class Mods(FolderListState):
         name_btn = Button(20, btn_y, "save_file", name_color, f"{state_label} {filename}",
                           lambda f=filename: self.toggle_mod(f))
         name_btn.text_align = "left"
-        name_btn.rect.width = 975
+        name_btn.rect.width = 935
         name_btn.disabled = not info["valid"]
         name_btn.is_scrollable = True
         name_btn.click_guard = self.scroll_click_guard
         self.elements.append(name_btn)
+
+        sandboxed = info["sandboxed"]
+        sandbox_btn = Button(965, btn_y, "tiny_square", "green" if sandboxed else "orange",
+                             "BOX" if sandboxed else "RAW",
+                             lambda f=filename: self.toggle_sandbox(f), font_preset="tiny")
+        sandbox_btn.disabled = not info["valid"]
+        sandbox_btn.is_scrollable = True
+        sandbox_btn.click_guard = self.scroll_click_guard
+        self.elements.append(sandbox_btn)
 
         del_btn = Button(1005, btn_y, "tiny_square", "red", "X",
                          lambda f=filename: self.start_delete(f))
@@ -119,6 +138,8 @@ class Mods(FolderListState):
         self.elements.append(del_btn)
 
         subtext = f"-> {info['target']}" if info["target"] else ""
+        if subtext:
+            subtext += "  [Sandboxed]" if sandboxed else "  [Unsandboxed]"
         if info["error"]:
             subtext = f"{subtext}  ({info['error']})" if subtext else info["error"]
         self._row_subtext.append((subtext, 25, btn_y + 32))
