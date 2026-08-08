@@ -74,11 +74,10 @@ class New_Game(GameState):
         ]
 
         if self.sub_state == "HISTORICAL":
-            """history_btn = Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
+            history_btn = Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
                                  self.open_historical_leaders_editor)
-            # Off by default; the "Enable Historical Leaders Editor" mod re-enables it.
-            history_btn.apply_state(enabled=False)
-            self.elements.append(history_btn)"""
+            history_btn.apply_state(enabled=True)
+            self.elements.append(history_btn)
 
         scenario_dir = self.scenario_dir
         if not os.path.exists(scenario_dir):
