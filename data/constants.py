@@ -140,7 +140,8 @@ CREDITS_DATA = [
                 {
                     "link_text": "neptune2019",
                     "info": ("Maps Added:\n"
-                    "- Kaiserreich 1936"),
+                    "- Kaiserreich 1936\n"
+                    "- 1939 fixed schizo scenario"),
                     "align": "left",
                 },
             ]
