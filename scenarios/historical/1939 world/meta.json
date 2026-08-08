@@ -2321,7 +2321,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -2338,7 +2338,7 @@
                 "Shanxi": 100,
                 "Manchukuo": -100,
                 "Mengjiang": -100,
-                "Japanese Empire": -100
+                "Japan": -100
             },
             "faction": "Chinese Unified Front",
             "is_faction_leader": true,
@@ -2388,7 +2388,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -2403,7 +2403,7 @@
                 "Xibei San Ma": 100,
                 "Xinjiang": 100,
                 "Shanxi": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Mengjiang": -100,
                 "Manchukuo": -100
             },
@@ -4471,7 +4471,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -4486,7 +4486,7 @@
                 "Xibei San Ma": 100,
                 "Xinjiang": 100,
                 "Shanxi": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Manchukuo": -100,
                 "Mengjiang": -100
             },
@@ -4536,7 +4536,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -4551,7 +4551,7 @@
                 "Xibei San Ma": 100,
                 "Xinjiang": 100,
                 "Shanxi": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Mengjiang": -100,
                 "Manchukuo": -100
             },
@@ -4601,7 +4601,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -4616,7 +4616,7 @@
                 "Yunnan": 100,
                 "Xinjiang": 100,
                 "Shanxi": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Mengjiang": -100,
                 "Manchukuo": -100
             },
@@ -4666,7 +4666,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -4681,7 +4681,7 @@
                 "Yunnan": 100,
                 "Xibei San Ma": 100,
                 "Shanxi": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Mengjiang": -100,
                 "Manchukuo": -100
             },
@@ -5629,7 +5629,7 @@
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
             "relations": {
-                "Japanese Empire": 100,
+                "Japan": 100,
                 "Mengjiang": 100,
                 "Nationalist China": -100,
                 "Communist China": -100,
@@ -5641,7 +5641,7 @@
             },
             "faction": "Greater East Asia Co-Prosperity Sphere",
             "is_faction_leader": false,
-            "master": "Japanese Empire",
+            "master": "Japan",
             "puppet_type": "Integrated",
             "siphon_rates": {
                 "manpower": 0.0,
@@ -5828,8 +5828,8 @@
             "adjective": "Scottish",
             "diplo_responses": {}
         },
-        "Japanese Empire": {
-            "name": "Japanese Empire",
+        "Japan": {
+            "name": "Japan",
             "color": [
                 255,
                 191,
@@ -10778,7 +10778,7 @@
             "pending_diplomacy": {},
             "relations": {
                 "Manchukuo": 100,
-                "Japanese Empire": 100,
+                "Japan": 100,
                 "Nationalist China": -100,
                 "Communist China": -100,
                 "Shanxi": -100,
@@ -20328,8 +20328,8 @@
             "adjective": "Indian",
             "diplo_responses": {}
         },
-        "British-Japanese Empire": {
-            "name": "British-Japanese Empire",
+        "British-Japan": {
+            "name": "British-Japan",
             "color": [
                 255,
                 128,
@@ -26618,38 +26618,38 @@
             },
             "Greater East Asia Co-Prosperity Sphere": {
                 "469": "Manchukuo",
-                "500": "Japanese Empire",
+                "500": "Japan",
                 "552": "Manchukuo",
                 "574": "Manchukuo",
                 "586": "Manchukuo",
-                "627": "Japanese Empire",
+                "627": "Japan",
                 "630": "Manchukuo",
                 "662": "Manchukuo",
-                "689": "Japanese Empire",
+                "689": "Japan",
                 "700": "Manchukuo",
                 "771": "Manchukuo",
                 "789": "Manchukuo",
-                "791": "Japanese Empire",
+                "791": "Japan",
                 "797": "Manchukuo",
                 "820": "Mengjiang",
-                "821": "Japanese Empire",
+                "821": "Japan",
                 "835": "Manchukuo",
                 "854": "Manchukuo",
-                "859": "Japanese Empire",
+                "859": "Japan",
                 "875": "Manchukuo",
-                "876": "Japanese Empire",
+                "876": "Japan",
                 "879": "Mengjiang",
                 "880": "Manchukuo",
                 "887": "Manchukuo",
-                "899": "Japanese Empire",
+                "899": "Japan",
                 "920": "Manchukuo",
                 "921": "Manchukuo",
-                "925": "Japanese Empire",
+                "925": "Japan",
                 "936": "Mengjiang",
                 "945": "Manchukuo",
                 "947": "Manchukuo",
-                "963": "Japanese Empire",
-                "964": "Japanese Empire",
+                "963": "Japan",
+                "964": "Japan",
                 "967": "Manchukuo",
                 "974": "Mengjiang",
                 "982": "Manchukuo",
@@ -26657,72 +26657,72 @@
                 "992": "Manchukuo",
                 "994": "Mengjiang",
                 "998": "Manchukuo",
-                "999": "Japanese Empire",
-                "1006": "Japanese Empire",
-                "1009": "Japanese Empire",
+                "999": "Japan",
+                "1006": "Japan",
+                "1009": "Japan",
                 "1020": "Manchukuo",
-                "1029": "Japanese Empire",
-                "1037": "Japanese Empire",
-                "1057": "Japanese Empire",
-                "1065": "Japanese Empire",
-                "1066": "Japanese Empire",
-                "1067": "Japanese Empire",
-                "1074": "Japanese Empire",
-                "1081": "Japanese Empire",
-                "1092": "Japanese Empire",
-                "1096": "Japanese Empire",
-                "1101": "Japanese Empire",
-                "1104": "Japanese Empire",
-                "1112": "Japanese Empire",
-                "1129": "Japanese Empire",
-                "1130": "Japanese Empire",
-                "1133": "Japanese Empire",
-                "1137": "Japanese Empire",
-                "1144": "Japanese Empire",
-                "1145": "Japanese Empire",
-                "1146": "Japanese Empire",
-                "1149": "Japanese Empire",
-                "1157": "Japanese Empire",
-                "1167": "Japanese Empire",
-                "1173": "Japanese Empire",
-                "1178": "Japanese Empire",
-                "1183": "Japanese Empire",
-                "1184": "Japanese Empire",
-                "1190": "Japanese Empire",
-                "1191": "Japanese Empire",
-                "1192": "Japanese Empire",
-                "1199": "Japanese Empire",
-                "1201": "Japanese Empire",
-                "1205": "Japanese Empire",
-                "1206": "Japanese Empire",
-                "1207": "Japanese Empire",
-                "1211": "Japanese Empire",
-                "1218": "Japanese Empire",
-                "1221": "Japanese Empire",
-                "1232": "Japanese Empire",
-                "1234": "Japanese Empire",
-                "1235": "Japanese Empire",
-                "1248": "Japanese Empire",
-                "1249": "Japanese Empire",
-                "1259": "Japanese Empire",
-                "1268": "Japanese Empire",
-                "1279": "Japanese Empire",
-                "1281": "Japanese Empire",
-                "1297": "Japanese Empire",
-                "1299": "Japanese Empire",
-                "1308": "Japanese Empire",
-                "1310": "Japanese Empire",
-                "1311": "Japanese Empire",
-                "1344": "Japanese Empire",
-                "1350": "Japanese Empire",
-                "1356": "Japanese Empire",
-                "1360": "Japanese Empire",
-                "1375": "Japanese Empire",
-                "1500": "Japanese Empire",
-                "1501": "Japanese Empire",
-                "1524": "Japanese Empire",
-                "1651": "Japanese Empire",
-                "1659": "Japanese Empire"
+                "1029": "Japan",
+                "1037": "Japan",
+                "1057": "Japan",
+                "1065": "Japan",
+                "1066": "Japan",
+                "1067": "Japan",
+                "1074": "Japan",
+                "1081": "Japan",
+                "1092": "Japan",
+                "1096": "Japan",
+                "1101": "Japan",
+                "1104": "Japan",
+                "1112": "Japan",
+                "1129": "Japan",
+                "1130": "Japan",
+                "1133": "Japan",
+                "1137": "Japan",
+                "1144": "Japan",
+                "1145": "Japan",
+                "1146": "Japan",
+                "1149": "Japan",
+                "1157": "Japan",
+                "1167": "Japan",
+                "1173": "Japan",
+                "1178": "Japan",
+                "1183": "Japan",
+                "1184": "Japan",
+                "1190": "Japan",
+                "1191": "Japan",
+                "1192": "Japan",
+                "1199": "Japan",
+                "1201": "Japan",
+                "1205": "Japan",
+                "1206": "Japan",
+                "1207": "Japan",
+                "1211": "Japan",
+                "1218": "Japan",
+                "1221": "Japan",
+                "1232": "Japan",
+                "1234": "Japan",
+                "1235": "Japan",
+                "1248": "Japan",
+                "1249": "Japan",
+                "1259": "Japan",
+                "1268": "Japan",
+                "1279": "Japan",
+                "1281": "Japan",
+                "1297": "Japan",
+                "1299": "Japan",
+                "1308": "Japan",
+                "1310": "Japan",
+                "1311": "Japan",
+                "1344": "Japan",
+                "1350": "Japan",
+                "1356": "Japan",
+                "1360": "Japan",
+                "1375": "Japan",
+                "1500": "Japan",
+                "1501": "Japan",
+                "1524": "Japan",
+                "1651": "Japan",
+                "1659": "Japan"
             },
             "diplo_responses": {}
         },
@@ -27012,7 +27012,7 @@
             "at_war_with": [
                 "Manchukuo",
                 "Mengjiang",
-                "Japanese Empire"
+                "Japan"
             ],
             "allied_with": [],
             "leader_name": "",
@@ -27029,7 +27029,7 @@
                 "Yunnan": 100,
                 "Xibei San Ma": 100,
                 "Xinjiang": 100,
-                "Japanese Empire": -100,
+                "Japan": -100,
                 "Mengjiang": -100,
                 "Manchukuo": -100
             },
@@ -46913,7 +46913,7 @@
             "buildings": []
         },
         "(244, 1, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Soviet Union",
                 "Sakhalin"
@@ -46922,7 +46922,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -49306,7 +49306,7 @@
             "buildings": []
         },
         "(115, 2, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Soviet Union",
                 "Sakhalin"
@@ -50379,9 +50379,9 @@
             "buildings": []
         },
         "(177, 2, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -52126,9 +52126,9 @@
             "buildings": []
         },
         "(23, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -52720,15 +52720,15 @@
             "buildings": []
         },
         "(53, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -53380,9 +53380,9 @@
             "buildings": []
         },
         "(91, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -53669,9 +53669,9 @@
             "buildings": []
         },
         "(108, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -54010,15 +54010,15 @@
             "buildings": []
         },
         "(131, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -54502,7 +54502,7 @@
             "buildings": []
         },
         "(157, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -55104,7 +55104,7 @@
             "buildings": []
         },
         "(195, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -55117,7 +55117,7 @@
             "buildings": []
         },
         "(196, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -55125,7 +55125,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -55744,15 +55744,15 @@
             ]
         },
         "(231, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -55875,7 +55875,7 @@
             "buildings": []
         },
         "(238, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -55916,7 +55916,7 @@
             "buildings": []
         },
         "(241, 3, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -56226,9 +56226,9 @@
             "buildings": []
         },
         "(5, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -56338,7 +56338,7 @@
             "buildings": []
         },
         "(13, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China",
@@ -56740,7 +56740,7 @@
             "buildings": []
         },
         "(33, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -56848,7 +56848,7 @@
             "buildings": []
         },
         "(41, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -56857,7 +56857,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -56879,7 +56879,7 @@
             "buildings": []
         },
         "(42, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -56893,15 +56893,15 @@
             "buildings": []
         },
         "(43, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -57015,7 +57015,7 @@
             "buildings": []
         },
         "(50, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -57102,9 +57102,9 @@
             "buildings": []
         },
         "(57, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -57277,7 +57277,7 @@
             "buildings": []
         },
         "(68, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -57365,7 +57365,7 @@
             "buildings": []
         },
         "(72, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -57467,7 +57467,7 @@
             "buildings": []
         },
         "(77, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -57476,7 +57476,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -57522,9 +57522,9 @@
             "buildings": []
         },
         "(80, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -57660,7 +57660,7 @@
             "buildings": []
         },
         "(88, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -57668,7 +57668,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -57980,7 +57980,7 @@
             "buildings": []
         },
         "(105, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -57989,7 +57989,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -58011,9 +58011,9 @@
             "buildings": []
         },
         "(106, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58069,9 +58069,9 @@
             "buildings": []
         },
         "(109, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58157,7 +58157,7 @@
             "buildings": []
         },
         "(113, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -58248,7 +58248,7 @@
             "buildings": []
         },
         "(120, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -58264,7 +58264,7 @@
             ]
         },
         "(121, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -58278,7 +58278,7 @@
             "buildings": []
         },
         "(122, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -58316,9 +58316,9 @@
             "buildings": []
         },
         "(125, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58439,9 +58439,9 @@
             ]
         },
         "(133, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58590,7 +58590,7 @@
             "buildings": []
         },
         "(143, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -58704,7 +58704,7 @@
             "buildings": []
         },
         "(149, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -58713,7 +58713,7 @@
             "units": [
                 {
                     "type": "Light Tank IV",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
@@ -58804,9 +58804,9 @@
             "buildings": []
         },
         "(154, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58891,7 +58891,7 @@
             ]
         },
         "(159, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -58904,9 +58904,9 @@
             "buildings": []
         },
         "(160, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -58982,7 +58982,7 @@
             "buildings": []
         },
         "(166, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -58991,7 +58991,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -59007,7 +59007,7 @@
                 },
                 {
                     "type": "Light Tank IV",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
@@ -59029,7 +59029,7 @@
             "buildings": []
         },
         "(167, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -59042,15 +59042,15 @@
             "buildings": []
         },
         "(168, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": false,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -59148,15 +59148,15 @@
             "buildings": []
         },
         "(175, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Destroyer VIII",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
@@ -59191,9 +59191,9 @@
             "buildings": []
         },
         "(177, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59243,7 +59243,7 @@
             "buildings": []
         },
         "(181, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -59257,7 +59257,7 @@
             "buildings": []
         },
         "(182, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Korea"
             ],
@@ -59270,9 +59270,9 @@
             "buildings": []
         },
         "(183, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59320,9 +59320,9 @@
             "buildings": []
         },
         "(187, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59461,9 +59461,9 @@
             "buildings": []
         },
         "(194, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59500,15 +59500,15 @@
             "buildings": []
         },
         "(197, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -59687,9 +59687,9 @@
             "buildings": []
         },
         "(208, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59711,7 +59711,7 @@
             "buildings": []
         },
         "(210, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -59725,9 +59725,9 @@
             "buildings": []
         },
         "(211, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -59890,7 +59890,7 @@
             "buildings": []
         },
         "(224, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -59899,7 +59899,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -59921,15 +59921,15 @@
             "buildings": []
         },
         "(225, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -60086,7 +60086,7 @@
             "buildings": []
         },
         "(235, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -60280,9 +60280,9 @@
             ]
         },
         "(244, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -60460,15 +60460,15 @@
             "buildings": []
         },
         "(255, 4, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Destroyer VIII",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
@@ -60501,7 +60501,7 @@
             "buildings": []
         },
         "(1, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -60510,7 +60510,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -60526,7 +60526,7 @@
                 },
                 {
                     "type": "Light Tank IV",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
@@ -60810,9 +60810,9 @@
             ]
         },
         "(17, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -60838,7 +60838,7 @@
             "buildings": []
         },
         "(19, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -60847,7 +60847,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -60984,7 +60984,7 @@
             "buildings": []
         },
         "(28, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -61028,15 +61028,15 @@
             "buildings": []
         },
         "(30, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -61058,9 +61058,9 @@
             "buildings": []
         },
         "(31, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -61634,7 +61634,7 @@
             "buildings": []
         },
         "(64, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -61750,9 +61750,9 @@
             "buildings": []
         },
         "(70, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -61843,15 +61843,15 @@
             "buildings": []
         },
         "(76, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Destroyer VIII",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2600.0,
                     "max_health": 2600,
                     "speed": 1,
@@ -61918,7 +61918,7 @@
             ]
         },
         "(80, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -61927,7 +61927,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -62170,7 +62170,7 @@
             "buildings": []
         },
         "(95, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -62179,7 +62179,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -62195,7 +62195,7 @@
                 },
                 {
                     "type": "Light Tank IV",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2400.0,
                     "max_health": 2400,
                     "speed": 3,
@@ -64307,7 +64307,7 @@
             "buildings": []
         },
         "(220, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -64316,7 +64316,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -64338,9 +64338,9 @@
             "buildings": []
         },
         "(221, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
-                "Japanese Empire"
+                "Japan"
             ],
             "is_coastal": true,
             "units": [],
@@ -64690,7 +64690,7 @@
             "buildings": []
         },
         "(244, 5, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China"
@@ -66691,7 +66691,7 @@
             "buildings": []
         },
         "(115, 6, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China",
@@ -66701,7 +66701,7 @@
             "units": [
                 {
                     "type": "Infantry Type 1939",
-                    "owner": "Japanese Empire",
+                    "owner": "Japan",
                     "health": 2450.0,
                     "max_health": 2450,
                     "speed": 1,
@@ -66836,7 +66836,7 @@
             "buildings": []
         },
         "(123, 6, 0)": {
-            "owner": "Japanese Empire",
+            "owner": "Japan",
             "cores": [
                 "Communist China",
                 "Nationalist China",

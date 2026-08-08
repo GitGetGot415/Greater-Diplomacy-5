@@ -18504,7 +18504,7 @@
             355,
             356
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -23208,7 +23208,7 @@
             631,
             669
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -25517,7 +25517,7 @@
         "neighbors": [
             631
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -25525,7 +25525,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(177, 2, 0)",
         "map_color": [
@@ -29163,7 +29163,7 @@
             821,
             631
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -29171,7 +29171,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(23, 3, 0)",
         "map_color": [
@@ -30264,7 +30264,7 @@
             859,
             860
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -30272,7 +30272,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(53, 3, 0)",
         "map_color": [
@@ -31642,7 +31642,7 @@
             763,
             860
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -31650,7 +31650,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(91, 3, 0)",
         "map_color": [
@@ -32226,7 +32226,7 @@
             860,
             821
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -32234,7 +32234,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(108, 3, 0)",
         "map_color": [
@@ -33003,7 +33003,7 @@
             763,
             860
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -33011,7 +33011,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(131, 3, 0)",
         "map_color": [
@@ -33974,11 +33974,11 @@
             854,
             921
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -35297,7 +35297,7 @@
             1009,
             921
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -35329,7 +35329,7 @@
             921,
             925
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -36580,7 +36580,7 @@
             860,
             763
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -36588,7 +36588,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(231, 3, 0)",
         "map_color": [
@@ -36818,7 +36818,7 @@
             1074,
             916
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -36916,11 +36916,11 @@
             1006,
             945
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -37668,7 +37668,7 @@
             860,
             999
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -37678,7 +37678,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(5, 4, 0)",
         "map_color": [
@@ -37955,11 +37955,11 @@
             998,
             967
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -38589,11 +38589,11 @@
             974,
             1136
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -38610,7 +38610,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -38724,7 +38724,7 @@
             1009,
             1074
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39007,7 +39007,7 @@
             985,
             1054
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39040,7 +39040,7 @@
             985,
             1020
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39074,7 +39074,7 @@
             1081,
             860
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39082,7 +39082,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(43, 4, 0)",
         "map_color": [
@@ -39306,7 +39306,7 @@
             916,
             1112
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39538,7 +39538,7 @@
             1104,
             1051
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -39546,7 +39546,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(57, 4, 0)",
         "map_color": [
@@ -39992,7 +39992,7 @@
             1074,
             1112
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -40142,7 +40142,7 @@
             1112,
             1087
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -40327,7 +40327,7 @@
             1136,
             1054
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -40427,7 +40427,7 @@
             1081,
             1051
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -40437,7 +40437,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(80, 4, 0)",
         "map_color": [
@@ -40692,7 +40692,7 @@
             1137,
             1074
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41354,7 +41354,7 @@
             1172,
             1144
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41387,7 +41387,7 @@
             1104,
             1178
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41395,7 +41395,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(106, 4, 0)",
         "map_color": [
@@ -41488,7 +41488,7 @@
             1051,
             1149
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41496,7 +41496,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(109, 4, 0)",
         "map_color": [
@@ -41624,11 +41624,11 @@
             1054,
             1182
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -41645,7 +41645,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -41693,7 +41693,7 @@
             1087,
             1183
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41916,7 +41916,7 @@
             1173,
             1205
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41950,7 +41950,7 @@
             1146,
             1127
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -41981,7 +41981,7 @@
             1026,
             1127
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -42098,7 +42098,7 @@
             1133,
             1157
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -42106,7 +42106,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(125, 4, 0)",
         "map_color": [
@@ -42402,7 +42402,7 @@
             1149,
             1192
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -42412,7 +42412,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(133, 4, 0)",
         "map_color": [
@@ -42753,7 +42753,7 @@
             1206,
             1112
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -42915,7 +42915,7 @@
             1190,
             1216
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -42949,11 +42949,11 @@
             1144,
             1145
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Medium Tank III",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 3500.0,
                 "max_health": 3500,
                 "morale": 100.0,
@@ -43147,7 +43147,7 @@
             1199,
             1211
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43155,7 +43155,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(154, 4, 0)",
         "map_color": [
@@ -43351,7 +43351,7 @@
             1191,
             1087
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43384,7 +43384,7 @@
             1207,
             1051
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43392,7 +43392,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(160, 4, 0)",
         "map_color": [
@@ -43585,7 +43585,7 @@
             1205,
             1144
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43618,7 +43618,7 @@
             1206,
             1087
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43652,7 +43652,7 @@
             1211,
             1149
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43660,7 +43660,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(168, 4, 0)",
         "map_color": [
@@ -43876,7 +43876,7 @@
             1178,
             1211
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43886,7 +43886,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(175, 4, 0)",
         "map_color": [
@@ -43941,7 +43941,7 @@
             1221,
             1207
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -43951,7 +43951,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(177, 4, 0)",
         "map_color": [
@@ -44073,7 +44073,7 @@
             1173,
             1144
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -44105,11 +44105,11 @@
             1127,
             1167
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -44157,7 +44157,7 @@
             1201,
             1245
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -44165,7 +44165,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(183, 4, 0)",
         "map_color": [
@@ -44285,7 +44285,7 @@
             1199,
             1178
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -44293,7 +44293,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(187, 4, 0)",
         "map_color": [
@@ -44448,11 +44448,11 @@
             1338,
             1182
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -44469,7 +44469,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -44486,7 +44486,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -44569,7 +44569,7 @@
             1207,
             1211
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -44577,7 +44577,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(194, 4, 0)",
         "map_color": [
@@ -44667,7 +44667,7 @@
             1235,
             1245
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -44675,7 +44675,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(197, 4, 0)",
         "map_color": [
@@ -45036,7 +45036,7 @@
             1221,
             1207
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -45044,7 +45044,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(208, 4, 0)",
         "map_color": [
@@ -45102,7 +45102,7 @@
             1205,
             1173
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -45134,7 +45134,7 @@
             1268,
             1221
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -45142,7 +45142,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(211, 4, 0)",
         "map_color": [
@@ -45589,7 +45589,7 @@
             1267,
             1205
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -45621,11 +45621,11 @@
             1245,
             1207
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -45649,7 +45649,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(225, 4, 0)",
         "map_color": [
@@ -46038,7 +46038,7 @@
             1273,
             1308
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -46325,11 +46325,11 @@
             1282,
             1190
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -46346,7 +46346,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -46394,7 +46394,7 @@
             1245,
             1254
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -46402,7 +46402,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(244, 4, 0)",
         "map_color": [
@@ -46757,7 +46757,7 @@
             1297,
             1245
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -46765,7 +46765,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(255, 4, 0)",
         "map_color": [
@@ -46821,7 +46821,7 @@
             1234,
             1299
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -46855,11 +46855,11 @@
             1327,
             1267
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -46876,7 +46876,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -47415,7 +47415,7 @@
             1245,
             1279
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -47425,7 +47425,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(17, 5, 0)",
         "map_color": [
@@ -47482,7 +47482,7 @@
             1360,
             1308
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -47788,7 +47788,7 @@
             1259,
             1344
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -47903,11 +47903,11 @@
             1254,
             1311
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -47929,7 +47929,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(30, 5, 0)",
         "map_color": [
@@ -47952,7 +47952,7 @@
             1254,
             1310
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -47962,7 +47962,7 @@
         ],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(31, 5, 0)",
         "map_color": [
@@ -48604,11 +48604,11 @@
             1395,
             1405
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -48625,7 +48625,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -48642,7 +48642,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -49257,7 +49257,7 @@
             1308,
             1375
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -49481,11 +49481,11 @@
             1327,
             1405
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -49502,7 +49502,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -49519,7 +49519,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -49536,7 +49536,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -49613,7 +49613,7 @@
             1310,
             1311
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -49621,7 +49621,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(70, 5, 0)",
         "map_color": [
@@ -49824,7 +49824,7 @@
             1254,
             1310
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -49832,7 +49832,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(76, 5, 0)",
         "map_color": [
@@ -49961,11 +49961,11 @@
             1398,
             1375
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -49982,7 +49982,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -50567,11 +50567,11 @@
             1273,
             1402
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -50588,7 +50588,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -50605,7 +50605,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -53377,11 +53377,11 @@
             1398,
             1402
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -53398,7 +53398,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -55570,7 +55570,7 @@
             1414,
             1415
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -55599,11 +55599,11 @@
         "neighbors": [
             1415
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -55625,7 +55625,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Japanese Empire"
+            "Japan"
         ],
         "json_key": "(221, 5, 0)",
         "map_color": [
@@ -55990,11 +55990,11 @@
             1485,
             1525
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -56011,7 +56011,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -56028,7 +56028,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -56469,11 +56469,11 @@
             1414,
             1415
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -56520,11 +56520,11 @@
             1484,
             1534
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -56541,7 +56541,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -56860,11 +56860,11 @@
             1553,
             1525
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -59110,11 +59110,11 @@
             1627,
             1565
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -59131,7 +59131,7 @@
             },
             {
                 "type": "Light Tank IV",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2400.0,
                 "max_health": 2400,
                 "morale": 100.0,
@@ -59148,7 +59148,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -59782,11 +59782,11 @@
             1588,
             1627
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -59955,11 +59955,11 @@
             1604,
             1593
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -59976,7 +59976,7 @@
             },
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -60088,11 +60088,11 @@
             1645,
             1661
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -60612,7 +60612,7 @@
             1627,
             1661
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -61045,11 +61045,11 @@
             1684,
             1661
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -61254,7 +61254,7 @@
             1659,
             1627
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -61508,11 +61508,11 @@
             1651,
             1627
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [
             {
                 "type": "Destroyer VIII",
-                "owner": "Japanese Empire",
+                "owner": "Japan",
                 "health": 2600.0,
                 "max_health": 2600,
                 "morale": 100.0,
@@ -61595,7 +61595,7 @@
             1627,
             1693
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -62357,7 +62357,7 @@
             1661,
             1694
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -62659,7 +62659,7 @@
             1627,
             1661
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -62691,7 +62691,7 @@
             1684,
             1709
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -63188,7 +63188,7 @@
             1684,
             1694
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -63223,7 +63223,7 @@
             1756,
             1693
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -63674,7 +63674,7 @@
             1710,
             1711
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -64791,7 +64791,7 @@
             1723,
             1789
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -65211,7 +65211,7 @@
             1780,
             1756
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -65570,7 +65570,7 @@
             1756,
             1789
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -65831,7 +65831,7 @@
             1748,
             1783
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -65864,7 +65864,7 @@
             1780,
             1756
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -66212,7 +66212,7 @@
             1788,
             1783
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -66408,7 +66408,7 @@
             1788,
             1853
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -67156,7 +67156,7 @@
             1780,
             1853
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -67439,7 +67439,7 @@
             1878,
             1788
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -67605,7 +67605,7 @@
             1788,
             1853
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -68024,7 +68024,7 @@
             1871,
             1840
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -68618,7 +68618,7 @@
             1878,
             1853
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -68839,7 +68839,7 @@
             1904,
             1810
         ],
-        "owner": "Japanese Empire",
+        "owner": "Japan",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
