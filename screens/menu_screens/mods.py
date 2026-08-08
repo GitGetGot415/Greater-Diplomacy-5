@@ -86,23 +86,16 @@ class Mods(FolderListState):
         info = mod_loader.describe_mod(filename)
         enabled = info["enabled"] and info["valid"]
 
-        name_color = "green" if enabled else ("grey" if not info["valid"] else "blue")
-        name_btn = Button(20, btn_y, "save_file", name_color, filename, None)
-        name_btn.disabled = True
+        name_color = "grey" if not info["valid"] else ("green" if enabled else "red")
+        name_btn = Button(20, btn_y, "save_file", name_color, filename,
+                          lambda f=filename: self.toggle_mod(f))
+        name_btn.rect.width = 975
+        name_btn.disabled = not info["valid"]
         name_btn.is_scrollable = True
         name_btn.click_guard = self.scroll_click_guard
         self.elements.append(name_btn)
 
-        toggle_btn = Button(895, btn_y, "small_save_button",
-                            "green" if enabled else "grey",
-                            "On" if enabled else "Off",
-                            lambda f=filename: self.toggle_mod(f))
-        toggle_btn.disabled = not info["valid"]
-        toggle_btn.is_scrollable = True
-        toggle_btn.click_guard = self.scroll_click_guard
-        self.elements.append(toggle_btn)
-
-        del_btn = Button(1005, btn_y, "small_save_button", "red", "Del",
+        del_btn = Button(1005, btn_y, "tiny_square", "red", "X",
                          lambda f=filename: self.start_delete(f))
         del_btn.is_scrollable = True
         del_btn.click_guard = self.scroll_click_guard
