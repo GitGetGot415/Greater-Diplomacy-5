@@ -109,6 +109,7 @@ class Button:
 
         self.is_selected = False
         self.disabled = False
+        self.text_align = "center"
         self.notification_count = 0
         # Overrides notification_count's digit text with an arbitrary string
         # (e.g. "!"). Same badge, just not a count.
@@ -213,7 +214,10 @@ class Button:
             else:
                 self.draw_label(surface, self.text, midleft=(img_rect.right + 10, self.rect.centery))
         elif self.text and not self.image:
-            self.draw_label(surface, self.text, center=self.rect.center)
+            if self.text_align == "left":
+                self.draw_label(surface, self.text, midleft=(self.rect.x + 10, self.rect.centery))
+            else:
+                self.draw_label(surface, self.text, center=self.rect.center)
 
         badge_text = getattr(self, 'notification_text', None)
         if not badge_text and getattr(self, 'notification_count', 0) > 0:

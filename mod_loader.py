@@ -30,6 +30,16 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODS_DIR = os.path.join(BASE_DIR, "mods")
 STATE_PATH = os.path.join(MODS_DIR, "enabled_mods.json")
 
+# Filenames actually patched in by install() at process start. Fixed for the
+# life of the process -- toggling a mod afterwards changes enabled_mods.json
+# but can't retroactively patch an already-imported module, so this is what
+# the Mods screen compares against to tell "on" from "on, pending restart".
+_active_mods = set()
+
+
+def is_mod_active(filename):
+    return filename in _active_mods
+
 
 def mod_files():
     """Every .py mod file in mods/, sorted for a deterministic scan order."""
@@ -128,7 +138,7 @@ def describe_mod(filename):
     current enabled state. Never raises -- a bad mod just comes back invalid
     with an explanation in "error"."""
     info = {"target": None, "module": None, "valid": False, "error": None,
-            "enabled": is_mod_enabled(filename)}
+            "enabled": is_mod_enabled(filename), "active": is_mod_active(filename)}
     try:
         target, _source = read_mod(filename)
         info["target"] = target
@@ -208,6 +218,7 @@ def install():
                 continue
 
             overrides[module_name] = (source, abs_target)
+            _active_mods.add(filename)
 
         if overrides:
             sys.meta_path.insert(0, _ModFinder(overrides))

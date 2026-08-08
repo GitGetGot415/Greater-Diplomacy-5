@@ -72,6 +72,8 @@ class Mods(FolderListState):
             Button(160, 20, "medium", "green", "Import Mod (.py)",
                    lambda: queries.import_mod_file(self, self.refresh_ui)),
         ]
+        for el in self.elements:
+            el.text_align = "left"
 
         self._row_subtext = []
         mods = self.list_folders()
@@ -84,11 +86,25 @@ class Mods(FolderListState):
 
     def _add_row(self, filename, btn_y):
         info = mod_loader.describe_mod(filename)
-        enabled = info["enabled"] and info["valid"]
+        enabled, active = info["enabled"], info["active"]
 
-        name_color = "grey" if not info["valid"] else ("green" if enabled else "red")
-        name_btn = Button(20, btn_y, "save_file", name_color, filename,
+        # enabled/active can disagree because toggling here only edits
+        # enabled_mods.json -- install() already ran at process start and
+        # won't re-run until restart, so "active" is frozen at launch-time.
+        if enabled and active:
+            name_color, state_label = "green",  "[TRUE]                               "
+        elif not enabled and not active:
+            name_color, state_label = "red",    "[FALSE]                             "
+        elif enabled and not active:
+            name_color, state_label = "orange", "[TRUE ON RESTART]      "
+        else:
+            name_color, state_label = "blue",   "[FALSE ON RESTART]   "
+        if not info["valid"]:
+            name_color = "grey"
+
+        name_btn = Button(20, btn_y, "save_file", name_color, f"{state_label} {filename}",
                           lambda f=filename: self.toggle_mod(f))
+        name_btn.text_align = "left"
         name_btn.rect.width = 975
         name_btn.disabled = not info["valid"]
         name_btn.is_scrollable = True
@@ -97,6 +113,7 @@ class Mods(FolderListState):
 
         del_btn = Button(1005, btn_y, "tiny_square", "red", "X",
                          lambda f=filename: self.start_delete(f))
+        del_btn.text_align = "left"
         del_btn.is_scrollable = True
         del_btn.click_guard = self.scroll_click_guard
         self.elements.append(del_btn)
