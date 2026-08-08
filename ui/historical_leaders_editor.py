@@ -537,13 +537,13 @@ class Historical_Leaders_Editor(GameState):
             label = f"{country} ({len(self.data.get(country, []))})"
             btn = Button(self.roster_rect.x, y, "list_row", "green" if country == self.active_country else "blue",
                         truncate(label, 28), lambda cc=country: self.select_country(cc), font_preset="button_small")
-            btn.rect.width = self.roster_rect.width - 40
+            btn.rect.width = self.roster_rect.width - 50
             btn.is_selected = country == self.active_country
             btn.pane = "roster"
             btn.click_guard = self._guard_roster
             self.elements.append(btn)
 
-            rm_btn = Button(self.roster_rect.right - 34, y + 3, "tiny_square", "red", "x",
+            rm_btn = Button(self.roster_rect.right - 44, y + 3, "tiny_square", "red", "x",
                             lambda cc=country: self.remove_country(cc), font_preset="button_small")
             rm_btn.pane = "roster"
             rm_btn.click_guard = self._guard_roster
