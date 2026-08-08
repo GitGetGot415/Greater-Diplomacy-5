@@ -381,6 +381,72 @@ class _ModFinder(importlib.abc.MetaPathFinder):
         return importlib.util.spec_from_loader(fullname, loader, origin=origin)
 
 
+def _restore_mods_dir_from_indexeddb():
+    """Web only. pygbag 0.9.3's WASM build only links MEMFS in (see the
+    matching comment in data/platform.py), so the virtual filesystem starts
+    completely empty on every page load/refresh -- a mod uploaded (and
+    mirrored into IndexedDB via data.platform.sync_persisted_dir) in an
+    earlier session would otherwise just be invisible to install() below on
+    the very next refresh, even though the mirror is still sitting in
+    IndexedDB. That mirror can only be read back asynchronously (there's no
+    synchronous browser API for IndexedDB), and install() has to run before
+    any other project module is imported (see this file's own docstring), so
+    this can't just delegate to data.platform.restore_persisted_dir() --
+    importing data.platform this early would let it dodge patching by any
+    mod that targets data/platform.py itself. So this duplicates just the
+    read half of data/platform.py's hand-rolled IndexedDB glue, kept
+    self-contained and stdlib-only like the rest of this file.
+    """
+    if sys.platform != "emscripten":
+        return
+    import asyncio
+    import platform  # stdlib `platform`, patched by pygbag with `.window` on web
+
+    async def _pull():
+        platform.window.eval(
+            "window.__gd5_mods_pull = function(root) {"
+            "  window.__gd5_mods_pull_ready = false;"
+            "  var req = indexedDB.open('gd5_persist', 1);"
+            "  req.onupgradeneeded = function(e) {"
+            "    var db = e.target.result;"
+            "    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');"
+            "  };"
+            "  req.onsuccess = function(e) {"
+            "    var db = e.target.result;"
+            "    var tx = db.transaction('files', 'readonly');"
+            "    var store = tx.objectStore('files');"
+            "    var prefix = root + '/';"
+            "    var cur = store.openCursor();"
+            "    cur.onsuccess = function(ev) {"
+            "      var cursor = ev.target.result;"
+            "      if (cursor) {"
+            "        var path = cursor.key;"
+            "        if (path.indexOf(prefix) === 0) {"
+            "          var dir = path.substring(0, path.lastIndexOf('/'));"
+            "          try { FS.mkdirTree(dir); } catch (e) {}"
+            "          try { FS.writeFile(path, new Uint8Array(cursor.value)); } catch (e) {}"
+            "        }"
+            "        cursor.continue();"
+            "      }"
+            "    };"
+            "    tx.oncomplete = function() { window.__gd5_mods_pull_ready = true; };"
+            "    tx.onerror = function() { window.__gd5_mods_pull_ready = true; };"
+            "  };"
+            "  req.onerror = function() { window.__gd5_mods_pull_ready = true; };"
+            "};"
+        )
+        platform.window.__gd5_mods_pull(os.path.abspath(MODS_DIR))
+        for _ in range(200):  # ~20s safety net, mirrors data/platform.py's own polling loops
+            if platform.window.__gd5_mods_pull_ready:
+                break
+            await asyncio.sleep(0.1)
+
+    try:
+        asyncio.run(_pull())
+    except Exception as e:
+        print(f"Mod restore from IndexedDB failed, continuing with whatever's already on disk: {e}")
+
+
 def install():
     """Builds the override table from every enabled, valid mod and installs
     the import finder. Safe to call even with a corrupt state file or a
@@ -389,6 +455,7 @@ def install():
     starting at all.
     """
     try:
+        _restore_mods_dir_from_indexeddb()
         overrides = {}
         for filename in mod_files():
             if not is_mod_enabled(filename):

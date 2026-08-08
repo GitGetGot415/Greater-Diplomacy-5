@@ -664,10 +664,13 @@ async def _bootstrap():
     # Web only: pull saves back out of IndexedDB before anything reads them
     # (Load_Game's directory listing, a save overwrite check, ...) -- pygbag's
     # in-memory FS otherwise starts every tab empty. See data/platform.py.
+    # MODS_DIR is deliberately not restored here -- it has to be back in
+    # place before mod_loader.install() (called at the very top of this file,
+    # long before this function runs) decides what to patch, so it's pulled
+    # from IndexedDB there instead. See mod_loader._restore_mods_dir_from_indexeddb.
     if IS_WEB:
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
-        await restore_persisted_dir(c.MODS_DIR)
     game = Controller()
     await game.run()
 
