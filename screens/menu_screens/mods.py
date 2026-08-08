@@ -116,16 +116,17 @@ class Mods(FolderListState):
 
         # Same four-color scheme as the enabled/disabled state above, applied
         # to sandboxed/unsandboxed: green/red when the declared setting
-        # already matches what's actually running, orange/yellow when it'll
-        # only take effect after a restart.
+        # already matches what's actually running, orange/yellow -- with the
+        # label itself switched to the "-ing..." form -- when it's queued but
+        # won't take effect until a restart.
         if sandboxed and sandbox_active:
-            sandbox_color = "green"
+            sandbox_color, sandbox_label = "green", "Sandboxed"
         elif not sandboxed and not sandbox_active:
-            sandbox_color = "red"
+            sandbox_color, sandbox_label = "red", "Unsandboxed"
         elif sandboxed and not sandbox_active:
-            sandbox_color = "orange"
+            sandbox_color, sandbox_label = "orange", "Sandboxing..."
         else:
-            sandbox_color = "yellow"
+            sandbox_color, sandbox_label = "yellow", "Unsandboxing..."
 
         name_btn = Button(20, btn_y, "save_file", name_color, f"{state_label} {filename}",
                           lambda f=filename: self.toggle_mod(f))
@@ -136,8 +137,7 @@ class Mods(FolderListState):
         name_btn.click_guard = self.scroll_click_guard
         self.elements.append(name_btn)
 
-        sandbox_btn = Button(845, btn_y, "tiny_square", sandbox_color,
-                             "Sandboxed" if sandboxed else "Unsandboxed",
+        sandbox_btn = Button(845, btn_y, "tiny_square", sandbox_color, sandbox_label,
                              lambda f=filename: self.toggle_sandbox(f), font_preset="tiny")
         sandbox_btn.rect.width = 150
         sandbox_btn.disabled = not info["valid"]
