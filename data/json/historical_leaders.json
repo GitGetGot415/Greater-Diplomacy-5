@@ -1169,18 +1169,6 @@
             "leader_title": "Chancellor"
         }
     ],
-    "Switzerland": [
-        {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
-            "name": "Switzerland",
-            "adjective": "Swiss",
-            "color": null,
-            "leader_name": "",
-            "leader_title": "President of the Swiss Confederation (rotates annually among the Federal Council)"
-        }
-    ],
     "Belgium": [
         {
             "year": 1865,
