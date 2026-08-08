@@ -21,7 +21,7 @@ STAGE_DIR = "web_stage"
 # main.py ships source (not a frozen binary) into the browser's virtual FS, so unlike
 # windows_compilation.py/macos_compilation.py this script also has to stage the first-party
 # Python packages themselves, not just data directories.
-SOURCE_FILES = ["main.py", "gameState.py", "ui_elements.py"]
+SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py"]
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
 
