@@ -13,66 +13,107 @@ import asyncio
 import os
 import sys
 
-# Must run before any project module is imported below -- see mod_loader's
-# own docstring for why. Applies enabled .py mods in memory only; nothing on
-# disk is touched.
+# Only the module object, not install() -- see _import_project_modules()
+# below for why that call had to move.
 import mod_loader
-mod_loader.install()
 
-from data.platform import IS_WEB, restore_persisted_dir
 
-# py2app / PyInstaller bundle fix: set working directory
-if getattr(sys, 'frozen', False):
-    if hasattr(sys, '_MEIPASS'):
-        # PyInstaller: assets are alongside the executable
-        os.chdir(os.path.dirname(sys.executable))
-    else:
-        # py2app / other
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+def _import_project_modules():
+    """Calls mod_loader.install() and imports every other project module --
+    deferred from plain top-level code (where all of this used to live) into
+    a function called from _bootstrap(), after that function has awaited
+    mod_loader.restore_mods_dir_from_indexeddb().
 
-import platform
-import pygame
+    On web, mod_loader.install() has to run after mods/ has actually been
+    pulled back out of IndexedDB into pygbag's in-memory filesystem, or it
+    permanently mistakes "player has no mods" for "player's mod hasn't been
+    restored into the virtual filesystem yet" -- and that pull is
+    unavoidably asynchronous (no synchronous browser API for IndexedDB
+    exists). But nothing async can actually complete during a script's own
+    top-level synchronous execution: control has to return to the browser's
+    event loop at least once first (single-threaded JS, same as any other
+    browser context) -- see restore_mods_dir_from_indexeddb()'s docstring for
+    how this was confirmed. So install(), and every project module below (it
+    has to run before them too, per install()'s own docstring, or none of
+    them could ever be patched), waits for _bootstrap() to actually be
+    running as a task the browser's own frame loop is driving, past its
+    first real `await`.
 
-# The macOS Tkinter/NSApplication claim that used to happen here is gone: no
-# screen the game opens is a Tk window any more, so pygame owns the app outright.
+    Moving these here doesn't change what any of them do: Controller's
+    methods only look these names up in this module's globals when they're
+    actually called, well after this function has already run -- Python
+    resolves free variables in a function/method body at call time, not when
+    the enclosing class statement first executes.
+    """
+    global IS_WEB, restore_persisted_dir, platform, pygame
+    global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods
+    global Orders_Screen, keybind_io, symbol_loader, modal_stack
+    global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
+    global Faction_Screen, Faction_Territories_Screen
+    global Select_Base_Map, Random_Setup, Scenario_Settings
+    global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
 
-# Tell Python 3.8+ to trust the current folder for DLLs
-if os.name == 'nt':
-    os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
+    # Must run before any other project module is imported below -- see
+    # mod_loader's own docstring for why. Applies enabled .py mods in memory
+    # only; nothing on disk is touched.
+    mod_loader.install()
 
-from screens.map_related_screens.messages import Messages_Screen
-from gameState import dispatch_global_keys
-from map_logic.rendering.font_manager import fonts
-import ui_elements
-import data.constants as c
-from data import queries
-from screens.menu_screens.load_game import Load_Game
-from screens.menu_screens.map import Map
-from screens.menu_screens.menu import Menu
-from screens.menu_screens.new_game import New_Game
-from screens.menu_screens.settings import Settings
-from screens.menu_screens.credits import Credits
-from screens.menu_screens.music_player import Music_Player
-from screens.menu_screens.view_assets import View_Assets
-from screens.menu_screens.mods import Mods
-from screens.map_related_screens.orders import Orders_Screen
-from data.io import keybind_io
-from map_logic.rendering import symbol_loader
-from ui import modal_stack
-from screens.map_related_screens.research import Research_Screen
-from screens.map_related_screens.economy import Economy_Screen
-from screens.map_related_screens.edit_country import Edit_Country_Screen
-from screens.map_related_screens.production import Production_Screen
-from screens.map_related_screens.faction import Faction_Screen, Faction_Territories_Screen
-from screens.menu_screens.select_base_map import Select_Base_Map
-from screens.menu_screens.random_setup import Random_Setup
-from screens.menu_screens.scenario_settings import Scenario_Settings
-from screens.menu_screens.multiplayer_hub import Multiplayer_Hub
-from screens.menu_screens.multiplayer_host import Multiplayer_Host
-from screens.menu_screens.multiplayer_join import Multiplayer_Join
-from screens.menu_screens.multiplayer_new import Multiplayer_New
+    from data.platform import IS_WEB, restore_persisted_dir
 
-pygame.display.set_caption("Greater Diplomacy 5")
+    # py2app / PyInstaller bundle fix: set working directory
+    if getattr(sys, 'frozen', False):
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller: assets are alongside the executable
+            os.chdir(os.path.dirname(sys.executable))
+        else:
+            # py2app / other
+            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    import platform
+    import pygame
+
+    # The macOS Tkinter/NSApplication claim that used to happen here is gone: no
+    # screen the game opens is a Tk window any more, so pygame owns the app outright.
+
+    # Tell Python 3.8+ to trust the current folder for DLLs
+    if os.name == 'nt':
+        os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
+
+    from screens.map_related_screens.messages import Messages_Screen
+    from gameState import dispatch_global_keys
+    from map_logic.rendering.font_manager import fonts
+    import ui_elements
+    import data.constants as c
+    from data import queries
+    from screens.menu_screens.load_game import Load_Game
+    from screens.menu_screens.map import Map
+    from screens.menu_screens.menu import Menu
+    from screens.menu_screens.new_game import New_Game
+    from screens.menu_screens.settings import Settings
+    from screens.menu_screens.credits import Credits
+    from screens.menu_screens.music_player import Music_Player
+    from screens.menu_screens.view_assets import View_Assets
+    from screens.menu_screens.mods import Mods
+    from screens.map_related_screens.orders import Orders_Screen
+    from data.io import keybind_io
+    from map_logic.rendering import symbol_loader
+    from ui import modal_stack
+    from screens.map_related_screens.research import Research_Screen
+    from screens.map_related_screens.economy import Economy_Screen
+    from screens.map_related_screens.edit_country import Edit_Country_Screen
+    from screens.map_related_screens.production import Production_Screen
+    from screens.map_related_screens.faction import Faction_Screen, Faction_Territories_Screen
+    from screens.menu_screens.select_base_map import Select_Base_Map
+    from screens.menu_screens.random_setup import Random_Setup
+    from screens.menu_screens.scenario_settings import Scenario_Settings
+    from screens.menu_screens.multiplayer_hub import Multiplayer_Hub
+    from screens.menu_screens.multiplayer_host import Multiplayer_Host
+    from screens.menu_screens.multiplayer_join import Multiplayer_Join
+    from screens.menu_screens.multiplayer_new import Multiplayer_New
+
+    pygame.display.set_caption("Greater Diplomacy 5")
+
 
 class Controller:
     def __init__(self):
@@ -661,13 +702,20 @@ class Controller:
             await asyncio.sleep(0)  # yield to the browser tab / event loop every frame
 
 async def _bootstrap():
+    # Web only: pull mods/ back out of IndexedDB before mod_loader.install()
+    # (called from _import_project_modules() below) decides what to patch --
+    # this has to be a real `await`, inside a coroutine _bootstrap() is
+    # actually driving, not a second asyncio.run() call from synchronous code
+    # (which silently never completes on web). See
+    # mod_loader.restore_mods_dir_from_indexeddb()'s docstring.
+    if sys.platform == "emscripten":
+        await mod_loader.restore_mods_dir_from_indexeddb()
+
+    _import_project_modules()
+
     # Web only: pull saves back out of IndexedDB before anything reads them
     # (Load_Game's directory listing, a save overwrite check, ...) -- pygbag's
     # in-memory FS otherwise starts every tab empty. See data/platform.py.
-    # MODS_DIR is deliberately not restored here -- it has to be back in
-    # place before mod_loader.install() (called at the very top of this file,
-    # long before this function runs) decides what to patch, so it's pulled
-    # from IndexedDB there instead. See mod_loader._restore_mods_dir_from_indexeddb.
     if IS_WEB:
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
@@ -679,7 +727,11 @@ if __name__ == "__main__":
         asyncio.run(_bootstrap())
     except Exception:
         import traceback
-        if IS_WEB:
+        # sys.platform, not IS_WEB -- if _import_project_modules() itself
+        # blew up (e.g. mod_loader.install() raised), IS_WEB was never set,
+        # and referencing it here would mask the real exception with a
+        # NameError.
+        if sys.platform == "emscripten":
             # ~/GD5_crash.log isn't reachable from a browser sandbox; the
             # browser devtools console is where a web player can see this.
             traceback.print_exc()

@@ -381,70 +381,109 @@ class _ModFinder(importlib.abc.MetaPathFinder):
         return importlib.util.spec_from_loader(fullname, loader, origin=origin)
 
 
-def _restore_mods_dir_from_indexeddb():
-    """Web only. pygbag 0.9.3's WASM build only links MEMFS in (see the
-    matching comment in data/platform.py), so the virtual filesystem starts
-    completely empty on every page load/refresh -- a mod uploaded (and
-    mirrored into IndexedDB via data.platform.sync_persisted_dir) in an
-    earlier session would otherwise just be invisible to install() below on
-    the very next refresh, even though the mirror is still sitting in
-    IndexedDB. That mirror can only be read back asynchronously (there's no
-    synchronous browser API for IndexedDB), and install() has to run before
-    any other project module is imported (see this file's own docstring), so
-    this can't just delegate to data.platform.restore_persisted_dir() --
-    importing data.platform this early would let it dodge patching by any
-    mod that targets data/platform.py itself. So this duplicates just the
-    read half of data/platform.py's hand-rolled IndexedDB glue, kept
-    self-contained and stdlib-only like the rest of this file.
+async def restore_mods_dir_from_indexeddb():
+    """Web only, and must be *awaited* from a coroutine main.py's own
+    asyncio.run(_bootstrap()) is actually driving -- see main.py's
+    _bootstrap()/_import_project_modules(), which call this before
+    install() and before any other project module import. Calling this via
+    a second, separate asyncio.run() (as an earlier version of this function
+    did) does NOT work: pygbag's own aio.run() (see
+    pygbag/support/cross/aio/__init__.py's run()) already calls itself once
+    internally before main.py ever starts executing, so every call after
+    that first one just logs "aio.run called twice" and returns immediately
+    without pumping anything -- the given coroutine gets queued onto pygbag's
+    requestAnimationFrame-driven task loop and only actually runs frames
+    later, long after whatever synchronous code called asyncio.run() has
+    already moved on. Confirmed by reading that file directly, and by the
+    browser console: the [gd5 mods] logs below printed in the wrong order
+    around install()'s own logging when this was called that way. A bare
+    `await` from within a coroutine that loop is already stepping (i.e.
+    _bootstrap()) doesn't have this problem.
+
+    pygbag 0.9.3's WASM build only links MEMFS in (see the matching comment
+    in data/platform.py), so the virtual filesystem starts completely empty
+    on every page load/refresh -- a mod uploaded (and mirrored into
+    IndexedDB via data.platform.sync_persisted_dir) in an earlier session
+    would otherwise just be invisible to install() on the very next refresh,
+    even though the mirror is still sitting in IndexedDB. That mirror can
+    only be read back asynchronously (no synchronous browser API for
+    IndexedDB exists), and install() has to run before any other project
+    module is imported (see this file's own docstring), so this can't just
+    delegate to data.platform.restore_persisted_dir() -- importing
+    data.platform this early would let it dodge patching by any mod that
+    targets data/platform.py itself. So this duplicates just the read half
+    of data/platform.py's hand-rolled IndexedDB glue, kept self-contained
+    and stdlib-only like the rest of this file.
     """
     if sys.platform != "emscripten":
         return
     import asyncio
     import platform  # stdlib `platform`, patched by pygbag with `.window` on web
 
-    async def _pull():
-        platform.window.eval(
-            "window.__gd5_mods_pull = function(root) {"
-            "  window.__gd5_mods_pull_ready = false;"
-            "  var req = indexedDB.open('gd5_persist', 1);"
-            "  req.onupgradeneeded = function(e) {"
-            "    var db = e.target.result;"
-            "    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');"
-            "  };"
-            "  req.onsuccess = function(e) {"
-            "    var db = e.target.result;"
-            "    var tx = db.transaction('files', 'readonly');"
-            "    var store = tx.objectStore('files');"
-            "    var prefix = root + '/';"
-            "    var cur = store.openCursor();"
-            "    cur.onsuccess = function(ev) {"
-            "      var cursor = ev.target.result;"
-            "      if (cursor) {"
-            "        var path = cursor.key;"
-            "        if (path.indexOf(prefix) === 0) {"
-            "          var dir = path.substring(0, path.lastIndexOf('/'));"
-            "          try { FS.mkdirTree(dir); } catch (e) {}"
-            "          try { FS.writeFile(path, new Uint8Array(cursor.value)); } catch (e) {}"
-            "        }"
-            "        cursor.continue();"
-            "      }"
-            "    };"
-            "    tx.oncomplete = function() { window.__gd5_mods_pull_ready = true; };"
-            "    tx.onerror = function() { window.__gd5_mods_pull_ready = true; };"
-            "  };"
-            "  req.onerror = function() { window.__gd5_mods_pull_ready = true; };"
-            "};"
-        )
-        platform.window.__gd5_mods_pull(os.path.abspath(MODS_DIR))
-        for _ in range(200):  # ~20s safety net, mirrors data/platform.py's own polling loops
-            if platform.window.__gd5_mods_pull_ready:
-                break
-            await asyncio.sleep(0.1)
+    # print() apparently doesn't reach the browser devtools console under
+    # pygbag (only its own in-page terminal overlay does) -- these diagnostics
+    # matter enough, for code this hard to test outside a real browser, to go
+    # straight to window.console.log via JS instead, so a player can actually
+    # see and report them. Every call is wrapped so a logging failure itself
+    # can never be why mod restore breaks.
+    def _log(msg):
+        try:
+            platform.window.console.log(str(msg))
+        except Exception:
+            pass
 
-    try:
-        asyncio.run(_pull())
-    except Exception as e:
-        print(f"Mod restore from IndexedDB failed, continuing with whatever's already on disk: {e}")
+    target = os.path.abspath(MODS_DIR)
+    _log(f"[gd5 mods] restoring {target!r} from IndexedDB...")
+
+    platform.window.eval(
+        "window.__gd5_mods_pull = function(root) {"
+        "  window.__gd5_mods_pull_ready = false;"
+        "  window.__gd5_mods_pull_error = null;"
+        "  var req = indexedDB.open('gd5_persist', 1);"
+        "  req.onupgradeneeded = function(e) {"
+        "    var db = e.target.result;"
+        "    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');"
+        "  };"
+        "  req.onsuccess = function(e) {"
+        "    var db = e.target.result;"
+        "    var tx = db.transaction('files', 'readonly');"
+        "    var store = tx.objectStore('files');"
+        "    var prefix = root + '/';"
+        "    var n = 0;"
+        "    var cur = store.openCursor();"
+        "    cur.onsuccess = function(ev) {"
+        "      var cursor = ev.target.result;"
+        "      if (cursor) {"
+        "        var path = cursor.key;"
+        "        if (path.indexOf(prefix) === 0) {"
+        "          var dir = path.substring(0, path.lastIndexOf('/'));"
+        "          try { FS.mkdirTree(dir); } catch (e) {}"
+        "          try { FS.writeFile(path, new Uint8Array(cursor.value)); n++; }"
+        "          catch (e) { window.__gd5_mods_pull_error = 'writeFile ' + path + ': ' + e; }"
+        "        }"
+        "        cursor.continue();"
+        "      } else {"
+        "        console.log('[gd5 mods] IndexedDB cursor done, ' + n + ' file(s) restored under ' + prefix);"
+        "      }"
+        "    };"
+        "    tx.oncomplete = function() { window.__gd5_mods_pull_ready = true; };"
+        "    tx.onerror = function() { window.__gd5_mods_pull_error = String(tx.error); window.__gd5_mods_pull_ready = true; };"
+        "  };"
+        "  req.onerror = function() { window.__gd5_mods_pull_error = String(req.error); window.__gd5_mods_pull_ready = true; };"
+        "};"
+    )
+    platform.window.__gd5_mods_pull(target)
+    for i in range(200):  # ~20s safety net, mirrors data/platform.py's own polling loops
+        if platform.window.__gd5_mods_pull_ready:
+            err = platform.window.__gd5_mods_pull_error
+            _log(f"[gd5 mods] pull finished after {i * 0.1:.1f}s"
+                 + (f" with error: {err}" if err else ""))
+            break
+        await asyncio.sleep(0.1)
+    else:
+        _log("[gd5 mods] pull timed out after 20s")
+
+    _log(f"[gd5 mods] mods/ dir now contains: {mod_files()}")
 
 
 def install():
@@ -453,9 +492,12 @@ def install():
     garbage mod dropped in by hand -- anything that doesn't check out is
     skipped with a console message rather than blocking the game from
     starting at all.
+
+    On web, restore_mods_dir_from_indexeddb() must already have been awaited
+    before this runs, or mods/ will still be empty in pygbag's in-memory
+    filesystem -- see that function's docstring and main.py's _bootstrap().
     """
     try:
-        _restore_mods_dir_from_indexeddb()
         overrides = {}
         for filename in mod_files():
             if not is_mod_enabled(filename):
@@ -492,5 +534,20 @@ def install():
             if any(sandboxed for _source, _origin, sandboxed, _filename in overrides.values()):
                 _install_sandbox_audit_hook()
             sys.meta_path.insert(0, _ModFinder(overrides))
+
+        if sys.platform == "emscripten":
+            try:
+                import platform
+                platform.window.console.log(f"[gd5 mods] install() finished, active mods: {sorted(_active_mods)}")
+            except Exception:
+                pass
     except Exception as e:
         print(f"Mod loading failed, continuing without mods: {e}")
+        if sys.platform == "emscripten":
+            try:
+                import platform
+                import traceback
+                platform.window.console.log(f"[gd5 mods] install() raised: {e}")
+                platform.window.console.log(traceback.format_exc())
+            except Exception:
+                pass
