@@ -176,7 +176,7 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
     master_name = master_data.get("name", master)
     master_adjective = master_data.get("adjective", "")
     
-    core_name = core_nation
+    core_name = nation_data.get(core_nation, {}).get("name", core_nation)
     
     # Load from active data or from disk if dead
     if core_nation in nation_data:
