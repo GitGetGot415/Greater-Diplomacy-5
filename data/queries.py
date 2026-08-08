@@ -3189,6 +3189,52 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
+def export_json_file(source_path, file_name, parent=None):
+    """Copies a single JSON file to the user's Downloads folder.
+
+    Single-file counterpart to export_dir_as_zip -- same desktop-writes-
+    directly / web-downloads-via-JS-bridge split, just without the zip step
+    since there's only one file to move.
+    """
+    from pathlib import Path
+    from ui import confirm_dialog
+    try:
+        dest_path = file_name if IS_WEB else os.path.join(str(Path.home() / "Downloads"), file_name)
+        shutil.copy2(source_path, dest_path)
+
+        if IS_WEB:
+            download_file(dest_path)
+            confirm_dialog.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
+        else:
+            confirm_dialog.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
+        return dest_path
+    except Exception as e:
+        confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
+        return None
+
+def import_json_file(game_state, title, on_loaded):
+    """Prompts for a .json file, parses it, and hands the parsed object to
+    on_loaded(data). Validating the shape and writing it anywhere is left to
+    the caller -- different JSON files have different schemas, this just
+    covers the shared "pick a file, parse it, report a read error" part.
+    """
+    from pathlib import Path
+    from ui import confirm_dialog
+
+    def _after_pick(file_path):
+        if not file_path:
+            return
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            confirm_dialog.show_error("Import Error", f"Couldn't read that file as JSON: {e}")
+            return
+        on_loaded(data)
+
+    open_file_browser(game_state, title, str(Path.home() / "Downloads"),
+                      extensions=[".json"], on_result=_after_pick)
+
 def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     """Prompts for a .zip and unpacks it into a folder named after the archive.
 

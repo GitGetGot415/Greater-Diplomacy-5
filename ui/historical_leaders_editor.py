@@ -16,6 +16,7 @@ at load time, keyed off that scenario's own date, so edits made here always
 take effect the next time a historical scenario is opened.
 """
 import copy
+import json
 import pygame
 from gameState import GameState
 import data.constants as c
@@ -75,11 +76,7 @@ class Historical_Leaders_Editor(GameState):
         super().__init__()
         self.bg_color = (20, 35, 20)
 
-        raw = queries.get_historical_leader_timeline()
-        self.data = {country: sorted((dict(e) for e in entries), key=_date_key)
-                    for country, entries in copy.deepcopy(raw).items()}
-        self.roster = sorted(self.data.keys())
-        self.active_country = self.roster[0] if self.roster else None
+        self._load_from_disk()
 
         self._scroll_roster = 0
         self._scroll_timeline = 0
@@ -88,6 +85,17 @@ class Historical_Leaders_Editor(GameState):
         self._entry_layout = []
 
         self.refresh_ui()
+
+    def _load_from_disk(self):
+        """(Re)builds self.data/roster/active_country from whatever's
+        currently saved in historical_leaders.json -- shared by __init__,
+        Import and Reset, which all need to throw away in-memory state and
+        start over from the file on disk."""
+        raw = queries.get_historical_leader_timeline()
+        self.data = {country: sorted((dict(e) for e in entries), key=_date_key)
+                    for country, entries in copy.deepcopy(raw).items()}
+        self.roster = sorted(self.data.keys())
+        self.active_country = self.roster[0] if self.roster else None
 
     @property
     def listening_for(self):
@@ -342,6 +350,74 @@ class Historical_Leaders_Editor(GameState):
             "adjectives and leaders automatically, based on each scenario's own date.")
         self.refresh_ui()
 
+    def export_timeline(self):
+        """Sends the on-disk historical_leaders.json to Downloads as-is --
+        exports the last saved state, not unsaved edits still sitting in the
+        on-screen fields (same "Save is its own separate step" split the rest
+        of this editor already uses)."""
+        queries.export_json_file(c.HISTORICAL_LEADERS_PATH, "historical_leaders.json")
+
+    @staticmethod
+    def _is_valid_timeline(data):
+        """A historical_leaders.json is {country: [ {year, month, day, ...}, ... ]}
+        -- rejects anything else before it gets anywhere near disk or self.data,
+        since a malformed shape here would only surface later as a confusing
+        crash in _date_key or the scenario loader."""
+        if not isinstance(data, dict):
+            return False
+        for entries in data.values():
+            if not isinstance(entries, list):
+                return False
+            if any(not isinstance(e, dict) or "year" not in e for e in entries):
+                return False
+        return True
+
+    def import_timeline(self):
+        def on_loaded(data):
+            if not self._is_valid_timeline(data):
+                confirm_dialog.show_error(
+                    "Import Error", "That file doesn't look like a historical leaders timeline.")
+                return
+
+            def on_confirm(ok):
+                if not ok:
+                    return
+                queries.save_historical_leader_timeline(data)
+                self._load_from_disk()
+                self._scroll_roster = 0
+                self._scroll_timeline = 0
+                confirm_dialog.show_success("Import Success", "Historical leaders timeline imported.")
+                self.refresh_ui()
+
+            confirm_dialog.ask_yes_no(
+                "Import Timeline?",
+                "This replaces your current historical leaders timeline, including any unsaved "
+                "edits, with the imported file. This can't be undone.", on_confirm)
+
+        queries.import_json_file(self, "Select historical_leaders.json", on_loaded)
+
+    def reset_timeline(self):
+        def on_confirm(ok):
+            if not ok:
+                return
+            try:
+                with open(c.HISTORICAL_LEADERS_DEFAULT_PATH, "r", encoding="utf-8") as f:
+                    default_data = json.load(f)
+            except Exception as e:
+                confirm_dialog.show_error("Reset Error", str(e))
+                return
+            queries.save_historical_leader_timeline(default_data)
+            self._load_from_disk()
+            self._scroll_roster = 0
+            self._scroll_timeline = 0
+            confirm_dialog.show_success("Reset", "Historical leaders timeline reset to the game's defaults.")
+            self.refresh_ui()
+
+        confirm_dialog.ask_yes_no(
+            "Reset to Defaults?",
+            "This overwrites historical_leaders.json with the game's built-in defaults, discarding "
+            "every custom entry and any unsaved edits. This can't be undone.", on_confirm)
+
     # ------------------------------------------------------------------ #
     #                              BUILD UI                               #
     # ------------------------------------------------------------------ #
@@ -448,6 +524,9 @@ class Historical_Leaders_Editor(GameState):
             Button(20, 20, "small", "red", "Back", self.exit_screen),
             Button(self.roster_rect.x, self.roster_rect.y - 40, "editor_ui", "green",
                   "+ Add Country", self.add_country),
+            Button(700, c.SCREEN_HEIGHT - 60, "small", "blue", "Export", self.export_timeline),
+            Button(810, c.SCREEN_HEIGHT - 60, "small", "purple", "Import", self.import_timeline),
+            Button(920, c.SCREEN_HEIGHT - 60, "small", "orange", "Reset", self.reset_timeline),
             Button(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 60, "medium", "green",
                   "Save Timeline", self.save),
         ]

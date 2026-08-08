@@ -35,4 +35,5 @@ main.spec
 !unit_data.json
 !research_template.json
 !historical_leaders.json
+!historical_leaders_DEFAULT.json
 !building_data.json

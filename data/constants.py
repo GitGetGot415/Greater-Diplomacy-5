@@ -140,7 +140,7 @@ CREDITS_DATA = [
                 {
                     "link_text": "neptune2019",
                     "info": ("Maps Added:\n"
-                    "- Kaiserreich Alpha"),
+                    "- Kaiserreich 1936"),
                     "align": "left",
                 },
             ]
@@ -972,6 +972,7 @@ ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
+HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 
 # ==========================================
 # HISTORY & SAVING SETTINGS
