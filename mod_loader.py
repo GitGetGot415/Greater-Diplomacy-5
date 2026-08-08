@@ -67,6 +67,14 @@ STATE_PATH = os.path.join(MODS_DIR, "enabled_mods.json")
 _active_mods = set()
 _active_sandbox = {}
 
+# Mods that got past the compile check but blew up when their top-level code
+# actually ran, keyed by filename -> "ExceptionType: message". Populated by
+# _ModSourceLoader.exec_module the moment (if ever) something actually
+# imports that mod's target module -- a mod targeting something never
+# imported this session just never gets an entry, since there's no way to
+# know it's broken without running it.
+_broken_mods = {}
+
 
 def is_mod_active(filename):
     return filename in _active_mods
@@ -231,6 +239,15 @@ def describe_mod(filename):
         info["error"] = f"syntax error: {e}"
     except Exception as e:
         info["error"] = str(e)
+
+    # Passing the compile check only means the mod is syntactically valid --
+    # it can still have blown up when its top-level code actually ran (see
+    # _ModSourceLoader.exec_module). That's a stronger, more specific verdict
+    # than anything above, so it wins even over "valid": True.
+    runtime_error = _broken_mods.get(filename)
+    if runtime_error:
+        info["valid"] = False
+        info["error"] = f"failed to load: {runtime_error}"
     return info
 
 
@@ -293,10 +310,11 @@ def _install_sandbox_audit_hook():
 
 
 class _ModSourceLoader(importlib.abc.Loader):
-    def __init__(self, source, origin, sandboxed):
+    def __init__(self, source, origin, sandboxed, mod_filename):
         self.source = source
         self.origin = origin
         self.sandboxed = sandboxed
+        self.mod_filename = mod_filename
 
     def exec_module(self, module):
         # Set before exec (not left to importlib's own has_location/spec
@@ -313,7 +331,38 @@ class _ModSourceLoader(importlib.abc.Loader):
             # anything -- mod code or later game code -- calls into them.
             module.__dict__[_SANDBOX_MARKER] = True
         code = compile(self.source, self.origin, "exec")
-        exec(code, module.__dict__)
+        try:
+            exec(code, module.__dict__)
+        except Exception as e:
+            # Compiling only proves the mod is syntactically valid -- its
+            # top-level code (a typo'd name, a bad default-argument
+            # expression, whatever) can still blow up the moment it actually
+            # runs. Rather than let that exception propagate up through
+            # whatever import statement first pulled this module in (almost
+            # always deep inside main.py's own startup chain, taking the
+            # whole game down before it even reaches a screen that could
+            # explain why), fall back to the real, unmodified file so the
+            # rest of the game boots normally; the Mods screen picks up
+            # _broken_mods to show what happened.
+            _broken_mods[self.mod_filename] = f"{type(e).__name__}: {e}"
+            _active_mods.discard(self.mod_filename)
+            _active_sandbox.pop(self.mod_filename, None)
+            print(f"Mod '{self.mod_filename}' failed to load ({type(e).__name__}: {e}) -- "
+                  f"falling back to the original file.")
+
+            # The failed exec() above may have partially populated
+            # module.__dict__ before raising -- clear it back to a blank
+            # slate (short of the housekeeping dunders importlib already
+            # set) so none of the mod's half-applied state leaks into the
+            # real module.
+            for key in list(module.__dict__):
+                if key not in ("__name__", "__loader__", "__spec__", "__file__", "__package__", "__path__"):
+                    del module.__dict__[key]
+
+            with open(self.origin, "r", encoding="utf-8") as f:
+                real_source = f.read()
+            real_code = compile(real_source, self.origin, "exec")
+            exec(real_code, module.__dict__)
 
     def get_source(self, fullname):
         return self.source
@@ -321,14 +370,15 @@ class _ModSourceLoader(importlib.abc.Loader):
 
 class _ModFinder(importlib.abc.MetaPathFinder):
     def __init__(self, overrides):
-        self.overrides = overrides  # module_name -> (source, origin_path, sandboxed)
+        self.overrides = overrides  # module_name -> (source, origin_path, sandboxed, mod_filename)
 
     def find_spec(self, fullname, path, target=None):
         entry = self.overrides.get(fullname)
         if entry is None:
             return None
-        source, origin, sandboxed = entry
-        return importlib.util.spec_from_loader(fullname, _ModSourceLoader(source, origin, sandboxed), origin=origin)
+        source, origin, sandboxed, mod_filename = entry
+        loader = _ModSourceLoader(source, origin, sandboxed, mod_filename)
+        return importlib.util.spec_from_loader(fullname, loader, origin=origin)
 
 
 def install():
@@ -367,12 +417,12 @@ def install():
                 continue
 
             sandboxed = is_mod_sandboxed(filename)
-            overrides[module_name] = (source, abs_target, sandboxed)
+            overrides[module_name] = (source, abs_target, sandboxed, filename)
             _active_mods.add(filename)
             _active_sandbox[filename] = sandboxed
 
         if overrides:
-            if any(sandboxed for _source, _origin, sandboxed in overrides.values()):
+            if any(sandboxed for _source, _origin, sandboxed, _filename in overrides.values()):
                 _install_sandbox_audit_hook()
             sys.meta_path.insert(0, _ModFinder(overrides))
     except Exception as e:
