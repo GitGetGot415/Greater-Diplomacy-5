@@ -1,9 +1,9 @@
 {
     "United States of America": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1897,
+            "month": 3,
+            "day": 4,
             "name": "United States of America",
             "adjective": "American",
             "color": null,
@@ -233,9 +233,9 @@
     ],
     "Canada": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1896,
+            "month": 7,
+            "day": 11,
             "name": "Canada",
             "adjective": "Canadian",
             "color": null,
@@ -455,9 +455,9 @@
     ],
     "France": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1899,
+            "month": 2,
+            "day": 18,
             "name": "France",
             "adjective": "French",
             "color": null,
@@ -657,9 +657,9 @@
     ],
     "United Kingdom": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1895,
+            "month": 6,
+            "day": 25,
             "name": "United Kingdom",
             "adjective": "British",
             "color": null,
@@ -979,9 +979,9 @@
     ],
     "Germany": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1888,
+            "month": 6,
+            "day": 15,
             "name": "German Empire",
             "adjective": "German",
             "color": null,
@@ -1183,9 +1183,9 @@
     ],
     "Belgium": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1865,
+            "month": 12,
+            "day": 17,
             "name": "Belgium",
             "adjective": "Belgian",
             "color": null,
@@ -1265,9 +1265,9 @@
     ],
     "Netherlands": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1890,
+            "month": 11,
+            "day": 23,
             "name": "Netherlands",
             "adjective": "Dutch",
             "color": null,
@@ -1307,9 +1307,9 @@
     ],
     "Sweden": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1872,
+            "month": 9,
+            "day": 18,
             "name": "Sweden",
             "adjective": "Swedish",
             "color": null,
@@ -1533,9 +1533,9 @@
     ],
     "Romania": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1881,
+            "month": 3,
+            "day": 26,
             "name": "Romania",
             "adjective": "Romanian",
             "color": null,
@@ -1705,9 +1705,9 @@
     ],
     "Bulgaria": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1887,
+            "month": 7,
+            "day": 7,
             "name": "Bulgaria",
             "adjective": "Bulgarian",
             "color": null,
@@ -1837,9 +1837,9 @@
     ],
     "Turkey": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1876,
+            "month": 8,
+            "day": 31,
             "name": "Ottoman Empire",
             "adjective": "Ottoman",
             "color": null,
@@ -2555,9 +2555,9 @@
     ],
     "German Empire": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1888,
+            "month": 6,
+            "day": 15,
             "name": "German Empire",
             "adjective": "German",
             "color": null,
@@ -2609,9 +2609,9 @@
     ],
     "Ottoman Empire": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1876,
+            "month": 8,
+            "day": 31,
             "name": "Ottoman Empire",
             "adjective": "Ottoman",
             "color": null,
@@ -2653,9 +2653,9 @@
     ],
     "Greece": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1863,
+            "month": 3,
+            "day": 30,
             "name": "Greece",
             "adjective": "Greek",
             "color": null,
@@ -3349,8 +3349,8 @@
     ],
     "Mexico": [
         {
-            "year": 1900,
-            "month": 1,
+            "year": 1884,
+            "month": 12,
             "day": 1,
             "name": "Mexico",
             "adjective": "Mexican",
@@ -3621,9 +3621,9 @@
     ],
     "Japan": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1898,
+            "month": 11,
+            "day": 8,
             "name": "Japan",
             "adjective": "Japanese",
             "color": null,
@@ -4597,9 +4597,9 @@
     ],
     "Egypt": [
         {
-            "year": 1900,
+            "year": 1892,
             "month": 1,
-            "day": 1,
+            "day": 8,
             "name": "Egypt",
             "adjective": "Egyptian",
             "color": null,
@@ -4739,9 +4739,9 @@
     ],
     "Spain": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1886,
+            "month": 5,
+            "day": 17,
             "name": "Spain",
             "adjective": "Spanish",
             "color": null,
@@ -4821,9 +4821,9 @@
     ],
     "Portugal": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1889,
+            "month": 10,
+            "day": 19,
             "name": "Portugal",
             "adjective": "Portuguese",
             "color": null,
@@ -5441,8 +5441,8 @@
     ],
     "Russia": [
         {
-            "year": 1900,
-            "month": 1,
+            "year": 1894,
+            "month": 11,
             "day": 1,
             "name": "Russia",
             "adjective": "Russian",
@@ -5847,9 +5847,9 @@
     ],
     "Denmark": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1863,
+            "month": 11,
+            "day": 15,
             "name": "Denmark",
             "adjective": "Danish",
             "color": null,
@@ -5909,9 +5909,9 @@
     ],
     "Serbia": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1889,
+            "month": 3,
+            "day": 6,
             "name": "Serbia",
             "adjective": "Serbian",
             "color": null,
@@ -6587,9 +6587,9 @@
     ],
     "New Zealand": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1893,
+            "month": 4,
+            "day": 27,
             "name": "New Zealand",
             "adjective": "New Zealand",
             "color": null,
@@ -6889,8 +6889,8 @@
     ],
     "Thailand": [
         {
-            "year": 1900,
-            "month": 1,
+            "year": 1868,
+            "month": 10,
             "day": 1,
             "name": "Siam",
             "adjective": "Thai",
@@ -7241,9 +7241,9 @@
     ],
     "Brazil": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1898,
+            "month": 11,
+            "day": 15,
             "name": "Brazil",
             "adjective": "Brazilian",
             "color": null,
@@ -7563,9 +7563,9 @@
     ],
     "Argentina": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1898,
+            "month": 10,
+            "day": 12,
             "name": "Argentina",
             "adjective": "Argentine",
             "color": null,
@@ -7965,9 +7965,9 @@
     ],
     "Peru": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1899,
+            "month": 9,
+            "day": 8,
             "name": "Peru",
             "adjective": "Peruvian",
             "color": null,
@@ -8277,9 +8277,9 @@
     ],
     "Venezuela": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1899,
+            "month": 10,
+            "day": 23,
             "name": "Venezuela",
             "adjective": "Venezuelan",
             "color": null,
@@ -8469,9 +8469,9 @@
     ],
     "Chile": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1896,
+            "month": 9,
+            "day": 18,
             "name": "Chile",
             "adjective": "Chilean",
             "color": null,
@@ -8751,9 +8751,9 @@
     ],
     "Ecuador": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1895,
+            "month": 6,
+            "day": 5,
             "name": "Ecuador",
             "adjective": "Ecuadorian",
             "color": null,
@@ -9857,9 +9857,9 @@
     ],
     "Costa Rica": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1894,
+            "month": 5,
+            "day": 8,
             "name": "Costa Rica",
             "adjective": "Costa Rican",
             "color": null,
@@ -10209,9 +10209,9 @@
     ],
     "Nicaragua": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1893,
+            "month": 7,
+            "day": 25,
             "name": "Nicaragua",
             "adjective": "Nicaraguan",
             "color": null,
@@ -10471,9 +10471,9 @@
     ],
     "Morocco": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1894,
+            "month": 6,
+            "day": 9,
             "name": "Morocco",
             "adjective": "Moroccan",
             "color": null,
@@ -10563,9 +10563,9 @@
     ],
     "Tunisia": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1882,
+            "month": 10,
+            "day": 28,
             "name": "Tunisia",
             "adjective": "Tunisian",
             "color": null,
@@ -10991,9 +10991,9 @@
     ],
     "Ethiopia": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1889,
+            "month": 11,
+            "day": 3,
             "name": "Ethiopia",
             "adjective": "Ethiopian",
             "color": null,
@@ -11115,7 +11115,7 @@
         {
             "year": 1900,
             "month": 1,
-            "day": 1,
+            "day": 4,
             "name": "Liberia",
             "adjective": "Liberian",
             "color": null,
@@ -11265,8 +11265,8 @@
     ],
     "Iran": [
         {
-            "year": 1900,
-            "month": 1,
+            "year": 1896,
+            "month": 5,
             "day": 1,
             "name": "Persia",
             "adjective": "Persian",
