@@ -58,8 +58,14 @@ def main():
     # Create empty saves/tournament_saves dirs in the bundle, mirroring the
     # Windows build: the app expects these to exist relative to its cwd, but
     # any saves already on this dev machine must NOT be bundled.
+    #
+    # mods/ is created empty for the same reason saves/ is: it's not a
+    # py2app data_files entry (those need at least one file per tuple, and
+    # this folder must ship with none), but the game still needs it to
+    # exist -- it's the drop-a-.py-in-here-and-restart folder from
+    # mod_loader.py's docstring / the in-game Mods screen.
     resources_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources")
-    for d in ("saves", "tournament_saves"):
+    for d in ("saves", "tournament_saves", "mods"):
         os.makedirs(os.path.join(resources_dir, d), exist_ok=True)
 
     # Overwrite active_albums.json with [] so the build doesn't carry over local settings

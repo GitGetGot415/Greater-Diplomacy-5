@@ -26,7 +26,31 @@ import json
 import os
 import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def _base_dir():
+    """The game folder mod targets are resolved against.
+
+    In dev mode this is just the directory this file lives in. In a frozen
+    build it must NOT be derived from __file__: PyInstaller only extracts
+    __file__'s module to the temp _MEIPASS dir (gone once the process exits,
+    and not where a user would drop a mods/ folder), and py2app zips this
+    module into lib/pythonXY.zip, whose __file__ looks like
+    ".../pythonXY.zip/mod_loader.pyc" -- os.path.dirname() of that names the
+    zip archive itself, not a real directory, so every os.path.isdir(MODS_DIR)
+    check below would silently and permanently fail.
+    """
+    if getattr(sys, "frozen", False):
+        if hasattr(sys, "_MEIPASS"):
+            # PyInstaller onefile: real, persistent files live next to the
+            # executable, not in the temp dir __file__ would point to.
+            return os.path.dirname(sys.executable)
+        # py2app: sys.executable is Contents/MacOS/<name>; the bundle's real
+        # (unzipped) resources -- and the loose .py source tree copied in
+        # for mod target validation -- live in the sibling Contents/Resources.
+        return os.path.normpath(os.path.join(os.path.dirname(sys.executable), "..", "Resources"))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = _base_dir()
 MODS_DIR = os.path.join(BASE_DIR, "mods")
 STATE_PATH = os.path.join(MODS_DIR, "enabled_mods.json")
 

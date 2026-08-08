@@ -39,6 +39,9 @@ def not_under_map_editor(path):
     # scenarios are dev/test scratch, not meant to ship.
     return "map_editor" not in os.path.normpath(path).split(os.sep)
 
+def is_py_file(path):
+    return path.endswith('.py')
+
 # ONLY raw assets go here — use tuples of (target_dir, [files]) for py2app.
 DATA_FILES = []
 DATA_FILES += find_data_files('assets', file_filter=not_git_ignored)
@@ -46,6 +49,18 @@ DATA_FILES += find_data_files('base_maps')
 DATA_FILES += find_data_files('scenarios', file_filter=not_under_map_editor)
 DATA_FILES += find_data_files('data/json', 'data/json')
 DATA_FILES.append(('.', ['mac64-libsoloud.dylib']))
+
+# Loose .py copies of every project package/module py2app also bundles below
+# (compiled, zipped into lib/pythonXY.zip). mod_loader resolves mod targets
+# against real files on disk next to the app -- see mod_loader.py's
+# _base_dir() docstring for why the zipped copies can't serve that role --
+# so without these, every dropped-in mod is rejected as "target not found"
+# even though the folder for it exists. Mirrors windows_compilation.py.
+DATA_FILES += find_data_files('screens', file_filter=is_py_file)
+DATA_FILES += find_data_files('map_logic', file_filter=is_py_file)
+DATA_FILES += find_data_files('ui', file_filter=is_py_file)
+DATA_FILES += find_data_files('data', 'data', file_filter=is_py_file)
+DATA_FILES.append(('.', ['mod_loader.py', 'gameState.py', 'ui_elements.py', 'soloud.py']))
 
 OPTIONS = {
     # All packages and sub-packages must be listed explicitly for py2app.

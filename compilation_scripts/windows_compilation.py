@@ -33,13 +33,32 @@ def main():
     os.makedirs(dist_dir, exist_ok=True)
     
     # 2. Copy directories
-    dirs_to_copy = ["assets", "base_maps", "data", "saves", "scenarios", "tournament_saves"]
-    
+    # screens/map_logic/ui are added alongside data so the mod system has a real,
+    # loose .py source tree to validate mod targets against and patch at import
+    # time -- PyInstaller only embeds compiled bytecode inside the exe itself,
+    # so without these the game folder next to main.exe has nothing on disk for
+    # mod_loader._resolve_target() to find, and every dropped-in mod is silently
+    # rejected as "target file not found".
+    dirs_to_copy = ["assets", "base_maps", "data", "screens", "map_logic", "ui",
+                     "saves", "scenarios", "tournament_saves"]
+
     def data_ignore_func(dir_name, contents):
         ignored = []
         for entry in contents:
             path = os.path.join(dir_name, entry)
-            if os.path.isfile(path) and not entry.endswith('.json'):
+            if entry == "__pycache__":
+                ignored.append(entry)
+            elif os.path.isfile(path) and not (entry.endswith('.json') or entry.endswith('.py')):
+                ignored.append(entry)
+        return ignored
+
+    def py_ignore_func(dir_name, contents):
+        ignored = []
+        for entry in contents:
+            path = os.path.join(dir_name, entry)
+            if entry == "__pycache__":
+                ignored.append(entry)
+            elif os.path.isfile(path) and not entry.endswith('.py'):
                 ignored.append(entry)
         return ignored
 
@@ -93,8 +112,24 @@ def main():
             shutil.copytree(src, dst, ignore=saves_ignore_func)
         elif d == "scenarios":
             shutil.copytree(src, dst, ignore=scenarios_ignore_func)
+        elif d in ("screens", "map_logic", "ui"):
+            shutil.copytree(src, dst, ignore=py_ignore_func)
         else:
             shutil.copytree(src, dst)
+
+    # Standalone top-level modules, alongside the package dirs above, so
+    # mod_loader can find and patch them too (e.g. a mod targeting
+    # "gameState.py" or "ui_elements.py" directly).
+    for py_file in ("main.py", "mod_loader.py", "gameState.py", "ui_elements.py", "soloud.py"):
+        if os.path.isfile(py_file):
+            shutil.copy2(py_file, os.path.join(dist_dir, py_file))
+
+    # Empty mods/ folder next to main.exe: dropping a .py mod in here (see
+    # mod_loader.py's docstring, or the in-game Mods screen) is how players
+    # self-serve mods without a rebuild. Left empty on purpose -- the
+    # example_*.py mods in the repo's mods/ dir are dev references, not
+    # meant to ship enabled.
+    os.makedirs(os.path.join(dist_dir, "mods"), exist_ok=True)
 
     # Overwrite active_albums.json with [] so the build doesn't carry over local settings
     active_albums_path = os.path.join(dist_dir, "data", "json", "active_albums.json")
