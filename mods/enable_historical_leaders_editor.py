@@ -1,3 +1,4 @@
+#screens/menu_screens/new_game.py
 import os
 import pygame
 from gameState import GameState
@@ -74,11 +75,10 @@ class New_Game(GameState):
         ]
 
         if self.sub_state == "HISTORICAL":
-            """history_btn = Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
-                                 self.open_historical_leaders_editor)
-            # Off by default; the "Enable Historical Leaders Editor" mod re-enables it.
-            history_btn.apply_state(enabled=False)
-            self.elements.append(history_btn)"""
+            self.elements.append(
+                Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
+                      self.open_historical_leaders_editor)
+            )
 
         scenario_dir = self.scenario_dir
         if not os.path.exists(scenario_dir):
@@ -132,7 +132,7 @@ class New_Game(GameState):
     def start_scenario(self, scenario_name, directory):
         self.selected_save_path = os.path.join(directory, scenario_name)
         # Pass the settings to the Map class
-        self.map_settings = queries.get_scenario_settings() 
+        self.map_settings = queries.get_scenario_settings()
         self.set_sub_state("CATEGORY")
         self.go_to("MAP")
 
