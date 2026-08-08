@@ -5966,7 +5966,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -5976,7 +5976,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -8194,7 +8196,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -8204,7 +8206,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -9451,7 +9455,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -9461,12 +9465,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -9476,7 +9482,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -10728,7 +10736,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -10738,7 +10746,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -11103,7 +11113,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -11113,7 +11123,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -11388,7 +11400,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -11398,7 +11410,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -11452,7 +11466,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -11462,7 +11476,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -11619,7 +11635,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -11629,7 +11645,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -11869,7 +11887,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -11879,7 +11897,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -12227,7 +12247,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -12237,7 +12257,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -12633,7 +12655,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -12643,7 +12665,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -12851,7 +12875,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -12861,7 +12885,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -13124,7 +13150,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -13134,7 +13160,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -13769,7 +13797,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -13779,7 +13807,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -13966,7 +13996,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -13976,7 +14006,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -15222,7 +15254,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -15232,7 +15264,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -16146,7 +16180,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -16156,7 +16190,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -16210,7 +16246,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -16220,7 +16256,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "8th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -16789,7 +16827,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -16799,7 +16837,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -16889,7 +16929,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -16899,7 +16939,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -17777,7 +17819,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -17787,7 +17829,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -17842,7 +17886,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -17852,7 +17896,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "9th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -18109,7 +18155,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "German Reich",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -18119,7 +18165,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "8th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -18175,7 +18223,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -18185,7 +18233,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -18941,7 +18991,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -18951,7 +19001,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "10th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -19328,7 +19380,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -19338,7 +19390,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -19976,7 +20030,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -19986,7 +20040,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -20350,7 +20406,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -20360,12 +20416,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -20375,7 +20433,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -20671,7 +20731,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -20681,7 +20741,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -21027,7 +21089,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Poland",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -21037,7 +21099,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -21317,7 +21381,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -21327,12 +21391,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "8th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -21342,7 +21408,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "9th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -21498,7 +21566,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -21508,7 +21576,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "11th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -22689,7 +22759,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Soviet Union",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -22699,7 +22769,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "12th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -24355,7 +24427,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -24365,7 +24437,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "10th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -27955,7 +28029,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -27965,7 +28039,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "11th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -30791,7 +30867,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "France",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -30801,7 +30877,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "12th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -40141,7 +40219,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Shanxi",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -40151,7 +40229,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -40555,7 +40635,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -40565,7 +40645,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -41918,7 +42000,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -41928,7 +42010,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -42755,7 +42839,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Shanxi",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -42765,7 +42849,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -43046,7 +43132,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -43056,7 +43142,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -43345,7 +43433,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -43355,7 +43443,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "1st Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -44619,7 +44709,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -44629,7 +44719,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "2nd Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -45320,7 +45412,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -45330,12 +45422,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -45345,7 +45439,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -46286,7 +46382,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -46296,12 +46392,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "3rd Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -46311,7 +46409,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "4th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -47442,7 +47542,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -47452,12 +47552,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -47467,7 +47569,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -48205,7 +48309,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -48215,7 +48319,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "5th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -48768,7 +48874,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -48778,12 +48884,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "8th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -48793,7 +48901,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "9th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -48865,7 +48975,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -48875,7 +48985,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "6th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -49489,7 +49601,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -49499,12 +49611,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "10th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -49514,7 +49628,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "11th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -50053,7 +50169,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -50063,12 +50179,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "7th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -50078,7 +50196,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "8th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -50647,7 +50767,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -50657,7 +50777,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "9th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -51403,7 +51525,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -51413,12 +51535,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "10th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -51428,7 +51552,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "11th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -51877,7 +52003,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -51887,12 +52013,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "12th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -51902,7 +52030,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "13th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -52473,7 +52603,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Japanese Empire",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -52483,7 +52613,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "14th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -53237,7 +53369,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -53247,7 +53379,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "12th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -53606,7 +53740,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -53616,7 +53750,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "13th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -53741,7 +53877,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -53751,12 +53887,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "14th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -53766,7 +53904,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "15th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -55156,7 +55296,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -55166,7 +55306,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "16th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -55363,7 +55505,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -55373,12 +55515,14 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "17th Artillery Division (VI)"
             },
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -55388,7 +55532,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "18th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -56677,7 +56823,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -56687,7 +56833,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "19th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
@@ -57592,7 +57740,7 @@
             {
                 "type": "Artillery VI",
                 "owner": "Nationalist China",
-                "health": 350,
+                "health": 350.0,
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
@@ -57602,7 +57750,9 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                }
+                },
+                "naval_unit": false,
+                "custom_name": "20th Artillery Division (VI)"
             }
         ],
         "building_queue": [],
