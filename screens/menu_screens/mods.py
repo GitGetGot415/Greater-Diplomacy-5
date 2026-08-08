@@ -98,7 +98,7 @@ class Mods(FolderListState):
         elif enabled and not active:
             name_color, state_label = "orange", "[TRUE ON RESTART]      "
         else:
-            name_color, state_label = "blue",   "[FALSE ON RESTART]   "
+            name_color, state_label = "yellow",   "[FALSE ON RESTART]   "
         if not info["valid"]:
             name_color = "grey"
 
