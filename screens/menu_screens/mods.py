@@ -97,11 +97,15 @@ class Mods(FolderListState):
     def _add_row(self, filename, btn_y):
         info = mod_loader.describe_mod(filename)
         enabled, active = info["enabled"], info["active"]
+        sandboxed, sandbox_active = info["sandboxed"], info["sandbox_active"]
 
-        # enabled/active can disagree because toggling here only edits
-        # enabled_mods.json -- install() already ran at process start and
-        # won't re-run until restart, so "active" is frozen at launch-time.
-        if enabled and active:
+        # enabled/active (and sandboxed/sandbox_active) can disagree because
+        # toggling here only edits enabled_mods.json -- install() already ran
+        # at process start and won't re-run until restart, so "active" and
+        # "sandbox_active" are both frozen at launch-time.
+        if not info["valid"]:
+            name_color, state_label = "grey", "[ERROR]                             "
+        elif enabled and active:
             name_color, state_label = "green",  "[TRUE]                               "
         elif not enabled and not active:
             name_color, state_label = "red",    "[FALSE]                             "
@@ -109,22 +113,33 @@ class Mods(FolderListState):
             name_color, state_label = "orange", "[TRUE ON RESTART]      "
         else:
             name_color, state_label = "yellow",   "[FALSE ON RESTART]   "
-        if not info["valid"]:
-            name_color = "grey"
+
+        # Same four-color scheme as the enabled/disabled state above, applied
+        # to sandboxed/unsandboxed: green/red when the declared setting
+        # already matches what's actually running, orange/yellow when it'll
+        # only take effect after a restart.
+        if sandboxed and sandbox_active:
+            sandbox_color = "green"
+        elif not sandboxed and not sandbox_active:
+            sandbox_color = "red"
+        elif sandboxed and not sandbox_active:
+            sandbox_color = "orange"
+        else:
+            sandbox_color = "yellow"
 
         name_btn = Button(20, btn_y, "save_file", name_color, f"{state_label} {filename}",
                           lambda f=filename: self.toggle_mod(f))
         name_btn.text_align = "left"
-        name_btn.rect.width = 935
+        name_btn.rect.width = 815
         name_btn.disabled = not info["valid"]
         name_btn.is_scrollable = True
         name_btn.click_guard = self.scroll_click_guard
         self.elements.append(name_btn)
 
-        sandboxed = info["sandboxed"]
-        sandbox_btn = Button(965, btn_y, "tiny_square", "green" if sandboxed else "orange",
-                             "BOX" if sandboxed else "RAW",
+        sandbox_btn = Button(845, btn_y, "tiny_square", sandbox_color,
+                             "Sandboxed" if sandboxed else "Unsandboxed",
                              lambda f=filename: self.toggle_sandbox(f), font_preset="tiny")
+        sandbox_btn.rect.width = 150
         sandbox_btn.disabled = not info["valid"]
         sandbox_btn.is_scrollable = True
         sandbox_btn.click_guard = self.scroll_click_guard
@@ -138,8 +153,6 @@ class Mods(FolderListState):
         self.elements.append(del_btn)
 
         subtext = f"-> {info['target']}" if info["target"] else ""
-        if subtext:
-            subtext += "  [Sandboxed]" if sandboxed else "  [Unsandboxed]"
         if info["error"]:
             subtext = f"{subtext}  ({info['error']})" if subtext else info["error"]
         self._row_subtext.append((subtext, 25, btn_y + 32))

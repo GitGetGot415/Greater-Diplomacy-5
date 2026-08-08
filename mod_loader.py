@@ -59,15 +59,26 @@ BASE_DIR = _base_dir()
 MODS_DIR = os.path.join(BASE_DIR, "mods")
 STATE_PATH = os.path.join(MODS_DIR, "enabled_mods.json")
 
-# Filenames actually patched in by install() at process start. Fixed for the
-# life of the process -- toggling a mod afterwards changes enabled_mods.json
-# but can't retroactively patch an already-imported module, so this is what
-# the Mods screen compares against to tell "on" from "on, pending restart".
+# Filenames actually patched in by install() at process start, and whether
+# each was loaded sandboxed. Fixed for the life of the process -- toggling a
+# mod (or its sandbox setting) afterwards changes enabled_mods.json but can't
+# retroactively patch an already-imported module, so this is what the Mods
+# screen compares against to tell "on"/"sandboxed" from "on, pending restart".
 _active_mods = set()
+_active_sandbox = {}
 
 
 def is_mod_active(filename):
     return filename in _active_mods
+
+
+def is_mod_sandbox_active(filename):
+    """Whether filename's currently-running instance (if any) was loaded
+    sandboxed. A mod that isn't active this process (disabled, invalid, or
+    never installed) has nothing running to diverge from, so this just
+    mirrors its current sandboxed setting -- no "pending restart" color for
+    a mod that isn't running at all."""
+    return _active_sandbox.get(filename, is_mod_sandboxed(filename))
 
 
 def mod_files():
@@ -196,13 +207,16 @@ def read_mod(filename):
 
 def describe_mod(filename):
     """Read-only summary for the Mods screen: target, module, validity, and
-    current enabled state. Never raises -- a bad mod just comes back invalid
-    with an explanation in "error"."""
+    current enabled/sandboxed state. Never raises -- a bad mod (including one
+    with a syntax error, which would otherwise only surface as a crash the
+    moment something imports its target module) just comes back invalid with
+    an explanation in "error"."""
     info = {"target": None, "module": None, "valid": False, "error": None,
             "enabled": is_mod_enabled(filename), "active": is_mod_active(filename),
-            "sandboxed": is_mod_sandboxed(filename)}
+            "sandboxed": is_mod_sandboxed(filename),
+            "sandbox_active": is_mod_sandbox_active(filename)}
     try:
-        target, _source = read_mod(filename)
+        target, source = read_mod(filename)
         info["target"] = target
         module_name, abs_target = _resolve_target(target)
         if module_name is None:
@@ -210,8 +224,11 @@ def describe_mod(filename):
         elif abs_target is None:
             info["error"] = f"target file not found: {target}"
         else:
+            compile(source, os.path.join(MODS_DIR, filename), "exec")
             info["module"] = module_name
             info["valid"] = True
+    except SyntaxError as e:
+        info["error"] = f"syntax error: {e}"
     except Exception as e:
         info["error"] = str(e)
     return info
@@ -343,8 +360,16 @@ def install():
                 print(f"Skipping mod '{filename}': {target} is already patched by another enabled mod")
                 continue
 
-            overrides[module_name] = (source, abs_target, is_mod_sandboxed(filename))
+            try:
+                compile(source, os.path.join(MODS_DIR, filename), "exec")
+            except SyntaxError as e:
+                print(f"Skipping mod '{filename}': syntax error: {e}")
+                continue
+
+            sandboxed = is_mod_sandboxed(filename)
+            overrides[module_name] = (source, abs_target, sandboxed)
             _active_mods.add(filename)
+            _active_sandbox[filename] = sandboxed
 
         if overrides:
             if any(sandboxed for _source, _origin, sandboxed in overrides.values()):
