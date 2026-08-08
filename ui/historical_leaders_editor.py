@@ -1,11 +1,14 @@
-"""Historical Leaders Editor: a dated timeline of name/adjective/leader_name/
-leader_title per country, saved to data/json/historical_leaders.json.
+"""Historical Leaders Editor: a dated timeline of name/adjective/color/flag/
+portrait/leader_name/leader_title per country, saved to
+data/json/historical_leaders.json.
 
 Left column is the working roster of countries being tracked; the right
-column -- much wider, since each row holds seven fields -- lists the active
+column -- much wider, since each row holds several fields -- lists the active
 country's timeline as editable cards, one per dated entry. An entry applies
 from its own date onward until a later entry supersedes it, field by field
-independently (see queries.apply_historical_leader_timeline).
+independently (see queries.apply_historical_leader_timeline). Flag and
+portrait, like color, start unset (None) on every entry -- a country with no
+override anywhere in its timeline just keeps using its normal flag/portrait.
 
 Saving here doesn't touch any scenario file directly: data/map/load_map.py
 re-applies the saved timeline to every scenario under scenarios/historical
@@ -30,6 +33,12 @@ ROSTER_ROW_H = 36
 ENTRY_ROW_H = 150
 FIELD_H = 32
 COLOR_SWATCH_SIZE = 34
+IMAGE_SWATCH_SIZE = 34
+# Thumbnail sizes the flag/portrait swatches render their preview at --
+# smaller than the game's actual c.FLAG_SIZE/c.PORTRAIT_SIZE, just enough
+# to sit inside an IMAGE_SWATCH_SIZE square button.
+FLAG_PREVIEW_SIZE = (30, 20)
+PORTRAIT_PREVIEW_SIZE = (30, 30)
 # Vertical offsets of each entry card's two field rows, relative to the
 # card's own top -- kept well apart so the date/name/adjective/color row
 # reads as clearly separate from the leader row below it.
@@ -105,6 +114,7 @@ class Historical_Leaders_Editor(GameState):
             "year": tx, "month": tx + 62, "day": tx + 116,
             "name": tx + 172, "adjective": tx + 334, "color": tx + 506,
             "leader_name": tx, "leader_title": tx + 300,
+            "flag": tx + 588, "portrait": tx + 706,
         }
 
     def _scroll_attrs(self, name):
@@ -195,16 +205,20 @@ class Historical_Leaders_Editor(GameState):
             entry = {k: last.get(k, "") for k in
                      ("year", "month", "day", "name", "adjective", "leader_name", "leader_title")}
             entry["color"] = last.get("color")
+            entry["flag_data"] = last.get("flag_data")
+            entry["portrait_data"] = last.get("portrait_data")
         else:
             base = queries.get_country_data().get(self.active_country, {})
             entry = _new_entry()
             entry["name"] = base.get("name", self.active_country)
             entry["adjective"] = base.get("adjective", "")
-            # Colour starts unset (None) rather than pre-filled from the
-            # country's current colour -- existing countries keep whatever
-            # colour they already have until someone deliberately opens the
-            # swatch and picks one for this entry.
+            # Colour/flag/portrait all start unset (None) rather than
+            # pre-filled from the country's current appearance -- existing
+            # countries keep whatever they already have until someone
+            # deliberately opens the swatch and picks something for this entry.
             entry["color"] = None
+            entry["flag_data"] = None
+            entry["portrait_data"] = None
 
         entries.append(entry)
         self.refresh_ui()
@@ -231,6 +245,45 @@ class Historical_Leaders_Editor(GameState):
         entry["color"] = None
         self.refresh_ui()
 
+    def _pick_image(self, entry, field, browse_dir, size, label):
+        """Shared flag/portrait file-import flow: browse, scale to the game's
+        fixed flag/portrait dimensions, and stash it Base64-encoded on the
+        entry -- same storage format country_data already uses, so a set
+        entry overrides the country's normal appearance and a cleared one
+        (None) just falls back to whatever the country already has."""
+        self._sync_entries()
+
+        def on_picked(file_path):
+            if not file_path:
+                return
+            try:
+                img = pygame.image.load(file_path).convert_alpha()
+                scaled = pygame.transform.scale(img, size)
+            except Exception:
+                confirm_dialog.show_error(f"Import Failed", f"Could not load that image as a {label.lower()}.")
+                return
+            entry[field] = queries.encode_surf_to_b64(scaled)
+            self.refresh_ui()
+
+        queries.open_file_browser(self, f"{self.active_country} {label}", browse_dir,
+                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
+
+    def pick_flag(self, entry):
+        self._pick_image(entry, "flag_data", c.FLAGS_DIR, c.FLAG_SIZE, "Flag")
+
+    def clear_flag(self, entry):
+        self._sync_entries()
+        entry["flag_data"] = None
+        self.refresh_ui()
+
+    def pick_portrait(self, entry):
+        self._pick_image(entry, "portrait_data", c.PORTRAITS_DIR, c.PORTRAIT_SIZE, "Portrait")
+
+    def clear_portrait(self, entry):
+        self._sync_entries()
+        entry["portrait_data"] = None
+        self.refresh_ui()
+
     def save(self):
         self._sync_entries()
         cleaned = {}
@@ -254,6 +307,13 @@ class Historical_Leaders_Editor(GameState):
                 else:
                     color = None
 
+                flag_data = e.get("flag_data")
+                if not isinstance(flag_data, str) or not flag_data:
+                    flag_data = None
+                portrait_data = e.get("portrait_data")
+                if not isinstance(portrait_data, str) or not portrait_data:
+                    portrait_data = None
+
                 parsed.append({
                     "year": year,
                     "month": max(1, min(12, month)),
@@ -261,6 +321,8 @@ class Historical_Leaders_Editor(GameState):
                     "name": str(e.get("name", "")).strip(),
                     "adjective": str(e.get("adjective", "")).strip(),
                     "color": color,
+                    "flag_data": flag_data,
+                    "portrait_data": portrait_data,
                     "leader_name": str(e.get("leader_name", "")).strip(),
                     "leader_title": str(e.get("leader_title", "")).strip(),
                 })
@@ -283,6 +345,14 @@ class Historical_Leaders_Editor(GameState):
     # ------------------------------------------------------------------ #
     #                              BUILD UI                               #
     # ------------------------------------------------------------------ #
+
+    def _preview_surf(self, b64_data, size, is_portrait, target_size):
+        """Decodes a flag/portrait entry (None falls back to the country's
+        normal appearance, same as an unset field does in play) and scales
+        it down to fit inside a swatch button."""
+        full = queries.decode_b64_to_surf(b64_data or "DEFAULT", size, is_portrait=is_portrait,
+                                          country_name=self.active_country)
+        return pygame.transform.smoothscale(full, target_size)
 
     def _build_entry_row(self, entry, y):
         fx = self.field_x
@@ -322,6 +392,29 @@ class Historical_Leaders_Editor(GameState):
         clear_btn.pane = "timeline"
         clear_btn.click_guard = self._guard_timeline
         self.elements.append(clear_btn)
+
+        for key, size, is_portrait, preview_size, pick_cb, clear_cb in (
+            ("flag", c.FLAG_SIZE, False, FLAG_PREVIEW_SIZE, self.pick_flag, self.clear_flag),
+            ("portrait", c.PORTRAIT_SIZE, True, PORTRAIT_PREVIEW_SIZE, self.pick_portrait, self.clear_portrait),
+        ):
+            has_override = bool(entry.get(f"{key}_data"))
+            preview = self._preview_surf(entry.get(f"{key}_data"), size, is_portrait, preview_size)
+
+            img_btn = Button(fx[key], row2_y - 1, "tiny_square", "grey", "",
+                             lambda e=entry, cb=pick_cb: cb(e), image=preview, show_text=False)
+            img_btn.rect.size = (IMAGE_SWATCH_SIZE, IMAGE_SWATCH_SIZE)
+            img_btn.pane = "timeline"
+            img_btn.click_guard = self._guard_timeline
+            self.elements.append(img_btn)
+
+            img_clear_btn = Button(fx[key] + IMAGE_SWATCH_SIZE + 8, row2_y - 1, "tiny_square", "orange", "Clear",
+                                   lambda e=entry, cb=clear_cb: cb(e), font_preset="button_small")
+            img_clear_btn.rect.size = (60, IMAGE_SWATCH_SIZE)
+            if not has_override:
+                img_clear_btn.apply_state(enabled=False)
+            img_clear_btn.pane = "timeline"
+            img_clear_btn.click_guard = self._guard_timeline
+            self.elements.append(img_clear_btn)
 
         # Kept well clear of the card's own right edge (timeline_rect.right - 20,
         # see the card_rect built in draw_elements) and the scrollbar track
@@ -421,7 +514,8 @@ class Historical_Leaders_Editor(GameState):
                                    ("name", "Name"), ("adjective", "Adjective"), ("color", "Color")):
                     cap = tiny.render(label, True, (150, 190, 150))
                     surface.blit(cap, (fx[key], row1_y - 15))
-                for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title")):
+                for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title"),
+                                   ("flag", "Flag"), ("portrait", "Portrait")):
                     cap = tiny.render(label, True, (150, 190, 150))
                     surface.blit(cap, (fx[key], row2_y - 15))
 
