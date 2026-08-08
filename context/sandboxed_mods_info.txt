@@ -1,0 +1,6 @@
+What sandboxed mods can/can't do 
+
+Blocked: open(), os.remove/rmdir/rename/mkdir/makedirs/chmod/chown/link/symlink/listdir/scandir, os.system/popen/spawn*/exec*/fork/kill, os.putenv/unsetenv/startfile, subprocess.Popen, shutil.rmtree/copyfile/copytree/move, and any socket.*/ctypes.* call. Since shutil/pathlib internally call those same low-level os/open primitives, they're covered automatically too.
+(note that the stuff blocked is only blocked when the mod's own code is the direct caller)
+
+Allowed: defining/overriding functions and classes, pure computation, importing anything (including os itself, for harmless things like os.path.join), and calling into the game's own existing functions, even ones that do legitimate file I/O as their normal job (e.g. calling queries.save_game()), since the direct caller of the actual open() there is queries.py, not the mod.
