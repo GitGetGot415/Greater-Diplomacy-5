@@ -192,7 +192,7 @@ def process_ai_economy_decisions(map_screen):
                 continue # Skip panic militia check since it's already in combat and can't build anyway
                 
             # 2. Panic Militia
-            if has_factory and ai_name in prov.get("cores", []):
+            if has_factory and queries.has_core(ai_name, prov):
                 enemy_adjacent = False
                 for n_id in prov.get("neighbors", []):
                     n_prov = map_screen.id_to_province.get(n_id)
@@ -381,9 +381,9 @@ def process_ai_economy_decisions(map_screen):
 
             # Find a province capable of recruiting (Exclude tiles in combat AND non-cores)
             if queries.get_base_unit_name(unit_name_to_build) == "Militia":
-                factory_provs = [p for p in my_provs if queries.has_industry(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and ai_name in p.get("cores", [])]
+                factory_provs = [p for p in my_provs if queries.has_industry(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and queries.has_core(ai_name, p)]
             else:
-                factory_provs = [p for p in my_provs if queries.has_basic_factory(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and ai_name in p.get("cores", [])]
+                factory_provs = [p for p in my_provs if queries.has_basic_factory(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and queries.has_core(ai_name, p)]
             
             # --- NEW: Filter to coastal factories only if building a naval unit ---
             is_naval_recruit = queries.is_naval_unit(unit_name_to_build)
@@ -437,8 +437,10 @@ def process_ai_economy_decisions(map_screen):
                     break # Can't afford it or out of valid factories. Exit recruitment loop.
 
         # --- AI CORING PRIORITY ---
+        # Nothing to core when cores are disabled -- every tile already counts
+        # as cored, so skip straight past this without spending resources.
         surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
-        if data.get("manpower", 0) > surplus_manpower:
+        if not getattr(c, "DISABLE_CORES", False) and data.get("manpower", 0) > surplus_manpower:
             uncored_provs = [p for p in my_provs if ai_name not in p.get("cores", []) and not any(q.get("order_type") == "CORE" for q in p.get("building_queue", []))]
             if uncored_provs:
                 valid_uncored = []
@@ -488,7 +490,7 @@ def process_ai_economy_decisions(map_screen):
 
             for prov in my_provs:
                 # Ensure AI only builds in its core territories
-                if ai_name not in prov.get("cores", []):
+                if not queries.has_core(ai_name, prov):
                     continue
 
                 current_buildings = prov.get("buildings", [])

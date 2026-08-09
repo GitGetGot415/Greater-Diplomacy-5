@@ -46,9 +46,9 @@ SLIDER_WIDTH = 180
 AI_SLIDER_Y_OFFSET = 8
 
 # --- Footer actions, centred under both columns ---
-DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 6 * ROW_H
-RESET_ROW_Y = 470
-TURN_EDITOR_ROW_Y = 530
+DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 7 * ROW_H
+RESET_ROW_Y = 516
+TURN_EDITOR_ROW_Y = 576
 
 # ==========================================
 # TOGGLES
@@ -72,6 +72,11 @@ TOGGLE_ROWS = [
     ("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, "Bounce Tiebreaker",
      "When equally-matched attackers contest a province, this makes the move bounce "
      "instead of letting chance decide who takes it."),
+    ("disable_cores", c.DEFAULT_DISABLE_CORES, "Disable Cores",
+     "Ignores cores as a game mechanic: every country is treated as fully cored on all its "
+     "territory, so there are no non-core penalties and nothing to manually core or remove "
+     "(the AI won't try to core or remove cores either). Cores still exist behind the scenes "
+     "for things like releasing puppets."),
 ]
 
 DAYS_PER_TURN_TOOLTIP = "Sets how many in-game days pass with each turn you take."

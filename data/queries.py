@@ -242,6 +242,7 @@ GLOBAL_SCENARIO_FLAGS = {
     "casus_belli_required": ("CASUS_BELLI_REQUIRED", c.DEFAULT_CASUS_BELLI),
     "battle_royale": ("BATTLE_ROYALE_MODE", c.DEFAULT_BATTLE_ROYALE),
     "disable_factions": ("DISABLE_FACTIONS", c.DEFAULT_DISABLE_FACTIONS),
+    "disable_cores": ("DISABLE_CORES", c.DEFAULT_DISABLE_CORES),
 }
 
 
@@ -1196,6 +1197,19 @@ def get_factory_count(nation, map_data):
                 if "Factory" in q.get("item_name", ""): count += 1
     return count
 
+def has_core(nation, province):
+    """True if `nation` should be treated as cored on `province`.
+
+    Under the "Disable Cores" scenario rule, every nation counts as cored on
+    every tile it owns -- no non-core penalties, and nothing left to manually
+    core or decore. This only affects that own-territory reading; it doesn't
+    touch the underlying `cores` list on the province, which other systems
+    (claims, puppet release, etc.) still rely on.
+    """
+    if getattr(c, "DISABLE_CORES", False):
+        return True
+    return nation in province.get("cores", [])
+
 def get_core_cost(nation, map_data):
     """Calculates the cost to core a territory dynamically."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
@@ -1398,7 +1412,7 @@ def calculate_all_economies(map_data, nation_data):
         
         # --- INCOME LOGIC ---
         if owner and owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
-            is_core = owner in province.get("cores", [])
+            is_core = has_core(owner, province)
             cat = "core" if is_core else "non_core"
             bd = econ_data[owner]["breakdown"]
             dyn_yields = econ_data[owner]["dynamic_yields"]

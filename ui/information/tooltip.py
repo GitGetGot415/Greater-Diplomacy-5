@@ -98,7 +98,7 @@ def draw_tooltip(self, surface):
         base_fuel = c.BASE_YIELDS['fuel']
 
         # Apply core/non-core penalties to give the player the EXACT true yield
-        is_core = owner_id in prov.get("cores", [])
+        is_core = queries.has_core(owner_id, prov)
         man_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]
         mat_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]
         fuel_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]

@@ -196,6 +196,10 @@ DEFAULT_BOUNCE_TIEBREAKER = False
 DISABLE_FACTIONS = False
 DEFAULT_DISABLE_FACTIONS = False
 
+# --- CORES ---
+DISABLE_CORES = False
+DEFAULT_DISABLE_CORES = False
+
 # ==========================================
 # DEFAULTS & ASSETS
 # ==========================================

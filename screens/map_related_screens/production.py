@@ -180,7 +180,7 @@ class Production_Screen(GameState):
         # --- BUILDING LOGIC ---
         bldg_groups = {"Other": ["industry"], "Recruitment": ["recruitment"]}
         
-        is_core = owner_nation in self.target_province.get("cores", [])
+        is_core = queries.has_core(owner_nation, self.target_province)
         
         # --- BUGFIX: Coring Restrictions ---
         can_core = False
@@ -233,49 +233,52 @@ class Production_Screen(GameState):
             y_offset += ROW_STEP_Y
 
         # --- REMOVE CORES BUTTON ---
-        foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
-        has_unit = any(u.get("owner") == owner_nation for u in self.target_province.get("units", []))
-        
-        is_removing_cores = any(q.get("order_type") == "REMOVE_CORE" for q in building_queue)
-        remove_data = queries.get_remove_core_cost(owner_nation, self.map_screen.map_data)
-        
-        if is_removing_cores:
-            btn_txt2 = "Removing Cores..."
-            btn_color2 = "grey"
-            cb2 = lambda: None
-        elif not foreign_cores:
-            btn_txt2 = "No Foreign Cores"
-            btn_color2 = "grey"
-            cb2 = lambda: None
-        elif not has_unit:
-            btn_txt2 = "Needs Garrison"
-            btn_color2 = "grey"
-            cb2 = lambda: None
-        elif not can_core:
-            btn_txt2 = "Cannot Remove"
-            btn_color2 = "grey"
-            cb2 = lambda: None
-        elif is_spectator and not can_spectator_edit:
-            btn_txt2 = "Remove Cores"
-            btn_color2 = "grey"
-            cb2 = lambda: None
-        else:
-            btn_txt2 = "Remove Cores"
-            btn_color2 = "red"
-            cb2 = lambda: self.start_remove_cores()
+        # Cores are ignored entirely under the "Disable Cores" scenario rule, so
+        # there's nothing left to add or strip -- skip this row completely.
+        if not getattr(c, "DISABLE_CORES", False):
+            foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
+            has_unit = any(u.get("owner") == owner_nation for u in self.target_province.get("units", []))
 
-        self._add_scroll_button(x_pos, y_offset, btn_color2, btn_txt2, cb2)
+            is_removing_cores = any(q.get("order_type") == "REMOVE_CORE" for q in building_queue)
+            remove_data = queries.get_remove_core_cost(owner_nation, self.map_screen.map_data)
 
-        bar_rect2 = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
-        mock_stats2 = {
-            "time": remove_data["time"],
-            "cost_manpower": remove_data["cost_manpower"],
-            "cost_materials": remove_data["cost_materials"],
-            "cost_fuel": remove_data["cost_fuel"],
-            "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
-        }
-        self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
-        y_offset += ROW_STEP_Y
+            if is_removing_cores:
+                btn_txt2 = "Removing Cores..."
+                btn_color2 = "grey"
+                cb2 = lambda: None
+            elif not foreign_cores:
+                btn_txt2 = "No Foreign Cores"
+                btn_color2 = "grey"
+                cb2 = lambda: None
+            elif not has_unit:
+                btn_txt2 = "Needs Garrison"
+                btn_color2 = "grey"
+                cb2 = lambda: None
+            elif not can_core:
+                btn_txt2 = "Cannot Remove"
+                btn_color2 = "grey"
+                cb2 = lambda: None
+            elif is_spectator and not can_spectator_edit:
+                btn_txt2 = "Remove Cores"
+                btn_color2 = "grey"
+                cb2 = lambda: None
+            else:
+                btn_txt2 = "Remove Cores"
+                btn_color2 = "red"
+                cb2 = lambda: self.start_remove_cores()
+
+            self._add_scroll_button(x_pos, y_offset, btn_color2, btn_txt2, cb2)
+
+            bar_rect2 = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
+            mock_stats2 = {
+                "time": remove_data["time"],
+                "cost_manpower": remove_data["cost_manpower"],
+                "cost_materials": remove_data["cost_materials"],
+                "cost_fuel": remove_data["cost_fuel"],
+                "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
+            }
+            self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
+            y_offset += ROW_STEP_Y
 
         self.admin_end_y = y_offset
 
@@ -596,7 +599,7 @@ class Production_Screen(GameState):
 
     def start_construction(self, b_name):
         owner = self.target_province.get("owner")
-        if owner not in self.target_province.get("cores", []):
+        if not queries.has_core(owner, self.target_province):
             self.map_screen.show_feedback("Must core territory before producing!")
             return
 
@@ -624,7 +627,7 @@ class Production_Screen(GameState):
 
     def buy_unit(self, unit_name):
         owner = self.target_province.get("owner")
-        if owner not in self.target_province.get("cores", []):
+        if not queries.has_core(owner, self.target_province):
             self.map_screen.show_feedback("Must core territory before recruiting!")
             return
 
