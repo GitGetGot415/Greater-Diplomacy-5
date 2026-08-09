@@ -29,10 +29,8 @@ def draw_sidebar_info(self, surface):
     and active combat data.
     """
     # 1. Draw the Panel Background and Border
-    panel_surf = pygame.Surface((info_rect.width, info_rect.height), pygame.SRCALPHA)
-    panel_surf.fill((30, 30, 30, 200))
-    surface.blit(panel_surf, (info_rect.x, info_rect.y))
-    pygame.draw.rect(surface, (200, 200, 200), info_rect, 1)
+    ui_bars.draw_translucent_panel(surface, info_rect, (30, 30, 30, 200),
+                                   border_color=c.UI_TEXT_LIGHT, border_width=1)
 
     # 2. Extract Province Data
     province = self.selected_province

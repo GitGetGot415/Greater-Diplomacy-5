@@ -16,20 +16,13 @@ import pygame
 import data.constants as c
 from gameState import dispatch_global_keys
 from ui import modal_stack
+from ui.bars import ui_bars
 
 
 def acquire_surface(size=None, caption=None):
-    """Returns (surface, owns_display), creating a window only when none exists."""
-    surface = pygame.display.get_surface()
-    if surface is not None:
-        return surface, False
-
-    if not pygame.get_init():
-        pygame.init()
-    surface = pygame.display.set_mode(size or (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-    if caption:
-        pygame.display.set_caption(caption)
-    return surface, True
+    """Kept as the name this module's callers use; the implementation is shared
+    with ui/confirm_dialog.py via ui_bars."""
+    return ui_bars.acquire_surface(size, caption)
 
 
 class _ScreenModal:

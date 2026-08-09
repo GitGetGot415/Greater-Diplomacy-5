@@ -17,7 +17,9 @@ MAP_QUEUE_MIN_HEIGHT = 80
 MAP_QUEUE_MAX_HEIGHT = 400
 
 # How fast the mouse wheel scrolls the read-only map queue overlay
-MAP_QUEUE_SCROLL_STEP = 30
+MAP_QUEUE_SCROLL_STEP = c.SCROLL_STEP
+# Alpha of the map queue overlay's fill, so the map stays visible behind it.
+MAP_QUEUE_TRANSPARENCY = 200
 
 # --- Interactive queue panel on the Production screen ---
 PANEL_WIDTH = 460
@@ -122,10 +124,8 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     panel_rect = pygame.Rect(MAP_QUEUE_OVERLAY_X, MAP_QUEUE_OVERLAY_Y, MAP_QUEUE_OVERLAY_WIDTH, panel_height)
 
-    panel_surf = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
-    panel_surf.fill((*PANEL_BG_COLOR, 200))
-    surface.blit(panel_surf, panel_rect.topleft)
-    pygame.draw.rect(surface, PANEL_BORDER_COLOR, panel_rect, 2)
+    ui_bars.draw_translucent_panel(surface, panel_rect, (*PANEL_BG_COLOR, MAP_QUEUE_TRANSPARENCY),
+                                   border_color=PANEL_BORDER_COLOR)
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (panel_rect.centerx, panel_rect.y), (panel_rect.centerx, panel_rect.bottom), 2)
 
     font = fonts.get("normal")

@@ -877,13 +877,8 @@ class Orders_Screen(GameState):
         if player_units:
             bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
             
-            # Draw semi-transparent panel
-            panel_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-            panel_surf.fill((*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY))
-            surface.blit(panel_surf, bg_rect.topleft)
-            
-            # Draw border
-            pygame.draw.rect(surface, PANEL_BORDER_COLOR, bg_rect, 2)
+            ui_bars.draw_translucent_panel(surface, bg_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
+                                           border_color=PANEL_BORDER_COLOR)
             
             # --- NEW: Scroll Bar Rendering ---
             self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(

@@ -107,6 +107,67 @@ def draw_modal_box(surface, rect, bg_color=(40, 40, 50), border_color=(100, 150,
         pygame.draw.rect(surface, bg_color, rect)
     pygame.draw.rect(surface, border_color, rect, border_width)
 
+def draw_translucent_panel(surface, rect, rgba, border_color=None, border_width=2, radius=0):
+    """A panel with an alpha fill -- the map-layered HUD boxes.
+
+    draw_modal_box takes the same 4-tuple path, but six panels were building the
+    SRCALPHA surface by hand because they also wanted a corner radius or no
+    border at all. This is that variant, kept separate so neither call site has
+    to pass arguments it doesn't use.
+    """
+    panel_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    if radius:
+        pygame.draw.rect(panel_surf, rgba, panel_surf.get_rect(), border_radius=radius)
+    else:
+        panel_surf.fill(rgba)
+    surface.blit(panel_surf, rect.topleft)
+    if border_color:
+        pygame.draw.rect(surface, border_color, rect, border_width, border_radius=radius)
+
+
+def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_width=3,
+                     title_dy=None, font_preset="heading2"):
+    """The standard modal panel: filled box, border, and a centred title.
+
+    Every modal screen repeated this same three-step sequence with its own
+    slightly different colours and title offset. Defaults come from the shared
+    palette so they all land on one look; the arguments stay for the screens
+    that genuinely need something else.
+    """
+    draw_modal_box(surface, rect,
+                   bg_color=c.MODAL_BG if bg is None else bg,
+                   border_color=c.MODAL_BORDER if border is None else border,
+                   border_width=border_width)
+    if title:
+        dy = c.MODAL_TITLE_Y_OFFSET if title_dy is None else title_dy
+        return draw_centered_title(surface, title, rect.y + dy, font_preset)
+    return None
+
+
+def acquire_surface(size=None, caption=None):
+    """Returns (surface, owns_display), creating a window only when none exists.
+
+    Used by the standalone paths -- the dev tools in data/editors and the
+    map_tools scripts run outside the game's main loop, with no display up yet.
+    """
+    surface = pygame.display.get_surface()
+    if surface is not None:
+        return surface, False
+
+    if not pygame.get_init():
+        pygame.init()
+    surface = pygame.display.set_mode(size or (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+    if caption:
+        pygame.display.set_caption(caption)
+    return surface, True
+
+
+def release_surface(owns_display):
+    """Tears down a display acquire_surface created, and only that one."""
+    if owns_display:
+        pygame.display.quit()
+
+
 def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False):
     """Draws centered title text to standardize headers."""
     from map_logic.rendering.font_manager import fonts

@@ -178,9 +178,11 @@ def draw_map_screen(self, surface):
     if self.selected_province:
         if self.selection_mode:
             # Use the transparent black for country selection confirmation
-            modal_overlay = pygame.Surface((surface.get_width(), surface.get_height() - self.total_ui_h), pygame.SRCALPHA)
-            modal_overlay.fill((0, 0, 0, 160)) 
-            surface.blit(modal_overlay, (0, self.top_ui_height))
+            # Only the map area is dimmed here, not the UI bars, so this is a
+            # rect panel rather than draw_fullscreen_overlay.
+            map_area = pygame.Rect(0, self.top_ui_height, surface.get_width(),
+                                   surface.get_height() - self.total_ui_h)
+            ui_bars.draw_translucent_panel(surface, map_area, (0, 0, 0, 160))
         else:
             # Use the custom transparent PNG for the actual province menu
             # Pass the backgrounds directory to the image loader!
@@ -270,9 +272,7 @@ def draw_map_screen(self, surface):
             surface.blit(cb_surf, (self.se_checkbox_rect.right + 10, self.se_checkbox_rect.y))
 
         if self.pending_selection:
-            overlay = pygame.Surface((surface.get_width(), surface.get_height()), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 100))
-            surface.blit(overlay, (0, 0))
+            ui_bars.draw_fullscreen_overlay(surface, 100)
             
             box_rect = pygame.Rect(0, 0, 400, 200)
             box_rect.center = (surface.get_width()//2, surface.get_height()//2)

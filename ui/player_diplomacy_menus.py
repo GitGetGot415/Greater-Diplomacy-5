@@ -446,10 +446,8 @@ class Claims_Screen(MapOverlayScreen):
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, color, base_radius=4, inset=i, is_justifying=is_just)
         
         # Draw Information Panel
-        panel_surf = pygame.Surface((self.panel_rect.width, self.panel_rect.height), pygame.SRCALPHA)
-        panel_surf.fill((30, 30, 50, 230))
-        surface.blit(panel_surf, self.panel_rect.topleft)
-        pygame.draw.rect(surface, (100, 150, 255), self.panel_rect, 2)
+        ui_bars.draw_translucent_panel(surface, self.panel_rect, (*c.HUD_PANEL_BG, 230),
+                                       border_color=c.MODAL_BORDER)
 
         font = fonts.get("heading1")
         sub_font = fonts.get("heading2")

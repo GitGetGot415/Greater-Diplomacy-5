@@ -22,6 +22,7 @@ from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
 from ui import text_utils
+from ui.bars import ui_bars
 
 _STANDALONE_SIZE = (520, 320)
 
@@ -57,20 +58,11 @@ def _show_tk_chain(hidden):
 
 
 def _acquire_surface():
-    surface = pygame.display.get_surface()
-    if surface is not None:
-        return surface, False
-
-    if not pygame.get_init():
-        pygame.init()
-    surface = pygame.display.set_mode(_STANDALONE_SIZE)
-    pygame.display.set_caption("Confirm")
-    return surface, True
+    return ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
 
 
 def _release_surface(owns_display):
-    if owns_display:
-        pygame.display.quit()
+    ui_bars.release_surface(owns_display)
 
 
 def _wrap_text(text, font, max_width):
