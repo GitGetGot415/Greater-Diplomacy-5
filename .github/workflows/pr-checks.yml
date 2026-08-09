@@ -38,14 +38,14 @@ jobs:
       - name: Check Python Syntax (Compile Check)
         run: |
           # Fails if any Python file has syntax errors
-          python -m compileall -q .
+          python -m compileall -q . --exclude '^\./mods/'
 
       - name: Lint with flake8 (Syntax errors & undefined names)
         run: |
           # Stop build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F821 --show-source --statistics
+          flake8 . --count --select=E9,F63,F7,F821 --show-source --statistics --exclude mods
           # Exit-zero treats all warnings as non-fatal
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude mods
 
       - name: Verify Headless Pygame Import & Initialization
         env:

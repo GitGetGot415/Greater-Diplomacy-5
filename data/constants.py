@@ -102,16 +102,16 @@ CREDITS_DATA = [
         ]
     },
     {
-            "main_text": "Music: ",
-            "people": [
-                {
-                    "link_text": "GitGetGot415",
-                    "info": "Made all the music",
-                    "align": "left",
-                    "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-                }
-            ]
-        },
+        "main_text": "Music: ",
+        "people": [
+            {
+                "link_text": "GitGetGot415",
+                "info": "Made all the music",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+            }
+        ]
+    },
     {
         "main_text": "GitHub Contributors: ",
         "people": [
@@ -125,26 +125,37 @@ CREDITS_DATA = [
                 ),
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
+            }
+        ]
+    },
+    {
+        "main_text": "Map Makers: ",
+        "people": [
+            {
+                "link_text": "neptune2019",
+                "info": ("Maps Added:\n"
+                "- Kaiserreich 1936\n"
+                "- 1939 fixed schizo scenario"),
+                "align": "left",
             },
+        ]
+    },
+    {
+        "main_text": "Tools: ",
+        "people": [
             {
                 "link_text": "github-advanced-security[bot]",
                 "info": "Improved encryption for tournaments",
                 "align": "left",
                 "links": [{"text": "Docs", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}]
+            },
+            {
+                "link_text": "claude",
+                "info": "Massive refactor to consolidate code",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
             }
         ]
-    },
-    {
-            "main_text": "Map Makers: ",
-            "people": [
-                {
-                    "link_text": "neptune2019",
-                    "info": ("Maps Added:\n"
-                    "- Kaiserreich 1936\n"
-                    "- 1939 fixed schizo scenario"),
-                    "align": "left",
-                },
-            ]
     }
 ]
 
