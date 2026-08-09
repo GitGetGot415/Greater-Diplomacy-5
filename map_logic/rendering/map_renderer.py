@@ -326,17 +326,24 @@ def draw_map_screen(self, surface):
         surface.blit(txt_surf, txt_surf.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
         surface.blit(sub_surf, sub_surf.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
 
-        yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 120, 100, 40)
-        no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 120, 100, 40)
+        # Published rather than recomputed by the click handler. These used to be
+        # written out again in ui/event_handler.py in a different coordinate
+        # frame (centre-relative rather than box-relative); the two agreed only
+        # because the box happened to be 200 tall, so resizing it here would
+        # have silently moved the buttons out from under their own hitboxes.
+        btn_w, btn_h = c.CONFIRM_BTN_SIZE
+        self.exit_yes_rect = pygame.Rect(box_rect.centerx - c.CONFIRM_BTN_DX,
+                                         box_rect.y + 120, btn_w, btn_h)
+        self.exit_no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 120, btn_w, btn_h)
 
         mx, my = pygame.mouse.get_pos()
-        
-        pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
-        pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
-        
+
+        pygame.draw.rect(surface, (150, 0, 0) if self.exit_yes_rect.collidepoint(mx, my) else (100, 0, 0), self.exit_yes_rect)
+        pygame.draw.rect(surface, (0, 150, 0) if self.exit_no_rect.collidepoint(mx, my) else (0, 100, 0), self.exit_no_rect)
+
         btn_font = fonts.get("button")
-        surface.blit(btn_font.render("EXIT", True, (255, 255, 255)), (yes_rect.x + 25, yes_rect.y + 8))
-        surface.blit(btn_font.render("STAY", True, (255, 255, 255)), (no_rect.x + 25, no_rect.y + 8))
+        surface.blit(btn_font.render("EXIT", True, (255, 255, 255)), (self.exit_yes_rect.x + 25, self.exit_yes_rect.y + 8))
+        surface.blit(btn_font.render("STAY", True, (255, 255, 255)), (self.exit_no_rect.x + 25, self.exit_no_rect.y + 8))
     
 def draw_badges(self, surface):
     """Draws notification badges on top of buttons after the main UI renders."""

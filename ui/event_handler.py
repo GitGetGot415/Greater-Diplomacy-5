@@ -50,14 +50,13 @@ def handle_map_events(self, event):
     # --- CONFIRMATION LOGIC HIJACK ---
     if self.show_exit_confirmation:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
-            
-            yes_rect = pygame.Rect(center_x - 130, center_y + 20, 100, 40)
-            no_rect = pygame.Rect(center_x + 30, center_y + 20, 100, 40)
-
-            if yes_rect.collidepoint(mx, my):
+            # Hit-tests the rects map_renderer published while drawing the
+            # dialog, rather than re-deriving them here in a different frame.
+            yes_rect = getattr(self, 'exit_yes_rect', None)
+            no_rect = getattr(self, 'exit_no_rect', None)
+            if yes_rect and yes_rect.collidepoint(mx, my):
                 self.confirm_exit()
-            elif no_rect.collidepoint(mx, my):
+            elif no_rect and no_rect.collidepoint(mx, my):
                 self.cancel_exit()
         return # Block all other map events while confirming
         
