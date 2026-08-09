@@ -2,6 +2,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 
@@ -73,7 +74,7 @@ class ListSelectScreen(GameState):
         for i, y in self.layout_list_rows(len(self.visible_items), self.ROW_HEIGHT, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             item = self.visible_items[i]
-            label = item if len(item) <= self.ROW_LABEL_MAX_CHARS else item[:self.ROW_LABEL_MAX_CHARS - 3] + "..."
+            label = text_utils.truncate_chars(item, self.ROW_LABEL_MAX_CHARS)
             btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
             if item == self.SEPARATOR:
                 btn.apply_state(enabled=False)

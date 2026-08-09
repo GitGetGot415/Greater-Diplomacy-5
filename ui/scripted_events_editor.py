@@ -35,6 +35,9 @@ COND_TYPES = [
     "Not Bordering", "True", "False",
 ]
 
+# Longest condition/action summary shown on an event row before ellipsising.
+SUMMARY_MAX_CHARS = 40
+
 CHAIN_OPS = ["AND", "OR", "XOR", "NOR", "NAND"]
 NUMERIC_OPS = ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
 TURN_OPS = ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
@@ -1042,9 +1045,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             else:
                 cond_strs.append(f"{prefix}{c_dict.get('type')} {c_dict.get('value')}")
 
-        full_cond_str = "".join(cond_strs)
-        if len(full_cond_str) > 40:
-            full_cond_str = full_cond_str[:37] + "..."
+        full_cond_str = truncate("".join(cond_strs), SUMMARY_MAX_CHARS)
 
         actions = evt.get("actions", [])
         if not actions and "action_type" in evt:
@@ -1072,9 +1073,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             else:
                 act_strs.append(f"{a_type} '{a.get('target')}'")
 
-        act_str = f"Then {', '.join(act_strs)}"
-        if len(act_str) > 40:
-            act_str = act_str[:37] + "..."
+        act_str = truncate(f"Then {', '.join(act_strs)}", SUMMARY_MAX_CHARS)
 
         once_str = " [Once]" if evt.get("fire_once", True) else " [Repeat]"
         return f"{index + 1}. If {full_cond_str} -> {act_str}{once_str}"

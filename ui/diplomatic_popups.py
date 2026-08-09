@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
+from ui import text_utils
 from data import queries
 
 # ==========================================
@@ -9,6 +10,7 @@ from data import queries
 
 POPUP_WIDTH = 450
 POPUP_HEIGHT = 130
+POPUP_MAX_LINES = 4
 POPUP_START_X = (c.SCREEN_WIDTH // 2) - (POPUP_WIDTH // 2)
 POPUP_START_Y = 100
 POPUP_OFFSET_STEP = 30
@@ -83,29 +85,13 @@ class DiplomaticPopup:
         title_surf = self.font_title.render(f"Diplomatic Alert: {self.sender}", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(title_surf, (self.rect.x + 10, self.rect.y + 10))
 
-        # Word wrap logic to prevent text from overflowing the rectangle
-        words = self.text.replace("\n", " \n ").split(" ")
-        lines = []
-        current_line = ""
-        max_width = self.width - 20
-        
-        for word in words:
-            if word == "\n":
-                lines.append(current_line)
-                current_line = ""
-            else:
-                test_line = current_line + word + " "
-                if self.font_body.size(test_line)[0] < max_width:
-                    current_line = test_line
-                else:
-                    lines.append(current_line)
-                    current_line = word + " "
-        if current_line:
-            lines.append(current_line)
+        # Capped at 4 lines so a long message can't spill out of the popup.
+        lines = text_utils.wrap_text(self.text, self.font_body, self.width - 20,
+                                     max_lines=POPUP_MAX_LINES)
 
         y_off = self.rect.y + 45
-        for line in lines[:4]: # Cap at 4 lines so it doesn't spill out
-            line_surf = self.font_body.render(line.strip(), True, (220, 220, 220))
+        for line in lines:
+            line_surf = self.font_body.render(line, True, (220, 220, 220))
             surface.blit(line_surf, (self.rect.x + 10, y_off))
             y_off += 20
 

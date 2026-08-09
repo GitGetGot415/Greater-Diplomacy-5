@@ -3,6 +3,7 @@ import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui.bars import ui_bars
+from ui import text_utils
 
 # ==========================================
 # LAYOUT
@@ -56,8 +57,7 @@ def get_queue_entry_text(item):
     else:
         raw_name = queries.get_condensed_building_name(raw_name)
 
-    if len(raw_name) > ROW_NAME_MAX_CHARS:
-        raw_name = raw_name[:ROW_NAME_MAX_CHARS - 2] + ".."
+    raw_name = text_utils.truncate_chars(raw_name, ROW_NAME_MAX_CHARS)
 
     turns = item.get("turns_remaining",
                      max(1, item.get("days_remaining", c.DEFAULT_DAYS_PER_TURN) // c.DEFAULT_DAYS_PER_TURN))
