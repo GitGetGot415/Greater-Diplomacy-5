@@ -23,6 +23,7 @@ import data.constants as c
 from data import queries
 from ui import confirm_dialog
 from ui.bars import ui_bars
+from ui.scroll_panes import ScrollPanes
 from ui.table_screen import truncate
 from ui_elements import Button, TextField
 from map_logic.rendering.font_manager import fonts
@@ -68,7 +69,7 @@ def _date_key(entry):
     return (as_int(entry.get("year", 0)), as_int(entry.get("month", 0)), as_int(entry.get("day", 0)))
 
 
-class Historical_Leaders_Editor(GameState):
+class Historical_Leaders_Editor(ScrollPanes, GameState):
     back_state = "NEW_GAME"
     title = "Historical Leaders & Names"
 
@@ -124,26 +125,6 @@ class Historical_Leaders_Editor(GameState):
             "leader_name": tx, "leader_title": tx + 300,
             "flag": tx + 588, "portrait": tx + 706,
         }
-
-    def _scroll_attrs(self, name):
-        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
-                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
-
-    def _rows_of(self, name, count, top, view_h, row_h):
-        # view_h is NOT forwarded to layout_list_rows: passing it explicitly
-        # would let it compute max_scroll against the full (taller) view_h
-        # while cull_bottom -- which actually gates clicks -- is shorter by
-        # row_h-2, leaving the last row a permanent sliver short of being
-        # clickable once fully scrolled into view. Omitting it makes the
-        # function derive its own view_h from cull_bottom instead, so the
-        # scroll limit and the clickable boundary always agree (see the
-        # matching comment in ui/turn_editor.py's refresh_ui).
-        attrs = self._scroll_attrs(name)
-        return self.layout_list_rows(count, row_h, top,
-                                     cull_top=top - 1, cull_bottom=top + view_h - row_h + 2,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
-                                     guard_attr=f"_guard_{name}")
 
     # ------------------------------------------------------------------ #
     #                          FIELD <-> DATA SYNC                       #
@@ -531,7 +512,7 @@ class Historical_Leaders_Editor(GameState):
                   "Save Timeline", self.save),
         ]
 
-        for i, y in self._rows_of("roster", len(self.roster), self.roster_rect.y,
+        for i, y in self.pane_rows("roster", len(self.roster), self.roster_rect.y,
                                   self.roster_rect.height, ROSTER_ROW_H):
             country = self.roster[i]
             label = f"{country} ({len(self.data.get(country, []))})"
@@ -557,7 +538,7 @@ class Historical_Leaders_Editor(GameState):
 
         entries = self.data.get(self.active_country, []) if self.active_country else []
         self._entry_layout = []
-        for i, y in self._rows_of("timeline", len(entries), self.timeline_rect.y,
+        for i, y in self.pane_rows("timeline", len(entries), self.timeline_rect.y,
                                   self.timeline_rect.height, ENTRY_ROW_H):
             entry = entries[i]
             self._entry_layout.append((entry, y))
@@ -567,59 +548,36 @@ class Historical_Leaders_Editor(GameState):
     #                             EVENTS                                  #
     # ------------------------------------------------------------------ #
 
-    def additional_events(self, event):
-        if event.type == pygame.MOUSEWHEEL:
-            pos = pygame.mouse.get_pos()
-            for name, rect in self.regions.items():
-                if rect.collidepoint(pos):
-                    self.handle_list_scroll(event, **self._scroll_attrs(name))
-                    return
-            return
+    def pane_rects(self):
+        return {"roster": self.roster_rect, "timeline": self.timeline_rect}
 
-        for name in ("roster", "timeline"):
-            if self.handle_list_scroll(event, **self._scroll_attrs(name)):
-                return
+    def additional_events(self, event):
+        self.route_pane_scroll(event)
 
     # ------------------------------------------------------------------ #
     #                             RENDERING                               #
     # ------------------------------------------------------------------ #
 
+    def _draw_timeline_cards(self, surface):
+        """The entry cards and their field captions, drawn inside the timeline
+        pane's clip region so they crop with the fields sitting on them."""
+        tiny = fonts.get("tiny")
+        fx = self.field_x
+        for entry, y in self._entry_layout:
+            card_rect = pygame.Rect(self.timeline_rect.x, y, self.timeline_rect.width - 20, ENTRY_ROW_H - 10)
+            pygame.draw.rect(surface, (35, 45, 35), card_rect, border_radius=4)
+            pygame.draw.rect(surface, (80, 110, 80), card_rect, 1, border_radius=4)
+
+            row1_y, row2_y = y + ROW1_Y_OFFSET, y + ROW2_Y_OFFSET
+            for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),
+                               ("name", "Name"), ("adjective", "Adjective"), ("color", "Color")):
+                surface.blit(tiny.render(label, True, (150, 190, 150)), (fx[key], row1_y - 15))
+            for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title"),
+                               ("flag", "Flag"), ("portrait", "Portrait")):
+                surface.blit(tiny.render(label, True, (150, 190, 150)), (fx[key], row2_y - 15))
+
     def draw_elements(self, surface):
-        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
-
-        roster_scroll, roster_limit = getattr(self, "_scroll_roster", 0), getattr(self, "_max_roster", 0)
-        with ui_bars.clip_scroll_region(surface, self.roster_rect,
-                                        draw_top=roster_scroll != 0, draw_bottom=roster_scroll > roster_limit):
-            for el in self.elements:
-                if getattr(el, "pane", None) == "roster":
-                    el.draw(surface)
-
-        tl_scroll, tl_limit = getattr(self, "_scroll_timeline", 0), getattr(self, "_max_timeline", 0)
-        with ui_bars.clip_scroll_region(surface, self.timeline_rect,
-                                        draw_top=tl_scroll != 0, draw_bottom=tl_scroll > tl_limit):
-            tiny = fonts.get("tiny")
-            fx = self.field_x
-            for entry, y in self._entry_layout:
-                card_rect = pygame.Rect(self.timeline_rect.x, y, self.timeline_rect.width - 20, ENTRY_ROW_H - 10)
-                pygame.draw.rect(surface, (35, 45, 35), card_rect, border_radius=4)
-                pygame.draw.rect(surface, (80, 110, 80), card_rect, 1, border_radius=4)
-
-                row1_y, row2_y = y + ROW1_Y_OFFSET, y + ROW2_Y_OFFSET
-                for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),
-                                   ("name", "Name"), ("adjective", "Adjective"), ("color", "Color")):
-                    cap = tiny.render(label, True, (150, 190, 150))
-                    surface.blit(cap, (fx[key], row1_y - 15))
-                for key, label in (("leader_name", "Leader Name"), ("leader_title", "Leader Title"),
-                                   ("flag", "Flag"), ("portrait", "Portrait")):
-                    cap = tiny.render(label, True, (150, 190, 150))
-                    surface.blit(cap, (fx[key], row2_y - 15))
-
-            for el in self.elements:
-                if getattr(el, "pane", None) == "timeline":
-                    el.draw(surface)
-
-        for el in fixed:
-            el.draw(surface)
+        self.draw_panes(surface, backdrops={"timeline": self._draw_timeline_cards})
 
     def additional_draw(self, surface):
         p = self.roster_rect
@@ -654,9 +612,9 @@ class Historical_Leaders_Editor(GameState):
         surface.blit(hint_line2, (PAD, c.SCREEN_HEIGHT - 24))
 
         self.draw_list_scrollbar(surface, self.roster_rect.right - 8, self.roster_rect.y,
-                                 self.roster_rect.height, **self._scroll_attrs("roster"))
+                                 self.roster_rect.height, **self.scroll_attrs("roster"))
         self.draw_list_scrollbar(surface, self.timeline_rect.right - 8, self.timeline_rect.y,
-                                 self.timeline_rect.height, **self._scroll_attrs("timeline"))
+                                 self.timeline_rect.height, **self.scroll_attrs("timeline"))
 
 
 def open_historical_leaders_editor(on_done=None):

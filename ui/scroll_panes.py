@@ -106,12 +106,13 @@ class ScrollPanes:
                 return True
         return False
 
-    def draw_panes(self, surface, rects=None, extra_draw=None):
+    def draw_panes(self, surface, rects=None, backdrops=None):
         """Draws each pane's rows clipped to its own rect, then the fixed chrome.
 
-        `extra_draw` is an optional {pane_name: callable(surface)} for panes that
-        render something other than plain buttons inside the same clip region --
-        the leaders editor draws its timeline cards that way.
+        `backdrops` is an optional {pane_name: callable(surface)} drawn inside
+        the clip region but *underneath* that pane's elements -- row striping,
+        card frames and the like, which have to crop with the widgets sitting on
+        them but must not paint over them.
         """
         from ui.bars import ui_bars  # deferred: keeps this module a leaf
 
@@ -122,11 +123,11 @@ class ScrollPanes:
             scroll, limit = self.pane_scroll(name), self.pane_scroll_limit(name)
             with ui_bars.clip_scroll_region(surface, rect,
                                             draw_top=scroll != 0, draw_bottom=scroll > limit):
+                if backdrops and name in backdrops:
+                    backdrops[name](surface)
                 for el in self.elements:
                     if getattr(el, "pane", None) == name:
                         el.draw(surface)
-                if extra_draw and name in extra_draw:
-                    extra_draw[name](surface)
 
         for el in self.elements:
             if not getattr(el, "pane", None):

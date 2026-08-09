@@ -4,6 +4,7 @@ from data import queries
 import ui_elements 
 from gameState import GameState
 from ui.bars import ui_bars
+from ui.scroll_panes import ScrollPanes
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
@@ -162,7 +163,7 @@ class MusicScrubber:
         pygame.draw.rect(surface, (100, 100, 100), self.rect, 2, border_radius=5)
 
 
-class Music_Player(GameState):
+class Music_Player(ScrollPanes, GameState):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -179,18 +180,18 @@ class Music_Player(GameState):
         if not os.path.exists(c.MUSIC_DIR):
             os.makedirs(c.MUSIC_DIR)
         
-        self.album_scroll_y = 0
-        self.track_scroll_y = 0
-        self.max_album_scroll = 0
-        self.max_track_scroll = 0
+        self._scroll_album = 0
+        self._scroll_track = 0
+        self._max_album = 0
+        self._max_track = 0
         
         # Drag state trackers for scrollbars
-        self.album_dragging = False
-        self.track_dragging = False
-        self.album_track_rect = None
-        self.album_handle_rect = None
-        self.track_track_rect = None
-        self.track_handle_rect = None
+        self._drag_album = False
+        self._drag_track = False
+        self._track_album = None
+        self._handle_album = None
+        self._track_track = None
+        self._handle_track = None
         
         # Scrubbing state
         self._track_lengths = {}
@@ -200,11 +201,11 @@ class Music_Player(GameState):
     def refresh_ui(self):
         self.elements = []
 
-        self.album_content_rect = pygame.Rect(0, 120, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 120)
-        self.track_content_rect = pygame.Rect(MUSIC_LEFT_PANE_W, 200, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
+        self._content_album = pygame.Rect(0, 120, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 120)
+        self._content_track = pygame.Rect(MUSIC_LEFT_PANE_W, 200, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
 
         # --- 1. Left Column: Albums (Scrolling) ---
-        y_offset = 120 + self.album_scroll_y
+        y_offset = 120 + self._scroll_album
         album_content_h = 0
         
         for album in sorted(self.controller.all_albums.keys()):
@@ -245,10 +246,10 @@ class Music_Player(GameState):
             self.elements.append(btn)
 
         # Calculate max boundary for Album scrolling
-        self.max_album_scroll = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
+        self._max_album = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
 
         # --- 2. Right Column: Tracks (Scrolling) ---
-        track_y = 200 + self.track_scroll_y # Adjusted to start below new scrubber
+        track_y = 200 + self._scroll_track # Adjusted to start below new scrubber
         track_content_h = 0
         
         for track_path in self.controller.playlist:
@@ -267,7 +268,7 @@ class Music_Player(GameState):
             track_content_h += song_y
 
         # Calculate max boundary for Track scrolling
-        self.max_track_scroll = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
+        self._max_track = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
 
         # --- 3. Top Layer: Fixed Overlay & Buttons ---
         self.elements.append(TopBarOverlay(self.controller))
@@ -636,48 +637,15 @@ class Music_Player(GameState):
 
     # The two panes are ordinary scrollable lists, so they both go through
     # GameState.handle_list_scroll / draw_list_scrollbar with their own attrs.
-    PANES = {
-        "album": dict(attr="album_scroll_y", limit_attr="max_album_scroll",
-                      track_attr="album_track_rect", handle_attr="album_handle_rect",
-                      drag_attr="album_dragging", content_rect_attr="album_content_rect"),
-        "track": dict(attr="track_scroll_y", limit_attr="max_track_scroll",
-                      track_attr="track_track_rect", handle_attr="track_handle_rect",
-                      drag_attr="track_dragging", content_rect_attr="track_content_rect"),
-    }
+    def pane_rects(self):
+        return {"album": self._content_album, "track": self._content_track}
 
     def additional_events(self, event):
-        # The wheel scrolls whichever pane the cursor is over; scrollbar grabs are
-        # located by their own rects so they work from anywhere.
-        if event.type == pygame.MOUSEWHEEL:
-            over_albums = pygame.mouse.get_pos()[0] < MUSIC_LEFT_PANE_W
-            self.handle_list_scroll(event, **self.PANES["album" if over_albums else "track"])
-            return
-
-        for pane in self.PANES.values():
-            if self.handle_list_scroll(event, **pane):
-                return
+        self.route_pane_scroll(event)
 
     def draw_elements(self, surface):
-        """Two independent scrolling panes, each cropped to its own rect --
-        see View_Assets.draw_elements for the same pattern with three panes."""
-        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
-        album_els = [el for el in self.elements if getattr(el, "pane", None) == "album"]
-        track_els = [el for el in self.elements if getattr(el, "pane", None) == "track"]
-
-        with ui_bars.clip_scroll_region(surface, self.album_content_rect,
-                                        draw_top=self.album_scroll_y != 0,
-                                        draw_bottom=self.album_scroll_y > self.max_album_scroll):
-            for el in album_els:
-                el.draw(surface)
-
-        with ui_bars.clip_scroll_region(surface, self.track_content_rect,
-                                        draw_top=self.track_scroll_y != 0,
-                                        draw_bottom=self.track_scroll_y > self.max_track_scroll):
-            for el in track_els:
-                el.draw(surface)
-
-        for el in fixed:
-            el.draw(surface)
+        """Two independent scrolling panes, each cropped to its own rect."""
+        self.draw_panes(surface)
 
     def additional_draw(self, surface):
         # Left Pane Background (Drawn underneath everything)
@@ -685,8 +653,8 @@ class Music_Player(GameState):
         pygame.draw.rect(surface, (35, 35, 45), left_pane)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
-        self.draw_list_scrollbar(surface, MUSIC_LEFT_PANE_W - 15, 120, c.SCREEN_HEIGHT - 120,
-                                 width=10, **self.PANES["album"])
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 280, 200, c.SCREEN_HEIGHT - 200,
-                                 width=10, **self.PANES["track"])
+        self.draw_pane_scrollbar(surface, "album", MUSIC_LEFT_PANE_W - 15, 120,
+                                 c.SCREEN_HEIGHT - 120, width=10)
+        self.draw_pane_scrollbar(surface, "track", c.SCREEN_WIDTH - 280, 200,
+                                 c.SCREEN_HEIGHT - 200, width=10)
 
