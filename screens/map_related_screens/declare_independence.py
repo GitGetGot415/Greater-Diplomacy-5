@@ -206,7 +206,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         
         y_off = panel_rect.y + 80
         for line in desc:
-            txt = font.render(line, True, (200, 200, 200))
+            txt = font.render(line, True, c.UI_TEXT_LIGHT)
             surface.blit(txt, (panel_rect.x + 30, y_off))
             y_off += 20
             

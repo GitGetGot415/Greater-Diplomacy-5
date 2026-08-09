@@ -479,7 +479,7 @@ class Messages_Screen(GameState):
                                  track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
 
         if not self.selected_recipient:
-            txt = font_med.render("Select a nation to view communications.", True, (150, 150, 150))
+            txt = font_med.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (MSG_LEFT_PANE_W + 50, c.SCREEN_HEIGHT // 2))
             return
 

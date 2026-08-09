@@ -406,6 +406,6 @@ class View_Assets(GameState):
             for line in self.preview_lines:
                 if y + line_h > HEADER_H and y < c.SCREEN_HEIGHT:
                     if line:
-                        text_surf = font.render(line, True, (220, 220, 220))
+                        text_surf = font.render(line, True, c.UI_TEXT_BRIGHT)
                         surface.blit(text_surf, (PREVIEW_X + PREVIEW_MARGIN, y))
                 y += line_h

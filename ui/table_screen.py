@@ -89,7 +89,7 @@ class TableScreen(GameState):
         ui_bars.draw_centered_title(surface, self.title, 25, "heading1")
 
         if not self.rows:
-            msg_surf = fonts.get("normal").render(self.empty_message, True, (200, 200, 200))
+            msg_surf = fonts.get("normal").render(self.empty_message, True, c.UI_TEXT_LIGHT)
             surface.blit(msg_surf, msg_surf.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)))
             for el in self.elements:
                 el.draw(surface)
@@ -120,7 +120,7 @@ class TableScreen(GameState):
                 x = self.table_x
                 for col in self.columns:
                     text = col.fmt(row.get(col.key, ""))
-                    cell_surf = row_font.render(text, True, (220, 220, 220))
+                    cell_surf = row_font.render(text, True, c.UI_TEXT_BRIGHT)
                     mid_y = y + self.ROW_HEIGHT // 2
                     if col.align == "left":
                         rect = cell_surf.get_rect(midleft=(x + 6, mid_y))

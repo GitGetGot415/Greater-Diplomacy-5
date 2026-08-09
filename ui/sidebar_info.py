@@ -110,18 +110,18 @@ def draw_sidebar_info(self, surface):
         current_y += 25
 
         if not is_visible:
-            txt = self.small_font.render("(Hidden by Fog of War)", True, (150, 150, 150))
+            txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         else:
             buildings = province.get("buildings", [])
             if not buildings:
-                txt = self.small_font.render("(None)", True, (150, 150, 150))
+                txt = self.small_font.render("(None)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
                 for b in buildings:
-                    txt = self.small_font.render(f"- {b}", True, (200, 200, 200))
+                    txt = self.small_font.render(f"- {b}", True, c.UI_TEXT_LIGHT)
                     surface.blit(txt, (text_x + 5, current_y))
                     current_y += 20
 
@@ -143,15 +143,15 @@ def draw_sidebar_info(self, surface):
 
         if not is_visible:
             if getattr(self, 'partial_visible_provinces', None) is not None and province["id"] in self.partial_visible_provinces and units:
-                txt = self.small_font.render("- ? (Unknown Units)", True, (150, 150, 150))
+                txt = self.small_font.render("- ? (Unknown Units)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
-                txt = self.small_font.render("(Hidden by Fog of War)", True, (150, 150, 150))
+                txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
         elif not units:
-            txt = self.small_font.render("(Empty)", True, (150, 150, 150))
+            txt = self.small_font.render("(Empty)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         elif is_combat:
@@ -193,7 +193,7 @@ def draw_sidebar_info(self, surface):
                     row_x = text_x + 10
 
                     # Unit name
-                    name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                    name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                     surface.blit(name_surf, (row_x, current_y))
                     row_x += name_surf.get_width() + 6
 
@@ -225,7 +225,7 @@ def draw_sidebar_info(self, surface):
                 row_x = text_x + 5
 
                 # Unit name
-                name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                 surface.blit(name_surf, (row_x, current_y))
                 row_x += name_surf.get_width() + 4
 

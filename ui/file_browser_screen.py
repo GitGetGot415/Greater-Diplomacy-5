@@ -496,7 +496,7 @@ class FileBrowserScreen(GameState):
 
         small = fonts.get("small")
         label_y = panel.y + self.LIST_TOP_OFF - 18
-        surface.blit(small.render("Places", True, (170, 170, 210)), (panel.x + self.SIDEBAR_OFF, label_y))
+        surface.blit(small.render("Places", True, c.UI_TEXT_DIM), (panel.x + self.SIDEBAR_OFF, label_y))
 
         info_w = panel.right - 40 - self.list_x
         if self.status:
@@ -506,7 +506,7 @@ class FileBrowserScreen(GameState):
         surface.blit(small.render(info, True, color), (self.list_x, label_y))
 
         if not self._rows and not self.status:
-            msg = fonts.get("normal").render("Nothing here.", True, (200, 200, 200))
+            msg = fonts.get("normal").render("Nothing here.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(self.list_x + c.SIZES["browser_row"][0] // 2,
                                                    self.list_top + self.LIST_VIEW_H // 2)))
 

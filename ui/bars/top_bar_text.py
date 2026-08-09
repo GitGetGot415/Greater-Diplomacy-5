@@ -59,7 +59,7 @@ def draw_top_text(map_screen, surface):
     
     # Grab our new dedicated top bar font preset
     big_font = fonts.get("top_bar_country")
-    name_surf = big_font.render(f"{player_display}", True, (200, 200, 200))
+    name_surf = big_font.render(f"{player_display}", True, c.UI_TEXT_LIGHT)
 
     # Position it
     draw_with_bg(name_surf, TOP_BAR_COUNTRY_X, TOP_BAR_COUNTRY_Y)

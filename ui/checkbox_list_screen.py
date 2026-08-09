@@ -200,7 +200,7 @@ class CheckboxListScreen(GameState):
             y += font.get_height() + 2
 
         if not self.items:
-            msg = font.render("Nothing to show.", True, (200, 200, 200))
+            msg = font.render("Nothing to show.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
         for el in self.elements:

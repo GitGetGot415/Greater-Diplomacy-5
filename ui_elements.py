@@ -403,7 +403,7 @@ class TextField:
 
         if self.label:
             label_font = fonts.get("normal")
-            label_surf = label_font.render(self.label, True, (220, 220, 220))
+            label_surf = label_font.render(self.label, True, c.UI_TEXT_BRIGHT)
             surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
 
         pygame.draw.rect(surface, (30, 30, 40), self.rect)

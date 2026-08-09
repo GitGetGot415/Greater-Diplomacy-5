@@ -124,7 +124,7 @@ class ListSelectScreen(GameState):
                                border_color=(100, 150, 255), border_width=3)
         ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 20, "heading2")
 
-        prompt_surf = fonts.get("normal").render(self.prompt, True, (220, 220, 220))
+        prompt_surf = fonts.get("normal").render(self.prompt, True, c.UI_TEXT_BRIGHT)
         surface.blit(prompt_surf, prompt_surf.get_rect(center=(self.panel_rect.centerx, self.panel_rect.y + 75)))
 
         self.draw_search_box(surface)
@@ -135,7 +135,7 @@ class ListSelectScreen(GameState):
 
         if not self.visible_items:
             font = fonts.get("normal")
-            msg = font.render("No matches found." if self.search_text else "Nothing to show.", True, (200, 200, 200))
+            msg = font.render("No matches found." if self.search_text else "Nothing to show.", True, c.UI_TEXT_LIGHT)
             list_top = self.panel_rect.y + self.ROW_TOP
             view_h = self.panel_rect.height - self.ROW_TOP - 30
             surface.blit(msg, msg.get_rect(center=(self.panel_rect.centerx, list_top + view_h // 2)))
@@ -159,5 +159,5 @@ class ListSelectScreen(GameState):
         if self.search_text:
             text_surf = font.render(self.search_text + "|", True, (255, 255, 255))
         else:
-            text_surf = font.render("Search...", True, (150, 150, 150))
+            text_surf = font.render("Search...", True, c.UI_TEXT_MUTED)
         surface.blit(text_surf, (box.x + 10, box.y + (box.height - text_surf.get_height()) // 2))

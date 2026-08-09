@@ -124,7 +124,7 @@ class Automation_Screen(GameState):
         options = ["Construction", "Troop Movement", "Research"]
         y_pos = self.panel_rect.y + 70
         for name in options:
-            lbl_surf = normal_font.render(name, True, (200, 200, 200))
+            lbl_surf = normal_font.render(name, True, c.UI_TEXT_LIGHT)
             surface.blit(lbl_surf, (self.panel_rect.centerx - lbl_surf.get_width()//2, y_pos))
             y_pos += 150
             

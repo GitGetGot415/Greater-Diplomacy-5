@@ -332,7 +332,7 @@ class Settings(GameState):
             ("MOD", c.SETTINGS_MOD_BOX_Y, f"{self.ai_mode.capitalize()} Model Name:"),
         ]
         for box_type, box_y, label in boxes:
-            surface.blit(font.render(label, True, (200, 200, 200)), (c.SETTINGS_BOX_X, box_y - 25))
+            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (c.SETTINGS_BOX_X, box_y - 25))
             rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
             self.draw_text_field(surface, rect, self.get_field(box_type),
                                  active=self.active_input == f"{self.ai_mode}_{box_type}")

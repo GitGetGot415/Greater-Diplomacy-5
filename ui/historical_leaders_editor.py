@@ -628,7 +628,7 @@ class Historical_Leaders_Editor(GameState):
                     (p.x, p.y - 20))
 
         if not self.roster:
-            msg = fonts.get("normal").render("Add a country to begin.", True, (200, 200, 200))
+            msg = fonts.get("normal").render("Add a country to begin.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, (p.x + 4, p.y + 6))
 
         pygame.draw.line(surface, (70, 95, 70), (self.timeline_rect.x - 15, TOP_Y),

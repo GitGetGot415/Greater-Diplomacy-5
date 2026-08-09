@@ -181,10 +181,10 @@ class Economy_Screen(GameState):
                     detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
 
             # Stats Breakdown (Main)
-            surface.blit(font_med.render(main_breakdown, True, (200, 200, 200)), (row_rect.x + 350, row_rect.y + 18))
+            surface.blit(font_med.render(main_breakdown, True, c.UI_TEXT_LIGHT), (row_rect.x + 350, row_rect.y + 18))
             
             # Detailed Breakdown
-            surface.blit(font_small.render(detail_breakdown, True, (150, 150, 150)), (row_rect.x + 0, row_rect.y + 60))
+            surface.blit(font_small.render(detail_breakdown, True, c.UI_TEXT_MUTED), (row_rect.x + 0, row_rect.y + 60))
             
             y_offset += ROW_STEP_Y
 

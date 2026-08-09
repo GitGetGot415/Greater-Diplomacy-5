@@ -45,7 +45,7 @@ def draw_turn_loading_screen(map_screen, surface):
     spacing = 65 # Tighter vertical spacing for 4 bars
 
     def draw_bar(y_pos, label, completed, total):
-        lbl_txt = fonts.get("normal").render(label, True, (200, 200, 200))
+        lbl_txt = fonts.get("normal").render(label, True, c.UI_TEXT_LIGHT)
         surface.blit(lbl_txt, (bar_x, y_pos - 22))
 
         # Background

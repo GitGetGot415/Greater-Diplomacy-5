@@ -593,7 +593,7 @@ class Research_Screen(GameState):
 
             # Removed the modulo 5 check; draws a major tick and text for every year
             pygame.draw.line(surface, (200, 200, 200), (x, axis_y - TIMELINE_TICK_HALF), (x, axis_y + TIMELINE_TICK_HALF), 2)
-            txt = year_font.render(str(year), True, (200, 200, 200))
+            txt = year_font.render(str(year), True, c.UI_TEXT_LIGHT)
             surface.blit(txt, (x - txt.get_width()//2, axis_y + TIMELINE_YEAR_LABEL_OFFSET_Y))
 
     def draw_connections(self, surface, res_levels):
@@ -679,7 +679,7 @@ class Research_Screen(GameState):
                 txt = f"Slot {i+1}: {tech_name} ({pts_left} pts left | {progress_pct}%)"
                 surface.blit(hud_font.render(txt, True, c.COLOR_SUCCESS_GREEN), (HUD_SLOT_TEXT_X, y_off))
             else:
-                surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, (150, 150, 150)), (HUD_SLOT_TEXT_X, y_off))
+                surface.blit(hud_font.render(f"Slot {i+1}: [EMPTY]", True, c.UI_TEXT_MUTED), (HUD_SLOT_TEXT_X, y_off))
 
     def draw_timeline_scrollbar(self, surface):
         """Full-width scrollbar along the very bottom of the screen, so the
@@ -794,7 +794,7 @@ class Research_Screen(GameState):
         # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
         if not entities_to_show and not unlocks:
             txt1 = "Advanced statistical data unavailable."
-            surface.blit(font_small.render(txt1, True, (150, 150, 150)), (text_x, y_off))
+            surface.blit(font_small.render(txt1, True, c.UI_TEXT_MUTED), (text_x, y_off))
             y_off += MODAL_LINE_STEP_Y
 
 
@@ -838,7 +838,7 @@ class Research_Screen(GameState):
                     s = self.building_library[entity]
 
                 txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
-                surface.blit(font_small.render(txt1, True, (200, 200, 200)), (text_x, y_off))
+                surface.blit(font_small.render(txt1, True, c.UI_TEXT_LIGHT), (text_x, y_off))
                 y_off += MODAL_LINE_STEP_Y
                 
                 draw_resource_string(

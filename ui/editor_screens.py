@@ -297,12 +297,12 @@ class Research_Edit_Screen(MapOverlayScreen):
             for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
                                               cull_top=p.y + 60, cull_bottom=p.bottom - 70):
                 tech = self.techs[i]
-                label = font.render(tech.replace("_", " ").title(), True, (220, 220, 220))
+                label = font.render(tech.replace("_", " ").title(), True, c.UI_TEXT_BRIGHT)
                 surface.blit(label, (p.x + 20, y + 4))
 
                 kind = self.tech_state[tech]
                 if kind[0] == "entry":
-                    hint = small_font.render(f"(0-{kind[2]})", True, (150, 150, 150))
+                    hint = small_font.render(f"(0-{kind[2]})", True, c.UI_TEXT_MUTED)
                     surface.blit(hint, (p.right - 250, y + 8))
 
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
@@ -588,7 +588,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         ui_bars.draw_modal_box(surface, p, bg_color=(35, 20, 45), border_color=(156, 39, 176), border_width=2)
         ui_bars.draw_centered_title(surface, "Resource Brush", p.y + 20, "heading2")
 
-        label = fonts.get("normal").render("Amount:", True, (220, 220, 220))
+        label = fonts.get("normal").render("Amount:", True, c.UI_TEXT_BRIGHT)
         surface.blit(label, label.get_rect(midright=(p.centerx - 85, p.y + 210)))
 
 # ==========================================
@@ -1061,12 +1061,12 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         ui_bars.draw_centered_title(surface, "Global Diplomacy & Factions", p.y + 14, "heading2")
 
         small = fonts.get("small")
-        surface.blit(small.render("Nations:", True, (170, 170, 210)), (self.nat_x, self.nations_top - 20))
+        surface.blit(small.render("Nations:", True, c.UI_TEXT_DIM), (self.nat_x, self.nations_top - 20))
         pygame.draw.line(surface, (70, 70, 95), (self.cols_x - 10, p.y + 60),
                          (self.cols_x - 10, p.bottom - 16), 1)
 
         if not self.target:
-            msg = fonts.get("heading2").render("Select a nation...", True, (200, 200, 200))
+            msg = fonts.get("heading2").render("Select a nation...", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(self.cols_x + 450, p.centery)))
             return
 
@@ -1075,9 +1075,9 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
 
         for idx, (region, header, rows, _is_checked, _on_click) in enumerate(self._columns()):
             col_x = self._col_x(idx)
-            surface.blit(small.render(header, True, (170, 170, 210)), (col_x, self.lists_top - 20))
+            surface.blit(small.render(header, True, c.UI_TEXT_DIM), (col_x, self.lists_top - 20))
             if not rows:
-                surface.blit(small.render("None available.", True, (150, 150, 150)),
+                surface.blit(small.render("None available.", True, c.UI_TEXT_MUTED),
                              (col_x + 4, self.lists_top + 6))
             self.draw_list_scrollbar(surface, col_x + self.COL_W - 18, self.lists_top, self.LIST_VIEW_H,
                                      **self._scroll_attrs(region))

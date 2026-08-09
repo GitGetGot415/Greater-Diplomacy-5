@@ -51,7 +51,7 @@ def draw_unit_info(self, surface):
             faction_name = self.nation_data.get(owner, {}).get("faction", "")
 
             if not faction_name:
-                surface.blit(self.small_font.render("No Faction", True, (150, 150, 150)), (dip_rect.x + 10, y_offset))
+                surface.blit(self.small_font.render("No Faction", True, c.UI_TEXT_MUTED), (dip_rect.x + 10, y_offset))
                 y_offset += 30
             else:
                 surface.blit(self.small_font.render(faction_name, True, c.COLOR_SUCCESS_GREEN), (dip_rect.x + 10, y_offset))
@@ -60,7 +60,7 @@ def draw_unit_info(self, surface):
                 members = queries.get_faction_members(faction_name, self.nation_data)
                 for m in members:
                     m_display = self.nation_data.get(m, {}).get("name", m)
-                    surface.blit(self.small_font.render(f" - {m_display}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    surface.blit(self.small_font.render(f" - {m_display}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
             # --- MAP PUPPET HIERARCHY ---
@@ -76,7 +76,7 @@ def draw_unit_info(self, surface):
                 y_offset += 20
                 for p in puppets:
                     p_disp = self.nation_data.get(p, {}).get("name", p)
-                    surface.blit(self.small_font.render(f" - {p_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    surface.blit(self.small_font.render(f" - {p_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
             # Keep war info so players know who this nation is fighting
@@ -86,7 +86,7 @@ def draw_unit_info(self, surface):
                 y_offset += 20
                 for w in wars:
                     w_disp = self.nation_data.get(w, {}).get("name", w)
-                    surface.blit(self.small_font.render(f" - {w_disp}", True, (200, 200, 200)), (dip_rect.x + 10, y_offset))
+                    surface.blit(self.small_font.render(f" - {w_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
         # Re-derive the scroll limit from what was actually drawn this frame.

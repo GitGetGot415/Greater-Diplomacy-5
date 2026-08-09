@@ -91,7 +91,7 @@ class DiplomaticPopup:
 
         y_off = self.rect.y + 45
         for line in lines:
-            line_surf = self.font_body.render(line, True, (220, 220, 220))
+            line_surf = self.font_body.render(line, True, c.UI_TEXT_BRIGHT)
             surface.blit(line_surf, (self.rect.x + 10, y_off))
             y_off += 20
 

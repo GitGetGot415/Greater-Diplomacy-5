@@ -321,7 +321,7 @@ def draw_map_screen(self, surface):
         sub_msg = "Unsaved progress will be lost."
         
         txt_surf = font.render(msg, True, (255, 255, 255))
-        sub_surf = fonts.get("normal").render(sub_msg, True, (200, 200, 200))
+        sub_surf = fonts.get("normal").render(sub_msg, True, c.UI_TEXT_LIGHT)
         
         surface.blit(txt_surf, txt_surf.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
         surface.blit(sub_surf, sub_surf.get_rect(center=(box_rect.centerx, box_rect.y + 85)))

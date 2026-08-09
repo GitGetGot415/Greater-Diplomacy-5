@@ -235,16 +235,16 @@ class TurnEditorScreen(GameState):
 
         font = fonts.get("normal")
         small = fonts.get("small")
-        surface.blit(small.render(self.tab["label"], True, (170, 170, 210)), (p.x + self.PAD, self.list_top - 20))
+        surface.blit(small.render(self.tab["label"], True, c.UI_TEXT_DIM), (p.x + self.PAD, self.list_top - 20))
         check_x = p.right - self.PAD - 34
-        turns_hdr = small.render("Turns to Construct", True, (170, 170, 210))
+        turns_hdr = small.render("Turns to Construct", True, c.UI_TEXT_DIM)
         surface.blit(turns_hdr, turns_hdr.get_rect(midright=(check_x - 10, self.list_top - 12)))
-        enabled_hdr = small.render("Enabled", True, (170, 170, 210))
+        enabled_hdr = small.render("Enabled", True, c.UI_TEXT_DIM)
         surface.blit(enabled_hdr, enabled_hdr.get_rect(center=(check_x + self.CHECK_SIZE // 2, self.list_top - 12)))
 
         names = self.tab["names"]
         if not names:
-            msg = font.render("Nothing to edit.", True, (200, 200, 200))
+            msg = font.render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
         for el in self.elements:

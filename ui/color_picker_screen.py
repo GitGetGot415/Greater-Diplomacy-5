@@ -108,7 +108,7 @@ class ColorPickerScreen(GameState):
         pygame.draw.rect(surface, self.current_color, swatch_rect)
         pygame.draw.rect(surface, (255, 255, 255), swatch_rect, 2)
 
-        hex_label = fonts.get("normal").render("Hex:", True, (220, 220, 220))
+        hex_label = fonts.get("normal").render("Hex:", True, c.UI_TEXT_BRIGHT)
         surface.blit(hex_label, hex_label.get_rect(midright=(self.hex_field.rect.x - 4, self.hex_field.rect.centery)))
 
         for el in self.elements:
