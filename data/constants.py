@@ -484,6 +484,54 @@ COLOR_SLIDER_HANDLE = (200, 200, 200)
 
 COLOR_CHROMA_PINK = (255, 0, 255)
 
+# ==========================================
+# UI PALETTE / GEOMETRY
+# ==========================================
+# The shared vocabulary for chrome that every screen draws. Before these existed
+# the same values were retyped as literals -- (200,200,200) alone appeared 79
+# times -- so a palette tweak meant a repo-wide find-and-replace that always
+# missed a few sites and left screens visibly out of step with each other.
+
+# Body text, brightest to dimmest.
+UI_TEXT_BRIGHT = (220, 220, 220)
+UI_TEXT_LIGHT = (200, 200, 200)
+UI_TEXT_DIM = (170, 170, 210)   # small column headers above list panes
+UI_TEXT_MUTED = (150, 150, 150)
+
+UI_ACCENT_BLUE = (100, 150, 255)
+
+# Modal panels: the dim layer behind them, the box itself, and where the title
+# sits relative to the box's top edge.
+MODAL_OVERLAY_ALPHA = 200
+MODAL_BG = (35, 35, 45)
+MODAL_BORDER = UI_ACCENT_BLUE
+MODAL_TITLE_Y_OFFSET = 14
+
+# Panels layered over the live map (sidebar, order queue, diplomacy popup).
+HUD_PANEL_BG = (30, 30, 50)
+HUD_PANEL_BORDER = (100, 100, 250)
+
+# Pixels per wheel notch. GameState.scroll_speed mirrors this; panels that roll
+# their own wheel handling should read it from here rather than redeclaring it.
+SCROLL_STEP = 30
+
+# Yes/No confirmation buttons: size, and horizontal offset from the box centre.
+CONFIRM_BTN_SIZE = (100, 40)
+CONFIRM_BTN_DX = 130
+
+ELLIPSIS = "..."
+
+# Back button placement. Full-screen menus anchor to the top-left corner;
+# screens layered over the map sit beside the top UI bar instead.
+BACK_BTN_TOPLEFT = (20, 20)
+BACK_BTN_MAP_CENTER = (50, TOP_BAR_UI_CENTER_Y)
+
+# Owner names that mean "nobody owns this". Deliberately NOT UNPLAYABLE_NATIONS:
+# that list also carries "The Rot"/"Spectator"/"GLOBAL_EVENTS"/"FACTION_WAR_MAPS"
+# and omits "", so substituting it would change which provinces count as empty.
+OWNERLESS_OWNERS = ("Unclaimed", "None", "Ocean", "Lakes")
+UNOWNED_LAND_OWNERS = ("Unclaimed", "None", "")
+
 # https://smilebasic.com/en/e-manual/manual28/
 EDITOR_COLOR_PALETTE = [
     (0,0,0),            # Black
