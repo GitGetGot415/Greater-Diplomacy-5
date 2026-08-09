@@ -10,9 +10,9 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
                   ai_immersion_level="LITE", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
                   ai_threads=1, show_fps=True, drag_mouse_toggle="RIGHT",
-                  saves_dir="saves", custom_scenarios_dir="scenarios/map_editor",
+                  saves_dir=c.DEFAULT_SAVES_DIR, custom_scenarios_dir=c.DEFAULT_SCENARIOS_CUSTOM_DIR,
                   ocean_light_color=c.DEFAULT_OCEAN_LIGHT_BLUE, ocean_dark_color=c.DEFAULT_OCEAN_DARK_BLUE,
-                  tournament_saves_dir="tournament_saves", checkerboard_water=c.CHECKERBOARD_WATER):
+                  tournament_saves_dir=c.DEFAULT_TOURNAMENT_SAVES_DIR, checkerboard_water=c.CHECKERBOARD_WATER):
     """Converts key codes to strings and saves all config data to JSON."""
     readable_binds = {}
     for action, key_code in keybind_dict.items():
@@ -61,8 +61,8 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
                 c.DEFAULT_CLAUDE_MODEL, 
                 c.DEFAULT_OLLAMA_MODEL, 
                 "LITE", default_pitch, default_pitch, c.TARGET_FPS, c.DEFAULT_AI_THREADS, True,
-                c.DRAG_MOUSE_BUTTON_TOGGLE, "saves", "scenarios/map_editor",
-                c.DEFAULT_OCEAN_LIGHT_BLUE, c.DEFAULT_OCEAN_DARK_BLUE, "tournament_saves", c.CHECKERBOARD_WATER)
+                c.DRAG_MOUSE_BUTTON_TOGGLE, c.DEFAULT_SAVES_DIR, c.DEFAULT_SCENARIOS_CUSTOM_DIR,
+                c.DEFAULT_OCEAN_LIGHT_BLUE, c.DEFAULT_OCEAN_DARK_BLUE, c.DEFAULT_TOURNAMENT_SAVES_DIR, c.CHECKERBOARD_WATER)
 
     try:
         # Utilize the caching manager
@@ -111,11 +111,11 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
             s.get("ai_threads", c.DEFAULT_AI_THREADS),
             s.get("show_fps", c.SHOW_FPS),
             s.get("drag_mouse_toggle", c.DRAG_MOUSE_BUTTON_TOGGLE),
-            s.get("saves_dir", "saves"),
-            s.get("custom_scenarios_dir", "scenarios/map_editor"),
+            s.get("saves_dir", c.DEFAULT_SAVES_DIR),
+            s.get("custom_scenarios_dir", c.DEFAULT_SCENARIOS_CUSTOM_DIR),
             tuple(s.get("ocean_light_color", c.DEFAULT_OCEAN_LIGHT_BLUE)),
             tuple(s.get("ocean_dark_color", c.DEFAULT_OCEAN_DARK_BLUE)),
-            s.get("tournament_saves_dir", "tournament_saves"),
+            s.get("tournament_saves_dir", c.DEFAULT_TOURNAMENT_SAVES_DIR),
             s.get("checkerboard_water", c.CHECKERBOARD_WATER)
         )
     except Exception as e:
@@ -127,5 +127,5 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
                 c.DEFAULT_CLAUDE_MODEL, 
                 c.DEFAULT_OLLAMA_MODEL, 
                 "LITE", default_pitch, default_pitch, c.TARGET_FPS, c.DEFAULT_AI_THREADS, True,
-                c.DRAG_MOUSE_BUTTON_TOGGLE, "saves", "scenarios/map_editor",
-                c.DEFAULT_OCEAN_LIGHT_BLUE, c.DEFAULT_OCEAN_DARK_BLUE, "tournament_saves", c.CHECKERBOARD_WATER)
+                c.DRAG_MOUSE_BUTTON_TOGGLE, c.DEFAULT_SAVES_DIR, c.DEFAULT_SCENARIOS_CUSTOM_DIR,
+                c.DEFAULT_OCEAN_LIGHT_BLUE, c.DEFAULT_OCEAN_DARK_BLUE, c.DEFAULT_TOURNAMENT_SAVES_DIR, c.CHECKERBOARD_WATER)

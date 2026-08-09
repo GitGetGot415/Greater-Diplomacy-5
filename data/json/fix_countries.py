@@ -1,6 +1,8 @@
 import json
 import os
 
+import data.constants as c
+
 files_to_fix = [
     "data/json/countries_data.json"
 ]
@@ -43,6 +45,6 @@ for path in files_to_fix:
                 attributes["research"] = new_research_block.copy()
                 
         with open(path, "w") as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f, indent=c.SAVE_INDENT)
             
 print("Countries updated to discrete research blocks!")

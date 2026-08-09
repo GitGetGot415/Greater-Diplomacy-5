@@ -1,5 +1,20 @@
 import pygame
 
+import data.constants as c
+
+def avoid_chroma(color):
+    """Nudges a nation colour off the chroma key used as the map's colorkey.
+
+    A nation painted in exactly COLOR_CHROMA_PINK would be punched out as
+    transparent when the political map is blitted, so shift it by one bit of
+    red. Called wherever a nation colour reaches a surface -- conquest,
+    core painting and the blended multi-core average all need the same guard.
+    """
+    if tuple(color) == c.COLOR_CHROMA_PINK:
+        r, g, b = c.COLOR_CHROMA_PINK
+        return (r - 1, g, b)
+    return color
+
 def update_single_province_surface(political_surf, id_map, province_color_id, new_nation_color):
     """
     Updates exactly one province using a clean mask blit. 

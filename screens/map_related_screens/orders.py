@@ -50,8 +50,10 @@ CANCEL_BOX_OFFSET_X = 20
 CANCEL_BOX_OFFSET_Y = -25
 CANCEL_BOX_SIZE = 25
 
-PANEL_BG_COLOR = (30, 30, 50)
-PANEL_BORDER_COLOR = (100, 100, 250)
+# Both map panels share the HUD palette; the values used to be typed out
+# separately here and in the other panel's module.
+PANEL_BG_COLOR = c.HUD_PANEL_BG
+PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 SCROLLBAR_OFFSET_X = -10
 SCROLLBAR_WIDTH = 10
 

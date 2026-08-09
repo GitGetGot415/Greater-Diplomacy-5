@@ -306,7 +306,7 @@ def save_scenario_settings(data):
     # 3. Write only the safe data to the JSON on disk
     try:
         with open(cache_obj["path"], "w", encoding="utf-8") as f:
-            json.dump(safe_data, f, indent=4)
+            json.dump(safe_data, f, indent=c.SAVE_INDENT)
     except Exception as e:
         print(f"Error saving {cache_obj['path']}: {e}")
 
@@ -343,7 +343,7 @@ def save_cached_json(cache_key, new_data):
     
     try:
         with open(cache_obj["path"], "w", encoding="utf-8") as f:
-            json.dump(new_data, f, indent=4)
+            json.dump(new_data, f, indent=c.SAVE_INDENT)
     except Exception as e:
         print(f"Error saving {cache_obj['path']}: {e}")
 

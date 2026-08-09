@@ -31,8 +31,10 @@ ROW_STEP_Y = 35
 ROW_NAME_MAX_CHARS = 13
 CANCEL_BOX_SIZE = 25
 
-PANEL_BG_COLOR = (30, 30, 50)
-PANEL_BORDER_COLOR = (100, 100, 250)
+# Both map panels share the HUD palette; the values used to be typed out
+# separately here and in the other panel's module.
+PANEL_BG_COLOR = c.HUD_PANEL_BG
+PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 QUEUE_TEXT_COLOR = (255, 200, 50)
 MUTED_TEXT_COLOR = (150, 150, 150)
 CANCEL_BOX_COLOR = (150, 0, 0)

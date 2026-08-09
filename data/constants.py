@@ -978,11 +978,19 @@ BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 MUSIC_DIR = "assets/music"
-SAVES_DIR = "saves"
-TOURNAMENT_SAVES_DIR = "tournament_saves"
+# These three are rebindable in Settings, so main.py overwrites them at startup
+# with whatever was persisted. The DEFAULT_ forms are the shipped values, and
+# are what settings loading falls back to -- reading the mutable name there
+# would hand back the last value loaded instead of the actual default.
+DEFAULT_SAVES_DIR = "saves"
+DEFAULT_TOURNAMENT_SAVES_DIR = "tournament_saves"
+DEFAULT_SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
+
+SAVES_DIR = DEFAULT_SAVES_DIR
+TOURNAMENT_SAVES_DIR = DEFAULT_TOURNAMENT_SAVES_DIR
 SCENARIOS_HISTORICAL_DIR = "scenarios/historical"
 SCENARIOS_ALTERNATE_DIR = "scenarios/alternate"
-SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
+SCENARIOS_CUSTOM_DIR = DEFAULT_SCENARIOS_CUSTOM_DIR
 BASE_MAPS_DIR = "base_maps"
 MODS_DIR = "mods"
 
