@@ -2,6 +2,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
@@ -556,16 +557,7 @@ class Messages_Screen(GameState):
         max_width = int((c.SCREEN_WIDTH - MSG_LEFT_PANE_W) * MSG_BUBBLE_MAX_WIDTH_RATIO)
 
         for msg in reversed(display_thread):
-            words = msg['content'].split(" ")
-            lines, current_line = [], ""
-            for word in words:
-                test_line = current_line + word + " "
-                if font_small.size(test_line)[0] < max_width:
-                    current_line = test_line
-                else:
-                    lines.append(current_line)
-                    current_line = word + " "
-            if current_line: lines.append(current_line)
+            lines = text_utils.wrap_text(msg['content'], font_small, max_width)
 
             box_height = 20 + (len(lines) * 20)
             if msg.get("date"):
