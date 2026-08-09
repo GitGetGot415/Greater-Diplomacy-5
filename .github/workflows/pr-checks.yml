@@ -38,7 +38,7 @@ jobs:
       - name: Check Python Syntax (Compile Check)
         run: |
           # Fails if any Python file has syntax errors
-          python -m compileall -q . --exclude '^\./mods/'
+          python -m compileall -q . -x '^\./mods/'
 
       - name: Lint with flake8 (Syntax errors & undefined names)
         run: |
