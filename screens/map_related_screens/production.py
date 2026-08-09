@@ -131,8 +131,8 @@ class Production_Screen(GameState):
         self.refresh_ui()
 
     def enforce_scroll_bounds(self):
-        self.target_scroll_y = max(-self.max_scroll, min(self.target_scroll_y, 0))
-        self.scroll_y = max(-self.max_scroll, min(self.scroll_y, 0))
+        self.target_scroll_y = max(self.max_scroll, min(self.target_scroll_y, 0))
+        self.scroll_y = max(self.max_scroll, min(self.scroll_y, 0))
 
     def update(self):
         super().update()
@@ -545,7 +545,8 @@ class Production_Screen(GameState):
         self.custom_end_y = y_offset
 
         # Calculate maximum scroll distance
-        self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + SCROLL_BOTTOM_PAD)
+        # Negative floor, matching GameState.max_scroll -- see enforce_scroll_bounds.
+        self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - y_offset)
 
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
@@ -746,7 +747,7 @@ class Production_Screen(GameState):
         # since update() already repositions every is_scrollable button off
         # base_y + scroll_y each frame -- no need to rebuild the whole list per pixel.
         if self.handle_content_drag(event, attr="target_scroll_y", rect_attr="scroll_content_rect",
-                                    lo=-self.max_scroll, hi=0, refresh=False):
+                                    lo=self.max_scroll, hi=0, refresh=False):
             self.enforce_scroll_bounds()
             return
 
@@ -774,7 +775,7 @@ class Production_Screen(GameState):
         heading_font = fonts.get("heading2")
 
         with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > -self.max_scroll):
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
             for prefix, label, fill, border, text_color in SECTION_PANELS:
                 start_y = getattr(self, f"{prefix}_start_y", 0)
                 end_y = getattr(self, f"{prefix}_end_y", 0)

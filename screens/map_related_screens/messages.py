@@ -45,8 +45,13 @@ class Messages_Screen(GameState):
         self.drafts = [] 
         self.draft_edit_rects = []
         
-        self.scroll_y = 0
-        self.max_msg_scroll = 0 # Tracks how high we can scroll in the thread
+        # The message thread scrolls on the positive convention (0 at the
+        # newest message, growing as you scroll back), unlike GameState's
+        # scroll_y which is a negative offset. Kept under its own name so
+        # the two never share an attribute -- the contact list beside it
+        # does use the base class's helpers, on the base convention.
+        self.msg_scroll_y = 0
+        self.max_msg_scroll = 0
         
         self.contact_scroll_y = 0
         self.max_contact_scroll = 0
@@ -61,7 +66,7 @@ class Messages_Screen(GameState):
         self.compose_text = ""
         self.drafts = []
         self.draft_edit_rects = []
-        self.scroll_y = 0
+        self.msg_scroll_y = 0
         self.max_msg_scroll = 0
         self.contact_scroll_y = 0
         self.is_dragging_contacts = False
@@ -150,7 +155,7 @@ class Messages_Screen(GameState):
             return
         
         self.selected_recipient = target
-        self.scroll_y = 0
+        self.msg_scroll_y = 0
         
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         for msg in p_data.get("inbox", []):
@@ -264,8 +269,8 @@ class Messages_Screen(GameState):
 
         # --- Message Thread Scrolling ---
         if event.type == pygame.MOUSEWHEEL and mx >= MSG_LEFT_PANE_W:
-            self.scroll_y += event.y * 40
-            self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
+            self.msg_scroll_y += event.y * 40
+            self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
 
         # --- Drag to Scroll Logic (message thread only) ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -285,8 +290,8 @@ class Messages_Screen(GameState):
 
         elif event.type == pygame.MOUSEMOTION:
             if self.is_dragging_messages:
-                self.scroll_y -= event.rel[1] # Subtract so dragging down pulls up newer messages
-                self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
+                self.msg_scroll_y -= event.rel[1] # Subtract so dragging down pulls up newer messages
+                self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
                 
         # --- Text Input Logic ---
         if self.selected_recipient:
@@ -580,14 +585,14 @@ class Messages_Screen(GameState):
         bottom_padding = 80 if has_bilateral else 20
 
         self.max_msg_scroll = max(0, total_h - input_rect.y + bottom_padding)
-        self.scroll_y = max(0, min(self.scroll_y, self.max_msg_scroll))
+        self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
 
-        current_y = input_rect.y - bottom_padding + self.scroll_y
+        current_y = input_rect.y - bottom_padding + self.msg_scroll_y
         self.draft_edit_rects = []
         
         msg_pane_rect = pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, input_rect.y)
         with ui_bars.clip_scroll_region(surface, msg_pane_rect,
-                                        draw_top=self.scroll_y < self.max_msg_scroll, draw_bottom=self.scroll_y != 0):
+                                        draw_top=self.msg_scroll_y < self.max_msg_scroll, draw_bottom=self.msg_scroll_y != 0):
             # Render iterating backwards (Newest -> Oldest), drawing bottom -> up
             for p_msg in processed_messages:
                 msg = p_msg["msg_data"]
