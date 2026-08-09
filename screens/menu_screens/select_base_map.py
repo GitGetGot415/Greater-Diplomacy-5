@@ -2,7 +2,7 @@ import os
 import pygame
 from ui import confirm_dialog
 from gameState import FolderListState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 from map_logic.system32 import loading_screen
@@ -80,8 +80,7 @@ class Select_Base_Map(FolderListState):
         self.elements = []
 
         if self.sub_state == "OTHER_CATEGORY":
-            self.elements = [Button(20, 20, "small", "red", "Back",
-                                    lambda: self.set_sub_state("CUSTOM_MAPS"))]
+            self.elements = [make_back_button(lambda: self.set_sub_state("CUSTOM_MAPS"))]
             for i, (state, (label, _attr)) in enumerate(self.OTHER_MAP_CATEGORIES.items()):
                 self.elements.append(
                     Button("centered", 220 + i * 100, "large", "blue", label,
@@ -93,7 +92,7 @@ class Select_Base_Map(FolderListState):
 
         if is_custom:
             self.elements.extend([
-                Button(20, 20, "small", "red", "Back", self.exit_screen),
+                make_back_button(self.exit_screen),
                 Button(160, 20, "medium", "green", "Import .zip",
                        lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
                 Button("centered-160", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
@@ -106,11 +105,11 @@ class Select_Base_Map(FolderListState):
             _label, attr = self.OTHER_MAP_CATEGORIES[self.sub_state]
             directory = getattr(c, attr)
             self.elements.extend([
-                Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("OTHER_CATEGORY")),
+                make_back_button(lambda: self.set_sub_state("OTHER_CATEGORY")),
             ])
         else:
             self.elements.extend([
-                Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CUSTOM_MAPS")),
+                make_back_button(lambda: self.set_sub_state("CUSTOM_MAPS")),
                 Button(c.SCREEN_WIDTH - 220, 20, "medium", "purple", "Data Refresh",
                        self.trigger_base_map_data_refresh),
             ])

@@ -12,42 +12,42 @@ from ui.bars import resource_hud, top_bar_text, ui_bars
 from screens.map_related_screens import recruit_ui
 from ui import sidebar_info
 
-def draw_map_screen(self, surface):
+def draw_map_screen(map_screen, surface):
     # --- HOTSEAT MULTIPLAYER OVERRIDE ---
-    if self.show_player_ready_screen:
+    if map_screen.show_player_ready_screen:
         surface.fill((10, 10, 15)) # Deep black/blue
         
         font = fonts.get("title")
-        display_name = self.nation_data.get(self.player_country, {}).get("name", self.player_country)
-        txt = font.render(f"Player {self.current_player_index + 1} ({display_name}) Ready?", True, (255, 255, 255))
+        display_name = map_screen.nation_data.get(map_screen.player_country, {}).get("name", map_screen.player_country)
+        txt = font.render(f"Player {map_screen.current_player_index + 1} ({display_name}) Ready?", True, (255, 255, 255))
         surface.blit(txt, txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 - 50)))
 
         btn_font = fonts.get("heading2")
         btn_txt = btn_font.render("Click here to start turn", True, (150, 255, 150))
-        self.ready_btn_rect = btn_txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 + 50))
-        surface.blit(btn_txt, self.ready_btn_rect)
+        map_screen.ready_btn_rect = btn_txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 + 50))
+        surface.blit(btn_txt, map_screen.ready_btn_rect)
         
         return # Skip drawing the map and UI completely!
 
     # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
-    if self.multi_turns_total > 0 and self.multi_turns_completed < self.multi_turns_total:
+    if map_screen.multi_turns_total > 0 and map_screen.multi_turns_completed < map_screen.multi_turns_total:
         surface.fill((10, 10, 15))
-        loading_screen.draw_turn_loading_screen(self, surface)
+        loading_screen.draw_turn_loading_screen(map_screen, surface)
         return
         
     # --- LAYER 1: THE BASE MAP ---
-    current_base = self.active_map
+    current_base = map_screen.active_map
 
-    vw = surface.get_width() / self.camera.zoom
-    vh = (surface.get_height() - self.total_ui_h) / (self.camera.zoom * self.camera.tilt_factor)
+    vw = surface.get_width() / map_screen.camera.zoom
+    vh = (surface.get_height() - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor)
     
-    x1_world = self.camera.pos.x
-    y1_world = self.camera.pos.y
+    x1_world = map_screen.camera.pos.x
+    y1_world = map_screen.camera.pos.y
     
     # --- NEW: Extract negative Y for screen offset and skybox ---
     render_y_offset = 0
     if y1_world < 0:
-        render_y_offset = -y1_world * self.camera.zoom * self.camera.tilt_factor
+        render_y_offset = -y1_world * map_screen.camera.zoom * map_screen.camera.tilt_factor
         vh += y1_world # Shrink the required source height since the top is sky
         y1_world = 0
 
@@ -55,78 +55,78 @@ def draw_map_screen(self, surface):
     
     # Draw Skybox
     if render_y_offset > 0:
-        sky_rect = pygame.Rect(0, self.top_ui_height, c.SCREEN_WIDTH, int(render_y_offset) + 2) # +2 overlap to prevent seam tearing
+        sky_rect = pygame.Rect(0, map_screen.top_ui_height, c.SCREEN_WIDTH, int(render_y_offset) + 2) # +2 overlap to prevent seam tearing
         pygame.draw.rect(surface, c.COLOR_SKYBOX, sky_rect)
 
-    if self.loop_map:
-        w1 = int(min(vw, self.map_w - x1))
-        h1 = int(min(vh, self.map_h - y1))
+    if map_screen.loop_map:
+        w1 = int(min(vw, map_screen.map_w - x1))
+        h1 = int(min(vh, map_screen.map_h - y1))
         if w1 > 0 and h1 > 0:
             # Base Map
             v1 = current_base.subsurface((x1, y1, w1, h1))
-            scaled_w1 = int(w1*self.camera.zoom)
-            scaled_h1 = int(h1*self.camera.zoom*self.camera.tilt_factor)
-            surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, self.top_ui_height + int(render_y_offset)))
+            scaled_w1 = int(w1*map_screen.camera.zoom)
+            scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
+            surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
             
             # Fog Map
-            if self.fog_map:
-                f1 = self.fog_map.subsurface((x1, y1, w1, h1))
-                surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, self.top_ui_height + int(render_y_offset)))
+            if map_screen.fog_map:
+                f1 = map_screen.fog_map.subsurface((x1, y1, w1, h1))
+                surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
                 
         if w1 < vw and h1 > 0:
             wrap_w = int(vw - w1)
             if wrap_w > 0:
-                scaled_wrap_w = int(wrap_w*self.camera.zoom)
-                scaled_h1 = int(h1*self.camera.zoom*self.camera.tilt_factor)
+                scaled_wrap_w = int(wrap_w*map_screen.camera.zoom)
+                scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
                 
                 # Base Map
                 v2 = current_base.subsurface((0, y1, wrap_w, h1))
-                surface.blit(pygame.transform.scale(v2, (scaled_wrap_w, scaled_h1)), (int(w1*self.camera.zoom), self.top_ui_height + int(render_y_offset)))
+                surface.blit(pygame.transform.scale(v2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
                 
                 # Fog Map
-                if self.fog_map:
-                    f2 = self.fog_map.subsurface((0, y1, wrap_w, h1))
-                    surface.blit(pygame.transform.scale(f2, (scaled_wrap_w, scaled_h1)), (int(w1*self.camera.zoom), self.top_ui_height + int(render_y_offset)))
+                if map_screen.fog_map:
+                    f2 = map_screen.fog_map.subsurface((0, y1, wrap_w, h1))
+                    surface.blit(pygame.transform.scale(f2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
     else:
         src_rect = pygame.Rect(x1, y1, int(vw), int(vh))
         clipped = src_rect.clip(current_base.get_rect())
         if clipped.width > 0 and clipped.height > 0:
-            scaled_w = int(clipped.width*self.camera.zoom)
-            scaled_h = int(clipped.height*self.camera.zoom*self.camera.tilt_factor)
+            scaled_w = int(clipped.width*map_screen.camera.zoom)
+            scaled_h = int(clipped.height*map_screen.camera.zoom*map_screen.camera.tilt_factor)
             
             # Base Map
             view = current_base.subsurface(clipped)
-            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (0, self.top_ui_height + int(render_y_offset)))
+            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
             
             # Fog Map
-            if self.fog_map:
-                f_view = self.fog_map.subsurface(clipped)
-                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, self.top_ui_height + int(render_y_offset)))
+            if map_screen.fog_map:
+                f_view = map_screen.fog_map.subsurface(clipped)
+                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
 
     # --- CPU BOTTLENECK OPTIMIZATION ---
     # Pygame's transform functions (scale, rotate, tilt) are extremely heavy.
     # If we render thousands of units, arrows, and buildings at 60 FPS while the AI is thinking,
     # the Python GIL chokes the background thread and makes turn processing take forever!
     # By short-circuiting the render loop here, we save massive amounts of CPU time.
-    if self.ai_is_thinking or self.is_refreshing or self.is_saving:
-        if self.is_saving:
-            loading_screen.draw_simple_refresh_bar(surface, self.loading_status_text, self.save_progress_completed, self.save_progress_total)
+    if map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving:
+        if map_screen.is_saving:
+            loading_screen.draw_simple_refresh_bar(surface, map_screen.loading_status_text, map_screen.save_progress_completed, map_screen.save_progress_total)
         else:
-            loading_screen.draw_turn_loading_screen(self, surface)
-        ui_bars.draw_ui_bars(self, surface)
-        if not self.selection_mode:
-            flag_renderer.draw_flag(self, surface)
-            top_bar_text.draw_top_text(self, surface)
+            loading_screen.draw_turn_loading_screen(map_screen, surface)
+        ui_bars.draw_ui_bars(map_screen, surface)
+        if not map_screen.selection_mode:
+            flag_renderer.draw_flag(map_screen, surface)
+            top_bar_text.draw_top_text(map_screen, surface)
         return
 
     # --- LAYER 2: SELECTION & HOVER ---
-    if not self.selected_province:
-        hover_renderer.draw_hover_glow(self, surface)
+    if not map_screen.selected_province:
+        hover_renderer.draw_hover_glow(map_screen, surface)
 
     # --- LAYER 3: OVERLAYS (Units & Movement Arrows) ---
-    overlay_renderer.draw_overlay_content(self, surface)
+    overlay_renderer.draw_overlay_content(map_screen, surface)
     
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
             if not order:
@@ -135,24 +135,24 @@ def draw_map_screen(self, surface):
             owner = unit.get("owner")
 
             # Only show the arrows for the CURRENT player taking their turn!
-            is_current_player_unit = (owner == self.player_country)
-            is_spectator = self.player_country == "Spectator"
+            is_current_player_unit = (owner == map_screen.player_country)
+            is_spectator = map_screen.player_country == "Spectator"
 
             # Hide the arrows if it's not the current player's unit, the player isn't spectating,
             # and the game isn't actively resolving AI/global turns.
-            if not is_current_player_unit and not is_spectator and not self.viewing_ai_moves:
+            if not is_current_player_unit and not is_spectator and not map_screen.viewing_ai_moves:
                 continue
 
             # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
             # Fix for tactical mode: only force visible if it's the specific tactical unit
-            is_tactical = self.tactical_mode and self.player_unit
-            force_vis = (unit is self.player_unit) if is_tactical else is_current_player_unit
+            is_tactical = map_screen.tactical_mode and map_screen.player_unit
+            force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
 
             if order.get("type") == "BOMBARD":
                 target_id = order.get("target_id")
                 if target_id is not None:
                     bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                    overlay_renderer.draw_bombardment_arrow(surface, self, province, target_id, bomb_range, force_visible=force_vis)
+                    overlay_renderer.draw_bombardment_arrow(surface, map_screen, province, target_id, bomb_range, force_visible=force_vis)
 
             elif order.get("type") == "MOVE":
                 path = order.get("path", [])
@@ -161,27 +161,27 @@ def draw_map_screen(self, surface):
                     
                     # If we are resolving global turns (viewing_ai_moves), hide future queued moves 
                     # by truncating the path to only what happens this turn to prevent hotseat leaks
-                    if self.viewing_ai_moves:
+                    if map_screen.viewing_ai_moves:
                         path = path[:speed]
                         if not path:
                             continue
 
                     # Dynamically pull the color of the unit's owner (fallback to yellow)
-                    owner_color = self.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
+                    owner_color = map_screen.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
 
-                    overlay_renderer.draw_split_movement_path(surface, self, province, path, speed, owner_color, force_visible=force_vis)
+                    overlay_renderer.draw_split_movement_path(surface, map_screen, province, path, speed, owner_color, force_visible=force_vis)
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
-    country_names.draw_country_names(self, surface)
+    country_names.draw_country_names(map_screen, surface)
     
     # --- LAYER 3.8: PROVINCE MENU OVERLAYS ---
-    if self.selected_province:
-        if self.selection_mode:
+    if map_screen.selected_province:
+        if map_screen.selection_mode:
             # Use the transparent black for country selection confirmation
             # Only the map area is dimmed here, not the UI bars, so this is a
             # rect panel rather than draw_fullscreen_overlay.
-            map_area = pygame.Rect(0, self.top_ui_height, surface.get_width(),
-                                   surface.get_height() - self.total_ui_h)
+            map_area = pygame.Rect(0, map_screen.top_ui_height, surface.get_width(),
+                                   surface.get_height() - map_screen.total_ui_h)
             ui_bars.draw_translucent_panel(surface, map_area, (0, 0, 0, 160))
         else:
             # Use the custom transparent PNG for the actual province menu
@@ -191,43 +191,43 @@ def draw_map_screen(self, surface):
                 province_bg = pygame.transform.scale(province_bg, surface.get_size())
             surface.blit(province_bg, (0, 0))
             
-        province_select.draw_province_select(self, surface)
+        province_select.draw_province_select(map_screen, surface)
 
     # --- LAYER 4: UI BARS & HUD ---
-    ui_bars.draw_ui_bars(self, surface)
+    ui_bars.draw_ui_bars(map_screen, surface)
     
-    if not self.selection_mode:
+    if not map_screen.selection_mode:
         # Call our clean, separated functions instead!
-        flag_renderer.draw_flag(self, surface)
-        top_bar_text.draw_top_text(self, surface)
-        resource_hud.draw_bottom_text(self, surface)
+        flag_renderer.draw_flag(map_screen, surface)
+        top_bar_text.draw_top_text(map_screen, surface)
+        resource_hud.draw_bottom_text(map_screen, surface)
         
         # Note: Sidebar info and minimap logic goes below here just like before
-        if self.selected_province: 
-            sidebar_info.draw_sidebar_info(self, surface)
-            sidebar_info.draw_owner_portrait(self, surface)
-            unit_info_popup.draw_unit_info(self, surface)
+        if map_screen.selected_province: 
+            sidebar_info.draw_sidebar_info(map_screen, surface)
+            sidebar_info.draw_owner_portrait(map_screen, surface)
+            unit_info_popup.draw_unit_info(map_screen, surface)
             
             # Always draw the queue! (Fog of War handles hiding contents)
             # if self.selected_province.get("owner") == self.player_country or self.player_country == "Spectator":
-            recruit_ui.draw_map_queue_overlay(surface, self.selected_province, self)
+            recruit_ui.draw_map_queue_overlay(surface, map_screen.selected_province, map_screen)
 
-        hide_mini = self.hide_minimap or self.selected_province
+        hide_mini = map_screen.hide_minimap or map_screen.selected_province
         if not hide_mini:
-            minimap.draw_minimap(self, surface, surface.get_width(), surface.get_height())
+            minimap.draw_minimap(map_screen, surface, surface.get_width(), surface.get_height())
 
     # --- LAYER 5: SELECTION MODE ---
     else:
-        if self.pending_selection:
-            disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
+        if map_screen.pending_selection:
+            disp_name = map_screen.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
             
             # Contextual prompt formatting for Tactical Mode
-            if self.tactical_mode and getattr(self, 'pending_unit', None):
-                prompt_txt = f"Play as {self.pending_unit.get('type')} ({disp_name})?"
+            if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
+                prompt_txt = f"Play as {map_screen.pending_unit.get('type')} ({disp_name})?"
             else:
                 prompt_txt = f"Play as {disp_name}?"
         else:
-            if self.tactical_mode:
+            if map_screen.tactical_mode:
                 prompt_txt = "Select a Unit to Control"
             else:
                 prompt_txt = "Select a Country to Play As"
@@ -239,12 +239,12 @@ def draw_map_screen(self, surface):
         surface.blit(txt, bg_rect)
 
         # --- NEW: Scripted Events Checkmark ---
-        if not self.pending_selection:
-            has_events = queries.scenario_has_scripted_events(self.nation_data)
+        if not map_screen.pending_selection:
+            has_events = queries.scenario_has_scripted_events(map_screen.nation_data)
             cb_font = fonts.get("normal")
 
             if has_events:
-                se_val = queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, self.scenario_settings)
+                se_val = queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.scenario_settings)
                 if se_val:
                     cb_text = "Scripted Events Enabled"
                 else:
@@ -259,100 +259,62 @@ def draw_map_screen(self, surface):
             total_w = 20 + 10 + txt_w
             start_x = surface.get_width() // 2 - total_w // 2
             start_y = c.SCREEN_HEIGHT - 40
-            self.se_checkbox_rect = pygame.Rect(start_x, start_y, 20, 20)
+            map_screen.se_checkbox_rect = pygame.Rect(start_x, start_y, 20, 20)
 
             bg_rect2 = pygame.Rect(start_x - 10, start_y - 5, total_w + 20, 30)
             pygame.draw.rect(surface, (0, 0, 0, 180), bg_rect2)
 
-            pygame.draw.rect(surface, cb_color, self.se_checkbox_rect, 2)
+            pygame.draw.rect(surface, cb_color, map_screen.se_checkbox_rect, 2)
             if se_val and has_events:
-                pygame.draw.rect(surface, (0, 255, 0), self.se_checkbox_rect.inflate(-8, -8))
+                pygame.draw.rect(surface, (0, 255, 0), map_screen.se_checkbox_rect.inflate(-8, -8))
 
             cb_surf = cb_font.render(cb_text, True, cb_color)
-            surface.blit(cb_surf, (self.se_checkbox_rect.right + 10, self.se_checkbox_rect.y))
+            surface.blit(cb_surf, (map_screen.se_checkbox_rect.right + 10, map_screen.se_checkbox_rect.y))
 
-        if self.pending_selection:
-            ui_bars.draw_fullscreen_overlay(surface, 100)
-            
+        if map_screen.pending_selection:
             box_rect = pygame.Rect(0, 0, 400, 200)
             box_rect.center = (surface.get_width()//2, surface.get_height()//2)
-            pygame.draw.rect(surface, (40, 40, 40), box_rect)
-            pygame.draw.rect(surface, (200, 200, 200), box_rect, 2)
-            
-            confirm_font = fonts.get("heading2")
-            disp_name = self.nation_data.get(self.pending_selection, {}).get("name", self.pending_selection)
-            
+
+            disp_name = map_screen.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
             # Contextual instructions for Tactical Mode
-            if self.tactical_mode and getattr(self, 'pending_unit', None):
-                instr_txt = f"Start Game as {self.pending_unit.get('type')}?"
+            if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
+                instr_txt = f"Start Game as {map_screen.pending_unit.get('type')}?"
             else:
                 instr_txt = f"Start Game as {disp_name}?"
-                
-            instr = confirm_font.render(instr_txt, True, (255, 255, 255))
-            surface.blit(instr, instr.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
-            
-            self.confirm_rect = pygame.Rect(box_rect.x + 50, box_rect.bottom - 70, 120, 40)
-            self.cancel_rect = pygame.Rect(box_rect.right - 170, box_rect.bottom - 70, 120, 40)
-            
-            pygame.draw.rect(surface, (0, 150, 0), self.confirm_rect)
-            pygame.draw.rect(surface, (150, 0, 0), self.cancel_rect)
-            
-            c_txt = confirm_font.render("CONFIRM", True, (255, 255, 255))
-            x_txt = confirm_font.render("CANCEL", True, (255, 255, 255))
-            surface.blit(c_txt, c_txt.get_rect(center=self.confirm_rect.center))
-            surface.blit(x_txt, x_txt.get_rect(center=self.cancel_rect.center))
+
+            # Published for ui/event_handler.py to hit-test -- see draw_confirm_prompt.
+            map_screen.confirm_rect, map_screen.cancel_rect = ui_bars.draw_confirm_prompt(
+                surface, box_rect, instr_txt, overlay_alpha=100)
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
     # Check flag before drawing the tooltip
     # this is the stuff that makes it so that if you select a province you don't display the tooltip
-    if self.hovered_province and not self.selected_province and not self.hide_tooltip: 
-        tooltip.draw_tooltip(self, surface)
+    if map_screen.hovered_province and not map_screen.selected_province and not map_screen.hide_tooltip: 
+        tooltip.draw_tooltip(map_screen, surface)
         
     # --- LAYER 7: EXIT CONFIRMATION MODAL ---
-    if self.show_exit_confirmation:
-        ui_bars.draw_fullscreen_overlay(surface, 180)
-
+    if map_screen.show_exit_confirmation:
         box_rect = pygame.Rect(0, 0, 450, 200)
         box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
-        ui_bars.draw_modal_box(surface, box_rect, bg_color=(40, 40, 40), border_color=(200, 200, 200), border_width=2)
-
-        font = fonts.get("heading2")
-        msg = "Quit to Main Menu?"
-        sub_msg = "Unsaved progress will be lost."
-        
-        txt_surf = font.render(msg, True, (255, 255, 255))
-        sub_surf = fonts.get("normal").render(sub_msg, True, c.UI_TEXT_LIGHT)
-        
-        surface.blit(txt_surf, txt_surf.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
-        surface.blit(sub_surf, sub_surf.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
 
         # Published rather than recomputed by the click handler. These used to be
         # written out again in ui/event_handler.py in a different coordinate
         # frame (centre-relative rather than box-relative); the two agreed only
         # because the box happened to be 200 tall, so resizing it here would
         # have silently moved the buttons out from under their own hitboxes.
-        btn_w, btn_h = c.CONFIRM_BTN_SIZE
-        self.exit_yes_rect = pygame.Rect(box_rect.centerx - c.CONFIRM_BTN_DX,
-                                         box_rect.y + 120, btn_w, btn_h)
-        self.exit_no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 120, btn_w, btn_h)
-
-        mx, my = pygame.mouse.get_pos()
-
-        pygame.draw.rect(surface, (150, 0, 0) if self.exit_yes_rect.collidepoint(mx, my) else (100, 0, 0), self.exit_yes_rect)
-        pygame.draw.rect(surface, (0, 150, 0) if self.exit_no_rect.collidepoint(mx, my) else (0, 100, 0), self.exit_no_rect)
-
-        btn_font = fonts.get("button")
-        surface.blit(btn_font.render("EXIT", True, (255, 255, 255)), (self.exit_yes_rect.x + 25, self.exit_yes_rect.y + 8))
-        surface.blit(btn_font.render("STAY", True, (255, 255, 255)), (self.exit_no_rect.x + 25, self.exit_no_rect.y + 8))
+        map_screen.exit_yes_rect, map_screen.exit_no_rect = ui_bars.draw_confirm_prompt(
+            surface, box_rect, "Quit to Main Menu?", "Unsaved progress will be lost.",
+            yes_label="EXIT", no_label="STAY",
+            yes_color=(150, 0, 0), no_color=(0, 150, 0), hover=True)
     
-def draw_badges(self, surface):
+def draw_badges(map_screen, surface):
     """Draws notification badges on top of buttons after the main UI renders."""
-    if not self.selection_mode and not self.hide_raised_rect:
+    if not map_screen.selection_mode and not map_screen.hide_raised_rect:
 
         # Get counts
-        unread_msgs = queries.get_unread_message_count(self.player_country, self.nation_data)
-        free_research = queries.has_free_research_slots(self.player_country, self.nation_data)
-        incoming_claims = queries.get_incoming_justifications_count(self.player_country, self.nation_data, self.id_to_province)
+        unread_msgs = queries.get_unread_message_count(map_screen.player_country, map_screen.nation_data)
+        free_research = queries.has_free_research_slots(map_screen.player_country, map_screen.nation_data)
+        incoming_claims = queries.get_incoming_justifications_count(map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
 
         def draw_badge(btn, text):
             if not btn.visible: return
@@ -360,10 +322,10 @@ def draw_badges(self, surface):
 
         # Draw the badges on the respective buttons
         if unread_msgs > 0:
-            draw_badge(self.btn_gp_msgs, unread_msgs)
+            draw_badge(map_screen.btn_gp_msgs, unread_msgs)
 
         if free_research:
-            draw_badge(self.btn_gp_rd, "!")
+            draw_badge(map_screen.btn_gp_rd, "!")
 
         if incoming_claims > 0:
-            draw_badge(self.btn_gp_claims, incoming_claims)
+            draw_badge(map_screen.btn_gp_claims, incoming_claims)

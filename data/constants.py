@@ -532,6 +532,14 @@ CONFIRM_BTN_DX = 130
 
 ELLIPSIS = "..."
 
+# Single-line text entry boxes. Nine screens each had their own fill/border
+# pair; these are the values they all draw with now (see
+# ui_elements.draw_text_box). The focused box lights up and gains a white edge.
+INPUT_BG = (30, 30, 40)
+INPUT_BG_ACTIVE = (60, 60, 80)
+INPUT_BORDER = (150, 150, 150)
+INPUT_BORDER_ACTIVE = (255, 255, 255)
+
 # Back button placement. Full-screen menus anchor to the top-left corner;
 # screens layered over the map sit beside the top UI bar instead.
 BACK_BTN_TOPLEFT = (20, 20)
@@ -1057,3 +1065,36 @@ SAVE_INDENT = 4
 # Camera Settings
 DEFAULT_MOUSE_BUTTON_TOGGLE = "RIGHT"
 DRAG_MOUSE_BUTTON_TOGGLE = DEFAULT_MOUSE_BUTTON_TOGGLE # Options: "RIGHT", "LEFT", "BOTH"
+
+# ==========================================
+# RUNTIME SETTINGS
+# ==========================================
+# A handful of settings are mirrored onto this module because the code that
+# reads them -- the renderer, the camera, the save paths -- is too low-level to
+# reach the Controller. Every one of them used to be copied across by hand at
+# six different call sites, and the lists had already fallen out of step.
+
+#: setting name (as used by data/io/settings_schema.py) -> constant name here.
+RUNTIME_SETTINGS = {
+    "drag_mouse_toggle": "DRAG_MOUSE_BUTTON_TOGGLE",
+    "saves_dir": "SAVES_DIR",
+    "custom_scenarios_dir": "SCENARIOS_CUSTOM_DIR",
+    "ocean_light_color": "OCEAN_LIGHT_BLUE",
+    "ocean_dark_color": "OCEAN_DARK_BLUE",
+    "tournament_saves_dir": "TOURNAMENT_SAVES_DIR",
+    "checkerboard_water": "CHECKERBOARD_WATER",
+}
+
+
+def apply_runtime_settings(values):
+    """Mirrors the settings above onto this module.
+
+    `values` is any mapping keyed by setting name; keys it does not carry are
+    left alone, so a screen that changed one setting can pass just that one.
+    Order is the declaration order above, which is the order the boot path used
+    -- data/platform.py reads SAVES_DIR when asked, not at import, so nothing
+    downstream depends on a different order, but keeping one is free.
+    """
+    for name, constant in RUNTIME_SETTINGS.items():
+        if name in values:
+            globals()[constant] = values[name]

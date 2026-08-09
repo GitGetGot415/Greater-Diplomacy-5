@@ -8,6 +8,55 @@ import data.constants as c
 from data import queries
 from data.platform import sync_persisted_dir
 
+def active_owners_of(map_ref):
+    """Every nation that actually holds a province right now.
+
+    Empty when there is no map loaded, which callers read as "no filter".
+    Written out twice before.
+    """
+    if not getattr(map_ref, "map_data", None):
+        return set()
+    return set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
+
+
+def display_name(nation_data, cid):
+    """A country's readable name, falling back to its id.
+
+    The isinstance guard is what makes this safe on a nation table that holds
+    non-dict utility entries. Three key-listing loops repeated it.
+    """
+    entry = nation_data.get(cid)
+    return entry.get("name", cid) if isinstance(entry, dict) else cid
+
+
+def run_with_progress(jobs, worker, caption, on_result):
+    """Runs `worker` over `jobs` in a thread pool, drawing the loading bar.
+
+    Both the key-encryption pass and the move-decryption pass drove their own
+    identical copy of this loop, down to the pygame.event.pump() that keeps the
+    window responsive while the pool works.
+    """
+    import concurrent.futures
+    import pygame
+    from map_logic.system32 import loading_screen
+
+    surface = pygame.display.get_surface()
+    total = len(jobs)
+    completed = 0
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(worker, job) for job in jobs]
+        for future in concurrent.futures.as_completed(futures):
+            pygame.event.pump()
+            result = future.result()
+            if result:
+                on_result(result)
+            completed += 1
+            if surface and total > 0:
+                loading_screen.draw_simple_refresh_bar(surface, caption, completed, total)
+                pygame.display.flip()
+
+
 def hash_key(key):
     return hashlib.sha256(key.encode('utf-8')).hexdigest()
 
@@ -72,23 +121,20 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
     all_keys_path = os.path.join(output_dir, "ALL_Host_Keys.txt")
     keys_path = os.path.join(output_dir, "Host_Keys.txt")
     
-    active_owners = set()
-    if hasattr(map_ref, 'map_data') and map_ref.map_data:
-        active_owners = set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
-        
+    active_owners = active_owners_of(map_ref)
     nation_data = getattr(map_ref, 'nation_data', {})
     
     with open(all_keys_path, 'w') as f:
         f.write("Every key for every possible country:\n\n")
         for cid, key in keys_dict.items():
-            name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+            name = display_name(nation_data, cid)
             f.write(f"{name} (ID {cid}): {key}\n")
             
     with open(keys_path, 'w') as f:
         f.write("Distribute these keys to your players:\n\n")
         for cid, key in keys_dict.items():
             if cid in active_owners:
-                name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+                name = display_name(nation_data, cid)
                 f.write(f"{name} (ID {cid}): {key}\n")
 
     # Web only: mirror the whole tournament_saves tree into IndexedDB so it
@@ -116,7 +162,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
             if hasattr(map_ref, 'multiplayer_keys_dict'):
                 map_ref.multiplayer_keys_dict[cid] = new_key
             nation_data = getattr(map_ref, 'nation_data', {})
-            name = nation_data.get(cid, {}).get("name", cid) if isinstance(nation_data.get(cid), dict) else cid
+            name = display_name(nation_data, cid)
             regenerated_keys[cid] = (name, new_key)
         map_ref.multiplayer_pending_key_regen.clear()
 
@@ -170,9 +216,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
     player_enc_cache = getattr(map_ref, 'multiplayer_player_enc_cache', {})
     
-    active_owners = set()
-    if hasattr(map_ref, 'map_data') and map_ref.map_data:
-        active_owners = set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
+    active_owners = active_owners_of(map_ref)
 
     tasks_to_encrypt = []
     for cid, ckey in keys_dict.items():
@@ -201,35 +245,22 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
             }
 
     if tasks_to_encrypt:
-        import concurrent.futures
-        import pygame
-        from map_logic.system32 import loading_screen
-        
-        def _encrypt_player(cid, ckey):
+        def _encrypt_player(task):
+            cid, ckey = task
             if not ckey: return None
             return cid, hash_key(ckey), encrypt_dict({"sk": session_key}, ckey)
-            
-        surface = pygame.display.get_surface()
-        total_tasks = len(tasks_to_encrypt)
-        completed_tasks = 0
-            
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(_encrypt_player, cid, ckey) for cid, ckey in tasks_to_encrypt]
-            for future in concurrent.futures.as_completed(futures):
-                pygame.event.pump()
-                res = future.result()
-                if res:
-                    r_cid, r_hash, r_enc = res
-                    verification_table[r_hash] = {
-                        "role": "PLAYER",
-                        "country_id": r_cid,
-                        "enc_session": r_enc
-                    }
-                    player_enc_cache[r_cid] = (keys_dict[r_cid], r_hash, r_enc)
-                completed_tasks += 1
-                if surface and total_tasks > 0:
-                    loading_screen.draw_simple_refresh_bar(surface, "Encrypting Player Keys...", completed_tasks, total_tasks)
-                    pygame.display.flip()
+
+        def _record(result):
+            r_cid, r_hash, r_enc = result
+            verification_table[r_hash] = {
+                "role": "PLAYER",
+                "country_id": r_cid,
+                "enc_session": r_enc
+            }
+            player_enc_cache[r_cid] = (keys_dict[r_cid], r_hash, r_enc)
+
+        run_with_progress(tasks_to_encrypt, _encrypt_player,
+                          "Encrypting Player Keys...", _record)
 
     map_ref.multiplayer_player_enc_cache = player_enc_cache
             
@@ -363,10 +394,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
     keys_dict maps Country_ID -> Country_Key
     """
     processed_cids = set()
-    
-    import concurrent.futures
-    import pygame
-    
+
     def _decrypt_move(file_path):
         if not os.path.exists(file_path):
             return None
@@ -390,24 +418,13 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         return file_path, cid, player_data
         
     valid_moves = {}
-    surface = pygame.display.get_surface()
-    total_tasks = len(move_file_paths)
-    completed_tasks = 0
-    
-    from map_logic.system32 import loading_screen
-    
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(_decrypt_move, fp) for fp in move_file_paths]
-        for future in concurrent.futures.as_completed(futures):
-            pygame.event.pump()
-            res = future.result()
-            if res:
-                file_path, cid, player_data = res
-                valid_moves[file_path] = (cid, player_data)
-            completed_tasks += 1
-            if surface:
-                loading_screen.draw_simple_refresh_bar(surface, "Decrypting Move Files...", completed_tasks, total_tasks)
-                pygame.display.flip()
+
+    def _record(result):
+        file_path, cid, player_data = result
+        valid_moves[file_path] = (cid, player_data)
+
+    run_with_progress(move_file_paths, _decrypt_move,
+                      "Decrypting Move Files...", _record)
                 
     for file_path in move_file_paths:
         if file_path not in valid_moves:

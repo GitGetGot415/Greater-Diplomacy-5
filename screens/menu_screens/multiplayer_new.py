@@ -1,7 +1,7 @@
 import os
 import pygame
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
@@ -20,7 +20,7 @@ class Multiplayer_New(GameState):
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings)
         ]
 

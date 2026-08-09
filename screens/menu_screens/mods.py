@@ -2,7 +2,7 @@ import os
 import pygame
 from data import queries
 from gameState import FolderListState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 import mod_loader
@@ -78,7 +78,7 @@ class Mods(FolderListState):
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(160, 20, "medium", "green", "Import Mod (.py)",
                    lambda: queries.import_mod_file(self, self.refresh_ui)),
         ]

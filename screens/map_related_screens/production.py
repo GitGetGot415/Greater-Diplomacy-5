@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from gameState import GameState
 from ui.bars import ui_bars
-from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats, draw_time_stat, draw_stat_separator
+from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats, draw_time_stat, draw_stat_separator, make_back_button
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
@@ -12,7 +12,6 @@ from ui.bars import resource_hud
 # LAYOUT
 # ==========================================
 
-BACK_BTN_POS = (20, 20)
 
 # Scrolling list of buttons + their stat bars
 LIST_START_Y = 120
@@ -161,7 +160,7 @@ class Production_Screen(GameState):
         return btn
 
     def refresh_ui(self):
-        self.btn_back = Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)
+        self.btn_back = make_back_button(self.exit_screen)
         self.elements = [self.btn_back]
 
         current_buildings = self.target_province.get("buildings", [])

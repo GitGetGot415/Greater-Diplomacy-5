@@ -161,3 +161,58 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT"):
             "sender": f"To: {receiver}", "content": content, "type": msg_type, 
             "read": True, "spectator_read": True, "date": date_str
         })
+
+# ==========================================
+# OUTGOING ANNOUNCEMENTS
+# ==========================================
+
+#: What an outgoing action says when its sender wrote nothing of their own.
+#:
+#: A tuple means "look this key up in ai_prompts.AI_FALLBACK_RESPONSES, and use
+#: the second element only if it isn't there". Those five actions already read
+#: that table, but with no default at all, so a mod that trimmed an entry sent
+#: a message with `None` for content. The plain strings are actions that have
+#: never read the table and are left alone.
+DEFAULT_ANNOUNCEMENTS = {
+    "CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
+    "CANCEL_MILITARY_ACCESS": "We no longer require military access through your territory.",
+    "REVOKE_MILITARY_ACCESS": "Your military access through our territory has been revoked.",
+    "FACTION_INVITE": "We invite your nation to join our faction.",
+    "JOIN_FACTION_REQ": "We formally request to join your faction.",
+    "REQ_MILITARY_ACCESS": "We formally request military access to move our troops through your territory.",
+    "CEASEFIRE": "We offer terms for a ceasefire.",
+    "CREATE_FACTION": "We propose establishing a new faction together.",
+    "TRADE": "We propose a trade agreement.",
+    "JOIN_WARS": ("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
+    "BREAK_ALLIANCE": ("BREAK_ALLIANCE", "We have broken our alliance."),
+    "DISBAND_FACTION": ("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
+    "KICK_FACTION_MEMBER": ("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
+    "LEAVE_FACTION": ("FACTION_ABANDONED", "We will not forget your abandonment."),
+}
+
+
+def announcement_for(action, custom_msg=""):
+    """The line an outgoing action announces itself with.
+
+    Fifteen branches of the outgoing-diplomacy pass wrote out
+    `custom_msg if custom_msg else "<literal>"` by hand, and several of those
+    literals were a stale copy of an AI_FALLBACK_RESPONSES entry saying the
+    same thing in slightly different words.
+    """
+    if custom_msg:
+        return custom_msg
+
+    default = DEFAULT_ANNOUNCEMENTS.get(action)
+    if default is None:
+        # An action added to constants.py without an entry here still reaches
+        # the other side's inbox rather than arriving blank.
+        return f"We propose {action.replace('_', ' ').lower()}."
+    if isinstance(default, tuple):
+        from map_logic.ai import ai_prompts
+        return ai_prompts.AI_FALLBACK_RESPONSES.get(default[0], default[1])
+    return default
+
+
+def send_treaty_message(map_screen, sender, receiver, action, custom_msg=""):
+    """Announces an outgoing diplomatic action to its recipient."""
+    send_message(map_screen, sender, receiver, announcement_for(action, custom_msg), "DIPLOMACY")

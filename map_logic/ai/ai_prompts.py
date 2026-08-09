@@ -151,12 +151,20 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
         
     return context
 
-def get_unilateral_system_prompt(action_context):
+def action_rules_and_schema(subject, message_hint):
+    """The tail every long system prompt ends with: the action list, the rules
+    for using them, and the JSON schema to reply in.
+
+    These eleven lines were written out three times, once per prompt, which
+    meant adding a valid action or a rule meant editing all three and the
+    copies had already begun to drift. Only two things genuinely differ:
+
+    - `subject`: what to call the thing being reacted to ("event", "proposal",
+      "message"), used in the opinion_change instruction.
+    - `message_hint`: the placeholder inside the JSON schema. The model reads
+      it, so the three stay distinct verbatim rather than being generalised.
+    """
     return (
-        "You are an AI playing a grand strategy game. You act as the leader of your nation. "
-        f"You have just received the following unilateral declaration: {action_context} "
-        "There is no proposal to accept or reject. You must send a reply to the country that sent you this declaration in character. "
-        "You may also take a diplomatic action in retaliation or response.\n"
         "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
         "RULES FOR ACTIONS:\n"
         "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
@@ -166,9 +174,18 @@ def get_unilateral_system_prompt(action_context):
         "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
         "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
         "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. Integrated puppets cannot engage in 'TRADE' agreements.\n"
-        "- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this event improved or worsened your general opinion of the sender.\n"
+        f"- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this {subject} improved or worsened your general opinion of the sender.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "In-character dialogue reacting to the event in english", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
+        '{"message": "' + message_hint + '", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
+    )
+
+def get_unilateral_system_prompt(action_context):
+    return (
+        "You are an AI playing a grand strategy game. You act as the leader of your nation. "
+        f"You have just received the following unilateral declaration: {action_context} "
+        "There is no proposal to accept or reject. You must send a reply to the country that sent you this declaration in character. "
+        "You may also take a diplomatic action in retaliation or response.\n"
+        + action_rules_and_schema("event", "In-character dialogue reacting to the event in english")
     )
 
 def get_bilateral_system_prompt(accepted):
@@ -178,18 +195,7 @@ def get_bilateral_system_prompt(accepted):
         f"You have already decided to strongly {decision_str} the diplomatic proposal. "
         "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
         "You may also take a diplomatic action in response to this proposal.\n"
-        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
-        "RULES FOR ACTIONS:\n"
-        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
-        "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
-        "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
-        "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
-        "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
-        "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
-        "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. Integrated puppets cannot engage in 'TRADE' agreements.\n"
-        "- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this proposal improved or worsened your general opinion of the sender.\n"
-        "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "In-character dialogue responding to the proposal in english", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
+        + action_rules_and_schema("proposal", "In-character dialogue responding to the proposal in english")
     )
 
 def get_custom_message_system_prompt():
@@ -203,19 +209,8 @@ def get_custom_message_system_prompt():
         "- Relations 0 to 50: Be neutral, transactional, and cautious.\n"
         "- Relations > 50: Be warm, brotherly, and highly cooperative.\n"
         "If you are at war, do not agree to anything friendly unless it's a 'CEASEFIRE'. "
-        "You may also take a diplomatic action if the sender's reasoning is convincing or offensive. " 
-        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
-        "RULES FOR ACTIONS:\n"
-        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
-        "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
-        "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"
-        "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
-        "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
-        "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
-        "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. Integrated puppets cannot engage in 'TRADE' agreements.\n"
-        "- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this message improved or worsened your general opinion of the sender.\n"
-        "Reply ONLY with a valid JSON object matching this schema: "
-        '{"message": "Your in-character response here", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
+        "You may also take a diplomatic action if the sender's reasoning is convincing or offensive. "
+        + action_rules_and_schema("message", "Your in-character response here")
     )
 
 def get_proactive_system_prompt(ai_nation, target_nation, action_context):

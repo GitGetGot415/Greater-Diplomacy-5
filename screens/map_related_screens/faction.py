@@ -2,10 +2,9 @@ import pygame
 from gameState import GameState, resolve_keybind
 import data.constants as c
 from ui.bars import ui_bars
-from ui_elements import Button, process_text_input
+from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
-from map_logic.diplomacy import diplomacy_logic
 
 class Faction_Screen(GameState):
     back_state = "MAP"
@@ -24,7 +23,7 @@ class Faction_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
 
         if not self.map_screen: return
 
@@ -72,14 +71,10 @@ class Faction_Screen(GameState):
             self.elements.append(btn_rename)
 
     def leave_faction(self):
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.map_screen.player_country, "LEAVE_FACTION", "")
-        self.map_screen.show_feedback(msg)
-        self.refresh_ui()
+        self.queue_diplomacy_action(self.map_screen.player_country, "LEAVE_FACTION")
 
     def disband_faction(self):
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.map_screen.player_country, "DISBAND_FACTION", "")
-        self.map_screen.show_feedback(msg)
-        self.refresh_ui()
+        self.queue_diplomacy_action(self.map_screen.player_country, "DISBAND_FACTION")
 
     def view_territories(self):
         self.next_state, self.done = "FACTION_TERRITORIES", True
@@ -141,10 +136,8 @@ class Faction_Screen(GameState):
 
         if self.is_renaming:
             title_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 200, 30, 400, 50)
-            ui_bars.draw_modal_box(surface, title_rect, bg_color=(100, 100, 100), border_color=(255, 255, 255), border_width=2)
-            
-            txt_surf = font_title.render(self.new_faction_name + "|", True, (255, 255, 255))
-            surface.blit(txt_surf, (title_rect.x + 10, title_rect.y + 10))
+            draw_text_box(surface, title_rect, self.new_faction_name, active=True,
+                          font=font_title)
             
             instr = font_normal.render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
             surface.blit(instr, (c.SCREEN_WIDTH // 2 - instr.get_width() // 2, 90))
@@ -185,7 +178,7 @@ class Faction_Territories_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
 
     def draw_background(self, surface):
         # Same live flat/checkerboard ocean background as the main map

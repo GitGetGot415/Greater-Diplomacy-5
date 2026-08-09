@@ -48,7 +48,7 @@ def _import_project_modules():
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods
-    global Orders_Screen, keybind_io, symbol_loader, modal_stack
+    global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Select_Base_Map, Random_Setup, Scenario_Settings
@@ -96,7 +96,7 @@ def _import_project_modules():
     from screens.menu_screens.view_assets import View_Assets
     from screens.menu_screens.mods import Mods
     from screens.map_related_screens.orders import Orders_Screen
-    from data.io import keybind_io
+    from data.io import keybind_io, settings_schema
     from map_logic.rendering import symbol_loader
     from ui import modal_stack
     from screens.map_related_screens.research import Research_Screen
@@ -260,47 +260,14 @@ class Controller:
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
         loaded_data = keybind_io.load_settings(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)
         
+        # The positional tuple, its per-setting defaults and the chain of
+        # `len(loaded_data) > N` guards that used to be written out here all
+        # live in data/io/settings_schema.py now -- a tuple saved by an older
+        # build simply stops early and the rest fall back.
         self.keybinds = loaded_data[0]
-        self.sfx_volume = loaded_data[1]
-        self.music_volume = loaded_data[2]
-        self.num_players = loaded_data[3]
-        self.ai_mode = loaded_data[4]
-        self.gemini_api_key = loaded_data[5]
-        self.chatgpt_api_key = loaded_data[6]
-        self.claude_api_key = loaded_data[7]
-        self.ollama_api_key = loaded_data[8]
-        self.gemini_model = loaded_data[9]
-        self.chatgpt_model = loaded_data[10]
-        self.claude_model = loaded_data[11]
-        self.ollama_model = loaded_data[12]
-        self.ai_immersion_level = loaded_data[13]
-        self.music_pitch = loaded_data[14] if len(loaded_data) > 14 else c.DEFAULT_AUDIO_PITCH
-        self.sfx_pitch = loaded_data[15] if len(loaded_data) > 15 else c.DEFAULT_AUDIO_PITCH
-        self.target_fps = loaded_data[16] if len(loaded_data) > 16 else c.TARGET_FPS
-        self.ai_threads = loaded_data[17] if len(loaded_data) > 17 else c.DEFAULT_AI_THREADS
-        self.show_fps = loaded_data[18] if len(loaded_data) > 18 else c.SHOW_FPS
-        
-        # --- FIXED MOUSE TOGGLE LOADING BLOCKS ---
-        self.drag_mouse_button_toggle = loaded_data[19] if len(loaded_data) > 19 else c.DRAG_MOUSE_BUTTON_TOGGLE
-        c.DRAG_MOUSE_BUTTON_TOGGLE = self.drag_mouse_button_toggle
-
-        self.saves_dir = loaded_data[20] if len(loaded_data) > 20 else c.SAVES_DIR
-        c.SAVES_DIR = self.saves_dir
-        
-        self.custom_scenarios_dir = loaded_data[21] if len(loaded_data) > 21 else c.SCENARIOS_CUSTOM_DIR
-        c.SCENARIOS_CUSTOM_DIR = self.custom_scenarios_dir
-
-        self.ocean_light_color = loaded_data[22] if len(loaded_data) > 22 else c.DEFAULT_OCEAN_LIGHT_BLUE
-        c.OCEAN_LIGHT_BLUE = self.ocean_light_color
-
-        self.ocean_dark_color = loaded_data[23] if len(loaded_data) > 23 else c.DEFAULT_OCEAN_DARK_BLUE
-        c.OCEAN_DARK_BLUE = self.ocean_dark_color
-
-        self.tournament_saves_dir = loaded_data[24] if len(loaded_data) > 24 else c.TOURNAMENT_SAVES_DIR
-        c.TOURNAMENT_SAVES_DIR = self.tournament_saves_dir
-
-        self.checkerboard_water = loaded_data[25] if len(loaded_data) > 25 else c.CHECKERBOARD_WATER
-        c.CHECKERBOARD_WATER = self.checkerboard_water
+        settings = settings_schema.from_tuple(loaded_data)
+        settings_schema.apply_to_controller(self, settings)
+        c.apply_runtime_settings(settings)
 
         # 3. Apply volume to global sounds on boot
         ui_elements.global_sfx_volume = self.sfx_volume

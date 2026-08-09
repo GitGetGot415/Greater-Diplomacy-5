@@ -1,9 +1,9 @@
 import pygame
 import data.constants as c
 from data import queries
-from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
+from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud
@@ -196,7 +196,7 @@ class Claims_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, style="map")]
 
         row_y = self.panel_rect.y + 40
         if self.is_global_viewer:
@@ -718,7 +718,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         pending = diplomacy_messages.get_pending(map_screen.nation_data, self.proposer, self.target)
         self.peace_type = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
 
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, style="map")]
 
     def draw_content(self, surface):
         draw_projected_peace_map(surface, self.map_screen, self.peace_type, self.proposer, self.target)
@@ -915,11 +915,8 @@ class Trade_Screen(MapOverlayScreen):
 
         # Draw Input Boxes
         for key, rect in self.input_rects().items():
-            is_active = self.active_input == key
-            pygame.draw.rect(surface, (60, 60, 80) if is_active else (20, 20, 30), rect)
-            pygame.draw.rect(surface, (150, 150, 150), rect, 1)
-            display = getattr(self, self.FIELD_ATTRS[key]) + ("|" if is_active else "")
-            surface.blit(font_small.render(display, True, (255, 255, 255)), (rect.x + 5, rect.y + 5))
+            draw_text_box(surface, rect, getattr(self, self.FIELD_ATTRS[key]),
+                          active=self.active_input == key, font=font_small, pad_x=5)
 
     def draw(self, surface):
         super().draw(surface)
@@ -943,7 +940,7 @@ class Puppets_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, style="map")]
         self.elements.append(Button(c.SCREEN_WIDTH - 300, c.TOP_BAR_UI_CENTER_Y, "large", "blue", "Create Integrated Puppet", self.open_create_puppet))
         
         
@@ -1031,19 +1028,13 @@ class Puppets_Screen(MapOverlayScreen):
         self.done = True
         
     def queue_annex(self, puppet):
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, puppet, "ANNEX_PUPPET", "")
-        self.map_screen.show_feedback(msg)
-        self.refresh_ui()
+        self.queue_diplomacy_action(puppet, "ANNEX_PUPPET")
 
     def queue_take_puppets(self, puppet):
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, puppet, "TAKE_PUPPETS", "")
-        self.map_screen.show_feedback(msg)
-        self.refresh_ui()
+        self.queue_diplomacy_action(puppet, "TAKE_PUPPETS")
 
     def queue_release(self, puppet):
-        msg = diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, puppet, "RELEASE_PUPPET", "")
-        self.map_screen.show_feedback(msg)
-        self.refresh_ui()
+        self.queue_diplomacy_action(puppet, "RELEASE_PUPPET")
 
     def open_create_puppet(self):
         screen = Create_Integrated_Puppet_Screen(self.map_screen)
@@ -1128,7 +1119,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, style="map")]
         
         btn_keep_cores_color = "green" if self.keep_cores else "red"
         btn_keep_cores_text = f"Keep Cores: {'ON' if self.keep_cores else 'OFF'}"
@@ -1267,25 +1258,19 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
 # ==========================================
 
 def open_wargoal_selection_menu(map_screen, target_nation):
-    screen = Declare_War_Screen(map_screen, target_nation)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, Declare_War_Screen(map_screen, target_nation))
 
 def open_claims_menu(map_screen):
-    screen = Claims_Screen(map_screen)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, Claims_Screen(map_screen))
 
 def open_peace_menu(map_screen, target_nation):
-    screen = Peace_Screen(map_screen, target_nation)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, Peace_Screen(map_screen, target_nation))
 
 def open_view_peace_treaty_menu(map_screen, proposer):
-    screen = View_Peace_Treaty_Screen(map_screen, proposer)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, View_Peace_Treaty_Screen(map_screen, proposer))
 
 def open_trade_menu(map_screen, target_nation):
-    screen = Trade_Screen(map_screen, target_nation)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, Trade_Screen(map_screen, target_nation))
 
 def open_puppets_menu(map_screen):
-    screen = Puppets_Screen(map_screen)
-    _run_pygame_sub_screen(map_screen, screen)
+    _run_pygame_sub_screen(map_screen, Puppets_Screen(map_screen))

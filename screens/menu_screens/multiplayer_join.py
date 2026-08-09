@@ -1,5 +1,5 @@
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
@@ -15,7 +15,7 @@ class Multiplayer_Join(GameState):
         self.bg_color = (10, 10, 40)
         self.elements = [
             Button("centered", "centered", "medium", "blue", "Load Tournament File", self.load_tour_file),
-            Button(20, 20, "small", "red", "Back", self.exit_screen)
+            make_back_button(self.exit_screen)
         ]
 
     def load_tour_file(self):

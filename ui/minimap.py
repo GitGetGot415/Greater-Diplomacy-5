@@ -12,8 +12,8 @@ MINIMAP_BG_COLOR = (10, 10, 10)
 MINIMAP_BORDER_COLOR = (100, 100, 100)
 MINIMAP_VIEWBOX_COLOR = (255, 255, 0)
 
-def draw_minimap(self, surface, screen_width, screen_height):
-    map_aspect = self.map_h / self.map_w
+def draw_minimap(map_screen, surface, screen_width, screen_height):
+    map_aspect = map_screen.map_h / map_screen.map_w
     mini_w = MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
     
@@ -28,18 +28,18 @@ def draw_minimap(self, surface, screen_width, screen_height):
     visible_map_width = screen_width - c.UI_LEFT_OFFSET
 
     # 1. Calculate how many 'world pixels' the red bar covers
-    world_ui_offset = c.UI_LEFT_OFFSET / self.camera.zoom
+    world_ui_offset = c.UI_LEFT_OFFSET / map_screen.camera.zoom
     
     # 2. Wrap the shifted X coordinate so it seamlessly loops around the globe
-    wrapped_x = (self.camera.pos.x + world_ui_offset) % self.map_w
+    wrapped_x = (map_screen.camera.pos.x + world_ui_offset) % map_screen.map_w
     
     # 3. Calculate the Start Position (vx)
-    vx = (wrapped_x / self.map_w) * mini_w + mx
-    vy = (self.camera.pos.y / self.map_h) * mini_h + my
+    vx = (wrapped_x / map_screen.map_w) * mini_w + mx
+    vy = (map_screen.camera.pos.y / map_screen.map_h) * mini_h + my
     
     # 4. Calculate the Width (vw)
-    vw = (visible_map_width / self.camera.zoom / self.map_w) * mini_w
-    vh = ((screen_height - self.total_ui_h) / (self.camera.zoom * self.camera.tilt_factor) / self.map_h) * mini_h
+    vw = (visible_map_width / map_screen.camera.zoom / map_screen.map_w) * mini_w
+    vh = ((screen_height - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor) / map_screen.map_h) * mini_h
     
     # --- Draw with Wrap-around support & Clamping ---
     vx_relative = vx - mx

@@ -18,7 +18,7 @@ from data import queries
 from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.modal_screen import ModalScreen
-from ui_elements import Button, TextField
+from ui_elements import Button, TextField, make_back_button
 from map_logic.rendering.font_manager import fonts
 
 
@@ -206,7 +206,7 @@ class TurnEditorScreen(ModalScreen):
             self.elements.append(check_btn)
 
         btn_y = p.bottom - 52
-        self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Back", self.exit_screen))
+        self.elements.append(make_back_button(self.exit_screen, pos=(p.x + self.PAD, btn_y)))
         self.elements.append(Button(p.centerx - 100, btn_y - 5, "medium", "green", "Save All Changes", self.save_all))
         self.elements.append(Button(p.right - self.PAD - 200, btn_y - 5, "medium", "red",
                                     "Reset to Defaults", self.reset_to_defaults))

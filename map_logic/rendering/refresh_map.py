@@ -115,9 +115,9 @@ def get_id_2d_array(id_map):
     return id_array, id_2d
 
 
-def _build_map_surface(self, get_owner_and_color):
+def _build_map_surface(map_screen, get_owner_and_color):
     """Unified helper to build NumPy map surfaces to prevent array calculation duplication."""
-    id_array, id_2d = get_id_2d_array(self.id_map)
+    id_array, id_2d = get_id_2d_array(map_screen.id_map)
     shape_3d = id_array.shape
     lut = np.zeros(16777216, dtype=np.uint32)
     owner_lut = np.zeros(16777216, dtype=np.uint32)
@@ -125,7 +125,7 @@ def _build_map_surface(self, get_owner_and_color):
     next_owner_id = 1
     owner_seq = []
 
-    for color_key, data in self.map_data.items():
+    for color_key, data in map_screen.map_data.items():
         terrain_type = data.get("terrain", "plains")
 
         if terrain_type in c.VISUAL_WATER_MAPPING:
@@ -154,10 +154,10 @@ def _build_map_surface(self, get_owner_and_color):
     # Process Shading
     water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
     layout_key = (tuple(owner_seq), tuple(water_ids))
-    level = _cached_shading_levels(self.id_map, layout_key, lambda: owner_lut[id_2d], water_ids)
+    level = _cached_shading_levels(map_screen.id_map, layout_key, lambda: owner_lut[id_2d], water_ids)
     out_3d = shade_packed_colors(out_2d, shape_3d, level)
 
-    new_surf = pygame.Surface(self.id_map.get_size(), depth=24)
+    new_surf = pygame.Surface(map_screen.id_map.get_size(), depth=24)
     pygame.surfarray.blit_array(new_surf, out_3d)
     
     # Now that the water is actually (255, 0, 255), this will punch out the transparency mask.
@@ -165,23 +165,23 @@ def _build_map_surface(self, get_owner_and_color):
     
     return new_surf
 
-def refresh_political_map(self):
+def refresh_political_map(map_screen):
     """Rebuilds the entire political map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        color = self.nation_colors.get(owner, (255, 255, 255))
+        color = map_screen.nation_colors.get(owner, (255, 255, 255))
         return owner, color
         
-    self.political_map = _build_map_surface(self, get_data)
+    map_screen.political_map = _build_map_surface(map_screen, get_data)
     
-    if self.map_mode == "POLITICAL":
-        self.active_map = self.political_map
+    if map_screen.map_mode == "POLITICAL":
+        map_screen.active_map = map_screen.political_map
         
     print(f"Political map refreshed in {pygame.time.get_ticks() - timer} ms")
 
-def refresh_relations_map(self):
+def refresh_relations_map(map_screen):
     """Rebuilds the relations map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
@@ -196,22 +196,22 @@ def refresh_relations_map(self):
         if color is None:
             if owner in ["Unclaimed", "None", ""]:
                 color = (255, 255, 255)
-            elif owner == self.player_country:
+            elif owner == map_screen.player_country:
                 color = (0, 0, 255)
             else:
-                relation = queries.get_relation_score(owner, self.player_country, self.nation_data, self.id_to_province)
+                relation = queries.get_relation_score(owner, map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
                 color = queries.get_relation_color(relation)
             color_by_owner[owner] = color
         return owner, color
 
-    self.relations_map = _build_map_surface(self, get_data)
+    map_screen.relations_map = _build_map_surface(map_screen, get_data)
     
-    if self.map_mode == "RELATIONS":
-        self.active_map = self.relations_map
+    if map_screen.map_mode == "RELATIONS":
+        map_screen.active_map = map_screen.relations_map
         
     print(f"Relations map refreshed in {pygame.time.get_ticks() - timer} ms")
 
-def refresh_cores_map(self):
+def refresh_cores_map(map_screen):
     """Rebuilds the cores map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     
@@ -219,28 +219,28 @@ def refresh_cores_map(self):
         cores = data.get("cores", [])
         if not cores:
             owner = "Unclaimed"
-            color = self.nation_colors.get(owner, (255, 255, 255))
+            color = map_screen.nation_colors.get(owner, (255, 255, 255))
         elif len(cores) == 1:
             owner = cores[0]
-            color = self.nation_colors.get(owner, (255, 255, 255))
+            color = map_screen.nation_colors.get(owner, (255, 255, 255))
         else:
             owner = ",".join(sorted(cores)) 
             r = g = b = valid = 0
             for core_name in cores:
-                c_color = self.nation_colors.get(core_name)
+                c_color = map_screen.nation_colors.get(core_name)
                 if c_color:
                     r += c_color[0]; g += c_color[1]; b += c_color[2]; valid += 1
             color = (r // valid, g // valid, b // valid) if valid > 0 else (255, 255, 255)
         return owner, color
         
-    self.cores_map = _build_map_surface(self, get_data)
+    map_screen.cores_map = _build_map_surface(map_screen, get_data)
     
-    if self.map_mode == "CORES":
-        self.active_map = self.cores_map
+    if map_screen.map_mode == "CORES":
+        map_screen.active_map = map_screen.cores_map
         
     print(f"Cores map refreshed in {pygame.time.get_ticks() - timer} ms")
 
-def refresh_factions_map(self):
+def refresh_factions_map(map_screen):
     """Rebuilds the factions map surface instantly using a NumPy LUT."""
     timer = pygame.time.get_ticks()
     faction_colors = {}
@@ -251,35 +251,35 @@ def refresh_factions_map(self):
         
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        fac = self.nation_data.get(owner, {}).get("faction", "")
+        fac = map_screen.nation_data.get(owner, {}).get("faction", "")
         
         if owner in ["Unclaimed", "None", ""]:
             color = (255, 255, 255)
         elif not fac:
             color = (150, 150, 150) # Neutral grey for non-faction countries
         else:
-            leader = queries.get_faction_leader(fac, self.nation_data)
-            if leader and leader in self.nation_colors:
-                faction_colors[fac] = self.nation_colors[leader]
+            leader = queries.get_faction_leader(fac, map_screen.nation_data)
+            if leader and leader in map_screen.nation_colors:
+                faction_colors[fac] = map_screen.nation_colors[leader]
             elif fac not in faction_colors:
                 faction_colors[fac] = get_faction_color(fac)
             color = faction_colors[fac]
         return owner, color
         
-    self.factions_map = _build_map_surface(self, get_data)
+    map_screen.factions_map = _build_map_surface(map_screen, get_data)
     
-    if self.map_mode == "FACTIONS":
-        self.active_map = self.factions_map
+    if map_screen.map_mode == "FACTIONS":
+        map_screen.active_map = map_screen.factions_map
         
     print(f"Factions map refreshed in {pygame.time.get_ticks() - timer} ms")
 
-def refresh_faction_territories_map(self):
+def refresh_faction_territories_map(map_screen):
     """Rebuilds the map showing pre-war faction borders, or current borders if at peace."""
     timer = pygame.time.get_ticks()
     
-    player_fac = self.nation_data.get(self.player_country, {}).get("faction", "")
-    members = queries.get_faction_members(player_fac, self.nation_data) if player_fac else []
-    pre_war_map = self.nation_data.get("FACTION_WAR_MAPS", {}).get(player_fac, {})
+    player_fac = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+    members = queries.get_faction_members(player_fac, map_screen.nation_data) if player_fac else []
+    pre_war_map = map_screen.nation_data.get("FACTION_WAR_MAPS", {}).get(player_fac, {})
     is_at_war = bool(pre_war_map)
     
     def get_data(data):
@@ -288,7 +288,7 @@ def refresh_faction_territories_map(self):
         if is_at_war:
             if str(data["id"]) in pre_war_map:
                 owner = pre_war_map[str(data["id"])]
-                color = self.nation_colors.get(owner, (255, 255, 255))
+                color = map_screen.nation_colors.get(owner, (255, 255, 255))
             else:
                 if curr_owner in members:
                     possible_cores = [c for c in data.get("cores", []) if c not in members]
@@ -299,74 +299,74 @@ def refresh_faction_territories_map(self):
         else:
             owner = curr_owner
             if owner in members:
-                color = self.nation_colors.get(owner, (255, 255, 255))
+                color = map_screen.nation_colors.get(owner, (255, 255, 255))
             else:
                 color = (255, 255, 255) if owner in ["Unclaimed", "None", ""] else (100, 100, 100)
                 
         return owner, color
         
-    self.faction_territories_map = _build_map_surface(self, get_data)
+    map_screen.faction_territories_map = _build_map_surface(map_screen, get_data)
     
-    if self.map_mode == "FACTION_TERRITORIES":
-        self.active_map = self.faction_territories_map
+    if map_screen.map_mode == "FACTION_TERRITORIES":
+        map_screen.active_map = map_screen.faction_territories_map
         
     print(f"Faction Territories map refreshed in {pygame.time.get_ticks() - timer} ms")
 
-def refresh_fog_map(self):
+def refresh_fog_map(map_screen):
     """Builds a semi-transparent fog surface to darken unseen provinces."""
     timer = pygame.time.get_ticks()
     
     # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not c.USE_FOG_OF_WAR or self.selection_mode:
-        self.fog_map = None
-        self.visible_provinces = None
-        self.partial_visible_provinces = None
+    if not c.USE_FOG_OF_WAR or map_screen.selection_mode:
+        map_screen.fog_map = None
+        map_screen.visible_provinces = None
+        map_screen.partial_visible_provinces = None
         return
 
     # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
     # Prevents hotseat players from seeing Player 1's vision before the next turn starts
-    is_multiplayer = hasattr(self, 'active_players') and len(self.active_players) > 1
-    if self.viewing_ai_moves and is_multiplayer:
-        self.visible_provinces = set() # Return an empty set so nothing is visible
-        self.partial_visible_provinces = set()
+    is_multiplayer = hasattr(map_screen, 'active_players') and len(map_screen.active_players) > 1
+    if map_screen.viewing_ai_moves and is_multiplayer:
+        map_screen.visible_provinces = set() # Return an empty set so nothing is visible
+        map_screen.partial_visible_provinces = set()
     else:
     # Dynamically fetch get_visible_provinces from queries
-        vis_result = queries.get_visible_provinces(self)
+        vis_result = queries.get_visible_provinces(map_screen)
         if vis_result[0] is None:
-            self.fog_map = None
-            self.visible_provinces = None
-            self.partial_visible_provinces = None
+            map_screen.fog_map = None
+            map_screen.visible_provinces = None
+            map_screen.partial_visible_provinces = None
             return
             
-        self.visible_provinces, self.partial_visible_provinces = vis_result
+        map_screen.visible_provinces, map_screen.partial_visible_provinces = vis_result
 
-    fog_strength = self.scenario_settings.get("fog_of_war_strength", "normal") if hasattr(self, 'scenario_settings') else "normal"
+    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal") if hasattr(map_screen, 'scenario_settings') else "normal"
     extreme_hidden = set()
     
     if fog_strength == "extreme":
-        for p_id, p_data in self.id_to_province.items():
-            if p_id not in self.visible_provinces and p_id not in self.partial_visible_provinces:
+        for p_id, p_data in map_screen.id_to_province.items():
+            if p_id not in map_screen.visible_provinces and p_id not in map_screen.partial_visible_provinces:
                 # check neighbors
                 neighbors = p_data.get("neighbors", [])
                 is_extreme = True
                 for n in neighbors:
-                    if n in self.visible_provinces or n in self.partial_visible_provinces:
+                    if n in map_screen.visible_provinces or n in map_screen.partial_visible_provinces:
                         is_extreme = False
                         break
                 if is_extreme:
                     extreme_hidden.add(p_id)
-    self.extreme_hidden_provinces = extreme_hidden
+    map_screen.extreme_hidden_provinces = extreme_hidden
 
-    id_array, id_2d = get_id_2d_array(self.id_map)
+    id_array, id_2d = get_id_2d_array(map_screen.id_map)
     lut = np.full(16777216, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
 
-    for color_key, data in self.map_data.items():
+    for color_key, data in map_screen.map_data.items():
         packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
         p_id = data["id"]
         
-        if p_id in self.visible_provinces:
+        if p_id in map_screen.visible_provinces:
             lut[packed_key] = 0 # 0 Alpha = Completely visible
-        elif p_id in self.partial_visible_provinces:
+        elif p_id in map_screen.partial_visible_provinces:
             lut[packed_key] = c.FOG_OF_WAR_ALPHA // 2 # Slightly darker for radius 2
         else:
             if fog_strength == "lite":
@@ -377,7 +377,7 @@ def refresh_fog_map(self):
             
     alpha_2d = lut[id_2d]
 
-    fog_surf = pygame.Surface(self.id_map.get_size(), pygame.SRCALPHA)
+    fog_surf = pygame.Surface(map_screen.id_map.get_size(), pygame.SRCALPHA)
     fog_surf.fill((0, 0, 0, 0)) # Base transparent layer
     
     # Lock alpha array to write NumPy output to it directly
@@ -390,5 +390,5 @@ def refresh_fog_map(self):
     rgb_array[...] = 0
     del rgb_array
 
-    self.fog_map = fog_surf
+    map_screen.fog_map = fog_surf
     print(f"Fog map refreshed in {pygame.time.get_ticks() - timer} ms")

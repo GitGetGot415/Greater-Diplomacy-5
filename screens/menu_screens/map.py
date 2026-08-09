@@ -127,9 +127,12 @@ class Map(GameState):
         else:
             load_map.load_map_assets(self, load_path)
 
-        # Sync constants mapping directly from loaded configuration store values if they exist
-        if hasattr(self, 'controller') and hasattr(self.controller, 'drag_mouse_button_toggle'):
-            c.DRAG_MOUSE_BUTTON_TOGGLE = self.controller.drag_mouse_button_toggle
+        # Re-mirror the camera's drag button onto data.constants, where the
+        # camera reads it. Deliberately only this one: a controller that is
+        # missing an attribute would otherwise hand apply_runtime_settings a
+        # schema default and quietly reset the player's save folder.
+        if hasattr(self, 'controller') and hasattr(self.controller, 'drag_mouse_toggle'):
+            c.apply_runtime_settings({"drag_mouse_toggle": self.controller.drag_mouse_toggle})
 
         # Capture settings passed from New_Game
         if map_settings:

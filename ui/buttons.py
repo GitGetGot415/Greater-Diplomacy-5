@@ -103,28 +103,28 @@ SETTINGS_PATH_RESET_OFFSET_X = -110
 SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
 
 
-def render_buttons(self):
+def render_buttons(map_screen):
     """Initializes and registers all map screen buttons uniformly."""
     icons = ui_elements.UI_ICONS
-    self.elements = []
+    map_screen.elements = []
 
     # ==================================================================== #
     #                        MAP VIEW TOGGLES                              #
     # ==================================================================== #
-    self.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", self.refresh_all_maps, font_preset="normal")
-    self.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(self), font_preset="normal")
+    map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
+    map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
 
-    self.btn_view_terrain = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", lambda: self.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
-    self.btn_view_political = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Political", lambda: self.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
-    self.btn_view_relations = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "green", "Relations", lambda: self.set_map_layer("RELATIONS"), image=icons.get("relations"), show_text=False)
-    self.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "green", "Cores", lambda: self.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
-    self.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "green", "Factions", lambda: self.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
+    map_screen.btn_view_terrain = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", lambda: map_screen.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
+    map_screen.btn_view_political = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Political", lambda: map_screen.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
+    map_screen.btn_view_relations = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "green", "Relations", lambda: map_screen.set_map_layer("RELATIONS"), image=icons.get("relations"), show_text=False)
+    map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
+    map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
 
-    self.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Resources", lambda: self.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False)
-    self.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: self.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False)
-    self.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: self.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False)
-    self.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "red", "Economy", lambda: self.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False)
-    self.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", self.toggle_country_names, image=icons.get("names"), show_text=False)
+    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Resources", lambda: map_screen.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False)
+    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: map_screen.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False)
+    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: map_screen.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False)
+    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "red", "Economy", lambda: map_screen.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False)
+    map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
@@ -132,37 +132,37 @@ def render_buttons(self):
     start_y_val = LEFT_UI_BAR_START_Y
 
    # Editor Buttons
-    self.btn_ed_load = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X *(-0.5), c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(self), font_preset="normal")
-    self.btn_ed_nation = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(self), font_preset="normal")
-    self.btn_ed_core = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(self), font_preset="normal")
-    self.btn_ed_autocore = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Auto-Core", self.auto_assign_cores, font_preset="normal")
+    map_screen.btn_ed_load = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X *(-0.5), c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(map_screen), font_preset="normal")
+    map_screen.btn_ed_nation = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*0.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(map_screen), font_preset="normal")
+    map_screen.btn_ed_core = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(map_screen), font_preset="normal")
+    map_screen.btn_ed_autocore = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Auto-Core", map_screen.auto_assign_cores, font_preset="normal")
     
-    self.btn_ed_clear = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Clear", lambda: editor_menus.open_clear_menu(self), image=icons.get("red_line"), show_text=False)
+    map_screen.btn_ed_clear = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Clear", lambda: editor_menus.open_clear_menu(map_screen), image=icons.get("red_line"), show_text=False)
     
-    self.btn_ed_claim = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Claim Brush", lambda: editor_menus.select_claim_brush(self), image=icons.get("paper"), show_text=False)
-    self.btn_ed_resource = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(self), image=icons.get("resource"), show_text=False)
-    self.btn_ed_building = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(self), image=icons.get("industry"), show_text=False)
-    self.btn_ed_unit = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Unit", lambda: editor_menus.select_unit_brush(self), image=icons.get("unit"), show_text=False)
-    self.btn_ed_refresh = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", self.refresh_nation_data, font_preset="normal")
-    self.btn_ed_date = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(self), image=icons.get("clock"), show_text=False)
-    self.btn_ed_edited = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(self), font_preset="normal")
-    self.btn_ed_diplo = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(self))
-    self.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(self), font_preset="normal")
+    map_screen.btn_ed_claim = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Claim Brush", lambda: editor_menus.select_claim_brush(map_screen), image=icons.get("paper"), show_text=False)
+    map_screen.btn_ed_resource = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(map_screen), image=icons.get("resource"), show_text=False)
+    map_screen.btn_ed_building = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(map_screen), image=icons.get("industry"), show_text=False)
+    map_screen.btn_ed_unit = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Unit", lambda: editor_menus.select_unit_brush(map_screen), image=icons.get("unit"), show_text=False)
+    map_screen.btn_ed_refresh = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", map_screen.refresh_nation_data, font_preset="normal")
+    map_screen.btn_ed_date = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), image=icons.get("clock"), show_text=False)
+    map_screen.btn_ed_edited = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), font_preset="normal")
+    map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
+    map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
 
     # Gameplay Buttons
-    if getattr(self, 'multiplayer_mode', False):
+    if getattr(map_screen, 'multiplayer_mode', False):
         def m_export():
             from data.io.multiplayer_io import export_move_file
             import os
-            turn = self.time_manager.total_turns if hasattr(self, 'time_manager') else 1
-            cid = self.player_country
+            turn = map_screen.time_manager.total_turns if hasattr(map_screen, 'time_manager') else 1
+            cid = map_screen.player_country
             save_name = f"Turn_{turn}_{cid}.gd5move"
             export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
-            player_key = getattr(self, 'multiplayer_player_key', '')
-            export_move_file(self, export_path, player_key)
-            self.show_feedback(f"Move exported to {export_path}")
+            player_key = getattr(map_screen, 'multiplayer_player_key', '')
+            export_move_file(map_screen, export_path, player_key)
+            map_screen.show_feedback(f"Move exported to {export_path}")
             
-        self.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
+        map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
         
         def m_import():
             from data.io.multiplayer_io import load_move_files
@@ -170,83 +170,96 @@ def render_buttons(self):
 
             def on_picked(file_path):
                 if file_path:
-                    cid = self.player_country
-                    player_key = getattr(self, 'multiplayer_player_key', '')
+                    cid = map_screen.player_country
+                    player_key = getattr(map_screen, 'multiplayer_player_key', '')
                     keys_dict = {cid: player_key}
 
-                    load_move_files(self, [file_path], keys_dict)
-                    self.show_feedback(f"Move imported from {os.path.basename(file_path)}")
+                    load_move_files(map_screen, [file_path], keys_dict)
+                    map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
 
-                    self.refresh_political_map()
-                    self.refresh_factions_map()
-                    self.refresh_relations_map()
+                    map_screen.refresh_political_map()
+                    map_screen.refresh_factions_map()
+                    map_screen.refresh_relations_map()
                     # If economy map refresh is needed we can do it, but Map doesn't have refresh_economy_map so we skip or call refresh_all_maps()
-                    self.refresh_cores_map()
-                    self.refresh_faction_territories_map()
-                    if hasattr(self, 'sync_units_to_data'):
-                        self.sync_units_to_data()
+                    map_screen.refresh_cores_map()
+                    map_screen.refresh_faction_territories_map()
+                    if hasattr(map_screen, 'sync_units_to_data'):
+                        map_screen.sync_units_to_data()
 
-            queries.open_file_browser(self, "Select Move File", c.TOURNAMENT_SAVES_DIR,
+            queries.open_file_browser(map_screen, "Select Move File", c.TOURNAMENT_SAVES_DIR,
                                       extensions=[".gd5move"], on_result=on_picked)
 
-        self.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
+        map_screen.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
     else:
-        self.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", lambda: turn_manager.advance_time(self))
-        self.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
+        map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", lambda: turn_manager.advance_time(map_screen))
+        map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
         
-    self.btn_skip_ai = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", self.toggle_skip_ai, font_preset="normal")
-    self.btn_multi_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Multi-Turn", self.trigger_multi_turn)
+    map_screen.btn_skip_ai = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", map_screen.toggle_skip_ai, font_preset="normal")
+    map_screen.btn_multi_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Multi-Turn", map_screen.trigger_multi_turn)
     
-    def open_declare_independence():
-        from screens.map_related_screens.declare_independence import Declare_Independence_Screen
-        from ui.player_diplomacy_menus import _run_pygame_sub_screen
-        _run_pygame_sub_screen(self, Declare_Independence_Screen(self))
-        
-    self.btn_declare_indep = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Independence!", open_declare_independence, font_preset="normal")
+    def sub_screen_opener(module_path, class_name):
+        """A click callback that late-imports a screen and runs it over the map.
+
+        The import has to stay inside the callback: these screens import the
+        map package, which is the module currently being built.
+        """
+        def open_it():
+            from importlib import import_module
+            from ui.player_diplomacy_menus import _run_pygame_sub_screen
+            _run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
+        return open_it
+
+    open_declare_independence = sub_screen_opener(
+        "screens.map_related_screens.declare_independence", "Declare_Independence_Screen")
+
+    map_screen.btn_declare_indep = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Independence!", open_declare_independence, font_preset="normal")
 
     def open_edit_country_action():
-        if self.player_country == "Spectator" or self.is_editor:
-            editor_menus.spec_select_edit_country(self)
-        elif self.player_country and self.player_country != "None":
-            self.editing_country = self.player_country
-            self.change_state("EDIT_COUNTRY")
+        if map_screen.player_country == "Spectator" or map_screen.is_editor:
+            editor_menus.spec_select_edit_country(map_screen)
+        elif map_screen.player_country and map_screen.player_country != "None":
+            map_screen.editing_country = map_screen.player_country
+            map_screen.change_state("EDIT_COUNTRY")
 
     # Deferred to execution time to prevent initialization sequence bugs: whether
     # the player is an editor/spectator isn't settled when the buttons are built.
     def editor_or(editor_action, player_state):
-        return lambda: (editor_action(self) if (self.is_editor or self.player_country == "Spectator")
-                        else self.change_state(player_state))
+        return lambda: (editor_action(map_screen) if (map_screen.is_editor or map_screen.player_country == "Spectator")
+                        else map_screen.change_state(player_state))
 
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     research_callback = editor_or(editor_menus.open_map_research_editor, "RESEARCH")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
-    self.btn_gp_edit = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 1, "left_ui_button", "pink", "Identity", open_edit_country_action, image=icons.get("brush"), show_text=True)
-    self.btn_gp_econ = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 2, "left_ui_button", "pink", "Economy", econ_callback, image=icons.get("economy(the_economy_of_a_country_to_be_unusually_specific)"), show_text=True)
-    self.btn_gp_rd = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 3, "left_ui_button", "pink", "R&D", research_callback, image=icons.get("research"), show_text=True)
-    self.btn_gp_msgs = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 4, "left_ui_button", "pink", "Mail", msgs_callback, image=icons.get("mail"), show_text=True)
-    self.btn_gp_save = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 5, "left_ui_button", "pink", "Save", self.save_map_data, image=icons.get("save"), show_text=True)
-    self.btn_gp_settings = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 6, "left_ui_button", "pink", "Settings", lambda: self.change_state("SETTINGS"), image=icons.get("settings"), show_text=True)
-    self.btn_gp_music = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 7, "left_ui_button", "pink", "Music", lambda: self.change_state("MUSIC_PLAYER"), image=icons.get("music"), show_text=True)
-    self.btn_gp_faction = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "pink", "Faction", lambda: self.change_state("FACTION"), image=icons.get("faction"), show_text=True)
-    
-    # Route everyone to the native Pygame screen so they can see map highlights
-    self.btn_gp_claims = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "pink", "Claims", lambda: player_diplomacy_actions.open_claims_menu(self), image=icons.get("paper"), show_text=True)
-    
-    self.btn_gp_puppets = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "pink", "Puppets", lambda: player_diplomacy_actions.open_puppets_menu(self), image=icons.get("puppet"), show_text=True)
-    
-    # NEW: Automation Button
-    def open_automation_screen():
-        from screens.map_related_screens.automation_screen import Automation_Screen
-        from ui.player_diplomacy_menus import _run_pygame_sub_screen
-        screen = Automation_Screen(self)
-        _run_pygame_sub_screen(self, screen)
-        
-    self.btn_gp_automation = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "pink", "Automation", open_automation_screen, show_text=True)
+    # The left-hand bar: one column, one size, one colour, one row per entry.
+    # Claims and Puppets route everyone to the native Pygame screen so they can
+    # see the map highlights.
+    left_bar_buttons = (
+        ("btn_gp_edit", 1, "Identity", "brush", open_edit_country_action),
+        ("btn_gp_econ", 2, "Economy",
+         "economy(the_economy_of_a_country_to_be_unusually_specific)", econ_callback),
+        ("btn_gp_rd", 3, "R&D", "research", research_callback),
+        ("btn_gp_msgs", 4, "Mail", "mail", msgs_callback),
+        ("btn_gp_save", 5, "Save", "save", map_screen.save_map_data),
+        ("btn_gp_settings", 6, "Settings", "settings", lambda: map_screen.change_state("SETTINGS")),
+        ("btn_gp_music", 7, "Music", "music", lambda: map_screen.change_state("MUSIC_PLAYER")),
+        ("btn_gp_faction", 8, "Faction", "faction", lambda: map_screen.change_state("FACTION")),
+        ("btn_gp_claims", 9, "Claims", "paper",
+         lambda: player_diplomacy_actions.open_claims_menu(map_screen)),
+        ("btn_gp_puppets", 10, "Puppets", "puppet",
+         lambda: player_diplomacy_actions.open_puppets_menu(map_screen)),
+        ("btn_gp_automation", 11, "Automation", None,
+         sub_screen_opener("screens.map_related_screens.automation_screen", "Automation_Screen")),
+    )
+    for attr, row, label, icon_name, action in left_bar_buttons:
+        setattr(map_screen, attr, Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * row,
+                                   "left_ui_button", "pink", label, action,
+                                   image=icons.get(icon_name) if icon_name else None,
+                                   show_text=True))
 
     # Register the Slider below the new Automation button
     slider_y = int(start_y_val + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)
-    self.slider_camera_tilt = Slider(LEFT_UI_BAR_X, slider_y, CAMERA_TILT_SLIDER_WIDTH, "Camera Tilt", self.camera_tilt_slider_val, self.set_camera_tilt)
+    map_screen.slider_camera_tilt = Slider(LEFT_UI_BAR_X, slider_y, CAMERA_TILT_SLIDER_WIDTH, "Camera Tilt", map_screen.camera_tilt_slider_val, map_screen.set_camera_tilt)
 
     # ======================================================================== #
     #                        CONTEXTUAL PROVINCE MENUS                         #
@@ -254,90 +267,110 @@ def render_buttons(self):
     diplo_x = DIPLO_BTN_X
 
     # Domestic Set
-    self.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: self.change_state("ORDERS"), image=icons.get("paper"), show_text=False)
-    self.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: self.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
+    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: map_screen.change_state("ORDERS"), image=icons.get("paper"), show_text=False)
+    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: map_screen.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
 
-    # Foreign Set
-    self.btn_declare_war = Button(diplo_x, ACTION_BTN_START_Y, "diplomatic", "red", "Declare War", lambda: player_diplomacy_actions.handle_declare_war(self))
-    self.btn_join_wars = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "diplomatic", "orange", "Join Wars", lambda: player_diplomacy_actions.handle_join_wars(self))
-    self.btn_call_to_arms = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 4, "diplomatic", "red", "Call to Arms", lambda: player_diplomacy_actions.handle_call_to_arms(self))
-    self.btn_fac_invite = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 5, "diplomatic", "green", "Invite to Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "FACTION_INVITE"))
-    self.btn_fac_join_req = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 6, "diplomatic", "green", "Req. Join Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "JOIN_FACTION_REQ"))
-    self.btn_fac_kick = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 7, "diplomatic", "red", "Kick from Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "KICK_FACTION_MEMBER"))
-    self.btn_fac_create = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 8, "diplomatic", "blue", "Create Faction", lambda: player_diplomacy_actions.handle_specific_action(self, "CREATE_FACTION"))
-    self.btn_req_mil_access = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 1, "diplomatic", "blue", "Request Mil. Access", lambda: player_diplomacy_actions.handle_specific_action(self, "REQ_MILITARY_ACCESS"))
-    self.btn_cancel_mil_access = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 1, "diplomatic", "orange", "Cancel Mil. Access", lambda: player_diplomacy_actions.handle_specific_action(self, "CANCEL_MILITARY_ACCESS"))
-    self.btn_revoke_mil_access = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "diplomatic", "red", "Revoke Mil. Access", lambda: player_diplomacy_actions.handle_specific_action(self, "REVOKE_MILITARY_ACCESS"))
-    self.btn_accept_req = Button(diplo_x, ACTION_BTN_START_Y, "diplomatic", "green", "Accept Request", lambda: player_diplomacy_actions.handle_accept_req(self))
-    self.btn_reject_req = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "diplomatic", "red", "Reject Request", lambda: player_diplomacy_actions.handle_reject_req(self))
+    # Foreign Set. Rows overlap deliberately -- only one of the buttons sharing
+    # a row is ever visible at a time (e.g. Request vs Cancel Mil. Access).
+    # An entry's last column is either a bare callback or the action string
+    # handle_specific_action should queue.
+    diplo_buttons = (
+        ("btn_declare_war", 0, "red", "Declare War", player_diplomacy_actions.handle_declare_war),
+        ("btn_accept_req", 0, "green", "Accept Request", player_diplomacy_actions.handle_accept_req),
+        ("btn_reject_req", 1, "red", "Reject Request", player_diplomacy_actions.handle_reject_req),
+        ("btn_req_mil_access", 1, "blue", "Request Mil. Access", "REQ_MILITARY_ACCESS"),
+        ("btn_cancel_mil_access", 1, "orange", "Cancel Mil. Access", "CANCEL_MILITARY_ACCESS"),
+        ("btn_revoke_mil_access", 2, "red", "Revoke Mil. Access", "REVOKE_MILITARY_ACCESS"),
+        ("btn_join_wars", 3, "orange", "Join Wars", player_diplomacy_actions.handle_join_wars),
+        ("btn_call_to_arms", 4, "red", "Call to Arms", player_diplomacy_actions.handle_call_to_arms),
+        ("btn_fac_invite", 5, "green", "Invite to Faction", "FACTION_INVITE"),
+        ("btn_fac_join_req", 6, "green", "Req. Join Faction", "JOIN_FACTION_REQ"),
+        ("btn_fac_kick", 7, "red", "Kick from Faction", "KICK_FACTION_MEMBER"),
+        ("btn_fac_create", 8, "blue", "Create Faction", "CREATE_FACTION"),
+    )
+    for attr, row, color, label, handler in diplo_buttons:
+        if isinstance(handler, str):
+            action = (lambda a=handler:
+                      player_diplomacy_actions.handle_specific_action(map_screen, a))
+        else:
+            action = lambda h=handler: h(map_screen)
+        setattr(map_screen, attr, Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
+                                   "diplomatic", color, label, action))
 
-    # Spectator God Power Buttons
-    self.btn_force_war = Button(ACTION_BTN_X, ACTION_BTN_START_Y, "diplomatic", "red", "Force War", lambda: spectator_menus.force_war_menu(self))
-    self.btn_force_peace = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y, "diplomatic", "green", "Force Ceasefire", lambda: spectator_menus.force_peace_menu(self))
-    self.btn_spec_create_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "diplomatic", "blue", "Create Faction", lambda: spectator_menus.spec_create_faction(self))
-    self.btn_spec_join_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "diplomatic", "yellow", "Join Faction", lambda: spectator_menus.spec_join_faction(self))
-    self.btn_spec_invite_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 2, "diplomatic", "blue", "Invite to Faction", lambda: spectator_menus.spec_invite_faction(self))
-    self.btn_spec_leave_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "diplomatic", "orange", "Leave Faction", lambda: spectator_menus.spec_leave_faction(self))
-    self.btn_spec_disband_fac = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * 3, "diplomatic", "red", "Disband Faction", lambda: spectator_menus.spec_disband_faction(self))
+    # Spectator God Power Buttons. Same overlapping-row rule as the foreign set:
+    # only one of the buttons sharing a row is shown for a given selection.
+    spectator_buttons = (
+        ("btn_force_war", 0, "red", "Force War", "force_war_menu"),
+        ("btn_force_peace", 1, "green", "Force Ceasefire", "force_peace_menu"),
+        ("btn_spec_create_fac", 2, "blue", "Create Faction", "spec_create_faction"),
+        ("btn_spec_invite_fac", 2, "blue", "Invite to Faction", "spec_invite_faction"),
+        ("btn_spec_join_fac", 3, "yellow", "Join Faction", "spec_join_faction"),
+        ("btn_spec_leave_fac", 3, "orange", "Leave Faction", "spec_leave_faction"),
+        ("btn_spec_disband_fac", 3, "red", "Disband Faction", "spec_disband_faction"),
+    )
+    for attr, row, color, label, menu_fn in spectator_buttons:
+        setattr(map_screen, attr, Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
+                                   "diplomatic", color, label,
+                                   lambda f=menu_fn: getattr(spectator_menus, f)(map_screen)))
     
     def host_manage_players():
         from ui.multiplayer_host_panel import manage_players_panel
-        manage_players_panel(self)
+        manage_players_panel(map_screen)
         
     def host_export_turn():
         from ui.multiplayer_host_panel import export_next_turn
-        export_next_turn(self)
+        export_next_turn(map_screen)
         
     def host_manage_keys():
         from ui.multiplayer_host_panel import manage_keys_panel
-        manage_keys_panel(self)
+        manage_keys_panel(map_screen)
         
-    self.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, "diplomatic", "blue", "Manage Players", host_manage_players)
-    self.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, "diplomatic", "green", "Export Turn", host_export_turn)
-    self.btn_spec_mp_keys = Button(MP_HOST_KEYS_X, MP_HOST_BTN_Y, "keys", "purple", "Keys", host_manage_keys)
+    map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, "diplomatic", "blue", "Manage Players", host_manage_players)
+    map_screen.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, "diplomatic", "green", "Export Turn", host_export_turn)
+    map_screen.btn_spec_mp_keys = Button(MP_HOST_KEYS_X, MP_HOST_BTN_Y, "keys", "purple", "Keys", host_manage_keys)
 
     # General Controls
     def start_spectator_action():
-        player_setup.start_spectator(self)
-        self.refresh_fog_map()
+        player_setup.start_spectator(map_screen)
+        map_screen.refresh_fog_map()
         
     def toggle_tactical_action():
-        self.tactical_mode = not self.tactical_mode
+        map_screen.tactical_mode = not map_screen.tactical_mode
         
         # Auto-swap the view mode so the player can actually see the units
-        if self.tactical_mode:
-            self.set_view_mode("UNITS")
+        if map_screen.tactical_mode:
+            map_screen.set_view_mode("UNITS")
         else:
-            self.set_view_mode("BLANK")
+            map_screen.set_view_mode("BLANK")
             
-        self.show_feedback(f"Mode: {'TACTICAL' if self.tactical_mode else 'STRATEGIC'}")
+        map_screen.show_feedback(f"Mode: {'TACTICAL' if map_screen.tactical_mode else 'STRATEGIC'}")
 
-    self.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
-    self.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
-    self.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", self.deselect_province)
-    self.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", self.exit_to_menu)
+    map_screen.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
+    map_screen.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
+    map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province)
+    map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu)
 
     # --- Append all explicitly defined buttons into the elements list ---
-    self.elements.extend([
-        self.btn_refresh_all, self.btn_global_econ_overview,
-        self.btn_view_terrain, self.btn_view_political, self.btn_view_relations, self.btn_view_cores, self.btn_view_factions,
-        self.btn_view_resources, self.btn_view_blank, self.btn_view_units, self.btn_view_economy, self.btn_toggle_names,
-        self.btn_ed_load, self.btn_ed_nation,
-        self.btn_ed_core, self.btn_ed_claim, self.btn_ed_autocore, self.btn_ed_clear, self.btn_ed_resource, self.btn_ed_building,
-        self.btn_ed_unit, self.btn_ed_refresh, self.btn_ed_edited, self.btn_ed_date, self.btn_ed_diplo, self.btn_ed_scripts,
-        self.btn_next_turn, self.btn_import_turn, self.btn_skip_ai, self.btn_multi_turn, self.btn_declare_indep, self.btn_gp_edit, self.btn_gp_econ, self.btn_gp_rd, self.btn_gp_msgs,
-        self.btn_gp_save, self.btn_gp_settings, self.btn_gp_music, self.btn_gp_faction, self.btn_gp_claims, self.btn_gp_puppets, self.btn_gp_automation, self.btn_go_orders, self.btn_go_production,
-        self.btn_declare_war, self.btn_join_wars, self.btn_call_to_arms, self.btn_fac_invite,
-        self.btn_fac_join_req, self.btn_fac_kick, self.btn_fac_create,
-        self.btn_req_mil_access, self.btn_cancel_mil_access, self.btn_revoke_mil_access,
-        self.btn_accept_req, self.btn_reject_req, self.btn_force_war, self.btn_force_peace,
-        self.btn_spec_create_fac, self.btn_spec_join_fac, self.btn_spec_invite_fac, self.btn_spec_leave_fac,
-        self.btn_spec_disband_fac, self.btn_spectator, self.btn_tactical, self.btn_close_info, self.btn_exit_to_menu,
-        self.btn_spec_mp_manage, self.btn_spec_mp_export, self.btn_spec_mp_keys,
-        self.slider_camera_tilt
+    map_screen.elements.extend([
+        map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
+        map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
+        map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
+        map_screen.btn_ed_load, map_screen.btn_ed_nation,
+        map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
+        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_scripts,
+        map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
+        map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_go_orders, map_screen.btn_go_production,
+        map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
+        map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
+        map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
+        map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
+        map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
+        map_screen.btn_spec_disband_fac, map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu,
+        map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
+        map_screen.slider_camera_tilt
     ])
 
-    for el in self.elements:
+    for el in map_screen.elements:
         el.visible = False
 
 
@@ -786,13 +819,13 @@ def render_settings_buttons(settings_screen):
     keybind_x = SETTINGS_RIGHT_COL_X
 
     settings_screen.elements = [
-        Button(*SETTINGS_BACK_POS, "small", "red", "Back", settings_screen.save_and_go_back),
+        ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
         Button(keybind_x, SETTINGS_FULLSCREEN_Y, "medium", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
         Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, "medium", "green" if settings_screen.checkerboard_water else "red",
                f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
-        Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_button_toggle}", settings_screen.toggle_drag_button),
+        Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
     ]
 
     # --- MASTER AI TOGGLE BUTTON ---

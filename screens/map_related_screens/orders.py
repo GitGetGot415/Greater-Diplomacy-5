@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from gameState import GameState, resolve_keybind
-from ui_elements import Button, process_text_input
+from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.rendering import symbol_loader
@@ -14,7 +14,6 @@ from map_logic.camera import camera_handler
 # LAYOUT
 # ==========================================
 
-BACK_BTN_X = 50
 TOP_BTN_ROW_Y = 90
 TOP_BTN_OFFSET_X = 20
 TOP_BTN_STEP_X = 100
@@ -165,7 +164,7 @@ class Orders_Screen(GameState):
         return pygame.transform.smoothscale(icon, (max(1, int(w * ratio)), max(1, int(h * ratio))))
 
     def refresh_ui(self):
-        self.elements = [Button(BACK_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, style="map")]
         
         units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
@@ -915,10 +914,9 @@ class Orders_Screen(GameState):
                         # Save Name sits at ACTION_COL_CONVERT while renaming (see refresh_ui);
                         # keep the box glued to its right edge.
                         box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + ACTION_COL_CONVERT + RENAME_BOX_GAP_X, y_pos + UNIT_ICON_OFFSET_Y, *RENAME_BOX_SIZE)
-                        pygame.draw.rect(surface, (60, 60, 80), box_rect)
-                        pygame.draw.rect(surface, (150, 150, 150), box_rect, 1)
-                        txt = small_font.render(self.rename_text + "|", True, (255, 255, 255))
-                        surface.blit(txt, (box_rect.x + 5, box_rect.y + 4))
+                        # Only drawn while this row is being renamed, so always focused.
+                        draw_text_box(surface, box_rect, self.rename_text, active=True,
+                                      font=small_font, pad_x=5)
 
                     order = unit.get("order", {})
                     path = order.get("path", [])

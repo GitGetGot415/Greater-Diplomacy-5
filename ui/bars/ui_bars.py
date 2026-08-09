@@ -125,6 +125,56 @@ def draw_translucent_panel(surface, rect, rgba, border_color=None, border_width=
         pygame.draw.rect(surface, border_color, rect, border_width, border_radius=radius)
 
 
+def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
+                        yes_label="CONFIRM", no_label="CANCEL",
+                        yes_color=(0, 150, 0), no_color=(150, 0, 0),
+                        overlay_alpha=180, hover=False,
+                        bg=(40, 40, 40), border=(200, 200, 200), border_width=2):
+    """Draws a yes/no prompt in `box_rect` and returns its two button rects.
+
+    For the confirmations the map draws as a render layer rather than as a
+    screen -- picking a country, quitting to the menu -- so that they can keep
+    gating map input through their own flags instead of going on the modal
+    stack. Both carried their own copy of the dim / box / question / two
+    buttons sequence, in different geometry.
+
+    The returned rects are what the click handler must hit-test. Publishing
+    them is the point: re-deriving the same buttons somewhere else is how the
+    quit dialog ended up drawn and clicked in two different coordinate frames.
+
+    `overlay_alpha` stays a parameter because the country picker deliberately
+    dims less -- you are meant to keep seeing the map you are choosing from.
+    """
+    from map_logic.rendering.font_manager import fonts
+
+    draw_fullscreen_overlay(surface, overlay_alpha)
+    draw_modal_box(surface, box_rect, bg_color=bg, border_color=border, border_width=border_width)
+
+    font = fonts.get("heading2")
+    head = font.render(question, True, (255, 255, 255))
+    surface.blit(head, head.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
+    if subtitle:
+        sub = fonts.get("normal").render(subtitle, True, c.UI_TEXT_LIGHT)
+        surface.blit(sub, sub.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
+
+    btn_w, btn_h = c.CONFIRM_BTN_SIZE
+    btn_y = box_rect.bottom - 70
+    yes_rect = pygame.Rect(box_rect.centerx - c.CONFIRM_BTN_DX, btn_y, btn_w, btn_h)
+    no_rect = pygame.Rect(box_rect.centerx + 30, btn_y, btn_w, btn_h)
+
+    mouse_pos = pygame.mouse.get_pos()
+    btn_font = fonts.get("button")
+    for rect, label, color in ((yes_rect, yes_label, yes_color), (no_rect, no_label, no_color)):
+        # `hover` dims the button until the cursor is on it, which is the
+        # quit dialog's existing feedback; the picker had none.
+        shade = tuple(max(0, ch - 50) for ch in color) if hover and not rect.collidepoint(mouse_pos) else color
+        pygame.draw.rect(surface, shade, rect)
+        text = btn_font.render(label, True, (255, 255, 255))
+        surface.blit(text, text.get_rect(center=rect.center))
+
+    return yes_rect, no_rect
+
+
 def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_width=3,
                      title_dy=None, font_preset="heading2"):
     """The standard modal panel: filled box, border, and a centred title.

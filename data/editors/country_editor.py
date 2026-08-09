@@ -98,6 +98,18 @@ class CountryEditor:
 
         self.refresh_list()
 
+    def save_to_disk(self):
+        """Writes the country table out and drops the game's cached copy.
+
+        Both halves have to happen together -- a write without the cache bust
+        leaves the running game reading the old data -- so the three places
+        that saved used to spell out the pair, and the comment about it, each
+        in their own way.
+        """
+        with open(PATH, "w") as f:
+            json.dump(self.data, f, indent=c.SAVE_INDENT)
+        queries.clear_json_caches()
+
     def get_default_research_dict(self):
         """Helper to build a starting research dict from the structural template."""
         template_path = c.RESEARCH_TEMPLATE_PATH
@@ -153,10 +165,7 @@ class CountryEditor:
                 self.data[int_id].setdefault("flag_data", "")
                 self.data[int_id].setdefault("portrait_data", "")
 
-            with open(PATH, "w") as f:
-                json.dump(self.data, f, indent=c.SAVE_INDENT)
-
-            queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+            self.save_to_disk()
 
             messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
             self.refresh_list()
@@ -197,10 +206,7 @@ class CountryEditor:
                 "portrait_data": ""
             }
         
-        with open(PATH, "w") as f:
-            json.dump(self.data, f, indent=c.SAVE_INDENT)
-            
-        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+        self.save_to_disk()
         
         self.refresh_list()
         self.id_ent.delete(0, tk.END)
@@ -240,10 +246,7 @@ class CountryEditor:
             if not ok:
                 return
             del self.data[int_id]
-            with open(PATH, "w") as f:
-                json.dump(self.data, f, indent=c.SAVE_INDENT)
-
-            queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+            self.save_to_disk()
 
             self.refresh_list()
 

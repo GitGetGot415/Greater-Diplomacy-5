@@ -6,103 +6,141 @@ from data import queries
 # ==========================================
 # EDITOR MENUS
 # ==========================================
+#
+# Every entry point below is a plain function taking the Map_Screen as its
+# first argument, which the editor attaches as a method. They almost all do the
+# same three things -- refuse to open on an empty map, import a screen class
+# late, run it modally -- so those three live in the helpers here and the tools
+# below are reduced to what actually differs.
 
-def editor_load_map(self):
+
+def _has_active_countries(map_screen):
+    """Guards the tools that operate on the live nation list.
+
+    Six of them used to carry this check written out verbatim, message and all.
+    """
+    if not queries.get_living_nations(map_screen.map_data):
+        map_screen.show_feedback("No active countries on map!")
+        return False
+    return True
+
+
+def _launch(map_screen, screen):
+    """Runs `screen` as a modal sub-screen of the editor."""
+    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    _run_pygame_sub_screen(map_screen, screen)
+
+
+def _launch_editor_screen(map_screen, class_name, *args, needs_countries=False):
+    """Opens one of ui.editor_screens' screens, looked up by name.
+
+    The import stays in-function on purpose: ui.editor_screens imports back
+    into the editor, so hoisting it would close an import cycle.
+    """
+    if needs_countries and not _has_active_countries(map_screen):
+        return
+    from ui import editor_screens
+    _launch(map_screen, getattr(editor_screens, class_name)(map_screen, *args))
+
+
+def _launch_table(map_screen, title, columns, rows, empty_message="Nothing to show.",
+                  needs_countries=False):
+    """Opens a full-screen sortable table over `rows`."""
+    if needs_countries and not _has_active_countries(map_screen):
+        return
+    from ui.table_screen import TableScreen
+    _launch(map_screen, TableScreen(map_screen, title, columns, rows, empty_message=empty_message))
+
+
+def editor_load_map(map_screen):
     """Opens the native folder picker to load a map folder directly into the editor."""
     def on_picked(path):
         if path:
-            load_map.load_map_assets(self, path)
-            self.refresh_political_map()
-            self.show_feedback("Map Loaded into Editor")
+            load_map.load_map_assets(map_screen, path)
+            map_screen.refresh_political_map()
+            map_screen.show_feedback("Map Loaded into Editor")
 
-    queries.open_file_browser(self, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
+    queries.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
                               mode="select_folder", on_result=on_picked)
 
-def _select_brush(self, mode, attr, items, title, prompt, feedback_label="Brush"):
+def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush"):
     """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""
     def cb(val):
-        setattr(self, attr, val)
-        self.editor_mode = mode
-        self.show_feedback(f"{feedback_label}: {val}")
-    queries.open_listbox_selector(self, title, prompt, items, cb)
+        setattr(map_screen, attr, val)
+        map_screen.editor_mode = mode
+        map_screen.show_feedback(f"{feedback_label}: {val}")
+    queries.open_listbox_selector(map_screen, title, prompt, items, cb)
 
-def _paintable_nations(self):
+def _paintable_nations(map_screen):
     """The nation list every nation-painting brush offers, sorted accent-insensitively."""
-    nations = sorted(self.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
+    nations = sorted(map_screen.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
     return ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
 
-def select_brush_nation(self):
+def select_brush_nation(map_screen):
     """Opens a Tkinter selection window and sets mode to NATION."""
-    _select_brush(self, "NATION", "brush_nation", _paintable_nations(self),
+    _select_brush(map_screen, "NATION", "brush_nation", _paintable_nations(map_screen),
                   "Select Nation", "Select Paint Nation:")
 
-def select_core_brush(self):
+def select_core_brush(map_screen):
     """Opens a Tkinter selection window and sets mode to CORE."""
-    _select_brush(self, "CORE", "brush_nation", _paintable_nations(self),
+    _select_brush(map_screen, "CORE", "brush_nation", _paintable_nations(map_screen),
                   "Select Core Nation", "Select Nation to Add Cores:", "Core Brush")
 
-def select_claim_brush(self):
+def select_claim_brush(map_screen):
     """Opens a Tkinter selection window and sets mode to CLAIM."""
-    _select_brush(self, "CLAIM", "brush_nation", _paintable_nations(self),
+    _select_brush(map_screen, "CLAIM", "brush_nation", _paintable_nations(map_screen),
                   "Select Claim Nation", "Select Nation to Add Claims:", "Claim Brush")
 
-def open_editor_claims(self):
+def open_editor_claims(map_screen):
     """Opens a full-screen sortable table listing every claim on the map."""
     rows = []
-    for c_name in sorted(self.nation_data.keys()):
-        claims = self.nation_data[c_name].get("claims", [])
+    for c_name in sorted(map_screen.nation_data.keys()):
+        claims = map_screen.nation_data[c_name].get("claims", [])
         if claims:
             rows.append({"country": c_name, "claims": ", ".join(map(str, claims))})
 
-    from ui.table_screen import TableScreen, TableColumn
+    from ui.table_screen import TableColumn
     columns = [
         TableColumn("country", "Country", 180, align="left"),
         TableColumn("claims", "Claimed Provinces", 700, align="left"),
     ]
+    _launch_table(map_screen, "Global Claims Overview", columns, rows,
+                  empty_message="No claims on the map.")
 
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, TableScreen(self, "Global Claims Overview", columns, rows,
-                                             empty_message="No claims on the map."))
-
-def select_building_brush(self):
+def select_building_brush(map_screen):
     """Opens a selection window for building types and sets mode to BUILDING."""
     bldg_lib = queries.get_building_library()
     items = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
-    _select_brush(self, "BUILDING", "brush_building", items,
+    _select_brush(map_screen, "BUILDING", "brush_building", items,
                   "Select Building", "Select Building to Place:")
 
-def spec_select_edit_country(self):
+def spec_select_edit_country(map_screen):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
-    items = sorted(queries.get_living_nations(self.map_data))
-    if not items:
-        self.show_feedback("No active countries on map!")
+    if not _has_active_countries(map_screen):
         return
+    items = sorted(queries.get_living_nations(map_screen.map_data))
     def cb(val):
-        self.editing_country = val
-        self.next_state, self.done = "EDIT_COUNTRY", True
-    queries.open_listbox_selector(self, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
+        map_screen.editing_country = val
+        map_screen.next_state, map_screen.done = "EDIT_COUNTRY", True
+    queries.open_listbox_selector(map_screen, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
 
-def open_editor_date(self):
+def open_editor_date(map_screen):
     """Opens a native screen to edit the game's starting date."""
-    from ui.editor_screens import Editor_Date_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Editor_Date_Screen(self))
+    _launch_editor_screen(map_screen, "Editor_Date_Screen")
 
 
-def open_editor_economy(self):
+def open_editor_economy(map_screen):
     """Opens a full-screen sortable table of every active country's detailed income."""
-    active_countries = sorted(queries.get_living_nations(self.map_data))
-
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
+    if not _has_active_countries(map_screen):
         return
 
-    all_econ = queries.calculate_all_economies(self.map_data, self.nation_data)
+    active_countries = sorted(queries.get_living_nations(map_screen.map_data))
+    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
 
     def get_stats(cid, res_key):
         d = all_econ[cid]
         bd = d["breakdown"][res_key]
-        cur = int(self.nation_data.get(cid, {}).get(res_key, 0))
+        cur = int(map_screen.nation_data.get(cid, {}).get(res_key, 0))
         inc = int(bd["core"] + bd["non_core"] + bd["resources"])
         bld = int(bd["buildings"])
         upk = int(d["upkeep"][res_key])
@@ -120,39 +158,27 @@ def open_editor_economy(self):
             row[f"{prefix}_bld"], row[f"{prefix}_upk"], row[f"{prefix}_net"] = bld, upk, net
         rows.append(row)
 
-    from ui.table_screen import TableScreen, TableColumn
+    from ui.table_screen import TableColumn
     columns = [TableColumn("country", "Country", 160, align="left")]
     for group, prefix in (("Manpower", "p"), ("Materials", "m"), ("Fuel", "f")):
         for stat, label in (("cur", "Cur"), ("inc", "Inc"), ("bld", "Bld"), ("upk", "Upk"), ("net", "Net")):
             columns.append(TableColumn(f"{prefix}_{stat}", label, 60, group=group))
 
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, TableScreen(self, "Global Economy Overview", columns, rows))
+    _launch_table(map_screen, "Global Economy Overview", columns, rows)
 
-def open_starting_economy_editor(self):
+def open_starting_economy_editor(map_screen):
     """Opens a native screen to edit starting resources for countries currently existing on the map."""
-    active_countries = queries.get_living_nations(self.map_data)
-
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
-        return
-
-    from ui.editor_screens import Starting_Economy_List_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Starting_Economy_List_Screen(self))
+    _launch_editor_screen(map_screen, "Starting_Economy_List_Screen", needs_countries=True)
         
-def open_spectator_messages(self):
+def open_spectator_messages(map_screen):
     """Opens a full-screen sortable table of every message sent between active countries."""
-    active_countries = queries.get_living_nations(self.map_data)
-
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
+    if not _has_active_countries(map_screen):
         return
 
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-    for c_name, data in self.nation_data.items():
+    for c_name, data in map_screen.nation_data.items():
         if data.get("is_playable"):
             inbox = data.get("inbox", [])
             for msg in inbox:
@@ -184,7 +210,7 @@ def open_spectator_messages(self):
 
     all_msgs.sort(key=lambda m: m["date_sort"], reverse=True)
 
-    from ui.table_screen import TableScreen, TableColumn, truncate
+    from ui.table_screen import TableColumn, truncate
     columns = [
         TableColumn("date", "Date", 130, sort_key=lambda r: r["date_sort"]),
         TableColumn("sender", "Sender", 120),
@@ -193,63 +219,43 @@ def open_spectator_messages(self):
         TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
     ]
 
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, TableScreen(self, "Global Messages Overview", columns, all_msgs,
-                                             empty_message="No messages have been sent yet."))
+    _launch_table(map_screen, "Global Messages Overview", columns, all_msgs,
+                  empty_message="No messages have been sent yet.")
 
-def open_map_research_editor(self):
+def open_map_research_editor(map_screen):
     """Opens a native screen to edit research for countries currently existing on the map."""
-    active_countries = queries.get_living_nations(self.map_data)
+    _launch_editor_screen(map_screen, "Research_List_Screen", needs_countries=True)
 
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
-        return
-
-    from ui.editor_screens import Research_List_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Research_List_Screen(self))
-
-def select_unit_brush(self):
+def select_unit_brush(map_screen):
     """Opens a selection window for unit types and sets mode to UNIT."""
     items = ["None", "Convoy", "----------"] + list(queries.get_unit_library().keys())
-    _select_brush(self, "UNIT", "brush_unit", items,
+    _select_brush(map_screen, "UNIT", "brush_unit", items,
                   "Select Unit", "Select Unit to Place:")
 
-def open_convoy_converter(self, province):
+def open_convoy_converter(map_screen, province):
     """Opens a native screen to select which units on a tile should be converted to convoys/trucks."""
     units = province.get("units", [])
     if not units:
-        self.show_feedback("No units on tile to convert!")
+        map_screen.show_feedback("No units on tile to convert!")
         return
 
-    from ui.editor_screens import Convoy_Converter_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Convoy_Converter_Screen(self, province))
+    _launch_editor_screen(map_screen, "Convoy_Converter_Screen", province)
 
-def select_resource_brush(self):
+def select_resource_brush(map_screen):
     """Opens a native screen for picking a resource type and amount to paint."""
-    from ui.editor_screens import Resource_Brush_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Resource_Brush_Screen(self))
+    _launch_editor_screen(map_screen, "Resource_Brush_Screen")
 
-def open_diplomacy_editor(self):
+def open_diplomacy_editor(map_screen):
     """Opens a native screen to edit global relations, factions and puppets."""
-    active_countries = queries.get_living_nations(self.map_data)
-    if not active_countries:
-        self.show_feedback("No active countries on map!")
-        return
+    _launch_editor_screen(map_screen, "Diplomacy_Editor_Screen", needs_countries=True)
 
-    from ui.editor_screens import Diplomacy_Editor_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Diplomacy_Editor_Screen(self))
-
-def open_edited_countries(self):
+def open_edited_countries(map_screen):
     """Opens a full-screen sortable table of countries with edited properties."""
     from data.io import country_io
     default_data = country_io.load_all_country_data()
 
     rows = []
-    for c_id, current_data in self.nation_data.items():
+    for c_id, current_data in map_screen.nation_data.items():
         if c_id in ["Unclaimed", "Ocean", "Lakes", "The Rot", "Spectator", "GLOBAL_EVENTS", "FACTION_WAR_MAPS"]:
             continue
 
@@ -285,7 +291,7 @@ def open_edited_countries(self):
                 "portrait": changes.get("portrait", "-"),
             })
 
-    from ui.table_screen import TableScreen, TableColumn
+    from ui.table_screen import TableColumn
     columns = [
         TableColumn("id", "ID", 150, align="left"),
         TableColumn("name", "Name", 150),
@@ -295,13 +301,10 @@ def open_edited_countries(self):
         TableColumn("portrait", "Portrait", 100),
     ]
 
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, TableScreen(self, "Edited Countries Overview", columns, rows,
-                                             empty_message="No countries have been edited yet."))
+    _launch_table(map_screen, "Edited Countries Overview", columns, rows,
+                  empty_message="No countries have been edited yet.")
 
 
-def open_clear_menu(self):
+def open_clear_menu(map_screen):
     """Opens a native screen to clear items from the map based on various criteria."""
-    from ui.editor_screens import Clear_Map_Screen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
-    _run_pygame_sub_screen(self, Clear_Map_Screen(self))
+    _launch_editor_screen(map_screen, "Clear_Map_Screen")

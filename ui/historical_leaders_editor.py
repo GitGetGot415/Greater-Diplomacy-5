@@ -25,7 +25,7 @@ from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
 from ui.table_screen import truncate
-from ui_elements import Button, TextField
+from ui_elements import Button, TextField, make_back_button
 from map_logic.rendering.font_manager import fonts
 
 PAD = 20
@@ -502,7 +502,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         self._layout()
 
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(self.roster_rect.x, self.roster_rect.y - 40, "editor_ui", "green",
                   "+ Add Country", self.add_country),
             Button(700, c.SCREEN_HEIGHT - 60, "small", "blue", "Export", self.export_timeline),

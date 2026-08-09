@@ -2,7 +2,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
 from data import queries
 
@@ -11,7 +11,6 @@ from data import queries
 # ==========================================
 
 TITLE_Y = 40
-BACK_BTN_POS = (20, 20)
 EXPENSES_BTN_OFFSET_X = 120 # Measured in from the right edge
 
 # Resource rows
@@ -45,10 +44,10 @@ class Economy_Screen(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
         
         # Expenses button positioned in the top right corner
-        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, BACK_BTN_POS[1], "small", "orange", "Expenses", self.open_expenses_table)
+        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table)
         if self.map_screen.tactical_mode:
             btn_expenses.apply_state(enabled=False)
         self.elements.append(btn_expenses)

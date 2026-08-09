@@ -20,7 +20,7 @@ from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.modal_screen import ModalScreen
 from ui.table_screen import truncate
-from ui_elements import Button, TextField
+from ui_elements import Button, TextField, make_back_button
 
 # ==========================================
 # OPTION LISTS
@@ -1026,7 +1026,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(self.nat_x, p.y + 46, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, pos=(self.nat_x, p.y + 46))]
 
         self._content_nations = pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h)
         self._content_events = pygame.Rect(self.events_x, self.events_top,
@@ -1114,14 +1114,14 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
                                  **self.scroll_attrs("events"))
 
 
-def open_scripted_events_editor(self):
-    active_countries = queries.get_living_nations(self.map_data)
+def open_scripted_events_editor(map_screen):
+    active_countries = queries.get_living_nations(map_screen.map_data)
     if not active_countries:
-        self.show_feedback("No active countries on map!")
+        map_screen.show_feedback("No active countries on map!")
         return
 
-    if not hasattr(self, 'script_variables'):
-        self.script_variables = []
+    if not hasattr(map_screen, 'script_variables'):
+        map_screen.script_variables = []
 
-    _run(Scripted_Events_Editor_Screen(self))
-    self.hovered_province = None
+    _run(Scripted_Events_Editor_Screen(map_screen))
+    map_screen.hovered_province = None

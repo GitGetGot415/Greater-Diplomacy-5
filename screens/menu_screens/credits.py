@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import make_back_button
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from ui.confirm_dialog import show_person_info
@@ -13,7 +13,7 @@ class Credits(GameState):
         self.bg_color = (10, 10, 40) # Midnight Blue
 
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
         ]
         
         self.credits_list = []

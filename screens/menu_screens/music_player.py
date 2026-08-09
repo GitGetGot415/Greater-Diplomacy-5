@@ -5,7 +5,7 @@ import ui_elements
 from gameState import GameState
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 
@@ -273,7 +273,7 @@ class Music_Player(ScrollPanes, GameState):
         # --- 3. Top Layer: Fixed Overlay & Buttons ---
         self.elements.append(TopBarOverlay(self.controller))
         
-        self.elements.append(Button(20, 20, "small", "red", "Back", self.handle_back_key))
+        self.elements.append(make_back_button(self.handle_back_key))
         # Anchored relative to the UI so it never scrolls away!
         self.elements.append(Button(MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song", self.play_track))
         

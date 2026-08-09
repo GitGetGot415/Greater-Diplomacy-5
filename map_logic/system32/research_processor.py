@@ -1,17 +1,17 @@
 import data.constants as c
 from data import queries
 
-def process_national_research(self):
+def process_national_research(map_screen):
     # Load template to know costs (REPLACED WITH CACHE)
     template = queries.get_tech_tree()
     
     # Uses the new constant
-    days_per_turn = queries.get_days_per_turn(self.scenario_settings)
+    days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
     base_points_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
 
-    current_exact_year = queries.get_exact_year(self.time_manager)
+    current_exact_year = queries.get_exact_year(map_screen.time_manager)
 
-    for country_name, country_data in self.nation_data.items():
+    for country_name, country_data in map_screen.nation_data.items():
         queue = country_data.get("research_queue", [])
         if not queue: continue
 
@@ -48,8 +48,8 @@ def process_national_research(self):
                 if "research_progress" in country_data:
                     country_data["research_progress"].pop(tech_key, None)
                 
-                if country_name == self.player_country:
-                    self.show_feedback(f"TECH FINISHED: {tech_key.replace('_', ' ').title()}")
+                if country_name == map_screen.player_country:
+                    map_screen.show_feedback(f"TECH FINISHED: {tech_key.replace('_', ' ').title()}")
                 
                 # Remove completed tech from queue
                 queue.pop(i)

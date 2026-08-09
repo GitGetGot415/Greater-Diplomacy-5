@@ -4,11 +4,24 @@ def load_all_country_data():
     """Returns the full dictionary of country objects from cache."""
     return queries.get_country_data()
 
+#: What a nation with no colour of its own is drawn in.
+DEFAULT_NATION_COLOR = (150, 150, 150)
+
+
+def nation_colors_from(nation_data):
+    """{Name: (R, G, B)} for Pygame rendering, from an in-memory nation table.
+
+    The fallback matters: utility entities (Ocean, Lakes, GLOBAL_EVENTS) carry
+    no colour, and indexing straight into them used to raise. data/map/load_map
+    carried its own copy of this comprehension, twice.
+    """
+    return {name: tuple(stats.get("color", DEFAULT_NATION_COLOR))
+            for name, stats in nation_data.items()}
+
+
 def get_nation_colors():
-    """Returns {Name: (R, G, B)} for Pygame rendering."""
-    data = load_all_country_data()
-    # FIX: Use .get() with a fallback color (Grey) to prevent KeyErrors on utility entities
-    return {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in data.items()}
+    """The same mapping, for the countries as they ship on disk."""
+    return nation_colors_from(load_all_country_data())
 
 def get_country_stats(name):
     """Returns the dictionary for a specific country"""

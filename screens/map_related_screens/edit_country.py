@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import unicodedata
 from gameState import GameState, resolve_keybind
-from ui_elements import process_text_input
+from ui_elements import process_text_input, draw_text_box
 import ui_elements
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
@@ -284,43 +284,39 @@ class Edit_Country_Screen(GameState):
         self.map_screen.show_feedback("Country Data Saved!")
         self.force_exit_to_map()
 
+    def _handle_popup_event(self, event, on_yes, on_no):
+        """Answers whichever danger prompt is open.
+
+        Both prompts take Enter/Escape and a click on either button, and the
+        buttons are the rects _draw_popup published, so this is the same
+        handler either way -- only the two callbacks differ.
+        """
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                on_yes()
+            elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
+                on_no()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            yes_rect = getattr(self, "popup_yes_rect", None)
+            no_rect = getattr(self, "popup_no_rect", None)
+            if yes_rect and yes_rect.collidepoint(event.pos):
+                on_yes()
+            elif no_rect and no_rect.collidepoint(event.pos):
+                on_no()
+
     def handle_events(self, events):
         for event in events:
             # --- UNSAVED CHANGES POPUP INTERCEPT ---
             if self.show_unsaved_confirmation:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        self.force_exit_to_map()
-                    elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
-                        self.show_unsaved_confirmation = False
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = event.pos
-                    center_x, center_y = c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2
-                    yes_rect = pygame.Rect(center_x - 130, center_y + 40, 100, 40)
-                    no_rect = pygame.Rect(center_x + 30, center_y + 40, 100, 40)
-                    if yes_rect.collidepoint(mx, my):
-                        self.force_exit_to_map()
-                    elif no_rect.collidepoint(mx, my):
-                        self.show_unsaved_confirmation = False
+                self._handle_popup_event(event, self.force_exit_to_map,
+                                         lambda: setattr(self, "show_unsaved_confirmation", False))
                 continue
 
             if self.resetting_type:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        self.confirm_reset()
-                    elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
-                        self.cancel_reset()
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = event.pos
-                    center_x, center_y = c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2
-                    yes_rect = pygame.Rect(center_x - 130, center_y + 40, 100, 40)
-                    no_rect = pygame.Rect(center_x + 30, center_y + 40, 100, 40)
-                    if yes_rect.collidepoint(mx, my):
-                        self.confirm_reset()
-                    elif no_rect.collidepoint(mx, my):
-                        self.cancel_reset()
+                self._handle_popup_event(event, self.confirm_reset, self.cancel_reset)
                 continue
-                
+
+
             for el in self.elements:
                 el.handle_event(event)
             self.additional_events(event)
@@ -412,29 +408,22 @@ class Edit_Country_Screen(GameState):
                         self.leader_title, _ = process_text_input(event, self.leader_title, max_length=c.COUNTRY_NAME_MAX_LENGTH)
 
     def _draw_popup(self, surface, title_text, sub_text, yes_text, no_text):
+        """Draws whichever danger prompt is open and publishes its buttons.
+
+        The rects are stored rather than recomputed in handle_events: the two
+        used to be written out separately, box-relative here and centre-relative
+        there, and only agreed because the box happened to be 200 tall.
+        """
         from ui.bars import ui_bars
-        ui_bars.draw_fullscreen_overlay(surface, 180)
 
         box_rect = pygame.Rect(0, 0, 450, 200)
         box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
-        ui_bars.draw_modal_box(surface, box_rect, bg_color=(60, 20, 20), border_color=(255, 50, 50), border_width=3)
 
-        msg = fonts.get("heading2").render(title_text, True, (255, 255, 255))
-        surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
-
-        sub_msg = fonts.get("normal").render(sub_text, True, c.UI_TEXT_LIGHT)
-        surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
-
-        yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
-        no_rect = pygame.Rect(box_rect.centerx + 30, box_rect.y + 140, 100, 40)
-
-        mx, my = pygame.mouse.get_pos()
-        pygame.draw.rect(surface, (150, 0, 0) if yes_rect.collidepoint(mx, my) else (100, 0, 0), yes_rect)
-        pygame.draw.rect(surface, (0, 150, 0) if no_rect.collidepoint(mx, my) else (0, 100, 0), no_rect)
-
-        btn_font = fonts.get("button")
-        surface.blit(btn_font.render(yes_text, True, (255, 255, 255)), yes_font := btn_font.render(yes_text, True, (255, 255, 255)).get_rect(center=yes_rect.center))
-        surface.blit(btn_font.render(no_text, True, (255, 255, 255)), no_font := btn_font.render(no_text, True, (255, 255, 255)).get_rect(center=no_rect.center))
+        self.popup_yes_rect, self.popup_no_rect = ui_bars.draw_confirm_prompt(
+            surface, box_rect, title_text, sub_text,
+            yes_label=yes_text, no_label=no_text,
+            yes_color=(150, 0, 0), no_color=(0, 150, 0), hover=True,
+            bg=(60, 20, 20), border=(255, 50, 50), border_width=3)
 
     def additional_draw(self, surface):
         title_font = fonts.get("title")
@@ -491,10 +480,8 @@ class Edit_Country_Screen(GameState):
         def draw_input_box(y_pos, label_text, input_state, value):
             surface.blit(normal_font.render(label_text, True, c.UI_TEXT_LIGHT), (input_box_x, y_pos - 20))
             rect = pygame.Rect(input_box_x, y_pos, 300, 40)
-            color = (200, 255, 200) if self.active_input == input_state else (100, 100, 100)
-            pygame.draw.rect(surface, (0, 0, 0), rect)
-            pygame.draw.rect(surface, color, rect, 2)
-            surface.blit(normal_font.render(value + ("|" if self.active_input == input_state else ""), True, (255, 255, 255)), (input_box_x + 10, y_pos + 10))
+            draw_text_box(surface, rect, value, active=self.active_input == input_state,
+                          font=normal_font)
 
         draw_input_box(480, "Country Name:", "COUNTRY_NAME", self.country_name)
         draw_input_box(540, "Adjective:", "ADJECTIVE", self.adjective)

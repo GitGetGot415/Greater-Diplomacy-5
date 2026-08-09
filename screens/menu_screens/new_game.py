@@ -1,7 +1,7 @@
 import os
 import pygame
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 from map_logic.system32 import loading_screen
@@ -58,7 +58,7 @@ class New_Game(GameState):
 
         if self.sub_state == "CATEGORY":
             self.elements = [
-                Button(20, 20, "small", "red", "Back", self.exit_screen),
+                make_back_button(self.exit_screen),
                 Button("centered", 200, "large", "blue", "Historical Scenarios", lambda: self.set_sub_state("HISTORICAL")),
                 Button("centered", 300, "large", "purple", "Alternate Scenarios", lambda: self.set_sub_state("ALTERNATE")),
                 Button("centered", 400, "large", "green", "Map Editor Scenarios", lambda: self.set_sub_state("MAP_EDITOR")),
@@ -69,7 +69,7 @@ class New_Game(GameState):
             return
 
         self.elements = [
-            Button(20, 20, "small", "red", "Back", lambda: self.set_sub_state("CATEGORY")),
+            make_back_button(lambda: self.set_sub_state("CATEGORY")),
             settings_btn,
         ]
 

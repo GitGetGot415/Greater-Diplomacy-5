@@ -120,8 +120,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None):
         if proposer not in granted:
             granted.append(proposer)
 
-        shared_enemy = bool(set(nation_data.get(accepter, {}).get("at_war_with", [])) &
-                            set(nation_data.get(proposer, {}).get("at_war_with", [])))
+        shared_enemy = bool(set(queries.get_enemies(accepter, nation_data)) &
+                            set(queries.get_enemies(proposer, nation_data)))
         if shared_enemy:
             nation_data[accepter].setdefault("military_access_reasons", {})[proposer] = "war"
 

@@ -339,29 +339,29 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_ARROWS else radius_x
                     pygame.draw.ellipse(surface, color, pygame.Rect(int(end_pos[0]) - radius_x, int(end_pos[1]) - radius_y, radius_x*2, radius_y*2))
 
-def draw_overlay_content(self, surface):
+def draw_overlay_content(map_screen, surface):
     """Orchestrates what icons/symbols to draw over the map."""
-    if self.secondary_mode == "BLANK":
+    if map_screen.secondary_mode == "BLANK":
         return
 
     # --- Render Combat Prediction Bubbles ---
-    if self.secondary_mode == "UNITS" or self.map_mode == "POLITICAL":
-        draw_combat_bubbles(self, surface)
+    if map_screen.secondary_mode == "UNITS" or map_screen.map_mode == "POLITICAL":
+        draw_combat_bubbles(map_screen, surface)
     # ---------------------------------------------
 
-    for color_key, province in self.map_data.items():
+    for color_key, province in map_screen.map_data.items():
         
         # --- FOG OF WAR VISIBILITY CHECK ---
         is_vis = True
         is_partial = False
-        if self.visible_provinces is not None:
-            if province["id"] in self.visible_provinces:
+        if map_screen.visible_provinces is not None:
+            if province["id"] in map_screen.visible_provinces:
                 is_vis = True
-            elif getattr(self, 'partial_visible_provinces', None) is not None and province["id"] in self.partial_visible_provinces:
+            elif getattr(map_screen, 'partial_visible_provinces', None) is not None and province["id"] in map_screen.partial_visible_provinces:
                 is_vis = False
                 is_partial = True
             else:
-                fog_strength = getattr(self, 'scenario_settings', {}).get("fog_of_war_strength", "normal")
+                fog_strength = getattr(map_screen, 'scenario_settings', {}).get("fog_of_war_strength", "normal")
                 if fog_strength == "lite":
                     is_vis = False
                     is_partial = True
@@ -371,33 +371,33 @@ def draw_overlay_content(self, surface):
         cx, cy = province["center"]
         
         # Wrapping logic for screen coordinates
-        offsets = [0, -self.map_w, self.map_w] if self.loop_map else [0]
+        offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
         
         for offset in offsets:
-            sx, sy = queries.world_to_screen((cx, cy), self, offset)
+            sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
             sx, sy = int(sx), int(sy)
             
             # Culling: only draw if within screen width
             if -50 < sx < surface.get_width() + 50:
                 
                 # --- UNIT VIEW ---
-                if self.secondary_mode == "UNITS":
+                if map_screen.secondary_mode == "UNITS":
                     if province["units"]:
-                        draw_unit_icon(self, surface, sx, sy, province, is_partial)
+                        draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
                         
                     if not is_partial and queries.is_training_troops(province):
-                        training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if training_sym:
-                            training_sym = map_utils.apply_tilt(training_sym, self.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+                            training_sym = map_utils.apply_tilt(training_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
                             training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = training_sym.get_rect(center=(sx, sy))
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
                     if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
-                        disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if disband_sym:
-                            disband_sym = map_utils.apply_tilt(disband_sym, self.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+                            disband_sym = map_utils.apply_tilt(disband_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
                             disband_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
@@ -415,21 +415,21 @@ def draw_overlay_content(self, surface):
                             else:
                                 convert_icon = base_icon
                         if convert_icon:
-                            convert_sym = symbol_loader.get_symbol(convert_icon, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                            convert_sym = symbol_loader.get_symbol(convert_icon, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                             if convert_sym:
-                                convert_sym = map_utils.apply_tilt(convert_sym, self.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+                                convert_sym = map_utils.apply_tilt(convert_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
                                 convert_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                                 rect = convert_sym.get_rect(center=(sx, sy))
                                 surface.blit(convert_sym, rect)
 
                 # --- ECONOMY VIEW ---
-                elif self.secondary_mode == "ECONOMY":
+                elif map_screen.secondary_mode == "ECONOMY":
                     if is_partial:
                         # Show an unknown building marker if any infrastructure exists
                         if province.get("buildings") or province.get("building_queue"):
-                            sym = symbol_loader.get_symbol("Unknown Building", self.camera.zoom * getattr(c, 'BUILDING_ICON_SCALE', 1.0))
+                            sym = symbol_loader.get_symbol("Unknown Building", map_screen.camera.zoom * getattr(c, 'BUILDING_ICON_SCALE', 1.0))
                             if sym:
-                                sym = map_utils.apply_tilt(sym, self.camera.tilt_factor, getattr(c, 'APPLY_TILT_TO_OVERLAYS', True))
+                                sym = map_utils.apply_tilt(sym, map_screen.camera.tilt_factor, getattr(c, 'APPLY_TILT_TO_OVERLAYS', True))
                                 draw_x = sx - (sym.get_width() // 2)
                                 draw_y = sy - (sym.get_height() // 2)
                                 surface.blit(sym, (draw_x, draw_y))
@@ -456,10 +456,10 @@ def draw_overlay_content(self, surface):
                         offset_y = 0
                         
                         sym_name = b_name
-                        symbol = symbol_loader.get_symbol(sym_name, self.camera.zoom * c.BUILDING_ICON_SCALE)
+                        symbol = symbol_loader.get_symbol(sym_name, map_screen.camera.zoom * c.BUILDING_ICON_SCALE)
                         
                         if symbol:
-                            symbol = map_utils.apply_tilt(symbol, self.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
+                            symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
                             # Center the symbol based on the calculated sx/sy
                             draw_x = sx + offset_x - (symbol.get_width() // 2)
                             draw_y = sy + offset_y - (symbol.get_height() // 2)
@@ -470,8 +470,8 @@ def draw_overlay_content(self, surface):
                             if "Factory" in b_name: color = (100, 100, 200) # Blue-ish for factory
                             if "Refinery" in b_name: color = (200, 100, 100) # Red-ish for refinery
                             
-                            w_scaled = int(12 * self.camera.zoom)
-                            h_scaled = int(12 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
+                            w_scaled = int(12 * map_screen.camera.zoom)
+                            h_scaled = int(12 * map_screen.camera.zoom * (map_screen.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                             
                             # Center the rect using the same logic
                             rect = pygame.Rect(
@@ -485,27 +485,27 @@ def draw_overlay_content(self, surface):
                     
                     # Draw Construction Hammer
                     if queries.is_constructing_building(province):
-                        hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, self.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
                         if hammer_sym:
-                            hammer_sym = map_utils.apply_tilt(hammer_sym, self.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+                            hammer_sym = map_utils.apply_tilt(hammer_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
                             hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = hammer_sym.get_rect(center=(sx, sy))
                             surface.blit(hammer_sym, rect)
                 
                 # --- RESOURCES VIEW ---
-                elif self.secondary_mode == "RESOURCES":
+                elif map_screen.secondary_mode == "RESOURCES":
                     if is_partial: continue # Hide resources in partial vision
                     
                     resources = province.get("resources", {})
                     if isinstance(resources, dict) and resources:
                         resource_items = [(res_type, amount) for res_type, amount in resources.items() if amount > 0]
                         if resource_items:
-                            icon_spacing = max(1, int(20 * self.camera.zoom))
+                            icon_spacing = max(1, int(20 * map_screen.camera.zoom))
                             icons = []
                             for res_type, amount in resource_items:
-                                sym = symbol_loader.get_symbol(res_type, self.camera.zoom * 0.8)
+                                sym = symbol_loader.get_symbol(res_type, map_screen.camera.zoom * 0.8)
                                 if sym:
-                                    sym = map_utils.apply_tilt(sym, self.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
+                                    sym = map_utils.apply_tilt(sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
                                     icons.append((sym, res_type))
                                 else:
                                     c_col = (200, 200, 200)
@@ -513,8 +513,8 @@ def draw_overlay_content(self, surface):
                                     if res_type == "Coal": c_col = (50, 50, 50)
                                     if res_type == "Oil": c_col = (30, 30, 30)
                                     if res_type == "Wheat": c_col = (220, 200, 60)
-                                    w_scaled = int(15 * self.camera.zoom)
-                                    h_scaled = int(15 * self.camera.zoom * (self.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
+                                    w_scaled = int(15 * map_screen.camera.zoom)
+                                    h_scaled = int(15 * map_screen.camera.zoom * (map_screen.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                                     icons.append((None, res_type, c_col, w_scaled, h_scaled))
 
                             total_width = 0
@@ -539,7 +539,7 @@ def draw_overlay_content(self, surface):
                                     pygame.draw.rect(surface, (255, 255, 255), rect, 1)
                                     current_x += w_scaled + icon_spacing
 
-def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
+def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
     units = province.get("units", [])
     if not units:
         return
@@ -547,11 +547,11 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
     if is_partial:
         internal_w = c.UNIT_BOX_WIDTH
         internal_h = c.UNIT_BOX_HEIGHT
-        display_scale = 0.25 + (self.camera.zoom * 0.12)
+        display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
         scaled_w = max(20, int(internal_w * display_scale))
         scaled_h = max(8, int(internal_h * display_scale))
-        if self.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
-            scaled_h = max(8, int(scaled_h * self.camera.tilt_factor))
+        if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
+            scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
         
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
         box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40)))
@@ -578,11 +578,11 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
     internal_h = c.UNIT_BOX_HEIGHT
     
     # Dampened Scaling rules
-    display_scale = 0.25 + (self.camera.zoom * 0.12)
+    display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
     scaled_w = max(20, int(internal_w * display_scale))
     scaled_h = max(8, int(internal_h * display_scale))
-    if self.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
-        scaled_h = max(8, int(scaled_h * self.camera.tilt_factor))
+    if map_screen.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
+        scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
         
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
 
@@ -594,8 +594,8 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
     # --- NEW: Sort owners by Total HP descending, but keep Player Tactical Unit on top ---
-    is_tactical = self.tactical_mode
-    player_unit = self.player_unit
+    is_tactical = map_screen.tactical_mode
+    player_unit = map_screen.player_unit
     
     def get_owner_sort_weight(o):
         if is_tactical and any(u is player_unit for u in units_by_owner[o]):
@@ -621,7 +621,7 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
 
         unit_count = len(owner_units)
         unit_type = best_unit.get("type", "")
-        owner_color = self.nation_colors.get(owner, (200, 200, 200))
+        owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
         
         # Check if it's a dynamic convoy or truck
         if unit_type.startswith("Convoy"):
@@ -635,7 +635,7 @@ def draw_unit_icon(self, surface, sx, sy, province, is_partial=False):
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
         
         # --- TACTICAL MODE INVERSION ---
-        is_player_tactical = self.tactical_mode and self.player_unit is best_unit
+        is_player_tactical = map_screen.tactical_mode and map_screen.player_unit is best_unit
         
         if is_player_tactical:
             box_surf.fill((255, 255, 255))

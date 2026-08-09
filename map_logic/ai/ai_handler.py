@@ -48,44 +48,151 @@ def abort_ai_generation():
         except:
             pass
 
+def _aborted(turn_id=None):
+    """True when an in-flight request should give up.
+
+    Either the player pressed Force Skip, or the turn moved on while the
+    request was out and its answer is no longer wanted. Nine call sites spelled
+    this condition out; they must all agree, because a request that stops
+    checking one half of it keeps writing into a turn that has already ended.
+    """
+    return FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID)
+
+
+def _setting(key, default=""):
+    """Reads one live setting. All the getters below share this body."""
+    return queries.get_settings().get(key, default)
+
+
 def get_gemini_api_key():
     """Helper to dynamically fetch the saved key from cache."""
     settings = queries.get_settings()
     return settings.get("gemini_api_key", settings.get("api_key", ""))
 
 def get_chatgpt_api_key():
-    return queries.get_settings().get("chatgpt_api_key", "")
+    return _setting("chatgpt_api_key")
 
 def get_claude_api_key():
-    return queries.get_settings().get("claude_api_key", "")
+    return _setting("claude_api_key")
 
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
-    return queries.get_settings().get("ai_mode", c.DEFAULT_AI_MODE)
+    return _setting("ai_mode", c.DEFAULT_AI_MODE)
 
 def get_ai_immersion_level():
     """Reads the settings config to see which immersion level is active."""
-    return queries.get_settings().get("ai_immersion_level", "LITE")
+    return _setting("ai_immersion_level", "LITE")
 
 # --- MODEL / URL GETTERS ---
 
 def get_gemini_model():
-    return queries.get_settings().get("gemini_model", c.DEFAULT_GEMINI_MODEL)
+    return _setting("gemini_model", c.DEFAULT_GEMINI_MODEL)
 
 def get_chatgpt_model():
-    return queries.get_settings().get("chatgpt_model", c.DEFAULT_CHATGPT_MODEL)
+    return _setting("chatgpt_model", c.DEFAULT_CHATGPT_MODEL)
 
 def get_claude_model():
-    return queries.get_settings().get("claude_model", c.DEFAULT_CLAUDE_MODEL)
+    return _setting("claude_model", c.DEFAULT_CLAUDE_MODEL)
 
 def get_ollama_model():
     """Reads the settings config to see which Ollama model is requested."""
-    return queries.get_settings().get("ollama_model", c.DEFAULT_OLLAMA_MODEL)
+    return _setting("ollama_model", c.DEFAULT_OLLAMA_MODEL)
 
 def get_ollama_url():
     """Reads the URL from the settings. Defaults to localhost if empty."""
-    url = queries.get_settings().get("ollama_api_key", "").strip()
+    url = _setting("ollama_api_key").strip()
     return url if url else "http://localhost:11434/api/chat"
+
+
+def _to_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _reply(message, source=None, accepted=None):
+    """The answer dict every AI entry point in this file returns.
+
+    It was written out fifteen times, which is how the Ollama branch came to
+    trust the model's `opinion_change` raw while the Gemini branch coerced it
+    to an int. `source` is a parsed model reply to lift the action fields off;
+    without one they all read "NONE", which is what every canned answer said.
+    `accepted` is omitted entirely when None -- replies to a plain message
+    carry no verdict, and downstream code tells the two apart by that key.
+    """
+    source = source or {}
+    reply = {}
+    if accepted is not None:
+        reply["accepted"] = accepted
+    reply.update({
+        "message": message,
+        "action": source.get("action", "NONE"),
+        "action_target": source.get("action_target", "NONE"),
+        "follow_up_action": source.get("follow_up_action", "NONE"),
+        "follow_up_target": source.get("follow_up_target", "NONE"),
+        "opinion_change": _to_int(source.get("opinion_change", 0)),
+    })
+    return reply
+
+
+def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True):
+    """Whether this exchange skips the LLM and answers from the canned table.
+
+    One rule for all three entry points. Proactive text passes
+    has_custom_msg=False because nobody wrote anything to reply to, which is
+    what made its LITE branch look different from the other two.
+    """
+    if mode == "OFF":
+        return True
+    if immersion == "ABSOLUTE":
+        return False
+    if immersion == "FULL":
+        return is_ai_to_ai
+    # LITE: only a human's own words are worth generating a reply to.
+    return not (has_custom_msg and not is_ai_to_ai)
+
+
+#: Providers with a hook reserved but no implementation yet.
+STUBBED_PROVIDERS = {"CHATGPT": "ChatGPT", "CLAUDE": "Claude"}
+
+
+def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None):
+    """Sends one prompt to whichever provider is configured and shapes the answer.
+
+    This ladder was written out twice, once for proposals and once for plain
+    messages; the two differed only in the canned line used when a provider is
+    stubbed or the request is abandoned, and in whether the answer carries a
+    verdict.
+    """
+    if mode == "OLLAMA":
+        result = call_ollama(system_prompt, user_prompt, turn_id)
+        if result:
+            return _reply(result.get("message", "OLLAMA ERROR: Unknown Format"), result, accepted)
+        return _reply("OLLAMA ERROR: No response", accepted=accepted)
+
+    if mode in STUBBED_PROVIDERS:
+        print(f"[LLM] Custom {STUBBED_PROVIDERS[mode]} hook to be placed here.")
+        return _reply(canned, accepted=accepted)
+
+    # Fallback to Gemini
+    try:
+        client = genai.Client(api_key=get_gemini_api_key())
+        response = client.models.generate_content(
+            model=get_gemini_model(),
+            contents=f"{system_prompt}\n\n{user_prompt}",
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+
+        if _aborted(turn_id):
+            return _reply(canned, accepted=accepted)
+
+        reply_json = json.loads(response.text)
+        return _reply(reply_json.get("message", "JSON ERROR: Parsed fine but missing 'message' key."),
+                      reply_json, accepted)
+    except Exception as e:
+        print(f"API Error: {e}")
+        return _reply(f"API ERROR: {str(e)}", accepted=accepted)
 
 def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
     ai_stats = nation_data.get(ai_nation, {})
@@ -150,7 +257,7 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
 
 def call_ollama(system_prompt, user_prompt, turn_id=None):
     """Helper to hit local Ollama instance with direct socket control for instant termination."""
-    if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): return None
+    if _aborted(turn_id): return None
     
     url_str = get_ollama_url()
     parsed_url = urllib.parse.urlparse(url_str)
@@ -207,7 +314,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
         full_text = ""
         # Iterate over the stream as it generates
         while True:
-            if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID):
+            if _aborted(turn_id):
                 conn.close()
                 return None
                 
@@ -228,7 +335,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             
     except Exception as e:
         # If the connection was forcefully closed by the skip button, fail silently
-        if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID):
+        if _aborted(turn_id):
             return None
         print(f"Ollama Connection Error: {e}")
         return {"message": f"OLLAMA ERROR: {str(e)}"}
@@ -240,16 +347,23 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
         except:
             pass
 
+#: What the AI says when the LLM is not consulted for this exchange. Actions
+#: not listed fall back to a plain accept/reject line.
+LITE_RESPONSE_KEYS = {
+    "WAR_DECLARATION": "BETRAYAL",
+    "LEAVE_FACTION": "FACTION_ABANDONED",
+    "DISBAND_FACTION": "FACTION_DISBANDED",
+    "JOIN_WARS": "ACCEPTED_HELP",
+    "BREAK_ALLIANCE": "ALLIANCE_BROKEN",
+    "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION",
+    "CALL_TO_ARMS": "ANSWERED_CALL",
+}
+
+
 def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None):
-    if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): 
-        return {
-            "accepted": True, 
-            "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], 
-            "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE", 
-            "opinion_change": 0
-        }
-    
+    if _aborted(turn_id):
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
+
     if human_players is None:
         human_players = []
 
@@ -278,7 +392,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
         ai_enemies = set(ai_stats.get("at_war_with", []))
-        sender_enemies = set(nation_data.get(sender_nation, {}).get("at_war_with", []))
+        sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
         accepted = bool(ai_enemies & sender_enemies)
             
     # NEW: AI Master-Puppet Faction Acceptance
@@ -292,7 +406,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         
         # Calculate shared enemies
         ai_enemies = set(ai_stats.get("at_war_with", []))
-        sender_enemies = set(nation_data.get(sender_nation, {}).get("at_war_with", []))
+        sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
         share_enemies = bool(ai_enemies.intersection(sender_enemies))
         
         # Accept if relations are good OR they are helping us fight common threats
@@ -332,45 +446,11 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
 
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
-    has_custom_msg = bool(custom_msg.strip())
 
-    # Apply LITE / FULL / ABSOLUTE AI rules cleanly
-    if immersion == "LITE":
-        # AI is off UNLESS a human sent a custom message
-        use_lite_logic = not (has_custom_msg and not is_ai_to_ai)
-    elif immersion == "FULL":
-        use_lite_logic = is_ai_to_ai
-    else: # ABSOLUTE
-        use_lite_logic = False
-        
-    if mode == "OFF":
-        use_lite_logic = True
-
-    if use_lite_logic:
-        if action_type == "WAR_DECLARATION":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["BETRAYAL"]
-        elif action_type == "LEAVE_FACTION":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["FACTION_ABANDONED"]
-        elif action_type == "DISBAND_FACTION":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["FACTION_DISBANDED"]
-        elif action_type == "JOIN_WARS":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["ACCEPTED_HELP"]
-        elif action_type == "BREAK_ALLIANCE":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["ALLIANCE_BROKEN"]
-        elif action_type == "KICK_FACTION_MEMBER":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["KICKED_FROM_FACTION"]
-        elif action_type == "CALL_TO_ARMS":
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["ANSWERED_CALL"]
-        else:
-            fallback = ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_ACCEPT"] if accepted else ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_REJECT"]
-            
-        return {
-            "accepted": accepted, 
-            "message": fallback, 
-            "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE", 
-            "opinion_change": 0
-        }
+    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip())):
+        key = LITE_RESPONSE_KEYS.get(action_type,
+                                     "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES[key], accepted=accepted)
 
     print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
 
@@ -386,173 +466,56 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         system_prompt = ai_prompts.get_bilateral_system_prompt(accepted)
         user_prompt = f"{context}\n{action_context} Provide your response based on your decision."
 
-    if mode == "OLLAMA":
-        result = call_ollama(system_prompt, user_prompt, turn_id)
-        if result:
-            return {
-                "accepted": accepted,
-                "message": result.get("message", f"OLLAMA ERROR: Unknown Format"),
-                "action": result.get("action", "NONE"),
-                "action_target": result.get("action_target", "NONE"),
-                "follow_up_action": result.get("follow_up_action", "NONE"),
-                "follow_up_target": result.get("follow_up_target", "NONE"),
-                "opinion_change": result.get("opinion_change", 0)
-            }
-        return { "accepted": accepted, "message": "OLLAMA ERROR: No response", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-    elif mode == "CHATGPT":
-        print("[LLM] Custom ChatGPT hook to be placed here.")
-        return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-    elif mode == "CLAUDE":
-        print("[LLM] Custom Claude hook to be placed here.")
-        return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-
-    # Fallback to Gemini
-    try:
-        client = genai.Client(api_key=get_gemini_api_key())
-        response = client.models.generate_content(
-            model=get_gemini_model(),
-            contents=f"{system_prompt}\n\n{user_prompt}",
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-        
-        if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): 
-            return { "accepted": accepted, "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-
-        reply_json = json.loads(response.text)
-        
-        try:
-            op_val = int(reply_json.get("opinion_change", 0))
-        except:
-            op_val = 0
-            
-        return {
-            "accepted": accepted,
-            "message": reply_json.get("message", f"JSON ERROR: Parsed fine but missing 'message' key."),
-            "action": reply_json.get("action", "NONE"),
-            "action_target": reply_json.get("action_target", "NONE"),
-            "follow_up_action": reply_json.get("follow_up_action", "NONE"),
-            "follow_up_target": reply_json.get("follow_up_target", "NONE"),
-            "opinion_change": op_val
-        }
-    except Exception as e:
-        print(f"API Error: {e}")
-        return {"accepted": accepted, "message": f"API ERROR: {str(e)}", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}
+    return _run_provider(mode, system_prompt, user_prompt, turn_id,
+                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted)
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None):
-    if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): 
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-    
+    if _aborted(turn_id):
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"])
+
     if human_players is None:
         human_players = []
 
     mode = get_ai_mode()
     immersion = get_ai_immersion_level()
-    
-    is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
-    
-    # Apply LITE / FULL / ABSOLUTE AI rules cleanly
-    if immersion == "LITE":
-        use_lite_logic = is_ai_to_ai # Allow if sender is human
-    elif immersion == "FULL":
-        use_lite_logic = is_ai_to_ai
-    else: # ABSOLUTE
-        use_lite_logic = False
-        
-    if mode == "OFF":
-        use_lite_logic = True
 
-    if use_lite_logic:
-        return {
-            "message": ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"], 
-            "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE",
-            "opinion_change": 0
-        }
+    is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
+    if _use_canned_reply(mode, immersion, is_ai_to_ai):
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"])
 
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
     system_prompt = ai_prompts.get_custom_message_system_prompt()
     user_prompt = f"{context}\nMessage from {sender_nation}: '{message_content}'"
-    
-    if mode == "OLLAMA":
-        result = call_ollama(system_prompt, user_prompt, turn_id)
-        if result:
-            return {
-                "message": result.get("message", f"OLLAMA ERROR: Unknown Format"), 
-                "action": result.get("action", "NONE"),
-                "action_target": result.get("action_target", "NONE"),
-                "follow_up_action": result.get("follow_up_action", "NONE"),
-                "follow_up_target": result.get("follow_up_target", "NONE"),
-                "opinion_change": result.get("opinion_change", 0)
-            }
-        return {
-            "message": "OLLAMA ERROR: No response", 
-            "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0
-        }
-    elif mode == "CHATGPT":
-        print("[LLM] Custom ChatGPT hook to be placed here.")
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-    elif mode == "CLAUDE":
-        print("[LLM] Custom Claude hook to be placed here.")
-        return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
 
-    try:
-        client = genai.Client(api_key=get_gemini_api_key())
-        response = client.models.generate_content(
-            model=get_gemini_model(),
-            contents=f"{system_prompt}\n\n{user_prompt}",
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-        
-        if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): 
-            return { "message": ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"], "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0 }
-
-        reply_json = json.loads(response.text)
-        
-        try:
-            op_val = int(reply_json.get("opinion_change", 0))
-        except:
-            op_val = 0
-                
-        return {
-            "message": reply_json.get("message", f"JSON ERROR: Parsed fine but missing 'message' key."), 
-            "action": reply_json.get("action", "NONE"),
-            "action_target": reply_json.get("action_target", "NONE"),
-            "follow_up_action": reply_json.get("follow_up_action", "NONE"),
-            "follow_up_target": reply_json.get("follow_up_target", "NONE"),
-            "opinion_change": op_val
-        }
-    except Exception as e:
-        print(f"API Error: {e}")
-        return {
-            "message": f"API ERROR: {str(e)}", 
-            "action": "NONE", "action_target": "NONE", 
-            "follow_up_action": "NONE", "follow_up_target": "NONE",
-            "opinion_change": 0
-        }
+    return _run_provider(mode, system_prompt, user_prompt, turn_id,
+                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"])
 
 def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None):
-    """Generates a quick one-liner for proactive hardcoded AI actions."""
-    if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): return None
-    
+    """Generates a quick one-liner for proactive hardcoded AI actions.
+
+    Unlike the two above, this returns a bare string (or None to mean "use the
+    caller's fallback"), because a proactive line has no verdict or follow-up
+    action attached to it.
+    """
+    if _aborted(turn_id): return None
+
     if human_players is None:
         human_players = []
-        
+
     mode = get_ai_mode()
     immersion = get_ai_immersion_level()
-    
+
     is_ai_to_ai = (ai_nation not in human_players) and (target_nation not in human_players)
-    use_lite_logic = (mode == "OFF") or (immersion == "LITE") or (immersion == "FULL" and is_ai_to_ai)
-    
-    if use_lite_logic:
-        return None 
-        
+    # No incoming message to react to, so LITE never generates here.
+    if _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=False):
+        return None
+
     context = get_world_context(nation_data, active_nations, ai_nation, target_nation)
     system_prompt = ai_prompts.get_proactive_system_prompt(ai_nation, target_nation, action_context)
     user_prompt = f"{context}\nWrite the message."
-    
+
     if mode == "OLLAMA":
         result = call_ollama(system_prompt, user_prompt, turn_id)
         return result.get("message", "OLLAMA ERROR: Unknown Format") if result else "OLLAMA ERROR: No response"
@@ -564,9 +527,9 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
             contents=f"{system_prompt}\n\n{user_prompt}",
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
-        
-        if FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID): return None
-            
+
+        if _aborted(turn_id): return None
+
         return json.loads(response.text).get("message", "JSON ERROR: Parsed fine but missing 'message' key.")
     except Exception as e:
         return f"API ERROR: {str(e)}"

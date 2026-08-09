@@ -250,6 +250,32 @@ class Button:
                     play_ui_sound("click")
                     self.callback()
 
+#: Where a back button sits, by the kind of screen it is on.
+BACK_BTN_STYLES = {
+    # Full-screen menus and editors draw their own title, so the button tucks
+    # into the top-left corner.
+    "menu": c.BACK_BTN_TOPLEFT,
+    # Screens layered over the map have to clear the top bar, so they sit lower
+    # and slightly further in.
+    "map": c.BACK_BTN_MAP_CENTER,
+}
+
+
+def make_back_button(on_click, style="menu", pos=None, label="Back", color="red"):
+    """The one way to build a screen's back button.
+
+    There were ~40 of these written out by hand in four different position
+    conventions, and one file (faction.py) used two of them for the same
+    button on two of its screens. The two dominant conventions are kept as two
+    named styles rather than merged: collapsing them would move the button on
+    every menu screen or on every map-layered screen, for no benefit.
+
+    Pass `pos` to place the button relative to a panel; it wins over `style`.
+    """
+    x, y = pos if pos is not None else BACK_BTN_STYLES.get(style, c.BACK_BTN_TOPLEFT)
+    return Button(x, y, "small", color, label, on_click)
+
+
 class Slider:
     def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0):
         self.rect = pygame.Rect(x, y, width, 20)
@@ -342,6 +368,37 @@ class Slider:
                     play_ui_sound("slider")
                     self.last_sound_tick = current_time # Reset the throttle
 
+def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None,
+                  pad_x=10, show_caret=True):
+    """Draws one single-line text entry box: fill, border, text, caret.
+
+    Nine screens carried their own copy of these four steps, between them using
+    six different fills and four different borders for the same widget. The
+    colours come from the shared palette now. `font` stays a parameter because
+    the boxes genuinely differ in size, from the unit-rename strip to the
+    faction title bar.
+
+    The clip is intersected with whatever is already set rather than replacing
+    it, so a box drawn inside a scrolling pane still gets cut off at the pane's
+    edge instead of escaping it.
+    """
+    font = font or fonts.get("normal")
+
+    pygame.draw.rect(surface, c.INPUT_BG_ACTIVE if active else c.INPUT_BG, rect)
+    pygame.draw.rect(surface, c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER, rect, 2)
+
+    if not text and placeholder:
+        text_surf = font.render(placeholder, True, c.UI_TEXT_MUTED)
+    else:
+        text_surf = font.render(text + ("|" if active and show_caret else ""), True, (255, 255, 255))
+
+    old_clip = surface.get_clip()
+    inner = rect.inflate(-6, -4)
+    surface.set_clip(inner.clip(old_clip) if old_clip else inner)
+    surface.blit(text_surf, text_surf.get_rect(midleft=(rect.x + pad_x, rect.centery)))
+    surface.set_clip(old_clip)
+
+
 class TextField:
     """A single-line text entry box with the same duck-typed interface as Button
     (.rect, .visible, .handle_event(event), .draw(surface)) so it can sit in a
@@ -406,16 +463,7 @@ class TextField:
             label_surf = label_font.render(self.label, True, c.UI_TEXT_BRIGHT)
             surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
 
-        pygame.draw.rect(surface, (30, 30, 40), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255) if self.active else (150, 150, 150), self.rect, 2)
-
-        field_font = fonts.get("normal")
-        display = self.text + ("|" if self.active else "")
-        text_surf = field_font.render(display, True, (255, 255, 255))
-        old_clip = surface.get_clip()
-        surface.set_clip(self.rect.inflate(-6, -4))
-        surface.blit(text_surf, text_surf.get_rect(midleft=(self.rect.x + 8, self.rect.centery)))
-        surface.set_clip(old_clip)
+        draw_text_box(surface, self.rect, self.text, active=self.active, pad_x=8)
 
 def process_text_input(event, current_text, max_length=None, validation_func=None):
     if event.type != pygame.KEYDOWN:

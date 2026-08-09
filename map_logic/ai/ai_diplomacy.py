@@ -1,10 +1,9 @@
 import random
-from map_logic.ai import ai_handler, ai_prompts
+from collections import namedtuple
+from map_logic.ai import ai_handler, ai_llm_runner, ai_prompts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
-from data.platform import IS_WEB
 import data.constants as c
-import concurrent.futures
 
 def _attach_generated_message(nation_data, task, final_msg):
     """Writes an LLM-generated line onto the action the task was queued for.
@@ -49,100 +48,34 @@ def process_proactive_llm_tasks(map_screen):
     map_screen.loading_status_text = f"Drafting Proactive Responses (0/{map_screen.proactive_llm_tasks_total})..."
     
     active_nations = set(queries.get_living_nations(map_screen.map_data))
-    
-    # If skipping, bypass the executor entirely to save time and prevent thread leakage
-    if map_screen.force_skip_llm:
-        for task in tasks:
-            final_msg = task["fallback"]
-            _attach_generated_message(map_screen.nation_data, task, final_msg)
-        return
-
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
-    if IS_WEB:
-        # No real OS threads under Pyodide -- run each task in-line instead of
-        # via ThreadPoolExecutor. With AI networking disabled on web (see
-        # ai_handler's IS_WEB guard), generate_proactive_text returns its
-        # fallback immediately per-task, so this is not a slow path here.
-        for task in tasks:
-            try:
-                llm_msg = ai_handler.generate_proactive_text(map_screen.nation_data, active_nations, task["sender"], task["target"], task["context"], human_players, my_turn_id)
-                final_msg = llm_msg if llm_msg else task["fallback"]
-            except Exception as e:
-                final_msg = task["fallback"]
-            _attach_generated_message(map_screen.nation_data, task, final_msg)
+    def call(task):
+        return ai_handler.generate_proactive_text(
+            map_screen.nation_data, active_nations, task["sender"], task["target"],
+            task["context"], human_players, my_turn_id)
 
-            is_ai_to_human = task["target"] in human_players
-            if current_ai_mode != "OFF":
-                if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
-                    map_screen.proactive_llm_tasks_completed += 1
-        return
+    def record(task, llm_msg):
+        # An empty answer is the same as no answer here.
+        _attach_generated_message(map_screen.nation_data, task,
+                                  llm_msg if llm_msg else task["fallback"])
 
-    # REMOVED THE "with" BLOCK SO IT DOESN'T BLOCK ON EXIT
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads)
-    futures = {}
-    for task in tasks:
-        future = executor.submit(ai_handler.generate_proactive_text, map_screen.nation_data, active_nations, task["sender"], task["target"], task["context"], human_players, my_turn_id)
-        futures[future] = task
-        
-    while futures:
-        # Check if the user pressed the Force Skip button
-        if map_screen.force_skip_llm:
-            # Cancel pending futures to prevent API spam
-            for f in futures:
-                f.cancel()
-                
-            # Apply fallback to everything remaining
-            for f, task in futures.items():
-                final_msg = task["fallback"]
-                
-                # If it somehow just finished perfectly before we canceled it
-                if f.done() and not f.cancelled():
-                    try:
-                        llm_msg = f.result()
-                        if llm_msg: final_msg = llm_msg
-                    except:
-                        pass
-                        
-                _attach_generated_message(map_screen.nation_data, task, final_msg)
-                    
-                # Progress Increment Logic
-                is_ai_to_human = task["target"] in human_players
-                if current_ai_mode != "OFF":
-                    if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
-                        map_screen.proactive_llm_tasks_completed += 1
-            
-            # Tell the executor to shut down WITHOUT waiting for the API requests to finish
-            try:
-                executor.shutdown(wait=False, cancel_futures=True)
-            except TypeError:
-                executor.shutdown(wait=False)
-            break # Exit the while loop entirely
-            
-        # Process successfully completed threads in chunks of 0.1 seconds
-        done, _ = concurrent.futures.wait(futures.keys(), timeout=0.1, return_when=concurrent.futures.FIRST_COMPLETED)
-        for future in done:
-            task = futures.pop(future)
-            try:
-                llm_msg = future.result()
-                final_msg = llm_msg if llm_msg else task["fallback"]
-            except Exception as e:
-                print(f"Thread error in proactive response: {e}")
-                final_msg = f"THREAD ERROR: {str(e)}"
-                
-            # Update the pending dictionary with the final generated message
-            _attach_generated_message(map_screen.nation_data, task, final_msg)
-                
-            # Progress Increment Logic
-            is_ai_to_human = task["target"] in human_players
-            if current_ai_mode != "OFF":
-                if immersion == "ABSOLUTE" or (immersion == "FULL" and is_ai_to_human):
-                    map_screen.proactive_llm_tasks_completed += 1
-                    map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
-            
-    # Clean up gracefully if it finished normally without skipping
-    if not map_screen.force_skip_llm:
-        executor.shutdown(wait=True)
+    def record_fallback(task):
+        _attach_generated_message(map_screen.nation_data, task, task["fallback"])
+
+    def count(task):
+        """Only the tasks the loading bar was sized for tick it along."""
+        if current_ai_mode == "OFF":
+            return
+        if immersion == "ABSOLUTE" or (immersion == "FULL" and task["target"] in human_players):
+            map_screen.proactive_llm_tasks_completed += 1
+            map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
+
+    ai_llm_runner.run_llm_batch(
+        tasks, call, record, record_fallback,
+        on_progress=count,
+        should_abort=lambda: map_screen.force_skip_llm,
+        max_workers=max_threads)
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""
@@ -152,6 +85,71 @@ def process_basic_proactive_ai(map_screen):
     # Access itself stays live, since section 0.5 below revokes it as it goes.
     with queries.diplomacy_snapshot(freeze_access=False):
         _run_basic_proactive_ai(map_screen)
+
+
+#: One row per proposal the AI opens on its own initiative.
+#: fallback_key  -- entry in ai_prompts.AI_FALLBACK_RESPONSES
+#: fallback      -- the same line again, so a mod that trims that table gets a
+#:                  sensible message instead of a KeyError. Two of the seven
+#:                  sections used to index the table directly and would crash.
+#: queued_message-- overrides what is stored on the queued action itself; only
+#:                  a war declaration uses it, to name the wargoal
+#: cooldown      -- whether queueing also starts a cooldown against the target
+ProactiveProposal = namedtuple("ProactiveProposal",
+                               "fallback_key fallback queued_message cooldown")
+
+PROACTIVE_PROPOSALS = {
+    "CEASEFIRE": ProactiveProposal(
+        "PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.", None, False),
+    "JOIN_FACTION_REQ": ProactiveProposal(
+        "PROACTIVE_JOIN_FACTION",
+        "Our enemies are aligned, let us join your faction to stand against them.",
+        None, False),
+    "CREATE_FACTION": ProactiveProposal(
+        "PROACTIVE_CREATE_FACTION", "We propose establishing a new faction together.",
+        None, False),
+    "CALL_TO_ARMS": ProactiveProposal(
+        "PROACTIVE_CALL_TO_ARMS", "We request your aid in our ongoing conflicts!",
+        None, False),
+    "REQ_MILITARY_ACCESS": ProactiveProposal(
+        "PROACTIVE_REQ_MILITARY_ACCESS",
+        "As we both fight against a common foe, we request military access through your territory.",
+        None, False),
+    "JOIN_WARS": ProactiveProposal(
+        "PROACTIVE_JOIN_WAR", "May we join you in your war?", None, False),
+    "WAR_DECLARATION": ProactiveProposal(
+        "PROACTIVE_DECLARE_WAR", "Your occupation of our rightful territory ends now!",
+        c.WARGOAL_TAKE_CLAIMS, True),
+}
+
+
+def _queue_proactive_proposal(map_screen, pending, ai_name, target, action, context_target=None):
+    """Queues one AI-initiated proposal and books the job that writes its text.
+
+    Seven sections of the proactive pass build the same three things -- the
+    prompt context, the entry in pending_diplomacy, and the proactive_llm_tasks
+    job -- and every difference between them that actually matters is a column
+    of PROACTIVE_PROPOSALS. The sections keep their own gating: who is a valid
+    target, and whether to stop after one, is genuinely per-section.
+    """
+    spec = PROACTIVE_PROPOSALS[action]
+    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(spec.fallback_key, spec.fallback)
+
+    pending[target] = {
+        "action": action,
+        "turns": 0,
+        "message": spec.queued_message or fallback,
+    }
+    if spec.cooldown:
+        queries.set_ai_diplo_cooldown(ai_name, target, action, map_screen.nation_data)
+
+    map_screen.proactive_llm_tasks.append({
+        "sender": ai_name,
+        "target": target,
+        "context": ai_prompts.get_proactive_action_context(action, context_target),
+        "fallback": fallback,
+        "action_type": action,
+    })
 
 
 def _claim_slot(pending, queued_this_pass, target):
@@ -225,7 +223,7 @@ def _run_basic_proactive_ai(map_screen):
             for grantee in list(access_reasons.keys()):
                 if access_reasons[grantee] != "war":
                     continue
-                grantee_enemies = set(map_screen.nation_data.get(grantee, {}).get("at_war_with", []))
+                grantee_enemies = set(queries.get_enemies(grantee, map_screen.nation_data))
                 if set(my_enemies) & grantee_enemies:
                     continue  # still fighting a common enemy, access stands
 
@@ -248,22 +246,7 @@ def _run_basic_proactive_ai(map_screen):
                 if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data, borders=border_graph):
                     if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
                         if _claim_slot(pending, queued_this_pass, enemy):
-                            action_context = ai_prompts.get_proactive_action_context("CEASEFIRE")
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")
-
-                            pending[enemy] = {
-                                "action": "CEASEFIRE",
-                                "turns": 0,
-                                "message": fallback
-                            }
-
-                            map_screen.proactive_llm_tasks.append({
-                                "sender": ai_name,
-                                "target": enemy,
-                                "context": action_context,
-                                "fallback": fallback,
-                                "action_type": "CEASEFIRE"
-                            })
+                            _queue_proactive_proposal(map_screen, pending, ai_name, enemy, "CEASEFIRE")
                             break # Act once per turn to avoid conflicts
 
         # --- 1.5. Defensive Faction Seeking Logic ---
@@ -279,7 +262,7 @@ def _run_basic_proactive_ai(map_screen):
                 potential_leaders = []
                 for enemy in my_enemies:
                     # Find nations also at war with our enemy
-                    enemy_wars = map_screen.nation_data.get(enemy, {}).get("at_war_with", [])
+                    enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
                     for mutual_combatant in enemy_wars:
                         if mutual_combatant == ai_name or mutual_combatant not in active_nations:
                             continue
@@ -295,27 +278,12 @@ def _run_basic_proactive_ai(map_screen):
                     target_leader = potential_leaders[0]
                     if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
                         if _claim_slot(pending, queued_this_pass, target_leader):
-                            # --- REFACTORED TO PULL FROM AI_PROMPTS ---
-                            action_context = ai_prompts.get_proactive_action_context("JOIN_FACTION_REQ")
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_JOIN_FACTION"]
-                            pending[target_leader] = {
-                                "action": "JOIN_FACTION_REQ",
-                                "turns": 0,
-                                "message": fallback
-                            }
-
-                            map_screen.proactive_llm_tasks.append({
-                                "sender": ai_name,
-                                "target": target_leader,
-                                "context": action_context,
-                                "fallback": fallback,
-                                "action_type": "JOIN_FACTION_REQ"
-                            })
+                            _queue_proactive_proposal(map_screen, pending, ai_name, target_leader, "JOIN_FACTION_REQ")
                 else:
                     # Find nations also at war with our enemy who aren't in a faction to form a new one with
                     potential_partners = []
                     for enemy in my_enemies:
-                        enemy_wars = map_screen.nation_data.get(enemy, {}).get("at_war_with", [])
+                        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
                         for mutual_combatant in enemy_wars:
                             if mutual_combatant == ai_name or mutual_combatant not in active_nations:
                                 continue
@@ -327,22 +295,7 @@ def _run_basic_proactive_ai(map_screen):
                         target_partner = potential_partners[0]
                         if not queries.is_ai_diplo_on_cooldown(ai_name, target_partner, "CREATE_FACTION", map_screen.nation_data):
                             if _claim_slot(pending, queued_this_pass, target_partner):
-                                # Updated to reference ai_prompts dynamically
-                                action_context = ai_prompts.get_proactive_action_context("CREATE_FACTION")
-                                fallback = ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_CREATE_FACTION"]
-                                pending[target_partner] = {
-                                    "action": "CREATE_FACTION",
-                                    "turns": 0,
-                                    "message": fallback
-                                }
-
-                                map_screen.proactive_llm_tasks.append({
-                                    "sender": ai_name,
-                                    "target": target_partner,
-                                    "context": action_context,
-                                    "fallback": fallback,
-                                    "action_type": "CREATE_FACTION"
-                                })
+                                _queue_proactive_proposal(map_screen, pending, ai_name, target_partner, "CREATE_FACTION")
 
         # --- 2. Call to Arms Logic ---
         if is_already_at_war and my_faction:
@@ -358,23 +311,8 @@ def _run_basic_proactive_ai(map_screen):
                 if unshared_wars:
                     if not queries.is_ai_diplo_on_cooldown(ai_name, member, "CALL_TO_ARMS", map_screen.nation_data):
                         if _claim_slot(pending, queued_this_pass, member):
-                            target_enemy = unshared_wars[0]
-                            action_context = ai_prompts.get_proactive_action_context("CALL_TO_ARMS", target_enemy)
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CALL_TO_ARMS", "We request your aid in our ongoing conflicts!")
-
-                            pending[member] = {
-                                "action": "CALL_TO_ARMS",
-                                "turns": 0,
-                                "message": fallback
-                            }
-
-                            map_screen.proactive_llm_tasks.append({
-                                "sender": ai_name,
-                                "target": member,
-                                "context": action_context,
-                                "fallback": fallback,
-                                "action_type": "CALL_TO_ARMS"
-                            })
+                            _queue_proactive_proposal(map_screen, pending, ai_name, member, "CALL_TO_ARMS",
+                                                      context_target=unshared_wars[0])
 
         # --- 2.5. Request Military Access From Co-Belligerents ---
         # Even nations in different factions ask each other for passage if they're
@@ -383,7 +321,7 @@ def _run_basic_proactive_ai(map_screen):
             co_belligerents = []
             for enemy in my_enemies:
                 if enemy not in active_nations: continue
-                for co in map_screen.nation_data.get(enemy, {}).get("at_war_with", []):
+                for co in queries.get_enemies(enemy, map_screen.nation_data):
                     if co == ai_name or co not in active_nations: continue
                     if co in co_belligerents: continue
                     if co in my_enemies: continue
@@ -395,22 +333,7 @@ def _run_basic_proactive_ai(map_screen):
                     continue
 
                 if _claim_slot(pending, queued_this_pass, co):
-                    action_context = ai_prompts.get_proactive_action_context("REQ_MILITARY_ACCESS")
-                    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_REQ_MILITARY_ACCESS", "As we both fight against a common foe, we request military access through your territory.")
-
-                    pending[co] = {
-                        "action": "REQ_MILITARY_ACCESS",
-                        "turns": 0,
-                        "message": fallback
-                    }
-
-                    map_screen.proactive_llm_tasks.append({
-                        "sender": ai_name,
-                        "target": co,
-                        "context": action_context,
-                        "fallback": fallback,
-                        "action_type": "REQ_MILITARY_ACCESS"
-                    })
+                    _queue_proactive_proposal(map_screen, pending, ai_name, co, "REQ_MILITARY_ACCESS")
                     break  # Act once per turn to avoid conflicts
 
         # --- 3. Faction War Joining Logic ---
@@ -429,22 +352,8 @@ def _run_basic_proactive_ai(map_screen):
                     target_enemy = unshared_wars[0]
                     if not queries.is_ai_diplo_on_cooldown(ai_name, member, "JOIN_WARS", map_screen.nation_data):
                         if _claim_slot(pending, queued_this_pass, member):
-                            action_context = ai_prompts.get_proactive_action_context("JOIN_WARS", target_enemy)
-                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "Brothers, let us join your fight.")
-
-                            pending[member] = {
-                                "action": "JOIN_WARS",
-                                "turns": 0,
-                                "message": fallback
-                            }
-
-                            map_screen.proactive_llm_tasks.append({
-                                "sender": ai_name,
-                                "target": member,
-                                "context": action_context,
-                                "fallback": fallback,
-                                "action_type": "JOIN_WARS"
-                            })
+                            _queue_proactive_proposal(map_screen, pending, ai_name, member, "JOIN_WARS",
+                                                      context_target=target_enemy)
                             
         # --- 4. Declare War for Cores & Claims Logic ---
         if not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
@@ -487,23 +396,8 @@ def _run_basic_proactive_ai(map_screen):
                                 if has_wargoal:
                                     if not queries.is_ai_diplo_on_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data):
                                         if _claim_slot(pending, queued_this_pass, target):
-                                            action_context = ai_prompts.get_proactive_action_context("WAR_DECLARATION", target)
-                                            fallback = ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "Your occupation of our rightful territory ends now!")
-
-                                            pending[target] = {
-                                                "action": "WAR_DECLARATION",
-                                                "turns": 0,
-                                                "message": c.WARGOAL_TAKE_CLAIMS
-                                            }
-                                            queries.set_ai_diplo_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data)
-                                            
-                                            map_screen.proactive_llm_tasks.append({
-                                                "sender": ai_name,
-                                                "target": target,
-                                                "context": action_context,
-                                                "fallback": fallback,
-                                                "action_type": "WAR_DECLARATION"
-                                            })
+                                            _queue_proactive_proposal(map_screen, pending, ai_name, target,
+                                                                      "WAR_DECLARATION", context_target=target)
                                             break
                                 else:
                                     # Make a claim! (assuming no war is happening)
@@ -779,10 +673,10 @@ def process_scripted_events(map_screen):
                     res = c_val not in queries.get_neighboring_nations(nation_name, map_screen.map_data, map_screen.id_to_province)
                 elif c_type == "Is At War":
                     target_check = c_val if c_val else nation_name
-                    res = len(map_screen.nation_data.get(target_check, {}).get("at_war_with", [])) > 0
+                    res = len(queries.get_enemies(target_check, map_screen.nation_data)) > 0
                 elif c_type == "Is At Peace":
                     target_check = c_val if c_val else nation_name
-                    res = len(map_screen.nation_data.get(target_check, {}).get("at_war_with", [])) == 0
+                    res = len(queries.get_enemies(target_check, map_screen.nation_data)) == 0
                 elif c_type == "Is In Faction":
                     target_check = c_val if c_val else nation_name
                     res = map_screen.nation_data.get(target_check, {}).get("faction", "") != ""

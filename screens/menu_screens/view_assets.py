@@ -6,7 +6,7 @@ from gameState import GameState
 from ui.bars import ui_bars
 from ui import text_utils
 from ui.scroll_panes import ScrollPanes
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 from map_logic.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file
 import data.constants as c
@@ -310,7 +310,7 @@ class View_Assets(ScrollPanes, GameState):
 
         # --- Fixed chrome on top ---
         self.elements.append(TopBarOverlay(self))
-        self.elements.append(Button(20, 20, "small", "red", "Back", self.handle_back_key))
+        self.elements.append(make_back_button(self.handle_back_key))
 
         if self.current_file:
             self.elements.append(Button(c.SCREEN_WIDTH - 220, 20, "medium", "green",

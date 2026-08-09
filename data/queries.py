@@ -348,36 +348,17 @@ def save_cached_json(cache_key, new_data):
         print(f"Error saving {cache_obj['path']}: {e}")
 
 def save_global_settings(controller):
-    """Unified helper to save all settings directly from the controller state."""
-    from data.io import keybind_io
+    """Writes every setting straight off the Controller.
 
-    keybind_io.save_settings(
-        controller.keybinds,
-        controller.sfx_volume,
-        controller.music_volume,
-        controller.num_players,
-        controller.ai_mode,
-        controller.gemini_api_key,
-        controller.chatgpt_api_key,
-        controller.claude_api_key,
-        controller.ollama_api_key,
-        controller.gemini_model,
-        controller.chatgpt_model,
-        controller.claude_model,
-        controller.ollama_model,
-        controller.ai_immersion_level,
-        controller.music_pitch,
-        controller.sfx_pitch,
-        controller.target_fps,
-        controller.ai_threads,
-        controller.show_fps,
-        controller.drag_mouse_button_toggle,
-        controller.saves_dir,
-        controller.custom_scenarios_dir,
-        controller.ocean_light_color,
-        controller.ocean_dark_color,
-        checkerboard_water=controller.checkerboard_water
-    )
+    The 25 attribute reads this used to spell out positionally are now one
+    settings_schema lookup -- which also means tournament_saves_dir is actually
+    saved. It was missing from the old list, so saving any setting quietly reset
+    the tournament folder to its default.
+    """
+    from data.io import keybind_io, settings_schema
+
+    keybind_io.save_settings(controller.keybinds,
+                             **settings_schema.from_controller(controller))
 
 def get_ai_threads():
     return get_settings().get("ai_threads", c.DEFAULT_AI_THREADS)
@@ -522,7 +503,7 @@ def get_time_appropriate_research(start_year):
 def get_combined_enemy_strength(target_nation, map_data, nation_data):
     """Calculates the total military strength of everyone actively fighting the target."""
     total_str = 0
-    enemies = nation_data.get(target_nation, {}).get("at_war_with", [])
+    enemies = get_enemies(target_nation, nation_data)
     for enemy in enemies:
         if enemy in nation_data and enemy not in c.UNPLAYABLE_NATIONS:
             total_str += get_military_strength(enemy, map_data)
@@ -617,7 +598,7 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province, nation_dat
 
 def are_at_war(nation_a, nation_b, nation_data):
     """Returns True if nation_b is in nation_a's war list."""
-    return nation_b in nation_data.get(nation_a, {}).get("at_war_with", [])
+    return nation_b in get_enemies(nation_a, nation_data)
 
 def is_province_in_active_combat(province, nation_data):
     """Returns True if ANY units from mutually hostile nations occupy this province."""
@@ -633,7 +614,7 @@ def is_province_in_active_combat(province, nation_data):
 def is_nation_in_combat_here(nation, province, nation_data):
     """Returns True if the specified nation has units in the province that are actively engaged with enemy units."""
     units = province.get("units", [])
-    enemies = nation_data.get(nation, {}).get("at_war_with", [])
+    enemies = get_enemies(nation, nation_data)
     return any(u.get("owner") in enemies for u in units)
 
 def is_hostile_territory(moving_nation, target_owner, nation_data):
@@ -721,7 +702,7 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
 def is_faction_at_war(faction_name, nation_data):
     """Returns True if any member of the given faction is actively at war."""
     members = get_faction_members(faction_name, nation_data)
-    return any(len(nation_data.get(m, {}).get("at_war_with", [])) > 0 for m in members)
+    return any(len(get_enemies(m, nation_data)) > 0 for m in members)
 
 def save_faction_pre_war_map(faction_name, map_data, nation_data):
     """Snapshots the faction's borders right before entering a war."""
@@ -1848,6 +1829,7 @@ def is_playable(nation, nation_data):
     return nation_data.get(nation, {}).get("is_playable", False)
 
 def get_enemies(nation, nation_data):
+    """Who a nation is at war with. The one place the key name is spelled out."""
     return nation_data.get(nation, {}).get("at_war_with", [])
 
 def get_diplomatic_status(sender, target, nation_data):
@@ -2196,6 +2178,43 @@ def classify_unit_group(base_name, stats):
         return UNIT_GROUP_TANKS
     return UNIT_GROUP_INFANTRY
 
+#: The buckets the AI balances its army across.
+#:
+#: Deliberately NOT the same rule as classify_unit_group above, which sorts the
+#: production screen's Infantry / Tanks / Navy columns. The two genuinely
+#: disagree -- the production list files Cavalry under Infantry and Railroad
+#: Guns under Tanks, the AI does the opposite -- and reconciling them would
+#: change what the AI builds, i.e. the game. They are two named rules now
+#: rather than one rule and four inline copies of the other.
+AI_FORCE_INFANTRY = "INFANTRY"
+AI_FORCE_TANKS = "TANKS"
+AI_FORCE_NAVY = "NAVY"
+
+
+def is_ai_tank(unit_type):
+    """Whether the AI counts this unit towards its armour quota."""
+    return "Tank" in unit_type or "Armored" in unit_type or unit_type == "Cavalry"
+
+
+def ai_force_category(unit_type):
+    """Which column of the AI's army balance a unit counts in, or None.
+
+    The tests run in this order in every copy this replaces: infantry before
+    armour, so a hypothetical "Infantry Tank" counts as infantry. Anything that
+    matches none of the three -- convoys, trucks, artillery -- is not counted
+    at all, which is why None is a real answer rather than a default bucket.
+    """
+    if not unit_type:
+        return None
+    if "Infantry" in unit_type or get_base_unit_name(unit_type) == "Militia":
+        return AI_FORCE_INFANTRY
+    if is_ai_tank(unit_type):
+        return AI_FORCE_TANKS
+    if is_naval_unit(unit_type) and not unit_type.startswith("Convoy"):
+        return AI_FORCE_NAVY
+    return None
+
+
 def get_formatted_division_name(unit_type):
     """Standardizes parsing unit names into division categories while preserving case."""
     # Use regex to strip out " type" case-insensitively, without lowercasing the entire string
@@ -2447,42 +2466,34 @@ def get_combat_predictions(map_screen):
     friendly_nations = get_all_friendly_nations(player_country, nation_data) if not is_spectator else set()
     
     predictions = []
-    incoming = {} 
-    
-    # 1. Map all incoming movements
+
+    # 1. Meeting engagements: decided by combat_rules, the same rule the turn
+    #    resolver uses, so the bubble cannot promise a fight that will not
+    #    happen. `visible_to` is what keeps a hotseat player from seeing moves
+    #    they did not order.
+    from map_logic.system32 import combat_rules
+    visible_to = None if is_spectator else friendly_nations
+
+    for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
+        _p1, _p2, side1, side2 = combat_rules.meeting_sides(
+            map_screen.id_to_province, pair, visible_to)
+        predictions.append({
+            "type": "meeting",
+            "loc": pair,
+            "side1": side1,
+            "side2": side2
+        })
+
+    # 2. Incoming movements, for the province clashes below.
+    incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
-                owner = u.get("owner")
-                
-                # Prevent leaking hotseat moves by hiding combat bubbles for moves
-                # the current player didn't make
-                if not is_spectator and owner not in friendly_nations:
+                if visible_to is not None and u.get("owner") not in visible_to:
                     continue
-                    
-                dest_id = order["path"][0]
-                incoming.setdefault(dest_id, []).append((u, prov["id"]))
-                
-    # 2. Find Meeting Engagements (Crossing Paths)
-    processed_pairs = set()
-    for dest_id, attackers in incoming.items():
-        for u_a, origin_a_id in attackers:
-            crossers = [u_b for u_b, orig_b in incoming.get(origin_a_id, []) 
-                        if orig_b == dest_id and are_at_war(u_a["owner"], u_b["owner"], nation_data)]
-            if crossers:
-                pair = tuple(sorted([origin_a_id, dest_id]))
-                if pair not in processed_pairs:
-                    processed_pairs.add(pair)
-                    side1 = [u for u, o in incoming.get(dest_id, []) if o == origin_a_id]
-                    side2 = [u for u, o in incoming.get(origin_a_id, []) if o == dest_id]
-                    predictions.append({
-                        "type": "meeting",
-                        "loc": pair,
-                        "side1": side1,
-                        "side2": side2
-                    })
-                    
+                incoming.setdefault(order["path"][0], []).append((u, prov["id"]))
+
     # 3. Find Province Clashes (Static Defenders vs Incoming Attackers)
     for prov in map_data.values():
         prov_id = prov["id"]
@@ -2649,10 +2660,10 @@ def build_national_border_graph(map_data, id_to_province):
 def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, nation_data, borders=None):
     """Determines if a nation can physically reach another via land borders (including passable nations) or connected water."""
     friendly_a = get_all_friendly_nations(nation_a, nation_data)
-    at_war_a = set(nation_data.get(nation_a, {}).get("at_war_with", []))
+    at_war_a = set(get_enemies(nation_a, nation_data))
 
     friendly_b = get_all_friendly_nations(target_nation, nation_data)
-    at_war_b = set(nation_data.get(target_nation, {}).get("at_war_with", []))
+    at_war_b = set(get_enemies(target_nation, nation_data))
 
     target_faction = nation_data.get(target_nation, {}).get("faction", "")
     enemy_nations = {target_nation}

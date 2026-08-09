@@ -4,7 +4,7 @@ from gameState import MapOverlayScreen
 import data.constants as c
 from ui.bars import ui_bars
 from ui import text_utils
-from ui_elements import Button, process_text_input
+from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager
@@ -48,7 +48,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
         
         panel_x, panel_y = self.panel_rect.topleft
 
@@ -213,12 +213,8 @@ class Declare_Independence_Screen(MapOverlayScreen):
         surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + self.input_y + 60))
         surface.blit(font.render("Claim Heritage (Cores):", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 450, panel_rect.y + 60))
         
-        input_rect = self.name_input_rect
-        pygame.draw.rect(surface, (60, 60, 80) if self.active_input else (30, 30, 40), input_rect)
-        pygame.draw.rect(surface, (200, 200, 200), input_rect, 2)
-
-        name_surf = font.render(self.new_country_name + ("|" if self.active_input else ""), True, (255, 255, 255))
-        surface.blit(name_surf, (input_rect.x + 10, input_rect.y + 10))
+        draw_text_box(surface, self.name_input_rect, self.new_country_name,
+                      active=bool(self.active_input), font=font)
 
         color_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 150, 40, 40)
         pygame.draw.rect(surface, self.new_country_color, color_rect)

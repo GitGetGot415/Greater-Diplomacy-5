@@ -10,7 +10,7 @@ import pygame
 import data.constants as c
 from data import queries
 from gameState import MapOverlayScreen
-from ui_elements import Button, TextField
+from ui_elements import Button, TextField, make_back_button
 from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
@@ -50,7 +50,7 @@ class Editor_Date_Screen(MapOverlayScreen):
         self.dpt_field.rect.topleft = (p.centerx - 30, p.y + 290)
 
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.centerx - 90, p.bottom - 55, "medium", "orange", "Apply Date", self.apply_date),
             self.day_field, self.month_field, self.year_field, self.dpt_field,
         ]
@@ -116,7 +116,7 @@ class Starting_Economy_Edit_Screen(MapOverlayScreen):
             y += 60
 
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.centerx - 100, p.bottom - 55, "medium", "green", "Save Economy", self.save),
         ] + list(self.fields.values())
 
@@ -149,7 +149,7 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
     def refresh_ui(self):
         p = self.panel_rect
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.right - 120, p.y + 20, "small", "red", "Reset All", self.reset_all),
         ]
 
@@ -237,7 +237,7 @@ class Research_Edit_Screen(MapOverlayScreen):
         self._sync_entries()
         p = self.panel_rect
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.right - 170, p.bottom - 55, "medium", "green", "Save", self.save),
         ]
 
@@ -341,7 +341,7 @@ class Research_List_Screen(MapOverlayScreen):
     def refresh_ui(self):
         p = self.panel_rect
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.x + 20, p.y + 60, "medium", "red", "Edit ALL (Bulk)", self.edit_all),
             Button(p.right - 220, p.y + 60, "medium", "orange", "Edit Map Default", self.edit_default),
             Button(p.centerx - 200, p.y + 115, "FTAP", "green", "Force Time-Appropriate Research",
@@ -461,7 +461,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
     def refresh_ui(self):
         p = self.panel_rect
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.centerx - 110, p.bottom - 55, "medium", "green", "Save Changes", self.save),
         ]
 
@@ -552,7 +552,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         self.amount_field.rect.topleft = (p.centerx - 75, p.y + 190)
 
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.centerx - 130, p.y + 90, "medium", "blue", f"Resource: {self.selected_resource}", self.pick_resource),
             Button(p.centerx - 100, p.bottom - 55, "medium", "purple", "Confirm Selection", self.confirm),
             self.amount_field,
@@ -644,7 +644,7 @@ class Clear_Map_Screen(MapOverlayScreen):
         opt_btn.rect.width = p.width - 60
 
         self.elements = [
-            Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen, style="map"),
             Button(p.centerx - 130, p.bottom - 55, "editor_ui", "red", "Confirm Clear", self.confirm_clear),
             opt_btn,
         ]
@@ -962,7 +962,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(self.nat_x, p.y + 10, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen, pos=(self.nat_x, p.y + 10))]
 
         for i, y in self.pane_rows("nations", len(self.countries), self.nations_top, self.nations_view_h):
             cid = self.countries[i]

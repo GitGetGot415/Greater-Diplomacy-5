@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from ui_elements import Button, Slider, parse_pos
+from ui_elements import Button, Slider, parse_pos, make_back_button
 import data.constants as c
 from data import queries
 from ui import confirm_dialog
@@ -13,7 +13,6 @@ from ui import confirm_dialog
 # section, and the two screen-opening actions (reset / turn editor) footered
 # below both columns. Only "Edit Construction Turns" still opens a sub-screen.
 
-BACK_BTN_POS = (20, 20)
 
 ROW_H = 46
 INFO_GAP = 10  # gap between an info button's right edge and its setting button's left edge
@@ -124,7 +123,7 @@ class Scenario_Settings(GameState):
                      lambda: confirm_dialog.show_info(tooltip_title, tooltip_text))
 
     def refresh_ui(self):
-        self.elements = [Button(*BACK_BTN_POS, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
 
         for i, (key, default, label, tooltip) in enumerate(TOGGLE_ROWS):
             y = LEFT_TOP_Y + i * ROW_H

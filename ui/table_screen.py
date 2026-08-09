@@ -3,7 +3,7 @@ from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui import text_utils
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 from map_logic.rendering.font_manager import fonts
 
 def truncate(text, max_chars):
@@ -71,7 +71,7 @@ class TableScreen(GameState):
         self.sort_reverse[col.key] = not reverse
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Back", self.exit_screen)]
+        self.elements = [make_back_button(self.exit_screen)]
 
         x = self.table_x
         for col in self.columns:

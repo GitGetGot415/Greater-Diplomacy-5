@@ -2,7 +2,7 @@ import os
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, make_back_button
 from data import queries
 
 class Random_Setup(GameState):
@@ -108,7 +108,7 @@ class Random_Setup(GameState):
         self.resource_slider = Slider((c.SCREEN_WIDTH // 2) - 100, 480, 200, f"Resource Spawn: {int(self.resource_chance * 100)}%", self.resource_slider_val, self.update_resource_chance)
         
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink", "Scenario Settings", self.scenario_settings),
             
             # Sliders 

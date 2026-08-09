@@ -124,6 +124,59 @@ class ControllerTests(unittest.TestCase):
                          settings_schema.defaults())
 
 
+class SaveSignatureTests(unittest.TestCase):
+    def test_save_settings_takes_exactly_the_schema_names(self):
+        """queries.save_global_settings splats from_controller() into this, so
+        the parameter names and the schema names have to stay in step. They
+        already disagreed once: the controller called the drag toggle
+        `drag_mouse_button_toggle` while everything else called it
+        `drag_mouse_toggle`."""
+        import inspect
+        from data.io import keybind_io
+
+        params = list(inspect.signature(keybind_io.save_settings).parameters)
+        self.assertEqual(params[0], "keybind_dict")
+        self.assertEqual(tuple(params[1:]), settings_schema.SETTINGS_ORDER)
+
+    def test_from_controller_supplies_every_parameter(self):
+        controller = ControllerTests.Fake()
+        settings_schema.apply_to_controller(controller, settings_schema.defaults())
+        self.assertEqual(set(settings_schema.from_controller(controller)),
+                         set(settings_schema.SETTINGS_ORDER))
+
+
+class RuntimeMirrorTests(unittest.TestCase):
+    """data.constants mirrors a few settings for code too low-level to reach
+    the Controller. Six call sites used to copy them across by hand."""
+
+    def test_only_the_named_settings_are_mirrored(self):
+        for name in c.RUNTIME_SETTINGS:
+            with self.subTest(setting=name):
+                self.assertIn(name, settings_schema.SETTINGS_ORDER)
+
+    def test_every_mirrored_constant_exists(self):
+        for constant in c.RUNTIME_SETTINGS.values():
+            with self.subTest(constant=constant):
+                self.assertTrue(hasattr(c, constant))
+
+    def test_applying_writes_the_constants(self):
+        originals = {n: getattr(c, n) for n in c.RUNTIME_SETTINGS.values()}
+        try:
+            c.apply_runtime_settings({"saves_dir": "somewhere",
+                                      "checkerboard_water": not originals["CHECKERBOARD_WATER"]})
+            self.assertEqual(c.SAVES_DIR, "somewhere")
+            self.assertEqual(c.CHECKERBOARD_WATER, not originals["CHECKERBOARD_WATER"])
+        finally:
+            for name, value in originals.items():
+                setattr(c, name, value)
+
+    def test_settings_it_was_not_given_are_left_alone(self):
+        """A screen that changed one setting passes just that one."""
+        before = c.SCENARIOS_CUSTOM_DIR
+        c.apply_runtime_settings({"saves_dir": c.SAVES_DIR})
+        self.assertEqual(c.SCENARIOS_CUSTOM_DIR, before)
+
+
 class KeybindIoTests(unittest.TestCase):
     def test_load_settings_returns_the_documented_shape(self):
         from data.io import keybind_io

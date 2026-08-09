@@ -5,6 +5,127 @@ from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import clear_pending
 import data.constants as c
 
+# --- SHARED STATE EDITS ---
+# The small, repeated edits to a nation's diplomatic bookkeeping. Each was
+# written out three or four times below with a different guard style, and the
+# odd one out was the one that could raise.
+
+def sever_military_access(nation_data, a, b):
+    """Drops any granted or requested passage between two nations.
+
+    Done when a nation is puppeted, when it joins a faction, and when a puppet
+    is dragged into its master's faction: in all three cases the two now move
+    through each other's territory by right, so a standing grant is redundant
+    and a pending request is moot.
+    """
+    for country, other in ((a, b), (b, a)):
+        access = nation_data.get(country, {}).get("military_access", [])
+        if other in access:
+            access.remove(other)
+        clear_pending(nation_data, country, other, only_actions=["REQ_MILITARY_ACCESS"])
+
+
+def add_enemy(nation_data, country, other):
+    """Puts `other` on `country`'s war list. True when it wasn't already there."""
+    enemies = nation_data.setdefault(country, {}).setdefault("at_war_with", [])
+    if other in enemies:
+        return False
+    enemies.append(other)
+    return True
+
+
+def remove_enemy(nation_data, country, other):
+    """Takes `other` off `country`'s war list. True when it was on it.
+
+    The mirror of add_enemy, and written out in two different styles by the
+    peace paths -- one indexing nation_data directly, one going through .get().
+    """
+    enemies = nation_data.get(country, {}).get("at_war_with")
+    if not enemies or other not in enemies:
+        return False
+    enemies.remove(other)
+    return True
+
+
+def link_war(nation_data, a, b):
+    """Puts two nations on each other's war list.
+
+    Four call sites wrote this out; one of them indexed nation_data directly
+    and raised KeyError for a nation that had never been given the key.
+    """
+    for country, other in ((a, b), (b, a)):
+        add_enemy(nation_data, country, other)
+
+
+def clear_war_call_cooldowns(nation_data, country, other):
+    """Lets `country` ask `other` for help again immediately.
+
+    Both a new war and a newly joined war reset these, so an ally who was
+    turned down last turn can be asked again now the situation has changed.
+    Deliberately one-directional: a new war clears only the belligerent's own
+    cooldowns, while joining a war clears both sides'.
+    """
+    cooldowns = nation_data.get(country, {}).get("diplo_cooldowns", {}).get(other)
+    if cooldowns:
+        cooldowns.pop("CALL_TO_ARMS", None)
+        cooldowns.pop("JOIN_WARS", None)
+
+
+def settle_with_faction(nation_data, joiner, fac):
+    """Makes peace with everyone already in `fac` and drops passage rights.
+
+    A faction cannot contain two nations at war with each other, so joining one
+    ends any such war. Written out twice: once for a nation joining directly,
+    once for its puppets being pulled in behind it.
+    """
+    for member in queries.get_faction_members(fac, nation_data):
+        if member == joiner:
+            continue
+        if queries.are_at_war(joiner, member, nation_data) or queries.are_at_war(member, joiner, nation_data):
+            finalize_neutral(nation_data, joiner, member)
+        sever_military_access(nation_data, joiner, member)
+
+
+def leave_faction(nation_data, leaver):
+    """Strips a nation's faction membership and takes its puppets with it.
+
+    The shared body of leaving voluntarily and being kicked out. What differs
+    is only who resents whom afterwards, which stays with the two callers.
+    """
+    fac = nation_data[leaver].get("faction", "")
+    if fac:
+        queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
+
+    nation_data[leaver]["faction"] = ""
+    nation_data[leaver]["is_faction_leader"] = False
+    pull_puppets_out_of_faction(leaver, nation_data)
+    return fac
+
+
+def _break_for_independence(map_data, nation_data, rebel, master, headline):
+    """Cuts a puppet loose because the two of them went to war.
+
+    Written out twice, once per direction, differing only in the headline: a
+    puppet that attacks its master is rebelling, one that is attacked has
+    independence forced on it. Either way the master keeps a claim on every
+    province the rebel holds, which is what gives the war a wargoal.
+    """
+    break_puppet_link(nation_data, master, rebel)
+
+    master_claims = nation_data.setdefault(master, {}).setdefault("claims", [])
+    for prov in map_data.values():
+        if prov.get("owner") == rebel and prov["id"] not in master_claims:
+            master_claims.append(prov["id"])
+
+    log_global_event(nation_data, headline)
+
+
+def resent_departure(nation_data, a, b):
+    """Applies the mutual "they walked out on us" relations hit."""
+    queries.add_temporary_modifier(a, b, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
+    queries.add_temporary_modifier(b, a, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
+
+
 # --- RECURSIVE PUPPET HELPERS ---
 def break_puppet_link(nation_data, master, puppet):
     if puppet in nation_data.get(master, {}).get("puppets", []):
@@ -27,11 +148,8 @@ def pull_master_into_war(puppet, target, map_data, nation_data):
         if queries.are_in_same_faction(master, target, nation_data):
             return
             
-        if target not in nation_data.get(master, {}).get("at_war_with", []):
-            nation_data.setdefault(master, {}).setdefault("at_war_with", []).append(target)
-        if master not in nation_data.get(target, {}).get("at_war_with", []):
-            nation_data.setdefault(target, {}).setdefault("at_war_with", []).append(master)
-        
+        link_war(nation_data, master, target)
+
         # Recursively pull the master's OTHER puppets into the war too!
         pull_puppets_into_war(master, target, map_data, nation_data)
         
@@ -81,31 +199,20 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
     if queries.are_at_war(master, puppet, nation_data) or queries.are_at_war(puppet, master, nation_data):
         finalize_neutral(nation_data, master, puppet)
 
-    # Clear military access (granted and pending) since puppet/master already have free passage
-    if "military_access" in nation_data.get(master, {}) and puppet in nation_data[master]["military_access"]:
-        nation_data[master]["military_access"].remove(puppet)
-    if "military_access" in nation_data.get(puppet, {}) and master in nation_data[puppet]["military_access"]:
-        nation_data[puppet]["military_access"].remove(master)
-    clear_pending(nation_data, master, puppet, only_actions=["REQ_MILITARY_ACCESS"])
-    clear_pending(nation_data, puppet, master, only_actions=["REQ_MILITARY_ACCESS"])
+    # Puppet and master already have free passage, so any grant or request is moot.
+    sever_military_access(nation_data, master, puppet)
 
 def pull_puppets_into_war(master, target, map_data, nation_data):
     def _add_war(p):
         if queries.are_in_same_faction(p, target, nation_data):
             return
-            
-        if target not in nation_data.get(p, {}).get("at_war_with", []):
-            nation_data.setdefault(p, {}).setdefault("at_war_with", []).append(target)
-        if p not in nation_data.get(target, {}).get("at_war_with", []):
-            nation_data.setdefault(target, {}).setdefault("at_war_with", []).append(p)
+        link_war(nation_data, p, target)
     apply_to_puppets_recursively(master, nation_data, _add_war)
 
 def pull_puppets_into_peace(master, target, nation_data):
     def _remove_war(p):
-        if target in nation_data.get(p, {}).get("at_war_with", []):
-            nation_data[p]["at_war_with"].remove(target)
-        if p in nation_data.get(target, {}).get("at_war_with", []):
-            nation_data[target]["at_war_with"].remove(p)
+        remove_enemy(nation_data, p, target)
+        remove_enemy(nation_data, target, p)
         nation_data[p].setdefault("truces", {})[target] = c.TRUCE_TURNS
     apply_to_puppets_recursively(master, nation_data, _remove_war)
 
@@ -113,20 +220,7 @@ def pull_puppets_into_faction(master, fac, map_data, nation_data):
     def _set_fac(p):
         nation_data[p]["faction"] = fac
         nation_data[p]["is_faction_leader"] = False
-        
-        members = queries.get_faction_members(fac, nation_data)
-        for member in members:
-            if member != p:
-                if queries.are_at_war(p, member, nation_data) or queries.are_at_war(member, p, nation_data):
-                    finalize_neutral(nation_data, p, member)
-
-                # Clear military access (granted and pending) since they are now in the same faction
-                if "military_access" in nation_data[p] and member in nation_data[p]["military_access"]:
-                    nation_data[p]["military_access"].remove(member)
-                if "military_access" in nation_data[member] and p in nation_data[member]["military_access"]:
-                    nation_data[member]["military_access"].remove(p)
-                clear_pending(nation_data, p, member, only_actions=["REQ_MILITARY_ACCESS"])
-                clear_pending(nation_data, member, p, only_actions=["REQ_MILITARY_ACCESS"])
+        settle_with_faction(nation_data, p, fac)
 
     apply_to_puppets_recursively(master, nation_data, _set_fac)
 
@@ -264,27 +358,11 @@ def finalize_war(map_data, nation_data, a, b):
         
     # If they are master and puppet, break the bond and declare independence
     if master_a == b:
-        break_puppet_link(nation_data, b, a)
-        
-        # NEW: Master gets claims on all rebel territory
-        master_claims = nation_data.setdefault(b, {}).setdefault("claims", [])
-        for prov in map_data.values():
-            if prov.get("owner") == a and prov["id"] not in master_claims:
-                master_claims.append(prov["id"])
-                
-        from map_logic.diplomacy.diplomacy_events import log_global_event
-        log_global_event(nation_data, f"{a} has declared a war of independence against {b}!")
+        _break_for_independence(map_data, nation_data, rebel=a, master=b,
+                                headline=f"{a} has declared a war of independence against {b}!")
     elif master_b == a:
-        break_puppet_link(nation_data, a, b)
-        
-        # NEW: Master gets claims on all rebel territory
-        master_claims = nation_data.setdefault(a, {}).setdefault("claims", [])
-        for prov in map_data.values():
-            if prov.get("owner") == b and prov["id"] not in master_claims:
-                master_claims.append(prov["id"])
-                
-        from map_logic.diplomacy.diplomacy_events import log_global_event
-        log_global_event(nation_data, f"{b} has achieved independence after being attacked by {a}!")
+        _break_for_independence(map_data, nation_data, rebel=b, master=a,
+                                headline=f"{b} has achieved independence after being attacked by {a}!")
 
     fac_a = nation_data.get(a, {}).get("faction", "")
     fac_b = nation_data.get(b, {}).get("faction", "")
@@ -295,23 +373,20 @@ def finalize_war(map_data, nation_data, a, b):
         queries.save_faction_pre_war_map(fac_b, map_data, nation_data)
 
     for country, other in [(a, b), (b, a)]:
-        if other not in nation_data[country]["at_war_with"]:
-            nation_data[country]["at_war_with"].append(other)
+        if add_enemy(nation_data, country, other):
             # NEW: Track war duration for ceasefire cooldowns
             nation_data[country].setdefault("war_durations", {})[other] = 0
 
         # Clear military access when going to war
-        if "military_access" in nation_data[country] and other in nation_data[country]["military_access"]:
-            nation_data[country]["military_access"].remove(other)
+        access = nation_data[country].get("military_access", [])
+        if other in access:
+            access.remove(other)
 
         # Clear faction war cooldowns so allies can be called in
         faction = nation_data[country].get("faction", "")
         if faction:
-            members = queries.get_faction_members(faction, nation_data)
-            for member in members:
-                if "diplo_cooldowns" in nation_data[country] and member in nation_data[country]["diplo_cooldowns"]:
-                    nation_data[country]["diplo_cooldowns"][member].pop("CALL_TO_ARMS", None)
-                    nation_data[country]["diplo_cooldowns"][member].pop("JOIN_WARS", None)
+            for member in queries.get_faction_members(faction, nation_data):
+                clear_war_call_cooldowns(nation_data, country, member)
 
     # Pull subjects into the fray
     pull_puppets_into_war(a, b, map_data, nation_data)
@@ -323,8 +398,7 @@ def finalize_war(map_data, nation_data, a, b):
 
 def finalize_neutral(nation_data, a, b):
     for country, other in [(a, b), (b, a)]:
-        if other in nation_data[country]["at_war_with"]:
-            nation_data[country]["at_war_with"].remove(other)
+        remove_enemy(nation_data, country, other)
         if other in nation_data[country]["allied_with"]:
             nation_data[country]["allied_with"].remove(other)
             
@@ -413,21 +487,7 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
         nation_data[joiner]["faction"] = fac
         nation_data[joiner]["is_faction_leader"] = False
         
-        members = queries.get_faction_members(fac, nation_data)
-        for member in members:
-            if member != joiner:
-                if queries.are_at_war(joiner, member, nation_data) or queries.are_at_war(member, joiner, nation_data):
-                    finalize_neutral(nation_data, joiner, member)
-                
-                # Clear military access since they are now in the same faction
-                if "military_access" in nation_data[joiner] and member in nation_data[joiner]["military_access"]:
-                    nation_data[joiner]["military_access"].remove(member)
-                if "military_access" in nation_data[member] and joiner in nation_data[member]["military_access"]:
-                    nation_data[member]["military_access"].remove(joiner)
-
-                # Cancel any now-unnecessary pending military access requests between them
-                clear_pending(nation_data, joiner, member, only_actions=["REQ_MILITARY_ACCESS"])
-                clear_pending(nation_data, member, joiner, only_actions=["REQ_MILITARY_ACCESS"])
+        settle_with_faction(nation_data, joiner, fac)
 
         if queries.is_faction_at_war(fac, nation_data):
             queries.add_member_to_pre_war_map(joiner, fac, map_data, nation_data)
@@ -435,22 +495,15 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
         pull_puppets_into_faction(joiner, fac, map_data, nation_data)
 
 def finalize_faction_leave(nation_data, leaver):
-    fac = nation_data[leaver].get("faction", "")
-    members = queries.get_faction_members(fac, nation_data)
-    
-    if fac:
-        queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
-        
-    nation_data[leaver]["faction"] = ""
-    nation_data[leaver]["is_faction_leader"] = False
-    
-    pull_puppets_out_of_faction(leaver, nation_data)
-    
-    # Apply Temporary Faction Desertion Modifier
+    """A nation walks out of its faction. Everyone left behind resents it."""
+    # Read the roster before the membership is stripped.
+    members = queries.get_faction_members(nation_data[leaver].get("faction", ""), nation_data)
+
+    fac = leave_faction(nation_data, leaver)
+
     for m in members:
         if m != leaver:
-            queries.add_temporary_modifier(leaver, m, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
-            queries.add_temporary_modifier(m, leaver, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
+            resent_departure(nation_data, leaver, m)
 
     if fac:
         queries.clear_faction_pre_war_map_if_peace(fac, nation_data)
@@ -463,33 +516,21 @@ def join_faction_wars(map_data, nation_data, joiner, faction_member):
 
     wars = nation_data[faction_member].get("at_war_with", [])
     for enemy in wars:
-        if enemy not in nation_data[joiner]["at_war_with"]:
-            nation_data[joiner]["at_war_with"].append(enemy)
-        if joiner not in nation_data[enemy]["at_war_with"]:
-            nation_data[enemy]["at_war_with"].append(joiner)
-            
+        link_war(nation_data, joiner, enemy)
+
         # Recursive puppet pull logic for new wars joined
         pull_puppets_into_war(joiner, enemy, map_data, nation_data)
 
     # Clear the cooldowns between these two so they can interact in future wars
-    for a, b in [(joiner, faction_member), (faction_member, joiner)]:
-        if "diplo_cooldowns" in nation_data[a] and b in nation_data[a]["diplo_cooldowns"]:
-            nation_data[a]["diplo_cooldowns"][b].pop("CALL_TO_ARMS", None)
-            nation_data[a]["diplo_cooldowns"][b].pop("JOIN_WARS", None)
+    clear_war_call_cooldowns(nation_data, joiner, faction_member)
+    clear_war_call_cooldowns(nation_data, faction_member, joiner)
 
 def finalize_faction_kick(nation_data, leader, member):
-    fac = nation_data[member].get("faction", "")
-    if fac:
-        queries.remove_member_from_pre_war_map(member, fac, nation_data)
-        
-    nation_data[member]["faction"] = ""
-    nation_data[member]["is_faction_leader"] = False
-    
-    pull_puppets_out_of_faction(member, nation_data)
-    
-    # Temporary Faction Desertion Modifier
-    queries.add_temporary_modifier(leader, member, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
-    queries.add_temporary_modifier(member, leader, "recent_faction", c.REL_MOD_RECENT_FACTION, nation_data)
+    """The leader throws a member out. Only the two of them fall out over it,
+    unlike leaving voluntarily, which the whole faction takes personally."""
+    fac = leave_faction(nation_data, member)
+
+    resent_departure(nation_data, leader, member)
 
     if fac:
         queries.clear_faction_pre_war_map_if_peace(fac, nation_data)

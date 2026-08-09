@@ -425,6 +425,21 @@ class GameState:
             from ui.information import feedback_text
             feedback_text.draw_feedback(self.map_screen, surface)
 
+    def queue_diplomacy_action(self, target, action, params=""):
+        """Toggles a queued diplomatic action and rebuilds this screen.
+
+        Every "queue this for next turn" button on a map-layered screen does
+        the same three things -- toggle, report the returned message, refresh --
+        and each one used to spell them out. The import is deferred because
+        map_logic.diplomacy imports back into the UI.
+        """
+        from map_logic.diplomacy import diplomacy_logic
+        msg = diplomacy_logic.toggle_diplomacy_action(
+            self.map_screen.nation_data, self.map_screen.player_country,
+            target, action, params)
+        self.map_screen.show_feedback(msg)
+        self.refresh_ui()
+
     def additional_draw(self, surface):
         pass
 
@@ -535,12 +550,11 @@ class FolderListState(GameState):
     def draw_rename_box(self, surface, x, y):
         """Draws the inline name-entry box in place of the row being renamed."""
         from map_logic.rendering.font_manager import fonts
+        from ui_elements import draw_text_box
         input_rect = pygame.Rect(x, y, *self.rename_box_size)
-        pygame.draw.rect(surface, (100, 100, 100), input_rect)
-        pygame.draw.rect(surface, (255, 255, 255), input_rect, 2)
-
-        txt_surf = fonts.get("heading2").render(self.new_name_text + "|", True, (255, 255, 255))
-        surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
+        # Only drawn in place of the row being renamed, so always focused.
+        draw_text_box(surface, input_rect, self.new_name_text, active=True,
+                      font=fonts.get("heading2"))
 
         instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
         surface.blit(instr, (input_rect.x, input_rect.y - 25))

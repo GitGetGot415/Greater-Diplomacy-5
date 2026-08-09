@@ -2,18 +2,18 @@ import pygame
 import data.constants as c
 from data import queries
 
-def draw_tooltip(self, surface):
-    if not self.hovered_province:
+def draw_tooltip(map_screen, surface):
+    if not map_screen.hovered_province:
         return
 
     mx, my = pygame.mouse.get_pos()
-    prov = self.hovered_province
+    prov = map_screen.hovered_province
     
     # --- FOG OF WAR VISIBILITY CHECK ---
-    is_visible = queries.is_province_visible(self, prov["id"])
+    is_visible = queries.is_province_visible(map_screen, prov["id"])
             
     owner_id = prov.get('owner', 'Unclaimed')
-    owner_display = self.nation_data.get(owner_id, {}).get("name", owner_id)
+    owner_display = map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
     
     # Coastal Sea and Inland Sea display
     terrain = prov.get('terrain', 'Unknown')
@@ -21,30 +21,30 @@ def draw_tooltip(self, surface):
         owner_display = terrain.replace('_', ' ').title()
     
     # 1. Start with the basic header info based on the primary map mode
-    if self.base_layer == "TERRAIN":
+    if map_screen.base_layer == "TERRAIN":
         terrain_display = terrain.replace('_', ' ').title()
         lines = [f"ID: {prov['id']} | {terrain_display}"]
-    elif self.base_layer == "RELATIONS":
+    elif map_screen.base_layer == "RELATIONS":
         # Display Relations
-        rel_score = queries.get_relation_score(owner_id, self.player_country, self.nation_data, self.id_to_province)
+        rel_score = queries.get_relation_score(owner_id, map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
         lines = [f"ID: {prov['id']} | {owner_display}", f"Opinion: {rel_score}"]
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
 
-    if self.base_layer == "CORES":
+    if map_screen.base_layer == "CORES":
         cores = prov.get("cores", [])
         if cores:
-            core_names = [self.nation_data.get(core, {}).get("name", core) for core in cores]
+            core_names = [map_screen.nation_data.get(core, {}).get("name", core) for core in cores]
             lines.append(f"Cores: {', '.join(core_names)}")
 
     # 2. Add contextual info based on secondary view mode
-    if self.secondary_mode == "BLANK":
+    if map_screen.secondary_mode == "BLANK":
         # The header is already set correctly above, no need to overwrite it
         pass
         
-    elif self.secondary_mode == "UNITS":
+    elif map_screen.secondary_mode == "UNITS":
         if not is_visible:
-            if getattr(self, 'partial_visible_provinces', None) is not None and prov["id"] in self.partial_visible_provinces and prov.get("units"):
+            if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and prov.get("units"):
                 lines.append("- ? (Unknown Units)")
             else:
                 lines.append("(Units hidden by Fog of War)")
@@ -70,7 +70,7 @@ def draw_tooltip(self, surface):
                 if len(units) > 5:
                     lines.append(f"...and {len(units)-5} more")
     
-    elif self.secondary_mode == "RESOURCES":
+    elif map_screen.secondary_mode == "RESOURCES":
         if not is_visible:
             lines.append("(Resources hidden by Fog of War)")
         else:
@@ -83,9 +83,9 @@ def draw_tooltip(self, surface):
             else:
                 lines.append("No Natural Resources")
 
-    elif self.secondary_mode == "ECONOMY":
+    elif map_screen.secondary_mode == "ECONOMY":
         # Base production from the tile itself dynamically calculated
-        owner_data = self.nation_data.get(owner_id, {})
+        owner_data = map_screen.nation_data.get(owner_id, {})
         research_data = owner_data.get("research", {})
         
         # Calculate dynamic bonuses based on tech
@@ -136,7 +136,7 @@ def draw_tooltip(self, surface):
 
     # 3. Render the Tooltip
     # Calculate dimensions
-    rendered_lines = [self.small_font.render(line, True, (255, 255, 255)) for line in lines]
+    rendered_lines = [map_screen.small_font.render(line, True, (255, 255, 255)) for line in lines]
     width = max(ts.get_width() for ts in rendered_lines) + 20
     height = sum(ts.get_height() for ts in rendered_lines) + 15
     

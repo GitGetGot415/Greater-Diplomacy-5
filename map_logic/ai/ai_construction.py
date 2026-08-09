@@ -97,7 +97,7 @@ def process_ai_economy_decisions(map_screen):
         for prov in my_provs:
             for u in prov.get("units", []) + prov.get("unit_queue", []):
                 u_type = u.get("type", "") if "type" in u else u.get("unit_type", "")
-                if "Tank" in u_type or "Armored" in u_type or u_type == "Cavalry":
+                if queries.is_ai_tank(u_type):
                     if isinstance(u, dict) and u.get("owner", ai_name) == ai_name:
                         current_tank_count += 1
                         
@@ -262,25 +262,19 @@ def process_ai_economy_decisions(map_screen):
                             }
                             prov.setdefault("unit_queue", []).append(order)
 
-            # Count existing units
-            for u in prov.get("units", []):
-                if u.get("owner") == ai_name:
-                    u_type = u.get("type", "")
-                    if "Infantry" in u_type or queries.get_base_unit_name(u_type) == "Militia":
-                        infantry_count += 1
-                    elif "Tank" in u_type or "Armored" in u_type or u_type == "Cavalry":  
-                        tank_count += 1
-                    elif queries.is_naval_unit(u_type) and not u_type.startswith("Convoy"):
-                        naval_count += 1
-            
-            # Count queued units
-            for q in prov.get("unit_queue", []):
-                q_type = q.get("unit_type", "")
-                if "Infantry" in q_type or queries.get_base_unit_name(q_type) == "Militia":
+            # Count what we have and what is already on order, together --
+            # the two loops applied the same rule and differed only in which
+            # key holds the unit's name.
+            standing = [u.get("type", "") for u in prov.get("units", [])
+                        if u.get("owner") == ai_name]
+            ordered = [q.get("unit_type", "") for q in prov.get("unit_queue", [])]
+            for u_type in standing + ordered:
+                category = queries.ai_force_category(u_type)
+                if category == queries.AI_FORCE_INFANTRY:
                     infantry_count += 1
-                elif "Tank" in q_type or "Armored" in q_type or q_type == "Cavalry":  
+                elif category == queries.AI_FORCE_TANKS:
                     tank_count += 1
-                elif queries.is_naval_unit(q_type) and not q_type.startswith("Convoy"):
+                elif category == queries.AI_FORCE_NAVY:
                     naval_count += 1
             
             # Check neighbors to determine land/sea ratios
@@ -409,7 +403,7 @@ def process_ai_economy_decisions(map_screen):
 
                 if is_naval_recruit:
                     naval_count += 1
-                elif "Tank" in unit_name_to_build or "Armored" in unit_name_to_build or unit_name_to_build == "Cavalry":
+                elif queries.is_ai_tank(unit_name_to_build):
                     tank_count += 1
                     # Recalculate force_tank so we don't accidentally buy way more tanks than the minimum!
                     if force_tank and tank_count >= min_tank_count:

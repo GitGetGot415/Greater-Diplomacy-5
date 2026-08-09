@@ -1,6 +1,6 @@
 import data.constants as c
 from data import queries
-from map_logic.system32 import edit_province_ownership
+from map_logic.system32 import combat_rules, edit_province_ownership
 import random # Imported for the random tiebreaker
 
 def apply_group_damage(total_atk, target_units):
@@ -20,7 +20,7 @@ def apply_group_damage(total_atk, target_units):
             
         u["health"] -= actual_dmg
 
-def process_bombardments(self):
+def process_bombardments(map_screen):
     """Resolves artillery fire on nearby tiles.
 
     Runs before movement, so a unit that walks away this turn still eats the
@@ -32,7 +32,7 @@ def process_bombardments(self):
     barrages = {}
     firing_units = []
 
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
             if not isinstance(order, dict) or order.get("type") != "BOMBARD":
@@ -43,7 +43,7 @@ def process_bombardments(self):
 
             # Drop the order if the gun can no longer make the shot
             if (bomb_range <= 0
-                    or target_id not in queries.get_bombardment_targets(province, self.id_to_province, bomb_range)):
+                    or target_id not in queries.get_bombardment_targets(province, map_screen.id_to_province, bomb_range)):
                 unit["order"] = {"type": "MOVE", "path": []}
                 continue
 
@@ -54,12 +54,12 @@ def process_bombardments(self):
         return
 
     for target_id, guns_by_owner in barrages.items():
-        target_prov = self.id_to_province.get(target_id)
+        target_prov = map_screen.id_to_province.get(target_id)
         if not target_prov: continue
 
         for owner, guns in guns_by_owner.items():
             targets = [u for u in target_prov.get("units", [])
-                       if queries.are_at_war(owner, u.get("owner"), self.nation_data)]
+                       if queries.are_at_war(owner, u.get("owner"), map_screen.nation_data)]
             if not targets:
                 continue
 
@@ -74,7 +74,7 @@ def process_bombardments(self):
                 u["_in_combat_this_turn"] = True
 
     # Clear the casualties out before movement and combat run
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         if province.get("units"):
             province["units"] = [u for u in province["units"] if u.get("health", 0) > 0]
 
@@ -82,16 +82,16 @@ def process_bombardments(self):
     for unit in firing_units:
         unit["order"] = {"type": "MOVE", "path": []}
 
-def process_pinning(self):
+def process_pinning(map_screen):
     """Rule: Units being attacked from a tile must defend the tile they're on, unless moving to friendly territory."""
     incoming_attacks = {}
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
-                dest_prov = self.id_to_province.get(dest_id)
-                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
+                dest_prov = map_screen.id_to_province.get(dest_id)
+                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), map_screen.nation_data):
                     # Track the origin province ID (province["id"]) along with the unit
                     incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
@@ -99,7 +99,7 @@ def process_pinning(self):
     # If incoming attackers are so weak they'd die instantly, resolve the combat NOW
     # so they die, deal their damage, and don't pin the defenders.
     for dest_id, attackers_info in list(incoming_attacks.items()):
-        dest_prov = self.id_to_province.get(dest_id)
+        dest_prov = map_screen.id_to_province.get(dest_id)
         if not dest_prov: continue
         
         defenders = dest_prov.get("units", [])
@@ -108,7 +108,7 @@ def process_pinning(self):
         tile_owner = dest_prov.get("owner", "Unclaimed")
         if tile_owner in c.UNPLAYABLE_NATIONS: continue
         
-        friendly_defenders = [u for u in defenders if not queries.are_at_war(tile_owner, u.get("owner"), self.nation_data)]
+        friendly_defenders = [u for u in defenders if not queries.are_at_war(tile_owner, u.get("owner"), map_screen.nation_data)]
         if not friendly_defenders: continue
         
         # Only top attackers deal damage
@@ -116,7 +116,7 @@ def process_pinning(self):
         
         hostile_attackers = [
             info for info in attackers_info
-            if queries.are_at_war(tile_owner, info[0].get("owner"), self.nation_data)
+            if queries.are_at_war(tile_owner, info[0].get("owner"), map_screen.nation_data)
         ]
         
         if not hostile_attackers: continue
@@ -147,7 +147,7 @@ def process_pinning(self):
                 incoming_attacks[dest_id] = [info for info in incoming_attacks[dest_id] if info[0] != a_unit]
                 
                 # Cleanup dead units from their origin province immediately
-                a_prov = self.id_to_province.get(a_origin_id)
+                a_prov = map_screen.id_to_province.get(a_origin_id)
                 if a_prov:
                     a_prov["units"] = [u for u in a_prov["units"] if u.get("health", 0) > 0]
             
@@ -155,91 +155,70 @@ def process_pinning(self):
             dest_prov["units"] = [u for u in dest_prov["units"] if u.get("health", 0) > 0]
 
     # --- STANDARD PINNING LOGIC ---
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
-                dest_prov = self.id_to_province.get(dest_id)
+                dest_prov = map_screen.id_to_province.get(dest_id)
                 
                 # If moving to hostile territory, check if we are pinned by an incoming attack
-                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), self.nation_data):
+                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), map_screen.nation_data):
                     attackers = incoming_attacks.get(province["id"], [])
                     
                     # ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
                     hostile_attackers = [
                         a for a, origin_id in attackers 
-                        if queries.are_at_war(unit["owner"], a["owner"], self.nation_data) and origin_id != dest_id
+                        if queries.are_at_war(unit["owner"], a["owner"], map_screen.nation_data) and origin_id != dest_id
                     ]
                     
                     if hostile_attackers:
                         # Pinned! Cannot attack outwards. Must defend.
                         order["path"] = []
 
-def process_meeting_engagements(self):
+def process_meeting_engagements(map_screen):
     """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
-    incoming = {}
-    for prov in self.map_data.values():
-        for u in prov.get("units", []):
-            order = u.get("order")
-            if order and order.get("type") == "MOVE" and order.get("path"):
-                dest_id = order["path"][0]
-                incoming.setdefault(dest_id, []).append((u, prov["id"], prov))
+    # Which tiles swapped garrisons is decided by combat_rules, the same rule
+    # the prediction bubbles are drawn from. The sides are read per pair, as we
+    # get to them: a unit killed in one engagement must not still be counted in
+    # the next engagement its province takes part in.
+    for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
+        prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
 
-    processed_pairs = set()
-    for dest_id, attackers in incoming.items():
-        for u_a, origin_a_id, prov_a in attackers:
-            crossers = []
-            for u_b, orig_b_id, prov_b in incoming.get(origin_a_id, []):
-                if orig_b_id == dest_id and queries.are_at_war(u_a["owner"], u_b["owner"], self.nation_data):
-                    crossers.append((u_b, prov_b))
-            
-            if crossers:
-                pair = tuple(sorted([origin_a_id, dest_id]))
-                if pair not in processed_pairs:
-                    processed_pairs.add(pair)
-                    
-                    prov1 = self.id_to_province[pair[0]]
-                    prov2 = self.id_to_province[pair[1]]
-                    
-                    # Safely check if the path has elements before grabbing index 0
-                    units1 = [u for u in prov1.get("units", []) if u.get("order", {}).get("path") and u["order"]["path"][0] == pair[1]]
-                    units2 = [u for u in prov2.get("units", []) if u.get("order", {}).get("path") and u["order"]["path"][0] == pair[0]]
-                    
-                    # Unpack Convoys Caught in Land Engagements
-                    is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
-                    if is_land_engagement:
-                        for u in units1 + units2:
-                            if u.get("type", "").startswith("Convoy"):
-                                queries.revert_transport(u)
-                    
-                    # Sort and cap attackers
-                    atk1 = queries.get_group_attack_sum(units1)
-                    atk2 = queries.get_group_attack_sum(units2)
-                    
-                    apply_group_damage(atk2, units1)
-                    apply_group_damage(atk1, units2)
-                    
-                    for u in units1 + units2:
-                        u["_in_combat_this_turn"] = True
-                    
-                    # Only lock them in combat if the enemy survived!
-                    surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
-                    surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
-                    
-                    if surviving_units2:
-                        for u in surviving_units1:
-                            u["_combat_locked"] = True
-                    if surviving_units1:
-                        for u in surviving_units2:
-                            u["_combat_locked"] = True
-                    
-                    prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
-                    prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
+        # Unpack Convoys Caught in Land Engagements
+        is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
+        if is_land_engagement:
+            for u in units1 + units2:
+                if u.get("type", "").startswith("Convoy"):
+                    queries.revert_transport(u)
 
-def process_combat(self):
+        # Sort and cap attackers
+        atk1 = queries.get_group_attack_sum(units1)
+        atk2 = queries.get_group_attack_sum(units2)
+
+        apply_group_damage(atk2, units1)
+        apply_group_damage(atk1, units2)
+
+        for u in units1 + units2:
+            u["_in_combat_this_turn"] = True
+
+        # Only lock them in combat if the enemy survived!
+        surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
+        surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
+
+        if surviving_units2:
+            for u in surviving_units1:
+                u["_combat_locked"] = True
+        if surviving_units1:
+            for u in surviving_units2:
+                u["_combat_locked"] = True
+
+        prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
+        prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
+
+def process_combat(map_screen):
     """Calculates turn-based damage for units sharing a province."""
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         units = province.get("units", [])
         if len(units) < 2:
             continue
@@ -247,7 +226,7 @@ def process_combat(self):
         is_land = not queries.is_water_province(province)
 
         # Unpack Convoys Caught on Land
-        if is_land and queries.is_province_in_active_combat(province, self.nation_data):
+        if is_land and queries.is_province_in_active_combat(province, map_screen.nation_data):
             for u in units:
                 if u.get("type", "").startswith("Convoy"):
                     queries.revert_transport(u)
@@ -274,7 +253,7 @@ def process_combat(self):
                 nation_b = owners[j]
                 
                 # Check if they are actually at war
-                at_war = queries.are_at_war(nation_a, nation_b, self.nation_data)
+                at_war = queries.are_at_war(nation_a, nation_b, map_screen.nation_data)
                 
                 if at_war:
                     combat_occurred = True
@@ -295,7 +274,7 @@ def process_combat(self):
             is_land = not queries.is_water_province(province)
             
             # Check if there are STILL enemies present after the combat phase
-            still_in_combat = queries.is_province_in_active_combat(province, self.nation_data)
+            still_in_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
             
             for u in surviving_units:
                 if still_in_combat:
@@ -309,9 +288,9 @@ def process_combat(self):
             # Filter dead ships out
             province["units"] = [u for u in surviving_units if u.get("health", 0) > 0]
 
-def check_for_post_combat_captures(self):
+def check_for_post_combat_captures(map_screen):
     """Assigns province ownership to units standing in an undefended enemy province."""
-    for province in self.map_data.values():
+    for province in map_screen.map_data.values():
         if queries.is_water_province(province):
             continue
 
@@ -329,7 +308,7 @@ def check_for_post_combat_captures(self):
         # they automatically retain (or regain) ownership, regardless of HP.
         if turn_start_owner in unit_owners:
             if current_owner != turn_start_owner:
-                edit_province_ownership.conquer_province(self, province, turn_start_owner)
+                edit_province_ownership.conquer_province(map_screen, province, turn_start_owner)
             continue
             
         # Ensure capturer is legally allowed to take the tile
@@ -340,7 +319,7 @@ def check_for_post_combat_captures(self):
             # to prevent order-of-execution advantages in movement processing.
             eval_owner = turn_start_owner if current_owner != turn_start_owner else current_owner
             
-            if eval_owner in ["Unclaimed", "None", "Ocean", "Lakes"] or queries.are_at_war(u["owner"], eval_owner, self.nation_data):
+            if eval_owner in ["Unclaimed", "None", "Ocean", "Lakes"] or queries.are_at_war(u["owner"], eval_owner, map_screen.nation_data):
                 valid_capturer_units.append(u)
 
         if not valid_capturer_units:
@@ -386,14 +365,14 @@ def check_for_post_combat_captures(self):
                     capturer = tied_by_spd[0]
                 else:
                     # Tiebreaker 3: Let fate decide, or bounce
-                    if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, self.scenario_settings):
+                    if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, map_screen.scenario_settings):
                         capturer = None
                         
                         # Bounce all valid capturer units back to where they came from
                         for u in valid_capturer_units:
                             if "_previous_province_id" in u:
                                 prev_prov_id = u.pop("_previous_province_id")
-                                prev_prov = self.id_to_province.get(prev_prov_id)
+                                prev_prov = map_screen.id_to_province.get(prev_prov_id)
                                 if prev_prov:
                                     if u in units:
                                         units.remove(u)
@@ -409,8 +388,8 @@ def check_for_post_combat_captures(self):
         if capturer:
             if capturer != current_owner:
                 # faction core transfer stuff
-                true_owner = queries.get_faction_core_transfer_target(capturer, province, self.nation_data)
-                edit_province_ownership.conquer_province(self, province, true_owner)
+                true_owner = queries.get_faction_core_transfer_target(capturer, province, map_screen.nation_data)
+                edit_province_ownership.conquer_province(map_screen, province, true_owner)
             
             # Scuttle ships if an enemy takes the tile they are on
             is_land = not queries.is_water_province(province)
@@ -418,10 +397,10 @@ def check_for_post_combat_captures(self):
                 for u in units:
                     if queries.is_warship(u.get("type", "")):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
-                        if queries.is_hostile_territory(capturer, u["owner"], self.nation_data):
+                        if queries.is_hostile_territory(capturer, u["owner"], map_screen.nation_data):
                             u["health"] = 0
                 province["units"] = [u for u in units if u.get("health", 0) > 0]
         else:
             # If no capturer (e.g., bounce tiebreaker triggered), revert any order-of-execution captures
             if current_owner != turn_start_owner:
-                edit_province_ownership.conquer_province(self, province, turn_start_owner)
+                edit_province_ownership.conquer_province(map_screen, province, turn_start_owner)

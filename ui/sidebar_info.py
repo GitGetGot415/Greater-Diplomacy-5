@@ -23,7 +23,7 @@ SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
 # Define the area for the sidebar info panel utilizing constants
 info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
 
-def draw_sidebar_info(self, surface):
+def draw_sidebar_info(map_screen, surface):
     """
     Draws the left-hand sidebar containing province information 
     and active combat data.
@@ -33,20 +33,20 @@ def draw_sidebar_info(self, surface):
                                    border_color=c.UI_TEXT_LIGHT, border_width=1)
 
     # 2. Extract Province Data
-    province = self.selected_province
+    province = map_screen.selected_province
     if not province:
-        self.sidebar_scroll_rect = None
+        map_screen.sidebar_scroll_rect = None
         return
 
     # --- FOG OF WAR VISIBILITY CHECK ---
-    is_visible = queries.is_province_visible(self, province["id"])
+    is_visible = queries.is_province_visible(map_screen, province["id"])
             
     owner_id = province.get("owner", "Unclaimed")
     terrain = province.get("terrain", "Unknown")
     units = province.get("units", [])
     
     # 3. Resolve Display Name for the Owner
-    owner_data = self.nation_data.get(owner_id, {})
+    owner_data = map_screen.nation_data.get(owner_id, {})
     owner_display = owner_data.get("name", owner_id).upper()
 
     # --- Terrain Image Loading ---
@@ -79,7 +79,7 @@ def draw_sidebar_info(self, surface):
     text_x = SIDEBAR_INFO_X + 10
     
     for i, line in enumerate(info_lines):
-        tsurf = self.small_font.render(line, True, (255, 255, 255))
+        tsurf = map_screen.small_font.render(line, True, (255, 255, 255))
         surface.blit(tsurf, (text_x, current_y))
         current_y += 25
 
@@ -91,10 +91,10 @@ def draw_sidebar_info(self, surface):
     # and scrolled with the mouse wheel instead of being truncated with a
     # "+N more" line.
     scroll_rect = pygame.Rect(info_rect.x, current_y, info_rect.width, info_rect.bottom - current_y)
-    self.sidebar_scroll_rect = scroll_rect
+    map_screen.sidebar_scroll_rect = scroll_rect
 
-    scroll_max = getattr(self, 'sidebar_scroll_max', 0)
-    scroll_offset = max(0, min(getattr(self, 'sidebar_scroll_y', 0), scroll_max))
+    scroll_max = getattr(map_screen, 'sidebar_scroll_max', 0)
+    scroll_offset = max(0, min(getattr(map_screen, 'sidebar_scroll_y', 0), scroll_max))
 
     scroll_top = current_y
     current_y -= scroll_offset
@@ -103,23 +103,23 @@ def draw_sidebar_info(self, surface):
                                     draw_top=scroll_offset != 0, draw_bottom=scroll_offset < scroll_max):
 
         # Buildings Section
-        header = self.font.render("--- BUILDINGS ---", True, (255, 255, 255))
+        header = map_screen.font.render("--- BUILDINGS ---", True, (255, 255, 255))
         surface.blit(header, (text_x, current_y))
         current_y += 25
 
         if not is_visible:
-            txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
+            txt = map_screen.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         else:
             buildings = province.get("buildings", [])
             if not buildings:
-                txt = self.small_font.render("(None)", True, c.UI_TEXT_MUTED)
+                txt = map_screen.small_font.render("(None)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
                 for b in buildings:
-                    txt = self.small_font.render(f"- {b}", True, c.UI_TEXT_LIGHT)
+                    txt = map_screen.small_font.render(f"- {b}", True, c.UI_TEXT_LIGHT)
                     surface.blit(txt, (text_x + 5, current_y))
                     current_y += 20
 
@@ -127,47 +127,47 @@ def draw_sidebar_info(self, surface):
 
         # 5. Combat Detection
         owners_present = list(set(u.get("owner", "Unknown") for u in units))
-        is_combat = queries.is_province_in_active_combat(province, self.nation_data)
+        is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
 
         # --- Active Garrison / Combat Zone ---
         # While a fight is active, the Combat Zone display (grouped by side) fully
         # replaces the Active Garrison list rather than both showing side by side.
         if is_combat:
-            header = self.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
+            header = map_screen.font.render("--- COMBAT ZONE ---", True, (255, 50, 50))
         else:
-            header = self.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
+            header = map_screen.font.render("--- ACTIVE GARRISON ---", True, (255, 255, 255))
         surface.blit(header, (text_x, current_y))
         current_y += 25
 
         if not is_visible:
-            if getattr(self, 'partial_visible_provinces', None) is not None and province["id"] in self.partial_visible_provinces and units:
-                txt = self.small_font.render("- ? (Unknown Units)", True, c.UI_TEXT_MUTED)
+            if getattr(map_screen, 'partial_visible_provinces', None) is not None and province["id"] in map_screen.partial_visible_provinces and units:
+                txt = map_screen.small_font.render("- ? (Unknown Units)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
-                txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
+                txt = map_screen.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
         elif not units:
-            txt = self.small_font.render("(Empty)", True, c.UI_TEXT_MUTED)
+            txt = map_screen.small_font.render("(Empty)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         elif is_combat:
             for side_id in owners_present:
-                side_data = self.nation_data.get(side_id, {})
+                side_data = map_screen.nation_data.get(side_id, {})
                 side_display = side_data.get("name", side_id)
-                side_color = self.nation_colors.get(side_id, (200, 200, 200))
+                side_color = map_screen.nation_colors.get(side_id, (200, 200, 200))
 
                 # Flag next to the side/category name -- individual unit rows below stay as-is
                 flag_w, flag_h = GARRISON_FLAG_SIZE
                 side_flag_data = side_data.get("flag_data", "DEFAULT")
                 flag_surf = queries.decode_b64_to_surf(side_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=side_id)
                 flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (self.small_font.get_height() - flag_h) // 2
+                flag_y = current_y + (map_screen.small_font.get_height() - flag_h) // 2
                 surface.blit(flag_surf, (text_x, flag_y))
                 pygame.draw.rect(surface, (100, 100, 100), (text_x, flag_y, flag_w, flag_h), 1)
 
-                title = self.small_font.render(f"{side_display}:", True, side_color)
+                title = map_screen.small_font.render(f"{side_display}:", True, side_color)
                 surface.blit(title, (text_x + flag_w + 6, current_y))
                 current_y += 22
 
@@ -191,13 +191,13 @@ def draw_sidebar_info(self, surface):
                     row_x = text_x + 10
 
                     # Unit name
-                    name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
+                    name_surf = map_screen.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                     surface.blit(name_surf, (row_x, current_y))
                     row_x += name_surf.get_width() + 6
 
                     # Condensed, icon-based combat stats, matching the garrison list
                     draw_combat_stats(
-                        surface, self.small_font, "",
+                        surface, map_screen.small_font, "",
                         u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
                         row_x, current_y, (200, 200, 200), labeled=False
                     )
@@ -207,7 +207,7 @@ def draw_sidebar_info(self, surface):
                     # Bombardment stats on their own indented line, only for units that can bombard
                     if has_bombard:
                         draw_bombardment_stats(
-                            surface, self.small_font,
+                            surface, map_screen.small_font,
                             u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
                             u.get("bombard_range", unit_stats.get('bombard_range', 0)),
                             text_x + 20, current_y, (200, 200, 200), base_text="", labeled=False
@@ -223,13 +223,13 @@ def draw_sidebar_info(self, surface):
                 row_x = text_x + 5
 
                 # Unit name
-                name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
+                name_surf = map_screen.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                 surface.blit(name_surf, (row_x, current_y))
                 row_x += name_surf.get_width() + 4
 
                 # Owner flag instead of a country name string
                 flag_w, flag_h = GARRISON_FLAG_SIZE
-                owner_flag_data = self.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
+                owner_flag_data = map_screen.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
                 flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
                 flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
                 flag_y = current_y + (name_surf.get_height() - flag_h) // 2
@@ -239,7 +239,7 @@ def draw_sidebar_info(self, surface):
 
                 # Condensed, icon-based combat stats, matching the production tab's style
                 draw_combat_stats(
-                    surface, self.small_font, "",
+                    surface, map_screen.small_font, "",
                     u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
                     row_x, current_y, (200, 200, 200), labeled=False
                 )
@@ -250,7 +250,7 @@ def draw_sidebar_info(self, surface):
                 unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
                 if 'bombard_attack' in unit_stats:
                     draw_bombardment_stats(
-                        surface, self.small_font,
+                        surface, map_screen.small_font,
                         u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
                         u.get("bombard_range", unit_stats.get('bombard_range', 0)),
                         text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
@@ -262,22 +262,22 @@ def draw_sidebar_info(self, surface):
     # settle on the offset so a shrinking list (units dying, etc.) doesn't
     # leave the view stuck scrolled past the new bottom.
     content_height = (current_y + scroll_offset) - scroll_top
-    self.sidebar_scroll_max = max(0, content_height - scroll_rect.height)
-    self.sidebar_scroll_y = min(scroll_offset, self.sidebar_scroll_max)
+    map_screen.sidebar_scroll_max = max(0, content_height - scroll_rect.height)
+    map_screen.sidebar_scroll_y = min(scroll_offset, map_screen.sidebar_scroll_max)
 
 # --- MODIFIED FUNCTION FOR PORTRAIT ---
-def draw_owner_portrait(self, surface):
+def draw_owner_portrait(map_screen, surface):
     """
     Draws the portrait, name, and title of the selected province's owner in the top left.
     Dynamically scales the image slightly larger if the leader title is empty.
     """
-    province = self.selected_province
+    province = map_screen.selected_province
     if not province: return
 
     owner_id = province.get("owner", "Unclaimed")
     if owner_id in c.UNPLAYABLE_NATIONS: return
 
-    owner_data = self.nation_data.get(owner_id, {})
+    owner_data = map_screen.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")
     leader_title = owner_data.get("leader_title", "Unknown Title").strip()
     portrait_str = owner_data.get("portrait_data", "DEFAULT")

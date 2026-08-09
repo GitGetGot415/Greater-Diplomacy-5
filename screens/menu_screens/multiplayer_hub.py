@@ -1,5 +1,5 @@
 from gameState import GameState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
@@ -16,7 +16,7 @@ class Multiplayer_Hub(GameState):
         self.elements = [
             Button("centered", 250, "medium", "green", "Host Game", self.host_game),
             Button("centered", 350, "medium", "blue", "Join Game", self.join_game),
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(c.SCREEN_WIDTH - 120, 20, "small", "blue", "Help", self.show_help)
         ]
 

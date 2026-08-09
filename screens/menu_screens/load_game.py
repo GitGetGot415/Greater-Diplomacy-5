@@ -4,7 +4,7 @@ import pygame
 from ui import confirm_dialog
 from data import queries
 from gameState import FolderListState
-from ui_elements import Button
+from ui_elements import Button, make_back_button
 import data.constants as c
 
 class Load_Game(FolderListState):
@@ -33,7 +33,7 @@ class Load_Game(FolderListState):
 
     def refresh_ui(self):
         self.elements = [
-            Button(20, 20, "small", "red", "Back", self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(160, 20, "medium", "green", "Import .zip",
                    lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
         ]

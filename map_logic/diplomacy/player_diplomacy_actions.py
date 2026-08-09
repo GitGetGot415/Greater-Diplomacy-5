@@ -2,6 +2,19 @@ from data import queries
 from map_logic.diplomacy import diplomacy_logic
 import data.constants as c
 
+
+def _queue_and_report(map_screen, target, action_type, custom_msg):
+    """Hands a validated action to the engine and reports what it said.
+
+    Closing the mail box and echoing the engine's message is the tail of every
+    "queue this offer" path, so it lives here rather than at each caller.
+    """
+    msg = diplomacy_logic.toggle_diplomacy_action(
+        map_screen.nation_data, map_screen.player_country, target, action_type, custom_msg)
+    map_screen.mail_input_active = False
+    map_screen.show_feedback(msg)
+
+
 def handle_declare_war(map_screen):
     player = map_screen.player_country
     target = map_screen.selected_province.get("owner")
@@ -119,9 +132,7 @@ def handle_specific_action(map_screen, action_type):
                 del player_pending[n]
 
     # Pass the validated action down to the engine
-    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, action_type, custom_msg)
-    map_screen.mail_input_active = False
-    map_screen.show_feedback(msg)
+    _queue_and_report(map_screen, target, action_type, custom_msg)
 
 def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     """Shared plumbing for the Accept / Reject buttons.
@@ -198,42 +209,37 @@ def handle_reject_req(map_screen, target=None, custom_msg=None):
 
     _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_REJECT, custom_msg)
 
-def handle_join_wars(map_screen):
+def _handle_faction_assist(map_screen, action, at_war_msg, not_allied_msg, leaving_msg):
+    """Queues one of the two "help a faction partner fight" requests.
+
+    Join Wars and Call to Arms ran the same three gates in the same order and
+    differed only in the action string and the wording of each refusal, so the
+    wording is now the parameter and the gates are written once.
+    """
     target = map_screen.selected_province.get("owner")
     if queries.are_at_war(map_screen.player_country, target, map_screen.nation_data):
-        map_screen.show_feedback("You cannot join the wars of an enemy!")
+        map_screen.show_feedback(at_war_msg)
         return
     if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
-        map_screen.show_feedback("You must be in the same faction to assist them!")
+        map_screen.show_feedback(not_allied_msg)
         return
-        
-    # --- Check if currently disbanding ---
+
+    # A nation on its way out of the faction cannot commit it to anything.
     self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
     if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
-        map_screen.show_feedback("Cannot join wars while leaving the faction!")
+        map_screen.show_feedback(leaving_msg)
         return
-        
-    custom_msg = map_screen.mail_draft_text.strip()
-    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "JOIN_WARS", custom_msg)
-    map_screen.mail_input_active = False
-    map_screen.show_feedback(msg)
+
+    _queue_and_report(map_screen, target, action, map_screen.mail_draft_text.strip())
+
+def handle_join_wars(map_screen):
+    _handle_faction_assist(map_screen, "JOIN_WARS",
+                           "You cannot join the wars of an enemy!",
+                           "You must be in the same faction to assist them!",
+                           "Cannot join wars while leaving the faction!")
 
 def handle_call_to_arms(map_screen):
-    target = map_screen.selected_province.get("owner")
-    if queries.are_at_war(map_screen.player_country, target, map_screen.nation_data):
-        map_screen.show_feedback("Cannot call enemies to arms!")
-        return
-    if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
-        map_screen.show_feedback("You must be in the same faction to call them to arms!")
-        return
-        
-    # --- Check if currently disbanding ---
-    self_action, self_turns = queries.get_diplomatic_status(map_screen.player_country, map_screen.player_country, map_screen.nation_data)
-    if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
-        map_screen.show_feedback("Cannot call to arms while leaving the faction!")
-        return
-        
-    custom_msg = map_screen.mail_draft_text.strip()
-    msg = diplomacy_logic.toggle_diplomacy_action(map_screen.nation_data, map_screen.player_country, target, "CALL_TO_ARMS", custom_msg)
-    map_screen.mail_input_active = False
-    map_screen.show_feedback(msg)
+    _handle_faction_assist(map_screen, "CALL_TO_ARMS",
+                           "Cannot call enemies to arms!",
+                           "You must be in the same faction to call them to arms!",
+                           "Cannot call to arms while leaving the faction!")

@@ -1,5 +1,6 @@
 import pygame
 import data.constants as c
+import ui_elements
 from ui import text_utils
 from ui.modal_screen import ModalScreen
 from ui_elements import Button
@@ -124,12 +125,6 @@ class ListSelectScreen(ModalScreen):
     def draw_search_box(self, surface):
         box = pygame.Rect(self.panel_rect.x + 20, self.panel_rect.y + self.SEARCH_BOX_Y,
                           self.panel_rect.width - 40, self.SEARCH_BOX_HEIGHT)
-        pygame.draw.rect(surface, (55, 55, 68), box)
-        pygame.draw.rect(surface, (120, 160, 255), box, 2)
-
-        font = fonts.get("normal")
-        if self.search_text:
-            text_surf = font.render(self.search_text + "|", True, (255, 255, 255))
-        else:
-            text_surf = font.render("Search...", True, c.UI_TEXT_MUTED)
-        surface.blit(text_surf, (box.x + 10, box.y + (box.height - text_surf.get_height()) // 2))
+        # Always drawn focused: this box is the screen's only text target.
+        ui_elements.draw_text_box(surface, box, self.search_text, active=True,
+                                  placeholder="Search...")

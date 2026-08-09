@@ -64,7 +64,7 @@ class Settings(GameState):
             setattr(self, f"{attr}_text", getattr(self.controller, attr))
 
         # Load dynamic mouse button config from controller, fallback to constants configuration setting
-        self.drag_mouse_button_toggle = self.controller.drag_mouse_button_toggle
+        self.drag_mouse_toggle = self.controller.drag_mouse_toggle
 
         self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
 
@@ -110,21 +110,21 @@ class Settings(GameState):
     def toggle_checkerboard_water(self):
         self.checkerboard_water = not self.checkerboard_water
         self.controller.checkerboard_water = self.checkerboard_water
-        c.CHECKERBOARD_WATER = self.checkerboard_water
+        c.apply_runtime_settings({"checkerboard_water": self.checkerboard_water})
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def toggle_drag_button(self):
         """Cycles the dynamic mouse button configuration toggle value string."""
         options = ["RIGHT", "LEFT", "BOTH"]
-        current_idx = options.index(self.drag_mouse_button_toggle)
+        current_idx = options.index(self.drag_mouse_toggle)
         next_idx = (current_idx + 1) % len(options)
         
-        self.drag_mouse_button_toggle = options[next_idx]
+        self.drag_mouse_toggle = options[next_idx]
         
         # Inject the modification to the global fallback configuration value AND controller
-        c.DRAG_MOUSE_BUTTON_TOGGLE = self.drag_mouse_button_toggle
-        self.controller.drag_mouse_button_toggle = self.drag_mouse_button_toggle
+        c.apply_runtime_settings({"drag_mouse_toggle": self.drag_mouse_toggle})
+        self.controller.drag_mouse_toggle = self.drag_mouse_toggle
         
         queries.save_global_settings(self.controller)
         self.refresh_ui()
@@ -186,9 +186,9 @@ class Settings(GameState):
         self.controller.num_players = 1
         self.num_players = self.controller.num_players
 
-        self.drag_mouse_button_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
-        c.DRAG_MOUSE_BUTTON_TOGGLE = c.DEFAULT_MOUSE_BUTTON_TOGGLE
-        self.controller.drag_mouse_button_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
+        self.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
+        c.apply_runtime_settings({"drag_mouse_toggle": c.DEFAULT_MOUSE_BUTTON_TOGGLE})
+        self.controller.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
 
         for key in self.COLOR_FIELDS:
             self.reset_setting(key, refresh=False)
@@ -294,13 +294,7 @@ class Settings(GameState):
         Used for the path boxes and the API key/model boxes alike; `active`
         lights the fill and appends the caret.
         """
-        font = fonts.get("normal")
-        pygame.draw.rect(surface, (60, 60, 80) if active else (20, 20, 30), rect)
-        pygame.draw.rect(surface, (150, 150, 150), rect, 1)
-        surface.set_clip(rect.inflate(-10, -10))
-        surface.blit(font.render(text + ("|" if active else ""), True, (255, 255, 255)),
-                     (rect.x + 5, rect.y + 10))
-        surface.set_clip(None)
+        ui_elements.draw_text_box(surface, rect, text, active=active, pad_x=5)
 
     def additional_draw(self, surface):
         font = fonts.get("normal")
