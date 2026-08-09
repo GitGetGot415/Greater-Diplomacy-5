@@ -15,6 +15,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button, TextField
 from map_logic.rendering.font_manager import fonts
 
@@ -116,20 +117,12 @@ def build_places(start_dir=None):
 
 def _fit_text(text, font, max_width):
     """Trims from the right, which keeps the start of a file name readable."""
-    if font.size(text)[0] <= max_width:
-        return text
-    while text and font.size(text + "...")[0] > max_width:
-        text = text[:-1]
-    return text + "..."
+    return text_utils.fit_text(text, font, max_width)
 
 
 def _fit_path(text, font, max_width):
     """Trims from the left, which keeps the deepest part of a path readable."""
-    if font.size(text)[0] <= max_width:
-        return text
-    while text and font.size("..." + text)[0] > max_width:
-        text = text[1:]
-    return "..." + text
+    return text_utils.fit_path(text, font, max_width)
 
 
 class FileBrowserScreen(GameState):

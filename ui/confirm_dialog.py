@@ -21,6 +21,7 @@ import webbrowser
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
+from ui import text_utils
 
 _STANDALONE_SIZE = (520, 320)
 
@@ -73,19 +74,9 @@ def _release_surface(owns_display):
 
 
 def _wrap_text(text, font, max_width):
-    lines = []
-    for raw_line in text.split("\n"):
-        words = raw_line.split(" ")
-        current = ""
-        for word in words:
-            candidate = f"{current} {word}".strip()
-            if font.size(candidate)[0] <= max_width or not current:
-                current = candidate
-            else:
-                lines.append(current)
-                current = word
-        lines.append(current)
-    return lines
+    """Kept as the name checkbox_list_screen and scripted_events_editor already
+    import; the implementation now lives in ui/text_utils.py."""
+    return text_utils.wrap_text(text, font, max_width)
 
 
 class _YesNoModal:

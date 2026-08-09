@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 from gameState import GameState
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file
@@ -32,57 +33,16 @@ VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS + TEXT_EXTENSIONS
 
 
 def _truncate_text(text, font, max_width):
-    """Shortens text with a trailing ellipsis so it fits max_width, for the
-    handful of asset filenames (some flag jokes run 40+ chars) too long to
-    ever fit the narrow file-name column."""
-    if font.size(text)[0] <= max_width:
-        return text
-
-    lo, hi = 0, len(text)
-    while lo < hi:
-        mid = (lo + hi + 1) // 2
-        if font.size(text[:mid] + "...")[0] <= max_width:
-            lo = mid
-        else:
-            hi = mid - 1
-    return (text[:lo] + "...") if lo > 0 else "..."
+    """Kept as a local name; the implementation moved to ui/text_utils.py, whose
+    fit_text is this same binary search shared with the file browser."""
+    return text_utils.fit_text(text, font, max_width)
 
 
 def _wrap_text(text, font, max_width):
-    """Word-wraps text to max_width, preserving blank lines and hard-breaking
-    any single word too wide to ever fit (long paths/URLs in README files)."""
-    lines = []
-    for paragraph in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
-        if not paragraph:
-            lines.append("")
-            continue
+    """Kept as a local name; ui/text_utils.wrap_text is this implementation,
+    promoted to be the one every screen shares."""
+    return text_utils.wrap_text(text, font, max_width)
 
-        current = ""
-        for word in paragraph.split(" "):
-            candidate = f"{current} {word}" if current else word
-            if font.size(candidate)[0] <= max_width:
-                current = candidate
-                continue
-
-            if current:
-                lines.append(current)
-                current = ""
-
-            if font.size(word)[0] <= max_width:
-                current = word
-                continue
-
-            chunk = ""
-            for ch in word:
-                if font.size(chunk + ch)[0] <= max_width:
-                    chunk += ch
-                else:
-                    lines.append(chunk)
-                    chunk = ch
-            current = chunk
-
-        lines.append(current)
-    return lines
 
 # Folders that hold non-image, non-text assets and shouldn't show up as browsable albums.
 EXCLUDED_ASSET_FOLDERS = {"music", "sounds", "fonts"}

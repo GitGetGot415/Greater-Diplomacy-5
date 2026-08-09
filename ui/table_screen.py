@@ -2,12 +2,14 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 
 def truncate(text, max_chars):
-    text = str(text)
-    return text if len(text) <= max_chars else text[:max_chars - 3] + "..."
+    """Kept as the name three editors already import; the implementation now
+    lives in ui/text_utils.py alongside the pixel-width fitters."""
+    return text_utils.truncate_chars(text, max_chars)
 
 class TableColumn:
     """One sortable column of a TableScreen.
