@@ -51,7 +51,13 @@ AI_FALLBACK_RESPONSES = {
     "REJECT_GENERIC": "We rejected your {action}.",
     "ACCEPT_FACTION_ALREADY_IN": "We wanted to accept, but we are already in a faction.",
     "ACCEPT_FACTION_JOIN_ALREADY_IN": "We cannot accept as you are already in a faction.",
-    "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties."
+    "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties.",
+
+    # These two were looked up by diplomacy_processor without ever being
+    # defined here, so accepting a peace treaty or a military-access request
+    # delivered a message with no content.
+    "ACCEPT_PEACE": "We accept your terms. The war between us is over.",
+    "ACCEPT_MILITARY_ACCESS": "We accept your request for military access."
 }
 
 # ==========================================

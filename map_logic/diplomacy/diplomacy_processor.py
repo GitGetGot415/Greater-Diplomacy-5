@@ -6,6 +6,7 @@ from data.platform import IS_WEB
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
+from map_logic.diplomacy import treaty_effects
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, get_response, get_response_map,
     set_response, clear_response, RESPONSE_ACCEPT, RESPONSE_REJECT
@@ -556,63 +557,14 @@ def process_diplomacy_turn(self):
                 fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
                 msg_text = custom_msg if custom_msg else fallback_msg
 
-                if orig_action == "FACTION_INVITE":
-                    if not self.nation_data[country_name].get("faction", ""):
-                        finalize_faction_join(self.map_data, self.nation_data, sender, country_name)
-                    else:
-                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_ALREADY_IN")
-                elif orig_action == "JOIN_FACTION_REQ":
-                    if not self.nation_data[sender].get("faction", ""):
-                        finalize_faction_join(self.map_data, self.nation_data, country_name, sender)
-                    else:
-                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_FACTION_JOIN_ALREADY_IN")
-                elif orig_action == "CREATE_FACTION":
-                    if not self.nation_data[country_name].get("faction", "") and not self.nation_data[sender].get("faction", ""):
-                        finalize_create_faction(self.map_data, self.nation_data, sender)
-                        finalize_faction_join(self.map_data, self.nation_data, sender, country_name)
-                    else:
-                        msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("CREATE_FACTION_CONFLICT")
-                elif orig_action == "CEASEFIRE":
-                    finalize_neutral(self.nation_data, country_name, sender)
-                elif orig_action == "PEACE_TREATY":
-                    treaty_type = params if params else c.PEACE_WHITE_PEACE
-                    execute_peace_treaty(self.map_data, self.nation_data, sender, country_name, treaty_type, self)
-                    msg_text = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_PEACE")
-
-                elif orig_action == "TRADE":
-                    trade_params = params if isinstance(params, dict) else {}
-                    queries.execute_trade_transfer(self.nation_data[sender], self.nation_data[country_name], trade_params)
-
-                    puppet_state = trade_params.get("puppet_state", "NONE")
-                    if puppet_state == "SENDER":
-                        from map_logic.diplomacy.diplomacy_agreements import assign_puppet
-                        assign_puppet(self.map_data, self.nation_data, sender, country_name)
-                    elif puppet_state == "RECEIVER":
-                        from map_logic.diplomacy.diplomacy_agreements import assign_puppet
-                        assign_puppet(self.map_data, self.nation_data, country_name, sender)
-
-                    msg_text = custom_msg if custom_msg else ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_TRADE")
-                elif orig_action == "CALL_TO_ARMS":
-                    join_faction_wars(self.map_data, self.nation_data, country_name, sender)
-                    log_global_event(self.nation_data, f"ESCALATION: {country_name} answered the call to arms of {sender}!")
-                elif orig_action == "JOIN_WARS":
-                    join_faction_wars(self.map_data, self.nation_data, sender, country_name)
-                    log_global_event(self.nation_data, f"ESCALATION: {sender} has joined the wars of {country_name}!")
-                elif orig_action == "REQ_MILITARY_ACCESS":
-                    # We are granting the sender passage through OUR territory.
-                    # Deliberately one-way: they get no say over our own passage.
-                    my_access = self.nation_data.get(country_name, {}).setdefault("military_access", [])
-                    if sender not in my_access:
-                        my_access.append(sender)
-
-                    shared_enemy = bool(
-                        set(self.nation_data.get(country_name, {}).get("at_war_with", [])) &
-                        set(self.nation_data.get(sender, {}).get("at_war_with", []))
-                    )
-                    if shared_enemy:
-                        self.nation_data[country_name].setdefault("military_access_reasons", {})[sender] = "war"
-
-                    msg_text = custom_msg if custom_msg else "We accept your request for military access."
+                # `sender` proposed and `country_name` accepted. The AI-accepted
+                # pass below runs the same rules -- see treaty_effects.
+                outcome = treaty_effects.apply_treaty_effect(
+                    self, orig_action, sender, country_name, params)
+                if outcome.blocked:
+                    msg_text = outcome.blocked
+                elif not custom_msg and outcome.canned:
+                    msg_text = outcome.canned
 
                 send_message(self, country_name, sender, msg_text, "DIPLOMACY")
 
@@ -947,52 +899,14 @@ def process_diplomacy_turn(self):
                         process_ai_retaliation(target, reply_dict, default_target=country_name)
                         
                         if accepted:
-                            if action == "FACTION_INVITE":
-                                if not self.nation_data[target].get("faction", ""):
-                                    finalize_faction_join(self.map_data, self.nation_data, country_name, target)
-                                else:
-                                    message = "We wanted to accept, but we are already in a faction."
-                            elif action == "JOIN_FACTION_REQ":
-                                if not self.nation_data[country_name].get("faction", ""):
-                                    finalize_faction_join(self.map_data, self.nation_data, target, country_name)
-                                else:
-                                    message = "We cannot accept as you are already in a faction."
-                            elif action == "CEASEFIRE":
-                                finalize_neutral(self.nation_data, country_name, target)
-                            elif action == "PEACE_TREATY":
-                                treaty_type = info.get("parameters", info.get("message", c.PEACE_WHITE_PEACE))
-                                execute_peace_treaty(self.map_data, self.nation_data, country_name, target, treaty_type, self)
-                            elif action == "CALL_TO_ARMS":
-                                join_faction_wars(self.map_data, self.nation_data, target, country_name)
-                                log_global_event(self.nation_data, f"ESCALATION: {target} answered the call to arms of {country_name}!")
-                            elif action == "CREATE_FACTION":
-                                if not self.nation_data[country_name].get("faction", "") and not self.nation_data[target].get("faction", ""):
-                                    finalize_create_faction(self.map_data, self.nation_data, country_name)
-                                    finalize_faction_join(self.map_data, self.nation_data, country_name, target)
-                                    log_global_event(self.nation_data, f"{country_name} and {target} have formed a new global faction!")
-                                else:
-                                    message = "The proposed faction could not be formed because one of us is already bound by other treaties."
-                            elif action == "JOIN_WARS":
-                                join_faction_wars(self.map_data, self.nation_data, country_name, target)
-                                log_global_event(self.nation_data, f"ESCALATION: {country_name} has joined the wars of {target}!")
-                            elif action == "TRADE":
-                                params = info.get("parameters", {})
-                                c_data = self.nation_data[country_name] # Proposer
-                                t_data = self.nation_data[target]       # Target (AI)
-
-                                queries.execute_trade_transfer(c_data, t_data, params)
-                            elif action == "REQ_MILITARY_ACCESS":
-                                # Target (AI) is granting access to country_name (proposer)
-                                target_list = self.nation_data[target].setdefault("military_access", [])
-                                if country_name not in target_list:
-                                    target_list.append(country_name)
-
-                                shared_enemy = bool(
-                                    set(self.nation_data.get(target, {}).get("at_war_with", [])) &
-                                    set(self.nation_data.get(country_name, {}).get("at_war_with", []))
-                                )
-                                if shared_enemy:
-                                    self.nation_data[target].setdefault("military_access_reasons", {})[country_name] = "war"
+                            # `country_name` proposed and `target` accepted,
+                            # mirroring the player-accepted pass above. The AI
+                            # wrote its own reply, so only a blocked agreement
+                            # replaces it.
+                            outcome = treaty_effects.apply_treaty_effect(
+                                self, action, country_name, target, info.get("parameters"))
+                            if outcome.blocked:
+                                message = outcome.blocked
                         else:
                             if action == "TRADE":
                                 params = info.get("parameters", {})
