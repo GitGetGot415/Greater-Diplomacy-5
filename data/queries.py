@@ -1354,6 +1354,30 @@ def _modify_resources(nation_data_block, costs_dict, is_refund=False):
 def refund_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=True)
 def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=False)
 
+def refund_queue_item(nation_data_block, item, owner=None, map_data=None):
+    """Refunds one cancelled production/construction queue entry.
+
+    Entries carry a "refund" dict recording what was actually paid, which is
+    what a cancellation should hand back -- the library price can have changed
+    since (a discount, a tech, a different owner). Older saves predate that
+    field, so fall back to pricing the item from the libraries.
+
+    Callers used to spell this out themselves, and one of them
+    (map_logic/ai/automation_logic.py) read a "building_type" key that queue
+    entries never had, so cancelling a building queue refunded nothing at all.
+    """
+    if "refund" in item:
+        refund_resources(nation_data_block, item["refund"])
+        return
+
+    stats = {}
+    if item.get("order_type") == "BUILDING":
+        stats = get_building_cost(item.get("item_name"), owner, map_data, get_building_library())
+    elif "unit_type" in item:
+        stats = get_unit_library().get(item["unit_type"], {})
+    refund_resources(nation_data_block, stats)
+
+
 def can_afford(nation_data_block, costs_dict):
     """Returns True if the nation has enough resources to cover the costs."""
     return all(nation_data_block.get(res, 0) >= costs_dict.get(f"cost_{res}", 0) for res in c.ECON_RESOURCE_KEYS)

@@ -724,15 +724,7 @@ class Production_Screen(GameState):
             owner = self.target_province.get("owner", "Unclaimed")
             p_data = self.map_screen.nation_data.get(owner, {})
             
-            if "refund" in item:
-                queries.refund_resources(p_data, item["refund"])
-            else:
-                stats = {}
-                if item.get("order_type") == "BUILDING":
-                    stats = queries.get_building_cost(item.get("item_name"), owner, self.map_screen.map_data, self.building_library)
-                elif "unit_type" in item:
-                    stats = self.unit_library.get(item["unit_type"], {})
-                queries.refund_resources(p_data, stats)
+            queries.refund_queue_item(p_data, item, owner, self.map_screen.map_data)
 
             self.map_screen.show_feedback("Cancelled & Refunded")
             self.refresh_ui()
