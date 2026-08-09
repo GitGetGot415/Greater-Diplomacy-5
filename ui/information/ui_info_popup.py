@@ -10,7 +10,7 @@ from ui.bars import ui_bars
 DIPLOMATIC_INFO_TITLE = "Diplomatic Info"
 
 # How fast the mouse wheel scrolls the Diplomatic Info body
-DIPLOMATIC_SCROLL_STEP = 30
+DIPLOMATIC_SCROLL_STEP = c.SCROLL_STEP
 
 # --- Define the split boxes using the centralized constants ---
 dip_rect = pygame.Rect(*c.PROVINCE_UI["diplomatic_box"])

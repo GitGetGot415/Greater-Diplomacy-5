@@ -9,7 +9,7 @@ from ui_elements import draw_combat_stats, draw_bombardment_stats
 GARRISON_FLAG_SIZE = (18, 12)
 
 # How fast the mouse wheel scrolls the Buildings/Garrison area
-SIDEBAR_SCROLL_STEP = 30
+SIDEBAR_SCROLL_STEP = c.SCROLL_STEP
 
 # ==========================================
 # LAYOUT
