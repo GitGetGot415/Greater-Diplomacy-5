@@ -6,33 +6,23 @@ askcolor's "None on cancel" contract.
 """
 import re
 import pygame
-from gameState import GameState
 import data.constants as c
-from ui.bars import ui_bars
+from ui.modal_screen import ModalScreen
 from ui_elements import Button, TextField, Slider
 from map_logic.rendering.font_manager import fonts
 
 _HEX_RE = re.compile(r"^[0-9A-Fa-f]{6}$")
 
 
-class ColorPickerScreen(GameState):
+class ColorPickerScreen(ModalScreen):
     PANEL_SIZE = (460, 440)
 
     def __init__(self, game_state, title, initial_color, on_confirm):
-        super().__init__()
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
-        self.title = title
+        super().__init__(game_state, title)
         self.on_confirm = on_confirm
 
         r, g, b = (int(v) for v in initial_color[:3])
         self.current_color = [r, g, b]
-
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        panel_w, panel_h = self.PANEL_SIZE
-        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
 
         slider_x = self.panel_rect.x + 40
         slider_w = self.panel_rect.width - 80
@@ -94,15 +84,7 @@ class ColorPickerScreen(GameState):
             Button(self.panel_rect.centerx + 10, self.panel_rect.bottom - 55, "small", "red", "Cancel", self.exit_screen),
         ]
 
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        ui_bars.draw_fullscreen_overlay(surface, 190)
-
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 40),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 20, "heading2")
-
+    def draw_body(self, surface):
         swatch_rect = pygame.Rect(0, 0, 80, 80)
         swatch_rect.center = (self.panel_rect.right - 80, self.panel_rect.y + 90)
         pygame.draw.rect(surface, self.current_color, swatch_rect)
@@ -110,6 +92,3 @@ class ColorPickerScreen(GameState):
 
         hex_label = fonts.get("normal").render("Hex:", True, c.UI_TEXT_BRIGHT)
         surface.blit(hex_label, hex_label.get_rect(midright=(self.hex_field.rect.x - 4, self.hex_field.rect.centery)))
-
-        for el in self.elements:
-            el.draw(surface)

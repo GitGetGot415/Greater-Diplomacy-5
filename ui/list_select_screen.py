@@ -1,12 +1,11 @@
 import pygame
-from gameState import GameState
 import data.constants as c
-from ui.bars import ui_bars
 from ui import text_utils
+from ui.modal_screen import ModalScreen
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 
-class ListSelectScreen(GameState):
+class ListSelectScreen(ModalScreen):
     """In-engine stand-in for a tkinter listbox picker.
 
     Freezes whatever was on screen behind a dimmed modal panel and shows a
@@ -25,23 +24,12 @@ class ListSelectScreen(GameState):
     SEARCH_MAX_CHARS = 40
 
     def __init__(self, game_state, title, prompt, items, on_confirm):
-        super().__init__()
-        # Only used to resolve custom keybinds (BACK/ORDERS); may not carry feedback_text.
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
-        self.title = title
+        super().__init__(game_state, title)
         self.prompt = prompt
         self.items = list(items)
         self.on_confirm = on_confirm
         self.search_text = ""
         self.visible_items = self.items
-
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        panel_w, panel_h = self.PANEL_SIZE
-        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-
         self.refresh_ui()
 
     def select(self, item):
@@ -115,37 +103,21 @@ class ListSelectScreen(GameState):
         if event.type == pygame.KEYDOWN:
             self._handle_search_key(event)
 
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        ui_bars.draw_fullscreen_overlay(surface, 190)
-
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(35, 35, 45),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 20, "heading2")
-
+    def draw_body(self, surface):
         prompt_surf = fonts.get("normal").render(self.prompt, True, c.UI_TEXT_BRIGHT)
         surface.blit(prompt_surf, prompt_surf.get_rect(center=(self.panel_rect.centerx, self.panel_rect.y + 75)))
 
         self.draw_search_box(surface)
 
-        for el in self.elements:
-            if not getattr(el, "is_scrollable", False):
-                el.draw(surface)
-
         if not self.visible_items:
             font = fonts.get("normal")
-            msg = font.render("No matches found." if self.search_text else "Nothing to show.", True, c.UI_TEXT_LIGHT)
+            msg = font.render("No matches found." if self.search_text else "Nothing to show.",
+                              True, c.UI_TEXT_LIGHT)
             list_top = self.panel_rect.y + self.ROW_TOP
             view_h = self.panel_rect.height - self.ROW_TOP - 30
             surface.blit(msg, msg.get_rect(center=(self.panel_rect.centerx, list_top + view_h // 2)))
 
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            for el in self.elements:
-                if getattr(el, "is_scrollable", False):
-                    el.draw(surface)
-
+    def draw_foreground(self, surface):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.ROW_TOP,
                                  self.panel_rect.height - self.ROW_TOP - 30)
 

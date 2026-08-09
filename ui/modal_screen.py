@@ -127,6 +127,12 @@ class ModalScreen(ScrollPanes, GameState):
         surface.blit(fonts.get(preset).render(text, True, color), pos)
 
     def draw_body(self, surface):
+        """Panel content drawn under the buttons -- labels, dividers, previews."""
+        pass
+
+    def draw_foreground(self, surface):
+        """Drawn after the buttons. Scrollbars go here: they must sit on top of
+        the rows they scroll, and the rows are drawn by draw_elements."""
         pass
 
     def draw(self, surface):
@@ -144,3 +150,4 @@ class ModalScreen(ScrollPanes, GameState):
 
         self.draw_body(surface)
         self.draw_elements(surface)
+        self.draw_foreground(surface)

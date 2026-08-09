@@ -7,11 +7,11 @@ country fields a data refresh may overwrite -- so they now share this screen.
 Confirm hands back the checked keys; cancelling never calls on_confirm.
 """
 import pygame
-from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui.modal_screen import ModalScreen
 from ui_elements import Button
-from ui.confirm_dialog import _wrap_text
+from ui import text_utils
 from map_logic.rendering.font_manager import fonts
 
 
@@ -31,7 +31,7 @@ class SectionHeader:
         self.label = label
 
 
-class CheckboxListScreen(GameState):
+class CheckboxListScreen(ModalScreen):
     PANEL_SIZE = (760, 620)
     ROW_HEIGHT = 30
     PAD = 20
@@ -39,10 +39,7 @@ class CheckboxListScreen(GameState):
     def __init__(self, game_state, title, prompt, items, on_confirm,
                  confirm_label="Confirm", show_select_all=True, extra_buttons=None,
                  footnote=None):
-        super().__init__()
-        # Only used to resolve custom keybinds (BACK/ORDERS); may not carry feedback_text.
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
-        self.title = title
+        super().__init__(game_state, title)
         self.on_confirm = on_confirm
         self.confirm_label = confirm_label
         self.show_select_all = show_select_all
@@ -50,14 +47,9 @@ class CheckboxListScreen(GameState):
         self.extra_buttons = list(extra_buttons or [])
         self.footnote = footnote
 
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        panel_w, panel_h = self.PANEL_SIZE
-        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-
-        self.prompt_lines = _wrap_text(prompt, fonts.get("normal"), panel_w - 2 * self.PAD) if prompt else []
+        panel_w = self.PANEL_SIZE[0]
+        self.prompt_lines = (text_utils.wrap_text(prompt, fonts.get("normal"), panel_w - 2 * self.PAD)
+                             if prompt else [])
         self._layout()
 
         self.items = []
@@ -180,35 +172,25 @@ class CheckboxListScreen(GameState):
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        else:
-            surface.fill((20, 20, 28))
-        ui_bars.draw_fullscreen_overlay(surface, 190)
-
+    def draw_body(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(35, 35, 45),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, p.y + 14, "heading2")
-
         font = fonts.get("normal")
         y = self.prompt_top
         for line in self.prompt_lines:
-            surf = font.render(line, True, (215, 215, 215))
-            surface.blit(surf, (p.x + self.PAD, y))
+            surface.blit(font.render(line, True, (215, 215, 215)), (p.x + self.PAD, y))
             y += font.get_height() + 2
 
         if not self.items:
             msg = font.render("Nothing to show.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
+    def draw_elements(self, surface):
+        """Section labels and per-row status text sit over the rows, so they are
+        drawn inside the same clip region as the buttons rather than after."""
         for el in self.elements:
             if not getattr(el, "is_scrollable", False):
                 el.draw(surface)
 
-        # Section labels and per-row status text sit over the rows, so they are
-        # drawn after the buttons (both clipped/cropped together at the list boundary).
         header_font = fonts.get("normal")
         note_font = fonts.get("small")
         row_w, _row_h = c.SIZES["checkbox_row"]
@@ -228,8 +210,10 @@ class CheckboxListScreen(GameState):
                     surface.blit(surf, surf.get_rect(midright=(self.row_x + row_w - 10,
                                                                row_y + self.ROW_HEIGHT // 2)))
 
+    def draw_foreground(self, surface):
+        p = self.panel_rect
         if self.footnote:
-            surf = note_font.render(self.footnote, True, (230, 180, 120))
+            surf = fonts.get("small").render(self.footnote, True, (230, 180, 120))
             surface.blit(surf, surf.get_rect(center=(p.centerx, p.bottom - 74)))
 
         self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)

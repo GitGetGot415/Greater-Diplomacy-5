@@ -13,16 +13,16 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
-from gameState import GameState
 import data.constants as c
 from data import queries
 from ui import confirm_dialog
 from ui.bars import ui_bars
+from ui.modal_screen import ModalScreen
 from ui_elements import Button, TextField
 from map_logic.rendering.font_manager import fonts
 
 
-class TurnEditorScreen(GameState):
+class TurnEditorScreen(ModalScreen):
     PANEL_SIZE = (900, 640)
     ROW_HEIGHT = 34
     PAD = 20
@@ -30,8 +30,8 @@ class TurnEditorScreen(GameState):
     CHECK_SIZE = 30
 
     def __init__(self):
-        super().__init__()
-        self.title = "Construction Turns Editor"
+        # Standalone editor: there is no host screen to take keybinds from.
+        super().__init__(None, "Construction Turns Editor")
 
         self.settings = queries.get_scenario_settings() or {}
 
@@ -57,13 +57,6 @@ class TurnEditorScreen(GameState):
                                         "time", "Building Type"),
         }
         self.active_tab = "unit"
-
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        panel_w, panel_h = self.PANEL_SIZE
-        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
 
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
         self.list_view_h = (self.panel_rect.bottom - 66) - self.list_top
@@ -221,18 +214,8 @@ class TurnEditorScreen(GameState):
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        else:
-            surface.fill((20, 20, 28))
-        ui_bars.draw_fullscreen_overlay(surface, 190)
-
+    def draw_body(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(35, 35, 45),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, p.y + 14, "heading2")
-
         font = fonts.get("normal")
         small = fonts.get("small")
         surface.blit(small.render(self.tab["label"], True, c.UI_TEXT_DIM), (p.x + self.PAD, self.list_top - 20))
@@ -246,6 +229,13 @@ class TurnEditorScreen(GameState):
         if not names:
             msg = font.render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
+
+    def draw_elements(self, surface):
+        """Row striping and the per-row default hint are drawn inside the same
+        clip region as the fields they sit behind."""
+        p = self.panel_rect
+        font, small = fonts.get("normal"), fonts.get("small")
+        names = self.tab["names"]
 
         for el in self.elements:
             if not getattr(el, "is_scrollable", False):
@@ -270,6 +260,8 @@ class TurnEditorScreen(GameState):
                 if getattr(el, "is_scrollable", False):
                     el.draw(surface)
 
+    def draw_foreground(self, surface):
+        p = self.panel_rect
         self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)
 
 

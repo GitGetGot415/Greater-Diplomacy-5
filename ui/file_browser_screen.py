@@ -12,9 +12,9 @@ same trick ui/confirm_dialog.py uses.
 import os
 import string
 import pygame
-from gameState import GameState
 import data.constants as c
 from ui.bars import ui_bars
+from ui.modal_screen import ModalScreen
 from ui import text_utils
 from ui_elements import Button, TextField
 from map_logic.rendering.font_manager import fonts
@@ -125,7 +125,7 @@ def _fit_path(text, font, max_width):
     return text_utils.fit_path(text, font, max_width)
 
 
-class FileBrowserScreen(GameState):
+class FileBrowserScreen(ModalScreen):
     """In-engine stand-in for a native file/folder picker.
 
     `mode` is one of:
@@ -145,10 +145,7 @@ class FileBrowserScreen(GameState):
 
     def __init__(self, game_state, title, start_dir, on_confirm,
                  mode="open_file", extensions=None, confirm_label=None):
-        super().__init__()
-        # Only used to resolve custom keybinds (BACK/ORDERS); may not carry feedback_text.
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
-        self.title = title
+        super().__init__(game_state, title)
         self.on_confirm = on_confirm
         self.mode = mode
         self.extensions = tuple(e.lower() for e in extensions) if extensions else None
@@ -162,13 +159,6 @@ class FileBrowserScreen(GameState):
         self.entries = []
         self._rows = []
         self._last_click = (None, 0)
-
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        panel_w, panel_h = self.PANEL_SIZE
-        self.panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
 
         self.places = build_places(start_dir)
         self.current_dir = self._resolve_start(start_dir)
@@ -482,18 +472,8 @@ class FileBrowserScreen(GameState):
             return f"{len(self.selected)} file(s) selected" if self.selected else "Click files to select them"
         return f"Selected: {os.path.basename(self.selected_file)}" if self.selected_file else "Click a file to select it"
 
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        else:
-            surface.fill((20, 20, 28))
-        ui_bars.draw_fullscreen_overlay(surface, 190)
-
+    def draw_body(self, surface):
         panel = self.panel_rect
-        ui_bars.draw_modal_box(surface, panel, bg_color=(35, 35, 45),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, panel.y + 14, "heading2")
-
         small = fonts.get("small")
         label_y = panel.y + self.LIST_TOP_OFF - 18
         surface.blit(small.render("Places", True, c.UI_TEXT_DIM), (panel.x + self.SIDEBAR_OFF, label_y))
@@ -510,16 +490,8 @@ class FileBrowserScreen(GameState):
             surface.blit(msg, msg.get_rect(center=(self.list_x + c.SIZES["browser_row"][0] // 2,
                                                    self.list_top + self.LIST_VIEW_H // 2)))
 
-        for el in self.elements:
-            if not getattr(el, "is_scrollable", False):
-                el.draw(surface)
-
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            for el in self.elements:
-                if getattr(el, "is_scrollable", False):
-                    el.draw(surface)
-
+    def draw_foreground(self, surface):
+        panel = self.panel_rect
         # Drawn over the (empty) path field rather than into it, so the hint never
         # has to be cleared back out of the user's typed text.
         if not self.path_field.text and not self.path_field.active:
