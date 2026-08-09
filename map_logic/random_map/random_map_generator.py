@@ -336,10 +336,8 @@ def randomize_all_provinces(map_screen, settings):
 
                 if not unit_to_buy: break
 
-                stats = unit_library.get(unit_to_buy, {})
-                u_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-                u_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-                u_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+                upkeep = queries.get_unit_upkeep(unit_library.get(unit_to_buy, {}))
+                u_man, u_mat, u_fuel = upkeep["manpower"], upkeep["materials"], upkeep["fuel"]
 
                 if upk_man + u_man <= target_man and upk_mat + u_mat <= target_mat and upk_fuel + u_fuel <= target_fuel:
                     units_to_spawn.append(unit_to_buy)
@@ -353,10 +351,8 @@ def randomize_all_provinces(map_screen, settings):
                 else:
                     # If we couldn't afford the preferred unit (like an expensive tank/ship), fallback to infantry
                     if unit_to_buy != best_inf and best_inf:
-                        stats = unit_library.get(best_inf, {})
-                        u_man = stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-                        u_mat = stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-                        u_fuel = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+                        upkeep = queries.get_unit_upkeep(unit_library.get(best_inf, {}))
+                        u_man, u_mat, u_fuel = upkeep["manpower"], upkeep["materials"], upkeep["fuel"]
                         
                         if upk_man + u_man <= target_man and upk_mat + u_mat <= target_mat and upk_fuel + u_fuel <= target_fuel:
                             units_to_spawn.append(best_inf)
