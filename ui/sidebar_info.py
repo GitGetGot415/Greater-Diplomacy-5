@@ -9,7 +9,7 @@ from ui_elements import draw_combat_stats, draw_bombardment_stats
 GARRISON_FLAG_SIZE = (18, 12)
 
 # How fast the mouse wheel scrolls the Buildings/Garrison area
-SIDEBAR_SCROLL_STEP = 30
+SIDEBAR_SCROLL_STEP = c.SCROLL_STEP
 
 # ==========================================
 # LAYOUT
@@ -29,10 +29,8 @@ def draw_sidebar_info(self, surface):
     and active combat data.
     """
     # 1. Draw the Panel Background and Border
-    panel_surf = pygame.Surface((info_rect.width, info_rect.height), pygame.SRCALPHA)
-    panel_surf.fill((30, 30, 30, 200))
-    surface.blit(panel_surf, (info_rect.x, info_rect.y))
-    pygame.draw.rect(surface, (200, 200, 200), info_rect, 1)
+    ui_bars.draw_translucent_panel(surface, info_rect, (30, 30, 30, 200),
+                                   border_color=c.UI_TEXT_LIGHT, border_width=1)
 
     # 2. Extract Province Data
     province = self.selected_province
@@ -110,18 +108,18 @@ def draw_sidebar_info(self, surface):
         current_y += 25
 
         if not is_visible:
-            txt = self.small_font.render("(Hidden by Fog of War)", True, (150, 150, 150))
+            txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         else:
             buildings = province.get("buildings", [])
             if not buildings:
-                txt = self.small_font.render("(None)", True, (150, 150, 150))
+                txt = self.small_font.render("(None)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
                 for b in buildings:
-                    txt = self.small_font.render(f"- {b}", True, (200, 200, 200))
+                    txt = self.small_font.render(f"- {b}", True, c.UI_TEXT_LIGHT)
                     surface.blit(txt, (text_x + 5, current_y))
                     current_y += 20
 
@@ -143,15 +141,15 @@ def draw_sidebar_info(self, surface):
 
         if not is_visible:
             if getattr(self, 'partial_visible_provinces', None) is not None and province["id"] in self.partial_visible_provinces and units:
-                txt = self.small_font.render("- ? (Unknown Units)", True, (150, 150, 150))
+                txt = self.small_font.render("- ? (Unknown Units)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
             else:
-                txt = self.small_font.render("(Hidden by Fog of War)", True, (150, 150, 150))
+                txt = self.small_font.render("(Hidden by Fog of War)", True, c.UI_TEXT_MUTED)
                 surface.blit(txt, (text_x + 5, current_y))
                 current_y += 25
         elif not units:
-            txt = self.small_font.render("(Empty)", True, (150, 150, 150))
+            txt = self.small_font.render("(Empty)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         elif is_combat:
@@ -193,7 +191,7 @@ def draw_sidebar_info(self, surface):
                     row_x = text_x + 10
 
                     # Unit name
-                    name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                    name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                     surface.blit(name_surf, (row_x, current_y))
                     row_x += name_surf.get_width() + 6
 
@@ -225,7 +223,7 @@ def draw_sidebar_info(self, surface):
                 row_x = text_x + 5
 
                 # Unit name
-                name_surf = self.small_font.render(f"- {u_name}", True, (200, 200, 200))
+                name_surf = self.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
                 surface.blit(name_surf, (row_x, current_y))
                 row_x += name_surf.get_width() + 4
 

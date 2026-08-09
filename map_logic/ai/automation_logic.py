@@ -29,27 +29,21 @@ def automate_player_research(map_screen):
 # --- CLEAR ---
 
 def clear_player_construction(map_screen):
+    """Empties the player's build and recruit queues, refunding what was paid.
+
+    Both queues go through the same refund rule the Production screen's Cancel
+    button uses, which honours the "refund" each entry recorded at purchase.
+    """
     player = map_screen.player_country
+    player_data = map_screen.nation_data[player]
+
     for prov in map_screen.map_data.values():
-        if prov.get("owner") == player:
-            queue = prov.get("building_queue", [])
-            for q in queue:
-                # Refund cost
-                b_type = q.get("building_type")
-                if b_type:
-                    cost = queries.get_building_library().get(b_type, {}).get("cost", 0)
-                    map_screen.nation_data[player]["materials"] += cost
-            prov["building_queue"] = []
-            
-            unit_queue = prov.get("unit_queue", [])
-            for u in unit_queue:
-                u_type = u.get("unit_type")
-                if u_type:
-                    stats = queries.get_unit_library().get(u_type, {})
-                    map_screen.nation_data[player]["manpower"] += stats.get("cost_manpower", 0)
-                    map_screen.nation_data[player]["materials"] += stats.get("cost_materials", 0)
-                    map_screen.nation_data[player]["fuel"] += stats.get("cost_fuel", 0)
-            prov["unit_queue"] = []
+        if prov.get("owner") != player:
+            continue
+        for queue_key in ("building_queue", "unit_queue"):
+            for item in prov.get(queue_key, []):
+                queries.refund_queue_item(player_data, item, player, map_screen.map_data)
+            prov[queue_key] = []
 
 def clear_player_movement(map_screen):
     player = map_screen.player_country

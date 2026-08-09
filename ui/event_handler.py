@@ -8,6 +8,23 @@ from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
 
+# The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
+# Diplomatic Info and the production queue overlay. Each publishes a rect and a
+# scroll ceiling under these attribute prefixes, and all three want identical
+# treatment -- block the map underneath, take the wheel, and be draggable. They
+# were previously three copy-pasted blocks per behaviour, nine in total.
+MAP_PANELS = ("sidebar", "diplomatic", "queue")
+
+
+def _panel_rect(map_screen, name):
+    return getattr(map_screen, f"{name}_scroll_rect", None)
+
+
+def _panels_are_live(map_screen):
+    """The panels only exist while a province is selected outside selection mode."""
+    return bool(map_screen.selected_province) and not map_screen.selection_mode
+
+
 def handle_map_events(self, event):
     mx, my = pygame.mouse.get_pos()
 
@@ -33,14 +50,13 @@ def handle_map_events(self, event):
     # --- CONFIRMATION LOGIC HIJACK ---
     if self.show_exit_confirmation:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            center_x, center_y = c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2
-            
-            yes_rect = pygame.Rect(center_x - 130, center_y + 20, 100, 40)
-            no_rect = pygame.Rect(center_x + 30, center_y + 20, 100, 40)
-
-            if yes_rect.collidepoint(mx, my):
+            # Hit-tests the rects map_renderer published while drawing the
+            # dialog, rather than re-deriving them here in a different frame.
+            yes_rect = getattr(self, 'exit_yes_rect', None)
+            no_rect = getattr(self, 'exit_no_rect', None)
+            if yes_rect and yes_rect.collidepoint(mx, my):
                 self.confirm_exit()
-            elif no_rect.collidepoint(mx, my):
+            elif no_rect and no_rect.collidepoint(mx, my):
                 self.cancel_exit()
         return # Block all other map events while confirming
         
@@ -81,57 +97,36 @@ def handle_map_events(self, event):
     # Buildings/Garrison, Diplomatic Info and the queue overlay sit on top of the
     # map at fixed screen rects, so treat them like any other UI bar: mousedown/
     # hover/camera-pan shouldn't reach through them to the map underneath.
-    panel_rects = (getattr(self, 'sidebar_scroll_rect', None),
-                   getattr(self, 'diplomatic_scroll_rect', None),
-                   getattr(self, 'queue_scroll_rect', None))
-    if self.selected_province and not self.selection_mode:
-        if any(r and r.collidepoint(mx, my) for r in panel_rects):
+    if _panels_are_live(self):
+        if any((r := _panel_rect(self, name)) and r.collidepoint(mx, my) for name in MAP_PANELS):
             on_ui = True
 
     # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
     # Lets the mouse wheel scroll long Buildings/Garrison, Diplomatic Info, and
     # queue-overlay lists instead of always zooming the map camera. Only
     # relevant while those panels are actually on screen.
-    if event.type == pygame.MOUSEWHEEL and self.selected_province and not self.selection_mode:
-        from ui import sidebar_info
-        from ui.information import ui_info_popup
-        from screens.map_related_screens import recruit_ui
-
-        sidebar_rect = getattr(self, 'sidebar_scroll_rect', None)
-        if sidebar_rect and sidebar_rect.collidepoint(mx, my):
-            max_scroll = getattr(self, 'sidebar_scroll_max', 0)
-            self.sidebar_scroll_y = max(0, min(getattr(self, 'sidebar_scroll_y', 0) - event.y * sidebar_info.SIDEBAR_SCROLL_STEP, max_scroll))
-            return
-
-        dip_rect = getattr(self, 'diplomatic_scroll_rect', None)
-        if dip_rect and dip_rect.collidepoint(mx, my):
-            max_scroll = getattr(self, 'diplomatic_scroll_max', 0)
-            self.diplomatic_scroll_y = max(0, min(getattr(self, 'diplomatic_scroll_y', 0) - event.y * ui_info_popup.DIPLOMATIC_SCROLL_STEP, max_scroll))
-            return
-
-        queue_rect = getattr(self, 'queue_scroll_rect', None)
-        if queue_rect and queue_rect.collidepoint(mx, my):
-            max_scroll = getattr(self, 'queue_scroll_max', 0)
-            self.queue_scroll_y = max(0, min(getattr(self, 'queue_scroll_y', 0) - event.y * recruit_ui.MAP_QUEUE_SCROLL_STEP, max_scroll))
-            return
+    if event.type == pygame.MOUSEWHEEL and _panels_are_live(self):
+        for name in MAP_PANELS:
+            rect = _panel_rect(self, name)
+            if rect and rect.collidepoint(mx, my):
+                max_scroll = getattr(self, f"{name}_scroll_max", 0)
+                current = getattr(self, f"{name}_scroll_y", 0)
+                setattr(self, f"{name}_scroll_y",
+                        max(0, min(current - event.y * c.SCROLL_STEP, max_scroll)))
+                return
 
     # --- SCROLLABLE INFO PANEL DRAG INTERCEPT ---
     # Lets the same three panels be grabbed and dragged directly, alongside the
     # wheel scrolling above -- see GameState.handle_content_drag.
     if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
-            and self.selected_province and not self.selection_mode):
-        if self.handle_content_drag(event, attr="sidebar_scroll_y", rect_attr="sidebar_scroll_rect",
-                                    drag_attr="sidebar_drag_state", lo=0, hi=getattr(self, "sidebar_scroll_max", 0),
-                                    invert=True):
-            return
-        if self.handle_content_drag(event, attr="diplomatic_scroll_y", rect_attr="diplomatic_scroll_rect",
-                                    drag_attr="diplomatic_drag_state", lo=0, hi=getattr(self, "diplomatic_scroll_max", 0),
-                                    invert=True):
-            return
-        if self.handle_content_drag(event, attr="queue_scroll_y", rect_attr="queue_scroll_rect",
-                                    drag_attr="queue_drag_state", lo=0, hi=getattr(self, "queue_scroll_max", 0),
-                                    invert=True):
-            return
+            and _panels_are_live(self)):
+        for name in MAP_PANELS:
+            if self.handle_content_drag(event, attr=f"{name}_scroll_y",
+                                        rect_attr=f"{name}_scroll_rect",
+                                        drag_attr=f"{name}_drag_state", lo=0,
+                                        hi=getattr(self, f"{name}_scroll_max", 0),
+                                        invert=True):
+                return
 
     # 2. Camera Controls (Always allow these so you can move while editing!)
     if event.type == pygame.MOUSEWHEEL:

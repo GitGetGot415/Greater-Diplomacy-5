@@ -18,11 +18,25 @@ Call sites always look the same either way: `ask_yes_no(title, msg, on_result=..
 """
 import pygame
 import webbrowser
+import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
+from ui import text_utils
+from ui.bars import ui_bars
 
 _STANDALONE_SIZE = (520, 320)
+
+# These dialogs keep their own darker, higher-contrast look rather than the
+# modal panel palette: they interrupt whatever is on screen, including the
+# panels in that palette, so they have to read as sitting above it.
+_DIALOG_BG = (40, 40, 40)
+_DIALOG_OVERLAY_ALPHA = 180
+
+
+def _lighten(color, amount=40):
+    """Hover tint for a solid-coloured action button."""
+    return tuple(min(255, channel + amount) for channel in color)
 
 
 def _back_key():
@@ -56,60 +70,168 @@ def _show_tk_chain(hidden):
 
 
 def _acquire_surface():
-    surface = pygame.display.get_surface()
-    if surface is not None:
-        return surface, False
-
-    if not pygame.get_init():
-        pygame.init()
-    surface = pygame.display.set_mode(_STANDALONE_SIZE)
-    pygame.display.set_caption("Confirm")
-    return surface, True
+    return ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
 
 
 def _release_surface(owns_display):
-    if owns_display:
-        pygame.display.quit()
+    ui_bars.release_surface(owns_display)
 
 
 def _wrap_text(text, font, max_width):
-    lines = []
-    for raw_line in text.split("\n"):
-        words = raw_line.split(" ")
-        current = ""
-        for word in words:
-            candidate = f"{current} {word}".strip()
-            if font.size(candidate)[0] <= max_width or not current:
-                current = candidate
-            else:
-                lines.append(current)
-                current = word
-        lines.append(current)
-    return lines
+    """Kept as the name checkbox_list_screen and scripted_events_editor already
+    import; the implementation now lives in ui/text_utils.py."""
+    return text_utils.wrap_text(text, font, max_width)
 
 
-class _YesNoModal:
-    def __init__(self, surface, title, message, on_result, yes_label, no_label):
+class _BaseModal:
+    """Shared skeleton for the four dialogs below.
+
+    Each one used to repeat the same __init__ prologue (snapshot the surface,
+    pick three fonts, wrap the message, centre a box), the same update/_finish
+    pair, and the same draw prologue (freeze-frame, dim, box, centred title,
+    wrapped body). Subclasses now declare their box width and extra height and
+    fill in draw_content().
+    """
+
+    #: Widest the box gets before it starts wrapping instead of growing.
+    BOX_MAX_W = 520
+    #: Minimum box height, and the fixed chrome above/below the message body.
+    BOX_MIN_H = 200
+    BOX_CHROME_H = 130
+    BORDER_COLOR = c.UI_TEXT_LIGHT
+    BORDER_WIDTH = 2
+    TITLE_DY = 35
+    BODY_DY = 75
+    BODY_ALIGN = "center"
+    #: Whether on_result takes the answer. The message popups just signal "closed".
+    PASSES_RESULT = True
+
+    def __init__(self, surface, title, message, on_result, extra_h=0):
         self.on_result = on_result
         self.background = surface.copy()
         self._resolved = False
+        self._result = None
 
-        title_font = fonts.get("heading2")
-        msg_font = fonts.get("normal")
+        self.title = title
+        self.title_font = fonts.get("heading2")
+        self.msg_font = fonts.get("normal")
         self.btn_font = fonts.get("button")
 
-        box_w = min(520, surface.get_width() - 40)
-        self.lines = _wrap_text(message, msg_font, box_w - 40)
-        box_h = max(200, 130 + len(self.lines) * (msg_font.get_height() + 2))
+        box_w = min(self.BOX_MAX_W, surface.get_width() - 40)
+        self.lines = _wrap_text(message, self.msg_font, box_w - 40) if message else []
+        box_h = max(self.BOX_MIN_H, self.BOX_CHROME_H + self.body_height() + extra_h)
+
         self.box_rect = pygame.Rect(0, 0, box_w, box_h)
         self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
 
+    def body_height(self):
+        return len(self.lines) * (self.msg_font.get_height() + 2)
+
+    # -- resolution ----------------------------------------------------- #
+
+    def update(self):
+        if self._resolved:
+            modal_stack.pop()
+            if self.on_result:
+                if self.PASSES_RESULT:
+                    self.on_result(self._result)
+                else:
+                    self.on_result()
+
+    def _finish(self, result=None):
+        self._resolved = True
+        self._result = result
+
+    # -- drawing -------------------------------------------------------- #
+
+    def draw_button(self, surface, rect, label, color, hover_color):
+        """One of the dialog's action buttons, tinted while hovered."""
+        hovered = rect.collidepoint(pygame.mouse.get_pos())
+        pygame.draw.rect(surface, hover_color if hovered else color, rect, border_radius=4)
+        surf = self.btn_font.render(label, True, (255, 255, 255))
+        surface.blit(surf, surf.get_rect(center=rect.center))
+
+    def draw_body_lines(self, surface):
+        """Renders the wrapped message and returns the y below the last line."""
+        y = self.box_rect.y + self.BODY_DY
+        left_x, right_x = self.box_rect.x + 40, self.box_rect.right - 40
+        for line in self.lines:
+            line_surf = self.msg_font.render(line, True, (210, 210, 210))
+            if self.BODY_ALIGN == "left":
+                rect = line_surf.get_rect(midleft=(left_x, y))
+            elif self.BODY_ALIGN == "right":
+                rect = line_surf.get_rect(midright=(right_x, y))
+            else:
+                rect = line_surf.get_rect(center=(self.box_rect.centerx, y))
+            surface.blit(line_surf, rect)
+            y += self.msg_font.get_height() + 2
+        return y
+
+    def draw_content(self, surface):
+        """Whatever sits below the message: input box, buttons, links."""
+        pass
+
+    def draw(self, surface):
+        surface.blit(self.background, (0, 0))
+        ui_bars.draw_fullscreen_overlay(surface, _DIALOG_OVERLAY_ALPHA)
+
+        pygame.draw.rect(surface, _DIALOG_BG, self.box_rect)
+        pygame.draw.rect(surface, self.BORDER_COLOR, self.box_rect, self.BORDER_WIDTH)
+
+        title_surf = self.title_font.render(self.title, True, (255, 255, 255))
+        surface.blit(title_surf,
+                     title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + self.TITLE_DY)))
+
+        self.draw_body_lines(surface)
+        self.draw_content(surface)
+
+
+def _run_blocking(make_modal, tk_parent, default_result=None):
+    """Runs a dialog to completion with its own frame loop, and returns the answer.
+
+    Only reachable when no display exists yet -- the standalone dev tools in
+    data/editors and the map_tools scripts, which run outside the game's main
+    loop. In-game the dialog goes on the modal stack instead; a nested loop
+    here would never yield to the browser and would freeze a pygbag tab
+    (see ui/modal_stack.py).
+
+    This was written out once per dialog, differing only in the modal class and
+    the sentinel returned on QUIT.
+    """
+    surface, owns_display = _acquire_surface()
+    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
+
+    modal = make_modal(surface)
+    clock = pygame.time.Clock()
+    result = default_result
+
+    try:
+        while True:
+            events = pygame.event.get()
+            if any(event.type == pygame.QUIT for event in events):
+                break
+            modal.handle_events(events)
+            if modal._resolved:
+                result = modal._result
+                break
+
+            modal.draw(surface)
+            pygame.display.flip()
+            clock.tick(c.TARGET_FPS)
+    finally:
+        _show_tk_chain(hidden_tk)
+        _release_surface(owns_display)
+
+    return result
+
+
+class _YesNoModal(_BaseModal):
+    BOX_MAX_W = 520
+
+    def __init__(self, surface, title, message, on_result, yes_label, no_label):
+        super().__init__(surface, title, message, on_result)
         self.yes_rect = pygame.Rect(self.box_rect.centerx - 140, self.box_rect.bottom - 55, 120, 40)
         self.no_rect = pygame.Rect(self.box_rect.centerx + 20, self.box_rect.bottom - 55, 120, 40)
-
-        self.title = title
-        self.title_font = title_font
-        self.msg_font = msg_font
         self.yes_label = yes_label
         self.no_label = no_label
 
@@ -126,73 +248,16 @@ class _YesNoModal:
                 elif self.no_rect.collidepoint(event.pos):
                     self._finish(False)
 
-    def update(self):
-        if self._resolved:
-            modal_stack.pop()
-            self.on_result(self._result)
-
-    def _finish(self, result):
-        self._resolved = True
-        self._result = result
-
-    def draw(self, surface):
-        surface.blit(self.background, (0, 0))
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pygame.draw.rect(surface, (40, 40, 40), self.box_rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.box_rect, 2)
-
-        title_surf = self.title_font.render(self.title, True, (255, 255, 255))
-        surface.blit(title_surf, title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + 35)))
-
-        y = self.box_rect.y + 75
-        for line in self.lines:
-            line_surf = self.msg_font.render(line, True, (210, 210, 210))
-            surface.blit(line_surf, line_surf.get_rect(center=(self.box_rect.centerx, y)))
-            y += self.msg_font.get_height() + 2
-
-        mx, my = pygame.mouse.get_pos()
-        yes_color = (0, 190, 0) if self.yes_rect.collidepoint(mx, my) else (0, 150, 0)
-        no_color = (190, 0, 0) if self.no_rect.collidepoint(mx, my) else (150, 0, 0)
-        pygame.draw.rect(surface, yes_color, self.yes_rect, border_radius=4)
-        pygame.draw.rect(surface, no_color, self.no_rect, border_radius=4)
-
-        yes_surf = self.btn_font.render(self.yes_label, True, (255, 255, 255))
-        no_surf = self.btn_font.render(self.no_label, True, (255, 255, 255))
-        surface.blit(yes_surf, yes_surf.get_rect(center=self.yes_rect.center))
-        surface.blit(no_surf, no_surf.get_rect(center=self.no_rect.center))
+    def draw_content(self, surface):
+        self.draw_button(surface, self.yes_rect, self.yes_label, (0, 150, 0), (0, 190, 0))
+        self.draw_button(surface, self.no_rect, self.no_label, (150, 0, 0), (190, 0, 0))
 
 
 def _ask_yes_no_standalone(title, message, on_result, tk_parent, yes_label, no_label):
-    """No main loop is pumping frames here, so resolve with our own short blocking loop."""
-    surface, owns_display = _acquire_surface()
-    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
-
-    modal = _YesNoModal(surface, title, message, lambda r: None, yes_label, no_label)
-    clock = pygame.time.Clock()
-    result = False
-    waiting = True
-
-    try:
-        while waiting:
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    result, waiting = False, False
-            modal.handle_events(events)
-            if modal._resolved:
-                result, waiting = modal._result, False
-
-            modal.draw(surface)
-            pygame.display.flip()
-            clock.tick(60)
-    finally:
-        _show_tk_chain(hidden_tk)
-        _release_surface(owns_display)
-
-    on_result(result)
+    result = _run_blocking(
+        lambda surf: _YesNoModal(surf, title, message, None, yes_label, no_label),
+        tk_parent, default_result=False)
+    on_result(bool(result))
 
 
 def ask_yes_no(title, message, on_result, tk_parent=None, yes_label="Yes", no_label="No"):
@@ -209,31 +274,28 @@ def ask_yes_no(title, message, on_result, tk_parent=None, yes_label="Yes", no_la
     modal_stack.push(_YesNoModal(surface, title, message, on_result, yes_label, no_label))
 
 
-class _TextInputModal:
+class _TextInputModal(_BaseModal):
+    BOX_MAX_W = 480
+    BOX_MIN_H = 230
+    BOX_CHROME_H = 210   # 120 of chrome plus the 90 the input row occupies
+
     def __init__(self, surface, title, message, initial_text, on_result, char_allowed, validate):
-        self.on_result = on_result
+        super().__init__(surface, title, message, on_result)
         self.char_allowed = char_allowed
         self.validate = validate
-        self.background = surface.copy()
-        self._resolved = False
 
-        self.title_font = fonts.get("heading2")
-        self.msg_font = fonts.get("normal")
-        self.btn_font = fonts.get("button")
-
-        box_w = min(480, surface.get_width() - 40)
-        self.lines = _wrap_text(message, self.msg_font, box_w - 40)
-        box_h = max(230, 120 + len(self.lines) * (self.msg_font.get_height() + 2) + 90)
-        self.box_rect = pygame.Rect(0, 0, box_w, box_h)
-        self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
-
-        self.input_rect = pygame.Rect(self.box_rect.x + 40, self.box_rect.bottom - 110, box_w - 80, 40)
+        self.input_rect = pygame.Rect(self.box_rect.x + 40, self.box_rect.bottom - 110,
+                                      self.box_rect.width - 80, 40)
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 140, self.box_rect.bottom - 55, 120, 40)
         self.cancel_rect = pygame.Rect(self.box_rect.centerx + 20, self.box_rect.bottom - 55, 120, 40)
 
-        self.title = title
         self.text = str(initial_text) if initial_text is not None else ""
         self.error_text = ""
+
+    def _submit(self):
+        value, self.error_text = self.validate(self.text)
+        if self.error_text == "":
+            self._finish(value)
 
     def handle_events(self, events):
         for event in events:
@@ -241,9 +303,7 @@ class _TextInputModal:
                 if event.key in (pygame.K_ESCAPE, _back_key()):
                     self._finish(None)
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    value, self.error_text = self.validate(self.text)
-                    if self.error_text == "":
-                        self._finish(value)
+                    self._submit()
                 elif event.key == pygame.K_BACKSPACE:
                     self.text = self.text[:-1]
                     self.error_text = ""
@@ -252,90 +312,35 @@ class _TextInputModal:
                     self.error_text = ""
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):
-                    value, self.error_text = self.validate(self.text)
-                    if self.error_text == "":
-                        self._finish(value)
+                    self._submit()
                 elif self.cancel_rect.collidepoint(event.pos):
                     self._finish(None)
 
-    def update(self):
-        if self._resolved:
-            modal_stack.pop()
-            self.on_result(self._result)
-
-    def _finish(self, result):
-        self._resolved = True
-        self._result = result
-
-    def draw(self, surface):
-        surface.blit(self.background, (0, 0))
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pygame.draw.rect(surface, (40, 40, 40), self.box_rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.box_rect, 2)
-
-        title_surf = self.title_font.render(self.title, True, (255, 255, 255))
-        surface.blit(title_surf, title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + 35)))
-
-        y = self.box_rect.y + 75
-        for line in self.lines:
-            line_surf = self.msg_font.render(line, True, (210, 210, 210))
-            surface.blit(line_surf, line_surf.get_rect(center=(self.box_rect.centerx, y)))
-            y += self.msg_font.get_height() + 2
-
+    def draw_content(self, surface):
         pygame.draw.rect(surface, (20, 20, 20), self.input_rect)
-        border_color = (220, 80, 80) if self.error_text else (200, 200, 200)
+        border_color = (220, 80, 80) if self.error_text else c.UI_TEXT_LIGHT
         pygame.draw.rect(surface, border_color, self.input_rect, 2)
         input_surf = self.msg_font.render(self.text or " ", True, (255, 255, 255))
         surface.set_clip(self.input_rect.inflate(-10, -6))
-        surface.blit(input_surf, input_surf.get_rect(midleft=(self.input_rect.x + 10, self.input_rect.centery)))
+        surface.blit(input_surf, input_surf.get_rect(midleft=(self.input_rect.x + 10,
+                                                             self.input_rect.centery)))
         surface.set_clip(None)
 
         if self.error_text:
             err_surf = fonts.get("small").render(self.error_text, True, (230, 100, 100))
-            surface.blit(err_surf, err_surf.get_rect(center=(self.box_rect.centerx, self.input_rect.y - 14)))
+            surface.blit(err_surf, err_surf.get_rect(center=(self.box_rect.centerx,
+                                                             self.input_rect.y - 14)))
 
-        mx, my = pygame.mouse.get_pos()
-        ok_color = (0, 190, 0) if self.ok_rect.collidepoint(mx, my) else (0, 150, 0)
-        cancel_color = (190, 0, 0) if self.cancel_rect.collidepoint(mx, my) else (150, 0, 0)
-        pygame.draw.rect(surface, ok_color, self.ok_rect, border_radius=4)
-        pygame.draw.rect(surface, cancel_color, self.cancel_rect, border_radius=4)
-
-        ok_surf = self.btn_font.render("OK", True, (255, 255, 255))
-        cancel_surf = self.btn_font.render("Cancel", True, (255, 255, 255))
-        surface.blit(ok_surf, ok_surf.get_rect(center=self.ok_rect.center))
-        surface.blit(cancel_surf, cancel_surf.get_rect(center=self.cancel_rect.center))
+        self.draw_button(surface, self.ok_rect, "OK", (0, 150, 0), (0, 190, 0))
+        self.draw_button(surface, self.cancel_rect, "Cancel", (150, 0, 0), (190, 0, 0))
 
 
-def _run_text_input_dialog_standalone(title, message, initial_text, tk_parent, char_allowed, validate, on_result):
-    surface, owns_display = _acquire_surface()
-    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
-
-    modal = _TextInputModal(surface, title, message, initial_text, lambda r: None, char_allowed, validate)
-    clock = pygame.time.Clock()
-    result = None
-    waiting = True
-
-    try:
-        while waiting:
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    result, waiting = None, False
-            modal.handle_events(events)
-            if modal._resolved:
-                result, waiting = modal._result, False
-
-            modal.draw(surface)
-            pygame.display.flip()
-            clock.tick(60)
-    finally:
-        _show_tk_chain(hidden_tk)
-        _release_surface(owns_display)
-
-    on_result(result)
+def _run_text_input_dialog_standalone(title, message, initial_text, tk_parent, char_allowed,
+                                      validate, on_result):
+    on_result(_run_blocking(
+        lambda surf: _TextInputModal(surf, title, message, initial_text, None,
+                                     char_allowed, validate),
+        tk_parent, default_result=None))
 
 
 def _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate, on_result):
@@ -397,98 +402,34 @@ _KIND_ACCENTS = {
 }
 
 
-class _MessageModal:
+class _MessageModal(_BaseModal):
+    BOX_MAX_W = 520
+    BOX_CHROME_H = 170   # 110 of chrome plus the 60 the OK row occupies
+    BORDER_WIDTH = 3
+    PASSES_RESULT = False
+
     def __init__(self, surface, title, message, on_result, kind):
-        self.on_result = on_result
-        self.background = surface.copy()
-        self._resolved = False
-
-        title_font = fonts.get("heading2")
-        msg_font = fonts.get("normal")
-        self.btn_font = fonts.get("button")
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
-
-        box_w = min(520, surface.get_width() - 40)
-        self.lines = _wrap_text(message, msg_font, box_w - 40)
-        box_h = max(200, 110 + len(self.lines) * (msg_font.get_height() + 2) + 60)
-        self.box_rect = pygame.Rect(0, 0, box_w, box_h)
-        self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
-
+        super().__init__(surface, title, message, on_result)
+        self.BORDER_COLOR = self.accent
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
-
-        self.title = title
-        self.title_font = title_font
-        self.msg_font = msg_font
 
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
+                                 pygame.K_SPACE, _back_key()):
                     self._finish()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):
                     self._finish()
 
-    def update(self):
-        if self._resolved:
-            modal_stack.pop()
-            if self.on_result:
-                self.on_result()
-
-    def _finish(self):
-        self._resolved = True
-
-    def draw(self, surface):
-        surface.blit(self.background, (0, 0))
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pygame.draw.rect(surface, (40, 40, 40), self.box_rect)
-        pygame.draw.rect(surface, self.accent, self.box_rect, 3)
-
-        title_surf = self.title_font.render(self.title, True, (255, 255, 255))
-        surface.blit(title_surf, title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + 35)))
-
-        y = self.box_rect.y + 75
-        for line in self.lines:
-            line_surf = self.msg_font.render(line, True, (210, 210, 210))
-            surface.blit(line_surf, line_surf.get_rect(center=(self.box_rect.centerx, y)))
-            y += self.msg_font.get_height() + 2
-
-        mx, my = pygame.mouse.get_pos()
-        hovered = self.ok_rect.collidepoint(mx, my)
-        ok_color = tuple(min(255, ch + 40) for ch in self.accent) if hovered else self.accent
-        pygame.draw.rect(surface, ok_color, self.ok_rect, border_radius=4)
-        ok_surf = self.btn_font.render("OK", True, (255, 255, 255))
-        surface.blit(ok_surf, ok_surf.get_rect(center=self.ok_rect.center))
+    def draw_content(self, surface):
+        self.draw_button(surface, self.ok_rect, "OK", self.accent, _lighten(self.accent))
 
 
 def _show_message_standalone(title, message, tk_parent, kind, on_result):
-    surface, owns_display = _acquire_surface()
-    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
-
-    modal = _MessageModal(surface, title, message, None, kind)
-    clock = pygame.time.Clock()
-    waiting = True
-
-    try:
-        while waiting:
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    waiting = False
-            modal.handle_events(events)
-            if modal._resolved:
-                waiting = False
-
-            modal.draw(surface)
-            pygame.display.flip()
-            clock.tick(60)
-    finally:
-        _show_tk_chain(hidden_tk)
-        _release_surface(owns_display)
-
+    _run_blocking(lambda surf: _MessageModal(surf, title, message, None, kind), tk_parent)
     if on_result:
         on_result()
 
@@ -527,61 +468,50 @@ _LINK_COLOR = (100, 100, 255)
 _LINK_HOVER_COLOR = (255, 255, 0)
 
 
-class _PersonInfoModal:
+class _PersonInfoModal(_BaseModal):
     """Popup for a Credits entry: a title, an optional free-text info section,
     and an optional list of clickable links below it."""
 
+    BOX_MAX_W = 560
+    BOX_MIN_H = 220
+    BOX_CHROME_H = 180   # 110 of chrome plus the 70 the Close row occupies
+    BORDER_COLOR = _KIND_ACCENTS["info"]
+    BORDER_WIDTH = 3
+    PASSES_RESULT = False
+
     def __init__(self, surface, name, info_text, links, on_result, align="center"):
-        self.on_result = on_result
-        self.background = surface.copy()
-        self._resolved = False
         self.align = align if align in ("left", "center", "right") else "center"
-
-        self.title_font = fonts.get("heading2")
-        self.msg_font = fonts.get("normal")
-        self.link_font = fonts.get("normal")
-        self.btn_font = fonts.get("button")
-
-        box_w = min(560, surface.get_width() - 40)
-        content_w = box_w - 80
-        self.lines = _wrap_text(info_text, self.msg_font, content_w) if info_text else []
+        self.BODY_ALIGN = self.align
         self.links = links or []
+        self.link_font = fonts.get("normal")
 
-        text_h = len(self.lines) * (self.msg_font.get_height() + 2)
         links_h = len(self.links) * (self.link_font.get_height() + 8)
-        box_h = 110 + text_h + (20 if self.links else 0) + links_h + 70
-        box_h = max(220, box_h)
-
-        self.box_rect = pygame.Rect(0, 0, box_w, box_h)
-        self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
-
-        self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
+        super().__init__(surface, name, info_text, on_result,
+                         extra_h=links_h + (20 if self.links else 0))
 
         self.name = name
-        self.text_y_start = self.box_rect.y + 75
+        self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
+        self.text_y_start = self.box_rect.y + self.BODY_DY
 
-        left_x = self.box_rect.x + 40
-        right_x = self.box_rect.right - 40
-
+        left_x, right_x = self.box_rect.x + 40, self.box_rect.right - 40
         self.link_rects = []
-        y = self.text_y_start + text_h + (20 if self.links else 0)
+        y = self.text_y_start + self.body_height() + (20 if self.links else 0)
         for link in self.links:
-            text = link.get("text", "")
-            w = self.link_font.size(text)[0]
+            w = self.link_font.size(link.get("text", ""))[0]
             if self.align == "left":
                 x = left_x
             elif self.align == "right":
                 x = right_x - w
             else:
                 x = self.box_rect.centerx - w // 2
-            rect = pygame.Rect(x, y, w, self.link_font.get_height())
-            self.link_rects.append(rect)
+            self.link_rects.append(pygame.Rect(x, y, w, self.link_font.get_height()))
             y += self.link_font.get_height() + 8
 
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
+                                 pygame.K_SPACE, _back_key()):
                     self._finish()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):
@@ -592,85 +522,23 @@ class _PersonInfoModal:
                         webbrowser.open(link["url"])
                         return
 
-    def update(self):
-        if self._resolved:
-            modal_stack.pop()
-            if self.on_result:
-                self.on_result()
-
-    def _finish(self):
-        self._resolved = True
-
-    def draw(self, surface):
-        surface.blit(self.background, (0, 0))
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pygame.draw.rect(surface, (40, 40, 40), self.box_rect)
-        pygame.draw.rect(surface, _KIND_ACCENTS["info"], self.box_rect, 3)
-
-        title_surf = self.title_font.render(self.name, True, (255, 255, 255))
-        surface.blit(title_surf, title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + 35)))
-
-        y = self.text_y_start
-        left_x = self.box_rect.x + 40
-        right_x = self.box_rect.right - 40
-        for line in self.lines:
-            line_surf = self.msg_font.render(line, True, (210, 210, 210))
-            if self.align == "left":
-                rect = line_surf.get_rect(midleft=(left_x, y))
-            elif self.align == "right":
-                rect = line_surf.get_rect(midright=(right_x, y))
-            else:
-                rect = line_surf.get_rect(center=(self.box_rect.centerx, y))
-            surface.blit(line_surf, rect)
-            y += self.msg_font.get_height() + 2
-
+    def draw_content(self, surface):
         mx, my = pygame.mouse.get_pos()
         for rect, link in zip(self.link_rects, self.links):
-            text = link.get("text", "")
             has_url = bool(link.get("url"))
             is_hovered = has_url and rect.collidepoint(mx, my)
-            color = _LINK_HOVER_COLOR if is_hovered else (_LINK_COLOR if has_url else (200, 200, 200))
-            text_surf = self.link_font.render(text, True, color)
-            surface.blit(text_surf, rect.topleft)
+            color = _LINK_HOVER_COLOR if is_hovered else (_LINK_COLOR if has_url else c.UI_TEXT_LIGHT)
+            surface.blit(self.link_font.render(link.get("text", ""), True, color), rect.topleft)
             if is_hovered:
                 pygame.draw.line(surface, color, (rect.left, rect.bottom), (rect.right, rect.bottom), 2)
 
-        hovered_ok = self.ok_rect.collidepoint(mx, my)
         accent = _KIND_ACCENTS["info"]
-        ok_color = tuple(min(255, ch + 40) for ch in accent) if hovered_ok else accent
-        pygame.draw.rect(surface, ok_color, self.ok_rect, border_radius=4)
-        ok_surf = self.btn_font.render("Close", True, (255, 255, 255))
-        surface.blit(ok_surf, ok_surf.get_rect(center=self.ok_rect.center))
+        self.draw_button(surface, self.ok_rect, "Close", accent, _lighten(accent))
 
 
 def _show_person_info_standalone(name, info_text, links, align, tk_parent, on_result):
-    surface, owns_display = _acquire_surface()
-    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
-
-    modal = _PersonInfoModal(surface, name, info_text, links, None, align)
-    clock = pygame.time.Clock()
-    waiting = True
-
-    try:
-        while waiting:
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    waiting = False
-            modal.handle_events(events)
-            if modal._resolved:
-                waiting = False
-
-            modal.draw(surface)
-            pygame.display.flip()
-            clock.tick(60)
-    finally:
-        _show_tk_chain(hidden_tk)
-        _release_surface(owns_display)
-
+    _run_blocking(lambda surf: _PersonInfoModal(surf, name, info_text, links, None, align),
+                  tk_parent)
     if on_result:
         on_result()
 

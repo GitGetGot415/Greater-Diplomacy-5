@@ -2,6 +2,17 @@ import random
 import data.constants as c
 from data import queries
 
+
+def _unit_costs(unit_library, unit_name):
+    """(stats, materials, manpower, fuel) for one unit type.
+
+    The purchase loop below re-reads these every time it changes its mind about
+    what to build, which it does up to three times per nation per turn.
+    """
+    stats = unit_library.get(unit_name, {})
+    return (stats, stats.get("cost_materials", 0),
+            stats.get("cost_manpower", 0), stats.get("cost_fuel", 0))
+
 def process_ai_economy_decisions(map_screen):
     """Handles AI unit recruitment and building construction based on economy."""
     unit_library = queries.get_unit_library()
@@ -63,10 +74,10 @@ def process_ai_economy_decisions(map_screen):
             for q in prov.get("unit_queue", []):
                 q_type = q.get("unit_type")
                 if q_type:
-                    q_stats = unit_library.get(q_type, {})
-                    upk_man += q_stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"]
-                    upk_mat += q_stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"]
-                    upk_fuel += q_stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+                    q_upkeep = queries.get_unit_upkeep(unit_library.get(q_type, {}))
+                    upk_man += q_upkeep["manpower"]
+                    upk_mat += q_upkeep["materials"]
+                    upk_fuel += q_upkeep["fuel"]
         # ------------------------------------------------------------
         
         ratio_man = upk_man / inc_man if inc_man > 0 else 1.0
@@ -238,9 +249,10 @@ def process_ai_economy_decisions(map_screen):
                             data["fuel"] -= c_fuel
                             
                             # Adjust upkeep tracking
-                            upk_man += c_man * c.UPKEEP_MODIFIERS["manpower"]
-                            upk_mat += c_mat * c.UPKEEP_MODIFIERS["materials"]
-                            upk_fuel += c_fuel * c.UPKEEP_MODIFIERS["fuel"]
+                            militia_upkeep = queries.get_unit_upkeep(militia_stats)
+                            upk_man += militia_upkeep["manpower"]
+                            upk_mat += militia_upkeep["materials"]
+                            upk_fuel += militia_upkeep["fuel"]
                             infantry_count += 1
                             
                             order = {
@@ -341,11 +353,8 @@ def process_ai_economy_decisions(map_screen):
             if not unit_name_to_build:
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=not fuel_shortage)
 
-            unit_stats = unit_library.get(unit_name_to_build, {})
-            cost_mat = unit_stats.get("cost_materials", 0)
-            cost_man = unit_stats.get("cost_manpower", 0)
-            cost_fuel = unit_stats.get("cost_fuel", 0)
-            
+            unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
+
             # --- SECONDARY FUEL CHECK (Upfront Cost vs Income) ---
             # If we passed the income ratio checks but we simply don't have enough 
             # stockpiled fuel to buy the unit, hard fallback to basic infantry!
@@ -354,24 +363,7 @@ def process_ai_economy_decisions(map_screen):
                     break # Save up for the tank! Do not waste resources on infantry.
                     
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=False)
-                
-                # Re-fetch stats for the fallback unit
-                unit_stats = unit_library.get(unit_name_to_build, {})
-                cost_mat = unit_stats.get("cost_materials", 0)
-                cost_man = unit_stats.get("cost_manpower", 0)
-                cost_fuel = unit_stats.get("cost_fuel", 0)
-            
-            # --- SECONDARY FUEL CHECK (Upfront Cost vs Income) ---
-            # If we passed the income ratio checks but we simply don't have enough 
-            # stockpiled fuel to buy the unit, hard fallback to basic infantry!
-            if cost_fuel > 0 and data.get("fuel", 0) < cost_fuel:
-                unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=False)
-                
-                # Re-fetch stats for the fallback unit
-                unit_stats = unit_library.get(unit_name_to_build, {})
-                cost_mat = unit_stats.get("cost_materials", 0)
-                cost_man = unit_stats.get("cost_manpower", 0)
-                cost_fuel = unit_stats.get("cost_fuel", 0)
+                unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
 
             # Nothing buildable at all (e.g. every unit family this nation could
             # field has been disabled for the scenario) -- stop for this nation
@@ -396,10 +388,7 @@ def process_ai_economy_decisions(map_screen):
             if is_naval_recruit and not valid_recruit_provs:
                 # Force basic infantry fallback here as well so the turn isn't wasted
                 unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=False)
-                unit_stats = unit_library.get(unit_name_to_build, {})
-                cost_mat = unit_stats.get("cost_materials", 0)
-                cost_man = unit_stats.get("cost_manpower", 0)
-                cost_fuel = unit_stats.get("cost_fuel", 0)
+                unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
                 is_naval_recruit = False
                 valid_recruit_provs = factory_provs
             
@@ -413,9 +402,10 @@ def process_ai_economy_decisions(map_screen):
                 data["fuel"] -= cost_fuel
 
                 # Track loops internal variables so the ratio math is valid on the next loop
-                upk_man += cost_man * c.UPKEEP_MODIFIERS["manpower"]
-                upk_mat += cost_mat * c.UPKEEP_MODIFIERS["materials"]
-                upk_fuel += cost_fuel * c.UPKEEP_MODIFIERS["fuel"]
+                unit_upkeep = queries.get_unit_upkeep(unit_stats)
+                upk_man += unit_upkeep["manpower"]
+                upk_mat += unit_upkeep["materials"]
+                upk_fuel += unit_upkeep["fuel"]
 
                 if is_naval_recruit:
                     naval_count += 1

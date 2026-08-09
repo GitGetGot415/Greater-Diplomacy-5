@@ -13,6 +13,7 @@ from gameState import MapOverlayScreen
 from ui_elements import Button, TextField
 from ui import confirm_dialog
 from ui.bars import ui_bars
+from ui.scroll_panes import ScrollPanes
 from ui.player_diplomacy_menus import _run_pygame_sub_screen
 from ui.table_screen import truncate
 from map_logic.rendering.font_manager import fonts
@@ -297,12 +298,12 @@ class Research_Edit_Screen(MapOverlayScreen):
             for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
                                               cull_top=p.y + 60, cull_bottom=p.bottom - 70):
                 tech = self.techs[i]
-                label = font.render(tech.replace("_", " ").title(), True, (220, 220, 220))
+                label = font.render(tech.replace("_", " ").title(), True, c.UI_TEXT_BRIGHT)
                 surface.blit(label, (p.x + 20, y + 4))
 
                 kind = self.tech_state[tech]
                 if kind[0] == "entry":
-                    hint = small_font.render(f"(0-{kind[2]})", True, (150, 150, 150))
+                    hint = small_font.render(f"(0-{kind[2]})", True, c.UI_TEXT_MUTED)
                     surface.blit(hint, (p.right - 250, y + 8))
 
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
@@ -588,7 +589,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         ui_bars.draw_modal_box(surface, p, bg_color=(35, 20, 45), border_color=(156, 39, 176), border_width=2)
         ui_bars.draw_centered_title(surface, "Resource Brush", p.y + 20, "heading2")
 
-        label = fonts.get("normal").render("Amount:", True, (220, 220, 220))
+        label = fonts.get("normal").render("Amount:", True, c.UI_TEXT_BRIGHT)
         surface.blit(label, label.get_rect(midright=(p.centerx - 85, p.y + 210)))
 
 # ==========================================
@@ -771,7 +772,7 @@ class Clear_Map_Screen(MapOverlayScreen):
 # GLOBAL DIPLOMACY & FACTIONS EDITOR
 # ==========================================
 
-class Diplomacy_Editor_Screen(MapOverlayScreen):
+class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     """Wars, factions and puppets for the whole map on a single screen.
 
     Keeps the shape of the tkinter original: nations down the left, and the
@@ -833,24 +834,13 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         for i, name in enumerate(("wars", "members", "master")):
             self.regions[name] = pygame.Rect(self._col_x(i), self.lists_top, self.COL_W, self.LIST_VIEW_H)
 
-        # Published per-region so _scroll_attrs's content_rect_attr can point
+        # Published per-region so scroll_attrs's content_rect_attr can point
         # handle_content_drag/draw_elements at each region's own rect by name.
         for name, rect in self.regions.items():
             setattr(self, f"_content_{name}", rect)
 
     def _col_x(self, index):
         return self.cols_x + index * (self.COL_W + self.COL_GAP)
-
-    def _scroll_attrs(self, name):
-        """Per-region scroll state names.
-
-        Underscore-prefixed so a region can never shadow a method: a region
-        called "events" would otherwise publish its scrollbar handle as
-        self.handle_events and overwrite GameState.handle_events.
-        """
-        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
-                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
 
     @property
     def listening_for(self):
@@ -959,14 +949,6 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         btn.rect.width = width
         return btn
 
-    def _rows_of(self, name, count, top, view_h):
-        attrs = self._scroll_attrs(name)
-        return self.layout_list_rows(count, self.ROW_HEIGHT, top, view_h=view_h,
-                                     cull_top=top - 1,
-                                     cull_bottom=top + view_h - self.ROW_HEIGHT + 2,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
-                                     guard_attr=f"_guard_{name}")
-
     def _columns(self):
         """(region, header, rows, is_checked, on_click) for the three right-hand lists."""
         return [
@@ -982,7 +964,7 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         p = self.panel_rect
         self.elements = [Button(self.nat_x, p.y + 10, "small", "red", "Back", self.exit_screen)]
 
-        for i, y in self._rows_of("nations", len(self.countries), self.nations_top, self.nations_view_h):
+        for i, y in self.pane_rows("nations", len(self.countries), self.nations_top, self.nations_view_h):
             cid = self.countries[i]
             btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
                             lambda cc=cid: self.select_nation(cc))
@@ -997,7 +979,7 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         for idx, (region, _header, rows, is_checked, on_click) in enumerate(self._columns()):
             col_x = self._col_x(idx)
             single = region == "master"
-            for i, y in self._rows_of(region, len(rows), self.lists_top, self.LIST_VIEW_H):
+            for i, y in self.pane_rows(region, len(rows), self.lists_top, self.LIST_VIEW_H):
                 name = rows[i]
                 checked = is_checked(name)
                 label = truncate(name, 28) if single else f"{'[X]' if checked else '[  ]'} {truncate(name, 24)}"
@@ -1024,36 +1006,15 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         self.elements.append(Button(self.cols_x + 470, self.row_b_y - 5, "medium", "green",
                                     "Save Changes", self.save))
 
-    def additional_events(self, event):
-        # The wheel drives whichever list the cursor is over; scrollbar presses and
-        # drags are offered to every region, which each ignore what is not theirs.
-        if event.type == pygame.MOUSEWHEEL:
-            pos = pygame.mouse.get_pos()
-            for name, rect in self.regions.items():
-                if rect.collidepoint(pos):
-                    self.handle_list_scroll(event, **self._scroll_attrs(name))
-                    return
-            return
+    def pane_rects(self):
+        return self.regions
 
-        for name in self.REGIONS:
-            if self.handle_list_scroll(event, **self._scroll_attrs(name)):
-                return
+    def additional_events(self, event):
+        self.route_pane_scroll(event)
 
     def draw_elements(self, surface):
-        """Four independent scrolling regions (nations + the three columns),
-        each cropped to its own rect -- see View_Assets.draw_elements for the
-        same pattern with three panes."""
-        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
-        for name, rect in self.regions.items():
-            scroll = getattr(self, f"_scroll_{name}", 0)
-            limit = getattr(self, f"_max_{name}", 0)
-            region_els = [el for el in self.elements if getattr(el, "pane", None) == name]
-            with ui_bars.clip_scroll_region(surface, rect, draw_top=scroll != 0, draw_bottom=scroll > limit):
-                for el in region_els:
-                    el.draw(surface)
-
-        for el in fixed:
-            el.draw(surface)
+        """Four independent scrolling regions: nations plus the three columns."""
+        self.draw_panes(surface)
 
     def draw_content(self, surface):
         p = self.panel_rect
@@ -1061,12 +1022,12 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
         ui_bars.draw_centered_title(surface, "Global Diplomacy & Factions", p.y + 14, "heading2")
 
         small = fonts.get("small")
-        surface.blit(small.render("Nations:", True, (170, 170, 210)), (self.nat_x, self.nations_top - 20))
+        surface.blit(small.render("Nations:", True, c.UI_TEXT_DIM), (self.nat_x, self.nations_top - 20))
         pygame.draw.line(surface, (70, 70, 95), (self.cols_x - 10, p.y + 60),
                          (self.cols_x - 10, p.bottom - 16), 1)
 
         if not self.target:
-            msg = fonts.get("heading2").render("Select a nation...", True, (200, 200, 200))
+            msg = fonts.get("heading2").render("Select a nation...", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(self.cols_x + 450, p.centery)))
             return
 
@@ -1075,12 +1036,12 @@ class Diplomacy_Editor_Screen(MapOverlayScreen):
 
         for idx, (region, header, rows, _is_checked, _on_click) in enumerate(self._columns()):
             col_x = self._col_x(idx)
-            surface.blit(small.render(header, True, (170, 170, 210)), (col_x, self.lists_top - 20))
+            surface.blit(small.render(header, True, c.UI_TEXT_DIM), (col_x, self.lists_top - 20))
             if not rows:
-                surface.blit(small.render("None available.", True, (150, 150, 150)),
+                surface.blit(small.render("None available.", True, c.UI_TEXT_MUTED),
                              (col_x + 4, self.lists_top + 6))
             self.draw_list_scrollbar(surface, col_x + self.COL_W - 18, self.lists_top, self.LIST_VIEW_H,
-                                     **self._scroll_attrs(region))
+                                     **self.scroll_attrs(region))
 
         self.draw_list_scrollbar(surface, self.nat_x + self.NAT_W - 18, self.nations_top,
-                                 self.nations_view_h, **self._scroll_attrs("nations"))
+                                 self.nations_view_h, **self.scroll_attrs("nations"))

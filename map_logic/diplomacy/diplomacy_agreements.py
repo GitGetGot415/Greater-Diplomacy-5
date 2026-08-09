@@ -106,7 +106,6 @@ def pull_puppets_into_peace(master, target, nation_data):
             nation_data[p]["at_war_with"].remove(target)
         if p in nation_data.get(target, {}).get("at_war_with", []):
             nation_data[target]["at_war_with"].remove(p)
-        nation_data[p].setdefault("relations", {})[target] = 0
         nation_data[p].setdefault("truces", {})[target] = c.TRUCE_TURNS
     apply_to_puppets_recursively(master, nation_data, _remove_war)
 
@@ -120,8 +119,6 @@ def pull_puppets_into_faction(master, fac, map_data, nation_data):
             if member != p:
                 if queries.are_at_war(p, member, nation_data) or queries.are_at_war(member, p, nation_data):
                     finalize_neutral(nation_data, p, member)
-                nation_data[p].setdefault("relations", {})[member] = 100
-                nation_data[member].setdefault("relations", {})[p] = 100
 
                 # Clear military access (granted and pending) since they are now in the same faction
                 if "military_access" in nation_data[p] and member in nation_data[p]["military_access"]:
@@ -331,9 +328,6 @@ def finalize_neutral(nation_data, a, b):
         if other in nation_data[country]["allied_with"]:
             nation_data[country]["allied_with"].remove(other)
             
-        # Reset relations to 0 upon ceasefire
-        nation_data[country].setdefault("relations", {})[other] = 0
-        
         # Apply Temporary Post-War Modifier
         queries.add_temporary_modifier(country, other, "recent_war", c.REL_MOD_RECENT_WAR, nation_data)
 
@@ -419,14 +413,11 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
         nation_data[joiner]["faction"] = fac
         nation_data[joiner]["is_faction_leader"] = False
         
-        # Set relations to 100 with all faction members
         members = queries.get_faction_members(fac, nation_data)
         for member in members:
             if member != joiner:
                 if queries.are_at_war(joiner, member, nation_data) or queries.are_at_war(member, joiner, nation_data):
                     finalize_neutral(nation_data, joiner, member)
-                nation_data[joiner].setdefault("relations", {})[member] = 100
-                nation_data[member].setdefault("relations", {})[joiner] = 100
                 
                 # Clear military access since they are now in the same faction
                 if "military_access" in nation_data[joiner] and member in nation_data[joiner]["military_access"]:

@@ -4,6 +4,8 @@ import shutil
 from pathlib import Path
 from gameState import GameState
 from ui.bars import ui_bars
+from ui import text_utils
+from ui.scroll_panes import ScrollPanes
 from ui_elements import Button
 from map_logic.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file
@@ -32,57 +34,16 @@ VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS + TEXT_EXTENSIONS
 
 
 def _truncate_text(text, font, max_width):
-    """Shortens text with a trailing ellipsis so it fits max_width, for the
-    handful of asset filenames (some flag jokes run 40+ chars) too long to
-    ever fit the narrow file-name column."""
-    if font.size(text)[0] <= max_width:
-        return text
-
-    lo, hi = 0, len(text)
-    while lo < hi:
-        mid = (lo + hi + 1) // 2
-        if font.size(text[:mid] + "...")[0] <= max_width:
-            lo = mid
-        else:
-            hi = mid - 1
-    return (text[:lo] + "...") if lo > 0 else "..."
+    """Kept as a local name; the implementation moved to ui/text_utils.py, whose
+    fit_text is this same binary search shared with the file browser."""
+    return text_utils.fit_text(text, font, max_width)
 
 
 def _wrap_text(text, font, max_width):
-    """Word-wraps text to max_width, preserving blank lines and hard-breaking
-    any single word too wide to ever fit (long paths/URLs in README files)."""
-    lines = []
-    for paragraph in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
-        if not paragraph:
-            lines.append("")
-            continue
+    """Kept as a local name; ui/text_utils.wrap_text is this implementation,
+    promoted to be the one every screen shares."""
+    return text_utils.wrap_text(text, font, max_width)
 
-        current = ""
-        for word in paragraph.split(" "):
-            candidate = f"{current} {word}" if current else word
-            if font.size(candidate)[0] <= max_width:
-                current = candidate
-                continue
-
-            if current:
-                lines.append(current)
-                current = ""
-
-            if font.size(word)[0] <= max_width:
-                current = word
-                continue
-
-            chunk = ""
-            for ch in word:
-                if font.size(chunk + ch)[0] <= max_width:
-                    chunk += ch
-                else:
-                    lines.append(chunk)
-                    chunk = ch
-            current = chunk
-
-        lines.append(current)
-    return lines
 
 # Folders that hold non-image, non-text assets and shouldn't show up as browsable albums.
 EXCLUDED_ASSET_FOLDERS = {"music", "sounds", "fonts"}
@@ -125,7 +86,7 @@ class TopBarOverlay:
             surface.blit(status_surf, status_surf.get_rect(topright=(c.SCREEN_WIDTH - 20, 75)))
 
 
-class View_Assets(GameState):
+class View_Assets(ScrollPanes, GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (25, 25, 30)
@@ -143,22 +104,22 @@ class View_Assets(GameState):
         self.download_status_color = c.COLOR_SUCCESS_GREEN
         self.download_status_timer = 0
 
-        self.folder_scroll_y = 0
-        self.file_scroll_y = 0
-        self.preview_scroll_y = 0
-        self.max_folder_scroll = 0
-        self.max_file_scroll = 0
-        self.max_preview_scroll = 0
+        self._scroll_folder = 0
+        self._scroll_file = 0
+        self._scroll_preview = 0
+        self._max_folder = 0
+        self._max_file = 0
+        self._max_preview = 0
 
-        self.folder_dragging = False
-        self.file_dragging = False
-        self.preview_dragging = False
-        self.folder_track_rect = None
-        self.folder_handle_rect = None
-        self.file_track_rect = None
-        self.file_handle_rect = None
-        self.preview_track_rect = None
-        self.preview_handle_rect = None
+        self._drag_folder = False
+        self._drag_file = False
+        self._drag_preview = False
+        self._track_folder = None
+        self._handle_folder = None
+        self._track_file = None
+        self._handle_file = None
+        self._track_preview = None
+        self._handle_preview = None
 
         self.folders = self._list_folders()
         self.files = []
@@ -222,7 +183,7 @@ class View_Assets(GameState):
 
         avail_h = max(1, c.SCREEN_HEIGHT - HEADER_H - PREVIEW_MARGIN * 2)
         content_h = len(self.preview_lines) * self.preview_line_h
-        self.max_preview_scroll = min(0, avail_h - content_h)
+        self._max_preview = min(0, avail_h - content_h)
 
     # ------------------------------------------------------------------ #
     #                            SELECTION                               #
@@ -230,7 +191,7 @@ class View_Assets(GameState):
 
     def select_folder(self, folder):
         self.current_folder = folder
-        self.file_scroll_y = 0
+        self._scroll_file = 0
         self.files = self._list_viewable_files(folder)
 
         if self.files:
@@ -241,7 +202,7 @@ class View_Assets(GameState):
             self.preview_surface = None
             self.preview_error = None
             self.preview_lines = []
-            self.max_preview_scroll = 0
+            self._max_preview = 0
             self.refresh_ui()
 
     def select_file(self, name):
@@ -250,8 +211,8 @@ class View_Assets(GameState):
         self.preview_error = None
         self.preview_surface = None
         self.preview_lines = []
-        self.preview_scroll_y = 0
-        self.max_preview_scroll = 0
+        self._scroll_preview = 0
+        self._max_preview = 0
         self.download_status = None
 
         path = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, name)
@@ -305,12 +266,12 @@ class View_Assets(GameState):
     def refresh_ui(self):
         self.elements = []
 
-        self.folder_content_rect = pygame.Rect(0, HEADER_H, FOLDER_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
-        self.file_content_rect = pygame.Rect(FOLDER_PANE_W, HEADER_H, FILE_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
-        self.preview_content_rect = pygame.Rect(PREVIEW_X, HEADER_H, PREVIEW_W, c.SCREEN_HEIGHT - HEADER_H)
+        self._content_folder = pygame.Rect(0, HEADER_H, FOLDER_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self._content_file = pygame.Rect(FOLDER_PANE_W, HEADER_H, FILE_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self._content_preview = pygame.Rect(PREVIEW_X, HEADER_H, PREVIEW_W, c.SCREEN_HEIGHT - HEADER_H)
 
         # --- Left: Folders (Scrolling) ---
-        y = HEADER_H + self.folder_scroll_y
+        y = HEADER_H + self._scroll_folder
         folder_content_h = 0
         for folder in self.folders:
             is_active = folder == self.current_folder
@@ -324,13 +285,13 @@ class View_Assets(GameState):
             y += FOLDER_ROW_H
             folder_content_h += FOLDER_ROW_H
 
-        self.max_folder_scroll = min(0, c.SCREEN_HEIGHT - HEADER_H - folder_content_h - 20)
+        self._max_folder = min(0, c.SCREEN_HEIGHT - HEADER_H - folder_content_h - 20)
 
         # --- Middle: File names (Scrolling) ---
         file_font = fonts.get(FILE_FONT_PRESET)
         file_btn_w = c.SIZES["asset_file"][0]
 
-        y = HEADER_H + self.file_scroll_y
+        y = HEADER_H + self._scroll_file
         file_content_h = 0
         for name in self.files:
             is_active = name == self.current_file
@@ -345,7 +306,7 @@ class View_Assets(GameState):
             y += FILE_ROW_H
             file_content_h += FILE_ROW_H
 
-        self.max_file_scroll = min(0, c.SCREEN_HEIGHT - HEADER_H - file_content_h - 20)
+        self._max_file = min(0, c.SCREEN_HEIGHT - HEADER_H - file_content_h - 20)
 
         # --- Fixed chrome on top ---
         self.elements.append(TopBarOverlay(self))
@@ -359,55 +320,19 @@ class View_Assets(GameState):
     #                        SCROLL / EVENTS                             #
     # ------------------------------------------------------------------ #
 
-    PANES = {
-        "folder": dict(attr="folder_scroll_y", limit_attr="max_folder_scroll",
-                        track_attr="folder_track_rect", handle_attr="folder_handle_rect",
-                        drag_attr="folder_dragging", content_rect_attr="folder_content_rect"),
-        "file": dict(attr="file_scroll_y", limit_attr="max_file_scroll",
-                     track_attr="file_track_rect", handle_attr="file_handle_rect",
-                     drag_attr="file_dragging", content_rect_attr="file_content_rect"),
-        "preview": dict(attr="preview_scroll_y", limit_attr="max_preview_scroll",
-                        track_attr="preview_track_rect", handle_attr="preview_handle_rect",
-                        drag_attr="preview_dragging", content_rect_attr="preview_content_rect"),
-    }
+    PANE_RECTS = ("folder", "file", "preview")
+
+    def pane_rects(self):
+        return {name: getattr(self, f"_content_{name}", None) for name in self.PANE_RECTS}
 
     def additional_events(self, event):
-        if event.type == pygame.MOUSEWHEEL:
-            mouse_x = pygame.mouse.get_pos()[0]
-            if mouse_x < FOLDER_PANE_W:
-                self.handle_list_scroll(event, **self.PANES["folder"])
-            elif mouse_x < PREVIEW_X:
-                self.handle_list_scroll(event, **self.PANES["file"])
-            else:
-                self.handle_list_scroll(event, **self.PANES["preview"])
-            return
-
-        for pane in self.PANES.values():
-            if self.handle_list_scroll(event, **pane):
-                return
+        self.route_pane_scroll(event)
 
     def draw_elements(self, surface):
-        """Overrides the base single-region clip: folder and file rows each
-        crop to their own pane, since this screen has two lists on screen
-        at once instead of the usual one."""
-        fixed = [el for el in self.elements if not getattr(el, "pane", None)]
-        folder_btns = [el for el in self.elements if getattr(el, "pane", None) == "folder"]
-        file_btns = [el for el in self.elements if getattr(el, "pane", None) == "file"]
-
-        with ui_bars.clip_scroll_region(surface, self.folder_content_rect,
-                                        draw_top=self.folder_scroll_y != 0,
-                                        draw_bottom=self.folder_scroll_y > self.max_folder_scroll):
-            for el in folder_btns:
-                el.draw(surface)
-
-        with ui_bars.clip_scroll_region(surface, self.file_content_rect,
-                                        draw_top=self.file_scroll_y != 0,
-                                        draw_bottom=self.file_scroll_y > self.max_file_scroll):
-            for el in file_btns:
-                el.draw(surface)
-
-        for el in fixed:
-            el.draw(surface)
+        """Folder and file rows each crop to their own pane; the preview pane
+        holds no buttons, so it is drawn by _draw_text_preview instead."""
+        self.draw_panes(surface, rects={"folder": self._content_folder,
+                                        "file": self._content_file})
 
     def additional_draw(self, surface):
         # Pane backgrounds
@@ -428,24 +353,22 @@ class View_Assets(GameState):
             surface.blit(text_surf, text_surf.get_rect(center=center))
 
         # --- Scrollbars ---
-        self.draw_list_scrollbar(surface, FOLDER_PANE_W - 15, HEADER_H, c.SCREEN_HEIGHT - HEADER_H,
-                                 width=10, **self.PANES["folder"])
-        self.draw_list_scrollbar(surface, PREVIEW_X - 15, HEADER_H, c.SCREEN_HEIGHT - HEADER_H,
-                                 width=10, **self.PANES["file"])
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 15, HEADER_H, c.SCREEN_HEIGHT - HEADER_H,
-                                 width=10, **self.PANES["preview"])
+        view_h = c.SCREEN_HEIGHT - HEADER_H
+        for name, track_x in (("folder", FOLDER_PANE_W - 15), ("file", PREVIEW_X - 15),
+                              ("preview", c.SCREEN_WIDTH - 15)):
+            self.draw_pane_scrollbar(surface, name, track_x, HEADER_H, view_h, width=10)
 
     def _draw_text_preview(self, surface):
         font = fonts.get(PREVIEW_TEXT_FONT)
         line_h = self.preview_line_h
 
-        with ui_bars.clip_scroll_region(surface, self.preview_content_rect,
-                                        draw_top=self.preview_scroll_y != 0,
-                                        draw_bottom=self.preview_scroll_y > self.max_preview_scroll):
-            y = HEADER_H + PREVIEW_MARGIN + self.preview_scroll_y
+        with ui_bars.clip_scroll_region(surface, self._content_preview,
+                                        draw_top=self._scroll_preview != 0,
+                                        draw_bottom=self._scroll_preview > self._max_preview):
+            y = HEADER_H + PREVIEW_MARGIN + self._scroll_preview
             for line in self.preview_lines:
                 if y + line_h > HEADER_H and y < c.SCREEN_HEIGHT:
                     if line:
-                        text_surf = font.render(line, True, (220, 220, 220))
+                        text_surf = font.render(line, True, c.UI_TEXT_BRIGHT)
                         surface.blit(text_surf, (PREVIEW_X + PREVIEW_MARGIN, y))
                 y += line_h

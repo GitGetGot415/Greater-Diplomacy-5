@@ -2,48 +2,24 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
-from gameState import MapOverlayScreen, dispatch_global_keys
+from gameState import MapOverlayScreen
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud
-from ui import modal_stack
-
-
-class _SubScreenModal:
-    """Pushed onto the modal stack in place of the old blocking loop that used
-    to bypass the main state machine here. See ui/modal_stack.py for why."""
-
-    def __init__(self, map_screen, screen_obj, on_done):
-        self.map_screen = map_screen
-        self.screen_obj = screen_obj
-        self.on_done = on_done
-        screen_obj.done = False
-
-    def handle_events(self, events):
-        for event in events:
-            # Mirrors the main loop so sub-screens get BACK/ORDERS for free.
-            dispatch_global_keys(self.screen_obj, event)
-        self.screen_obj.handle_events(events)
-
-    def update(self):
-        self.screen_obj.update()
-        if self.screen_obj.done:
-            modal_stack.pop()
-            # Clear any phantom hovering from the sub-screen
-            self.map_screen.hovered_province = None
-            if self.on_done:
-                self.on_done()
-
-    def draw(self, surface):
-        # The background is safely filled by the map rendering itself.
-        self.screen_obj.draw(surface)
 
 
 def _run_pygame_sub_screen(map_screen, screen_obj, on_done=None):
     """Pushes screen_obj onto the modal stack until it marks itself done, then
-    calls on_done() if given. Never blocks -- see ui/modal_stack.py."""
-    modal_stack.push(_SubScreenModal(map_screen, screen_obj, on_done))
+    calls on_done() if given. Never blocks -- see ui/modal_stack.py.
+
+    Kept as the name ~25 call sites already use (21 of them via an in-function
+    import). It is the map-layered flavour of screen_runner.run_screen: the
+    hosting map gets its hover cleared on close, and on_done takes no argument.
+    """
+    from ui.screen_runner import run_screen
+    run_screen(screen_obj, on_done, clear_hover_for=map_screen, pass_screen=False)
+
 
 def build_choice_button(x, y, size, label, enabled, selected, callback):
     """One button in a mutually exclusive option row.
@@ -446,10 +422,8 @@ class Claims_Screen(MapOverlayScreen):
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, color, base_radius=4, inset=i, is_justifying=is_just)
         
         # Draw Information Panel
-        panel_surf = pygame.Surface((self.panel_rect.width, self.panel_rect.height), pygame.SRCALPHA)
-        panel_surf.fill((30, 30, 50, 230))
-        surface.blit(panel_surf, self.panel_rect.topleft)
-        pygame.draw.rect(surface, (100, 150, 255), self.panel_rect, 2)
+        ui_bars.draw_translucent_panel(surface, self.panel_rect, (*c.HUD_PANEL_BG, 230),
+                                       border_color=c.MODAL_BORDER)
 
         font = fonts.get("heading1")
         sub_font = fonts.get("heading2")
@@ -482,7 +456,7 @@ class Claims_Screen(MapOverlayScreen):
                 y_off += 30
             
                 if not global_claims_list:
-                    surface.blit(tiny_font.render("No claims on the map.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                    surface.blit(tiny_font.render("No claims on the map.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
                 else:
                     for item in global_claims_list:
                         nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
@@ -497,14 +471,14 @@ class Claims_Screen(MapOverlayScreen):
                 y_off += 30
             
                 if not queue:
-                    surface.blit(tiny_font.render("No claims queued.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                    surface.blit(tiny_font.render("No claims queued.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
                     y_off += 25
                 else:
                     for q in queue:
                         prov = self.map_screen.id_to_province.get(q["prov_id"])
                         owner = prov.get("owner", "Unknown") if prov else "Unknown"
                         owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                        txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, (200, 200, 200))
+                        txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, c.UI_TEXT_LIGHT)
                         surface.blit(txt, (self.panel_rect.x + 30, y_off))
                         y_off += 25
                     
@@ -514,7 +488,7 @@ class Claims_Screen(MapOverlayScreen):
                 y_off += 30
             
                 if not display_claims:
-                    surface.blit(tiny_font.render("No active claims.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                    surface.blit(tiny_font.render("No active claims.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
                 else:
                     for pid in display_claims:
                         prov = self.map_screen.id_to_province.get(pid)
@@ -545,7 +519,7 @@ class Claims_Screen(MapOverlayScreen):
                 y_off += 30
             
                 if not queued_foreign:
-                    surface.blit(tiny_font.render("No nations are actively justifying claims on you.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                    surface.blit(tiny_font.render("No nations are actively justifying claims on you.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
                     y_off += 25
                 else:
                     for item in queued_foreign:
@@ -567,7 +541,7 @@ class Claims_Screen(MapOverlayScreen):
                 y_off += 30
             
                 if not active_foreign:
-                    surface.blit(tiny_font.render("No foreign claims on your territory.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+                    surface.blit(tiny_font.render("No foreign claims on your territory.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
                 else:
                     for item in active_foreign:
                         nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
@@ -587,10 +561,9 @@ class Claims_Screen(MapOverlayScreen):
                         y_off += 25
                     
 
-        # Draw a custom scrollbar if the content exceeds the box height
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 90, viewport_h, width=10
-        )
+        # Draws nothing when the content fits inside the box.
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 90,
+                                 viewport_h, width=10)
 
 # ==========================================
 # CEASEFIRE / PEACE SCREEN
@@ -929,13 +902,13 @@ class Trade_Screen(MapOverlayScreen):
 
         # You Give Section
         surface.blit(font_med.render("You Give:", True, (255, 100, 100)), (self.panel_rect.x + 30, self.panel_rect.y + 60))
-        surface.blit(font_small.render("Materials:", True, (200, 200, 200)), (self.panel_rect.x + 30, self.panel_rect.y + 105))
-        surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.x + 30, self.panel_rect.y + 155))
+        surface.blit(font_small.render("Materials:", True, c.UI_TEXT_LIGHT), (self.panel_rect.x + 30, self.panel_rect.y + 105))
+        surface.blit(font_small.render("Fuel:", True, c.UI_TEXT_LIGHT), (self.panel_rect.x + 30, self.panel_rect.y + 155))
 
         # They Give Section
         surface.blit(font_med.render("They Give:", True, c.COLOR_SUCCESS_GREEN), (self.panel_rect.centerx + 30, self.panel_rect.y + 60))
-        surface.blit(font_small.render("Materials:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 105))
-        surface.blit(font_small.render("Fuel:", True, (200, 200, 200)), (self.panel_rect.centerx + 30, self.panel_rect.y + 155))
+        surface.blit(font_small.render("Materials:", True, c.UI_TEXT_LIGHT), (self.panel_rect.centerx + 30, self.panel_rect.y + 105))
+        surface.blit(font_small.render("Fuel:", True, c.UI_TEXT_LIGHT), (self.panel_rect.centerx + 30, self.panel_rect.y + 155))
 
         # Puppet Header
         surface.blit(font_med.render("Puppeting Terms:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.centerx - 80, self.panel_rect.y + 190))
@@ -1095,7 +1068,7 @@ class Puppets_Screen(MapOverlayScreen):
 
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
         if not puppets:
-            txt = font_body.render("You currently control no subjects.", True, (150, 150, 150))
+            txt = font_body.render("You currently control no subjects.", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (self.panel_rect.centerx - txt.get_width()//2, self.panel_rect.y + 130))
         else:
             with ui_bars.clip_scroll_region(surface, clip_rect,
@@ -1108,7 +1081,7 @@ class Puppets_Screen(MapOverlayScreen):
 
                     # Formatted Puppet Sub-text
                     name_txt = font_body.render(p_name, True, (255, 255, 255))
-                    type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else (200, 200, 200))
+                    type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else c.UI_TEXT_LIGHT)
 
                     surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
                     surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
@@ -1123,9 +1096,9 @@ class Puppets_Screen(MapOverlayScreen):
                             siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
 
                             tiny_font = fonts.get("tiny")
-                            man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, (200, 200, 200))
-                            mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, (200, 200, 200))
-                            fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, (200, 200, 200))
+                            man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, c.UI_TEXT_LIGHT)
+                            mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, c.UI_TEXT_LIGHT)
+                            fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, c.UI_TEXT_LIGHT)
 
                             surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
                             surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))
@@ -1260,7 +1233,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
 
         if not self.valid_subjects:
             y_off = self.panel_rect.y + 120 + self.scroll_y
-            surface.blit(tiny_font.render("No potential subjects available.", True, (150, 150, 150)), (self.panel_rect.x + 30, y_off))
+            surface.blit(tiny_font.render("No potential subjects available.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
         else:
             with ui_bars.clip_scroll_region(surface, clip_rect,
                                             draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
@@ -1282,11 +1255,12 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                     surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))
                     y_off += 50
 
-        if self.max_scroll < 0:
-            viewport_h = self.panel_rect.height - 110
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 100, viewport_h, width=10
-            )
+        # No max_scroll guard here: draw_list_scrollbar already returns nothing
+        # when the list fits, and going through it also clears last frame's
+        # track/handle rects instead of leaving them stale.
+        viewport_h = self.panel_rect.height - 110
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 100,
+                                 viewport_h, width=10)
 
 # ==========================================
 # PUBLIC INTERCEPT LAUNCHERS

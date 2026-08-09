@@ -542,7 +542,7 @@ class FolderListState(GameState):
         txt_surf = fonts.get("heading2").render(self.new_name_text + "|", True, (255, 255, 255))
         surface.blit(txt_surf, (input_rect.x + 10, input_rect.y + 10))
 
-        instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
+        instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
         surface.blit(instr, (input_rect.x, input_rect.y - 25))
 
     def draw_delete_confirm(self, surface, center=None):
@@ -558,7 +558,7 @@ class FolderListState(GameState):
         msg = fonts.get("heading2").render(f"Delete '{self.deleting_item}'?", True, (255, 255, 255))
         surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
 
-        sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, (200, 200, 200))
+        sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, c.UI_TEXT_LIGHT)
         surface.blit(sub_msg, sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.centery + 25)))
 
 class MapOverlayScreen(GameState):

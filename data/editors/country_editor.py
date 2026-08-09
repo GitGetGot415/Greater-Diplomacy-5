@@ -154,7 +154,7 @@ class CountryEditor:
                 self.data[int_id].setdefault("portrait_data", "")
 
             with open(PATH, "w") as f:
-                json.dump(self.data, f, indent=4)
+                json.dump(self.data, f, indent=c.SAVE_INDENT)
 
             queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
 
@@ -198,7 +198,7 @@ class CountryEditor:
             }
         
         with open(PATH, "w") as f:
-            json.dump(self.data, f, indent=4)
+            json.dump(self.data, f, indent=c.SAVE_INDENT)
             
         queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
         
@@ -241,7 +241,7 @@ class CountryEditor:
                 return
             del self.data[int_id]
             with open(PATH, "w") as f:
-                json.dump(self.data, f, indent=4)
+                json.dump(self.data, f, indent=c.SAVE_INDENT)
 
             queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
 

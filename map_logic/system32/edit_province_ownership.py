@@ -31,10 +31,7 @@ def conquer_province(self, province, new_owner):
             nations_dict = country_io.get_nation_colors()
             new_color = list(nations_dict.get(new_owner, (255, 255, 255))) # Fallback to white if unclaimed
             
-            # --- THE MAGIC PINK BUG FIX ---
-            # If the nation's color is completely identical to our colorkey mapping, shift it 1 bit
-            if tuple(new_color) == (255, 0, 255):
-                new_color = (254, 0, 255)
+            new_color = map_utils.avoid_chroma(new_color)
             
             map_utils.update_single_province_surface(
                 self.political_map, 
@@ -122,10 +119,7 @@ def get_mixed_core_color(cores):
     if not cores:
         return (255, 255, 255)
     if len(cores) == 1:
-        color = nations_dict.get(cores[0], (255, 255, 255))
-        if tuple(color) == (255, 0, 255):
-            return (254, 0, 255)
-        return color
+        return map_utils.avoid_chroma(nations_dict.get(cores[0], (255, 255, 255)))
         
     r = g = b = valid = 0
     for core in cores:
@@ -135,11 +129,7 @@ def get_mixed_core_color(cores):
             valid += 1
             
     color = (r // valid, g // valid, b // valid) if valid > 0 else (255, 255, 255)
-    
-    # Check Magic Pink for blended multi-core tiles as well!
-    if tuple(color) == (255, 0, 255):
-        return (254, 0, 255)
-    return color
+    return map_utils.avoid_chroma(color)
 
 def add_core(self, province, nation):
     if province and nation:

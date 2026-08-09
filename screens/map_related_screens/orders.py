@@ -50,8 +50,10 @@ CANCEL_BOX_OFFSET_X = 20
 CANCEL_BOX_OFFSET_Y = -25
 CANCEL_BOX_SIZE = 25
 
-PANEL_BG_COLOR = (30, 30, 50)
-PANEL_BORDER_COLOR = (100, 100, 250)
+# Both map panels share the HUD palette; the values used to be typed out
+# separately here and in the other panel's module.
+PANEL_BG_COLOR = c.HUD_PANEL_BG
+PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 SCROLLBAR_OFFSET_X = -10
 SCROLLBAR_WIDTH = 10
 
@@ -875,18 +877,12 @@ class Orders_Screen(GameState):
         if player_units:
             bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
             
-            # Draw semi-transparent panel
-            panel_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-            panel_surf.fill((*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY))
-            surface.blit(panel_surf, bg_rect.topleft)
+            ui_bars.draw_translucent_panel(surface, bg_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
+                                           border_color=PANEL_BORDER_COLOR)
             
-            # Draw border
-            pygame.draw.rect(surface, PANEL_BORDER_COLOR, bg_rect, 2)
-            
-            # --- NEW: Scroll Bar Rendering ---
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll_y, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top, self.panel_max_h, width=SCROLLBAR_WIDTH
-            )
+            self.draw_list_scrollbar(surface, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top,
+                                     self.panel_max_h, width=SCROLLBAR_WIDTH,
+                                     limit_attr="max_scroll_y")
 
         display_index = 0
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
@@ -909,7 +905,7 @@ class Orders_Screen(GameState):
                     surface.blit(name_surf, (self.PANEL_X + UNIT_NAME_OFFSET_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
 
                     stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
-                    txt_surf = small_font.render(stats_txt, True, (200, 200, 200))
+                    txt_surf = small_font.render(stats_txt, True, c.UI_TEXT_LIGHT)
 
                     surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
 

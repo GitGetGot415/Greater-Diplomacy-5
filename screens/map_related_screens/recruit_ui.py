@@ -3,6 +3,7 @@ import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui.bars import ui_bars
+from ui import text_utils
 
 # ==========================================
 # LAYOUT
@@ -16,7 +17,9 @@ MAP_QUEUE_MIN_HEIGHT = 80
 MAP_QUEUE_MAX_HEIGHT = 400
 
 # How fast the mouse wheel scrolls the read-only map queue overlay
-MAP_QUEUE_SCROLL_STEP = 30
+MAP_QUEUE_SCROLL_STEP = c.SCROLL_STEP
+# Alpha of the map queue overlay's fill, so the map stays visible behind it.
+MAP_QUEUE_TRANSPARENCY = 200
 
 # --- Interactive queue panel on the Production screen ---
 PANEL_WIDTH = 460
@@ -30,8 +33,10 @@ ROW_STEP_Y = 35
 ROW_NAME_MAX_CHARS = 13
 CANCEL_BOX_SIZE = 25
 
-PANEL_BG_COLOR = (30, 30, 50)
-PANEL_BORDER_COLOR = (100, 100, 250)
+# Both map panels share the HUD palette; the values used to be typed out
+# separately here and in the other panel's module.
+PANEL_BG_COLOR = c.HUD_PANEL_BG
+PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 QUEUE_TEXT_COLOR = (255, 200, 50)
 MUTED_TEXT_COLOR = (150, 150, 150)
 CANCEL_BOX_COLOR = (150, 0, 0)
@@ -56,8 +61,7 @@ def get_queue_entry_text(item):
     else:
         raw_name = queries.get_condensed_building_name(raw_name)
 
-    if len(raw_name) > ROW_NAME_MAX_CHARS:
-        raw_name = raw_name[:ROW_NAME_MAX_CHARS - 2] + ".."
+    raw_name = text_utils.truncate_chars(raw_name, ROW_NAME_MAX_CHARS)
 
     turns = item.get("turns_remaining",
                      max(1, item.get("days_remaining", c.DEFAULT_DAYS_PER_TURN) // c.DEFAULT_DAYS_PER_TURN))
@@ -120,10 +124,8 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     panel_rect = pygame.Rect(MAP_QUEUE_OVERLAY_X, MAP_QUEUE_OVERLAY_Y, MAP_QUEUE_OVERLAY_WIDTH, panel_height)
 
-    panel_surf = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
-    panel_surf.fill((*PANEL_BG_COLOR, 200))
-    surface.blit(panel_surf, panel_rect.topleft)
-    pygame.draw.rect(surface, PANEL_BORDER_COLOR, panel_rect, 2)
+    ui_bars.draw_translucent_panel(surface, panel_rect, (*PANEL_BG_COLOR, MAP_QUEUE_TRANSPARENCY),
+                                   border_color=PANEL_BORDER_COLOR)
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (panel_rect.centerx, panel_rect.y), (panel_rect.centerx, panel_rect.bottom), 2)
 
     font = fonts.get("normal")

@@ -131,8 +131,8 @@ class Production_Screen(GameState):
         self.refresh_ui()
 
     def enforce_scroll_bounds(self):
-        self.target_scroll_y = max(-self.max_scroll, min(self.target_scroll_y, 0))
-        self.scroll_y = max(-self.max_scroll, min(self.scroll_y, 0))
+        self.target_scroll_y = max(self.max_scroll, min(self.target_scroll_y, 0))
+        self.scroll_y = max(self.max_scroll, min(self.scroll_y, 0))
 
     def update(self):
         super().update()
@@ -545,7 +545,8 @@ class Production_Screen(GameState):
         self.custom_end_y = y_offset
 
         # Calculate maximum scroll distance
-        self.max_scroll = max(0, y_offset - c.SCREEN_HEIGHT + SCROLL_BOTTOM_PAD)
+        # Negative floor, matching GameState.max_scroll -- see enforce_scroll_bounds.
+        self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - y_offset)
 
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
@@ -723,15 +724,7 @@ class Production_Screen(GameState):
             owner = self.target_province.get("owner", "Unclaimed")
             p_data = self.map_screen.nation_data.get(owner, {})
             
-            if "refund" in item:
-                queries.refund_resources(p_data, item["refund"])
-            else:
-                stats = {}
-                if item.get("order_type") == "BUILDING":
-                    stats = queries.get_building_cost(item.get("item_name"), owner, self.map_screen.map_data, self.building_library)
-                elif "unit_type" in item:
-                    stats = self.unit_library.get(item["unit_type"], {})
-                queries.refund_resources(p_data, stats)
+            queries.refund_queue_item(p_data, item, owner, self.map_screen.map_data)
 
             self.map_screen.show_feedback("Cancelled & Refunded")
             self.refresh_ui()
@@ -746,7 +739,7 @@ class Production_Screen(GameState):
         # since update() already repositions every is_scrollable button off
         # base_y + scroll_y each frame -- no need to rebuild the whole list per pixel.
         if self.handle_content_drag(event, attr="target_scroll_y", rect_attr="scroll_content_rect",
-                                    lo=-self.max_scroll, hi=0, refresh=False):
+                                    lo=self.max_scroll, hi=0, refresh=False):
             self.enforce_scroll_bounds()
             return
 
@@ -774,7 +767,7 @@ class Production_Screen(GameState):
         heading_font = fonts.get("heading2")
 
         with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > -self.max_scroll):
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
             for prefix, label, fill, border, text_color in SECTION_PANELS:
                 start_y = getattr(self, f"{prefix}_start_y", 0)
                 end_y = getattr(self, f"{prefix}_end_y", 0)

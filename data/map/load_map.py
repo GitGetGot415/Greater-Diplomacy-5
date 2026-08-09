@@ -231,10 +231,6 @@ def load_map_assets(self, load_path):
             if country not in self.nation_data:
                 self.nation_data[country] = base_data
             else:
-                # RELATIONS INIT
-                if "relations" not in self.nation_data[country]:
-                    self.nation_data[country]["relations"] = {}
-
                 # SYNC FIX: Merge any missing top-level keys from the base template
                 for base_key, base_val in base_data.items():
                     if base_key not in self.nation_data[country]:
@@ -249,7 +245,9 @@ def load_map_assets(self, load_path):
         # Fallback to default starting data
         self.nation_data = base_nation_data
 
-    # INITIALIZE RELATIONS FOR STARTING WARS & FACTIONS
+    # Relation scores are derived on demand by queries.get_relation_score from
+    # at_war_with / faction / master / temp_modifiers / claims, so there is no
+    # stored table to seed here.
     if c.DISABLE_FACTIONS:
         for c_name, c_data in self.nation_data.items():
             c_data["faction"] = ""
@@ -264,20 +262,7 @@ def load_map_assets(self, load_path):
             if "master" in c_data:
                 c_data["master"] = ""
             c_data["puppets"] = []
-            c_data.setdefault("relations", {})
             c_data["at_war_with"] = [other for other in playable_nations if other != c_name]
-            for other in c_data["at_war_with"]:
-                c_data["relations"][other] = -100
-    else:
-        for c_name, c_data in self.nation_data.items():
-            for enemy in c_data.get("at_war_with", []):
-                c_data.setdefault("relations", {})[enemy] = -100
-            
-            fac = c_data.get("faction", "")
-            if fac:
-                for other_c, other_d in self.nation_data.items():
-                    if other_c != c_name and other_d.get("faction", "") == fac:
-                        c_data.setdefault("relations", {})[other_c] = 100
 
     if self.random_settings and "base_days_per_turn" in self.random_settings:
         self.scenario_settings["base_days_per_turn"] = self.random_settings["base_days_per_turn"]

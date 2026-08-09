@@ -306,7 +306,7 @@ def save_scenario_settings(data):
     # 3. Write only the safe data to the JSON on disk
     try:
         with open(cache_obj["path"], "w", encoding="utf-8") as f:
-            json.dump(safe_data, f, indent=4)
+            json.dump(safe_data, f, indent=c.SAVE_INDENT)
     except Exception as e:
         print(f"Error saving {cache_obj['path']}: {e}")
 
@@ -343,7 +343,7 @@ def save_cached_json(cache_key, new_data):
     
     try:
         with open(cache_obj["path"], "w", encoding="utf-8") as f:
-            json.dump(new_data, f, indent=4)
+            json.dump(new_data, f, indent=c.SAVE_INDENT)
     except Exception as e:
         print(f"Error saving {cache_obj['path']}: {e}")
 
@@ -1353,6 +1353,30 @@ def _modify_resources(nation_data_block, costs_dict, is_refund=False):
 
 def refund_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=True)
 def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=False)
+
+def refund_queue_item(nation_data_block, item, owner=None, map_data=None):
+    """Refunds one cancelled production/construction queue entry.
+
+    Entries carry a "refund" dict recording what was actually paid, which is
+    what a cancellation should hand back -- the library price can have changed
+    since (a discount, a tech, a different owner). Older saves predate that
+    field, so fall back to pricing the item from the libraries.
+
+    Callers used to spell this out themselves, and one of them
+    (map_logic/ai/automation_logic.py) read a "building_type" key that queue
+    entries never had, so cancelling a building queue refunded nothing at all.
+    """
+    if "refund" in item:
+        refund_resources(nation_data_block, item["refund"])
+        return
+
+    stats = {}
+    if item.get("order_type") == "BUILDING":
+        stats = get_building_cost(item.get("item_name"), owner, map_data, get_building_library())
+    elif "unit_type" in item:
+        stats = get_unit_library().get(item["unit_type"], {})
+    refund_resources(nation_data_block, stats)
+
 
 def can_afford(nation_data_block, costs_dict):
     """Returns True if the nation has enough resources to cover the costs."""

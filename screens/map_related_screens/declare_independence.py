@@ -3,10 +3,14 @@ import copy
 from gameState import MapOverlayScreen
 import data.constants as c
 from ui.bars import ui_bars
+from ui import text_utils
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager
+
+# Longest core name shown on a selection button before it is ellipsised.
+CORE_NAME_MAX_CHARS = 15
 
 class Declare_Independence_Screen(MapOverlayScreen):
     overlay_alpha = 200
@@ -59,7 +63,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         
         for i, core_tag in enumerate(self.available_cores):
             core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
-            display_name = core_name if len(core_name) <= 15 else core_name[:12] + "..."
+            display_name = text_utils.truncate_chars(core_name, CORE_NAME_MAX_CHARS)
             color_core = "green" if self.selected_core == core_tag else "blue"
             self.elements.append(Button(btn_x, btn_y + 60 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
 
@@ -202,7 +206,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         
         y_off = panel_rect.y + 80
         for line in desc:
-            txt = font.render(line, True, (200, 200, 200))
+            txt = font.render(line, True, c.UI_TEXT_LIGHT)
             surface.blit(txt, (panel_rect.x + 30, y_off))
             y_off += 20
             

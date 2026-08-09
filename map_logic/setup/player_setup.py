@@ -74,7 +74,7 @@ def confirm_player_country(map_screen):
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
             stats = queries.get_unit_library().get(u_type, {})
             map_screen.unit_economy["fuel"] = c.TACTICAL_MAX_FUEL
-            map_screen.unit_economy["fuel_inc"] = stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
+            map_screen.unit_economy["fuel_inc"] = queries.get_unit_upkeep(stats)["fuel"]
             
         map_screen.selected_province = None 
         map_screen.hovered_province = None

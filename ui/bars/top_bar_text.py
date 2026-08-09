@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
+from ui.bars import ui_bars
 
 # ==========================================
 # LAYOUT
@@ -30,10 +31,9 @@ def draw_top_text(map_screen, surface):
             surf_text.get_width() + TOP_BAR_TEXT_BG_PADDING * 2, 
             surf_text.get_height() + TOP_BAR_TEXT_BG_PADDING
         )
-        bg_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-        bg_surf.fill((*TOP_BAR_TEXT_BG_COLOR, TOP_BAR_TEXT_BG_ALPHA))
-        surface.blit(bg_surf, bg_rect.topleft)
-        pygame.draw.rect(surface, TOP_BAR_TEXT_BORDER_COLOR, bg_rect, 1) # Clean UI border
+        ui_bars.draw_translucent_panel(surface, bg_rect,
+                                       (*TOP_BAR_TEXT_BG_COLOR, TOP_BAR_TEXT_BG_ALPHA),
+                                       border_color=TOP_BAR_TEXT_BORDER_COLOR, border_width=1)
         surface.blit(surf_text, (x, y))
 
     # 1. Draw Date (Centered)
@@ -59,7 +59,7 @@ def draw_top_text(map_screen, surface):
     
     # Grab our new dedicated top bar font preset
     big_font = fonts.get("top_bar_country")
-    name_surf = big_font.render(f"{player_display}", True, (200, 200, 200))
+    name_surf = big_font.render(f"{player_display}", True, c.UI_TEXT_LIGHT)
 
     # Position it
     draw_with_bg(name_surf, TOP_BAR_COUNTRY_X, TOP_BAR_COUNTRY_Y)

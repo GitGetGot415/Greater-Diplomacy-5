@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
+from ui.bars import ui_bars
 
 # ==========================================
 # LAYOUT
@@ -37,12 +38,9 @@ def draw_bottom_text(map_screen, surface):
 
     # Draw Background Box
     bg_width = (len(resources) * HUD_SPACING) - HUD_BOX_TRIM
-    bg_surf = pygame.Surface((bg_width, HUD_BOX_HEIGHT), pygame.SRCALPHA)
-    bg_surf.fill((0, 0, 0, HUD_BG_ALPHA))
-
     bg_rect = pygame.Rect(HUD_START_X - HUD_BOX_PAD_X, hud_y - HUD_BOX_PAD_Y, bg_width, HUD_BOX_HEIGHT)
-    surface.blit(bg_surf, bg_rect.topleft)
-    pygame.draw.rect(surface, BAR_LINE_COLOR, bg_rect, 1)
+    ui_bars.draw_translucent_panel(surface, bg_rect, (0, 0, 0, HUD_BG_ALPHA),
+                                   border_color=BAR_LINE_COLOR, border_width=1)
 
     # Draw Text using the dedicated preset
     hud_font = fonts.get("resource_hud")

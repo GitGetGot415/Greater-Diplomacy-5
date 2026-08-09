@@ -244,7 +244,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
-        json.dump(payload, f, indent=4)
+        json.dump(payload, f, indent=c.SAVE_INDENT)
 
     # Web only: mirror the .gd5tour (and any regen-keys txt above) into
     # IndexedDB so it survives closing the tab. No-op on desktop.
@@ -351,7 +351,7 @@ def export_move_file(map_ref, file_path, player_key):
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
-        json.dump(payload, f, indent=4)
+        json.dump(payload, f, indent=c.SAVE_INDENT)
 
     # Web only: mirror the .gd5move into IndexedDB so it survives closing the
     # tab. No-op on desktop.

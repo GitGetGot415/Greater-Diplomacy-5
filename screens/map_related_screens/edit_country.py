@@ -422,7 +422,7 @@ class Edit_Country_Screen(GameState):
         msg = fonts.get("heading2").render(title_text, True, (255, 255, 255))
         surface.blit(msg, msg.get_rect(center=(box_rect.centerx, box_rect.y + 50)))
 
-        sub_msg = fonts.get("normal").render(sub_text, True, (200, 200, 200))
+        sub_msg = fonts.get("normal").render(sub_text, True, c.UI_TEXT_LIGHT)
         surface.blit(sub_msg, sub_msg.get_rect(center=(box_rect.centerx, box_rect.y + 90)))
 
         yes_rect = pygame.Rect(box_rect.centerx - 130, box_rect.y + 140, 100, 40)
@@ -455,11 +455,11 @@ class Edit_Country_Screen(GameState):
         pygame.draw.rect(surface, (200, 200, 200), self.portrait_rect, 2)
 
         # Labels
-        surface.blit(heading_font.render("Flag (60x40)", True, (200, 200, 200)), (input_box_x, 110))
-        surface.blit(heading_font.render("Leader Portrait (60x60)", True, (200, 200, 200)), (second_right_ui_x, 110))
+        surface.blit(heading_font.render("Flag (60x40)", True, c.UI_TEXT_LIGHT), (input_box_x, 110))
+        surface.blit(heading_font.render("Leader Portrait (60x60)", True, c.UI_TEXT_LIGHT), (second_right_ui_x, 110))
         
         # Render Palette & Tool Header
-        surface.blit(heading_font.render("Color Palette", True, (200, 200, 200)), (right_ui_x, 110))
+        surface.blit(heading_font.render("Color Palette", True, c.UI_TEXT_LIGHT), (right_ui_x, 110))
         
         # Render Active Color Indicator ("selected")
         color_x = c.SCREEN_WIDTH - 150
@@ -477,19 +477,19 @@ class Edit_Country_Screen(GameState):
             pygame.draw.rect(surface, self.active_color, (color_x, color_y, 60, 60))
             
         pygame.draw.rect(surface, (255, 255, 255), (color_x, color_y, 60, 60), 2)
-        surface.blit(normal_font.render("Selected", True, (200, 200, 200)), (color_x, color_y - 20))
+        surface.blit(normal_font.render("Selected", True, c.UI_TEXT_LIGHT), (color_x, color_y - 20))
 
         # --- Map Color Preview ---
         map_color_x = c.SCREEN_WIDTH - 200
         map_color_y = 600
-        surface.blit(heading_font.render("Map Color", True, (200, 200, 200)), (map_color_x, map_color_y - 30))
+        surface.blit(heading_font.render("Map Color", True, c.UI_TEXT_LIGHT), (map_color_x, map_color_y - 30))
         pygame.draw.rect(surface, self.new_map_color, (map_color_x, map_color_y, 60, 40))
         pygame.draw.rect(surface, (255, 255, 255), (map_color_x, map_color_y, 60, 40), 2)
 
         # Draw Text Inputs
         
         def draw_input_box(y_pos, label_text, input_state, value):
-            surface.blit(normal_font.render(label_text, True, (200, 200, 200)), (input_box_x, y_pos - 20))
+            surface.blit(normal_font.render(label_text, True, c.UI_TEXT_LIGHT), (input_box_x, y_pos - 20))
             rect = pygame.Rect(input_box_x, y_pos, 300, 40)
             color = (200, 255, 200) if self.active_input == input_state else (100, 100, 100)
             pygame.draw.rect(surface, (0, 0, 0), rect)
@@ -510,7 +510,7 @@ class Edit_Country_Screen(GameState):
         id_display_x = EDIT_COUNTRY_ID_DISPLAY_X
         id_display_y = EDIT_COUNTRY_ID_DISPLAY_Y
         id_text = f"Country ID: {self.editing_country}"
-        id_surf = normal_font.render(id_text, True, (150, 150, 150))
+        id_surf = normal_font.render(id_text, True, c.UI_TEXT_MUTED)
         surface.blit(id_surf, (id_display_x, id_display_y))
 
     def exit_screen(self):

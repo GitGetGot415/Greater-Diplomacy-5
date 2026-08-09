@@ -146,7 +146,7 @@ class Faction_Screen(GameState):
             txt_surf = font_title.render(self.new_faction_name + "|", True, (255, 255, 255))
             surface.blit(txt_surf, (title_rect.x + 10, title_rect.y + 10))
             
-            instr = font_normal.render("Enter: Save | Esc: Cancel", True, (200, 200, 200))
+            instr = font_normal.render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
             surface.blit(instr, (c.SCREEN_WIDTH // 2 - instr.get_width() // 2, 90))
         else:
             ui_bars.draw_centered_title(surface, f"Faction: {my_faction}", 40, font_preset="title")
@@ -158,7 +158,7 @@ class Faction_Screen(GameState):
         surface.blit(leader_txt, (c.SCREEN_WIDTH // 2 - leader_txt.get_width() // 2, 120))
 
         list_start_y = 200
-        surface.blit(font_heading.render("Members:", True, (200, 200, 200)), (c.SCREEN_WIDTH // 2 - 300, list_start_y))
+        surface.blit(font_heading.render("Members:", True, c.UI_TEXT_LIGHT), (c.SCREEN_WIDTH // 2 - 300, list_start_y))
 
         for i, member in enumerate(members):
             m_name = nation_data.get(member, {}).get("name", member)
