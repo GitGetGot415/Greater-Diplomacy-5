@@ -26,9 +26,20 @@ def acquire_surface(size=None, caption=None):
 
 
 class _ScreenModal:
-    def __init__(self, screen, on_done):
+    """Pushed onto the modal stack in place of a blocking loop -- see
+    ui/modal_stack.py for why nothing here is allowed to block.
+
+    `clear_hover_for` is the map screen to wipe hovered_province on when the
+    sub-screen closes: a screen layered over the live map leaves the province
+    under the cursor highlighted otherwise. `pass_screen` is False for the
+    callers whose on_done takes no argument.
+    """
+
+    def __init__(self, screen, on_done, clear_hover_for=None, pass_screen=True):
         self.screen = screen
         self.on_done = on_done
+        self.clear_hover_for = clear_hover_for
+        self.pass_screen = pass_screen
         screen.done = False
 
     def handle_events(self, events):
@@ -41,8 +52,10 @@ class _ScreenModal:
         self.screen.update()
         if self.screen.done:
             modal_stack.pop()
+            if self.clear_hover_for is not None:
+                self.clear_hover_for.hovered_province = None
             if self.on_done:
-                self.on_done(self.screen)
+                self.on_done(self.screen) if self.pass_screen else self.on_done()
 
     def draw(self, surface):
         self.screen.draw(surface)
@@ -82,7 +95,8 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
         on_done(screen)
 
 
-def run_screen(screen_or_factory, on_done=None, tk_parent=None, caption=None, size=None):
+def run_screen(screen_or_factory, on_done=None, tk_parent=None, caption=None, size=None,
+               clear_hover_for=None, pass_screen=True):
     """Runs a screen until it marks itself done, then calls on_done(screen).
 
     Pass a zero-argument factory rather than a screen when the screen's
@@ -103,4 +117,4 @@ def run_screen(screen_or_factory, on_done=None, tk_parent=None, caption=None, si
     # Embedded case: main.py's loop is already running, so hand off to the modal
     # stack instead of blocking. tk_parent doesn't apply here -- nothing tkinter
     # is ever on screen at the same time as the live game.
-    modal_stack.push(_ScreenModal(screen, on_done))
+    modal_stack.push(_ScreenModal(screen, on_done, clear_hover_for, pass_screen))

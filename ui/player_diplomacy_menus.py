@@ -2,48 +2,24 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
-from gameState import MapOverlayScreen, dispatch_global_keys
+from gameState import MapOverlayScreen
 from ui_elements import Button, Slider
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud
-from ui import modal_stack
-
-
-class _SubScreenModal:
-    """Pushed onto the modal stack in place of the old blocking loop that used
-    to bypass the main state machine here. See ui/modal_stack.py for why."""
-
-    def __init__(self, map_screen, screen_obj, on_done):
-        self.map_screen = map_screen
-        self.screen_obj = screen_obj
-        self.on_done = on_done
-        screen_obj.done = False
-
-    def handle_events(self, events):
-        for event in events:
-            # Mirrors the main loop so sub-screens get BACK/ORDERS for free.
-            dispatch_global_keys(self.screen_obj, event)
-        self.screen_obj.handle_events(events)
-
-    def update(self):
-        self.screen_obj.update()
-        if self.screen_obj.done:
-            modal_stack.pop()
-            # Clear any phantom hovering from the sub-screen
-            self.map_screen.hovered_province = None
-            if self.on_done:
-                self.on_done()
-
-    def draw(self, surface):
-        # The background is safely filled by the map rendering itself.
-        self.screen_obj.draw(surface)
 
 
 def _run_pygame_sub_screen(map_screen, screen_obj, on_done=None):
     """Pushes screen_obj onto the modal stack until it marks itself done, then
-    calls on_done() if given. Never blocks -- see ui/modal_stack.py."""
-    modal_stack.push(_SubScreenModal(map_screen, screen_obj, on_done))
+    calls on_done() if given. Never blocks -- see ui/modal_stack.py.
+
+    Kept as the name ~25 call sites already use (21 of them via an in-function
+    import). It is the map-layered flavour of screen_runner.run_screen: the
+    hosting map gets its hover cleared on close, and on_done takes no argument.
+    """
+    from ui.screen_runner import run_screen
+    run_screen(screen_obj, on_done, clear_hover_for=map_screen, pass_screen=False)
+
 
 def build_choice_button(x, y, size, label, enabled, selected, callback):
     """One button in a mutually exclusive option row.

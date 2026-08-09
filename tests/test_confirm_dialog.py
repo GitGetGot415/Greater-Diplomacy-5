@@ -178,5 +178,88 @@ class DialogTests(unittest.TestCase):
         modal_stack.pop()
 
 
+
+class ScreenRunnerTests(unittest.TestCase):
+    """run_screen is the one modal-launch path; _run_pygame_sub_screen is its
+    map-layered flavour. Both must push exactly one modal and pop it again."""
+
+    @classmethod
+    def setUpClass(cls):
+        _controller, cls.surface = app_harness.boot()
+
+    def setUp(self):
+        while not modal_stack.is_empty():
+            modal_stack.pop()
+
+    def make_screen(self):
+        from gameState import GameState
+
+        class Trivial(GameState):
+            def draw(self, surface):
+                pass
+
+        return Trivial()
+
+    def test_run_screen_pushes_then_pops(self):
+        from ui.screen_runner import run_screen
+
+        done = []
+        screen = self.make_screen()
+        run_screen(screen, on_done=done.append)
+        self.assertIs(modal_stack.active().screen, screen)
+
+        screen.done = True
+        modal_stack.active().update()
+        self.assertTrue(modal_stack.is_empty())
+        self.assertEqual(done, [screen])
+
+    def test_sub_screen_clears_hover_and_calls_back_with_no_args(self):
+        from ui.player_diplomacy_menus import _run_pygame_sub_screen
+
+        class FakeMap:
+            hovered_province = {"id": 1}
+
+        host = FakeMap()
+        calls = []
+        screen = self.make_screen()
+        _run_pygame_sub_screen(host, screen, on_done=lambda: calls.append(True))
+
+        screen.done = True
+        modal_stack.active().update()
+        self.assertTrue(modal_stack.is_empty())
+        self.assertEqual(calls, [True])
+        self.assertIsNone(host.hovered_province,
+                          "closing a map-layered sub-screen left the province highlighted")
+
+    def test_no_nested_event_loop_in_the_ui_package(self):
+        """A blocking loop reached from the game freezes a pygbag tab: the main
+        loop never gets back to its await. The only permitted ones are guarded
+        by "no display exists yet"."""
+        import ast
+        import os
+
+        allowed = {"ui/confirm_dialog.py", "ui/screen_runner.py"}
+        offenders = []
+        ui_dir = os.path.join(app_harness.ROOT, "ui")
+        for dirpath, _dirnames, filenames in os.walk(ui_dir):
+            for filename in filenames:
+                if not filename.endswith(".py"):
+                    continue
+                path = os.path.join(dirpath, filename)
+                rel = os.path.relpath(path, app_harness.ROOT).replace(os.sep, "/")
+                if rel in allowed:
+                    continue
+                with open(path, encoding="utf-8") as fh:
+                    tree = ast.parse(fh.read())
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.While):
+                        continue
+                    for inner in ast.walk(node):
+                        if (isinstance(inner, ast.Attribute) and inner.attr == "get"
+                                and isinstance(inner.value, ast.Attribute)
+                                and inner.value.attr == "event"):
+                            offenders.append(f"{rel}:{node.lineno}")
+        self.assertEqual(offenders, [])
+
 if __name__ == "__main__":
     unittest.main()
