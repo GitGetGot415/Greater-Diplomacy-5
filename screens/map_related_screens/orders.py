@@ -880,10 +880,9 @@ class Orders_Screen(GameState):
             ui_bars.draw_translucent_panel(surface, bg_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
                                            border_color=PANEL_BORDER_COLOR)
             
-            # --- NEW: Scroll Bar Rendering ---
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll_y, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top, self.panel_max_h, width=SCROLLBAR_WIDTH
-            )
+            self.draw_list_scrollbar(surface, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top,
+                                     self.panel_max_h, width=SCROLLBAR_WIDTH,
+                                     limit_attr="max_scroll_y")
 
         display_index = 0
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(

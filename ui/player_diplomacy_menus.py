@@ -585,10 +585,9 @@ class Claims_Screen(MapOverlayScreen):
                         y_off += 25
                     
 
-        # Draw a custom scrollbar if the content exceeds the box height
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 90, viewport_h, width=10
-        )
+        # Draws nothing when the content fits inside the box.
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 90,
+                                 viewport_h, width=10)
 
 # ==========================================
 # CEASEFIRE / PEACE SCREEN
@@ -1280,11 +1279,12 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                     surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))
                     y_off += 50
 
-        if self.max_scroll < 0:
-            viewport_h = self.panel_rect.height - 110
-            self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-                surface, self.scroll_y, self.max_scroll, self.panel_rect.right - 15, self.panel_rect.y + 100, viewport_h, width=10
-            )
+        # No max_scroll guard here: draw_list_scrollbar already returns nothing
+        # when the list fits, and going through it also clears last frame's
+        # track/handle rects instead of leaving them stale.
+        viewport_h = self.panel_rect.height - 110
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 100,
+                                 viewport_h, width=10)
 
 # ==========================================
 # PUBLIC INTERCEPT LAUNCHERS
