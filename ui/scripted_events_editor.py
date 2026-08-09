@@ -18,6 +18,7 @@ from map_logic.system32.time_handler import TimeHandler
 from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
 from ui.bars import ui_bars
+from ui.modal_screen import ModalScreen
 from ui.table_screen import truncate
 from ui_elements import Button, TextField
 
@@ -119,115 +120,11 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
 # SHARED CHROME
 # ==========================================
 
-class _ModalScreen(GameState):
-    """A dimmed freeze-frame behind a bordered panel -- the shape every converted
-    tool window in ui/ uses. Subclasses fill in draw_body() and refresh_ui()."""
-    PANEL_SIZE = (1240, 680)
-    PAD = 16
-    ROW_HEIGHT = 34
-
-    def __init__(self, game_state, title):
-        super().__init__()
-        # Only used to resolve custom keybinds (BACK/ORDERS) and to host sub-pickers.
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
-        self.title = title
-
-        surface = pygame.display.get_surface()
-        self.background = surface.copy() if surface else None
-
-        self.panel_rect = pygame.Rect(0, 0, *self.PANEL_SIZE)
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-
-    # -- widgets -------------------------------------------------------- #
-
-    def _assign(self, attr, value):
-        """Sets an attribute and re-renders -- the callback shape combos and toggles want."""
-        setattr(self, attr, value)
-        self.refresh_ui()
-
-    def _sized(self, btn, width):
-        btn.rect.width = width
-        return btn
-
-    def button(self, x, y, width, color, text, callback, preset="list_row"):
-        return self._sized(Button(x, y, preset, color, text, callback, font_preset="button_small"), width)
-
-    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue"):
-        """A combobox: shows the current value, opens the shared modal list picker."""
-        label = truncate(str(value) if str(value) else "-", max(4, (width - 14) // 9))
-        return self.button(x, y, width, color, label,
-                           lambda: self._choose(title, options, on_pick))
-
-    def _choose(self, title, options, on_pick):
-        options = list(options)
-        if not options:
-            confirm_dialog.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
-            return
-        queries.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
-        self.refresh_ui()
-
-    def toggle(self, x, y, width, checked, text, callback):
-        label = truncate(f"[{'X' if checked else '  '}] {text}", max(4, (width - 14) // 9))
-        btn = self.button(x, y, width, "green" if checked else "grey", label, callback)
-        btn.is_selected = checked
-        return btn
-
-    # -- scroll regions ------------------------------------------------- #
-
-    def scroll_attrs(self, name):
-        """Per-region scroll state names.
-
-        Underscore-prefixed so a region can never shadow a method: a region
-        called "events" would otherwise publish its scrollbar handle as
-        self.handle_events and overwrite GameState.handle_events.
-        """
-        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
-                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
-
-    def rows_of(self, name, count, top, view_h, row_h=None):
-        row_h = row_h or self.ROW_HEIGHT
-        attrs = self.scroll_attrs(name)
-        return self.layout_list_rows(count, row_h, top, view_h=view_h, cull_top=top - 1,
-                                     cull_bottom=top + view_h - row_h + 2,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
-                                     guard_attr=f"_guard_{name}")
-
-    def route_scroll(self, event, regions):
-        """Wheel goes to whichever region the cursor is over; scrollbar presses and
-        drags are offered to all of them, which each ignore what is not theirs."""
-        if event.type == pygame.MOUSEWHEEL:
-            pos = pygame.mouse.get_pos()
-            for name, rect in regions.items():
-                if rect.collidepoint(pos):
-                    self.handle_list_scroll(event, **self.scroll_attrs(name))
-                    return
-            return
-        for name in regions:
-            if self.handle_list_scroll(event, **self.scroll_attrs(name)):
-                return
-
-    # -- drawing -------------------------------------------------------- #
-
-    def label(self, surface, text, pos, color=(170, 170, 210), preset="small"):
-        surface.blit(fonts.get(preset).render(text, True, color), pos)
-
-    def draw_body(self, surface):
-        pass
-
-    def draw(self, surface):
-        if self.background:
-            surface.blit(self.background, (0, 0))
-        else:
-            surface.fill((20, 20, 28))
-        ui_bars.draw_fullscreen_overlay(surface, 210)
-
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(35, 35, 45),
-                               border_color=(100, 150, 255), border_width=3)
-        ui_bars.draw_centered_title(surface, self.title, self.panel_rect.y + 12, "heading2")
-
-        self.draw_body(surface)
-        self.draw_elements(surface)
+class _ModalScreen(ModalScreen):
+    """Legacy alias. The implementation moved to ui/modal_screen.py so the other
+    six modal screens could share it instead of importing a private name out of
+    this editor; the name stays here because a mod may target this module."""
+    pass
 
 
 def _run(screen):
@@ -483,7 +380,7 @@ class _VariablesScreen(_ModalScreen):
 
         self._content_vars = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
         self.scroll_content_rect = self._content_vars
-        for i, y in self.rows_of("vars", len(self.variables), self.list_top, self.list_view_h, row_h=30):
+        for i, y in self.pane_rows("vars", len(self.variables), self.list_top, self.list_view_h, row_h=30):
             v = self.variables[i]
             btn = self.button(self.list_x, y, self.LIST_W - 24, "blue",
                               truncate(f"{v['name']} ({v['type']}) = {v['value']}", 40),
@@ -509,7 +406,7 @@ class _VariablesScreen(_ModalScreen):
                                          lambda: self._move(1)))
 
     def additional_events(self, event):
-        self.route_scroll(event, {"vars": pygame.Rect(self.list_x, self.list_top,
+        self.route_pane_scroll(event, {"vars": pygame.Rect(self.list_x, self.list_top,
                                                       self.LIST_W, self.list_view_h)})
 
     def draw_body(self, surface):
@@ -879,7 +776,7 @@ class _EventEditScreen(_ModalScreen):
         self._content_conds = pygame.Rect(self.list_x, self.cond_top, self.panel_rect.width - 40, self.LIST_VIEW_H)
         self._content_acts = pygame.Rect(self.list_x, self.act_top, self.panel_rect.width - 40, self.LIST_VIEW_H)
 
-        for i, y in self.rows_of("conds", len(self.conds), self.cond_top, self.LIST_VIEW_H):
+        for i, y in self.pane_rows("conds", len(self.conds), self.cond_top, self.LIST_VIEW_H):
             row_els = self._build_cond_row(self.conds[i], i, y)
             for el in row_els:
                 el.is_scrollable = True
@@ -887,7 +784,7 @@ class _EventEditScreen(_ModalScreen):
                 el.click_guard = self._guard_conds
             self.elements += row_els
 
-        for i, y in self.rows_of("acts", len(self.acts), self.act_top, self.LIST_VIEW_H):
+        for i, y in self.pane_rows("acts", len(self.acts), self.act_top, self.LIST_VIEW_H):
             row_els = self._build_act_row(self.acts[i], i, y)
             for el in row_els:
                 el.is_scrollable = True
@@ -908,7 +805,7 @@ class _EventEditScreen(_ModalScreen):
         self.refresh_ui()
 
     def additional_events(self, event):
-        self.route_scroll(event, {"conds": self._content_conds, "acts": self._content_acts})
+        self.route_pane_scroll(event, {"conds": self._content_conds, "acts": self._content_acts})
 
     def draw_elements(self, surface):
         """Conditionals and actions scroll independently -- see
@@ -1135,7 +1032,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         self._content_events = pygame.Rect(self.events_x, self.events_top,
                                            self.panel_rect.right - self.events_x, self.events_view_h)
 
-        for i, y in self.rows_of("nations", len(self.countries), self.nations_top,
+        for i, y in self.pane_rows("nations", len(self.countries), self.nations_top,
                                  self.nations_view_h, row_h=30):
             cid = self.countries[i]
             btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
@@ -1151,7 +1048,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
         events = self._events()
         row_w = p.right - self.PAD - self.events_x - 20
-        for i, y in self.rows_of("events", len(events), self.events_top, self.events_view_h):
+        for i, y in self.pane_rows("events", len(events), self.events_top, self.events_view_h):
             btn = self.button(self.events_x, y, row_w, "blue",
                               truncate(self._event_summary(events[i], i), row_w // 9),
                               lambda idx=i: self.select_event(idx))
@@ -1180,7 +1077,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         self.elements.append(remove_btn)
 
     def additional_events(self, event):
-        self.route_scroll(event, {"nations": self._content_nations, "events": self._content_events})
+        self.route_pane_scroll(event, {"nations": self._content_nations, "events": self._content_events})
 
     def draw_elements(self, surface):
         """Nations and events scroll independently -- see
