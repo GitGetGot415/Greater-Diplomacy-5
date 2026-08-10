@@ -159,12 +159,19 @@ class Research_List_Screen(MapOverlayScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
+        force_time_appropriate_on = queries.get_scenario_flag(
+            "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
+            self.map_screen.scenario_settings)
+
+        ftap_btn = Button(p.centerx - 200, p.y + 115, "FTAP", "green", "Force Time-Appropriate Research",
+                          self.toggle_force_time_appropriate)
+        ftap_btn.is_selected = force_time_appropriate_on
+
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
             Button(p.x + 20, p.y + 60, "medium", "red", "Edit ALL (Bulk)", self.edit_all),
             Button(p.right - 220, p.y + 60, "medium", "orange", "Edit Map Default", self.edit_default),
-            Button(p.centerx - 200, p.y + 115, "FTAP", "green", "Force Time-Appropriate Research",
-                  self.force_time_appropriate),
+            ftap_btn,
         ]
 
         row_top = p.y + 170
@@ -225,27 +232,39 @@ class Research_List_Screen(MapOverlayScreen):
 
         self._open_editor("MAP DEFAULT", base_data, save)
 
-    def force_time_appropriate(self):
+    def toggle_force_time_appropriate(self):
+        settings = self.map_screen.scenario_settings
+        default = c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH
+        currently_on = queries.get_scenario_flag("force_time_appropriate_research", default, settings)
+
+        if currently_on:
+            # Turning off just stops future auto-recompute -- it doesn't touch
+            # whatever research values are currently set.
+            queries.toggle_scenario_flag(settings, "force_time_appropriate_research", default)
+            self.map_screen.show_feedback("Force Time-Appropriate Research: OFF")
+            self.refresh_ui()
+            return
+
         current_year = getattr(self.map_screen.time_manager, "year", c.START_YEAR)
         msg = (
-            f"This will reset and edit the research of ALL nations on the map to match "
-            f"the time-appropriate research levels for year {current_year} (the current year of this map), "
-            f"exactly as if a random scenario was created in {current_year}.\n\n"
-            f"Are you sure you want to force time-appropriate research for all nations?"
+            f"This will turn ON Force Time-Appropriate Research, resetting the research of ALL nations "
+            f"on the map to match the time-appropriate research levels for year {current_year} "
+            f"(the scenario's start year), exactly as if a random scenario was created in {current_year}.\n\n"
+            f"While this stays on, changing the scenario's start date will automatically re-align research "
+            f"to stay time-appropriate for the new date.\n\n"
+            f"Are you sure you want to turn this on?"
         )
 
         def on_confirm(ok):
             if not ok:
                 return
-            time_app_res = queries.get_time_appropriate_research(current_year)
-            self.map_screen.default_research = time_app_res.copy()
-            self.default_research = time_app_res.copy()
-            for cid in self.active_countries:
-                self.map_screen.nation_data[cid]["research"] = time_app_res.copy()
-            self.map_screen.show_feedback(f"Forced Time Appropriate Research for {current_year}")
+            queries.toggle_scenario_flag(settings, "force_time_appropriate_research", default)
+            queries.apply_time_appropriate_research_to_map(self.map_screen, current_year)
+            self.default_research = self.map_screen.default_research.copy()
+            self.map_screen.show_feedback(f"Force Time-Appropriate Research: ON ({current_year})")
             self.refresh_ui()
 
-        confirm_dialog.ask_yes_no("Force Time Appropriate Research", msg, on_confirm)
+        confirm_dialog.ask_yes_no("Force Time-Appropriate Research", msg, on_confirm)
 
     def draw_content(self, surface):
         p = self.panel_rect

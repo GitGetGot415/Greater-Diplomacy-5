@@ -70,7 +70,15 @@ class Editor_Date_Screen(MapOverlayScreen):
         self.map_screen.scenario_settings["base_days_per_turn"] = b_dpt
         self.map_screen.scenario_settings["days_per_turn"] = "Default"
         queries.save_scenario_settings(self.map_screen.scenario_settings)
-        self.map_screen.show_feedback("Date & Turn Rate set!")
+
+        feedback = "Date & Turn Rate set!"
+        if queries.get_scenario_flag("force_time_appropriate_research",
+                                     c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
+                                     self.map_screen.scenario_settings):
+            queries.apply_time_appropriate_research_to_map(self.map_screen, y)
+            feedback = f"Date & Turn Rate set! Research re-aligned to {y}."
+
+        self.map_screen.show_feedback(feedback)
         self.done = True
 
     def draw_content(self, surface):

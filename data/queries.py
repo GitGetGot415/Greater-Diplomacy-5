@@ -496,6 +496,21 @@ def get_time_appropriate_research(start_year):
     return {tech: lvl for tech, lvl in res.items() if tech in struct}
 
 
+def apply_time_appropriate_research_to_map(map_screen, year):
+    """Overwrites the map default and every living nation's research with the
+    time-appropriate levels for `year`.
+
+    Shared by the research editor's manual toggle and the date editor's
+    auto-recompute (when "force_time_appropriate_research" is on), so the two
+    can't drift into computing this differently.
+    """
+    time_app_res = get_time_appropriate_research(year)
+    map_screen.default_research = time_app_res.copy()
+    for cid in get_living_nations(map_screen.map_data):
+        map_screen.nation_data[cid]["research"] = time_app_res.copy()
+    return time_app_res
+
+
 # ==========================================
 # DIPLOMACY & COMBAT QUERIES
 # ==========================================
