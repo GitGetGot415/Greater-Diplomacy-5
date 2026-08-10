@@ -119,6 +119,8 @@ def load_map_assets(map_screen, load_path):
                 map_screen.scenario_settings["base_days_per_turn"] = save_meta["scenario_settings"]["base_days_per_turn"]
             if "use_scripted_events" in save_meta["scenario_settings"]:
                 map_screen.scenario_settings["use_scripted_events"] = save_meta["scenario_settings"]["use_scripted_events"]
+            if "force_time_appropriate_research" in save_meta["scenario_settings"]:
+                map_screen.scenario_settings["force_time_appropriate_research"] = save_meta["scenario_settings"]["force_time_appropriate_research"]
 
     # --- APPLY TURN OVERRIDES ---
     # Clear and reload libraries to ensure a clean slate before applying overrides
@@ -430,3 +432,14 @@ def load_map_assets(map_screen, load_path):
         for unit in prov.get("units", []):
             if not unit.get("custom_name"):
                 unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
+
+    # --- FORCE TIME-APPROPRIATE RESEARCH ---
+    # Only when actually starting a fresh game from a scenario (selection_mode) --
+    # never on a save already in progress, where research has since moved on
+    # through normal play, and never on an editor load, which drives this itself
+    # (see research_screens.py / date_economy_screens.py) so manual per-nation
+    # edits between those triggers aren't clobbered on every re-open.
+    if getattr(map_screen, 'selection_mode', False) and queries.get_scenario_flag(
+            "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
+            map_screen.scenario_settings):
+        queries.apply_time_appropriate_research_to_map(map_screen, map_screen.time_manager.year)
