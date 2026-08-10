@@ -1,6 +1,6 @@
 import random
 from collections import namedtuple
-from map_logic.ai import ai_handler, ai_llm_runner, ai_prompts
+from map_logic.ai import ai_handler, ai_llm_runner, ai_prompts, ai_world
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
@@ -212,11 +212,11 @@ def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
         diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
 
-def _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, border_graph):
+def _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, world):
     """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
     for enemy in my_enemies:
         if enemy not in active_nations: continue
-        if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data, borders=border_graph):
+        if not world.reachable(ai_name, enemy):
             if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
                 if _claim_slot(pending, queued_this_pass, enemy):
                     _queue_proactive_proposal(map_screen, pending, ai_name, enemy, "CEASEFIRE")
@@ -335,7 +335,7 @@ def _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pas
                                               context_target=target_enemy)
 
 
-def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations):
+def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
     """Section 4: declares war on a bordering nation holding our cores/claims
     once we think we can win, or fabricates a claim on them first if we lack a wargoal."""
     if my_master and my_type == c.PUPPET_TYPE_INTEGRATED:
@@ -346,12 +346,12 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
     if current_turn < turns_to_wait:
         return
 
-    valid_war_targets = queries.get_nations_holding_our_cores_or_claims(ai_name, map_screen.map_data, map_screen.nation_data)
+    valid_war_targets = world.core_claim_targets(ai_name)
     if not valid_war_targets:
         return
 
     # ONLY look at nations we actually share a physical border with
-    my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
+    my_neighbors = world.neighbors[ai_name]
     valid_border_targets = [t for t in valid_war_targets if t in my_neighbors]
 
     for target in valid_border_targets:
@@ -374,7 +374,7 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
         # the target already is all live inside ai_thinks_it_can_win; this
         # block used to recompute every one of them and throw the result
         # away, which cost several full map scans per candidate target.
-        if queries.ai_thinks_it_can_win(ai_name, target, map_screen.map_data, map_screen.nation_data, map_screen.id_to_province):
+        if world.thinks_it_can_win(ai_name, target):
 
             # Random chance to actually declare war
             war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
@@ -444,7 +444,7 @@ def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_n
         queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
 
 
-def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations):
+def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations, world):
     """Section 5: while at peace, fabricates a claim on a weaker bordering
     neighbor we don't already have a wargoal or claim against."""
     current_turn = queries.get_total_turns(map_screen.time_manager)
@@ -452,7 +452,7 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
     if current_turn < turns_to_wait:
         return
 
-    my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
+    my_neighbors = world.neighbors[ai_name]
 
     for neighbor in my_neighbors:
         if neighbor not in active_nations: continue
@@ -471,7 +471,7 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
         has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
 
         if not has_wg and not has_claims_on_them:
-            if queries.is_weaker_neighbor(ai_name, neighbor, map_screen.map_data, map_screen.nation_data):
+            if world.is_weaker_neighbor(ai_name, neighbor):
                 if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
 
                     valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
@@ -495,9 +495,11 @@ def _run_basic_proactive_ai(map_screen):
     map_screen.proactive_tasks_completed = 0
     map_screen.loading_status_text = "Evaluating AI Grand Strategy..."
 
-    # Nothing below redraws the map, so the reachability graph is the same for
-    # every nation this pass. Building it once keeps it off the per-enemy path.
-    border_graph = queries.build_national_border_graph(map_screen.map_data, map_screen.id_to_province)
+    # Nothing below redraws the map, so every border, strength and relation
+    # this pass asks about is the same for every nation in it. The snapshot
+    # holds the reachability graph that used to be built here, plus the
+    # per-pair answers each section below would otherwise sweep the map for.
+    world = ai_world.for_screen(map_screen)
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
@@ -527,7 +529,7 @@ def _run_basic_proactive_ai(map_screen):
         is_already_at_war = len(my_enemies) > 0
 
         if is_already_at_war:
-            _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, border_graph)
+            _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, world)
 
         if is_already_at_war and not my_faction and not getattr(c, "DISABLE_FACTIONS", False):
             _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations)
@@ -541,13 +543,13 @@ def _run_basic_proactive_ai(map_screen):
         if my_faction:
             _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations)
 
-        _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations)
+        _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations, world)
 
         if is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
             _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations)
 
         if not is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
-            _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations)
+            _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations, world)
 
         # --- Update Progress Bar ---
         map_screen.proactive_tasks_completed += 1
