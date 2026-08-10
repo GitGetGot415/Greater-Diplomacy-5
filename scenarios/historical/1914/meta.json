@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-10T14:42:33.905425",
+    "generated_at": "2026-08-10T18:48:49.925274",
     "date": {
         "day": 15,
         "month": 0,
@@ -41986,24 +41986,7 @@
                 "German Empire"
             ],
             "is_coastal": false,
-            "units": [
-                {
-                    "type": "WW1 Tank",
-                    "owner": "German Empire",
-                    "health": 3000.0,
-                    "max_health": 3000,
-                    "speed": 1,
-                    "attack": 1500,
-                    "defense": 100,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "1st Ww1 Tank Division",
-                    "naval_unit": false
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -42207,24 +42190,7 @@
                 "Russia"
             ],
             "is_coastal": false,
-            "units": [
-                {
-                    "type": "WW1 Tank",
-                    "owner": "Russia",
-                    "health": 3000.0,
-                    "max_health": 3000,
-                    "speed": 1,
-                    "attack": 1500,
-                    "defense": 100,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "1st Ww1 Tank Division",
-                    "naval_unit": false
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -42888,24 +42854,7 @@
                 "German Empire"
             ],
             "is_coastal": false,
-            "units": [
-                {
-                    "type": "WW1 Tank",
-                    "owner": "German Empire",
-                    "health": 3000.0,
-                    "max_health": 3000,
-                    "speed": 1,
-                    "attack": 1500,
-                    "defense": 100,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "2nd Ww1 Tank Division",
-                    "naval_unit": false
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -44187,24 +44136,7 @@
                 "France"
             ],
             "is_coastal": false,
-            "units": [
-                {
-                    "type": "WW1 Tank",
-                    "owner": "France",
-                    "health": 3000.0,
-                    "max_health": 3000,
-                    "speed": 1,
-                    "attack": 1500,
-                    "defense": 100,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "1st Ww1 Tank Division",
-                    "naval_unit": false
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -49303,8 +49235,9 @@
                 {
                     "type": "Destroyer I",
                     "owner": "Ottoman Empire",
-                    "health": 1200.0,
+                    "health": 1200,
                     "max_health": 1200,
+                    "morale": 100.0,
                     "speed": 1,
                     "attack": 600,
                     "defense": 100,
@@ -49312,25 +49245,7 @@
                     "order": {
                         "type": "MOVE",
                         "path": []
-                    },
-                    "custom_name": "1st Destroyer (I)",
-                    "naval_unit": true
-                },
-                {
-                    "type": "WW1 Tank",
-                    "owner": "Ottoman Empire",
-                    "health": 3000.0,
-                    "max_health": 3000,
-                    "speed": 1,
-                    "attack": 1500,
-                    "defense": 100,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "1st Ww1 Tank Division",
-                    "naval_unit": false
+                    }
                 }
             ],
             "building_queue": [],

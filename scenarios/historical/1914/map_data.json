@@ -9689,24 +9689,7 @@
             283
         ],
         "owner": "German Empire",
-        "units": [
-            {
-                "type": "WW1 Tank",
-                "owner": "German Empire",
-                "health": 3000.0,
-                "max_health": 3000,
-                "speed": 1,
-                "attack": 1500,
-                "defense": 100,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "1st Ww1 Tank Division",
-                "naval_unit": false
-            }
-        ],
+        "units": [],
         "orders": [],
         "buildings": [
             "Factory Lvl 2",
@@ -10126,24 +10109,7 @@
             245
         ],
         "owner": "Russia",
-        "units": [
-            {
-                "type": "WW1 Tank",
-                "owner": "Russia",
-                "health": 3000.0,
-                "max_health": 3000,
-                "speed": 1,
-                "attack": 1500,
-                "defense": 100,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "1st Ww1 Tank Division",
-                "naval_unit": false
-            }
-        ],
+        "units": [],
         "orders": [],
         "buildings": [
             "Basic Factory"
@@ -11546,24 +11512,7 @@
             351
         ],
         "owner": "German Empire",
-        "units": [
-            {
-                "type": "WW1 Tank",
-                "owner": "German Empire",
-                "health": 3000.0,
-                "max_health": 3000,
-                "speed": 1,
-                "attack": 1500,
-                "defense": 100,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "2nd Ww1 Tank Division",
-                "naval_unit": false
-            }
-        ],
+        "units": [],
         "orders": [],
         "buildings": [],
         "resources": {},
@@ -14109,24 +14058,7 @@
             405
         ],
         "owner": "France",
-        "units": [
-            {
-                "type": "WW1 Tank",
-                "owner": "France",
-                "health": 3000.0,
-                "max_health": 3000,
-                "speed": 1,
-                "attack": 1500,
-                "defense": 100,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "1st Ww1 Tank Division",
-                "naval_unit": false
-            }
-        ],
+        "units": [],
         "orders": [],
         "buildings": [],
         "resources": {},
@@ -24295,8 +24227,9 @@
             {
                 "type": "Destroyer I",
                 "owner": "Ottoman Empire",
-                "health": 1200.0,
+                "health": 1200,
                 "max_health": 1200,
+                "morale": 100.0,
                 "speed": 1,
                 "attack": 600,
                 "defense": 100,
@@ -24304,25 +24237,7 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                },
-                "custom_name": "1st Destroyer (I)",
-                "naval_unit": true
-            },
-            {
-                "type": "WW1 Tank",
-                "owner": "Ottoman Empire",
-                "health": 3000.0,
-                "max_health": 3000,
-                "speed": 1,
-                "attack": 1500,
-                "defense": 100,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "1st Ww1 Tank Division",
-                "naval_unit": false
+                }
             }
         ],
         "orders": [],
