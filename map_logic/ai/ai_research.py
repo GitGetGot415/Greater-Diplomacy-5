@@ -46,11 +46,14 @@ def process_ai_research(map_screen):
             years = t_data.get("years", [1900] * max_lvl)
             target_year = years[min(lvl_to_research - 1, len(years)-1)]
             
-            available_techs.append((tech_key, target_year, t_data.get("cost", 300)))
+            is_new_tech = cur_lvl == 0
 
-        # Sort by year (prioritize techs that are on-time or older), then by cost
+            available_techs.append((tech_key, target_year, t_data.get("cost", 300), is_new_tech))
+
+        # Sort by year (prioritize techs that are on-time or older), then prefer
+        # brand-new techs over upgrades to existing ones, then by cost
         current_year = map_screen.time_manager.year
-        available_techs.sort(key=lambda x: (max(0, x[1] - current_year), x[2]))
+        available_techs.sort(key=lambda x: (max(0, x[1] - current_year), 0 if x[3] else 1, x[2]))
 
         # Fill the queue
         while len(queue) < c.RESEARCH_SLOTS and available_techs:
