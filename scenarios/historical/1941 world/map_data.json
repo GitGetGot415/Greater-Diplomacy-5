@@ -888,7 +888,7 @@
             61,
             63
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -896,7 +896,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(27, 0, 0)",
         "map_color": [
@@ -2358,7 +2358,7 @@
             116,
             39
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -2366,7 +2366,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(71, 0, 0)",
         "map_color": [
@@ -3900,7 +3900,7 @@
             203,
             164
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -3908,7 +3908,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(115, 0, 0)",
         "map_color": [
@@ -3933,7 +3933,7 @@
             186,
             157
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -3941,7 +3941,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(116, 0, 0)",
         "map_color": [
@@ -4115,7 +4115,7 @@
             63,
             127
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -4123,7 +4123,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(121, 0, 0)",
         "map_color": [
@@ -4314,7 +4314,7 @@
             61,
             63
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -4322,7 +4322,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(127, 0, 0)",
         "map_color": [
@@ -4414,7 +4414,7 @@
             189,
             158
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -4422,7 +4422,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(129, 0, 0)",
         "map_color": [
@@ -4694,7 +4694,7 @@
             115,
             60
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -4704,7 +4704,7 @@
             "Oil": 50
         },
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(137, 0, 0)",
         "map_color": [
@@ -4730,7 +4730,7 @@
             121,
             63
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -4738,7 +4738,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(138, 0, 0)",
         "map_color": [
@@ -5278,7 +5278,7 @@
             121,
             127
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5286,7 +5286,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(153, 0, 0)",
         "map_color": [
@@ -5427,7 +5427,7 @@
             165,
             214
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5435,7 +5435,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(157, 0, 0)",
         "map_color": [
@@ -5459,7 +5459,7 @@
             281,
             189
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5469,7 +5469,7 @@
             "Oil": 50
         },
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(158, 0, 0)",
         "map_color": [
@@ -5691,7 +5691,7 @@
             179,
             282
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5699,7 +5699,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(164, 0, 0)",
         "map_color": [
@@ -5722,7 +5722,7 @@
             157,
             253
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5730,7 +5730,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(165, 0, 0)",
         "map_color": [
@@ -5874,7 +5874,7 @@
             186,
             189
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -5882,7 +5882,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(169, 0, 0)",
         "map_color": [
@@ -6225,7 +6225,7 @@
             164,
             300
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -6233,7 +6233,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(179, 0, 0)",
         "map_color": [
@@ -6256,7 +6256,7 @@
             300,
             165
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -6266,7 +6266,7 @@
             "Oil": 50
         },
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(180, 0, 0)",
         "map_color": [
@@ -6669,7 +6669,7 @@
             281,
             158
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -6677,7 +6677,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(189, 0, 0)",
         "map_color": [
@@ -7168,7 +7168,7 @@
             242,
             115
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -7176,7 +7176,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(203, 0, 0)",
         "map_color": [
@@ -7200,7 +7200,7 @@
             269,
             121
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -7208,7 +7208,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(204, 0, 0)",
         "map_color": [
@@ -7413,7 +7413,7 @@
             153,
             127
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -7421,7 +7421,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(210, 0, 0)",
         "map_color": [
@@ -7552,7 +7552,7 @@
             186,
             253
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -7560,7 +7560,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(214, 0, 0)",
         "map_color": [
@@ -7585,7 +7585,7 @@
             410,
             127
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -7593,7 +7593,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(215, 0, 0)",
         "map_color": [
@@ -8513,11 +8513,11 @@
             203,
             268
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -8541,7 +8541,7 @@
         ],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(242, 0, 0)",
         "map_color": [
@@ -8807,7 +8807,7 @@
             189,
             351
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -8815,7 +8815,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(248, 0, 0)",
         "map_color": [
@@ -8989,7 +8989,7 @@
             407,
             157
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -8997,7 +8997,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(253, 0, 0)",
         "map_color": [
@@ -9104,7 +9104,7 @@
         "neighbors": [
             227
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -9112,7 +9112,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(0, 1, 0)",
         "map_color": [
@@ -9200,7 +9200,7 @@
             153,
             411
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -9208,7 +9208,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(3, 1, 0)",
         "map_color": [
@@ -9532,7 +9532,7 @@
             343,
             282
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -9540,7 +9540,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(12, 1, 0)",
         "map_color": [
@@ -9564,7 +9564,7 @@
             204,
             411
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -9572,7 +9572,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(13, 1, 0)",
         "map_color": [
@@ -9966,7 +9966,7 @@
             189,
             158
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -9974,7 +9974,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(25, 1, 0)",
         "map_color": [
@@ -10000,7 +10000,7 @@
             343,
             376
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -10008,7 +10008,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(26, 1, 0)",
         "map_color": [
@@ -10293,7 +10293,7 @@
             407,
             253
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -10303,7 +10303,7 @@
         ],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(33, 1, 0)",
         "map_color": [
@@ -10732,11 +10732,11 @@
             180,
             282
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -10758,7 +10758,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(44, 1, 0)",
         "map_color": [
@@ -10783,7 +10783,7 @@
             186,
             351
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -10791,7 +10791,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(45, 1, 0)",
         "map_color": [
@@ -11083,7 +11083,7 @@
             410,
             189
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -11091,7 +11091,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(53, 1, 0)",
         "map_color": [
@@ -11585,7 +11585,7 @@
             410,
             411
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -11593,7 +11593,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(65, 1, 0)",
         "map_color": [
@@ -12834,11 +12834,11 @@
             439,
             248
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -12862,7 +12862,7 @@
         ],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(95, 1, 0)",
         "map_color": [
@@ -13055,7 +13055,7 @@
             248,
             351
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -13063,7 +13063,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(101, 1, 0)",
         "map_color": [
@@ -13087,7 +13087,7 @@
             269,
             411
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -13095,7 +13095,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(102, 1, 0)",
         "map_color": [
@@ -15046,7 +15046,7 @@
             411,
             508
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -15054,7 +15054,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(154, 1, 0)",
         "map_color": [
@@ -15080,7 +15080,7 @@
             410,
             508
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -15088,7 +15088,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(155, 1, 0)",
         "map_color": [
@@ -15554,7 +15554,7 @@
             524,
             604
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -15562,7 +15562,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(167, 1, 0)",
         "map_color": [
@@ -16763,7 +16763,7 @@
             309,
             439
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -16771,7 +16771,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(200, 1, 0)",
         "map_color": [
@@ -17405,7 +17405,7 @@
         "neighbors": [
             451
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -17413,7 +17413,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(217, 1, 0)",
         "map_color": [
@@ -18604,7 +18604,7 @@
             601,
             410
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -18612,7 +18612,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(247, 1, 0)",
         "map_color": [
@@ -18635,7 +18635,7 @@
             451,
             553
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -18643,7 +18643,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(248, 1, 0)",
         "map_color": [
@@ -18786,7 +18786,7 @@
             410,
             411
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -18796,7 +18796,7 @@
         ],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(252, 1, 0)",
         "map_color": [
@@ -18956,7 +18956,7 @@
             604,
             423
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -18964,7 +18964,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(1, 2, 0)",
         "map_color": [
@@ -19671,7 +19671,7 @@
             410,
             508
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -19679,7 +19679,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(20, 2, 0)",
         "map_color": [
@@ -20444,7 +20444,7 @@
             603,
             508
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -20452,7 +20452,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(41, 2, 0)",
         "map_color": [
@@ -20579,7 +20579,7 @@
             565,
             503
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -20587,7 +20587,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(45, 2, 0)",
         "map_color": [
@@ -21145,7 +21145,7 @@
             504,
             603
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -21153,7 +21153,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(59, 2, 0)",
         "map_color": [
@@ -21488,7 +21488,7 @@
             654,
             503
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -21498,7 +21498,7 @@
         ],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(69, 2, 0)",
         "map_color": [
@@ -21625,7 +21625,7 @@
             532,
             503
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -21633,7 +21633,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(73, 2, 0)",
         "map_color": [
@@ -22249,7 +22249,7 @@
             565,
             503
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -22257,7 +22257,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(89, 2, 0)",
         "map_color": [
@@ -22331,11 +22331,11 @@
             602,
             571
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -22357,7 +22357,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(91, 2, 0)",
         "map_color": [
@@ -22632,7 +22632,7 @@
             602,
             508
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -22640,7 +22640,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(99, 2, 0)",
         "map_color": [
@@ -22965,11 +22965,11 @@
             691,
             532
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -22991,7 +22991,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(109, 2, 0)",
         "map_color": [
@@ -23946,7 +23946,7 @@
             571,
             524
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -23954,7 +23954,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(136, 2, 0)",
         "map_color": [
@@ -24143,7 +24143,7 @@
             565,
             742
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -24151,7 +24151,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(141, 2, 0)",
         "map_color": [
@@ -24178,7 +24178,7 @@
             721,
             601
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -24186,7 +24186,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(142, 2, 0)",
         "map_color": [
@@ -24948,7 +24948,7 @@
             654,
             680
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -24956,7 +24956,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(162, 2, 0)",
         "map_color": [
@@ -25172,7 +25172,7 @@
             565,
             601
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -25180,7 +25180,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(168, 2, 0)",
         "map_color": [
@@ -27345,11 +27345,11 @@
             565,
             760
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [
             {
                 "type": "Infantry Type 1941",
-                "owner": "Dominion of Canada",
+                "owner": "Canada",
                 "health": 2550.0,
                 "max_health": 2550,
                 "morale": 100.0,
@@ -27371,7 +27371,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(229, 2, 0)",
         "map_color": [
@@ -27396,7 +27396,7 @@
             781,
             653
         ],
-        "owner": "Dominion of Canada",
+        "owner": "Canada",
         "units": [],
         "building_queue": [],
         "unit_queue": [],
@@ -27404,7 +27404,7 @@
         "buildings": [],
         "resources": {},
         "cores": [
-            "Dominion of Canada"
+            "Canada"
         ],
         "json_key": "(230, 2, 0)",
         "map_color": [

@@ -444,7 +444,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "French Indochina": 100,
@@ -679,7 +679,7 @@
                 "Australia",
                 "British Malaya",
                 "British Raj",
-                "Dominion of Canada",
+                "Canada",
                 "Egypt",
                 "New Zealand",
                 "Oman",
@@ -717,7 +717,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100,
@@ -1519,7 +1519,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "Free France": 100,
                 "British Malaya": 100,
@@ -1874,7 +1874,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -1901,7 +1901,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -2068,7 +2068,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -2095,7 +2095,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -2267,7 +2267,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada"
+                "Canada"
             ],
             "faction": "Allies",
             "is_faction_leader": true,
@@ -2276,7 +2276,7 @@
             "relations": {
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Australia": 100,
                 "New Zealand": 100,
                 "British Raj": 100,
@@ -3003,7 +3003,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "France": 100,
@@ -3089,7 +3089,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "France": 100,
@@ -3163,7 +3163,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -3190,7 +3190,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -3663,7 +3663,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "French Indochina": 100,
@@ -5428,7 +5428,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "Free France": 100,
@@ -5760,7 +5760,7 @@
                 "New Zealand": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "France": 100,
@@ -5900,7 +5900,7 @@
             "relations": {
                 "United Kingdom": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Australia": 100,
                 "New Zealand": 100,
                 "British Raj": 100,
@@ -6780,7 +6780,7 @@
             "relations": {
                 "United Kingdom": 100,
                 "Egypt": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Australia": 100,
                 "New Zealand": 100,
                 "British Raj": 100,
@@ -12231,7 +12231,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -12258,7 +12258,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -20819,8 +20819,8 @@
             "adjective": "Colombian",
             "diplo_responses": {}
         },
-        "Dominion of Canada": {
-            "name": "Dominion of Canada",
+        "Canada": {
+            "name": "Canada",
             "color": [
                 200,
                 0,
@@ -22372,7 +22372,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -22399,7 +22399,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -23647,7 +23647,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "British Malaya": 100,
                 "France": 100,
                 "Oman": 100,
@@ -23975,7 +23975,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "Dutch East Indies": 100,
@@ -27830,95 +27830,95 @@
                 "2023": "Italian East Africa"
             },
             "Allies": {
-                "27": "Dominion of Canada",
-                "71": "Dominion of Canada",
-                "115": "Dominion of Canada",
-                "116": "Dominion of Canada",
-                "121": "Dominion of Canada",
-                "127": "Dominion of Canada",
-                "129": "Dominion of Canada",
-                "137": "Dominion of Canada",
-                "138": "Dominion of Canada",
+                "27": "Canada",
+                "71": "Canada",
+                "115": "Canada",
+                "116": "Canada",
+                "121": "Canada",
+                "127": "Canada",
+                "129": "Canada",
+                "137": "Canada",
+                "138": "Canada",
                 "143": "United Kingdom",
-                "153": "Dominion of Canada",
-                "157": "Dominion of Canada",
-                "158": "Dominion of Canada",
-                "164": "Dominion of Canada",
-                "165": "Dominion of Canada",
+                "153": "Canada",
+                "157": "Canada",
+                "158": "Canada",
+                "164": "Canada",
+                "165": "Canada",
                 "166": "United Kingdom",
-                "169": "Dominion of Canada",
-                "179": "Dominion of Canada",
-                "180": "Dominion of Canada",
-                "189": "Dominion of Canada",
+                "169": "Canada",
+                "179": "Canada",
+                "180": "Canada",
+                "189": "Canada",
                 "199": "United Kingdom",
-                "203": "Dominion of Canada",
-                "204": "Dominion of Canada",
-                "210": "Dominion of Canada",
-                "214": "Dominion of Canada",
-                "215": "Dominion of Canada",
+                "203": "Canada",
+                "204": "Canada",
+                "210": "Canada",
+                "214": "Canada",
+                "215": "Canada",
                 "226": "United Kingdom",
                 "233": "United Kingdom",
-                "242": "Dominion of Canada",
+                "242": "Canada",
                 "245": "United Kingdom",
                 "247": "United Kingdom",
-                "248": "Dominion of Canada",
+                "248": "Canada",
                 "249": "United Kingdom",
-                "253": "Dominion of Canada",
-                "256": "Dominion of Canada",
+                "253": "Canada",
+                "256": "Canada",
                 "257": "United Kingdom",
-                "259": "Dominion of Canada",
-                "268": "Dominion of Canada",
-                "269": "Dominion of Canada",
+                "259": "Canada",
+                "268": "Canada",
+                "269": "Canada",
                 "279": "United Kingdom",
-                "281": "Dominion of Canada",
-                "282": "Dominion of Canada",
+                "281": "Canada",
+                "282": "Canada",
                 "288": "United Kingdom",
-                "289": "Dominion of Canada",
+                "289": "Canada",
                 "293": "United Kingdom",
-                "300": "Dominion of Canada",
-                "301": "Dominion of Canada",
-                "309": "Dominion of Canada",
+                "300": "Canada",
+                "301": "Canada",
+                "309": "Canada",
                 "310": "United Kingdom",
                 "311": "United Kingdom",
-                "321": "Dominion of Canada",
+                "321": "Canada",
                 "335": "United Kingdom",
                 "336": "United Kingdom",
                 "348": "United Kingdom",
                 "349": "United Kingdom",
-                "351": "Dominion of Canada",
-                "357": "Dominion of Canada",
-                "358": "Dominion of Canada",
+                "351": "Canada",
+                "357": "Canada",
+                "358": "Canada",
                 "370": "United Kingdom",
                 "380": "United Kingdom",
                 "395": "United Kingdom",
                 "400": "United Kingdom",
-                "410": "Dominion of Canada",
-                "411": "Dominion of Canada",
+                "410": "Canada",
+                "411": "Canada",
                 "414": "United Kingdom",
-                "423": "Dominion of Canada",
-                "456": "Dominion of Canada",
-                "473": "Dominion of Canada",
-                "503": "Dominion of Canada",
-                "504": "Dominion of Canada",
-                "508": "Dominion of Canada",
-                "513": "Dominion of Canada",
-                "532": "Dominion of Canada",
-                "553": "Dominion of Canada",
-                "557": "Dominion of Canada",
-                "571": "Dominion of Canada",
-                "581": "Dominion of Canada",
-                "585": "Dominion of Canada",
-                "601": "Dominion of Canada",
-                "603": "Dominion of Canada",
-                "611": "Dominion of Canada",
-                "621": "Dominion of Canada",
-                "648": "Dominion of Canada",
-                "653": "Dominion of Canada",
-                "654": "Dominion of Canada",
-                "674": "Dominion of Canada",
-                "680": "Dominion of Canada",
-                "741": "Dominion of Canada",
-                "742": "Dominion of Canada",
+                "423": "Canada",
+                "456": "Canada",
+                "473": "Canada",
+                "503": "Canada",
+                "504": "Canada",
+                "508": "Canada",
+                "513": "Canada",
+                "532": "Canada",
+                "553": "Canada",
+                "557": "Canada",
+                "571": "Canada",
+                "581": "Canada",
+                "585": "Canada",
+                "601": "Canada",
+                "603": "Canada",
+                "611": "Canada",
+                "621": "Canada",
+                "648": "Canada",
+                "653": "Canada",
+                "654": "Canada",
+                "674": "Canada",
+                "680": "Canada",
+                "741": "Canada",
+                "742": "Canada",
                 "1113": "United Kingdom",
                 "1120": "United Kingdom",
                 "1204": "British Raj",
@@ -29188,7 +29188,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "France": 100,
                 "Oman": 100,
@@ -29283,7 +29283,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "French Madagascar": 100
@@ -29379,7 +29379,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "British Malaya": 100,
                 "French Indochina": 100
@@ -29622,7 +29622,7 @@
                 "British Malaya",
                 "British Raj",
                 "Oman",
-                "Dominion of Canada",
+                "Canada",
                 "United Kingdom"
             ],
             "allied_with": [],
@@ -29649,7 +29649,7 @@
                 "British Malaya": -100,
                 "British Raj": -100,
                 "Oman": -100,
-                "Dominion of Canada": -100,
+                "Canada": -100,
                 "Hungary": 100,
                 "Bulgaria": 100,
                 "Romania": 100
@@ -29732,7 +29732,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "Free France": 100,
                 "British Malaya": 100
@@ -29831,7 +29831,7 @@
                 "British Raj": 100,
                 "Egypt": 100,
                 "Sudan": 100,
-                "Dominion of Canada": 100,
+                "Canada": 100,
                 "Union of South Africa": 100,
                 "Free France": 100,
                 "British Malaya": 100,
@@ -40697,9 +40697,9 @@
             "buildings": []
         },
         "(27, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -41310,9 +41310,9 @@
             "buildings": []
         },
         "(71, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -41990,9 +41990,9 @@
             "buildings": []
         },
         "(115, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -42003,9 +42003,9 @@
             "buildings": []
         },
         "(116, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42089,9 +42089,9 @@
             "buildings": []
         },
         "(121, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42169,9 +42169,9 @@
             "buildings": []
         },
         "(127, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42230,9 +42230,9 @@
             "buildings": []
         },
         "(129, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42353,9 +42353,9 @@
             "buildings": []
         },
         "(137, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42368,9 +42368,9 @@
             "buildings": []
         },
         "(138, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42610,9 +42610,9 @@
             "buildings": []
         },
         "(153, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -42682,9 +42682,9 @@
             ]
         },
         "(157, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -42695,9 +42695,9 @@
             "buildings": []
         },
         "(158, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -42811,9 +42811,9 @@
             "buildings": []
         },
         "(164, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -42824,9 +42824,9 @@
             "buildings": []
         },
         "(165, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -42898,9 +42898,9 @@
             "buildings": []
         },
         "(169, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -43047,9 +43047,9 @@
             "buildings": []
         },
         "(179, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43060,9 +43060,9 @@
             "buildings": []
         },
         "(180, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43300,9 +43300,9 @@
             ]
         },
         "(189, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43524,9 +43524,9 @@
             "buildings": []
         },
         "(203, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43537,9 +43537,9 @@
             "buildings": []
         },
         "(204, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43631,9 +43631,9 @@
             "buildings": []
         },
         "(210, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -43685,9 +43685,9 @@
             "buildings": []
         },
         "(214, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -43698,9 +43698,9 @@
             "buildings": []
         },
         "(215, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -44078,15 +44078,15 @@
             "buildings": []
         },
         "(242, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -44256,9 +44256,9 @@
             ]
         },
         "(248, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -44343,9 +44343,9 @@
             "buildings": []
         },
         "(253, 0, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -44401,9 +44401,9 @@
             "buildings": []
         },
         "(0, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -44438,9 +44438,9 @@
             "buildings": []
         },
         "(3, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -44592,9 +44592,9 @@
             "buildings": []
         },
         "(12, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -44605,9 +44605,9 @@
             "buildings": []
         },
         "(13, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -44781,9 +44781,9 @@
             "buildings": []
         },
         "(25, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -44794,9 +44794,9 @@
             "buildings": []
         },
         "(26, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -44942,9 +44942,9 @@
             ]
         },
         "(33, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -45160,15 +45160,15 @@
             "buildings": []
         },
         "(44, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -45191,9 +45191,9 @@
             "buildings": []
         },
         "(45, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -45335,9 +45335,9 @@
             "buildings": []
         },
         "(53, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -45602,9 +45602,9 @@
             "buildings": []
         },
         "(65, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -46257,15 +46257,15 @@
             "buildings": []
         },
         "(95, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -46356,9 +46356,9 @@
             "buildings": []
         },
         "(101, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -46369,9 +46369,9 @@
             "buildings": []
         },
         "(102, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -47291,9 +47291,9 @@
             "buildings": []
         },
         "(154, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -47304,9 +47304,9 @@
             "buildings": []
         },
         "(155, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -47541,9 +47541,9 @@
             "buildings": []
         },
         "(167, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -48084,9 +48084,9 @@
             "buildings": []
         },
         "(200, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -48391,9 +48391,9 @@
             "buildings": []
         },
         "(217, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -48994,9 +48994,9 @@
             "buildings": []
         },
         "(247, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -49007,9 +49007,9 @@
             "buildings": []
         },
         "(248, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -49080,9 +49080,9 @@
             "buildings": []
         },
         "(252, 1, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -49150,9 +49150,9 @@
             "buildings": []
         },
         "(1, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -49491,9 +49491,9 @@
             "buildings": []
         },
         "(20, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -49842,9 +49842,9 @@
             "buildings": []
         },
         "(41, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -49898,9 +49898,9 @@
             "buildings": []
         },
         "(45, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -50176,9 +50176,9 @@
             "buildings": []
         },
         "(59, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -50317,9 +50317,9 @@
             "buildings": []
         },
         "(69, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -50374,9 +50374,9 @@
             "buildings": []
         },
         "(73, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -50684,9 +50684,9 @@
             "buildings": []
         },
         "(89, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -50728,15 +50728,15 @@
             "buildings": []
         },
         "(91, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -50868,9 +50868,9 @@
             "buildings": []
         },
         "(99, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [],
@@ -51000,15 +51000,15 @@
             "buildings": []
         },
         "(109, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": false,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -51439,9 +51439,9 @@
             "buildings": []
         },
         "(136, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -51542,9 +51542,9 @@
             "buildings": []
         },
         "(141, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -51555,9 +51555,9 @@
             "buildings": []
         },
         "(142, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -51921,9 +51921,9 @@
             "buildings": []
         },
         "(162, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -52022,9 +52022,9 @@
             "buildings": []
         },
         "(168, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
@@ -52979,15 +52979,15 @@
             "buildings": []
         },
         "(229, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [
                 {
                     "type": "Infantry Type 1941",
-                    "owner": "Dominion of Canada",
+                    "owner": "Canada",
                     "health": 2550.0,
                     "max_health": 2550,
                     "morale": 100.0,
@@ -53010,9 +53010,9 @@
             "buildings": []
         },
         "(230, 2, 0)": {
-            "owner": "Dominion of Canada",
+            "owner": "Canada",
             "cores": [
-                "Dominion of Canada"
+                "Canada"
             ],
             "is_coastal": true,
             "units": [],
