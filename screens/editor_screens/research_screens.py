@@ -238,11 +238,22 @@ class Research_List_Screen(MapOverlayScreen):
         currently_on = queries.get_scenario_flag("force_time_appropriate_research", default, settings)
 
         if currently_on:
-            # Turning off just stops future auto-recompute -- it doesn't touch
-            # whatever research values are currently set.
-            queries.toggle_scenario_flag(settings, "force_time_appropriate_research", default)
-            self.map_screen.show_feedback("Force Time-Appropriate Research: OFF")
-            self.refresh_ui()
+            off_msg = (
+                "This will turn OFF Force Time-Appropriate Research.\n\n"
+                "Research will NOT be reset -- whatever levels are currently set will stay as they are. "
+                "But changing the scenario's start date will no longer automatically re-align research, "
+                "so it can drift out of sync with the scenario's start year.\n\n"
+                "Are you sure you want to turn this off?"
+            )
+
+            def on_confirm_off(ok):
+                if not ok:
+                    return
+                queries.toggle_scenario_flag(settings, "force_time_appropriate_research", default)
+                self.map_screen.show_feedback("Force Time-Appropriate Research: OFF")
+                self.refresh_ui()
+
+            confirm_dialog.ask_yes_no("Force Time-Appropriate Research", off_msg, on_confirm_off)
             return
 
         current_year = getattr(self.map_screen.time_manager, "year", c.START_YEAR)
