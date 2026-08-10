@@ -19861,9 +19861,9 @@
     ],
     "Tibet": [
         {
-            "year": 1900,
-            "month": 1,
-            "day": 1,
+            "year": 1895,
+            "month": 9,
+            "day": 8,
             "name": "Tibet",
             "adjective": "Tibetan",
             "color": null,
@@ -20273,6 +20273,44 @@
             "portrait_data": null,
             "leader_name": "",
             "leader_title": "Annexed by the Soviet Union"
+        }
+    ],
+    "Austria-Hungary": [
+        {
+            "year": 1867,
+            "month": 6,
+            "day": 8,
+            "name": "Austria-Hungary",
+            "adjective": "Austro-Hungarian",
+            "color": null,
+            "flag_data": null,
+            "portrait_data": null,
+            "leader_name": "Franz Joseph I",
+            "leader_title": "Emperor of Austria, King of Hungary"
+        },
+        {
+            "year": 1916,
+            "month": 11,
+            "day": 21,
+            "name": "",
+            "adjective": "",
+            "color": null,
+            "flag_data": null,
+            "portrait_data": null,
+            "leader_name": "Karl I",
+            "leader_title": "Emperor of Austria, King of Hungary"
+        },
+        {
+            "year": 1918,
+            "month": 11,
+            "day": 11,
+            "name": "",
+            "adjective": "",
+            "color": null,
+            "flag_data": null,
+            "portrait_data": null,
+            "leader_name": "",
+            "leader_title": "Empire Dissolved"
         }
     ]
 }
