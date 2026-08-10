@@ -34,6 +34,11 @@ MAX_MAIL_DRAFT_LENGTH = 120
 UNIT_NAME_MAX_LENGTH = 50
 COUNTRY_NAME_MAX_LENGTH = 50
 
+# How many messages a nation's inbox keeps. Inboxes live in nation_data and
+# are saved wholesale, so an uncapped one grows the save file for the whole
+# length of a game. Newest first, so the oldest fall off the end.
+INBOX_MAX_MESSAGES = 300
+
 # Economy Data
 BASE_YIELDS = {
     "manpower": 100,
@@ -963,6 +968,11 @@ REL_MOD_IN_FACTION = 80
 REL_MOD_RECENT_WAR = -20
 REL_MOD_RECENT_FACTION = -20
 REL_MOD_COMMON_ENEMY = 20
+
+# How a puppet and its master regard each other. Asymmetric on purpose: a
+# master is fonder of the puppet it installed than the puppet is of the master.
+REL_MOD_MASTER_OF = 50   # our view of a nation we puppeted
+REL_MOD_PUPPET_OF = 20   # our view of the nation that puppeted us
 
 REL_MOD_PER_CLAIM = -5
 REL_MOD_MAX_CLAIM_PENALTY = -50

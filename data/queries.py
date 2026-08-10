@@ -1993,9 +1993,9 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     master_a = nation_data.get(nation_a, {}).get("master", "")
     master_b = nation_data.get(nation_b, {}).get("master", "")
     if master_b == nation_a:
-        score += 50
+        score += c.REL_MOD_MASTER_OF
     elif master_a == nation_b:
-        score += 20
+        score += c.REL_MOD_PUPPET_OF
                 
     # Apply all decaying temporary modifiers
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})

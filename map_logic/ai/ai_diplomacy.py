@@ -516,8 +516,13 @@ def _run_basic_proactive_ai(map_screen):
         _decrement_diplo_cooldowns(data)
         _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies)
 
+        # Battle Royale has no diplomacy to run, but the cooldown/access
+        # upkeep above still applies to every nation -- this used to `return`
+        # from inside the loop, which skipped that upkeep for every nation
+        # after the first and left the loading bar stuck below its total.
         if c.BATTLE_ROYALE_MODE:
-            return
+            map_screen.proactive_tasks_completed += 1
+            continue
 
         is_already_at_war = len(my_enemies) > 0
 
