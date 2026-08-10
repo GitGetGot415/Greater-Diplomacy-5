@@ -70,6 +70,10 @@ SETTINGS_FIELDS = (
     _field("tournament_saves_dir", "tournament_saves_dir",
            lambda: c.DEFAULT_TOURNAMENT_SAVES_DIR),
     _field("checkerboard_water", "checkerboard_water", lambda: c.CHECKERBOARD_WATER),
+    _field("deepseek_api_key", "deepseek_api_key", lambda: ""),
+    _field("moonshot_api_key", "moonshot_api_key", lambda: ""),
+    _field("deepseek_model", "deepseek_model", lambda: c.DEFAULT_DEEPSEEK_MODEL),
+    _field("moonshot_model", "moonshot_model", lambda: c.DEFAULT_MOONSHOT_MODEL),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

@@ -13,7 +13,9 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   ai_threads=1, show_fps=True, drag_mouse_toggle="RIGHT",
                   saves_dir=c.DEFAULT_SAVES_DIR, custom_scenarios_dir=c.DEFAULT_SCENARIOS_CUSTOM_DIR,
                   ocean_light_color=c.DEFAULT_OCEAN_LIGHT_BLUE, ocean_dark_color=c.DEFAULT_OCEAN_DARK_BLUE,
-                  tournament_saves_dir=c.DEFAULT_TOURNAMENT_SAVES_DIR, checkerboard_water=c.CHECKERBOARD_WATER):
+                  tournament_saves_dir=c.DEFAULT_TOURNAMENT_SAVES_DIR, checkerboard_water=c.CHECKERBOARD_WATER,
+                  deepseek_api_key="", moonshot_api_key="",
+                  deepseek_model=c.DEFAULT_DEEPSEEK_MODEL, moonshot_model=c.DEFAULT_MOONSHOT_MODEL):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these

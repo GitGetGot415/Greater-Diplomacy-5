@@ -31,6 +31,7 @@ GOLDEN_ORDER = (
     "ai_threads", "show_fps", "drag_mouse_toggle", "saves_dir",
     "custom_scenarios_dir", "ocean_light_color", "ocean_dark_color",
     "tournament_saves_dir", "checkerboard_water",
+    "deepseek_api_key", "moonshot_api_key", "deepseek_model", "moonshot_model",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)

@@ -33,11 +33,15 @@ from map_logic.ai.ai_settings import (
     get_gemini_api_key,
     get_chatgpt_api_key,
     get_claude_api_key,
+    get_deepseek_api_key,
+    get_moonshot_api_key,
     get_ai_mode,
     get_ai_immersion_level,
     get_gemini_model,
     get_chatgpt_model,
     get_claude_model,
+    get_deepseek_model,
+    get_moonshot_model,
     get_ollama_model,
     get_ollama_url,
 )
@@ -84,6 +88,49 @@ def _aborted(turn_id=None):
 #: Providers with a hook reserved but no implementation yet.
 STUBBED_PROVIDERS = {"CHATGPT": "ChatGPT", "CLAUDE": "Claude"}
 
+#: DeepSeek and Moonshot (Kimi) both speak the same OpenAI-style chat
+#: completions REST API, so one caller and this lookup of
+#: (endpoint, api key getter, model getter) covers both instead of writing
+#: the request/response handling out twice.
+OPENAI_COMPATIBLE_PROVIDERS = {
+    "DEEPSEEK": (lambda: c.DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
+    "MOONSHOT": (lambda: c.MOONSHOT_API_URL, get_moonshot_api_key, get_moonshot_model),
+}
+
+
+def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn_id=None):
+    """Hits an OpenAI-style /chat/completions endpoint (DeepSeek, Moonshot/Kimi)."""
+    if _aborted(turn_id):
+        return None
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "response_format": {"type": "json_object"},
+    }
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=120)
+        if _aborted(turn_id):
+            return None
+
+        if response.status_code >= 400:
+            return {"message": f"HTTP ERROR {response.status_code}: {response.text}"}
+
+        content = response.json()["choices"][0]["message"]["content"]
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {"message": content}
+    except Exception as e:
+        if _aborted(turn_id):
+            return None
+        return {"message": f"API ERROR: {str(e)}"}
+
 
 def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None):
     """Sends one prompt to whichever provider is configured and shapes the answer.
@@ -103,6 +150,13 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
 
     if mode in STUBBED_PROVIDERS:
         print(f"[LLM] Custom {STUBBED_PROVIDERS[mode]} hook to be placed here.")
+        return _reply(canned, accepted=accepted)
+
+    if mode in OPENAI_COMPATIBLE_PROVIDERS:
+        get_url, get_key, get_model = OPENAI_COMPATIBLE_PROVIDERS[mode]
+        result = call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
+        if result:
+            return _reply(result.get("message", f"{mode} ERROR: Unknown Format"), result, accepted)
         return _reply(canned, accepted=accepted)
 
     # Fallback to Gemini

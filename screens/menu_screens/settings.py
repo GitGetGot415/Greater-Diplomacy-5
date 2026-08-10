@@ -73,7 +73,7 @@ def render_settings_buttons(settings_screen):
         # AI provider picker
         settings_screen.elements.extend(make_option_buttons([
             (SETTINGS_AI_PROVIDER_START_X + i * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y, mode, mode)
-            for i, mode in enumerate(("OLLAMA", "GEMINI", "CHATGPT", "CLAUDE"))
+            for i, mode in enumerate(("OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "MOONSHOT"))
         ], settings_screen.set_ai_mode, settings_screen.ai_mode))
 
         # AI immersion level picker
@@ -142,7 +142,7 @@ class Settings(GameState):
     # Every LLM provider stores its credentials under the same attribute pair,
     # so one naming rule replaces the four-branch if/elif chains this screen
     # used to carry in five separate places.
-    AI_MODES = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE"]
+    AI_MODES = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE", "DEEPSEEK", "MOONSHOT"]
     AI_FIELD_SUFFIX = {"KEY": "api_key", "MOD": "model"}
 
     # key -> (constants attribute to keep in sync, default value, picker title)

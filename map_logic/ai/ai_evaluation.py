@@ -311,6 +311,11 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
         result = ai_handler.call_ollama(system_prompt, user_prompt, turn_id)
         return result.get("message", "OLLAMA ERROR: Unknown Format") if result else "OLLAMA ERROR: No response"
 
+    if mode in ai_handler.OPENAI_COMPATIBLE_PROVIDERS:
+        get_url, get_key, get_model = ai_handler.OPENAI_COMPATIBLE_PROVIDERS[mode]
+        result = ai_handler.call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
+        return result.get("message", f"{mode} ERROR: Unknown Format") if result else f"{mode} ERROR: No response"
+
     try:
         client = genai.Client(api_key=ai_settings.get_gemini_api_key())
         response = client.models.generate_content(
