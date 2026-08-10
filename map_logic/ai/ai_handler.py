@@ -34,14 +34,14 @@ from map_logic.ai.ai_settings import (
     get_chatgpt_api_key,
     get_claude_api_key,
     get_deepseek_api_key,
-    get_moonshot_api_key,
+    get_kimi_api_key,
     get_ai_mode,
     get_ai_immersion_level,
     get_gemini_model,
     get_chatgpt_model,
     get_claude_model,
     get_deepseek_model,
-    get_moonshot_model,
+    get_kimi_model,
     get_ollama_model,
     get_ollama_url,
 )
@@ -85,16 +85,14 @@ def _aborted(turn_id=None):
     return FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID)
 
 
-#: Providers with a hook reserved but no implementation yet.
-STUBBED_PROVIDERS = {"CHATGPT": "ChatGPT", "CLAUDE": "Claude"}
-
-#: DeepSeek and Moonshot (Kimi) both speak the same OpenAI-style chat
+#: ChatGPT, DeepSeek, and Kimi (Moonshot) all speak the same OpenAI-style chat
 #: completions REST API, so one caller and this lookup of
-#: (endpoint, api key getter, model getter) covers both instead of writing
-#: the request/response handling out twice.
+#: (endpoint, api key getter, model getter) covers all three instead of writing
+#: the request/response handling out three times.
 OPENAI_COMPATIBLE_PROVIDERS = {
+    "CHATGPT": (lambda: c.CHATGPT_API_URL, get_chatgpt_api_key, get_chatgpt_model),
     "DEEPSEEK": (lambda: c.DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
-    "MOONSHOT": (lambda: c.MOONSHOT_API_URL, get_moonshot_api_key, get_moonshot_model),
+    "KIMI": (lambda: c.KIMI_API_URL, get_kimi_api_key, get_kimi_model),
 }
 
 
@@ -132,13 +130,49 @@ def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn
         return {"message": f"API ERROR: {str(e)}"}
 
 
+def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
+    """Hits Anthropic's Messages API, which uses its own auth headers and
+    request/response shape rather than the OpenAI-style ones above."""
+    if _aborted(turn_id):
+        return None
+
+    payload = {
+        "model": model,
+        "max_tokens": 1024,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": c.CLAUDE_API_VERSION,
+    }
+
+    try:
+        response = requests.post(c.CLAUDE_API_URL, json=payload, headers=headers, timeout=120)
+        if _aborted(turn_id):
+            return None
+
+        if response.status_code >= 400:
+            return {"message": f"HTTP ERROR {response.status_code}: {response.text}"}
+
+        content = response.json()["content"][0]["text"]
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {"message": content}
+    except Exception as e:
+        if _aborted(turn_id):
+            return None
+        return {"message": f"API ERROR: {str(e)}"}
+
+
 def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None):
     """Sends one prompt to whichever provider is configured and shapes the answer.
 
     This ladder was written out twice, once for proposals and once for plain
-    messages; the two differed only in the canned line used when a provider is
-    stubbed or the request is abandoned, and in whether the answer carries a
-    verdict.
+    messages; the two differed only in the canned line used when the request
+    is abandoned, and in whether the answer carries a verdict.
     """
     from map_logic.ai.ai_evaluation import _reply
 
@@ -148,15 +182,17 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
             return _reply(result.get("message", "OLLAMA ERROR: Unknown Format"), result, accepted)
         return _reply("OLLAMA ERROR: No response", accepted=accepted)
 
-    if mode in STUBBED_PROVIDERS:
-        print(f"[LLM] Custom {STUBBED_PROVIDERS[mode]} hook to be placed here.")
-        return _reply(canned, accepted=accepted)
-
     if mode in OPENAI_COMPATIBLE_PROVIDERS:
         get_url, get_key, get_model = OPENAI_COMPATIBLE_PROVIDERS[mode]
         result = call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
         if result:
             return _reply(result.get("message", f"{mode} ERROR: Unknown Format"), result, accepted)
+        return _reply(canned, accepted=accepted)
+
+    if mode == "CLAUDE":
+        result = call_claude(get_claude_api_key(), get_claude_model(), system_prompt, user_prompt, turn_id)
+        if result:
+            return _reply(result.get("message", "CLAUDE ERROR: Unknown Format"), result, accepted)
         return _reply(canned, accepted=accepted)
 
     # Fallback to Gemini

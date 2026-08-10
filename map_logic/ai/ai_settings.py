@@ -28,8 +28,8 @@ def get_claude_api_key():
 def get_deepseek_api_key():
     return _setting("deepseek_api_key")
 
-def get_moonshot_api_key():
-    return _setting("moonshot_api_key")
+def get_kimi_api_key():
+    return _setting("kimi_api_key")
 
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
@@ -53,8 +53,8 @@ def get_claude_model():
 def get_deepseek_model():
     return _setting("deepseek_model", c.DEFAULT_DEEPSEEK_MODEL)
 
-def get_moonshot_model():
-    return _setting("moonshot_model", c.DEFAULT_MOONSHOT_MODEL)
+def get_kimi_model():
+    return _setting("kimi_model", c.DEFAULT_KIMI_MODEL)
 
 def get_ollama_model():
     """Reads the settings config to see which Ollama model is requested."""
