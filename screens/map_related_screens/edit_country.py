@@ -15,7 +15,7 @@ from map_logic.rendering import country_names
 # ==========================================
 # LAYOUT
 # ==========================================
-# Button placement for this screen lives in ui/buttons.py, next to the rest of
+# Button placement for this screen lives in ui/buttons/, next to the rest of
 # the game's button layout; only the text this screen draws itself is here.
 
 EDIT_COUNTRY_TITLE_X = 600

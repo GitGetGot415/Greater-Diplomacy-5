@@ -221,7 +221,7 @@ class Scenario_Settings(GameState):
 
     def open_turn_editor(self):
         try:
-            from ui.turn_editor import open_turn_editor
+            from screens.editor_screens.turn_editor import open_turn_editor
             # Re-reads settings once the editor closes so the "!" badge reflects
             # whatever was actually saved (or cleared, on cancel/back).
             open_turn_editor(on_done=lambda screen: self.refresh_ui())

@@ -5,7 +5,7 @@ from gameState import FolderListState
 from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
-from map_logic.system32 import loading_screen
+from map_logic.turn_processing import loading_screen
 
 class Select_Base_Map(FolderListState):
     back_state = "MENU"

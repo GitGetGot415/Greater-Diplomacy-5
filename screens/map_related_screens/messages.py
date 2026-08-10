@@ -90,7 +90,7 @@ class Messages_Screen(GameState):
 
     def view_peace_treaty(self, target):
         self.save_current_draft()
-        from ui.player_diplomacy_menus import open_view_peace_treaty_menu
+        from screens.map_related_screens.peace_screen import open_view_peace_treaty_menu
         open_view_peace_treaty_menu(self.map_screen, target)
         self.refresh_ui()
 
@@ -465,7 +465,7 @@ class Messages_Screen(GameState):
 
     def open_trade(self):
         self.save_current_draft()
-        from ui.player_diplomacy_menus import open_trade_menu
+        from screens.map_related_screens.trade_screen import open_trade_menu
         open_trade_menu(self.map_screen, self.selected_recipient)
         self.refresh_ui()
 

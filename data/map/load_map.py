@@ -3,7 +3,7 @@ import json
 import os
 import re
 import copy
-from map_logic.system32.time_handler import TimeHandler
+from map_logic.turn_processing.time_handler import TimeHandler
 from data.io import country_io
 import data.constants as c
 from data import queries

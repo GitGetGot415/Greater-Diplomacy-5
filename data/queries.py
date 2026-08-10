@@ -2471,7 +2471,7 @@ def get_combat_predictions(map_screen):
     #    resolver uses, so the bubble cannot promise a fight that will not
     #    happen. `visible_to` is what keeps a hotseat player from seeing moves
     #    they did not order.
-    from map_logic.system32 import combat_rules
+    from map_logic.turn_processing import combat_rules
     visible_to = None if is_spectator else friendly_nations
 
     for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
@@ -2966,7 +2966,7 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback)
     """In-engine listbox picker for editor tools and spectators: dims and freezes
     the current frame, then shows a clickable list of rows in a modal panel."""
     from ui.list_select_screen import ListSelectScreen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    from ui.screen_runner import _run_pygame_sub_screen
     screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
@@ -3000,7 +3000,7 @@ def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_labe
 def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
     from ui.color_picker_screen import ColorPickerScreen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    from ui.screen_runner import _run_pygame_sub_screen
     screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
@@ -3372,7 +3372,7 @@ def ask_directory(game_state, title, initialdir, on_result):
 def ask_color(game_state, title, initial, on_result):
     """Native colour picker; answers on_result with an (r, g, b) tuple, or None if cancelled."""
     from ui.color_picker_screen import ColorPickerScreen
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    from ui.screen_runner import _run_pygame_sub_screen
     result = {}
     screen = ColorPickerScreen(game_state, title, initial, lambda color: result.setdefault("color", color))
     _run_pygame_sub_screen(game_state, screen, on_done=lambda: on_result(result.get("color")))

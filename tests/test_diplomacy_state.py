@@ -16,7 +16,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import diplomacy_agreements as agreements
-from map_logic.system32 import combat_rules
+from map_logic.turn_processing import combat_rules
 
 
 class WarListTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 import pygame
 from map_logic.rendering import hover_renderer, province_select, overlay_renderer, country_names
-from map_logic.system32 import loading_screen
+from map_logic.turn_processing import loading_screen
 from ui import minimap
 from data import queries
 import data.constants as c

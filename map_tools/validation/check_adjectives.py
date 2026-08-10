@@ -6,8 +6,8 @@ def check_adjectives():
     Utility script to ensure every playable country inside data/json/countries_data.json
     has an associated 'adjective' property set.
     """
-    # Use relative paths assuming this is inside the map_tools/ folder
-    countries_json = os.path.join(os.path.dirname(__file__), '..', 'data', 'json', 'countries_data.json')
+    # Use relative paths assuming this is inside the map_tools/validation/ folder
+    countries_json = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'json', 'countries_data.json')
 
     if not os.path.exists(countries_json):
         print(f"Error: File {countries_json} not found.")

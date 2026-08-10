@@ -38,7 +38,7 @@ def run_with_progress(jobs, worker, caption, on_result):
     """
     import concurrent.futures
     import pygame
-    from map_logic.system32 import loading_screen
+    from map_logic.turn_processing import loading_screen
 
     surface = pygame.display.get_surface()
     total = len(jobs)

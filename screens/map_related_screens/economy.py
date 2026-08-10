@@ -232,6 +232,6 @@ class Economy_Screen(GameState):
             TableColumn("fuel", "Fuel", 120, align="right", fmt=lambda v: f"{v:.2f}"),
         ]
 
-        from ui.player_diplomacy_menus import _run_pygame_sub_screen
+        from ui.screen_runner import _run_pygame_sub_screen
         _run_pygame_sub_screen(self.map_screen, TableScreen(self, "Military Upkeep Expenses", columns, rows,
                                                              empty_message="No units to show expenses for."))

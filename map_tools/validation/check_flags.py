@@ -6,9 +6,9 @@ def check_flags():
     Utility script to ensure every .png image in the assets/flags directory
     has an associated country entry inside data/json/countries_data.json.
     """
-    # Use relative paths assuming this is inside the map_tools/ folder
-    flags_dir = os.path.join(os.path.dirname(__file__), '..', 'assets', 'flags')
-    countries_json = os.path.join(os.path.dirname(__file__), '..', 'data', 'json', 'countries_data.json')
+    # Use relative paths assuming this is inside the map_tools/validation/ folder
+    flags_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'flags')
+    countries_json = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'json', 'countries_data.json')
 
     if not os.path.exists(flags_dir):
         print(f"Error: Directory {flags_dir} not found.")

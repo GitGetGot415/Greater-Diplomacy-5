@@ -14,7 +14,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from data import queries
-from map_logic.system32.time_handler import TimeHandler
+from map_logic.turn_processing.time_handler import TimeHandler
 from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
 from ui.bars import ui_bars

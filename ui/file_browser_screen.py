@@ -7,7 +7,7 @@ call site's `start_dir` is just where the browser opens, never a fence.
 
 run_file_browser() is the blocking entry point. It works with no pygame display
 already up (the standalone map_tools scripts) by opening its own window, the
-same trick ui/confirm_dialog.py uses.
+same trick ui/confirm_dialog/ uses.
 """
 import os
 import string

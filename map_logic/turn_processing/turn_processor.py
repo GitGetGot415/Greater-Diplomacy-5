@@ -1,7 +1,7 @@
 import asyncio
 from map_logic.diplomacy import diplomacy_logic
 from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, automation_logic
-from map_logic.system32 import combat_processor, movement_processor, economy_processor, research_processor
+from map_logic.turn_processing import combat_processor, movement_processor, economy_processor, research_processor
 import data.constants as c
 from data import queries
 

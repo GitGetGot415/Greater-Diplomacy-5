@@ -7,7 +7,7 @@ each with slightly different values -- overlay alpha 190 or 210, panel fill
 taken from the palette in data/constants.py, with the numbers still overridable
 per screen for anything that genuinely needs to differ.
 
-The class was previously buried in ui/scripted_events_editor.py as _ModalScreen,
+The class was previously buried in screens/editor_screens/scripted_events_editor.py as _ModalScreen,
 which meant every other screen would have had to import a private name out of an
 unrelated 1200-line editor to reuse it. That module keeps the old name as an
 alias, so nothing that referred to it breaks.

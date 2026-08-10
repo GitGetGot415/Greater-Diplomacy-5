@@ -4,7 +4,7 @@ from gameState import GameState
 from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
-from map_logic.system32 import loading_screen
+from map_logic.turn_processing import loading_screen
 
 class New_Game(GameState):
     back_state = "MENU"
@@ -124,7 +124,7 @@ class New_Game(GameState):
         self.go_to("SCENARIO_SETTINGS")
 
     def open_historical_leaders_editor(self):
-        from ui.historical_leaders_editor import open_historical_leaders_editor
+        from screens.editor_screens.historical_leaders_editor import open_historical_leaders_editor
         open_historical_leaders_editor(on_done=lambda screen: self.refresh_ui())
 
     def start_scenario(self, scenario_name, directory):

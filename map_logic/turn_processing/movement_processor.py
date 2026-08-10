@@ -2,7 +2,7 @@ from collections import deque
 
 import data.constants as c
 from data import queries
-from map_logic.system32 import edit_province_ownership
+from map_logic.turn_processing import edit_province_ownership
 
 def process_dead_nations(map_screen):
     """Removes units belonging to nations that no longer control any territory and updates wars."""

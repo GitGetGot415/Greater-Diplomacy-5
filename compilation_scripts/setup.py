@@ -65,10 +65,10 @@ DATA_FILES.append(('.', ['mod_loader.py', 'gameState.py', 'ui_elements.py', 'sol
 OPTIONS = {
     # All packages and sub-packages must be listed explicitly for py2app.
     'packages': [
-        'screens', 'screens.menu_screens', 'screens.map_related_screens',
+        'screens', 'screens.menu_screens', 'screens.map_related_screens', 'screens.editor_screens',
         'map_logic', 'map_logic.ai', 'map_logic.camera', 'map_logic.diplomacy',
-        'map_logic.random_map', 'map_logic.rendering', 'map_logic.setup', 'map_logic.system32',
-        'ui', 'ui.bars', 'ui.information',
+        'map_logic.random_map', 'map_logic.rendering', 'map_logic.setup', 'map_logic.turn_processing',
+        'ui', 'ui.bars', 'ui.information', 'ui.buttons', 'ui.confirm_dialog',
         'data', 'data.editors', 'data.io', 'data.map',
     ],
     # Standalone modules that aren't packages but are imported by the app.

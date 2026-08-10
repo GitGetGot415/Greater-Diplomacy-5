@@ -1,4 +1,4 @@
-"""Covers the four dialogs in ui/confirm_dialog.py.
+"""Covers the four dialogs in ui/confirm_dialog/.
 
 They are pushed onto the modal stack from deep inside other screens, so nothing
 else in the suite reaches them -- and they all now share one base class, so a
@@ -214,7 +214,7 @@ class ScreenRunnerTests(unittest.TestCase):
         self.assertEqual(done, [screen])
 
     def test_sub_screen_clears_hover_and_calls_back_with_no_args(self):
-        from ui.player_diplomacy_menus import _run_pygame_sub_screen
+        from ui.screen_runner import _run_pygame_sub_screen
 
         class FakeMap:
             hovered_province = {"id": 1}
@@ -238,7 +238,7 @@ class ScreenRunnerTests(unittest.TestCase):
         import ast
         import os
 
-        allowed = {"ui/confirm_dialog.py", "ui/screen_runner.py"}
+        allowed = {"ui/confirm_dialog/base.py", "ui/screen_runner.py"}
         offenders = []
         ui_dir = os.path.join(app_harness.ROOT, "ui")
         for dirpath, _dirnames, filenames in os.walk(ui_dir):

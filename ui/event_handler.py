@@ -1,6 +1,6 @@
 import pygame
 from map_logic.rendering import map_utils
-from map_logic.system32 import edit_province_ownership
+from map_logic.turn_processing import edit_province_ownership
 import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic.setup import player_setup

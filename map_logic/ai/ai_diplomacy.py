@@ -175,10 +175,321 @@ def _claim_slot(pending, queued_this_pass, target):
     return True
 
 
+def _decrement_diplo_cooldowns(data):
+    """Section 0: ages down (and cleans up) this nation's per-target action cooldowns."""
+    if "diplo_cooldowns" in data:
+        for target, actions in list(data["diplo_cooldowns"].items()):
+            for act, cd in list(actions.items()):
+                if cd > 0:
+                    actions[act] -= 1
+                elif cd == 0:
+                    # Clean up finished cooldowns
+                    del actions[act]
+            if not actions:
+                del data["diplo_cooldowns"][target]
+
+
+def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
+    """Section 0.5: access granted purely because we shared an enemy lapses
+    once that shared enemy is no longer common to both of us (peace, ceasefire, etc)."""
+    access_reasons = data.get("military_access_reasons", {})
+    if not access_reasons:
+        return
+
+    my_access = data.get("military_access", [])
+    for grantee in list(access_reasons.keys()):
+        if access_reasons[grantee] != "war":
+            continue
+        grantee_enemies = set(queries.get_enemies(grantee, map_screen.nation_data))
+        if set(my_enemies) & grantee_enemies:
+            continue  # still fighting a common enemy, access stands
+
+        if grantee in my_access:
+            my_access.remove(grantee)
+        del access_reasons[grantee]
+
+        diplomacy_events.log_global_event(map_screen.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
+        diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
+
+
+def _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, border_graph):
+    """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
+    for enemy in my_enemies:
+        if enemy not in active_nations: continue
+        if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data, borders=border_graph):
+            if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
+                if _claim_slot(pending, queued_this_pass, enemy):
+                    _queue_proactive_proposal(map_screen, pending, ai_name, enemy, "CEASEFIRE")
+                    break # Act once per turn to avoid conflicts
+
+
+def _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations):
+    """Section 1.5: an unaligned nation at war looks for a faction to join, or
+    else another unaligned co-belligerent to found one with."""
+    # Prevent sending multiple faction requests
+    has_pending_faction_req = False
+    for target_nation, info in pending.items():
+        if isinstance(info, dict) and info.get("action") in ["CREATE_FACTION", "JOIN_FACTION_REQ"]:
+            has_pending_faction_req = True
+            break
+
+    if has_pending_faction_req:
+        return
+
+    potential_leaders = []
+    for enemy in my_enemies:
+        # Find nations also at war with our enemy
+        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
+        for mutual_combatant in enemy_wars:
+            if mutual_combatant == ai_name or mutual_combatant not in active_nations:
+                continue
+            # If they have a faction, we want to talk to the leader
+            fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
+            if fac:
+                fac_leader = queries.get_faction_leader(fac, map_screen.nation_data)
+                if fac_leader and fac_leader not in potential_leaders and fac_leader in active_nations:
+                    potential_leaders.append(fac_leader)
+
+    if potential_leaders:
+        # Just ask the first valid leader we found
+        target_leader = potential_leaders[0]
+        if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
+            if _claim_slot(pending, queued_this_pass, target_leader):
+                _queue_proactive_proposal(map_screen, pending, ai_name, target_leader, "JOIN_FACTION_REQ")
+        return
+
+    # Find nations also at war with our enemy who aren't in a faction to form a new one with
+    potential_partners = []
+    for enemy in my_enemies:
+        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
+        for mutual_combatant in enemy_wars:
+            if mutual_combatant == ai_name or mutual_combatant not in active_nations:
+                continue
+            fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
+            if not fac and mutual_combatant not in potential_partners:
+                potential_partners.append(mutual_combatant)
+
+    if potential_partners:
+        target_partner = potential_partners[0]
+        if not queries.is_ai_diplo_on_cooldown(ai_name, target_partner, "CREATE_FACTION", map_screen.nation_data):
+            if _claim_slot(pending, queued_this_pass, target_partner):
+                _queue_proactive_proposal(map_screen, pending, ai_name, target_partner, "CREATE_FACTION")
+
+
+def _call_faction_to_arms(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations):
+    """Section 2: asks a faction-mate to join a war of ours they aren't already in."""
+    faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
+    for member in faction_members:
+        if member == ai_name or member not in active_nations: continue
+
+        member_enemies = map_screen.nation_data[member].get("at_war_with", [])
+
+        unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations and not queries.has_active_truce(member, e, map_screen.nation_data)]
+
+        if unshared_wars:
+            if not queries.is_ai_diplo_on_cooldown(ai_name, member, "CALL_TO_ARMS", map_screen.nation_data):
+                if _claim_slot(pending, queued_this_pass, member):
+                    _queue_proactive_proposal(map_screen, pending, ai_name, member, "CALL_TO_ARMS",
+                                              context_target=unshared_wars[0])
+
+
+def _request_access_from_co_belligerents(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations):
+    """Section 2.5: even nations in different factions ask each other for
+    passage if they're both fighting the same enemy, so allied fronts can
+    actually link up."""
+    co_belligerents = []
+    for enemy in my_enemies:
+        if enemy not in active_nations: continue
+        for co in queries.get_enemies(enemy, map_screen.nation_data):
+            if co == ai_name or co not in active_nations: continue
+            if co in co_belligerents: continue
+            if co in my_enemies: continue
+            if not queries.needs_military_access_request(ai_name, co, map_screen.nation_data): continue
+            co_belligerents.append(co)
+
+    for co in co_belligerents:
+        if queries.is_ai_diplo_on_cooldown(ai_name, co, "REQ_MILITARY_ACCESS", map_screen.nation_data):
+            continue
+
+        if _claim_slot(pending, queued_this_pass, co):
+            _queue_proactive_proposal(map_screen, pending, ai_name, co, "REQ_MILITARY_ACCESS")
+            break  # Act once per turn to avoid conflicts
+
+
+def _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations):
+    """Section 3: offers to join a faction-mate's war we aren't already in."""
+    faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
+    for member in faction_members:
+        if member == ai_name:
+            continue
+
+        member_enemies = map_screen.nation_data[member].get("at_war_with", [])
+
+        unshared_wars = [e for e in member_enemies if e not in my_enemies and e in active_nations and not queries.has_active_truce(ai_name, e, map_screen.nation_data)]
+
+        if unshared_wars:
+            target_enemy = unshared_wars[0]
+            if not queries.is_ai_diplo_on_cooldown(ai_name, member, "JOIN_WARS", map_screen.nation_data):
+                if _claim_slot(pending, queued_this_pass, member):
+                    _queue_proactive_proposal(map_screen, pending, ai_name, member, "JOIN_WARS",
+                                              context_target=target_enemy)
+
+
+def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations):
+    """Section 4: declares war on a bordering nation holding our cores/claims
+    once we think we can win, or fabricates a claim on them first if we lack a wargoal."""
+    if my_master and my_type == c.PUPPET_TYPE_INTEGRATED:
+        return
+
+    current_turn = queries.get_total_turns(map_screen.time_manager)
+    turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
+    if current_turn < turns_to_wait:
+        return
+
+    valid_war_targets = queries.get_nations_holding_our_cores_or_claims(ai_name, map_screen.map_data, map_screen.nation_data)
+    if not valid_war_targets:
+        return
+
+    # ONLY look at nations we actually share a physical border with
+    my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
+    valid_border_targets = [t for t in valid_war_targets if t in my_neighbors]
+
+    for target in valid_border_targets:
+        if target not in active_nations: continue
+        if target in my_enemies: continue
+        if queries.are_in_same_faction(ai_name, target, map_screen.nation_data): continue
+        if queries.has_active_truce(ai_name, target, map_screen.nation_data): continue
+
+        # --- NEW: Skip Integrated Puppets ---
+        t_master = map_screen.nation_data.get(target, {}).get("master", "")
+        t_type = map_screen.nation_data.get(target, {}).get("puppet_type", "")
+        if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
+            continue
+
+        # Avoid arbitrary attacks on masters
+        if my_master and my_type == c.PUPPET_TYPE_AUTONOMOUS and target != my_master:
+            continue
+
+        # Border superiority, alliance/economic power and how distracted
+        # the target already is all live inside ai_thinks_it_can_win; this
+        # block used to recompute every one of them and throw the result
+        # away, which cost several full map scans per candidate target.
+        if queries.ai_thinks_it_can_win(ai_name, target, map_screen.map_data, map_screen.nation_data, map_screen.id_to_province):
+
+            # Random chance to actually declare war
+            war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
+            if random.random() <= war_chance:
+                has_wargoal = queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
+                if has_wargoal:
+                    if not queries.is_ai_diplo_on_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data):
+                        if _claim_slot(pending, queued_this_pass, target):
+                            _queue_proactive_proposal(map_screen, pending, ai_name, target,
+                                                      "WAR_DECLARATION", context_target=target)
+                            break
+                else:
+                    # Make a claim! (assuming no war is happening)
+                    if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
+                        core_ids = []
+                        for prov in map_screen.map_data.values():
+                            if prov.get("owner") == target and ai_name in prov.get("cores", []):
+                                core_ids.append(prov["id"])
+
+                        if core_ids:
+                            queue = map_screen.nation_data[ai_name].setdefault("claim_queue", [])
+                            claims = map_screen.nation_data[ai_name].setdefault("claims", [])
+                            for cid in core_ids:
+                                if cid not in claims and not any(q["prov_id"] == cid for q in queue):
+                                    queue.append({"prov_id": cid, "turns_left": c.CLAIM_TURN_CORE})
+
+                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            break
+
+
+def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations):
+    """Section 4.5: while at war and with no claim queued, picks one enemy
+    province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
+    claim_queue = data.get("claim_queue", [])
+    if claim_queue:
+        return
+
+    my_claims = set(data.get("claims", []))
+    owned_and_claimed = set(my_claims)
+    for prov in map_screen.map_data.values():
+        if prov.get("owner") == ai_name:
+            owned_and_claimed.add(prov["id"])
+
+    potential_targets_adjacent = []
+    potential_targets_any = []
+
+    for enemy in my_enemies:
+        if enemy not in active_nations: continue
+        if queries.is_ai_diplo_on_cooldown(ai_name, enemy, "FABRICATE_CLAIM", map_screen.nation_data):
+            continue
+
+        for prov in map_screen.map_data.values():
+            if prov.get("owner") == enemy and prov["id"] not in my_claims:
+                potential_targets_any.append((enemy, prov))
+                if any(n_id in owned_and_claimed for n_id in prov.get("neighbors", [])):
+                    potential_targets_adjacent.append((enemy, prov))
+
+    chosen_target = None
+    if potential_targets_adjacent:
+        chosen_target = random.choice(potential_targets_adjacent)
+    elif potential_targets_any:
+        chosen_target = random.choice(potential_targets_any)
+
+    if chosen_target:
+        target_enemy, target_prov = chosen_target
+        data.setdefault("claim_queue", []).append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
+        queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+
+
+def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations):
+    """Section 5: while at peace, fabricates a claim on a weaker bordering
+    neighbor we don't already have a wargoal or claim against."""
+    current_turn = queries.get_total_turns(map_screen.time_manager)
+    turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
+    if current_turn < turns_to_wait:
+        return
+
+    my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
+
+    for neighbor in my_neighbors:
+        if neighbor not in active_nations: continue
+        if neighbor in my_enemies: continue
+        if queries.are_in_same_faction(ai_name, neighbor, map_screen.nation_data): continue
+        if queries.has_active_truce(ai_name, neighbor, map_screen.nation_data): continue
+
+        # Avoid attacking masters or puppets
+        n_master = map_screen.nation_data.get(neighbor, {}).get("master", "")
+        if my_master and my_master == neighbor: continue
+        if n_master and n_master == ai_name: continue
+
+        # Check if we already have claims on them or an active wargoal
+        has_wg = queries.has_wargoal(ai_name, neighbor, map_screen.nation_data, map_screen.map_data)
+        claims = data.get("claims", [])
+        has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
+
+        if not has_wg and not has_claims_on_them:
+            if queries.is_weaker_neighbor(ai_name, neighbor, map_screen.map_data, map_screen.nation_data):
+                if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
+
+                    valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
+                    if valid_targets:
+                        target_prov = random.choice(valid_targets)
+                        queue = data.setdefault("claim_queue", [])
+
+                        # Ensure it's not already in the queue
+                        if not any(q["prov_id"] == target_prov["id"] for q in queue):
+                            queue.append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
+                            queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            break  # Limit to queueing one claim per cycle
+
+
 def _run_basic_proactive_ai(map_screen):
     active_nations = set(queries.get_living_nations(map_screen.map_data))
     ai_nations = queries.get_active_ai_nations(map_screen)
-    
+
     # --- Trigger the UI Progress Bar ---
     map_screen.proactive_tasks_total = len(ai_nations)
     map_screen.proactive_tasks_completed = 0
@@ -201,295 +512,38 @@ def _run_basic_proactive_ai(map_screen):
         my_enemies = data.get("at_war_with", [])
         my_master = data.get("master", "")
         my_type = data.get("puppet_type", "")
-        
-        # --- 0. Decrement Diplomatic Cooldowns ---
-        if "diplo_cooldowns" in data:
-            for target, actions in list(data["diplo_cooldowns"].items()):
-                for act, cd in list(actions.items()):
-                    if cd > 0:
-                        actions[act] -= 1
-                    elif cd == 0:
-                        # Clean up finished cooldowns
-                        del actions[act]
-                if not actions:
-                    del data["diplo_cooldowns"][target]
 
-        # --- 0.5. Auto-Revoke War-Based Military Access ---
-        # Access granted purely because we shared an enemy lapses once that
-        # shared enemy is no longer common to both of us (peace, ceasefire, etc).
-        access_reasons = data.get("military_access_reasons", {})
-        if access_reasons:
-            my_access = data.get("military_access", [])
-            for grantee in list(access_reasons.keys()):
-                if access_reasons[grantee] != "war":
-                    continue
-                grantee_enemies = set(queries.get_enemies(grantee, map_screen.nation_data))
-                if set(my_enemies) & grantee_enemies:
-                    continue  # still fighting a common enemy, access stands
-
-                if grantee in my_access:
-                    my_access.remove(grantee)
-                del access_reasons[grantee]
-
-                diplomacy_events.log_global_event(map_screen.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
-                diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
+        _decrement_diplo_cooldowns(data)
+        _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies)
 
         if c.BATTLE_ROYALE_MODE:
             return
 
         is_already_at_war = len(my_enemies) > 0
-        
-        # --- 1. Unreachable Ceasefire Logic ---
-        if is_already_at_war:
-            for enemy in my_enemies:
-                if enemy not in active_nations: continue
-                if not queries.is_nation_reachable(ai_name, enemy, map_screen.map_data, map_screen.id_to_province, map_screen.nation_data, borders=border_graph):
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
-                        if _claim_slot(pending, queued_this_pass, enemy):
-                            _queue_proactive_proposal(map_screen, pending, ai_name, enemy, "CEASEFIRE")
-                            break # Act once per turn to avoid conflicts
 
-        # --- 1.5. Defensive Faction Seeking Logic ---
+        if is_already_at_war:
+            _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, border_graph)
+
         if is_already_at_war and not my_faction and not getattr(c, "DISABLE_FACTIONS", False):
-            # Prevent sending multiple faction requests
-            has_pending_faction_req = False
-            for target_nation, info in pending.items():
-                if isinstance(info, dict) and info.get("action") in ["CREATE_FACTION", "JOIN_FACTION_REQ"]:
-                    has_pending_faction_req = True
-                    break
-                    
-            if not has_pending_faction_req:
-                potential_leaders = []
-                for enemy in my_enemies:
-                    # Find nations also at war with our enemy
-                    enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
-                    for mutual_combatant in enemy_wars:
-                        if mutual_combatant == ai_name or mutual_combatant not in active_nations:
-                            continue
-                        # If they have a faction, we want to talk to the leader
-                        fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
-                        if fac:
-                            fac_leader = queries.get_faction_leader(fac, map_screen.nation_data)
-                            if fac_leader and fac_leader not in potential_leaders and fac_leader in active_nations:
-                                potential_leaders.append(fac_leader)
+            _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations)
 
-                if potential_leaders:
-                    # Just ask the first valid leader we found
-                    target_leader = potential_leaders[0]
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
-                        if _claim_slot(pending, queued_this_pass, target_leader):
-                            _queue_proactive_proposal(map_screen, pending, ai_name, target_leader, "JOIN_FACTION_REQ")
-                else:
-                    # Find nations also at war with our enemy who aren't in a faction to form a new one with
-                    potential_partners = []
-                    for enemy in my_enemies:
-                        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
-                        for mutual_combatant in enemy_wars:
-                            if mutual_combatant == ai_name or mutual_combatant not in active_nations:
-                                continue
-                            fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
-                            if not fac and mutual_combatant not in potential_partners:
-                                potential_partners.append(mutual_combatant)
-
-                    if potential_partners:
-                        target_partner = potential_partners[0]
-                        if not queries.is_ai_diplo_on_cooldown(ai_name, target_partner, "CREATE_FACTION", map_screen.nation_data):
-                            if _claim_slot(pending, queued_this_pass, target_partner):
-                                _queue_proactive_proposal(map_screen, pending, ai_name, target_partner, "CREATE_FACTION")
-
-        # --- 2. Call to Arms Logic ---
         if is_already_at_war and my_faction:
-            faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
-            for member in faction_members:
-                if member == ai_name or member not in active_nations: continue
-                
-                member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-                
-                # INDENTED THIS BLOCK
-                unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations and not queries.has_active_truce(member, e, map_screen.nation_data)]
-                
-                if unshared_wars:
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, member, "CALL_TO_ARMS", map_screen.nation_data):
-                        if _claim_slot(pending, queued_this_pass, member):
-                            _queue_proactive_proposal(map_screen, pending, ai_name, member, "CALL_TO_ARMS",
-                                                      context_target=unshared_wars[0])
+            _call_faction_to_arms(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations)
 
-        # --- 2.5. Request Military Access From Co-Belligerents ---
-        # Even nations in different factions ask each other for passage if they're
-        # both fighting the same enemy, so allied fronts can actually link up.
         if is_already_at_war:
-            co_belligerents = []
-            for enemy in my_enemies:
-                if enemy not in active_nations: continue
-                for co in queries.get_enemies(enemy, map_screen.nation_data):
-                    if co == ai_name or co not in active_nations: continue
-                    if co in co_belligerents: continue
-                    if co in my_enemies: continue
-                    if not queries.needs_military_access_request(ai_name, co, map_screen.nation_data): continue
-                    co_belligerents.append(co)
+            _request_access_from_co_belligerents(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations)
 
-            for co in co_belligerents:
-                if queries.is_ai_diplo_on_cooldown(ai_name, co, "REQ_MILITARY_ACCESS", map_screen.nation_data):
-                    continue
-
-                if _claim_slot(pending, queued_this_pass, co):
-                    _queue_proactive_proposal(map_screen, pending, ai_name, co, "REQ_MILITARY_ACCESS")
-                    break  # Act once per turn to avoid conflicts
-
-        # --- 3. Faction War Joining Logic ---
         if my_faction:
-            faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
-            for member in faction_members:
-                if member == ai_name:
-                    continue
-                
-                member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-                
-                # INDENTED THIS BLOCK
-                unshared_wars = [e for e in member_enemies if e not in my_enemies and e in active_nations and not queries.has_active_truce(ai_name, e, map_screen.nation_data)]
-                
-                if unshared_wars:
-                    target_enemy = unshared_wars[0]
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, member, "JOIN_WARS", map_screen.nation_data):
-                        if _claim_slot(pending, queued_this_pass, member):
-                            _queue_proactive_proposal(map_screen, pending, ai_name, member, "JOIN_WARS",
-                                                      context_target=target_enemy)
-                            
-        # --- 4. Declare War for Cores & Claims Logic ---
-        if not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
-            current_turn = queries.get_total_turns(map_screen.time_manager)
-            turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
-            if current_turn >= turns_to_wait:
-                valid_war_targets = queries.get_nations_holding_our_cores_or_claims(ai_name, map_screen.map_data, map_screen.nation_data)
-                
-                if valid_war_targets:
-                    # ONLY look at nations we actually share a physical border with
-                    my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
-                    valid_border_targets = [t for t in valid_war_targets if t in my_neighbors]
-                    
-                    for target in valid_border_targets:
-                        if target not in active_nations: continue
-                        if target in my_enemies: continue
-                        if queries.are_in_same_faction(ai_name, target, map_screen.nation_data): continue
-                        if queries.has_active_truce(ai_name, target, map_screen.nation_data): continue
-                        
-                        # --- NEW: Skip Integrated Puppets ---
-                        t_master = map_screen.nation_data.get(target, {}).get("master", "")
-                        t_type = map_screen.nation_data.get(target, {}).get("puppet_type", "")
-                        if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
-                            continue
-                            
-                        # Avoid arbitrary attacks on masters
-                        if my_master and my_type == c.PUPPET_TYPE_AUTONOMOUS and target != my_master:
-                            continue
-                        
-                        # Border superiority, alliance/economic power and how distracted
-                        # the target already is all live inside ai_thinks_it_can_win; this
-                        # block used to recompute every one of them and throw the result
-                        # away, which cost several full map scans per candidate target.
-                        if queries.ai_thinks_it_can_win(ai_name, target, map_screen.map_data, map_screen.nation_data, map_screen.id_to_province):
-                            
-                            # Random chance to actually declare war
-                            war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
-                            if random.random() <= war_chance:
-                                has_wargoal = queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
-                                if has_wargoal:
-                                    if not queries.is_ai_diplo_on_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data):
-                                        if _claim_slot(pending, queued_this_pass, target):
-                                            _queue_proactive_proposal(map_screen, pending, ai_name, target,
-                                                                      "WAR_DECLARATION", context_target=target)
-                                            break
-                                else:
-                                    # Make a claim! (assuming no war is happening)
-                                    if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
-                                        core_ids = []
-                                        for prov in map_screen.map_data.values():
-                                            if prov.get("owner") == target and ai_name in prov.get("cores", []):
-                                                core_ids.append(prov["id"])
+            _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations)
 
-                                        if core_ids:
-                                            queue = map_screen.nation_data[ai_name].setdefault("claim_queue", [])
-                                            claims = map_screen.nation_data[ai_name].setdefault("claims", [])
-                                            for cid in core_ids:
-                                                if cid not in claims and not any(q["prov_id"] == cid for q in queue):
-                                                    queue.append({"prov_id": cid, "turns_left": c.CLAIM_TURN_CORE})
-                                            
-                                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
-                                            break
+        _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations)
 
-        # --- 4.5. Fabricate Claims During War ---
         if is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
-            claim_queue = data.get("claim_queue", [])
-            if not claim_queue:
-                my_claims = set(data.get("claims", []))
-                owned_and_claimed = set(my_claims)
-                for prov in map_screen.map_data.values():
-                    if prov.get("owner") == ai_name:
-                        owned_and_claimed.add(prov["id"])
-                        
-                potential_targets_adjacent = []
-                potential_targets_any = []
-                
-                for enemy in my_enemies:
-                    if enemy not in active_nations: continue
-                    if queries.is_ai_diplo_on_cooldown(ai_name, enemy, "FABRICATE_CLAIM", map_screen.nation_data):
-                        continue
-                        
-                    for prov in map_screen.map_data.values():
-                        if prov.get("owner") == enemy and prov["id"] not in my_claims:
-                            potential_targets_any.append((enemy, prov))
-                            if any(n_id in owned_and_claimed for n_id in prov.get("neighbors", [])):
-                                potential_targets_adjacent.append((enemy, prov))
-                                
-                chosen_target = None
-                if potential_targets_adjacent:
-                    chosen_target = random.choice(potential_targets_adjacent)
-                elif potential_targets_any:
-                    chosen_target = random.choice(potential_targets_any)
-                    
-                if chosen_target:
-                    target_enemy, target_prov = chosen_target
-                    data.setdefault("claim_queue", []).append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-                    queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+            _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations)
 
-        # --- 5. Fabricate Claims on Weaker Neighbors ---
         if not is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
-            current_turn = queries.get_total_turns(map_screen.time_manager)
-            turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
-            if current_turn >= turns_to_wait:
-                my_neighbors = queries.get_neighboring_nations(ai_name, map_screen.map_data, map_screen.id_to_province)
-                
-                for neighbor in my_neighbors:
-                    if neighbor not in active_nations: continue
-                    if neighbor in my_enemies: continue
-                    if queries.are_in_same_faction(ai_name, neighbor, map_screen.nation_data): continue
-                    if queries.has_active_truce(ai_name, neighbor, map_screen.nation_data): continue
-                    
-                    # Avoid attacking masters or puppets
-                    n_master = map_screen.nation_data.get(neighbor, {}).get("master", "")
-                    if my_master and my_master == neighbor: continue
-                    if n_master and n_master == ai_name: continue
-                    
-                    # Check if we already have claims on them or an active wargoal
-                    has_wg = queries.has_wargoal(ai_name, neighbor, map_screen.nation_data, map_screen.map_data)
-                    claims = data.get("claims", [])
-                    has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
-                    
-                    if not has_wg and not has_claims_on_them:
-                        if queries.is_weaker_neighbor(ai_name, neighbor, map_screen.map_data, map_screen.nation_data):
-                            if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
-                                
-                                valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
-                                if valid_targets:
-                                    target_prov = random.choice(valid_targets)
-                                    queue = data.setdefault("claim_queue", [])
-                                    
-                                    # Ensure it's not already in the queue
-                                    if not any(q["prov_id"] == target_prov["id"] for q in queue):
-                                        queue.append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-                                        queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
-                                        break  # Limit to queueing one claim per cycle
-                        
+            _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations)
+
         # --- Update Progress Bar ---
         map_screen.proactive_tasks_completed += 1
         map_screen.loading_status_text = f"Evaluating AI Grand Strategy ({map_screen.proactive_tasks_completed}/{map_screen.proactive_tasks_total})..."
@@ -761,7 +815,7 @@ def process_scripted_events(map_screen):
                         target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]
                         tiles = [t.strip() for t in str(act.get("message", "")).split(",") if t.strip()]
                         must_control = act.get("ai_generate", False)
-                        from map_logic.system32 import edit_province_ownership
+                        from map_logic.turn_processing import edit_province_ownership
                         for a_target in target_list:
                             if a_target == "None": continue
                             for tile_id in tiles:

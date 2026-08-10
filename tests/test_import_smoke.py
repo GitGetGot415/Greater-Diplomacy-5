@@ -7,7 +7,7 @@ invisible until someone launches the game.
 
 Two live top-level cycles exist and work only because of the order main.py
 imports things in (map_logic.setup.player_setup <-> ui.buttons, and
-ui.buttons <-> map_logic.system32.turn_manager), so this file imports modules in
+ui.buttons <-> map_logic.turn_processing.turn_manager), so this file imports modules in
 a shuffled order as well as individually -- a cycle that only resolves under one
 particular ordering is a latent startup crash.
 """

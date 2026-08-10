@@ -1,9 +1,9 @@
 """Non-blocking runner for the pygame screens that replaced the old Tk tool windows.
 
-_run_pygame_sub_screen in ui/player_diplomacy_menus.py covers screens layered on
-the live map. This covers everything else: dialogs opened from the menus, and the
-standalone editors in data/editors and map_tools that used to be their own Tk
-apps and so may run with no pygame display up at all.
+_run_pygame_sub_screen below covers screens layered on the live map. run_screen()
+covers everything else: dialogs opened from the menus, and the standalone editors
+in data/editors and map_tools that used to be their own Tk apps and so may run
+with no pygame display up at all.
 
 run_screen() takes an on_done(screen) callback instead of returning the finished
 screen, and either pushes the screen onto ui/modal_stack.py (the normal in-game
@@ -21,7 +21,7 @@ from ui.bars import ui_bars
 
 def acquire_surface(size=None, caption=None):
     """Kept as the name this module's callers use; the implementation is shared
-    with ui/confirm_dialog.py via ui_bars."""
+    with ui/confirm_dialog/ via ui_bars."""
     return ui_bars.acquire_surface(size, caption)
 
 
@@ -118,3 +118,14 @@ def run_screen(screen_or_factory, on_done=None, tk_parent=None, caption=None, si
     # stack instead of blocking. tk_parent doesn't apply here -- nothing tkinter
     # is ever on screen at the same time as the live game.
     modal_stack.push(_ScreenModal(screen, on_done, clear_hover_for, pass_screen))
+
+
+def _run_pygame_sub_screen(map_screen, screen_obj, on_done=None):
+    """Pushes screen_obj onto the modal stack until it marks itself done, then
+    calls on_done() if given. Never blocks -- see ui/modal_stack.py.
+
+    Kept as the name ~25 call sites already use (21 of them via an in-function
+    import). It is the map-layered flavour of run_screen: the hosting map gets
+    its hover cleared on close, and on_done takes no argument.
+    """
+    run_screen(screen_obj, on_done, clear_hover_for=map_screen, pass_screen=False)

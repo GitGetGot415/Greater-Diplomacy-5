@@ -48,7 +48,7 @@ ROW1_Y_OFFSET = 26
 ROW2_Y_OFFSET = 92
 
 # Display convention: month is shown/edited as 1-12, matching how the rest of
-# the editors (e.g. ui/editor_screens.py's Editor_Date_Screen) present dates
+# the editors (e.g. date_economy_screens.py's Editor_Date_Screen) present dates
 # to a human. Storage (both the in-memory working buffer here and the saved
 # JSON) keeps that same 1-12 value -- only queries.apply_historical_leader_timeline
 # converts down to TimeHandler's 0-based month_index when it compares against

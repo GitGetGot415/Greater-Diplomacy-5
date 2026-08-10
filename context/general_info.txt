@@ -19,21 +19,33 @@ dist
 map_logic
     /ai
         - how the ai for every country works
+        - ai_settings.py has the read-only settings getters (provider, model, API keys)
+        - ai_handler.py holds the mutable abort/turn-id state and talks to the LLM providers
+        - ai_evaluation.py turns a proposal/message/proactive action into an AI reply
+        - ai_diplomacy.py is the hardcoded proactive AI (war/faction/claims logic)
+        - ai_movement.py is unit orders; ai_construction.py is recruitment/building
     /camera
         - camera movement (note that this does not handle the camera tilt)
     /diplomacy
         - diplomacy!
+        - split by concern: war_actions.py, puppet_actions.py, faction_actions.py
+        - diplomacy_agreements.py is a facade re-exporting all three for backwards compatibility
+        - diplomacy_logic.py is a further facade over diplomacy_agreements/diplomacy_processor/diplomacy_messages
     /random_map
         - random map and scenario stuff
     /rendering
         - shows the ui bars, buttons, symbols, etc
     /setup
         - handles the starting setup for choosing countries at the beginning of a scenario
-    /system32
-        - handles how the map processes turns
+    /turn_processing
+        - handles how the map processes turns (renamed from the old /system32)
 
 map_tools
     - tools for making and testing new maps in base_maps
+    /validation
+        - check_flags.py / check_adjectives.py: scripts auditing data/json/countries_data.json
+    - interactive_map_tester.py is the pygame-based interactive tester (was tester.py)
+    - automatic_map_painter.py / reset_map_data.py are standalone map-authoring scripts
 
 saves
     - contains saved games
@@ -42,7 +54,24 @@ scenarios
     - various scenarios
 
 screens
-    - handles the screens the user can go to (menu screen, settings screen, map screen, etc)
+    - handles the screens the user can go to
+    /menu_screens
+        - top-level navigation screens (main menu, settings, new game, etc)
+    /map_related_screens
+        - screens opened from within an active game/map (orders, research, production,
+          messages, economy, faction, declare independence, and the diplomacy overlays:
+          war/claims/peace/trade/puppets screens)
+    /editor_screens
+        - screens only used by the map editor tool (date/economy, research, brushes,
+          diplomacy editor, scripted events editor, historical leaders editor, turn editor)
 
 ui
-    - handles the ui (top ui bar, bottom ui bar, side ui bar, corner ui bar, etc)
+    - reusable widgets, dialogs, and framework glue used by many screens
+      (top/bottom/side/corner ui bars, buttons, modals, popups, event dispatch) --
+      NOT where standalone feature screens live, see screens/ for those
+    /buttons
+        - button-building split by which screen builds them: map_buttons.py (the main
+          map's bars), edit_country_buttons.py, settings_buttons.py, common.py
+    /confirm_dialog
+        - pygame replacements for tkinter dialogs, split by kind: base.py (shared modal
+          skeleton), yes_no.py, text_input.py, message_box.py, person_info.py

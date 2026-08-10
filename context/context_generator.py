@@ -135,7 +135,7 @@ files_to_skip_but_list = [
     "map_logic/random_map\**",
     "map_logic/rendering\**",
     "map_logic/setup\**",
-    #"map_logic/system32\**",
+    #"map_logic/turn_processing\**",
 ]
 
 # FULL:

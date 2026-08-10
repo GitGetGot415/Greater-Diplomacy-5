@@ -7,7 +7,7 @@ from ui import text_utils
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
-from map_logic.system32 import turn_manager
+from map_logic.turn_processing import turn_manager
 
 # Longest core name shown on a selection button before it is ellipsised.
 CORE_NAME_MAX_CHARS = 15
@@ -130,7 +130,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
                 break
                 
         if unit_prov:
-            from map_logic.system32 import edit_province_ownership
+            from map_logic.turn_processing import edit_province_ownership
             edit_province_ownership.conquer_province(self.map_screen, unit_prov, new_tag)
             edit_province_ownership.add_core(self.map_screen, unit_prov, new_tag)
             if old_tag not in c.UNPLAYABLE_NATIONS:

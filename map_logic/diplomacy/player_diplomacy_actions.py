@@ -66,11 +66,11 @@ def handle_declare_war(map_screen):
         return
 
     # Direct import to bypass __init__.py namespace issues
-    from ui.player_diplomacy_menus import open_wargoal_selection_menu
+    from screens.map_related_screens.war_screen import open_wargoal_selection_menu
     open_wargoal_selection_menu(map_screen, target)
 
 def open_claims_menu(map_screen):
-    from ui.player_diplomacy_menus import open_claims_menu
+    from screens.map_related_screens.claims_screen import open_claims_menu
     open_claims_menu(map_screen)
 
 def handle_ceasefire(map_screen):
@@ -83,11 +83,11 @@ def handle_ceasefire(map_screen):
         return
         
     # Direct import to bypass __init__.py namespace issues
-    from ui.player_diplomacy_menus import open_peace_menu
+    from screens.map_related_screens.peace_screen import open_peace_menu
     open_peace_menu(map_screen, target)
 
 def open_puppets_menu(map_screen):
-    from ui.player_diplomacy_menus import open_puppets_menu
+    from screens.map_related_screens.puppets_screen import open_puppets_menu
     open_puppets_menu(map_screen)
 
 def handle_specific_action(map_screen, action_type):

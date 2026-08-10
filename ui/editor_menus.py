@@ -27,19 +27,15 @@ def _has_active_countries(map_screen):
 
 def _launch(map_screen, screen):
     """Runs `screen` as a modal sub-screen of the editor."""
-    from ui.player_diplomacy_menus import _run_pygame_sub_screen
+    from ui.screen_runner import _run_pygame_sub_screen
     _run_pygame_sub_screen(map_screen, screen)
 
 
 def _launch_editor_screen(map_screen, class_name, *args, needs_countries=False):
-    """Opens one of ui.editor_screens' screens, looked up by name.
-
-    The import stays in-function on purpose: ui.editor_screens imports back
-    into the editor, so hoisting it would close an import cycle.
-    """
+    """Opens one of screens.editor_screens' screens, looked up by name."""
     if needs_countries and not _has_active_countries(map_screen):
         return
-    from ui import editor_screens
+    from screens import editor_screens
     _launch(map_screen, getattr(editor_screens, class_name)(map_screen, *args))
 
 

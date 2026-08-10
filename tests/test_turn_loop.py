@@ -43,7 +43,7 @@ class TurnLoopTests(unittest.TestCase):
 
     @staticmethod
     def run_turns(game_map, surface, count):
-        from map_logic.system32 import turn_manager
+        from map_logic.turn_processing import turn_manager
 
         async def play():
             for _ in range(count):
