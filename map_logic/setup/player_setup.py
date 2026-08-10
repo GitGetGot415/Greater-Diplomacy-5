@@ -1,6 +1,5 @@
 import data.constants as c
 from data import queries
-from ui import buttons
 
 def select_player_country(map_screen, province):
     owner = province.get("owner", "Unclaimed")
@@ -93,7 +92,8 @@ def confirm_player_country(map_screen):
             map_screen.pending_unit = None
             
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
-            buttons.render_buttons(map_screen)
+            from screens.menu_screens.map import render_buttons
+            render_buttons(map_screen)
             map_screen.refresh_relations_map()
 
 def cancel_selection(map_screen):
@@ -121,7 +121,7 @@ def start_spectator(map_screen):
     map_screen.hovered_province = None
     map_screen.hover_glow_surf = None
     map_screen.show_feedback("Entered Spectator Mode")
-    
-    from ui import buttons
-    buttons.render_buttons(map_screen)
+
+    from screens.menu_screens.map import render_buttons
+    render_buttons(map_screen)
     map_screen.refresh_relations_map()

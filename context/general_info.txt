@@ -67,11 +67,13 @@ screens
 
 ui
     - reusable widgets, dialogs, and framework glue used by many screens
-      (top/bottom/side/corner ui bars, buttons, modals, popups, event dispatch) --
+      (top/bottom/side/corner ui bars, modals, popups, event dispatch) --
       NOT where standalone feature screens live, see screens/ for those
-    /buttons
-        - button-building split by which screen builds them: map_buttons.py (the main
-          map's bars), edit_country_buttons.py, settings_buttons.py, common.py
+    - button-building lives with the screen that builds them, not here: the map's
+      buttons are in screens/menu_screens/map.py, edit country's in
+      screens/map_related_screens/edit_country.py, settings' in
+      screens/menu_screens/settings.py -- so editing a screen's buttons means
+      editing that screen's file, nothing else
     /confirm_dialog
         - pygame replacements for tkinter dialogs, split by kind: base.py (shared modal
           skeleton), yes_no.py, text_input.py, message_box.py, person_info.py

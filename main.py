@@ -395,8 +395,8 @@ class Controller:
                     shutil.rmtree(temp_dir, ignore_errors=True)
                     
                     self.states["MAP"].refresh_all_maps()
-                    import ui.buttons as buttons
-                    buttons.render_buttons(self.states["MAP"])
+                    from screens.menu_screens.map import render_buttons
+                    render_buttons(self.states["MAP"])
                 else:
                     print(f"Failed to load tournament: {msg}")
 

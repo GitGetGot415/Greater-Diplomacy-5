@@ -151,7 +151,7 @@ CREDITS_DATA = [
             },
             {
                 "link_text": "claude",
-                "info": "Massive refactor to consolidate code",
+                "info": "Massive refactors to consolidate / organize code",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
             }

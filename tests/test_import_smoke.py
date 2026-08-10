@@ -5,11 +5,12 @@ compileall + a narrow flake8 selection -- neither of which executes an import.
 That leaves import cycles, missed renames and bad `from X import name` edits
 invisible until someone launches the game.
 
-Two live top-level cycles exist and work only because of the order main.py
-imports things in (map_logic.setup.player_setup <-> ui.buttons, and
-ui.buttons <-> map_logic.turn_processing.turn_manager), so this file imports modules in
-a shuffled order as well as individually -- a cycle that only resolves under one
-particular ordering is a latent startup crash.
+map_logic.setup.player_setup and map_logic.turn_processing.turn_manager both
+call into screens.menu_screens.map's render_buttons, which in turn imports
+player_setup at module level -- resolved with deferred (function-local)
+imports on the player_setup/turn_manager side rather than relying on import
+order, but this file still imports modules in a shuffled order as well as
+individually to guard against that pattern regressing.
 """
 
 import importlib

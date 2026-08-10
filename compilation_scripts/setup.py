@@ -68,7 +68,7 @@ OPTIONS = {
         'screens', 'screens.menu_screens', 'screens.map_related_screens', 'screens.editor_screens',
         'map_logic', 'map_logic.ai', 'map_logic.camera', 'map_logic.diplomacy',
         'map_logic.random_map', 'map_logic.rendering', 'map_logic.setup', 'map_logic.turn_processing',
-        'ui', 'ui.bars', 'ui.information', 'ui.buttons', 'ui.confirm_dialog',
+        'ui', 'ui.bars', 'ui.information', 'ui.confirm_dialog',
         'data', 'data.editors', 'data.io', 'data.map',
     ],
     # Standalone modules that aren't packages but are imported by the app.
