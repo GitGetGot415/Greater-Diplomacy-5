@@ -4,12 +4,12 @@
 - combat width might be wack if there's multiple countries involved... 10 for the side with 2 countries, 5 for the side with 1 country
 - seems a bit unbalanced
 
-- check the recent issues coming from playtesting
-
 - if no claims, add option to generate claims
 - edit cost for units editor?
 
 - color or colour???
+
+- ADD REAL FLAGS SUGGESTED BY KAISERIN
 
 - puppets should take territory that has their cores...
 - prevent puppet bordergore
@@ -84,6 +84,7 @@ CUSTOMIZATION!!!
 - give control of factories to other countries temporarially or permenantly
 - ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
 - temporarially rent out factories to other countries via trade?
+- ADD HER FLAGS
 
 - add territory trade offer mechanic?
 - you can offer territories to give / ask for
