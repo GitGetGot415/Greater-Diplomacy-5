@@ -6,15 +6,6 @@ Split out of map_logic/ai/ai_handler.py, which re-exports every name here so
 existing `ai_handler.evaluate_diplomatic_proposal(...)`-style call sites keep
 working.
 """
-import json
-from data.platform import IS_WEB
-
-if not IS_WEB:
-    from google import genai
-    from google.genai import types
-else:
-    genai = None
-    types = None
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_prompts
@@ -307,30 +298,11 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
     system_prompt = ai_prompts.get_proactive_system_prompt(ai_nation, target_nation, action_context)
     user_prompt = f"{context}\nWrite the message."
 
-    if mode == "OLLAMA":
-        result = ai_handler.call_ollama(system_prompt, user_prompt, turn_id)
-        return result.get("message", "OLLAMA ERROR: Unknown Format") if result else "OLLAMA ERROR: No response"
-
-    if mode in ai_handler.OPENAI_COMPATIBLE_PROVIDERS:
-        get_url, get_key, get_model = ai_handler.OPENAI_COMPATIBLE_PROVIDERS[mode]
-        result = ai_handler.call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
-        return result.get("message", f"{mode} ERROR: Unknown Format") if result else f"{mode} ERROR: No response"
-
-    if mode == "CLAUDE":
-        result = ai_handler.call_claude(ai_settings.get_claude_api_key(), ai_settings.get_claude_model(),
-                                         system_prompt, user_prompt, turn_id)
-        return result.get("message", "CLAUDE ERROR: Unknown Format") if result else "CLAUDE ERROR: No response"
-
-    try:
-        client = genai.Client(api_key=ai_settings.get_gemini_api_key())
-        response = client.models.generate_content(
-            model=ai_settings.get_gemini_model(),
-            contents=f"{system_prompt}\n\n{user_prompt}",
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-
-        if ai_handler._aborted(turn_id): return None
-
-        return json.loads(response.text).get("message", "JSON ERROR: Parsed fine but missing 'message' key.")
-    except Exception as e:
-        return f"API ERROR: {str(e)}"
+    # This used to be its own copy of ai_handler's provider ladder, built its
+    # own genai client, and reported provider failures as the message itself --
+    # so a bad API key was delivered to the player as the text of a war
+    # declaration. None means "no answer", and the caller uses its fallback line.
+    result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True)
+    if not result or result.get("error"):
+        return None
+    return result.get("message")

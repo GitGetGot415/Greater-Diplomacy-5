@@ -15,7 +15,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   ocean_light_color=c.DEFAULT_OCEAN_LIGHT_BLUE, ocean_dark_color=c.DEFAULT_OCEAN_DARK_BLUE,
                   tournament_saves_dir=c.DEFAULT_TOURNAMENT_SAVES_DIR, checkerboard_water=c.CHECKERBOARD_WATER,
                   deepseek_api_key="", kimi_api_key="",
-                  deepseek_model=c.DEFAULT_DEEPSEEK_MODEL, kimi_model=c.DEFAULT_KIMI_MODEL):
+                  deepseek_model=c.DEFAULT_DEEPSEEK_MODEL, kimi_model=c.DEFAULT_KIMI_MODEL,
+                  ai_turn_budget_seconds=c.DEFAULT_AI_TURN_BUDGET_SECONDS):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these

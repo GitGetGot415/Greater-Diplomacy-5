@@ -341,7 +341,17 @@ PROVINCE_UI = {
 
 DEFAULT_AI_MODE = "OFF" # LLM AI is opt-in; off until the player picks a provider
 AI_MODE_REENABLE_FALLBACK = "OLLAMA" # Provider selected when re-enabling AI from OFF with no prior mode
-DEFAULT_AI_THREADS = 1 # Added default thread count
+# How many LLM requests a turn's batch has in flight at once, when the player
+# hasn't moved the slider. A hosted provider answers concurrent requests
+# independently, so fanning out is close to free throughput; a local Ollama is
+# one model on one GPU, and four concurrent generations there just thrash it.
+DEFAULT_AI_THREADS = 4
+DEFAULT_AI_THREADS_LOCAL = 1
+
+# Wall-clock ceiling for one turn's LLM batch, in seconds. Whatever hasn't come
+# back by then falls back, so a slow or unreachable provider costs a wait rather
+# than a hung turn. 0 disables the limit.
+DEFAULT_AI_TURN_BUDGET_SECONDS = 45
 
 # --- Unified Settings UI Layout ---
 SETTINGS_BOX_X = 140

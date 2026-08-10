@@ -280,6 +280,10 @@ class Settings(GameState):
         self.ai_mode = mode
         self.controller.ai_mode = mode
         self.active_input = None # Deselect input box when switching modes
+        # Provider clients and the shared HTTP session are cached between turns;
+        # drop them so the next call is built against the provider just picked.
+        from map_logic.ai import ai_handler
+        ai_handler.reset_clients()
         self.refresh_ui()
 
     def set_ai_immersion_level(self, level):

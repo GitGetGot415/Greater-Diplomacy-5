@@ -75,7 +75,8 @@ def process_proactive_llm_tasks(map_screen):
         tasks, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
-        max_workers=max_threads)
+        max_workers=max_threads,
+        deadline=ai_llm_runner.turn_deadline())
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""

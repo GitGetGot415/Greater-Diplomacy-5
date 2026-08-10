@@ -15,6 +15,7 @@ moved out and are re-exported below for every existing
 call site.
 """
 import json
+import threading
 import urllib.parse
 import http.client
 import socket
@@ -51,6 +52,60 @@ FORCE_SKIP = False
 CURRENT_TURN_ID = 0
 ACTIVE_OLLAMA_CONNECTIONS = []
 
+# A turn fans a whole batch of requests at one provider, and each one used to
+# build its client and open its own TLS connection from scratch. Both are
+# rebuilt only when the setting behind them changes, and both are shared across
+# the batch's worker threads -- requests.Session and genai.Client are documented
+# as thread-safe, and the lock only guards the swap, not the requests.
+_CLIENT_LOCK = threading.Lock()
+_SESSION = None
+_GEMINI_CLIENT = {"key": None, "client": None}
+
+
+def _session():
+    """The shared requests.Session for Claude and the OpenAI-compatible providers.
+
+    Connection reuse across a batch, which on a hosted provider is the single
+    largest latency saving available -- a fresh TLS handshake per call was
+    costing more than some of the completions.
+    """
+    global _SESSION
+    if _SESSION is None:
+        with _CLIENT_LOCK:
+            if _SESSION is None:
+                _SESSION = requests.Session()
+    return _SESSION
+
+
+def _gemini_client():
+    """The shared genai client, rebuilt only when the API key changes."""
+    from google import genai
+
+    api_key = get_gemini_api_key()
+    with _CLIENT_LOCK:
+        if _GEMINI_CLIENT["client"] is None or _GEMINI_CLIENT["key"] != api_key:
+            _GEMINI_CLIENT["client"] = genai.Client(api_key=api_key)
+            _GEMINI_CLIENT["key"] = api_key
+        return _GEMINI_CLIENT["client"]
+
+
+def reset_clients():
+    """Drops the cached client and session, so the next call picks up new settings.
+
+    The Gemini client keys off the API key on its own; this is for the cases it
+    can't see, like the settings screen swapping providers or clearing a key.
+    """
+    global _SESSION
+    with _CLIENT_LOCK:
+        if _SESSION is not None:
+            try:
+                _SESSION.close()
+            except Exception:
+                pass
+        _SESSION = None
+        _GEMINI_CLIENT["client"] = None
+        _GEMINI_CLIENT["key"] = None
+
 def abort_ai_generation():
     """Forcefully kills local AI generation by dropping OS sockets and flushing VRAM."""
     # 1. Close all active HTTP TCP sockets to instantly snap threads out of blocking I/O
@@ -73,6 +128,17 @@ def abort_ai_generation():
             requests.post(url, json={"model": get_ollama_model(), "prompt": "", "keep_alive": 0}, timeout=(0.1, 0.1))
         except:
             pass
+
+def _provider_error(message):
+    """A provider failure, flagged so callers can tell it from a real answer.
+
+    The text still reaches the player on a proposal -- a bad API key showing up
+    in the reply is how you find out it is bad -- but a proactive one-liner has
+    no verdict riding on it, so generate_proactive_text drops these and uses its
+    fallback line rather than sending "API ERROR: ..." as a diplomatic cable.
+    """
+    return {"message": message, "error": True}
+
 
 def _aborted(turn_id=None):
     """True when an in-flight request should give up.
@@ -112,12 +178,12 @@ def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=120)
+        response = _session().post(url, json=payload, headers=headers, timeout=120)
         if _aborted(turn_id):
             return None
 
         if response.status_code >= 400:
-            return {"message": f"HTTP ERROR {response.status_code}: {response.text}"}
+            return _provider_error(f"HTTP ERROR {response.status_code}: {response.text}")
 
         content = response.json()["choices"][0]["message"]["content"]
         try:
@@ -127,7 +193,7 @@ def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn
     except Exception as e:
         if _aborted(turn_id):
             return None
-        return {"message": f"API ERROR: {str(e)}"}
+        return _provider_error(f"API ERROR: {str(e)}")
 
 
 def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
@@ -149,12 +215,12 @@ def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
     }
 
     try:
-        response = requests.post(c.CLAUDE_API_URL, json=payload, headers=headers, timeout=120)
+        response = _session().post(c.CLAUDE_API_URL, json=payload, headers=headers, timeout=120)
         if _aborted(turn_id):
             return None
 
         if response.status_code >= 400:
-            return {"message": f"HTTP ERROR {response.status_code}: {response.text}"}
+            return _provider_error(f"HTTP ERROR {response.status_code}: {response.text}")
 
         content = response.json()["content"][0]["text"]
         try:
@@ -164,58 +230,87 @@ def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
     except Exception as e:
         if _aborted(turn_id):
             return None
-        return {"message": f"API ERROR: {str(e)}"}
+        return _provider_error(f"API ERROR: {str(e)}")
 
 
-def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None):
-    """Sends one prompt to whichever provider is configured and shapes the answer.
+def call_gemini(system_prompt, user_prompt, turn_id=None):
+    """Hits Gemini, shaped like the other three callers above.
 
-    This ladder was written out twice, once for proposals and once for plain
-    messages; the two differed only in the canned line used when the request
-    is abandoned, and in whether the answer carries a verdict.
+    Was inline in the dispatch ladder and duplicated a second time in
+    ai_evaluation.generate_proactive_text, which is how the two copies came to
+    build a client each and disagree about what a malformed reply means.
     """
-    from map_logic.ai.ai_evaluation import _reply
+    if _aborted(turn_id):
+        return None
 
-    if mode == "OLLAMA":
-        result = call_ollama(system_prompt, user_prompt, turn_id)
-        if result:
-            return _reply(result.get("message", "OLLAMA ERROR: Unknown Format"), result, accepted)
-        return _reply("OLLAMA ERROR: No response", accepted=accepted)
+    from google.genai import types
 
-    if mode in OPENAI_COMPATIBLE_PROVIDERS:
-        get_url, get_key, get_model = OPENAI_COMPATIBLE_PROVIDERS[mode]
-        result = call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
-        if result:
-            return _reply(result.get("message", f"{mode} ERROR: Unknown Format"), result, accepted)
-        return _reply(canned, accepted=accepted)
-
-    if mode == "CLAUDE":
-        result = call_claude(get_claude_api_key(), get_claude_model(), system_prompt, user_prompt, turn_id)
-        if result:
-            return _reply(result.get("message", "CLAUDE ERROR: Unknown Format"), result, accepted)
-        return _reply(canned, accepted=accepted)
-
-    # Fallback to Gemini
-    if not IS_WEB:
-        from google import genai
-        from google.genai import types
     try:
-        client = genai.Client(api_key=get_gemini_api_key())
-        response = client.models.generate_content(
+        response = _gemini_client().models.generate_content(
             model=get_gemini_model(),
             contents=f"{system_prompt}\n\n{user_prompt}",
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
-
         if _aborted(turn_id):
-            return _reply(canned, accepted=accepted)
+            return None
 
-        reply_json = json.loads(response.text)
-        return _reply(reply_json.get("message", "JSON ERROR: Parsed fine but missing 'message' key."),
-                      reply_json, accepted)
+        try:
+            return json.loads(response.text)
+        except json.JSONDecodeError:
+            # The other three providers hand back unparseable output as the
+            # message rather than throwing it away; this one used to let the
+            # decode error fall into the handler below and report itself as an
+            # API failure, which it isn't.
+            return {"message": response.text}
     except Exception as e:
+        if _aborted(turn_id):
+            return None
         print(f"API Error: {e}")
-        return _reply(f"API ERROR: {str(e)}", accepted=accepted)
+        return _provider_error(f"API ERROR: {str(e)}")
+
+
+def _call_provider(mode, system_prompt, user_prompt, turn_id):
+    """One request to whichever provider is configured.
+
+    Returns the parsed reply dict, or None when the request was abandoned --
+    Force Skip, or the turn moving on while it was out. Gemini is the
+    else-branch, so an unrecognised mode still answers.
+    """
+    if mode == "OLLAMA":
+        return call_ollama(system_prompt, user_prompt, turn_id)
+
+    if mode in OPENAI_COMPATIBLE_PROVIDERS:
+        get_url, get_key, get_model = OPENAI_COMPATIBLE_PROVIDERS[mode]
+        return call_openai_compatible(get_url(), get_key(), get_model(),
+                                      system_prompt, user_prompt, turn_id)
+
+    if mode == "CLAUDE":
+        return call_claude(get_claude_api_key(), get_claude_model(),
+                           system_prompt, user_prompt, turn_id)
+
+    return call_gemini(system_prompt, user_prompt, turn_id)
+
+
+def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None, raw=False):
+    """Sends one prompt to the configured provider and shapes the answer.
+
+    raw=True hands back the parsed provider dict (or None) instead of a reply,
+    for callers that want a bare string rather than a verdict-carrying answer.
+
+    A None result means the request was abandoned, so every provider now falls
+    back to the canned line. The Ollama branch used to put its own
+    "OLLAMA ERROR: No response" in front of the player instead, which meant
+    pressing Force Skip produced an error message dressed as a diplomatic cable.
+    """
+    from map_logic.ai.ai_evaluation import _reply
+
+    result = _call_provider(mode, system_prompt, user_prompt, turn_id)
+    if raw:
+        return result
+    if result is None:
+        return _reply(canned, accepted=accepted)
+    return _reply(result.get("message", f"{mode} ERROR: reply had no 'message' field"),
+                  result, accepted)
 
 def call_ollama(system_prompt, user_prompt, turn_id=None):
     """Helper to hit local Ollama instance with direct socket control for instant termination."""

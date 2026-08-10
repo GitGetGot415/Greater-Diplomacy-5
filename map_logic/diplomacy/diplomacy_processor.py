@@ -410,7 +410,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         answerable, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
-        max_workers=queries.get_ai_threads())
+        max_workers=queries.get_ai_threads(),
+        deadline=ai_llm_runner.turn_deadline())
 
     return ai_results
 

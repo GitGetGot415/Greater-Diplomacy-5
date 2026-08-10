@@ -361,7 +361,24 @@ def save_global_settings(controller):
                              **settings_schema.from_controller(controller))
 
 def get_ai_threads():
-    return get_settings().get("ai_threads", c.DEFAULT_AI_THREADS)
+    """How many LLM requests to keep in flight, defaulting by provider.
+
+    An explicit slider setting always wins. Without one, a hosted provider gets
+    the parallel default and a local Ollama gets one -- four concurrent
+    generations against a single local model make the whole batch slower, not
+    faster.
+    """
+    saved = get_settings().get("ai_threads")
+    if saved:
+        return saved
+
+    from map_logic.ai import ai_settings
+    return c.DEFAULT_AI_THREADS_LOCAL if ai_settings.get_ai_mode() == "OLLAMA" else c.DEFAULT_AI_THREADS
+
+
+def get_ai_turn_budget_seconds():
+    """Wall-clock ceiling for one turn's LLM batch; 0 means no limit."""
+    return get_settings().get("ai_turn_budget_seconds", c.DEFAULT_AI_TURN_BUDGET_SECONDS)
 
 # --- REFACTORED GETTERS (No paths needed here anymore!) ---
 def get_settings(): return _load_cached_json("settings")

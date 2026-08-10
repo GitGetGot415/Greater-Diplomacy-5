@@ -10,6 +10,7 @@ request that lands in the same instant the user gives up on it.
 import os
 import sys
 import threading
+import time
 import unittest
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -141,6 +142,105 @@ class BatchTests(unittest.TestCase):
 
     def test_progress_is_optional(self):
         ai_llm_runner.run_llm_batch(["a"], lambda j: j, lambda j, r: None, lambda j: None)
+
+
+class DeadlineTests(unittest.TestCase):
+    """The wall-clock budget, which shares its give-up path with Force Skip.
+
+    A provider that has gone slow or unreachable must cost the budget, not the
+    turn: whatever hasn't landed by the deadline takes its fallback and the
+    batch returns.
+    """
+
+    def run_batch(self, jobs, call, **kwargs):
+        rec = Recorder()
+        ai_llm_runner.run_llm_batch(jobs, call, rec.on_result, rec.on_fallback,
+                                    on_progress=rec.on_progress, **kwargs)
+        return rec
+
+    def test_a_deadline_already_past_falls_everything_back(self):
+        called = []
+        for sequential in (False, True):
+            with self.subTest(sequential=sequential):
+                rec = self.run_batch(["a", "b"], lambda j: called.append(j),
+                                     deadline=time.monotonic() - 1, sequential=sequential)
+                self.assertEqual(called, [])
+                self.assertCountEqual(rec.fallbacks, ["a", "b"])
+
+    def test_no_deadline_means_no_limit(self):
+        rec = self.run_batch(["a"], lambda j: "answered", deadline=None)
+        self.assertEqual(rec.results, {"a": "answered"})
+
+    def test_a_deadline_far_ahead_does_not_interfere(self):
+        rec = self.run_batch(["a", "b"], lambda j: j.upper(),
+                             deadline=time.monotonic() + 30, max_workers=2)
+        self.assertEqual(rec.results, {"a": "A", "b": "B"})
+        self.assertEqual(rec.fallbacks, [])
+
+    def test_a_batch_that_overruns_gives_up_on_what_is_still_out(self):
+        release = threading.Event()
+
+        def call(job):
+            if job == "slow":
+                release.wait(5)
+            return f"answer-{job}"
+
+        rec = Recorder()
+        try:
+            ai_llm_runner.run_llm_batch(
+                ["quick", "slow"], call, rec.on_result, rec.on_fallback,
+                on_progress=rec.on_progress, max_workers=2,
+                deadline=time.monotonic() + 0.3, poll=0.05)
+        finally:
+            release.set()
+
+        self.assertIn("slow", rec.fallbacks)
+        self.assertEqual(rec.results.get("quick"), "answer-quick")
+        self.assertCountEqual(rec.progress, ["quick", "slow"])
+
+    def test_the_sequential_path_stops_calling_once_the_deadline_passes(self):
+        """Web runs inline, so the budget has to be checked per job there too --
+        otherwise a slow first call means every later one still runs."""
+        called = []
+
+        def call(job):
+            called.append(job)
+            return "ok"
+
+        rec = self.run_batch(["a", "b", "c"], call, sequential=True,
+                             deadline=time.monotonic() + 0.15)
+        # "a" gets through; whatever the timing, nothing is left unaccounted for.
+        self.assertIn("a", called)
+        self.assertEqual(len(rec.results) + len(rec.fallbacks), 3)
+        self.assertCountEqual(rec.progress, ["a", "b", "c"])
+
+    def test_force_skip_still_wins_when_a_deadline_is_also_set(self):
+        called = []
+        rec = self.run_batch(["a"], lambda j: called.append(j),
+                             should_abort=lambda: True,
+                             deadline=time.monotonic() + 30)
+        self.assertEqual(called, [])
+        self.assertEqual(rec.fallbacks, ["a"])
+
+
+class TurnDeadlineTests(unittest.TestCase):
+    def test_a_zero_budget_means_unlimited(self):
+        from data import queries
+        original = queries.get_ai_turn_budget_seconds
+        try:
+            queries.get_ai_turn_budget_seconds = lambda: 0
+            self.assertIsNone(ai_llm_runner.turn_deadline())
+        finally:
+            queries.get_ai_turn_budget_seconds = original
+
+    def test_a_budget_becomes_a_stamp_in_the_future(self):
+        from data import queries
+        original = queries.get_ai_turn_budget_seconds
+        try:
+            queries.get_ai_turn_budget_seconds = lambda: 45
+            self.assertGreater(ai_llm_runner.turn_deadline(), time.monotonic())
+        finally:
+            queries.get_ai_turn_budget_seconds = original
 
 
 if __name__ == "__main__":
