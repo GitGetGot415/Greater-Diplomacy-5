@@ -453,6 +453,22 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
     raw_act_target = reply_dict.get("action_target", "NONE")
     raw_f_up_target = reply_dict.get("follow_up_target", "NONE")
 
+    def worded(fallback_key, default):
+        """The leader's own line for the move it just decided to make.
+
+        Every branch below had the reply in hand as reply_dict["message"] and
+        threw it away for a hardcoded constant, so a nation the model had just
+        driven into a ceasefire announced it in the same words as one running
+        off the canned table. A war declaration is the exception: its message
+        field carries the wargoal rather than prose, which is the same exception
+        PROACTIVE_PROPOSALS.queued_message already makes.
+        """
+        own_words = (reply_dict.get("message") or "").strip()
+        if own_words and not ai_prompts.reads_as_third_person(
+                own_words, country_name, map_screen.nation_data):
+            return own_words
+        return ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_key, default)
+
     def get_valid_target(raw_target):
         if not raw_target or raw_target == "NONE": return default_target if default_target else "NONE"
         clean_target = raw_target.strip().lower()
@@ -518,7 +534,7 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
             delayed_responses.append((country_name, act_target, "WAR_DECLARATION", 0, c.WARGOAL_NO_CB))
     elif ai_action == "JOIN_WARS":
         if queries.are_in_same_faction(country_name, act_target, map_screen.nation_data):
-            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "We stand with you.")))
+            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
         elif not c.AI_LLM_DIRECT_RETALIATION:
             # Asking to join a non-faction-mate's war used to silently expand
             # into a declaration on every one of that nation's enemies at once.
@@ -540,15 +556,15 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))
     elif ai_action == "JOIN_FACTION_REQ":
         if not map_screen.nation_data[country_name].get("faction", ""):
-            delayed_responses.append((country_name, act_target, "JOIN_FACTION_REQ", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_FACTION", "We formally request to join your faction.")))
+            delayed_responses.append((country_name, act_target, "JOIN_FACTION_REQ", 0, worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction.")))
     elif ai_action == "CEASEFIRE":
-        delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
+        delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
     elif ai_action == "CALL_TO_ARMS":
-        delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
+        delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
     elif ai_action == "CREATE_FACTION":
-        delayed_responses.append((country_name, act_target, "CREATE_FACTION", 0, "We propose establishing a new faction."))
+        delayed_responses.append((country_name, act_target, "CREATE_FACTION", 0, worded("PROACTIVE_CREATE_FACTION", "We propose establishing a new faction.")))
     elif ai_action == "KICK_FACTION_MEMBER":
-        delayed_responses.append((country_name, act_target, "KICK_FACTION_MEMBER", 0, "You are expelled."))
+        delayed_responses.append((country_name, act_target, "KICK_FACTION_MEMBER", 0, worded("KICKED_FROM_FACTION", "You are expelled.")))
     elif ai_action == "DISBAND_FACTION":
         delayed_responses.append((country_name, country_name, "DISBAND_FACTION", 0, ""))
 

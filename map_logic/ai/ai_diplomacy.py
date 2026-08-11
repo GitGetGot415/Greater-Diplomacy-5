@@ -32,11 +32,15 @@ def process_proactive_llm_tasks(map_screen):
     mode = ai_handler.get_ai_mode()
 
     def consulted(choice):
-        if mode == "OFF" or not ai_director.should_consult(choice["candidates"]):
+        # The immersion question comes first now: it is what decides whether
+        # this nation's words are meant to be written at all, and a forced
+        # choice still wants them written.
+        if mode == "OFF":
             return False
-        return not ai_evaluation._use_canned_reply(
+        wants_prose = not ai_evaluation._use_canned_reply(
             mode, ai_handler.get_ai_immersion_level(), is_ai_to_ai=True,
             has_custom_msg=False, nation=choice["nation"], world=world)
+        return wants_prose and ai_director.should_consult(choice["candidates"], wants_prose)
 
     jobs = [choice for choice in pending_choices if consulted(choice)]
 
@@ -62,7 +66,8 @@ def process_proactive_llm_tasks(map_screen):
         if not reply or reply.get("error"):
             return
         chosen, messages = ai_director.parse(reply, choice["candidates"],
-                                             c.AI_MAX_ACTIONS_PER_TURN)
+                                             c.AI_MAX_ACTIONS_PER_TURN,
+                                             choice["nation"], map_screen.nation_data)
         choice["chosen"] = chosen
         choice["messages"] = messages
 

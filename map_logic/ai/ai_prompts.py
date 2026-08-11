@@ -163,6 +163,52 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
         
     return context
 
+#: How the message is to be written, as opposed to what it has to contain.
+#:
+#: Nothing said this before. Every prompt named the nation ("You are the leader
+#: of X") and left the voice to be inferred, which a strong model does and a
+#: small one does not: llama3 wrote "Switzerland accepts your offer" into a
+#: message already labelled as being from Switzerland. Stated once here, since
+#: all three long prompts end with action_rules_and_schema.
+VOICE_RULE = (
+    "VOICE: write the 'message' as your own government addressing theirs, in the "
+    "first person plural -- 'we', 'our', 'us'. Never refer to your own nation in "
+    "the third person or by name, and never narrate what it does from outside.\n"
+)
+
+
+def reads_as_third_person(message, nation, nation_data=None):
+    """Whether a reply talks about its own sender rather than speaking as them.
+
+    Deliberately narrow: only an opening that names the nation or its adjective,
+    which is the failure small models actually produce and the one that reads
+    worst next to a sender label. A nation named mid-sentence is ordinary prose
+    ("our claim on Poland stands") and is left alone. No second request is made
+    to fix it -- the canned line is used instead, because a retry at ABSOLUTE
+    costs one call per nation per turn.
+    """
+    if not message or not nation:
+        return False
+
+    names = {nation}
+    data = (nation_data or {}).get(nation) or {}
+    for key in ("name", "adjective"):
+        if data.get(key):
+            names.add(data[key])
+
+    opening = message.lstrip().lstrip("\"'*").lower()
+    for name in names:
+        name = name.strip().lower()
+        if not name or not opening.startswith(name):
+            continue
+        rest = opening[len(name):]
+        # "Switzerland accepts" is third person; "Switzerland! We accept" and
+        # "Switzerland's terms are these" are somebody's own voice.
+        if rest[:1] in ("", " ") and not rest.lstrip().startswith(("we ", "we'", "our ")):
+            return True
+    return False
+
+
 def action_rules_and_schema(subject, message_hint):
     """The tail every long system prompt ends with: the action list, the rules
     for using them, and the JSON schema to reply in.
@@ -177,6 +223,7 @@ def action_rules_and_schema(subject, message_hint):
       it, so the three stay distinct verbatim rather than being generalised.
     """
     return (
+        VOICE_RULE +
         "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
         "RULES FOR ACTIONS:\n"
         "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"

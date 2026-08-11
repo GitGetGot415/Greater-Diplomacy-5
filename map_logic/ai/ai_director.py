@@ -29,19 +29,27 @@ def top_scored(candidates, limit):
     return list(candidates[:limit])
 
 
-def should_consult(candidates):
-    """Whether this nation's choice is worth a request.
+def should_consult(candidates, wants_prose=False):
+    """Whether this nation is worth a request.
 
-    Nothing to choose between means nothing to ask about. On a large map this is
-    most nations most turns, and skipping them is the cheapest lever there is on
-    what ABSOLUTE mode costs.
+    Nothing to choose between means nothing to ask about, and on a large map
+    that is most nations most turns -- the cheapest lever there is on what
+    ABSOLUTE mode costs.
+
+    But the same reply carries the wording, so this was quietly deciding two
+    things at once. A nation with exactly one legal option sent its canned line
+    at every immersion level, including ABSOLUTE, whose entire purpose is that
+    the world writes its own diplomacy: saves/generic message despite absolute
+    ai is almost nothing but "We accept your proposal." Where the level would
+    have written prose for this nation anyway, ask -- the choice is a formality
+    and the wording is the point.
     """
-    return len(candidates) > 1
+    return len(candidates) > 1 or (wants_prose and len(candidates) > 0)
 
 
 def build_prompt(world, nation, candidates, limit, personality_note=""):
     """The menu, as the leader's staff would put it."""
-    from map_logic.ai import ai_candidates
+    from map_logic.ai import ai_candidates, ai_prompts
 
     lines = []
     for cand in candidates:
@@ -56,7 +64,8 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
         f"{personality_note}"
         f"Choose at most {limit}. You may follow the ratings or overrule them, "
         f"but you may only choose from this list.\n\n"
-        "Reply ONLY with a valid JSON object of this shape:\n"
+        + ai_prompts.VOICE_RULE +
+        "\nReply ONLY with a valid JSON object of this shape:\n"
         '{"picks": [0], "reason": "one sentence of why", '
         '"messages": {"0": "In-character text of the message that action sends"}}\n'
         "Every index in \"picks\" must appear in \"messages\"."
@@ -103,17 +112,28 @@ def _declined(picks):
     return any(str(raw).strip() == c.AI_DIRECTOR_NONE_CID for raw in picks)
 
 
-def messages_from(reply):
-    """The in-character text per chosen index, if the model supplied any."""
+def messages_from(reply, nation=None, nation_data=None):
+    """The in-character text per chosen index, if the model supplied any.
+
+    A line that talks about its own sender in the third person is dropped rather
+    than sent, and the proposal falls back to its canned line. Small models write
+    "Switzerland accepts your offer" into a message already labelled as being
+    from Switzerland; a dropped line costs one piece of flavour, a kept one
+    reads as a bug.
+    """
+    from map_logic.ai import ai_prompts
+
     if not isinstance(reply, dict):
         return {}
     messages = reply.get("messages")
     if not isinstance(messages, dict):
         return {}
-    return {str(k): str(v) for k, v in messages.items() if isinstance(v, str) and v.strip()}
+    return {str(k): str(v) for k, v in messages.items()
+            if isinstance(v, str) and v.strip()
+            and not ai_prompts.reads_as_third_person(v, nation, nation_data)}
 
 
-def parse(raw_reply, candidates, limit):
+def parse(raw_reply, candidates, limit, nation=None, nation_data=None):
     """(chosen candidates, {cid: message}) from one provider reply."""
     reply = raw_reply
     if isinstance(reply, str):
@@ -121,4 +141,4 @@ def parse(raw_reply, candidates, limit):
             reply = json.loads(reply)
         except (ValueError, TypeError):
             reply = None
-    return validate(reply, candidates, limit), messages_from(reply)
+    return validate(reply, candidates, limit), messages_from(reply, nation, nation_data)
