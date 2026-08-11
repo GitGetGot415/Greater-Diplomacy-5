@@ -1027,6 +1027,22 @@ AI_CONVERSION_PANIC_MATERIALS = 5000
 AI_CONVERSION_PANIC_FUEL = 500
 AI_CONVERSION_EMERGENCY_MATERIALS = 50000
 
+# How much an economic tech's per-turn yield counts against a military tech's
+# one-off improvement to the units on offer. The two are in different units --
+# income per turn versus a better division -- so this is the exchange rate
+# between them, and raising it makes the AI build its economy before its army.
+AI_TECH_ECONOMY_WEIGHT = 1.0
+
+# How many of the RESEARCH_SLOTS are held for a tech that unlocks a unit.
+# Economic techs are repeatable and compound, so on value alone they take every
+# slot forever -- true enough about this economy, and a terrible way to fight a
+# war. Which military tech fills the slot still comes from the valuation.
+AI_RESEARCH_MILITARY_SLOTS = 1
+
+# How many turns of extra income an economic tech is credited with. Longer means
+# more willingness to invest in industry before army.
+AI_TECH_ECONOMY_HORIZON = 30.0
+
 MAX_RESEARCH_TURN_SIMULATION = 5000
 
 # ==========================================

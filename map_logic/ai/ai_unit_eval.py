@@ -193,7 +193,11 @@ def buildable_units(research, unit_library):
     """
     global _BUILDABLE_CACHE, _BUILDABLE_CACHE_LIBRARY
 
-    if _BUILDABLE_CACHE_LIBRARY is not id(unit_library):
+    # `!=`, not `is not`: id() returns a large int and Python only interns small
+    # ones, so an identity test here is true even when the library is the same
+    # object -- which cleared the cache on every single call and made the whole
+    # thing a no-op.
+    if _BUILDABLE_CACHE_LIBRARY != id(unit_library):
         _BUILDABLE_CACHE = {}
         _BUILDABLE_CACHE_LIBRARY = id(unit_library)
 

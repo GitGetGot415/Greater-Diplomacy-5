@@ -278,21 +278,39 @@ class BuildableTests(unittest.TestCase):
             self.assertTrue(queries.is_unit_unlocked(name, {}), name)
 
     def test_the_same_research_is_only_worked_out_once(self):
-        """Scanning the 602-entry library is regex-heavy and was 89% of the whole
-        economy pass. Nations in a scenario mostly start on identical research, so
-        a fifty-country map asks a handful of distinct questions, not fifty."""
+        """Scanning the 602-entry library is regex-heavy and was most of the
+        research pass. Nations in a scenario mostly share research, so a
+        fifty-country map asks a handful of distinct questions, not fifty.
+
+        Asserted by counting distinct entries after asking distinct questions,
+        NOT by counting entries after asking the same one twice -- the first
+        version of this test did the latter, which stays at one entry whether
+        the cache works or is being wiped on every call, and so sat green over
+        exactly that bug.
+        """
         from data import queries
         library = queries.get_unit_library()
-        research = {"destroyer": 8, "medium_tank": 3, "infantry_type": 30}
+        a = {"destroyer": 8, "medium_tank": 3, "infantry_type": 30}
+        b = {"destroyer": 8, "medium_tank": 4, "infantry_type": 30}
 
         ue._BUILDABLE_CACHE.clear()
-        first = ue.buildable_units(research, library)
-        entries_after_first = len(ue._BUILDABLE_CACHE)
-        again = ue.buildable_units(dict(research), library)
+        first = ue.buildable_units(a, library)
+        ue.buildable_units(b, library)
+        again = ue.buildable_units(dict(a), library)
 
         self.assertEqual(first, again)
-        self.assertEqual(len(ue._BUILDABLE_CACHE), entries_after_first,
-                         "an equivalent research dict must hit the same entry")
+        self.assertEqual(len(ue._BUILDABLE_CACHE), 2,
+                         "both questions must still be remembered")
+
+    def test_the_cache_survives_repeated_calls(self):
+        """Directly pins the bug above: the library check compared id() values
+        with `is not`, and large ints are not interned, so it was always true."""
+        from data import queries
+        library = queries.get_unit_library()
+        ue._BUILDABLE_CACHE.clear()
+        for level in range(1, 6):
+            ue.buildable_units({"medium_tank": level}, library)
+        self.assertEqual(len(ue._BUILDABLE_CACHE), 5)
 
     def test_different_research_gets_a_different_answer(self):
         from data import queries
