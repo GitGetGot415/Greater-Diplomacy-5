@@ -126,6 +126,7 @@ def render_buttons(map_screen):
     map_screen.btn_ed_date = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), image=icons.get("clock"), show_text=False)
     map_screen.btn_ed_edited = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), font_preset="normal")
     map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
+    map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
     map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
 
     # Gameplay Buttons
@@ -336,7 +337,7 @@ def render_buttons(map_screen):
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
         map_screen.btn_ed_load, map_screen.btn_ed_nation,
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
-        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_scripts,
+        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
         map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_go_orders, map_screen.btn_go_production,
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
@@ -427,7 +428,7 @@ def update_button_states(map_screen):
             map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_core, map_screen.btn_ed_claim,
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
-            map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_scripts,
+            map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
             map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt
         ]
         for btn in ed_btns:

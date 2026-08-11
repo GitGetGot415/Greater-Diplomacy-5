@@ -23,3 +23,7 @@ from screens.editor_screens.brush_screens import (
     Clear_Map_Screen,
 )
 from screens.editor_screens.diplomacy_editor_screen import Diplomacy_Editor_Screen
+from screens.editor_screens.personality_editor import (
+    Personality_Edit_Screen,
+    Personality_List_Screen,
+)
