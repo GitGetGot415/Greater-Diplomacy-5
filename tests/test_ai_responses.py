@@ -205,13 +205,24 @@ class ConditionTests(unittest.TestCase):
     def test_strength_is_read_off_the_map_not_the_nation_table(self):
         """get_military_strength counts units on the map, so it wants map_data.
         Handing it nation_data returns 0 for everyone and silently reads every
-        war in the game as an even match -- which is what it did at first."""
-        map_data = {
-            "1": {"units": [{"owner": "Them", "type": "Militia I", "health": 5000}]},
-        }
-        line = ai_prompts.resolve("K", sender="Us", target="Them",
-                                  nation_data=self.nation_data, map_data=map_data)
-        self.assertEqual(line, "We are outmatched.")
+        war in the game as an even match -- which is what it did at first.
+
+        Both sides need a real army here: with ours empty, reading our side off
+        the wrong table still leaves us the weaker party and the test passes
+        without proving anything.
+        """
+        def with_armies(mine, theirs):
+            return {"1": {"units": [{"owner": "Us", "type": "Militia I", "health": mine},
+                                    {"owner": "Them", "type": "Militia I", "health": theirs}]}}
+
+        weak = ai_prompts.resolve("K", sender="Us", target="Them",
+                                  nation_data=self.nation_data,
+                                  map_data=with_armies(100, 5000))
+        strong = ai_prompts.resolve("K", sender="Us", target="Them",
+                                    nation_data=self.nation_data,
+                                    map_data=with_armies(5000, 100))
+        self.assertEqual(weak, "We are outmatched.")
+        self.assertEqual(strong, "You are outmatched.")
 
     def test_with_no_map_and_no_world_the_catch_all_answers(self):
         """Better than guessing 'even' and picking a line off the guess."""
