@@ -316,8 +316,8 @@ class AIWorld:
         elif master_a == nation_b:
             score += c.REL_MOD_PUPPET_OF
 
-        for mod_val in nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {}).values():
-            score += mod_val
+        for entry in nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {}).values():
+            score += queries.modifier_value(entry)
 
         contested = self.claim_pressure[(nation_b, nation_a)] + self.claim_pressure[(nation_a, nation_b)]
         score -= min(abs(c.REL_MOD_MAX_CLAIM_PENALTY), contested * abs(c.REL_MOD_PER_CLAIM))

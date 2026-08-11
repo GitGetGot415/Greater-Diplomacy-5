@@ -117,13 +117,29 @@ def _decay_modifiers_and_truces(map_screen):
         temp_mods = data.get("temp_modifiers", {})
         for target, mods in temp_mods.items():
             for mod_name in list(mods.keys()):
-                if mods[mod_name] > 0:
-                    mods[mod_name] -= 1
-                elif mods[mod_name] < 0:
-                    mods[mod_name] += 1
+                entry = mods[mod_name]
+                value = queries.modifier_value(entry)
+                decay = queries.modifier_decay(entry)
+                turns = queries.modifier_turns(entry)
 
-                if mods[mod_name] == 0:
+                # Fade toward zero by `decay` a turn. A decay of 0 is a grudge
+                # that does not soften on its own -- it ends when its `turns`
+                # run out, or never.
+                if value > 0:
+                    value = max(0, value - decay)
+                elif value < 0:
+                    value = min(0, value + decay)
+
+                if turns is not None:
+                    turns -= 1
+
+                if value == 0 or (turns is not None and turns <= 0):
                     del mods[mod_name]
+                elif isinstance(entry, dict):
+                    entry["value"] = value
+                    entry["turns"] = turns
+                else:
+                    mods[mod_name] = value
 
         # --- DECAY TRUCES ---
         truces = data.get("truces", {})
@@ -367,6 +383,13 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
 
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
+    # Diplomacy resolves after the AI phases have torn down their snapshot, so
+    # this pass builds its own. Verdicts read relations, war odds and prices off
+    # it; without one they fall back to the old threshold rules.
+    from map_logic.ai import ai_world
+    verdict_world = ai_world.for_screen(map_screen)
+    scenario_settings = getattr(map_screen, "scenario_settings", None)
+
     def call(task):
         if task["action"] == "CUSTOM_MSG":
             return ai_handler.process_custom_message(
@@ -375,7 +398,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         return ai_handler.evaluate_diplomatic_proposal(
             map_screen.nation_data, map_screen.map_data, active_nations_list, task["target"],
             task["sender"], task["action"], task.get("content", ""),
-            human_players, my_turn_id)
+            human_players, my_turn_id, world=verdict_world,
+            scenario_settings=scenario_settings)
 
     def key_of(task):
         return (task["sender"], task["target"], task["action"])

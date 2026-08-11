@@ -1,6 +1,6 @@
 import random
 from collections import namedtuple
-from map_logic.ai import ai_handler, ai_llm_runner, ai_prompts, ai_world
+from map_logic.ai import ai_handler, ai_llm_runner, ai_opinion, ai_prompts, ai_world
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
@@ -380,7 +380,11 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
         # the target already is all live inside ai_thinks_it_can_win; this
         # block used to recompute every one of them and throw the result
         # away, which cost several full map scans per candidate target.
-        if world.thinks_it_can_win(ai_name, target):
+        # Not "could I win" but "do I want this": the odds still dominate, but a
+        # nation we are on good terms with, a promise we made, and the two wars
+        # we are already losing all count now -- and an aggressive nation will
+        # gamble on odds a cautious one turns down.
+        if ai_opinion.wants_war(world, ai_name, target, map_screen.scenario_settings):
 
             # Random chance to actually declare war
             war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
@@ -479,7 +483,14 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
         has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
 
         if not has_wg and not has_claims_on_them:
-            if world.is_weaker_neighbor(ai_name, neighbor):
+            # Fabricating a claim is how a war becomes legal later, so it wants
+            # the same appetite the war itself will need -- minus the wargoal
+            # requirement it exists to satisfy. An unambitious nation on good
+            # terms with a weak neighbour now simply leaves them alone.
+            if (world.is_weaker_neighbor(ai_name, neighbor)
+                    and ai_opinion.war_desire(world, ai_name, neighbor,
+                                              map_screen.scenario_settings)
+                    >= c.AI_CLAIM_DESIRE_THRESHOLD):
                 if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
 
                     valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)

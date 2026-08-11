@@ -9,6 +9,7 @@ working.
 import collections
 
 import data.constants as c
+from map_logic.ai import ai_opinion, ai_unit_eval
 from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.ai import ai_settings
@@ -149,7 +150,27 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
 Verdict = collections.namedtuple("Verdict", "accepted confidence reason")
 
 
-def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type, custom_msg=""):
+def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
+    """The peace type being offered.
+
+    will_ai_accept_peace takes this as `peace_type` but is handed `custom_msg`,
+    which works only because the terms *are* the message. Anything that attaches
+    prose to a peace proposal -- a script, or the model once it is allowed to
+    write one -- makes every startswith() check silently false and the offer is
+    accepted by the catch-all. The proposal's own parameters win where they
+    exist, and the message is the fallback.
+    """
+    pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
+    params = pending.get("parameters") if isinstance(pending, dict) else None
+    if isinstance(params, dict):
+        declared = params.get("peace_type") or params.get("terms")
+        if declared:
+            return str(declared)
+    return custom_msg or ""
+
+
+def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
+                     custom_msg="", world=None, scenario_settings=None):
     """Whether the AI accepts a proposal, decided without consulting the model.
 
     Lifted out of evaluate_diplomatic_proposal unchanged. It was worth its own
@@ -209,7 +230,19 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     # 3. Evaluate peace deals dynamically using the centralized query
     if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
-        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, custom_msg, map_data, nation_data)
+        terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
+        if world is not None:
+            accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
+                                                scenario_settings)
+            appetite = ai_opinion.peace_appetite(world, ai_nation, sender_nation,
+                                                 scenario_settings)
+            # A marginal call is exactly where a leader's own judgement should
+            # be allowed to differ, which is what Phase 4 reads this for.
+            confidence = min(1.0, abs(appetite - c.AI_PEACE_CEASEFIRE_THRESHOLD) * 2.5)
+            reason = (f"we are {'losing ground and weary of' if appetite > 0.5 else 'holding our own in'} "
+                      f"this war with {sender_nation}")
+            return Verdict(accepted, max(0.15, confidence), reason)
+        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, terms, map_data, nation_data)
 
     # --- NEW AI TRADE LOGIC ---
     elif action_type == "TRADE":
@@ -231,8 +264,27 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         ai_gives_fuel = params.get("take_fuel", 0)
 
         if puppet_state != "NONE" or is_sender_integrated or is_my_integrated:
-            accepted = False
-        elif ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
+            # A structural impossibility, not a judgement call -- nothing should
+            # be allowed to talk us out of it.
+            return Verdict(False, 1.0, "the terms are not ours to agree to")
+
+        if world is not None:
+            # Priced against our own scarcity and shaded by how much we like
+            # them, replacing "accept only if we give literally nothing" -- which
+            # is why no AI ever agreed to a deal a player would call fair.
+            econ = world.economies.get(ai_nation, {})
+            prices = ai_unit_eval.resource_prices(econ, ai_stats)
+            net = ai_opinion.trade_appetite(
+                world, ai_nation, sender_nation,
+                receive={"materials": ai_takes_mats, "fuel": ai_takes_fuel},
+                give={"materials": ai_gives_mats, "fuel": ai_gives_fuel},
+                prices=prices, scenario_settings=scenario_settings)
+            accepted = net > 0
+            scale = max(1.0, abs(net) + prices.get("materials", 1.0) * 100.0)
+            return Verdict(accepted, max(0.2, min(1.0, abs(net) / scale)),
+                           "the exchange favours us" if accepted else "we give up more than we gain")
+
+        if ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
             accepted = True
         else:
             accepted = False
@@ -241,7 +293,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     return Verdict(accepted, 1.0, "")
 
 
-def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None):
+def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None):
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
@@ -254,7 +306,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     immersion = ai_settings.get_ai_immersion_level()
 
     accepted = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
-                                action_type, custom_msg).accepted
+                                action_type, custom_msg, world=world,
+                                scenario_settings=scenario_settings).accepted
 
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)

@@ -858,6 +858,19 @@ AI_EXPEDITION_WEIGHT = 5
 # AI PROACTIVE DIPLOMACY THRESHOLDS
 # ==========================================
 
+# ==========================================
+# AI PERSONALITY (map_logic/ai/ai_personality.py)
+# ==========================================
+
+# Seed every nation's procedural temperament is derived from. A scenario stores
+# its own on first use, so changing this only affects scenarios that never had
+# one; changing it will not reroll personalities in a save already underway.
+DEFAULT_AI_PERSONALITY_SEED = "greater-diplomacy-5"
+
+# What counts as a trait worth mentioning when describing a nation.
+AI_TRAIT_NOTABLE_HIGH = 0.68
+AI_TRAIT_NOTABLE_LOW = 0.32
+
 AI_RELATION_FACTION_THRESHOLD = 50
 AI_WAR_STRENGTH_THRESHOLD = 1.2 # AI must be 20% stronger on the shared border to declare war
 AI_GLOBAL_STRENGTH_THRESHOLD = 0.8 # AI must have at least 80% of the target's total alliance + economic power to consider war
@@ -865,6 +878,62 @@ AI_DIPLO_COOLDOWN = 12 # How many turns before AI can retry a rejected/ignored p
 AI_WAR_COOLDOWN = 12
 AI_CLAIM_COOLDOWN = 12 # How many turns the AI waits before trying to fabricate another claim
 AI_WEAK_NEIGHBOR_STRENGTH_RATIO = 0.60 # Target must be this much weaker (e.g. 60% of AI's power) to be bullied with claims
+
+# ==========================================
+# AI DESIRE WEIGHTS (map_logic/ai/ai_opinion.py)
+# ==========================================
+# War used to be two thresholds and nothing else. These turn the same
+# quantities into degrees, and add the things the old logic had no way to say:
+# that we like them, that we are already fighting two wars, that we promised not
+# to. The odds terms and the appetite terms each sum to 1.0, so a nation with
+# perfect odds and maximum appetite sits at 2.0 before restraint pulls it back.
+
+# How the two halves of the decision trade off. They are averaged rather than
+# added -- see the note in war_desire -- so these sum to 1.0.
+AI_W_ODDS = 0.55            # can we win
+AI_W_APPETITE = 0.45        # do we want to
+
+AI_W_BORDER = 0.6           # local superiority on the shared front
+AI_W_GLOBAL = 0.4           # overall alliance and economic weight
+AI_ODDS_STEEPNESS = 6.0     # how sharply confidence turns over around the crossover
+
+AI_W_CLAIM = 0.45           # how much of their land we already claim
+AI_W_AGGRO = 0.35           # temperament, independent of the odds
+AI_W_AMBITION = 0.20        # appetite for land we have no claim on yet
+
+AI_W_RELATION = 0.55        # good relations suppress war. Previously: nothing did.
+AI_W_OVEREXTENSION = 0.45   # every war already being fought makes the next one less appealing
+
+# Measured over 20 turns of the 1939 scenario against the old boolean, which
+# declared 33 wars and ended 8. This gives 23 declared and 7 ended: a
+# noticeably less trigger-happy world where a larger share of wars actually
+# resolve, without making it inert. 0.62 gives 16/6 and 0.70 gives 11/7, both
+# too quiet for a scenario that should catch fire.
+AI_WAR_DESIRE_THRESHOLD = 0.55
+# Lower than the war bar: fabricating a claim is a step toward a war, taken
+# before the odds are settled, and it is how a war becomes legal at all.
+AI_CLAIM_DESIRE_THRESHOLD = 0.45
+AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committed
+
+# Peace. Losing, tired and cautious all push toward the table.
+AI_W_PEACE_LOSING = 0.5
+AI_W_PEACE_WEARINESS = 0.35
+AI_W_PEACE_CAUTION = 0.15
+AI_WAR_WEARINESS_TURNS = 25.0
+AI_PEACE_CEASEFIRE_THRESHOLD = 0.5
+# Giving up land takes more than agreeing to stop. Above zero and reachable,
+# where the old rule refused a claims demand unconditionally -- which is the
+# reason AI wars never once ended with territory changing hands.
+AI_PEACE_CEDE_LAND_THRESHOLD = 0.72
+
+# Trade. How much a good relationship discounts what we hand over.
+AI_TRADE_GOODWILL_DISCOUNT = 0.5
+
+# Alliances and faction invitations.
+AI_W_ALLY_RELATION = 0.5
+AI_W_ALLY_SHARED_ENEMY = 0.35
+AI_W_ALLY_WEAKNESS = 0.15   # the weak seek protection
+AI_ALLIANCE_DESIRE_THRESHOLD = 0.55
 TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
 MIN_TURNS_FOR_CEASEFIRE = 2 # Turns that must occur before the ai allows ceasefires
@@ -1097,6 +1166,16 @@ REL_MOD_MAX_CLAIM_PENALTY = -50
 
 REL_MOD_REMOVE_CORE = -30
 REL_MOD_MAX_REMOVE_CORE_PENALTY = -150
+
+# Consequences of keeping or breaking your word. The broken-promise grudge is
+# deliberately durable -- decay 0, and long -- because a betrayal nobody
+# remembers next decade is not a betrayal, it is a free move.
+REL_MOD_BROKEN_COMMITMENT = -40
+REL_MOD_BROKEN_COMMITMENT_TURNS = 60
+REL_MOD_HONORED_COMMITMENT = 15
+REL_MOD_REFUSED_CALL_TO_ARMS = -25
+REL_MOD_FOUGHT_TOGETHER = 10
+REL_MOD_GIFT = 10
 
 COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
 COLOR_REL_POS = (0, 255, 0)         # Green at 100

@@ -2045,8 +2045,8 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
                 
     # Apply all decaying temporary modifiers
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})
-    for mod_val in temp_mods.values():
-        score += mod_val
+    for entry in temp_mods.values():
+        score += modifier_value(entry)
         
     if id_to_province:
         claims_a = nation_data.get(nation_a, {}).get("claims", [])
@@ -2072,15 +2072,69 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
         
     return score
 
-def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data):
-    """Adds or updates a temporary relation modifier. General opinions stack."""
+# A relation modifier is stored either as a bare int -- every modifier written
+# before this existed, and every one in an old save -- or as a dict carrying how
+# fast it fades and how long it lasts:
+#
+#     -40                                              decays 1/turn, as always
+#     {"value": -40, "decay": 0, "turns": 60, ...}     durable: 60 turns, no fade
+#
+# Nothing migrates in place. An int keeps behaving exactly as it always has, for
+# as long as it exists, and a mixed dict is fine. Grudges that actually last are
+# what make a betrayal cost something later.
+
+def modifier_value(entry):
+    """The score contribution of a modifier, in either storage form."""
+    if isinstance(entry, dict):
+        try:
+            return int(entry.get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+    try:
+        return int(entry)
+    except (TypeError, ValueError):
+        return 0
+
+
+def modifier_decay(entry):
+    """How much this modifier fades toward zero per turn. 0 means never."""
+    if isinstance(entry, dict):
+        try:
+            return max(0, int(entry.get("decay", 1)))
+        except (TypeError, ValueError):
+            return 1
+    return 1
+
+
+def modifier_turns(entry):
+    """Turns left before it expires outright, or None for no expiry."""
+    if isinstance(entry, dict) and entry.get("turns") is not None:
+        try:
+            return int(entry["turns"])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data,
+                           decay=1, turns=None, reason=""):
+    """Adds or updates a temporary relation modifier. General opinions stack.
+
+    decay/turns/reason are keyword arguments with the old behaviour as their
+    defaults, so every existing call site is unchanged.
+    """
     if nation_a not in nation_data: return
     mods = nation_data.setdefault(nation_a, {}).setdefault("temp_modifiers", {}).setdefault(nation_b, {})
-    
+
     if mod_name == "general":
-        mods["general"] = mods.get("general", 0) + value
-    else:
+        value = modifier_value(mods.get("general", 0)) + value
+
+    if decay == 1 and turns is None and not reason:
+        # Plain form for a plain modifier, so saves stay readable and old builds
+        # can still make sense of the common case.
         mods[mod_name] = value
+    else:
+        mods[mod_name] = {"value": value, "decay": decay, "turns": turns, "reason": reason}
 
 def lerp_color(c1, c2, t):
     """Linearly interpolates between two RGB color tuples by factor t (0.0-1.0)."""
@@ -2793,20 +2847,26 @@ def has_wargoal(nation, target_nation, nation_data, map_data=None):
                 return True
     return target_nation in nation_data.get(nation, {}).get("wargoals", {})
 
-def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
-    """Calculates if the AI believes it is strong enough to defeat the target (CTW)."""
+def power_ratio(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
+    """(border_ratio, global_ratio) between two nations.
+
+    The two quantities ai_thinks_it_can_win compares against its thresholds,
+    exposed as numbers so a caller can reason in degrees instead of a yes/no --
+    which is what lets a bold nation gamble on odds a careful one turns down.
+    ai_thinks_it_can_win is written in terms of this so the two cannot drift.
+    """
     if not id_to_province:
         id_to_province = {prov["id"]: prov for prov in map_data.values()}
 
     my_border_str, target_border_str = get_border_strength(ai_nation, target_nation, map_data, id_to_province, nation_data)
-    
+
     # Prevent division by zero if they have literally no troops on the border
     target_border_str = max(1, target_border_str)
-    
+
     # Consider total alliance strength, economy, and distractions
     my_alliance_str = get_alliance_military_strength(ai_nation, map_data, nation_data)
     target_alliance_str = get_alliance_military_strength(target_nation, map_data, nation_data)
-    
+
     my_econ_power = get_economic_power(ai_nation, nation_data) / 100.0
     target_econ_power = get_economic_power(target_nation, nation_data) / 100.0
 
@@ -2816,9 +2876,15 @@ def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_
     # Add the target's distraction to our perceived power
     my_total_power = my_alliance_str + my_econ_power + target_distraction_str
     target_total_power = max(1.0, target_alliance_str + target_econ_power)
-    
+
+    return my_border_str / target_border_str, my_total_power / target_total_power
+
+def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
+    """Calculates if the AI believes it is strong enough to defeat the target (CTW)."""
+    border_ratio, global_ratio = power_ratio(ai_nation, target_nation, map_data, nation_data, id_to_province)
+
     # AI needs local border superiority AND overall global viability
-    return my_border_str >= (target_border_str * c.AI_WAR_STRENGTH_THRESHOLD) and my_total_power >= (target_total_power * c.AI_GLOBAL_STRENGTH_THRESHOLD)
+    return border_ratio >= c.AI_WAR_STRENGTH_THRESHOLD and global_ratio >= c.AI_GLOBAL_STRENGTH_THRESHOLD
 
 def is_weaker_neighbor(ai_nation, target_nation, map_data, nation_data):
     """Returns True if the target nation's total power is significantly lower than the AI's."""
