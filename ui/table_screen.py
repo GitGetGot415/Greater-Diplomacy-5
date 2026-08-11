@@ -37,7 +37,8 @@ class TableScreen(GameState):
     HEADER_Y = 88
     ROW_TOP = 130
 
-    def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show."):
+    def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
+                 on_row_click=None):
         super().__init__()
         self.map_screen = getattr(game_state, "map_screen", None) or game_state
         self.bg_color = (25, 28, 35)
@@ -46,6 +47,12 @@ class TableScreen(GameState):
         self.rows = rows
         self.empty_message = empty_message
         self.sort_reverse = {}
+        #: Optional callback taking the row dict. Rows are only clickable where
+        #: one is given, so the economy and expenses tables are unaffected.
+        self.on_row_click = on_row_click
+        #: (rect, row) for every row actually drawn last frame. Culled rows are
+        #: absent, so a row scrolled out of view cannot be clicked.
+        self.row_hitboxes = []
 
         self.total_w = sum(col.width for col in columns)
         self.table_x = max(20, (c.SCREEN_WIDTH - self.total_w) // 2)
@@ -84,6 +91,20 @@ class TableScreen(GameState):
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
+        if not self.on_row_click:
+            return
+        if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+            return
+        # A row half-scrolled under the header is drawn clipped, so the click
+        # has to land inside the scroll region as well as on the row.
+        clip = getattr(self, "scroll_content_rect", None)
+        if clip is not None and not clip.collidepoint(event.pos):
+            return
+        for rect, row in self.row_hitboxes:
+            if rect.collidepoint(event.pos):
+                self.on_row_click(row)
+                return
+
     def draw(self, surface):
         surface.fill(self.bg_color)
         ui_bars.draw_centered_title(surface, self.title, 25, "heading1")
@@ -106,6 +127,8 @@ class TableScreen(GameState):
 
         view_h = c.SCREEN_HEIGHT - self.ROW_TOP - 20
         row_font = fonts.get("small")
+        self.row_hitboxes = []
+        hovered = pygame.mouse.get_pos() if self.on_row_click else None
         clip_rect = pygame.Rect(self.table_x, self.ROW_TOP - 10, self.total_w, c.SCREEN_HEIGHT - (self.ROW_TOP - 10) - 10)
         self.scroll_content_rect = clip_rect
         with ui_bars.clip_scroll_region(surface, clip_rect,
@@ -113,9 +136,15 @@ class TableScreen(GameState):
             for i, y in self.layout_list_rows(len(self.rows), self.ROW_HEIGHT, self.ROW_TOP, view_h=view_h,
                                               cull_top=self.ROW_TOP - 10, cull_bottom=c.SCREEN_HEIGHT - 10):
                 row = self.rows[i]
+                row_rect = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
                 if i % 2 == 0:
-                    stripe = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
-                    pygame.draw.rect(surface, (35, 38, 45), stripe)
+                    pygame.draw.rect(surface, (35, 38, 45), row_rect)
+
+                if hovered is not None:
+                    self.row_hitboxes.append((row_rect, row))
+                    if row_rect.collidepoint(hovered) and clip_rect.collidepoint(hovered):
+                        pygame.draw.rect(surface, (55, 60, 75), row_rect)
+                        pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, row_rect, 1)
 
                 x = self.table_x
                 for col in self.columns:

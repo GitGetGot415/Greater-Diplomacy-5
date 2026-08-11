@@ -32,11 +32,15 @@ def process_proactive_llm_tasks(map_screen):
     mode = ai_handler.get_ai_mode()
 
     def consulted(choice):
-        if mode == "OFF" or not ai_director.should_consult(choice["candidates"]):
+        # The immersion question comes first now: it is what decides whether
+        # this nation's words are meant to be written at all, and a forced
+        # choice still wants them written.
+        if mode == "OFF":
             return False
-        return not ai_evaluation._use_canned_reply(
+        wants_prose = not ai_evaluation._use_canned_reply(
             mode, ai_handler.get_ai_immersion_level(), is_ai_to_ai=True,
             has_custom_msg=False, nation=choice["nation"], world=world)
+        return wants_prose and ai_director.should_consult(choice["candidates"], wants_prose)
 
     jobs = [choice for choice in pending_choices if consulted(choice)]
 
@@ -62,7 +66,8 @@ def process_proactive_llm_tasks(map_screen):
         if not reply or reply.get("error"):
             return
         chosen, messages = ai_director.parse(reply, choice["candidates"],
-                                             c.AI_MAX_ACTIONS_PER_TURN)
+                                             c.AI_MAX_ACTIONS_PER_TURN,
+                                             choice["nation"], map_screen.nation_data)
         choice["chosen"] = chosen
         choice["messages"] = messages
 
@@ -286,7 +291,12 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     of PROACTIVE_PROPOSALS.
     """
     spec = PROACTIVE_PROPOSALS[action]
-    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(spec.fallback_key, spec.fallback)
+    # Who it is being said to decides how it is said: a nation that knows it is
+    # outmatched declares war differently from one that knows it is not.
+    fallback = ai_prompts.resolve(spec.fallback_key, sender=ai_name, target=target,
+                                  nation_data=map_screen.nation_data,
+                                  map_data=map_screen.map_data,
+                                  default=spec.fallback)
 
     # A war declaration's queued_message is the wargoal, not prose, so the
     # leader's own wording never replaces it.
@@ -432,7 +442,14 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
         target_leader = max(potential_leaders,
                             key=lambda n: (ai_opinion.alliance_appetite(
                                 world, ai_name, n, map_screen.scenario_settings), n))
-        if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target_leader, "JOIN_FACTION_REQ"):
+        # A puppet has no alignment to seek -- it holds whatever its master
+        # holds. Founding one is a different act and stays available:
+        # finalize_create_faction redirects to the master and makes it the
+        # leader, so the result is a bloc the overlord is actually in, not a
+        # subject aligned somewhere its master is not.
+        if (queries.can_choose_own_faction(ai_name, map_screen.nation_data)
+                and ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name,
+                                                  target_leader, "JOIN_FACTION_REQ")):
             bag.add(ai_candidates.make(
                 "JOIN_FACTION_REQ", target_leader,
                 max(c.AI_SCORE_DEFENSIVE_FACTION,
@@ -682,6 +699,9 @@ def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, w
             continue
         other_data = map_screen.nation_data.get(other, {})
         if other_data.get("faction"):
+            continue
+        # Courting somebody else's subject is courting their overlord's answer.
+        if not queries.can_choose_own_faction(other, map_screen.nation_data):
             continue
         if queries.are_at_war(ai_name, other, map_screen.nation_data):
             continue

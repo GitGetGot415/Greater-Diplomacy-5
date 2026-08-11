@@ -52,62 +52,105 @@ def conquer_province(map_screen, province, new_owner):
             if not province.get("cores"):
                 province["cores"] = [new_owner]
 
-        # --- NEW: Check if old owner was a created integrated puppet and lost all territory ---
+        # --- A nation that just lost its last province leaves the world stage ---
         if old_owner != new_owner and old_owner in map_screen.nation_data:
-            should_delete = False
-            
-            if map_screen.nation_data[old_owner].get("is_created_integrated_puppet", False):
-                should_delete = not any(p.get("owner") == old_owner for p in map_screen.map_data.values())
-            
-            # Rebellion killed before peace deal: still at war means defeated in combat, not via treaty
-            if map_screen.nation_data[old_owner].get("is_rebellion", False):
-                if not any(p.get("owner") == old_owner for p in map_screen.map_data.values()):
-                    if map_screen.nation_data[old_owner].get("at_war_with", []):
-                        should_delete = True
-            
-            if should_delete:
-                # Remove all cores of this country from the map
-                for p in map_screen.map_data.values():
-                    if old_owner in p.get("cores", []):
-                        p["cores"].remove(old_owner)
-                        refresh_core_tint(map_screen, p, p["cores"])
-                            
-                # --- Completely remove from the game ---
-                # 1. Break puppet link from master
-                master = map_screen.nation_data[old_owner].get("master", "")
-                if master and master in map_screen.nation_data:
-                    if old_owner in map_screen.nation_data[master].get("puppets", []):
-                        map_screen.nation_data[master]["puppets"].remove(old_owner)
-                        
-                # 2. Cleanup references in other nations
-                for n_id, n_data in list(map_screen.nation_data.items()):
-                    if old_owner in n_data.get("at_war_with", []):
-                        n_data["at_war_with"].remove(old_owner)
-                    if old_owner in n_data.get("allied_with", []):
-                        n_data["allied_with"].remove(old_owner)
-                    if old_owner in n_data.get("puppets", []):
-                        n_data["puppets"].remove(old_owner)
-                    if n_data.get("master") == old_owner:
-                        n_data["master"] = ""
-                        n_data["puppet_type"] = ""
-                        
-                    for dict_key in ["relations", "truces", "diplo_cooldowns", "wargoals", "pending_diplomacy", "draft_lists", "diplo_responses"]:
-                        if old_owner in n_data.get(dict_key, {}):
-                            del n_data[dict_key][old_owner]
-                            
-                    # Remove messages sent by the dead entity to avoid ghost notifications
-                    if "inbox" in n_data:
-                        n_data["inbox"] = [msg for msg in n_data["inbox"] if msg.get("sender") != old_owner]
-                            
-                # Cleanup faction maps
-                fac = map_screen.nation_data[old_owner].get("faction", "")
-                if fac and "FACTION_WAR_MAPS" in map_screen.nation_data:
-                    if fac in map_screen.nation_data["FACTION_WAR_MAPS"]:
-                        if old_owner in map_screen.nation_data["FACTION_WAR_MAPS"][fac]:
-                            del map_screen.nation_data["FACTION_WAR_MAPS"][fac][old_owner]
-                            
-                # 3. Finally delete from nation_data
-                del map_screen.nation_data[old_owner]
+            landless = not any(p.get("owner") == old_owner
+                               for p in map_screen.map_data.values())
+            if landless:
+                retire_landless_nation(map_screen, old_owner)
+
+
+def retire_landless_nation(map_screen, nation):
+    """Takes a nation that holds no territory out of everyone else's business.
+
+    Two jobs used to be one, behind a gate that only opened for a puppet the
+    player had created or a rebellion put down mid-war. Everything else -- an
+    ordinary conquest, or annexing a puppet the scenario shipped with -- left a
+    landless nation sitting on its faction's roster forever: saves/Tannu Tuva
+    Gone but not forgotten had three of them, only one of which was a puppet.
+
+    So the diplomatic tidy-up now runs for anyone who runs out of land, and only
+    the harder half -- erasing cores and the nation itself -- stays behind the
+    original gate. That is the distinction the two kinds of integrated puppet
+    are meant to have: one the scenario authored keeps its cores when you annex
+    it, one you created and re-annexed does not.
+    """
+    data = map_screen.nation_data.get(nation)
+    if data is None:
+        return
+
+    # In the editor a country sits at zero provinces all the time -- that is
+    # what repainting one looks like halfway through -- so losing its treaties
+    # for it would be destructive rather than tidy. Only the erase-entirely
+    # half below still runs there, as it always has.
+    if not getattr(map_screen, "is_editor", False):
+        # Nobody is still allied with, at war with, or in a bloc with a nation
+        # that no longer holds any ground.
+        from map_logic.diplomacy.faction_actions import leave_faction
+        fac = data.get("faction", "")
+        if fac:
+            leave_faction(map_screen.nation_data, nation)
+
+        # Its own proposals die with it. Territory changes hands in phase 2 and
+        # diplomacy resolves in phase 1, so an offer queued before the last
+        # province fell would otherwise still land the turn after -- which is
+        # how a dead Luxembourg founded "The Luxembourg Pact" on turn 15 of a
+        # test run and reappeared on a roster it had just been taken off.
+        data["pending_diplomacy"] = {}
+        data["diplo_responses"] = {}
+
+        master = data.get("master", "")
+        if master and master in map_screen.nation_data:
+            if nation in map_screen.nation_data[master].get("puppets", []):
+                map_screen.nation_data[master]["puppets"].remove(nation)
+
+        for n_id, n_data in list(map_screen.nation_data.items()):
+            if not isinstance(n_data, dict) or n_id == nation:
+                continue
+            if nation in n_data.get("at_war_with", []):
+                n_data["at_war_with"].remove(nation)
+            if nation in n_data.get("allied_with", []):
+                n_data["allied_with"].remove(nation)
+            for dict_key in ["pending_diplomacy", "diplo_responses", "diplo_cooldowns",
+                             "truces", "draft_lists"]:
+                if nation in n_data.get(dict_key, {}):
+                    del n_data[dict_key][nation]
+
+        if fac and "FACTION_WAR_MAPS" in map_screen.nation_data:
+            war_maps = map_screen.nation_data["FACTION_WAR_MAPS"]
+            if fac in war_maps and nation in war_maps[fac]:
+                del war_maps[fac][nation]
+
+    # --- Only for a puppet the player created, or a rebellion put down while
+    # the war was still running: erase the cores and the nation with them. ---
+    should_delete = bool(data.get("is_created_integrated_puppet", False))
+    if data.get("is_rebellion", False) and data.get("at_war_with", []):
+        should_delete = True
+    if not should_delete:
+        return
+
+    for p in map_screen.map_data.values():
+        if nation in p.get("cores", []):
+            p["cores"].remove(nation)
+            refresh_core_tint(map_screen, p, p["cores"])
+
+    for n_id, n_data in list(map_screen.nation_data.items()):
+        if not isinstance(n_data, dict):
+            continue
+        if nation in n_data.get("puppets", []):
+            n_data["puppets"].remove(nation)
+        if n_data.get("master") == nation:
+            n_data["master"] = ""
+            n_data["puppet_type"] = ""
+        for dict_key in ["relations", "wargoals"]:
+            if nation in n_data.get(dict_key, {}):
+                del n_data[dict_key][nation]
+        # Remove messages sent by the dead entity to avoid ghost notifications
+        if "inbox" in n_data:
+            n_data["inbox"] = [msg for msg in n_data["inbox"]
+                               if msg.get("sender") != nation]
+
+    del map_screen.nation_data[nation]
 
 def get_mixed_core_color(cores):
     """Helper function to average the colors of all cores on a tile."""

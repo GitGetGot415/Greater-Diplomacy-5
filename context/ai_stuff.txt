@@ -74,8 +74,8 @@ map_logic/ai/
   ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
 
 
-TWO THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
----------------------------------------------------------------
+THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
+----------------------------------------------------------------
 
 An extra body is worth what it ABSORBS, not a flat bonus. apply_group_damage
 deals sum(max(0, volley/N - defense)), so at defense 0 that sum is exactly the
@@ -90,6 +90,13 @@ Lvl 2 does. Scoring the new building's whole output overstated it by a factor
 of the level, which made unreachable tiers look like the best deals on the
 board. And a level further ahead than the nation has actually built is worth
 nothing, because a province can only ever queue the next item in its chain.
+
+BUY AND SELL BY THE SAME VALUATION. The purchase loop takes the argmax of
+ai_unit_eval's marginal score; the disband pass used to take the minimum raw
+attack, and the two disagreed -- Japan, the German Reich and France were each
+paying for one unit type and scrapping that same type in the same turn. If a
+second place in the code has to decide what a unit is worth, it asks
+ai_unit_eval, or the AI argues with itself.
 
 
 TUNING
@@ -111,6 +118,12 @@ data/constants.py, the AI blocks. The ones worth knowing:
   AI_COMMITMENT_WEIGHT        how much a pact restrains, before loyalty
   AI_MAX_ACTIONS_PER_TURN     proposals a nation may have in flight
   AI_NEGOTIATION_MAX_PAIRS    summits per turn
+  AI_UPKEEP_TARGETS           share of each resource's income upkeep may eat
+                              before the AI stops buying more of what needs it.
+                              The fuel entry is the lever if armies come out
+                              too small or too large -- UPKEEP_MODIFIERS["fuel"]
+                              is 0.50 against 0.05 for materials, so fuel is
+                              what actually binds
   ai_turn_budget_seconds      (a setting) wall-clock ceiling per turn's model
                               work; whatever has not answered falls back
 
@@ -126,9 +139,19 @@ USSR 0.04, so the historical scenarios are worth authoring.
 RULES WORTH KNOWING
 -------------------
 
-Puppets cannot settle their own wars, only wars against their own master --
-the mirror of the rule that they may only declare war on their master. The
-backstop is in treaty_effects.apply_treaty_effect, where every path converges.
+A puppet chooses neither its wars nor its friends. It may only declare war on
+its master, may only make peace with its master, and may not join, be invited
+into, or leave a faction at all -- it follows its master in and out through
+pull_puppets_into_faction. The backstops are queries.can_negotiate_peace and
+queries.can_choose_own_faction, enforced where every path converges:
+treaty_effects.apply_treaty_effect, plus faction_actions for the join and
+leave halves, which crossed invitations reach directly.
+
+A nation that loses its last province leaves every faction, war and pending
+offer behind. Only a puppet the player created, or a rebellion put down while
+still at war, is additionally erased along with its cores -- which is what
+makes an integrated puppet the scenario shipped with keep its cores when
+annexed, while one you created and re-annexed does not.
 
 Bombardment is free, draws no return fire, ignores the combat-width cap, and
 a bombarding unit still fights on its own tile. The AI shells whenever it has
@@ -137,3 +160,49 @@ a target in range, which is also what stops artillery charging into melee.
 Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
 movement re-plan. They did not used to, which meant no AI unit was ever
 disbanded by anything.
+
+Disbanding is a last resort and never touches the front. A unit standing in a
+battle or with an enemy next door is never given up, and neither is a type the
+nation is currently producing; if every candidate is at the front, nothing is
+disbanded at all, because losing the war costs more than the deficit does. The
+deficit it answers to is the standing army's, not the standing army's plus
+whatever is on order -- counting the queue there had nations deleting real
+units to fund units that had not arrived.
+
+Fuel is checked when buying, not only when regretting. Most units burn none,
+so a fuel shortage does not stop the purchase loop the way materials do; it
+removes fuel-burning units from what is affordable and from what is worth
+saving up for, and leaves everything else alone.
+
+
+WHAT THE AI SAYS WITH THE MODEL OFF
+-----------------------------------
+
+data/json/ai_responses.json, read through the same cache as unit_data.json.
+A key holds either a plain string or a list of variant groups; a group may
+carry a "when" and holds interchangeable "lines". The most specific eligible
+group wins and one of its lines is chosen at random, so a nation declaring war
+on someone twice its size does not use the sentence it would use on someone
+half its size, and neither reads identically twice.
+
+  "when" keys: strength (weaker/even/stronger), at_war, same_faction,
+               opinion (hostile/cold/warm)
+
+ai_prompts.resolve() is the accessor; AI_FALLBACK_RESPONSES still exists as a
+read-through mapping for the forty-odd sites that have nobody to compare
+against. Add lines by editing the JSON -- nothing is compiled in.
+
+Every prompt states the voice (first person plural, never your own nation in
+the third person) via ai_prompts.VOICE_RULE, and a reply that opens by naming
+its own sender is dropped for the canned line rather than sent. Small models
+need telling; llama3 wrote "Switzerland accepts your offer" as Switzerland.
+
+At ABSOLUTE, a nation with only one legal option is still asked -- choosing
+and phrasing come from the same call, so skipping it silently skipped the
+wording. Measured on the 1939 map, that took the director from 19.6 to 22.6
+calls a turn: the cost lever is still doing its job, since most nations still
+have nothing on their menu at all. If a turn feels slow at ABSOLUTE the thing
+to check is ai_threads (1 by default) and whether the provider is actually
+answering -- an unreachable Ollama makes every call wait out its timeout, and
+ai_turn_budget_seconds then caps each turn at that budget rather than the
+work.

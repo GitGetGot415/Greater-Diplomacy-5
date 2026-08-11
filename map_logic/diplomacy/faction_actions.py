@@ -89,6 +89,14 @@ def finalize_disband_faction(nation_data, leader):
 def finalize_faction_join(map_data, nation_data, host, joiner):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
 
+    # A puppet has no alignment of its own; it follows its master in through
+    # pull_puppets_into_faction below, which sets `faction` directly and so does
+    # not come back through here. Guarded at this level rather than only at the
+    # treaty layer because crossed invitations in diplomacy_processor call
+    # straight in, and had no check of any kind.
+    if not queries.can_choose_own_faction(joiner, nation_data):
+        return
+
     fac = nation_data[host].get("faction", "")
     if fac:
         nation_data[joiner]["faction"] = fac
@@ -102,7 +110,16 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
         pull_puppets_into_faction(joiner, fac, map_data, nation_data)
 
 def finalize_faction_leave(nation_data, leaver):
-    """A nation walks out of its faction. Everyone left behind resents it."""
+    """A nation walks out of its faction. Everyone left behind resents it.
+
+    A puppet cannot: it leaves when its master does, through
+    pull_puppets_out_of_faction. Walking out alone would strand it outside the
+    faction its overlord is still in, which is the same broken state as joining
+    one alone, only mirrored.
+    """
+    if not queries.can_choose_own_faction(leaver, nation_data):
+        return
+
     # Read the roster before the membership is stripped.
     members = queries.get_faction_members(nation_data[leaver].get("faction", ""), nation_data)
 

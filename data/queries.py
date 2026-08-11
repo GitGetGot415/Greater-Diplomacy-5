@@ -202,6 +202,7 @@ _JSON_CACHE = {
     "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
     "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None},
     "historical_leaders": {"path": c.HISTORICAL_LEADERS_PATH, "data": None},
+    "ai_responses": {"path": c.AI_RESPONSES_PATH, "data": None},
 }
 
 def scenario_has_scripted_events(nation_data):
@@ -400,6 +401,7 @@ def get_unit_library(): return _load_cached_json("unit_library")
 def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")
 def get_country_data(): return _load_cached_json("country_data")
+def get_ai_responses(): return _load_cached_json("ai_responses")
 def get_historical_leader_timeline(): return _load_cached_json("historical_leaders")
 
 def save_historical_leader_timeline(data):
@@ -814,6 +816,21 @@ def can_negotiate_peace(nation, other, nation_data):
     """
     master = nation_data.get(nation, {}).get("master", "")
     return not master or master == other
+
+
+def can_choose_own_faction(nation, nation_data):
+    """Whether `nation` may join, be invited into, or leave a faction alone.
+
+    A puppet's alignment is its master's, exactly as its wars are -- it follows
+    its overlord in and out through pull_puppets_into_faction and its opposite,
+    and has no say of its own. Nothing checked this either, so a subject could
+    sit in a faction its master had never joined: in saves/Madagascar but not
+    France, French Madagascar was in the Axis while Vichy France was in nothing.
+
+    Founding a faction is deliberately not covered. finalize_create_faction
+    already redirects to the master, so the puppet is not acting alone there.
+    """
+    return not nation_data.get(nation, {}).get("master", "")
 
 
 def needs_military_access_request(moving_nation, target_owner, nation_data):

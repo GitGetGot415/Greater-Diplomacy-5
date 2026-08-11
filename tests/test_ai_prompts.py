@@ -92,8 +92,9 @@ class FallbackTableTests(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertIn(spec.fallback_key, ai_prompts.AI_FALLBACK_RESPONSES)
                 # The defensive literal must not have drifted from the table.
-                self.assertEqual(ai_prompts.AI_FALLBACK_RESPONSES[spec.fallback_key],
-                                 spec.fallback)
+                # A key may now hold several interchangeable lines, so the
+                # question is whether the literal is still one of them.
+                self.assertIn(spec.fallback, ai_prompts.lines_for(spec.fallback_key))
 
     def test_every_canned_response_the_handler_names_exists(self):
         from map_logic.ai import ai_handler
