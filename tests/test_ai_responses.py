@@ -138,12 +138,27 @@ class ConditionTests(unittest.TestCase):
     def tearDown(self):
         ai_prompts.all_responses = self.real
 
-    class World:
-        def __init__(self, mine, theirs):
-            self._s = {"Us": mine, "Them": theirs}
+    def World(self, mine, theirs):
+        """A real AIWorld with two nations' armies dialled in.
 
-        def strength(self, n):
-            return self._s[n]
+        Deliberately not a stand-in with a strength() method on it -- the first
+        cut of this called world.strength(), which AIWorld has never had (it is
+        world.military()), and a hand-rolled double happily answered to the
+        wrong name while every AI turn in the actual game raised
+        AttributeError. If it is going to stand for AIWorld, it has to be one.
+        """
+        from map_logic.ai import ai_world
+        map_data = {
+            "1": {"id": 1, "json_key": "1", "owner": "Us", "cores": ["Us"],
+                  "neighbors": [], "terrain": "plains",
+                  "units": [{"owner": "Us", "type": "Militia I", "health": mine}]},
+            "2": {"id": 2, "json_key": "2", "owner": "Them", "cores": ["Them"],
+                  "neighbors": [], "terrain": "plains",
+                  "units": [{"owner": "Them", "type": "Militia I", "health": theirs}]},
+        }
+
+        return ai_world.AIWorld(map_data, self.nation_data,
+                                {p["id"]: p for p in map_data.values()})
 
     def line(self, mine, theirs):
         return ai_prompts.resolve("K", sender="Us", target="Them",

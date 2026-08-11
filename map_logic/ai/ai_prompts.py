@@ -45,7 +45,7 @@ def _situation(sender, target, nation_data, world=None, map_data=None):
     # handing it nation_data returns 0 for everybody and silently reads every
     # war as an even match.
     if world is not None:
-        mine, theirs = world.strength(sender), world.strength(target)
+        mine, theirs = world.military(sender), world.military(target)
     elif map_data is not None:
         mine = queries.get_military_strength(sender, map_data)
         theirs = queries.get_military_strength(target, map_data)
