@@ -150,8 +150,19 @@ def _build_shared_pathing_caches(map_screen):
 
 
 def _reset_orders_and_collect_units(map_screen, ai_nations):
-    """Clears every AI unit's order (so it rethinks its strategy every turn)
-    and buckets units/provinces by owning nation."""
+    """Clears every AI unit's movement order (so it rethinks its strategy every
+    turn) and buckets units/provinces by owning nation.
+
+    Standing multi-turn commitments survive. This pass runs a few lines after
+    ai_construction in prepare_turn, and clearing unconditionally destroyed the
+    DISBAND orders construction had just issued -- DISBAND is only executed
+    later, in movement_processor, by which point the order was gone. The effect
+    was that no AI unit had ever been disbanded: peacetime militia accumulated
+    indefinitely and the obsolete-unit cull never ran once.
+
+    A unit already committed is also skipped for order assignment, since it is
+    busy; see _assign_unit_orders.
+    """
     nation_units = {}
     nation_provs = {}
 
@@ -161,6 +172,10 @@ def _reset_orders_and_collect_units(map_screen, ai_nations):
         nation_units[ai_name] = []
 
         for unit, prov in units:
+            order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") in c.MULTI_TURN_ORDER_TYPES:
+                continue  # Already committed; leave it be and do not re-task it.
+
             # Clear old path so the AI can rethink its strategy every turn
             unit["order"] = {"type": "MOVE", "path": []}
             nation_units[ai_name].append((unit, prov))
@@ -465,6 +480,47 @@ def _build_target_assignments(units_info, borders, battles, at_war):
     }
 
 
+def _bombardment_target(map_screen, ai_name, prov, bomb_range):
+    """The in-range tile whose enemy stack is worth shelling most, or None."""
+    best_id, best_value = None, 0.0
+    in_range = queries.get_bombardment_targets(prov, map_screen.id_to_province, bomb_range)
+
+    for target_id in sorted(in_range):
+        target = map_screen.id_to_province.get(target_id)
+        if not target:
+            continue
+        value = sum(queries.calculate_unit_strength(u) for u in target.get("units", ())
+                    if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data))
+        if value > best_value:
+            best_id, best_value = target_id, value
+
+    return best_id
+
+
+def _try_bombard(map_screen, ai_name, unit, prov):
+    """Orders a barrage if this unit has a gun and anything to point it at.
+
+    Bombardment costs nothing, draws no return fire, and is the one thing in the
+    game not capped by MAX_COMBAT_ATTACKERS -- and a bombarding unit still
+    fights on its own tile, so the shot is pure profit. The AI had no
+    bombardment code at all: it bought artillery, valued it for a barrage, and
+    then walked it into melee to swing a melee attack a fraction the size.
+
+    The order is reissued every turn, because process_bombardments clears it
+    after firing and the best target moves.
+    """
+    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+    if bomb_range <= 0:
+        return False
+
+    target_id = _bombardment_target(map_screen, ai_name, prov, bomb_range)
+    if target_id is None:
+        return False
+
+    unit["order"] = {"type": "BOMBARD", "target_id": target_id}
+    return True
+
+
 def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids):
     """Walks every one of this nation's units and assigns it a MOVE/CONVERT
     order: retreat from a lost battle, hold a defensive line, push into
@@ -532,7 +588,22 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                     unit["order"]["path"] = [safe_retreats[0]]
                     continue # Successfully ordered retreat, skip normal BFS
             # -----------------------------------
+
+            # Holding the line does not preclude firing: a bombarding unit still
+            # fights on its own tile, so the barrage is pure profit. Tried only
+            # after the retreat decisions above, so a fleet that should be
+            # withdrawing does not stand and shell instead.
+            _try_bombard(map_screen, ai_name, unit, prov)
             continue # Otherwise, hold the line and fight!
+
+        # --- BOMBARDMENT ---
+        # Free, draws no return fire, and the one thing not capped by combat
+        # width, so a gun with anything in range has nothing better to do. An
+        # adjacent enemy is inside range 1, which is what stops artillery
+        # walking into a melee to swing a melee attack a fraction the size.
+        if _try_bombard(map_screen, ai_name, unit, prov):
+            continue
+        # -------------------
 
         # If we are holding a defensive border (peace or coastal) and we are the ONLY unit here, HOLD THE LINE.
         # Do not apply this to war_borders because we WANT to push forward into enemy_targets.

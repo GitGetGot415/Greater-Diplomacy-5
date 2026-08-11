@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 import data.constants as c
 from data import queries
+from data.map import history_io
 from data.platform import sync_persisted_dir
 
 async def save_map_data(self, save_name=None):
@@ -34,27 +35,32 @@ async def save_map_data(self, save_name=None):
         self.save_progress_completed = 1
         await asyncio.sleep(0)
 
-        # Actual map data
+        # Actual map data. json.dump writes through the text layer in many
+        # small chunks; one buffered write of the same bytes is several times
+        # faster, and history.json is large enough that it dominated the save.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
-            json.dump(save_dict, f, indent=c.SAVE_INDENT)
+            f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
         self.save_progress_completed = 2
         await asyncio.sleep(0)
 
         # Raw structural geometry (so this save is completely self-contained)
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
-            json.dump(self.raw_json_data, f, indent=c.SAVE_INDENT)
+            f.write(history_io.dump_text(self.raw_json_data, indent=c.SAVE_INDENT))
         self.save_progress_completed = 3
         await asyncio.sleep(0)
 
         # History
         if hasattr(self, 'history'):
-            # Scrub images from history snapshots before writing (they were skipped at snapshot time for speed)
+            # Scrub images from history snapshots before writing (they were
+            # skipped at snapshot time for speed). Each snapshot is scrubbed
+            # once and flagged: the work is identical every time, and redoing
+            # it for all 130 turns on every save was most of the save's cost.
             for turn_snap in self.history.values():
                 nd = turn_snap.get("nation_data")
-                if nd:
+                if nd and not turn_snap.get(c.HISTORY_SCRUBBED_KEY):
                     queries.scrub_default_images(nd)
-            with open(os.path.join(save_path, "history.json"), "w") as f:
-                json.dump(self.history, f, indent=c.HISTORY_INDENT)
+                    turn_snap[c.HISTORY_SCRUBBED_KEY] = True
+            history_io.write(save_path, self.history)
         self.save_progress_completed = 4
         await asyncio.sleep(0)
 

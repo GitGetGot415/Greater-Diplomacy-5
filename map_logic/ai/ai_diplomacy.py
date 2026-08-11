@@ -356,10 +356,21 @@ def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
         diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
 
+def _may_settle(nation_data, ai_name, enemy):
+    """Both sides must be free to settle their own wars.
+
+    A puppet's wars are its master's business, in both directions -- there is no
+    point offering terms to a subject that cannot agree to them either.
+    """
+    return (queries.can_negotiate_peace(ai_name, enemy, nation_data)
+            and queries.can_negotiate_peace(enemy, ai_name, nation_data))
+
+
 def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):
     """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
     for enemy in my_enemies:
         if enemy not in active_nations: continue
+        if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
         if not world.reachable(ai_name, enemy):
             if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
                 bag.add(ai_candidates.make(
@@ -377,6 +388,7 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
     """
     for enemy in my_enemies:
         if enemy not in active_nations: continue
+        if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
         if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "PEACE_TREATY"):
             continue
 

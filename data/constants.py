@@ -750,6 +750,15 @@ CONVOY_DEF = 0
 TRUCK_DEF = 0
 TRUCK_CONVERT_TURNS = 3
 
+# Orders that span more than one turn and are therefore a standing commitment,
+# not a plan to be re-derived. The AI wipes its units' orders every turn so it
+# can rethink its movement; these are the ones it must NOT wipe, or the order
+# is destroyed before the turn processor ever sees it.
+MULTI_TURN_ORDER_TYPES = ("CONVERT", "DISBAND", "REPAIR")
+# The above plus bombardment, which occupies the unit's turn even though it
+# resolves within it. A unit doing any of these cannot also move.
+ORDERS_BLOCKING_MOVEMENT = MULTI_TURN_ORDER_TYPES + ("BOMBARD",)
+
 # ==========================================
 # OVERLAY ICONS & SCALES
 # ==========================================
@@ -1234,6 +1243,21 @@ AI_RESEARCH_MILITARY_SLOTS = 1
 # more willingness to invest in industry before army.
 AI_TECH_ECONOMY_HORIZON = 30.0
 
+# How long a BUILDING gets to earn back what it cost to put up. A separate
+# number from the one above, which they used to share: that one scales an
+# income stream against an army, while this one is a payback period, and a
+# building keeps producing long after the thirty turns a division is costed
+# against. At thirty every building in the game -- including the first Basic
+# Factory -- read as a loss, which is the opposite of the error it was meant
+# to correct. Sixty turns is roughly when a factory upgrade breaks even.
+AI_BUILDING_PAYBACK_TURNS = 60.0
+
+# How many building levels the AI will research ahead of what it has actually
+# constructed. A province can only ever queue the next item in its chain, so
+# research further ahead than this buys nothing it can act on for many turns.
+# One spare level keeps the pipeline full without letting it run away.
+AI_MAX_BUILDING_RESEARCH_LEAD = 1
+
 MAX_RESEARCH_TURN_SIMULATION = 5000
 
 # ==========================================
@@ -1407,6 +1431,12 @@ HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 RECORD_HISTORY = True
 HISTORY_INDENT = None # this used to be 4
 SAVE_INDENT = 4
+# Level 1 gets ~13x on history's very repetitive JSON for a third of level 6's
+# CPU, and the write it saves is bigger than the compression it costs.
+HISTORY_GZIP_LEVEL = 1
+# Marks a history snapshot whose images have already been scrubbed, so a save
+# does not redo identical work for every turn it has ever recorded.
+HISTORY_SCRUBBED_KEY = "_scrubbed"
 
 # Camera Settings
 DEFAULT_MOUSE_BUTTON_TOGGLE = "RIGHT"

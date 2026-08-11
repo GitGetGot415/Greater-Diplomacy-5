@@ -59,7 +59,8 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from screens import editor_screens
         for name in ("Editor_Date_Screen", "Starting_Economy_List_Screen",
                      "Research_List_Screen", "Resource_Brush_Screen",
-                     "Clear_Map_Screen", "Diplomacy_Editor_Screen"):
+                     "Clear_Map_Screen", "Diplomacy_Editor_Screen",
+                     "Personality_List_Screen"):
             with self.subTest(screen=name):
                 self.exercise(getattr(editor_screens, name)(self.map))
 
@@ -67,6 +68,11 @@ class EditorScreenSmokeTests(unittest.TestCase):
         """Takes a province as well as the map, unlike its siblings."""
         from screens import editor_screens
         self.exercise(editor_screens.Convoy_Converter_Screen(self.map, self.map.selected_province))
+
+    def test_personality_edit(self):
+        """Takes a country as well as the map, unlike its siblings."""
+        from screens import editor_screens
+        self.exercise(editor_screens.Personality_Edit_Screen(self.map, self.map.player_country))
 
     # -- the other modal tool windows ------------------------------------
 

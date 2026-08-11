@@ -26,6 +26,45 @@ def get_pending_action(nation_data, player_name, target_name):
         return info.get("action")
     return info
 
+def describe_trade(params, viewer_is_proposer=False):
+    """A trade's terms in words, from one side's point of view.
+
+    The keys are stored from the PROPOSER's point of view -- `give_*` is what
+    they hand over, `take_*` what they ask for -- which is how
+    queries.execute_trade_transfer reads them too. The receiving side therefore
+    sees them inverted, and getting that backwards would mislead a player into
+    accepting the opposite of what they thought.
+
+    Two shapes have to render: the trade screen writes all four keys, while the
+    AI's resource_offer writes only the one it gives and the one it wants. A
+    missing key is simply nothing offered.
+
+    Returns [] when there is nothing to say, so a caller can skip the bubble.
+    """
+    if not isinstance(params, dict):
+        return []
+
+    incoming = {res: params.get(f"give_{res}", 0) or 0 for res in c.TRADE_RESOURCE_KEYS}
+    outgoing = {res: params.get(f"take_{res}", 0) or 0 for res in c.TRADE_RESOURCE_KEYS}
+    if viewer_is_proposer:
+        incoming, outgoing = outgoing, incoming
+
+    def amounts(side):
+        return ", ".join(f"{int(qty)} {res.title()}"
+                         for res, qty in side.items() if qty > 0)
+
+    given, wanted = amounts(incoming), amounts(outgoing)
+    lines = []
+    lines.append(f"You receive: {given}" if given else "You receive: nothing")
+    lines.append(f"You give: {wanted}" if wanted else "You give: nothing")
+
+    puppet_state = params.get("puppet_state", "NONE")
+    if puppet_state and puppet_state != "NONE":
+        lines.append(f"Puppet terms: {puppet_state}")
+
+    return lines
+
+
 def set_pending(nation_data, player_name, target_name, action, **extra):
     """Overwrites the pending action aimed at target_name.
 

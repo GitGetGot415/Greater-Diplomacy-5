@@ -402,27 +402,9 @@ class Messages_Screen(GameState):
             else:
                 self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
                 
-            is_puppet = bool(p_data.get("master", ""))
-            target_is_puppet = bool(self.map_screen.nation_data.get(self.selected_recipient, {}).get("master", ""))
-            
-            my_type = p_data.get("puppet_type", "")
-            target_type = self.map_screen.nation_data.get(self.selected_recipient, {}).get("puppet_type", "")
-
-            my_master = p_data.get("master", "")
-            target_master = self.map_screen.nation_data.get(self.selected_recipient, {}).get("master", "")
-
-            is_my_integrated = is_puppet and my_type == c.PUPPET_TYPE_INTEGRATED and my_master != self.selected_recipient
-            is_target_integrated = target_is_puppet and target_type == c.PUPPET_TYPE_INTEGRATED and target_master != self.map_screen.player_country
-
-            if is_my_integrated:
-                btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Integrated Can't Trade", lambda: None)
-                btn_trade.disabled = True
-                self.elements.append(btn_trade)
-            elif is_target_integrated:
-                btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Target is Integrated", lambda: None)
-                btn_trade.disabled = True
-                self.elements.append(btn_trade)
-            elif is_tactical:
+            # Integrated puppets used to be barred from trading with anyone but
+            # their master. They trade like anyone else now.
+            if is_tactical:
                 btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Tactical: Read Only", lambda: None)
                 btn_trade.disabled = True
                 self.elements.append(btn_trade)
@@ -510,6 +492,21 @@ class Messages_Screen(GameState):
                         "date": show_date
                     })
                         
+        # --- SHOW WHAT AN INCOMING TRADE ACTUALLY ASKS FOR ---
+        # The offer travels as prose only -- the AI's covering line, or the
+        # sender's own -- while the numbers stay on the sender's pending entry.
+        # Without this a player was asked to accept or reject terms they could
+        # not see. Read from the sender's side and inverted, since the keys are
+        # written from the proposer's point of view.
+        their_offer = diplomacy_messages.get_pending(
+            self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
+        if their_offer.get("action") == "TRADE" and their_offer.get("turns", 0) > 0:
+            for line in diplomacy_messages.describe_trade(their_offer.get("parameters")):
+                display_thread.append({
+                    "content": line, "is_player": False, "is_draft": False,
+                    "is_diplo": True, "date": "",
+                })
+
         # Check if there is an active diplomatic action pending for this target
         pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
         act_str = pending.get("action", "")

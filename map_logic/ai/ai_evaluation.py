@@ -270,6 +270,13 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     # 3. Evaluate peace deals dynamically using the centralized query
     if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
+        # A puppet cannot settle its own wars, and there is no point agreeing
+        # terms with one that cannot honour them. Structural, so no judgement
+        # call and nothing to overrule.
+        if not (queries.can_negotiate_peace(ai_nation, sender_nation, nation_data)
+                and queries.can_negotiate_peace(sender_nation, ai_nation, nation_data)):
+            return Verdict(False, 1.0, "a subject state cannot settle a war on its own authority")
+
         terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
         if world is not None:
             accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
@@ -290,12 +297,6 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         params = pending.get("parameters", {})
 
         puppet_state = params.get("puppet_state", "NONE")
-        sender_master = nation_data.get(sender_nation, {}).get("master", "")
-        sender_type = nation_data.get(sender_nation, {}).get("puppet_type", "")
-        my_type = ai_stats.get("puppet_type", "")
-
-        is_sender_integrated = bool(sender_master and sender_type == c.PUPPET_TYPE_INTEGRATED and sender_master != ai_nation)
-        is_my_integrated = bool(my_master and my_type == c.PUPPET_TYPE_INTEGRATED and my_master != sender_nation)
 
         # We are the AI (Receiving). Therefore we "Take" what they "Give", and we "Give" what they "Take".
         ai_takes_mats = params.get("give_materials", 0)
@@ -303,7 +304,11 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         ai_gives_mats = params.get("take_materials", 0)
         ai_gives_fuel = params.get("take_fuel", 0)
 
-        if puppet_state != "NONE" or is_sender_integrated or is_my_integrated:
+        # An integrated puppet used to be barred from trading with anyone but
+        # its master; that restriction is gone and subjects trade like anyone
+        # else. A clause that would hand a nation over is still not something
+        # the receiving side can be talked into.
+        if puppet_state != "NONE":
             # A structural impossibility, not a judgement call -- nothing should
             # be allowed to talk us out of it.
             return Verdict(False, 1.0, "the terms are not ours to agree to")

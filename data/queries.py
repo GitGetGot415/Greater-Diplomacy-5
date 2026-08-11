@@ -785,6 +785,37 @@ def has_military_access(moving_nation, target_owner, nation_data):
     """Returns True if the target_owner has granted military access to the moving_nation."""
     return moving_nation in nation_data.get(target_owner, {}).get("military_access", [])
 
+def get_military_access_granted_by(nation, nation_data):
+    """Who this nation lets march through its territory."""
+    return list(nation_data.get(nation, {}).get("military_access", []))
+
+
+def get_military_access_granted_to(nation, nation_data):
+    """Whose territory this nation may march through.
+
+    Access is stored only on the granting side, so the reverse direction needs a
+    sweep -- there is no index for it. Cheap enough for a panel that redraws on
+    selection, but do not call it per frame on a large map.
+    """
+    return sorted(other for other, data in nation_data.items()
+                  if isinstance(data, dict) and nation in (data.get("military_access") or ()))
+
+
+def can_negotiate_peace(nation, other, nation_data):
+    """Whether `nation` may settle a war with `other` on its own authority.
+
+    A puppet's wars are its master's business. It may still make peace WITH its
+    master, since that is how an independence war ends -- the mirror of the
+    existing rule that a puppet may only declare war on its master.
+
+    Nothing enforced this before: thirteen separate paths could initiate or
+    accept a peace, and none of them looked at `master`, so a subject could sign
+    its own treaty while its overlord was still fighting.
+    """
+    master = nation_data.get(nation, {}).get("master", "")
+    return not master or master == other
+
+
 def needs_military_access_request(moving_nation, target_owner, nation_data):
     """False if moving_nation can already enter target_owner's territory.
 
@@ -2422,8 +2453,19 @@ def is_naval_unit(unit_type):
 def get_bombardment_range(unit_type):
     """Returns how many tiles this unit class can shell, or 0 if it cannot bombard.
 
-    Matched on the base class name so every level of the family qualifies, while
-    a unit loaded onto a Convoy/Truck ("Convoy (Artillery III)") does not."""
+    The unit's own bombard_range wins, so adding one in unit_data.json is all it
+    takes to give something a gun -- the AI already valued that stat, and the two
+    answers disagreeing meant it could price a barrage the unit could not fire.
+    The constant table is the fallback, matched on the base class name so every
+    level of a family qualifies.
+
+    A unit riding a Convoy/Truck ("Convoy (Artillery III)") still cannot shell:
+    that name is not in the unit library, so the stat lookup misses, and it is
+    not in the table either.
+    """
+    from_stats = (get_unit_library().get(unit_type) or {}).get("bombard_range")
+    if from_stats:
+        return int(from_stats)
     return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type), 0)
 
 def can_bombard(unit_type):
@@ -2672,22 +2714,46 @@ def get_default_b64(is_portrait=False):
         
     return cached
 
+#: country -> (flag_b64, portrait_b64) for the on-disk assets, or None where
+#: there is no file. Answering this needs a disk load, an alpha conversion, a
+#: rescale and a full-buffer base64 per country, and the answer cannot change
+#: while the game runs -- but scrub_default_images is called once per nation per
+#: history snapshot, so on a 130-turn 752-nation save it was being computed
+#: ~98,000 times and cost 8.9 seconds of every save.
+_local_image_b64_cache = {}
+
+
+def _local_image_b64(country):
+    """Base64 of this country's own flag/portrait files, memoised for the process."""
+    cached = _local_image_b64_cache.get(country)
+    if cached is None:
+        f_img = _load_and_scale_local_image(os.path.join(c.FLAGS_DIR, f"{country}.png"), c.FLAG_SIZE)
+        p_img = _load_and_scale_local_image(os.path.join(c.PORTRAITS_DIR, f"{country}.png"), c.PORTRAIT_SIZE)
+        cached = (encode_surf_to_b64(f_img) if f_img else None,
+                  encode_surf_to_b64(p_img) if p_img else None)
+        _local_image_b64_cache[country] = cached
+    return cached
+
+
 def scrub_default_images(nation_data_block):
     """Replaces large Base64 strings with 'DEFAULT' if they match the default images or local files."""
     def_flag = get_default_b64(is_portrait=False)
     def_port = get_default_b64(is_portrait=True)
-    
+
     for country, data in nation_data_block.items():
-        if data.get("flag_data") == def_flag: data["flag_data"] = "DEFAULT"
-        if data.get("portrait_data") == def_port: data["portrait_data"] = "DEFAULT"
-            
-        # Check against local country-specific files
-        f_img = _load_and_scale_local_image(os.path.join(c.FLAGS_DIR, f"{country}.png"), c.FLAG_SIZE)
-        if f_img and data.get("flag_data") == encode_surf_to_b64(f_img):
+        flag_b64, port_b64 = _local_image_b64(country)
+
+        # 'DEFAULT' means "rebuild it from the country's own file, or failing
+        # that the global default" -- so both comparisons collapse to the same
+        # replacement, and neither is worth storing. Guarded on truthiness so a
+        # nation with no flag_data at all does not gain the key here, which is
+        # what a bare `in` test would have done when the local file is absent.
+        stored_flag = data.get("flag_data")
+        if stored_flag and stored_flag in (def_flag, flag_b64):
             data["flag_data"] = "DEFAULT"
-            
-        p_img = _load_and_scale_local_image(os.path.join(c.PORTRAITS_DIR, f"{country}.png"), c.PORTRAIT_SIZE)
-        if p_img and data.get("portrait_data") == encode_surf_to_b64(p_img):
+
+        stored_port = data.get("portrait_data")
+        if stored_port and stored_port in (def_port, port_b64):
             data["portrait_data"] = "DEFAULT"
 
 def encode_surf_to_b64(surf, fmt="RGBA"):
@@ -3059,15 +3125,16 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 save_dict = build_save_dict(temp_map_context)
 
                 # 5. Perform the manual write operations in-place
+                from data.map import history_io
+
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
-                    json.dump(save_dict, f, indent=c.SAVE_INDENT)
+                    f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
 
                 with open(map_json_path, "w") as f:
-                    json.dump(temp_map_context.raw_json_data, f, indent=c.SAVE_INDENT)
+                    f.write(history_io.dump_text(temp_map_context.raw_json_data, indent=c.SAVE_INDENT))
 
                 if hasattr(temp_map_context, 'history'):
-                    with open(os.path.join(scenario_path, "history.json"), "w") as f:
-                        json.dump(temp_map_context.history, f, indent=c.HISTORY_INDENT)
+                    history_io.write(scenario_path, temp_map_context.history)
 
                 pygame.image.save(temp_map_context.political_map, os.path.join(scenario_path, "political.png"))
                 pygame.image.save(temp_map_context.terrain_map, os.path.join(scenario_path, "terrain.png"))

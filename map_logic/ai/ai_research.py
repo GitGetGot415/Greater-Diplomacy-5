@@ -129,6 +129,9 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
         coast=len(world.coast_tiles.get(ai_name, ())) if world else 0,
         budget=ai_unit_eval.spending_budget(econ, data, prices))
 
+    built = ai_tech_eval.built_levels(
+        world.provs_by_owner.get(ai_name, ()) if world else (), building_library)
+
     return ai_tech_eval.rank_available(
         available_techs, research, unit_library, building_library, ctx,
-        set(candidates), current_year, econ.get("total_inc", {}))
+        set(candidates), current_year, econ.get("total_inc", {}), built)

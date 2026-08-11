@@ -234,15 +234,16 @@ class TradeTests(VerdictTestCase):
         self.offer(give_materials=500, puppet_state="VASSALIZE")
         self.assertFalse(self.accepts("TRADE"))
 
-    def test_an_integrated_puppet_cannot_trade_on_its_own_account(self):
+    def test_an_integrated_puppet_may_now_trade_on_its_own_account(self):
+        """The restriction is lifted: subjects trade like anyone else."""
         self.offer(give_materials=500)
         self.nation_data["Avaria"].update(master="Carrow", puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        self.assertFalse(self.accepts("TRADE"))
+        self.assertTrue(self.accepts("TRADE"))
 
-    def test_nor_can_one_be_traded_with(self):
+    def test_and_can_be_traded_with(self):
         self.offer(give_materials=500)
         self.nation_data["Borland"].update(master="Carrow", puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        self.assertFalse(self.accepts("TRADE"))
+        self.assertTrue(self.accepts("TRADE"))
 
     def test_a_master_can_still_trade_with_its_own_integrated_puppet(self):
         self.offer(give_materials=500)

@@ -92,6 +92,52 @@ def _yield_value(stats, prices, key_prefix="prod_"):
                for res in ai_unit_eval.RESOURCES)
 
 
+def _replaced_building(name, building_library):
+    """The building in the same group this one supersedes, if any.
+
+    Upgrading does not stack: economy_processor drops every other member of the
+    group from the province before appending the new one, so a Factory Lvl 8
+    province produces 8000/turn, not 1000+2000+...+8000. The `req` field names
+    exactly what is being torn down.
+    """
+    req = (building_library.get(name) or {}).get("req")
+    if not req or req == "null" or req not in building_library:
+        return None
+    return req
+
+
+def _build_cost(name, stats, prices):
+    """What putting this building up costs, in the same scarcity terms."""
+    if name == "Basic Factory":
+        # Its JSON costs are zeros standing in for a figure worked out per
+        # nation by queries.get_building_cost, which scales with how many
+        # factories the nation already has. Taken at face value it read as a
+        # free +500/turn. Nothing here has map access, so the base is the
+        # honest floor.
+        base = float(c.BASIC_FACTORY_BASE_COST_X)
+        costs = {"materials": base * 2, "manpower": base, "fuel": 0.0}
+    else:
+        costs = {res: float(stats.get(f"cost_{res}", 0)) for res in ai_unit_eval.RESOURCES}
+    return sum(prices[res] * costs[res] for res in ai_unit_eval.RESOURCES)
+
+
+def _conversion_gain(level, prices, income):
+    """What one more level of fuel_refining is worth.
+
+    It raises the ceiling on how much of a nation's materials income it may
+    convert into fuel, at FUEL_CONVERSION_RATIO. So it is worth something only
+    where fuel is scarcer than the ten materials it takes to make a unit of it
+    -- which is precisely the trade the slider offers, and can be negative.
+
+    No building carries this tech, so the building branch found nothing to score
+    and a fifty-level tech was worth exactly zero to every AI in the game.
+    """
+    if level * c.FUEL_REFINING_CONVERSION_PER_LVL > c.MAX_CONVERSION_SLIDER_VAL:
+        return 0.0   # Past the slider's ceiling; further levels do nothing.
+    freed = max(0.0, float(income.get("materials", 0))) * c.FUEL_REFINING_CONVERSION_PER_LVL
+    return prices["fuel"] * freed * c.FUEL_CONVERSION_RATIO - prices["materials"] * freed
+
+
 class UnitGains:
     """Per-tech unit value, scored in one pass over every reachable unit.
 
@@ -148,38 +194,87 @@ class UnitGains:
         return max(0.0, best)
 
 
-def economy_gain(tech_key, level, prices, building_library, income):
+def built_levels(provinces, building_library):
+    """The highest level of each building chain this nation has actually put up.
+
+    Researching a building level does not make it buildable: a province can only
+    ever queue the next item in its chain, so a nation whose factories are all at
+    Lvl 1 cannot touch Lvl 9 until it has built seven upgrades at twelve turns
+    each. Without this, research runs off ahead of construction and never comes
+    back -- which is how a nation ends up holding factory level 8 with nothing
+    above Lvl 1 anywhere on the map.
+
+    A chain nobody has started is simply absent, which reads as level 0 -- so
+    the first level of a ladder is always allowed and the second is not until
+    the first is standing somewhere.
+    """
+    best = {}
+    for prov in provinces or ():
+        for name in prov.get("buildings", ()):
+            if name not in building_library:
+                continue
+            tech_key, level = queries.get_building_required_tech(name)
+            if tech_key:
+                best[tech_key] = max(best.get(tech_key, 0), level)
+    return best
+
+
+def economy_gain(tech_key, level, prices, building_library, income, built=None):
     """Per-turn economic value of a tech that unlocks a building or a flat bonus.
 
     Priced with the same scarcity vector as units, so a refinery is worth more
     to a nation that has run dry than to one sitting on a fuel mountain.
+
+    Everything here is MARGINAL -- what this level adds over the one below it.
+    The building branch used to credit the new building's whole output, which
+    for a chain that replaces rather than stacks overstated it by a factor of
+    the level: Factory Lvl 8 was scored at 8000 materials a turn when upgrading
+    a Lvl 7 province to it actually gains 1000, against the same flat 30,000
+    build cost every level charges. The error grew with the level, so the higher
+    and less reachable the tier, the better a deal the AI thought it was.
     """
     flat = FLAT_ECONOMY_TECHS.get(tech_key)
     if flat:
         resource, amount = flat
-        return prices[resource] * amount
+        return max(0.0, prices[resource] * amount)
 
     if tech_key == "resource_refining":
         # A percentage multiplier, so its worth scales with what is already
         # coming in rather than being a fixed amount.
-        return c.RESOURCE_REFINING_BONUS_PER_LVL * sum(
-            prices[res] * max(0.0, float(income.get(res, 0))) for res in ai_unit_eval.RESOURCES)
+        return max(0.0, c.RESOURCE_REFINING_BONUS_PER_LVL * sum(
+            prices[res] * max(0.0, float(income.get(res, 0))) for res in ai_unit_eval.RESOURCES))
+
+    if tech_key == "fuel_refining":
+        return max(0.0, _conversion_gain(level, prices, income))
+
+    # A level the nation could not start building for decades is not worth
+    # researching now, however good it would eventually be. This is what stops
+    # research running away from construction -- the USA in the save that
+    # prompted this held factory level 8 with nothing above Lvl 1 on the map,
+    # seven twelve-turn upgrades away from being able to use any of it.
+    if built is not None and level > built.get(tech_key, 0) + c.AI_MAX_BUILDING_RESEARCH_LEAD:
+        return 0.0
 
     best = 0.0
     for name in buildings_unlocked_by(tech_key, level, building_library):
         stats = building_library.get(name, {})
-        # Net of what it costs to put up, spread over the horizon an economic
-        # tech is credited over rather than the shorter one unit upkeep uses --
-        # a factory pays for itself across the rest of the game, not inside the
-        # twenty turns a division is costed against.
-        build_cost = sum(prices[res] * float(stats.get(f"cost_{res}", 0))
-                         for res in ai_unit_eval.RESOURCES)
-        best = max(best, _yield_value(stats, prices) - build_cost / c.AI_TECH_ECONOMY_HORIZON)
+
+        # What the province gains, net of what the level below it stops
+        # producing the moment this one is built on top.
+        gain = _yield_value(stats, prices)
+        replaced = _replaced_building(name, building_library)
+        if replaced:
+            gain -= _yield_value(building_library[replaced], prices)
+
+        # Net of what it costs to put up, spread over the period a building is
+        # given to earn that back -- it keeps producing long after the twenty
+        # turns a division is costed against.
+        best = max(best, gain - _build_cost(name, stats, prices) / c.AI_BUILDING_PAYBACK_TURNS)
     return max(0.0, best)
 
 
 def rank_available(available, research, unit_library, building_library, ctx,
-                   current_names, current_year, income):
+                   current_names, current_year, income, built=None):
     """Orders candidate techs best-first.
 
     `available` is (tech_key, target_year, cost, is_new). Value per point of
@@ -211,7 +306,7 @@ def rank_available(available, research, unit_library, building_library, ctx,
 
         # Applied across the army this nation can afford, not to one unit.
         military = gains.gain(tech_key) * max(1.0, ctx.budget)
-        economic = (economy_gain(tech_key, level, ctx.prices, building_library, income)
+        economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built)
                     * buy_rate * horizon * c.AI_TECH_ECONOMY_WEIGHT)
 
         pace = queries.get_research_multiplier(current_year, target_year)

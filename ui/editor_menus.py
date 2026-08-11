@@ -245,6 +245,10 @@ def open_diplomacy_editor(map_screen):
     """Opens a native screen to edit global relations, factions and puppets."""
     _launch_editor_screen(map_screen, "Diplomacy_Editor_Screen", needs_countries=True)
 
+def open_personality_editor(map_screen):
+    """Opens a native screen to set what each AI nation is like."""
+    _launch_editor_screen(map_screen, "Personality_List_Screen", needs_countries=True)
+
 def open_edited_countries(map_screen):
     """Opens a full-screen sortable table of countries with edited properties."""
     from data.io import country_io

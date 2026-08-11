@@ -75,7 +75,17 @@ def open_claims_menu(map_screen):
 
 def handle_ceasefire(map_screen):
     target = map_screen.selected_province.get("owner")
-    
+
+    # A puppet's wars belong to its master -- the mirror of "puppets can only
+    # declare war on their master" above. Peace with the master itself is still
+    # allowed, since that is how an independence war ends.
+    if not queries.can_negotiate_peace(map_screen.player_country, target, map_screen.nation_data):
+        map_screen.show_feedback("Puppets can only make peace with their master!")
+        return
+    if not queries.can_negotiate_peace(target, map_screen.player_country, map_screen.nation_data):
+        map_screen.show_feedback(f"{target} is a puppet -- negotiate with its master instead!")
+        return
+
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)
     pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, target, map_screen.nation_data)
     if pending_action in ["PEACE_TREATY", "CEASEFIRE"] and pending_turns > 0:
@@ -197,6 +207,13 @@ def handle_accept_req(map_screen, target=None, custom_msg=None):
         elif action in ["JOIN_WARS", "CALL_TO_ARMS"]:
             if not queries.are_in_same_faction(map_screen.player_country, target, map_screen.nation_data):
                 map_screen.show_feedback("You must be in the same faction to do this!")
+                return
+        elif action in ["PEACE_TREATY", "CEASEFIRE"]:
+            if not queries.can_negotiate_peace(map_screen.player_country, target, map_screen.nation_data):
+                map_screen.show_feedback("Puppets can only make peace with their master!")
+                return
+            if not queries.can_negotiate_peace(target, map_screen.player_country, map_screen.nation_data):
+                map_screen.show_feedback(f"{target} cannot make peace without its master!")
                 return
 
     _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_ACCEPT, custom_msg)
