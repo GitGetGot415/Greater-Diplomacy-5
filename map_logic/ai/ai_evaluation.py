@@ -21,7 +21,7 @@ def _to_int(value, default=0):
         return default
 
 
-def _reply(message, source=None, accepted=None):
+def _reply(message, source=None, accepted=None, llm=False):
     """The answer dict every AI entry point in this file returns.
 
     It was written out fifteen times, which is how the Ollama branch came to
@@ -30,6 +30,12 @@ def _reply(message, source=None, accepted=None):
     without one they all read "NONE", which is what every canned answer said.
     `accepted` is omitted entirely when None -- replies to a plain message
     carry no verdict, and downstream code tells the two apart by that key.
+
+    `llm` says a model wrote this line, and is passed explicitly rather than
+    inferred from `source`: the abort and no-answer paths return canned text
+    too, so "a source was parsed" is not the same question. It rides all the
+    way to the message so a reader can see which of the things a country said
+    it had actually thought of.
     """
     source = source or {}
     reply = {}
@@ -37,6 +43,7 @@ def _reply(message, source=None, accepted=None):
         reply["accepted"] = accepted
     reply.update({
         "message": message,
+        "llm": llm,
         "action": source.get("action", "NONE"),
         "action_target": source.get("action_target", "NONE"),
         "follow_up_action": source.get("follow_up_action", "NONE"),
@@ -413,7 +420,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         accepted = reply["accepted"]
 
     return _reply(reply.get("message", f"{mode} ERROR: reply had no 'message' field"),
-                  reply, accepted)
+                  reply, accepted, llm=bool(reply.get("message")))
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None):
     from map_logic.ai import ai_handler

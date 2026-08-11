@@ -1284,6 +1284,51 @@ UNILATERAL_ACTIONS = [
     "REVOKE_MILITARY_ACCESS"
 ]
 
+# What kind of act a message announced, for anyone reading a list of them.
+#
+# A message's `type` is either TEXT or DIPLOMACY and cannot become more
+# specific: the literal "DIPLOMACY" is what raises the popup and what draws the
+# gold bubble, so widening it would change behaviour rather than labelling it.
+# The action is recorded on the message instead and resolved through here for
+# display, which is why a spectator's overview used to be a column of the word
+# DIPLOMACY with a trade, a war and a faction invite all indistinguishable.
+#
+# An action with no entry reads DIPLOMACY, so a mod adding one is unlabelled
+# rather than broken.
+MESSAGE_CATEGORIES = {
+    "WAR_DECLARATION": "WAR",
+    "CALL_TO_ARMS": "WAR",
+    "JOIN_WARS": "WAR",
+    "JUSTIFY_WARGOAL": "WAR",
+
+    "CEASEFIRE": "PEACE",
+    "PEACE_TREATY": "PEACE",
+
+    "TRADE": "TRADE",
+
+    "FACTION_INVITE": "FACTION",
+    "JOIN_FACTION_REQ": "FACTION",
+    "CREATE_FACTION": "FACTION",
+    "LEAVE_FACTION": "FACTION",
+    "DISBAND_FACTION": "FACTION",
+    "KICK_FACTION_MEMBER": "FACTION",
+
+    "REQ_MILITARY_ACCESS": "ACCESS",
+    "CANCEL_MILITARY_ACCESS": "ACCESS",
+    "REVOKE_MILITARY_ACCESS": "ACCESS",
+
+    "ANNEX_PUPPET": "PUPPET",
+    "RELEASE_PUPPET": "PUPPET",
+    "TAKE_PUPPETS": "PUPPET",
+
+    "BREAK_ALLIANCE": "ALLIANCE",
+}
+
+# Row background for a message a model wrote, in the spectator's overview.
+# Deliberately close to the table's own dark ground -- it has to be legible
+# behind bright text and readable at a glance down a column, not shout.
+MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
+
 # Proposals that require the target to explicitly Accept or Reject
 BILATERAL_ACTIONS = [
     "JOIN_WARS",

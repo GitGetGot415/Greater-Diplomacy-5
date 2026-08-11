@@ -613,6 +613,11 @@ def _process_queued_responses(map_screen):
             verdict = resp.get("verdict", "")
             orig_action = resp.get("action", "")
             custom_msg = resp.get("message", "")
+            # True only while custom_msg is what actually goes out: a blocked
+            # or canned outcome below replaces the text, and a replaced line
+            # is not the model's however it was answered.
+            wrote_it = bool(custom_msg) and bool(resp.get("llm"))
+            answered = {"action": orig_action}
 
             # The terms being agreed to belong to whoever made the offer.
             their_request = map_screen.nation_data.get(sender, {}).get("pending_diplomacy", {}).get(country_name, {})
@@ -630,10 +635,12 @@ def _process_queued_responses(map_screen):
                     map_screen, orig_action, sender, country_name, params)
                 if outcome.blocked:
                     msg_text = outcome.blocked
+                    wrote_it = False
                 elif not custom_msg and outcome.canned:
                     msg_text = outcome.canned
 
-                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY")
+                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
+                             extra=answered, llm=wrote_it)
 
                 if msg_text == custom_msg or "accepted" in msg_text.lower():
                     log_global_event(map_screen.nation_data, f"Diplomatic agreement reached between {country_name} and {sender}.")
@@ -646,7 +653,8 @@ def _process_queued_responses(map_screen):
                 if orig_action == "TRADE" and sender in map_screen.nation_data:
                     queries.cancel_trade_escrow(map_screen.nation_data[sender], params if isinstance(params, dict) else {})
 
-                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY")
+                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
+                             extra=answered, llm=wrote_it)
                 _decline_cooldown(map_screen, sender, country_name, orig_action)
 
             # Their request has now been answered either way.
@@ -677,6 +685,9 @@ def _process_pass1_immediate_actions(map_screen):
             turns = info.get("turns", 0)
             timer = info.get("timer", 0)
             custom_msg = info.get("message", "")
+            # Set beside `message` by whoever queued it, so the flag travels
+            # with the text it belongs to rather than being guessed at here.
+            wrote_it = bool(info.get("llm"))
 
             is_unilateral = action in c.UNILATERAL_ACTIONS
 
@@ -729,14 +740,14 @@ def _process_pass1_immediate_actions(map_screen):
                         actions_to_clear.append(target)
                     else:
                         # DO NOT execute the war join here! Just send the proposal message.
-                        send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                        send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
 
                 elif action == "CALL_TO_ARMS":
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
 
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
                     finalize_neutral(map_screen.nation_data, country_name, target)
 
                 elif action == "ANNEX_PUPPET":
@@ -758,7 +769,7 @@ def _process_pass1_immediate_actions(map_screen):
                     if country_name in target_list:
                         target_list.remove(country_name)
                     log_global_event(map_screen.nation_data, f"{country_name} cancelled their military access to {target}.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
                     actions_to_clear.append(target)
 
                 elif action == "REVOKE_MILITARY_ACCESS":
@@ -767,7 +778,7 @@ def _process_pass1_immediate_actions(map_screen):
                     if target in our_list:
                         our_list.remove(target)
                     log_global_event(map_screen.nation_data, f"{country_name} revoked {target}'s military access.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
                     actions_to_clear.append(target)
 
 
@@ -782,7 +793,7 @@ def _process_pass1_immediate_actions(map_screen):
                     # A trade's terms travel with it, so both sides can still
                     # read what was agreed after the offer itself is cleared.
                     send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"))
+                                        parameters=info.get("parameters"), llm=wrote_it)
 
                 elif action == "PEACE_TREATY":
                     # The terms ARE the message, so this one formats rather than
@@ -796,13 +807,13 @@ def _process_pass1_immediate_actions(map_screen):
                     log_global_event(map_screen.nation_data, f"The faction led by {country_name} has been disbanded.")
                     for m in info["cached_members"]:
                         if m != country_name:
-                            send_treaty_message(map_screen, country_name, m, action, custom_msg)
+                            send_treaty_message(map_screen, country_name, m, action, custom_msg, llm=wrote_it)
 
                     finalize_disband_faction(map_screen.nation_data, country_name)
 
                 elif action == "KICK_FACTION_MEMBER":
                     log_global_event(map_screen.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
                     finalize_faction_kick(map_screen.nation_data, country_name, target)
 
                 elif action == "LEAVE_FACTION":
@@ -811,7 +822,7 @@ def _process_pass1_immediate_actions(map_screen):
                     log_global_event(map_screen.nation_data, f"{country_name} has abandoned their faction.")
                     for m in info["cached_members"]:
                         if m != country_name:
-                            send_treaty_message(map_screen, country_name, m, action, custom_msg)
+                            send_treaty_message(map_screen, country_name, m, action, custom_msg, llm=wrote_it)
 
                     finalize_faction_leave(map_screen.nation_data, country_name)
 
@@ -819,7 +830,7 @@ def _process_pass1_immediate_actions(map_screen):
                     # Catch-all so a bilateral action added to constants.py without
                     # its own branch above still reaches the other side's inbox
                     # instead of silently advancing to turns=1 with no message.
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
 
                 # Cleanup or increment
                 if target in actions_to_clear:
@@ -888,7 +899,9 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                                     queries.add_temporary_modifier(m, country_name, "general", op_val, map_screen.nation_data)
 
                                 _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, m, reply_dict, default_target=country_name)
-                                send_message(map_screen, m, country_name, msg_text, "DIPLOMACY")
+                                send_message(map_screen, m, country_name, msg_text, "DIPLOMACY",
+                                             extra={"action": action},
+                                             llm=bool(reply_dict.get("llm")))
 
                     elif not is_human_target:
                         reply_dict = ai_results.get((country_name, target, action), {})
@@ -900,7 +913,9 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                             queries.add_temporary_modifier(target, country_name, "general", op_val, map_screen.nation_data)
 
                         _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, target, reply_dict, default_target=country_name)
-                        send_message(map_screen, target, country_name, message, "DIPLOMACY")
+                        send_message(map_screen, target, country_name, message, "DIPLOMACY",
+                                     extra={"action": action},
+                                     llm=bool(reply_dict.get("llm")))
 
                     actions_to_clear.append(target)
 
@@ -917,7 +932,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                         _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, target, reply_dict, default_target=country_name)
 
                         msg_type = "TEXT" if reply_dict.get("action", "NONE") == "NONE" else "DIPLOMACY"
-                        send_message(map_screen, target, country_name, message, msg_type)
+                        send_message(map_screen, target, country_name, message, msg_type,
+                                     llm=bool(reply_dict.get("llm")))
 
                     actions_to_clear.append(target)
 
@@ -933,7 +949,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                             info["turns"] += 1
                         else:
                             # Auto-decline since the human player did not respond immediately on their turn
-                            send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                            send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
+                                     extra={"action": action})
                             _decline_cooldown(map_screen, country_name, target, action)
                             actions_to_clear.append(target)
                     else:
@@ -941,6 +958,7 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
 
                         accepted = reply_dict.get("accepted", False)
                         message = reply_dict.get("message", "Timeout.")
+                        wrote_it = bool(reply_dict.get("llm"))
 
                         op_val = reply_dict.get("opinion_change", 0)
                         if op_val != 0:
@@ -957,13 +975,15 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                                 map_screen, action, country_name, target, info.get("parameters"))
                             if outcome.blocked:
                                 message = outcome.blocked
+                                wrote_it = False
                         else:
                             if action == "TRADE":
                                 params = info.get("parameters", {})
                                 queries.cancel_trade_escrow(map_screen.nation_data[country_name], params)
                             _decline_cooldown(map_screen, country_name, target, action)
 
-                        send_message(map_screen, target, country_name, message, "DIPLOMACY")
+                        send_message(map_screen, target, country_name, message, "DIPLOMACY",
+                                     extra={"action": action}, llm=wrote_it)
                         actions_to_clear.append(target)
 
             elif turns > 1:
@@ -975,7 +995,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                         params = info.get("parameters", {})
                         queries.cancel_trade_escrow(map_screen.nation_data[country_name], params)
 
-                    send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY")
+                    send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
+                                     extra={"action": action})
                     _decline_cooldown(map_screen, country_name, target, action)
                     actions_to_clear.append(target)
                 else:

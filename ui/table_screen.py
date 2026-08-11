@@ -38,7 +38,7 @@ class TableScreen(GameState):
     ROW_TOP = 130
 
     def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
-                 on_row_click=None):
+                 on_row_click=None, row_tint=None):
         super().__init__()
         self.map_screen = getattr(game_state, "map_screen", None) or game_state
         self.bg_color = (25, 28, 35)
@@ -50,6 +50,10 @@ class TableScreen(GameState):
         #: Optional callback taking the row dict. Rows are only clickable where
         #: one is given, so the economy and expenses tables are unaffected.
         self.on_row_click = on_row_click
+        #: Optional callback taking the row dict and returning a background
+        #: colour, or None to leave the row striped as usual. Tables that pass
+        #: nothing are drawn exactly as before.
+        self.row_tint = row_tint
         #: (rect, row) for every row actually drawn last frame. Culled rows are
         #: absent, so a row scrolled out of view cannot be clicked.
         self.row_hitboxes = []
@@ -137,7 +141,10 @@ class TableScreen(GameState):
                                               cull_top=self.ROW_TOP - 10, cull_bottom=c.SCREEN_HEIGHT - 10):
                 row = self.rows[i]
                 row_rect = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
-                if i % 2 == 0:
+                tint = self.row_tint(row) if self.row_tint else None
+                if tint:
+                    pygame.draw.rect(surface, tint, row_rect)
+                elif i % 2 == 0:
                     pygame.draw.rect(surface, (35, 38, 45), row_rect)
 
                 if hovered is not None:

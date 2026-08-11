@@ -196,7 +196,9 @@ def _publish_summit(map_screen, pair, agreed):
     for line in pair["transcript"]:
         speaker, _, said = line.partition(": ")
         listener = b if speaker == a else a
-        diplomacy_messages.send_message(map_screen, speaker, listener, said, "TEXT")
+        # A summit only happens because a model held it, so every line of the
+        # transcript is the leader's own words by construction.
+        diplomacy_messages.send_message(map_screen, speaker, listener, said, "TEXT", llm=True)
 
     if agreed:
         summary = ai_negotiation.describe_terms(agreed)
@@ -299,11 +301,17 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
                                   default=spec.fallback)
 
     # A war declaration's queued_message is the wargoal, not prose, so the
-    # leader's own wording never replaces it.
+    # leader's own wording never replaces it -- and is therefore not the
+    # leader's wording to record either.
+    wrote_it = bool(message and message.strip()) and not spec.queued_message
     entry = {
         "action": action,
         "turns": 0,
         "message": spec.queued_message or (message.strip() if message else fallback),
+        # The model's line and the canned one used to land in `message`
+        # indistinguishably, which is the whole reason nothing downstream could
+        # tell a leader's own words from the table's.
+        "llm": wrote_it,
     }
     if parameters:
         entry["parameters"] = parameters

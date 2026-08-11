@@ -26,8 +26,12 @@ def get_pending_action(nation_data, player_name, target_name):
         return info.get("action")
     return info
 
-def describe_trade(params, viewer_is_proposer=False):
+def describe_trade(params, viewer_is_proposer=False, subject=None):
     """A trade's terms in words, from one side's point of view.
+
+    `subject` names that side instead of calling it "You", which is what a
+    spectator watching two other countries needs -- "You receive" is a lie when
+    the reader is not either party.
 
     The keys are stored from the PROPOSER's point of view -- `give_*` is what
     they hand over, `take_*` what they ask for -- which is how
@@ -54,9 +58,11 @@ def describe_trade(params, viewer_is_proposer=False):
                          for res, qty in side.items() if qty > 0)
 
     given, wanted = amounts(incoming), amounts(outgoing)
+    who = subject or "You"
+    receives, gives = ("receives", "gives") if subject else ("receive", "give")
     lines = []
-    lines.append(f"You receive: {given}" if given else "You receive: nothing")
-    lines.append(f"You give: {wanted}" if wanted else "You give: nothing")
+    lines.append(f"{who} {receives}: {given or 'nothing'}")
+    lines.append(f"{who} {gives}: {wanted or 'nothing'}")
 
     puppet_state = params.get("puppet_state", "NONE")
     if puppet_state and puppet_state != "NONE":
@@ -194,7 +200,8 @@ def _deliver(nation_data, owner, entry):
         del inbox[c.INBOX_MAX_MESSAGES:]
 
 
-def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=None):
+def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=None,
+                 llm=False):
     """Delivers one message to the receiver and files a sent copy for the sender.
 
     `extra` is stamped onto both copies. It exists for the terms of a trade: the
@@ -202,17 +209,28 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     moment the offer resolves, so a player who accepted a trade had no way to
     see afterwards what they had agreed to. Recorded on the message itself it
     outlives the offer, and costs nothing to persist -- nation_data is
-    serialized wholesale by build_save_dict.
+    serialized wholesale by build_save_dict. The action a message announced
+    rides along the same way, for the same reason.
+
+    `llm` records that a model wrote this line rather than the canned table
+    picking one. The two used to be indistinguishable the moment they left
+    ai_evaluation -- the fallback is substituted by dict.get's default and
+    travels the identical path -- so there was no way to see which of the
+    things a country said it had actually thought of.
     """
     nation_data = map_screen.nation_data
     date_str = map_screen.time_manager.get_date_string()
+
+    stamp = dict(extra or {})
+    if llm:
+        stamp["llm"] = True
 
     # 1. Deliver the message to the receiver
     incoming = {
         "sender": sender, "content": content, "type": msg_type,
         "read": False, "spectator_read": False, "date": date_str
     }
-    incoming.update(extra or {})
+    incoming.update(stamp)
     _deliver(nation_data, receiver, incoming)
 
     # 2. Save a "Sent" copy to the sender's inbox
@@ -220,7 +238,7 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
         "sender": f"To: {receiver}", "content": content, "type": msg_type,
         "read": True, "spectator_read": True, "date": date_str
     }
-    outgoing.update(extra or {})
+    outgoing.update(stamp)
     _deliver(nation_data, sender, outgoing)
 
 # ==========================================
@@ -274,12 +292,33 @@ def announcement_for(action, custom_msg=""):
     return default
 
 
-def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None):
+def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None,
+                        llm=False):
     """Announces an outgoing diplomatic action to its recipient.
 
     A trade's `parameters` ride along on the message so its terms survive the
-    offer being resolved and cleared -- see send_message.
+    offer being resolved and cleared -- see send_message. `action` rides along
+    for the same reason: it lives on the sender's pending_diplomacy entry,
+    which is deleted on resolution, so afterwards nothing recorded whether a
+    message had been a trade offer or a declaration of war.
     """
-    extra = {"parameters": parameters} if parameters else None
+    extra = {"action": action}
+    if parameters:
+        extra["parameters"] = parameters
     send_message(map_screen, sender, receiver, announcement_for(action, custom_msg),
-                 "DIPLOMACY", extra=extra)
+                 "DIPLOMACY", extra=extra, llm=llm)
+
+
+def message_category(msg):
+    """The kind of act a message announced, for a reader scanning a list.
+
+    Falls back to the message's own type, so a message from a save written
+    before actions were recorded still reads DIPLOMACY or TEXT rather than
+    going blank.
+    """
+    if not isinstance(msg, dict):
+        return ""
+    action = msg.get("action")
+    if action:
+        return c.MESSAGE_CATEGORIES.get(action, "DIPLOMACY")
+    return msg.get("type", "TEXT")
