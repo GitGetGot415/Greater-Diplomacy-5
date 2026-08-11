@@ -215,6 +215,22 @@ class RetireLandlessTests(unittest.TestCase):
         own.conquer_province(screen, map_data["1"], "Taker")
         self.assertEqual(nation_data["Victim"]["faction"], "")
 
+    def test_the_editor_does_not_dissolve_a_nation_you_are_repainting(self):
+        """Zero provinces is what half of a repaint looks like. Losing the
+        scenario's treaties for it would be destructive, not tidy."""
+        screen = self.build()
+        screen.is_editor = True
+        own.retire_landless_nation(screen, "Doomed")
+        self.assertEqual(self.nation_data["Doomed"]["faction"], "Pact")
+        self.assertEqual(self.nation_data["Empire"]["at_war_with"], ["Doomed"])
+
+    def test_the_editor_still_erases_a_created_puppet(self):
+        """That half always ran there and is how re-annexation cleans up."""
+        screen = self.build(is_created_integrated_puppet=True)
+        screen.is_editor = True
+        own.retire_landless_nation(screen, "Doomed")
+        self.assertNotIn("Doomed", self.nation_data)
+
 
 class ReleasedPuppetTests(unittest.TestCase):
     """A released puppet is an ordinary country from then on."""

@@ -79,34 +79,39 @@ def retire_landless_nation(map_screen, nation):
     if data is None:
         return
 
-    # --- Always: nobody is still allied with, at war with, or in a bloc with
-    # a nation that no longer holds any ground. ---
-    from map_logic.diplomacy.faction_actions import leave_faction
-    fac = data.get("faction", "")
-    if fac:
-        leave_faction(map_screen.nation_data, nation)
+    # In the editor a country sits at zero provinces all the time -- that is
+    # what repainting one looks like halfway through -- so losing its treaties
+    # for it would be destructive rather than tidy. Only the erase-entirely
+    # half below still runs there, as it always has.
+    if not getattr(map_screen, "is_editor", False):
+        # Nobody is still allied with, at war with, or in a bloc with a nation
+        # that no longer holds any ground.
+        from map_logic.diplomacy.faction_actions import leave_faction
+        fac = data.get("faction", "")
+        if fac:
+            leave_faction(map_screen.nation_data, nation)
 
-    master = data.get("master", "")
-    if master and master in map_screen.nation_data:
-        if nation in map_screen.nation_data[master].get("puppets", []):
-            map_screen.nation_data[master]["puppets"].remove(nation)
+        master = data.get("master", "")
+        if master and master in map_screen.nation_data:
+            if nation in map_screen.nation_data[master].get("puppets", []):
+                map_screen.nation_data[master]["puppets"].remove(nation)
 
-    for n_id, n_data in list(map_screen.nation_data.items()):
-        if not isinstance(n_data, dict) or n_id == nation:
-            continue
-        if nation in n_data.get("at_war_with", []):
-            n_data["at_war_with"].remove(nation)
-        if nation in n_data.get("allied_with", []):
-            n_data["allied_with"].remove(nation)
-        for dict_key in ["pending_diplomacy", "diplo_responses", "diplo_cooldowns",
-                         "truces", "draft_lists"]:
-            if nation in n_data.get(dict_key, {}):
-                del n_data[dict_key][nation]
+        for n_id, n_data in list(map_screen.nation_data.items()):
+            if not isinstance(n_data, dict) or n_id == nation:
+                continue
+            if nation in n_data.get("at_war_with", []):
+                n_data["at_war_with"].remove(nation)
+            if nation in n_data.get("allied_with", []):
+                n_data["allied_with"].remove(nation)
+            for dict_key in ["pending_diplomacy", "diplo_responses", "diplo_cooldowns",
+                             "truces", "draft_lists"]:
+                if nation in n_data.get(dict_key, {}):
+                    del n_data[dict_key][nation]
 
-    if fac and "FACTION_WAR_MAPS" in map_screen.nation_data:
-        war_maps = map_screen.nation_data["FACTION_WAR_MAPS"]
-        if fac in war_maps and nation in war_maps[fac]:
-            del war_maps[fac][nation]
+        if fac and "FACTION_WAR_MAPS" in map_screen.nation_data:
+            war_maps = map_screen.nation_data["FACTION_WAR_MAPS"]
+            if fac in war_maps and nation in war_maps[fac]:
+                del war_maps[fac][nation]
 
     # --- Only for a puppet the player created, or a rebellion put down while
     # the war was still running: erase the cores and the nation with them. ---
