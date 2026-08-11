@@ -437,12 +437,13 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
                   or t["action"] in c.BILATERAL_ACTIONS
                   or t["action"] == "CUSTOM_MSG"]
 
-    ai_llm_runner.run_llm_batch(
+    outcome = ai_llm_runner.run_llm_batch(
         answerable, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
         max_workers=queries.get_ai_threads(),
         deadline=ai_llm_runner.turn_deadline())
+    ai_llm_runner.report_unserved(map_screen, outcome, "Answering proposals")
 
     return ai_results
 

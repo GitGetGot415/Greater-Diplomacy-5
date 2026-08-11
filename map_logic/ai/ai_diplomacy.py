@@ -7,6 +7,32 @@ from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
 
+def _longest_waiting_first(map_screen, jobs):
+    """Puts whoever has gone longest without the model at the front of the queue.
+
+    The batch runs in list order, and that order was nation_data's -- the
+    scenario file's -- so it never varied. Whenever the turn budget could not
+    cover every nation (one thread and a local model is enough to do that with
+    a single call), the same nation won every turn and the rest were never
+    consulted once. In saves/it kinda just stopped for some reason the loading
+    bar promised twelve and the German Reich, the first major power in the file,
+    took the whole budget on turn after turn.
+
+    The stamp lives in nation_data, so it is saved and restored with everything
+    else, and a nation that has never been consulted sorts first.
+    """
+    turn = queries.get_total_turns(map_screen.time_manager)
+
+    def waited(choice):
+        stamp = map_screen.nation_data.get(choice["nation"], {}).get("llm_last_turn")
+        return (0 if stamp is None else 1, stamp or 0, choice["nation"])
+
+    ordered = sorted(jobs, key=waited)
+    for choice in ordered:
+        choice["_turn"] = turn
+    return ordered
+
+
 def process_proactive_llm_tasks(map_screen):
     """Lets each nation's leader choose from the options its staff prepared.
 
@@ -43,6 +69,7 @@ def process_proactive_llm_tasks(map_screen):
         return wants_prose and ai_director.should_consult(choice["candidates"], wants_prose)
 
     jobs = [choice for choice in pending_choices if consulted(choice)]
+    jobs = _longest_waiting_first(map_screen, jobs)
 
     map_screen.proactive_llm_tasks_total = len(jobs)
     map_screen.proactive_llm_tasks_completed = 0
@@ -63,6 +90,11 @@ def process_proactive_llm_tasks(map_screen):
                                         my_turn_id, None, raw=True)
 
     def record(choice, reply):
+        # Stamped whether or not the reply was usable: the nation cost a call
+        # and had its turn at the model, so it goes to the back of the queue
+        # either way. Stamping only on success would let a nation whose
+        # provider keeps erroring monopolise the front of the line.
+        map_screen.nation_data.setdefault(choice["nation"], {})["llm_last_turn"] = choice["_turn"]
         if not reply or reply.get("error"):
             return
         chosen, messages = ai_director.parse(reply, choice["candidates"],
@@ -81,12 +113,13 @@ def process_proactive_llm_tasks(map_screen):
             f"/{map_screen.proactive_llm_tasks_total})...")
 
     if jobs:
-        ai_llm_runner.run_llm_batch(
+        outcome = ai_llm_runner.run_llm_batch(
             jobs, call, record, record_fallback,
             on_progress=count,
             should_abort=lambda: map_screen.force_skip_llm,
             max_workers=queries.get_ai_threads(),
             deadline=ai_llm_runner.turn_deadline())
+        ai_llm_runner.report_unserved(map_screen, outcome, "Directing AI nations")
 
     for choice in pending_choices:
         _execute_candidates(map_screen, choice["nation"], choice["pending"],
@@ -166,12 +199,13 @@ def process_summits(map_screen):
             f"Holding Summits ({map_screen.summits_completed}/{len(pairs)})...")
 
     map_screen.summits_completed = 0
-    ai_llm_runner.run_llm_batch(
+    outcome = ai_llm_runner.run_llm_batch(
         pairs, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
         max_workers=queries.get_ai_threads(),
         deadline=ai_llm_runner.turn_deadline())
+    ai_llm_runner.report_unserved(map_screen, outcome, "Holding summits")
 
     for pair in pairs:
         if not pair["transcript"]:

@@ -136,8 +136,13 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               is standing there. The guard stays at one whatever
                               the combat width is -- a quiet border is a
                               garrison, not a firing line
-  ai_turn_budget_seconds      (a setting) wall-clock ceiling per turn's model
-                              work; whatever has not answered falls back
+  ai_turn_budget_seconds      (a setting) wall-clock ceiling per batch of model
+                              work; whatever has not answered falls back. There
+                              are three batches a turn -- directing, answering
+                              proposals, summits -- and each gets its own budget
+  ai_threads                  (a setting) how many model calls are in flight at
+                              once. 1 by default, which against a local model
+                              means one nation per call in series
 
 Personalities are edited in the map editor under AI Personality -- the purple
 button on the left bar, which pins them so nothing regenerates them. It spent
@@ -264,6 +269,16 @@ authors what a nation *starts* with (the bulk checkbox list). A spectator picks
 a nation and gets its real tech tree, live queue included. A player gets their
 own. The chosen nation arrives as map_screen.viewing_research_country, which is
 the same hand-off channel editing_country uses for the identity editor.
+
+When the budget cannot reach everyone, whoever has waited longest goes first.
+The batch runs in list order and that order used to be the scenario file's, so
+the same nation won the budget every single turn and the rest were never asked
+once -- at MAJOR on one thread against a local model, twelve major powers came
+down to whichever appeared earliest in the file. nation_data["llm_last_turn"]
+is the stamp, written whether or not the reply was usable so a nation with a
+failing provider cannot hold the front of the queue. And a batch that runs out
+now says so, naming the two settings that decide how many it can reach; before,
+serving one nation of twelve looked exactly like having nothing to say.
 
 At ABSOLUTE, a nation with only one legal option is still asked -- choosing
 and phrasing come from the same call, so skipping it silently skipped the
