@@ -85,27 +85,144 @@ class EconomyValueTests(unittest.TestCase):
                                 {"materials": 50000, "manpower": 50000, "fuel": 5000})
         self.assertGreater(large, small)
 
-    def test_a_building_tech_is_worth_its_yield(self):
-        """Basic Factory costs nothing to research towards and yields 500/turn."""
-        self.assertGreater(
-            te.economy_gain("basic_factory", 1, prices(), self.blib, self.income), 0.0)
+    def test_the_first_building_of_a_chain_is_worth_its_whole_yield(self):
+        """Basic Factory replaces nothing, so all 500/turn of it counts.
 
-    def test_a_building_that_does_not_pay_back_is_worth_nothing(self):
-        """Not a quirk of the test: Factory Lvl 1 costs 30,000 materials for
-        1,000/turn, so over the horizon an economic tech is credited across it
-        is very slightly under water. Worth knowing rather than papering over --
-        the AI reaches for it at higher levels, where the yields justify it."""
+        Its JSON costs are zeros standing in for a figure computed per nation,
+        so the valuation substitutes the real base rather than reading it as a
+        free +500/turn, which is what it used to be scored as.
+        """
+        cheap = prices(materials=1.0, manpower=0.01)
+        value = te.economy_gain("basic_factory", 1, cheap, self.blib, self.income)
+
+        # Spelled out from the constants rather than by calling _build_cost,
+        # so that zeroing the substituted cost is visible here. queries.py
+        # charges 2x the base in materials and 1x in manpower.
+        base = float(c.BASIC_FACTORY_BASE_COST_X)
+        yield_per_turn = cheap["materials"] * self.blib["Basic Factory"]["prod_materials"]
+        real_cost = cheap["materials"] * base * 2 + cheap["manpower"] * base
+        self.assertAlmostEqual(value, yield_per_turn - real_cost / c.AI_BUILDING_PAYBACK_TURNS)
+        self.assertGreater(value, 0.0)
+
+    def test_the_basic_factory_is_not_scored_as_free(self):
+        """Its JSON costs are zeros standing in for a per-nation figure. Read
+        literally they made it a free +500/turn, which no other building is."""
+        self.assertGreater(
+            te._build_cost("Basic Factory", self.blib["Basic Factory"], prices()), 0.0)
+
+    def test_an_upgrade_is_worth_only_what_it_adds(self):
+        """Factory Lvl 1 yields 1,000/turn but tears down the Basic Factory's
+        500 doing it, for 30,000 materials. That is not a deal."""
         value = te.economy_gain("factory", 1, prices(), self.blib, self.income)
         self.assertEqual(value, 0.0)
 
-    def test_a_higher_tier_building_is_worth_more_than_a_marginal_one(self):
-        low = te.economy_gain("factory", 1, prices(), self.blib, self.income)
-        high = te.economy_gain("factory", 8, prices(), self.blib, self.income)
-        self.assertGreater(high, low)
+    def test_every_factory_upgrade_is_worth_the_same(self):
+        """The bug this replaced, and the headline property.
+
+        Every factory level costs a flat 30,000 and adds a flat 1,000/turn over
+        the level it destroys, so Lvl 25 is worth exactly what Lvl 2 is. The old
+        absolute reading scored the new building's whole output, making Lvl 25
+        look twelve times the deal Lvl 2 was and sending the AI chasing tiers
+        decades ahead of its date -- the further out of reach, the better it
+        looked.
+        """
+        values = {lvl: te.economy_gain("factory", lvl, prices(), self.blib, self.income)
+                  for lvl in (2, 8, 15, 25)}
+        self.assertEqual(len(set(values.values())), 1, values)
+        self.assertGreater(values[2], 0.0, "still worth having, just not more so")
+
+    def test_the_marginal_yield_is_the_difference_between_the_tiers(self):
+        """Priced so the upgrade is worth having, the figure is the gap between
+        the two levels and not the higher level's whole output."""
+        cheap_build = prices(materials=1.0)
+        value = te.economy_gain("factory", 8, cheap_build, self.blib, self.income)
+        lvl8 = self.blib["Factory Lvl 8"]
+        lvl7 = self.blib["Factory Lvl 7"]
+        gain = (te._yield_value(lvl8, cheap_build) - te._yield_value(lvl7, cheap_build))
+        cost = te._build_cost("Factory Lvl 8", lvl8, cheap_build) / c.AI_BUILDING_PAYBACK_TURNS
+        self.assertAlmostEqual(value, gain - cost)
+        self.assertLess(value, te._yield_value(lvl8, cheap_build),
+                        "must not be the absolute output")
+
+    def test_fuel_refining_is_worth_something_when_fuel_is_scarce(self):
+        """It carries no building, so the building branch scored a fifty-level
+        tech at exactly zero for every AI in the game. It raises the ceiling on
+        turning materials into fuel, which is worth having only when fuel costs
+        more than the ten materials it takes to make."""
+        scarce = te.economy_gain("fuel_refining", 1, prices(materials=1.0, fuel=100.0),
+                                 self.blib, self.income)
+        awash = te.economy_gain("fuel_refining", 1, prices(materials=1.0, fuel=1.0),
+                                self.blib, self.income)
+        self.assertGreater(scarce, 0.0)
+        self.assertEqual(awash, 0.0, "converting at 10:1 into a glut is a loss")
+
+    def test_fuel_refining_stops_paying_past_the_slider_ceiling(self):
+        beyond = int(c.MAX_CONVERSION_SLIDER_VAL / c.FUEL_REFINING_CONVERSION_PER_LVL) + 1
+        self.assertEqual(
+            te.economy_gain("fuel_refining", beyond, prices(materials=1.0, fuel=100.0),
+                            self.blib, self.income), 0.0)
 
     def test_a_military_tech_has_no_economic_value(self):
         self.assertEqual(
             te.economy_gain("medium_tank", 3, prices(), self.blib, self.income), 0.0)
+
+
+class BuildingLeadTests(unittest.TestCase):
+    """Research must not run away from what the nation has actually built.
+
+    A province can only ever queue the next item in its chain, so holding
+    factory level 8 with nothing above Lvl 1 anywhere buys nothing for seven
+    twelve-turn upgrades. That is the state the USA was in when this was found.
+    """
+
+    def setUp(self):
+        self.blib = queries.get_building_library()
+        self.income = {"materials": 5000, "manpower": 5000, "fuel": 500}
+
+    def provinces(self, *buildings):
+        return [{"buildings": list(buildings)}]
+
+    def test_built_levels_reports_the_highest_of_each_chain(self):
+        provs = self.provinces("Factory Lvl 3") + self.provinces("Factory Lvl 7",
+                                                                 "Recruitment Building Lvl 2")
+        built = te.built_levels(provs, self.blib)
+        self.assertEqual(built["factory"], 7)
+        self.assertEqual(built["recruitment_buildings"], 2)
+
+    def test_a_chain_nobody_has_started_is_absent(self):
+        self.assertEqual(te.built_levels(self.provinces("Basic Factory"), self.blib),
+                         {"basic_factory": 1})
+
+    def test_unknown_buildings_are_ignored(self):
+        self.assertEqual(te.built_levels(self.provinces("Pyramid"), self.blib), {})
+
+    def test_the_next_level_up_is_still_worth_researching(self):
+        built = {"factory": 7}
+        self.assertGreater(
+            te.economy_gain("factory", 8, prices(), self.blib, self.income, built), 0.0)
+
+    def test_a_level_far_beyond_what_is_built_is_worth_nothing(self):
+        built = {"factory": 1}
+        self.assertEqual(
+            te.economy_gain("factory", 9, prices(), self.blib, self.income, built), 0.0)
+
+    def test_the_first_level_of_a_chain_is_always_allowed(self):
+        """Nothing built means level 0, and one level of lead is granted."""
+        self.assertEqual(
+            te.economy_gain("factory", 1, prices(materials=0.05), self.blib, self.income, {}),
+            te.economy_gain("factory", 1, prices(materials=0.05), self.blib, self.income))
+
+    def test_the_second_level_is_gated_until_the_first_is_standing(self):
+        gated = te.economy_gain("factory", 2, prices(), self.blib, self.income, {})
+        ungated = te.economy_gain("factory", 2, prices(), self.blib, self.income,
+                                  {"factory": 1})
+        self.assertEqual(gated, 0.0)
+        self.assertGreater(ungated, 0.0)
+
+    def test_omitting_the_argument_applies_no_cap(self):
+        """Mods and callers that cannot supply province state keep working."""
+        self.assertGreater(
+            te.economy_gain("factory", 25, prices(), self.blib, self.income), 0.0)
 
 
 class UnitGainTests(unittest.TestCase):

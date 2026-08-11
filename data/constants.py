@@ -1243,6 +1243,21 @@ AI_RESEARCH_MILITARY_SLOTS = 1
 # more willingness to invest in industry before army.
 AI_TECH_ECONOMY_HORIZON = 30.0
 
+# How long a BUILDING gets to earn back what it cost to put up. A separate
+# number from the one above, which they used to share: that one scales an
+# income stream against an army, while this one is a payback period, and a
+# building keeps producing long after the thirty turns a division is costed
+# against. At thirty every building in the game -- including the first Basic
+# Factory -- read as a loss, which is the opposite of the error it was meant
+# to correct. Sixty turns is roughly when a factory upgrade breaks even.
+AI_BUILDING_PAYBACK_TURNS = 60.0
+
+# How many building levels the AI will research ahead of what it has actually
+# constructed. A province can only ever queue the next item in its chain, so
+# research further ahead than this buys nothing it can act on for many turns.
+# One spare level keeps the pipeline full without letting it run away.
+AI_MAX_BUILDING_RESEARCH_LEAD = 1
+
 MAX_RESEARCH_TURN_SIMULATION = 5000
 
 # ==========================================
