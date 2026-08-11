@@ -934,6 +934,51 @@ AI_W_ALLY_RELATION = 0.5
 AI_W_ALLY_SHARED_ENEMY = 0.35
 AI_W_ALLY_WEAKNESS = 0.15   # the weak seek protection
 AI_ALLIANCE_DESIRE_THRESHOLD = 0.55
+
+# How many proposals one nation may have in flight at once. The pass used to
+# allow exactly one per target with no comparison between them, so whichever
+# section ran first won the slot.
+AI_MAX_ACTIONS_PER_TURN = 3
+
+# Proposing a trade. Stock counts toward what a nation can spare, spread over
+# this many turns, so a full warehouse is tradeable but not all at once.
+AI_TRADE_STOCK_TURNS = 20.0
+AI_TRADE_OFFER_FRACTION = 0.5
+AI_TRADE_MIN_AMOUNT = 250
+
+# How each action reads in a prompt or an event log.
+AI_ACTION_PHRASES = {
+    "WAR_DECLARATION": "declare war on",
+    "CEASEFIRE": "offer a ceasefire to",
+    "PEACE_TREATY": "offer peace terms to",
+    "JOIN_FACTION_REQ": "ask to join the faction of",
+    "CREATE_FACTION": "propose founding a faction with",
+    "FACTION_INVITE": "invite into our faction",
+    "CALL_TO_ARMS": "call to arms",
+    "JOIN_WARS": "offer to join the wars of",
+    "REQ_MILITARY_ACCESS": "request military access through",
+    "TRADE": "propose a trade with",
+    "BREAK_ALLIANCE": "break our alliance with",
+}
+
+# Baseline desirability for actions with no appetite function of their own.
+# Access is cheap to ask for and often the difference between being able to
+# fight a shared war at all -- but it is a tactical convenience, and loses to
+# anything that changes who a nation's friends are.
+AI_SCORE_MILITARY_ACCESS = 0.55
+
+# A nation at war with no allies at all wants that fixed more than it wants
+# anything else, whatever it happens to think of the only bloc on offer.
+AI_SCORE_DEFENSIVE_FACTION = 0.78
+AI_SCORE_CALL_TO_ARMS = 0.50
+AI_SCORE_JOIN_WARS = 0.45
+AI_SCORE_CEASEFIRE_UNREACHABLE = 0.80   # a war we physically cannot fight is pure cost
+AI_SCORE_TRADE = 0.40                   # useful, rarely urgent
+
+# How badly a war must be going before the AI sues for peace. Below the bar at
+# which it would accept a ceasefire offered to it: asking costs standing, so it
+# waits a little longer than it would to say yes.
+AI_PEACE_OFFER_THRESHOLD = 0.62
 TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
 MIN_TURNS_FOR_CEASEFIRE = 2 # Turns that must occur before the ai allows ceasefires

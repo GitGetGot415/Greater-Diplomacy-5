@@ -1,6 +1,7 @@
 import random
 from collections import namedtuple
-from map_logic.ai import ai_handler, ai_llm_runner, ai_opinion, ai_prompts, ai_world
+from map_logic.ai import (ai_candidates, ai_handler, ai_llm_runner, ai_opinion,
+                          ai_personality, ai_prompts, ai_world)
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
@@ -121,26 +122,46 @@ PROACTIVE_PROPOSALS = {
     "WAR_DECLARATION": ProactiveProposal(
         "PROACTIVE_DECLARE_WAR", "Your occupation of our rightful territory ends now!",
         c.WARGOAL_TAKE_CLAIMS, True),
+    # The three below are actions the AI could receive and answer but never
+    # once send. It has never offered peace, never invited anyone into its own
+    # faction, and never proposed a trade.
+    "PEACE_TREATY": ProactiveProposal(
+        "PROACTIVE_PEACE_TREATY", "This war has cost us both too much. We propose terms.",
+        None, False),
+    "FACTION_INVITE": ProactiveProposal(
+        "PROACTIVE_FACTION_INVITE", "Our cause would be stronger with you in it. Join us.",
+        None, False),
+    # Cooldown on the way out, unlike the other proposals. An accepted trade
+    # never records one -- cooldowns are stamped when a proposal is refused --
+    # so a pair that gets on well would otherwise trade every single turn
+    # forever, which in a 20-turn run came to 84 offers.
+    "TRADE": ProactiveProposal(
+        "PROACTIVE_TRADE", "We propose an exchange to the benefit of us both.",
+        None, True),
 }
 
 
-def _queue_proactive_proposal(map_screen, pending, ai_name, target, action, context_target=None):
+def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
+                              context_target=None, parameters=None):
     """Queues one AI-initiated proposal and books the job that writes its text.
 
-    Seven sections of the proactive pass build the same three things -- the
+    Every section of the proactive pass builds the same three things -- the
     prompt context, the entry in pending_diplomacy, and the proactive_llm_tasks
     job -- and every difference between them that actually matters is a column
-    of PROACTIVE_PROPOSALS. The sections keep their own gating: who is a valid
-    target, and whether to stop after one, is genuinely per-section.
+    of PROACTIVE_PROPOSALS.
     """
     spec = PROACTIVE_PROPOSALS[action]
     fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(spec.fallback_key, spec.fallback)
 
-    pending[target] = {
+    entry = {
         "action": action,
         "turns": 0,
         "message": spec.queued_message or fallback,
     }
+    if parameters:
+        entry["parameters"] = parameters
+    pending[target] = entry
+
     if spec.cooldown:
         queries.set_ai_diplo_cooldown(ai_name, target, action, map_screen.nation_data)
 
@@ -153,27 +174,13 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action, cont
     })
 
 
-def _claim_slot(pending, queued_this_pass, target):
-    """Reserves this nation's one outgoing-proposal slot for `target`.
-
-    pending_diplomacy holds a single action per target, so the sections below
-    compete for the same slot. Without this, a Call to Arms queued by section 2
-    would be silently overwritten by section 3's Join Wars later in the very same
-    pass, and the player would never see the request at all. First section to ask
-    for a target wins it; the rest wait for a future turn.
-    """
-    if target in queued_this_pass:
-        return False
-
-    existing = pending.get(target)
-    if existing is not None:
-        # Never overwrite a proposal that is already travelling
-        turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
-        if turns != 0:
-            return False
-
-    queued_this_pass.add(target)
-    return True
+def _execute_candidates(map_screen, ai_name, pending, candidates):
+    """Turns the chosen candidates into queued proposals."""
+    for candidate in candidates:
+        _queue_proactive_proposal(
+            map_screen, pending, ai_name, candidate.target, candidate.action,
+            context_target=candidate.payload.get("context_target"),
+            parameters=candidate.payload.get("parameters"))
 
 
 def _decrement_diplo_cooldowns(data):
@@ -213,18 +220,38 @@ def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
         diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
 
-def _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, world):
+def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):
     """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
     for enemy in my_enemies:
         if enemy not in active_nations: continue
         if not world.reachable(ai_name, enemy):
-            if not queries.is_ai_diplo_on_cooldown(ai_name, enemy, "CEASEFIRE", map_screen.nation_data):
-                if _claim_slot(pending, queued_this_pass, enemy):
-                    _queue_proactive_proposal(map_screen, pending, ai_name, enemy, "CEASEFIRE")
-                    break # Act once per turn to avoid conflicts
+            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
+                bag.add(ai_candidates.make(
+                    "CEASEFIRE", enemy, c.AI_SCORE_CEASEFIRE_UNREACHABLE,
+                    "we cannot reach them to fight them, and the war costs us anyway"))
 
 
-def _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations):
+def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nations, world):
+    """Section 1.2: sues for peace in a war going badly.
+
+    Entirely new. The AI has never once offered peace -- the only thing on the
+    proactive table was a ceasefire to an enemy it physically could not reach,
+    so a nation being slowly destroyed by a neighbour it shared a border with
+    had no way to ask for terms and simply fought until it was gone.
+    """
+    for enemy in my_enemies:
+        if enemy not in active_nations: continue
+        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "PEACE_TREATY"):
+            continue
+
+        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, map_screen.scenario_settings)
+        if appetite >= c.AI_PEACE_OFFER_THRESHOLD:
+            bag.add(ai_candidates.make(
+                "PEACE_TREATY", enemy, appetite,
+                f"this war with {enemy} is going badly and has run long enough"))
+
+
+def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):
     """Section 1.5: an unaligned nation at war looks for a faction to join, or
     else another unaligned co-belligerent to found one with."""
     # Prevent sending multiple faction requests
@@ -252,11 +279,18 @@ def _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_e
                     potential_leaders.append(fac_leader)
 
     if potential_leaders:
-        # Just ask the first valid leader we found
-        target_leader = potential_leaders[0]
-        if not queries.is_ai_diplo_on_cooldown(ai_name, target_leader, "JOIN_FACTION_REQ", map_screen.nation_data):
-            if _claim_slot(pending, queued_this_pass, target_leader):
-                _queue_proactive_proposal(map_screen, pending, ai_name, target_leader, "JOIN_FACTION_REQ")
+        # Ask whichever leader we would most like to stand with, rather than
+        # whichever happened to be found first.
+        target_leader = max(potential_leaders,
+                            key=lambda n: (ai_opinion.alliance_appetite(
+                                world, ai_name, n, map_screen.scenario_settings), n))
+        if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target_leader, "JOIN_FACTION_REQ"):
+            bag.add(ai_candidates.make(
+                "JOIN_FACTION_REQ", target_leader,
+                max(c.AI_SCORE_DEFENSIVE_FACTION,
+                    ai_opinion.alliance_appetite(world, ai_name, target_leader,
+                                                 map_screen.scenario_settings)),
+                "we are at war and alone, and they already fight our enemies"))
         return
 
     # Find nations also at war with our enemy who aren't in a faction to form a new one with
@@ -271,13 +305,19 @@ def _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_e
                 potential_partners.append(mutual_combatant)
 
     if potential_partners:
-        target_partner = potential_partners[0]
-        if not queries.is_ai_diplo_on_cooldown(ai_name, target_partner, "CREATE_FACTION", map_screen.nation_data):
-            if _claim_slot(pending, queued_this_pass, target_partner):
-                _queue_proactive_proposal(map_screen, pending, ai_name, target_partner, "CREATE_FACTION")
+        target_partner = max(potential_partners,
+                             key=lambda n: (ai_opinion.alliance_appetite(
+                                 world, ai_name, n, map_screen.scenario_settings), n))
+        if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target_partner, "CREATE_FACTION"):
+            bag.add(ai_candidates.make(
+                "CREATE_FACTION", target_partner,
+                max(c.AI_SCORE_DEFENSIVE_FACTION,
+                    ai_opinion.alliance_appetite(world, ai_name, target_partner,
+                                                 map_screen.scenario_settings)),
+                "neither of us has allies and we fight the same enemy"))
 
 
-def _call_faction_to_arms(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations):
+def _call_faction_to_arms(bag, map_screen, ai_name, my_faction, my_enemies, active_nations, world):
     """Section 2: asks a faction-mate to join a war of ours they aren't already in."""
     faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
     for member in faction_members:
@@ -288,13 +328,18 @@ def _call_faction_to_arms(map_screen, ai_name, pending, queued_this_pass, my_fac
         unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations and not queries.has_active_truce(member, e, map_screen.nation_data)]
 
         if unshared_wars:
-            if not queries.is_ai_diplo_on_cooldown(ai_name, member, "CALL_TO_ARMS", map_screen.nation_data):
-                if _claim_slot(pending, queued_this_pass, member):
-                    _queue_proactive_proposal(map_screen, pending, ai_name, member, "CALL_TO_ARMS",
-                                              context_target=unshared_wars[0])
+            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, member, "CALL_TO_ARMS"):
+                # More urgent the worse the war is going.
+                urgency = ai_opinion.peace_appetite(world, ai_name, unshared_wars[0],
+                                                    map_screen.scenario_settings)
+                bag.add(ai_candidates.make(
+                    "CALL_TO_ARMS", member,
+                    c.AI_SCORE_CALL_TO_ARMS + (1.0 - c.AI_SCORE_CALL_TO_ARMS) * urgency,
+                    f"they are sworn to our faction and we are fighting {unshared_wars[0]} alone",
+                    context_target=unshared_wars[0]))
 
 
-def _request_access_from_co_belligerents(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations):
+def _request_access_from_co_belligerents(bag, map_screen, ai_name, my_enemies, active_nations):
     """Section 2.5: even nations in different factions ask each other for
     passage if they're both fighting the same enemy, so allied fronts can
     actually link up."""
@@ -309,17 +354,19 @@ def _request_access_from_co_belligerents(map_screen, ai_name, pending, queued_th
             co_belligerents.append(co)
 
     for co in co_belligerents:
-        if queries.is_ai_diplo_on_cooldown(ai_name, co, "REQ_MILITARY_ACCESS", map_screen.nation_data):
+        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
             continue
+        bag.add(ai_candidates.make(
+            "REQ_MILITARY_ACCESS", co, c.AI_SCORE_MILITARY_ACCESS,
+            "we fight the same enemy and our fronts cannot link up without passage"))
 
-        if _claim_slot(pending, queued_this_pass, co):
-            _queue_proactive_proposal(map_screen, pending, ai_name, co, "REQ_MILITARY_ACCESS")
-            break  # Act once per turn to avoid conflicts
 
-
-def _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations):
+def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enemies,
+                                   active_nations, world):
     """Section 3: offers to join a faction-mate's war we aren't already in."""
     faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
+    loyalty = ai_personality.trait(map_screen.nation_data, ai_name, "loyalty",
+                                   map_screen.scenario_settings)
     for member in faction_members:
         if member == ai_name:
             continue
@@ -330,13 +377,16 @@ def _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pas
 
         if unshared_wars:
             target_enemy = unshared_wars[0]
-            if not queries.is_ai_diplo_on_cooldown(ai_name, member, "JOIN_WARS", map_screen.nation_data):
-                if _claim_slot(pending, queued_this_pass, member):
-                    _queue_proactive_proposal(map_screen, pending, ai_name, member, "JOIN_WARS",
-                                              context_target=target_enemy)
+            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, member, "JOIN_WARS"):
+                # A faithless nation lets its allies fight alone; a loyal one
+                # turns up. Nothing used to distinguish them.
+                bag.add(ai_candidates.make(
+                    "JOIN_WARS", member, c.AI_SCORE_JOIN_WARS * (0.4 + 1.2 * loyalty),
+                    f"our faction-mate is fighting {target_enemy} without us",
+                    context_target=target_enemy))
 
 
-def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
+def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
     """Section 4: declares war on a bordering nation holding our cores/claims
     once we think we can win, or fabricates a claim on them first if we lack a wargoal."""
     if my_master and my_type == c.PUPPET_TYPE_INTEGRATED:
@@ -351,12 +401,12 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
     if not valid_war_targets:
         return
 
-    # ONLY look at nations we actually share a physical border with.
-    # Sorted because the loop below takes the first candidate that passes and
-    # breaks: iterating the raw set meant which neighbour got invaded came down
-    # to string hash order, which is randomised per process, so the same save
-    # could start a different war on different launches. Alphabetical is a
-    # placeholder for the desirability score Phase 3 sorts by.
+    # ONLY look at nations we actually share a physical border with. Sorted for
+    # a stable order -- iterating the raw set meant which neighbour got invaded
+    # came down to string hash order, randomised per process, so the same save
+    # could start a different war on different launches. Every one that passes
+    # is now offered as a candidate carrying its own desire, and the arbiter
+    # picks; this loop no longer breaks on the first.
     my_neighbors = world.neighbors[ai_name]
     valid_border_targets = sorted(t for t in valid_war_targets if t in my_neighbors)
 
@@ -384,20 +434,23 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
         # nation we are on good terms with, a promise we made, and the two wars
         # we are already losing all count now -- and an aggressive nation will
         # gamble on odds a cautious one turns down.
-        if ai_opinion.wants_war(world, ai_name, target, map_screen.scenario_settings):
+        desire = ai_opinion.war_desire(world, ai_name, target, map_screen.scenario_settings)
+        if desire >= c.AI_WAR_DESIRE_THRESHOLD:
 
             # Random chance to actually declare war
             war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
             if random.random() <= war_chance:
                 has_wargoal = queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
                 if has_wargoal:
-                    if not queries.is_ai_diplo_on_cooldown(ai_name, target, "WAR_DECLARATION", map_screen.nation_data):
-                        if _claim_slot(pending, queued_this_pass, target):
-                            _queue_proactive_proposal(map_screen, pending, ai_name, target,
-                                                      "WAR_DECLARATION", context_target=target)
-                            break
+                    if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target, "WAR_DECLARATION"):
+                        bag.add(ai_candidates.make(
+                            "WAR_DECLARATION", target, desire,
+                            f"{target} holds territory that is ours by right and we have the strength to take it",
+                            context_target=target))
                 else:
-                    # Make a claim! (assuming no war is happening)
+                    # Make a claim! (assuming no war is happening). Not a
+                    # proposal -- it goes straight into our own claim queue --
+                    # so it is done here rather than offered as a candidate.
                     if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
                         core_ids = []
                         for prov in map_screen.map_data.values():
@@ -413,6 +466,65 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
 
                             queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                             break
+
+
+def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world):
+    """Section 6: a faction leader recruits nations it gets on with.
+
+    New. FACTION_INVITE existed as an action a player could send and an AI could
+    accept, but no AI ever sent one -- factions only ever grew by outsiders
+    asking to be let in, so a strong bloc never courted anyone.
+    """
+    if not data.get("is_faction_leader") or getattr(c, "DISABLE_FACTIONS", False):
+        return
+
+    for other in sorted(active_nations):
+        if other == ai_name:
+            continue
+        other_data = map_screen.nation_data.get(other, {})
+        if other_data.get("faction"):
+            continue
+        if queries.are_at_war(ai_name, other, map_screen.nation_data):
+            continue
+        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, other, "FACTION_INVITE"):
+            continue
+
+        appetite = ai_opinion.alliance_appetite(world, ai_name, other,
+                                                map_screen.scenario_settings)
+        if appetite >= c.AI_ALLIANCE_DESIRE_THRESHOLD:
+            bag.add(ai_candidates.make(
+                "FACTION_INVITE", other, appetite,
+                "they are unaligned, we are on good terms, and they would strengthen the bloc"))
+
+
+def _offer_trades(bag, map_screen, ai_name, active_nations, world):
+    """Section 7: offers a swap to a neighbour whose shortages mirror ours.
+
+    New. The AI could not propose a trade at all, and would accept one only if
+    it gave away literally nothing -- so the entire trade system was inert
+    between AI nations.
+    """
+    for other in sorted(world.neighbors.get(ai_name, ())):
+        if other not in active_nations:
+            continue
+        if queries.are_at_war(ai_name, other, map_screen.nation_data):
+            continue
+        # Neutral is fine. Relations sit at exactly 0 for almost every pair on
+        # a fresh map -- requiring better than that meant trade never happened
+        # anywhere. Only active dislike rules it out.
+        if world.relation(ai_name, other) < 0:
+            continue
+        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, other, "TRADE"):
+            continue
+
+        offer = ai_candidates.resource_offer(world, ai_name, other)
+        if not offer:
+            continue
+
+        bag.add(ai_candidates.make(
+            "TRADE", other, c.AI_SCORE_TRADE,
+            "we have a surplus of what they lack, and they of what we lack",
+            parameters=offer))
 
 
 def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations):
@@ -527,8 +639,6 @@ def _run_basic_proactive_ai(map_screen):
 
         data = map_screen.nation_data[ai_name]
         pending = data.setdefault("pending_diplomacy", {})
-        # Targets already spoken for by an earlier section this turn
-        queued_this_pass = set()
         my_faction = data.get("faction", "")
         my_enemies = data.get("at_war_with", [])
         my_master = data.get("master", "")
@@ -547,22 +657,43 @@ def _run_basic_proactive_ai(map_screen):
 
         is_already_at_war = len(my_enemies) > 0
 
+        # Every section offers what it would like to do and the arbiter picks.
+        # They used to write straight into pending_diplomacy, which holds one
+        # action per target, so whichever section ran first won the slot and the
+        # rest were silently discarded -- a Call to Arms from section 2 starved
+        # the war declaration section 4 wanted to send to the same nation, and
+        # nothing anywhere compared the two.
+        bag = ai_candidates.Collector(ai_name, pending)
+
         if is_already_at_war:
-            _seek_ceasefire_if_unreachable(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations, world)
+            _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world)
+            _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nations, world)
 
         if is_already_at_war and not my_faction and not getattr(c, "DISABLE_FACTIONS", False):
-            _seek_defensive_faction(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations)
+            _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world)
 
         if is_already_at_war and my_faction:
-            _call_faction_to_arms(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations)
+            _call_faction_to_arms(bag, map_screen, ai_name, my_faction, my_enemies, active_nations, world)
 
         if is_already_at_war:
-            _request_access_from_co_belligerents(map_screen, ai_name, pending, queued_this_pass, my_enemies, active_nations)
+            _request_access_from_co_belligerents(bag, map_screen, ai_name, my_enemies, active_nations)
 
         if my_faction:
-            _join_faction_wars_proactively(map_screen, ai_name, pending, queued_this_pass, my_faction, my_enemies, active_nations)
+            _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enemies, active_nations, world)
 
-        _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_pass, my_enemies, my_master, my_type, is_already_at_war, active_nations, world)
+        _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world)
+
+        if not getattr(c, "DISABLE_FACTIONS", False):
+            _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world)
+
+        _offer_trades(bag, map_screen, ai_name, active_nations, world)
+
+        # With the model off this is simply the best few by score, which on its
+        # own is what fixes the starvation above. Phase 4 hands the same list to
+        # the model to choose from -- and because every entry was built by the
+        # ordinary rules, there is nothing illegal on it for it to pick.
+        chosen = bag.ranked(limit=c.AI_MAX_ACTIONS_PER_TURN)
+        _execute_candidates(map_screen, ai_name, pending, chosen)
 
         if is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
             _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations)

@@ -46,6 +46,9 @@ AI_FALLBACK_RESPONSES = {
     "PROACTIVE_CEASEFIRE": "We offer terms for a ceasefire.",
     "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
     "PROACTIVE_REQ_MILITARY_ACCESS": "As we both fight against a common foe, we request military access through your territory.",
+    "PROACTIVE_PEACE_TREATY": "This war has cost us both too much. We propose terms.",
+    "PROACTIVE_FACTION_INVITE": "Our cause would be stronger with you in it. Join us.",
+    "PROACTIVE_TRADE": "We propose an exchange to the benefit of us both.",
 
     "ACCEPT_GENERIC": "We accepted your {action}.",
     "REJECT_GENERIC": "We rejected your {action}.",
@@ -101,6 +104,12 @@ def get_proactive_action_context(action_type, target=None):
         return "proposing to create a new faction together to combat mutual threats"
     elif action_type == "REQ_MILITARY_ACCESS":
         return "requesting military access through your territory since we are both fighting a common enemy"
+    elif action_type == "PEACE_TREATY":
+        return "offering terms to end the war between us, which has gone badly for us"
+    elif action_type == "FACTION_INVITE":
+        return "inviting you into our faction, since we are on good terms and would both be stronger for it"
+    elif action_type == "TRADE":
+        return "proposing an exchange of resources, each of us sending what the other lacks"
     elif action_type.startswith("ACCEPT_"):
         return f"accepting the {action_type.replace('ACCEPT_', '').replace('_', ' ').lower()} proposal"
     elif action_type.startswith("REJECT_"):
