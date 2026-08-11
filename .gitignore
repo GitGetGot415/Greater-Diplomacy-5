@@ -4,6 +4,7 @@ venv/
 
 *.png
 *.json
+*.json.gz
 *.txt
 !assets/**
 !map_tools/*
