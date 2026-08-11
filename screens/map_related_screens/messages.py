@@ -402,27 +402,9 @@ class Messages_Screen(GameState):
             else:
                 self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
                 
-            is_puppet = bool(p_data.get("master", ""))
-            target_is_puppet = bool(self.map_screen.nation_data.get(self.selected_recipient, {}).get("master", ""))
-            
-            my_type = p_data.get("puppet_type", "")
-            target_type = self.map_screen.nation_data.get(self.selected_recipient, {}).get("puppet_type", "")
-
-            my_master = p_data.get("master", "")
-            target_master = self.map_screen.nation_data.get(self.selected_recipient, {}).get("master", "")
-
-            is_my_integrated = is_puppet and my_type == c.PUPPET_TYPE_INTEGRATED and my_master != self.selected_recipient
-            is_target_integrated = target_is_puppet and target_type == c.PUPPET_TYPE_INTEGRATED and target_master != self.map_screen.player_country
-
-            if is_my_integrated:
-                btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Integrated Can't Trade", lambda: None)
-                btn_trade.disabled = True
-                self.elements.append(btn_trade)
-            elif is_target_integrated:
-                btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Target is Integrated", lambda: None)
-                btn_trade.disabled = True
-                self.elements.append(btn_trade)
-            elif is_tactical:
+            # Integrated puppets used to be barred from trading with anyone but
+            # their master. They trade like anyone else now.
+            if is_tactical:
                 btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Tactical: Read Only", lambda: None)
                 btn_trade.disabled = True
                 self.elements.append(btn_trade)

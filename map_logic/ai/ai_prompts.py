@@ -60,7 +60,9 @@ AI_FALLBACK_RESPONSES = {
     # defined here, so accepting a peace treaty or a military-access request
     # delivered a message with no content.
     "ACCEPT_PEACE": "We accept your terms. The war between us is over.",
-    "ACCEPT_MILITARY_ACCESS": "We accept your request for military access."
+    "ACCEPT_MILITARY_ACCESS": "We accept your request for military access.",
+
+    "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord."
 }
 
 # ==========================================
@@ -182,7 +184,7 @@ def action_rules_and_schema(subject, message_hint):
         "- Do NOT output 'JOIN_WARS' if you're trying to join the war of someone not in your faction, instead just type 'WAR_DECLARATION' against the target country.\n"
         "- If your plan requires two steps (like leaving your faction this turn to declare war next turn), "
         "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
-        "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. Integrated puppets cannot engage in 'TRADE' agreements.\n"
+        "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. A puppet cannot make peace or sign a ceasefire on its own authority, only with its own master.\n"
         f"- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this {subject} improved or worsened your general opinion of the sender.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
         '{"message": "' + message_hint + '", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'

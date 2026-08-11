@@ -785,6 +785,21 @@ def has_military_access(moving_nation, target_owner, nation_data):
     """Returns True if the target_owner has granted military access to the moving_nation."""
     return moving_nation in nation_data.get(target_owner, {}).get("military_access", [])
 
+def can_negotiate_peace(nation, other, nation_data):
+    """Whether `nation` may settle a war with `other` on its own authority.
+
+    A puppet's wars are its master's business. It may still make peace WITH its
+    master, since that is how an independence war ends -- the mirror of the
+    existing rule that a puppet may only declare war on its master.
+
+    Nothing enforced this before: thirteen separate paths could initiate or
+    accept a peace, and none of them looked at `master`, so a subject could sign
+    its own treaty while its overlord was still fighting.
+    """
+    master = nation_data.get(nation, {}).get("master", "")
+    return not master or master == other
+
+
 def needs_military_access_request(moving_nation, target_owner, nation_data):
     """False if moving_nation can already enter target_owner's territory.
 

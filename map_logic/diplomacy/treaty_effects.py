@@ -83,13 +83,20 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None):
         log_global_event(nation_data,
                          f"{proposer} and {accepter} have formed a new global faction!")
 
-    elif action == "CEASEFIRE":
-        finalize_neutral(nation_data, proposer, accepter)
+    elif action in ("CEASEFIRE", "PEACE_TREATY"):
+        # A puppet's wars are its master's business. This is the one place all
+        # thirteen paths that can settle a war converge, so the backstop lives
+        # here even though the friendlier guards upstream catch it first.
+        for side, other in ((proposer, accepter), (accepter, proposer)):
+            if not queries.can_negotiate_peace(side, other, nation_data):
+                return _blocked("PUPPET_CANNOT_MAKE_PEACE")
 
-    elif action == "PEACE_TREATY":
-        execute_peace_treaty(map_data, nation_data, proposer, accepter,
-                             params if params else c.PEACE_WHITE_PEACE, host)
-        return _canned("ACCEPT_PEACE")
+        if action == "CEASEFIRE":
+            finalize_neutral(nation_data, proposer, accepter)
+        else:
+            execute_peace_treaty(map_data, nation_data, proposer, accepter,
+                                 params if params else c.PEACE_WHITE_PEACE, host)
+            return _canned("ACCEPT_PEACE")
 
     elif action == "TRADE":
         trade_params = params if isinstance(params, dict) else {}
