@@ -10,7 +10,6 @@
 
 import random
 
-import data.constants as c
 from data import queries
 
 
