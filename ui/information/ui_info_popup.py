@@ -89,6 +89,25 @@ def draw_unit_info(map_screen, surface):
                     surface.blit(map_screen.small_font.render(f" - {w_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
+            # --- MILITARY ACCESS, BOTH WAYS ---
+            # Access is one-way and stored only on the granting side, so the two
+            # directions are genuinely different facts and both are worth having:
+            # who may walk through this nation, and whose land it may walk
+            # through. Nothing listed either of them anywhere before.
+            for label, colour, names in (
+                    ("Grants Passage To:", c.COLOR_GOLD_HIGHLIGHT,
+                     queries.get_military_access_granted_by(owner, map_screen.nation_data)),
+                    ("Has Passage Through:", (150, 200, 255),
+                     queries.get_military_access_granted_to(owner, map_screen.nation_data))):
+                if not names:
+                    continue
+                surface.blit(map_screen.small_font.render(label, True, colour), (dip_rect.x + 10, y_offset))
+                y_offset += 20
+                for n in names:
+                    n_disp = map_screen.nation_data.get(n, {}).get("name", n)
+                    surface.blit(map_screen.small_font.render(f" - {n_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
+                    y_offset += 20
+
         # Re-derive the scroll limit from what was actually drawn this frame.
         content_height = (y_offset + scroll_offset) - body_top
         map_screen.diplomatic_scroll_max = max(0, content_height - body_rect.height)

@@ -785,6 +785,22 @@ def has_military_access(moving_nation, target_owner, nation_data):
     """Returns True if the target_owner has granted military access to the moving_nation."""
     return moving_nation in nation_data.get(target_owner, {}).get("military_access", [])
 
+def get_military_access_granted_by(nation, nation_data):
+    """Who this nation lets march through its territory."""
+    return list(nation_data.get(nation, {}).get("military_access", []))
+
+
+def get_military_access_granted_to(nation, nation_data):
+    """Whose territory this nation may march through.
+
+    Access is stored only on the granting side, so the reverse direction needs a
+    sweep -- there is no index for it. Cheap enough for a panel that redraws on
+    selection, but do not call it per frame on a large map.
+    """
+    return sorted(other for other, data in nation_data.items()
+                  if isinstance(data, dict) and nation in (data.get("military_access") or ()))
+
+
 def can_negotiate_peace(nation, other, nation_data):
     """Whether `nation` may settle a war with `other` on its own authority.
 

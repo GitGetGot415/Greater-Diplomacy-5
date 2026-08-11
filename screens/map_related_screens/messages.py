@@ -492,6 +492,21 @@ class Messages_Screen(GameState):
                         "date": show_date
                     })
                         
+        # --- SHOW WHAT AN INCOMING TRADE ACTUALLY ASKS FOR ---
+        # The offer travels as prose only -- the AI's covering line, or the
+        # sender's own -- while the numbers stay on the sender's pending entry.
+        # Without this a player was asked to accept or reject terms they could
+        # not see. Read from the sender's side and inverted, since the keys are
+        # written from the proposer's point of view.
+        their_offer = diplomacy_messages.get_pending(
+            self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
+        if their_offer.get("action") == "TRADE" and their_offer.get("turns", 0) > 0:
+            for line in diplomacy_messages.describe_trade(their_offer.get("parameters")):
+                display_thread.append({
+                    "content": line, "is_player": False, "is_draft": False,
+                    "is_diplo": True, "date": "",
+                })
+
         # Check if there is an active diplomatic action pending for this target
         pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
         act_str = pending.get("action", "")
