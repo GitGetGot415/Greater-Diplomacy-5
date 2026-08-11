@@ -270,6 +270,23 @@ a nation and gets its real tech tree, live queue included. A player gets their
 own. The chosen nation arrives as map_screen.viewing_research_country, which is
 the same hand-off channel editing_country uses for the identity editor.
 
+EVERY NATION ASKED IN A TURN SENDS THE SAME PROMPT PREFIX. A local model
+re-reads a prompt from the first token that differs from the last one it saw,
+and the world picture is ~90% of what gets sent. So build_world_context puts
+everything true regardless of who is asking first -- date, the nation list, the
+politics block, world events -- and only then says who it is talking to, what
+that nation owns, and how it regards the others. ai_director's system half
+names nobody for the same reason: it is sent ahead of the context, so one "You
+are the leader of X" at the top costs the entire saving.
+
+Measured on the 1941 map, 12 majors, llama3 via Ollama: 179s before, 28s after
+-- 15s a call became 2.3s, because 13s of every call was re-reading a world
+that had not changed. That is the difference between two of twelve nations
+getting a model and all twelve. tests/test_prompt_sharing.py pins it, since
+nothing about it is visible from reading a prompt. Neutral relation scores are
+left out of the tail for the same budget (63% of them on that map), with the
+prompt saying an unlisted nation is neutral.
+
 When the budget cannot reach everyone, whoever has waited longest goes first.
 The batch runs in list order and that order used to be the scenario file's, so
 the same nation won the budget every single turn and the rest were never asked

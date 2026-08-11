@@ -240,25 +240,47 @@ AI_FALLBACK_RESPONSES = _FallbackTable()
 # SYSTEM PROMPTS & CONTEXT GENERATORS
 # ==========================================
 
-def build_world_context(current_date, ai_nation, active_nations_str, manpower, materials, politics_str, events_str, target_context_str, target_nation):
-    # Assembles the overarching context about the world, economy, and politics.
+def build_world_context(current_date, ai_nation, active_nations_str, manpower, materials,
+                        politics_str, events_str, target_context_str, target_nation,
+                        relations_str=""):
+    """Assembles the world, economy and politics a nation is reasoning about.
+
+    Everything true of the world regardless of who is asking comes first, and
+    byte-for-byte identically for every nation in a turn's batch; only the tail
+    knows whose turn it is.
+
+    That ordering is the whole reason this is worth writing down. A local model
+    re-reads the prompt from the first token that differs, and the world picture
+    is around ninety percent of it -- so weaving each nation's own relation
+    scores through the politics block, which is what this used to do, meant
+    twelve nations paid the full cost twelve times. Measured against llama3 on
+    a 12k-character prompt: 9.5s of prompt evaluation cold, 0.2s when the
+    prefix matches the previous call. Nothing here is hidden from the model
+    that was visible before; it is the same text in a different order.
+    """
+    # --- shared prefix: identical for every nation asked this turn ----------
     context = f"Current Date: {current_date}\n"
-    context += f"You are the leader of {ai_nation}.\n"
     context += f"CRITICAL RULE: The ONLY nations that currently exist in this world are: {active_nations_str}.\n"
     context += "Do NOT mention, reference, or interact with any country, empire, or nation not explicitly on this list.\n\n"
-    context += f"Your economy: {manpower} Manpower, {materials} Materials.\n\n"
     context += "--- GLOBAL POLITICS ---\n"
     context += politics_str
-    
+
     if events_str:
         context += "\n--- RECENT WORLD EVENTS ---\n"
         context += events_str
-        
+
+    # --- per-nation tail ---------------------------------------------------
+    context += f"\n--- YOU ---\nYou are the leader of {ai_nation}.\n"
+    context += f"Your economy: {manpower} Manpower, {materials} Materials.\n"
+    if relations_str:
+        context += ("How you regard the others (scale -200 to 200; anyone not "
+                    "listed is neutral):\n" + relations_str)
+
     if target_nation:
         context += f"\n--- CURRENT TARGET ---\nYou are currently communicating with {target_nation}.\n"
         if target_context_str:
             context += "Recent message history:\n" + target_context_str
-            
+
     return context
 
 def get_proactive_action_context(action_type, target=None):

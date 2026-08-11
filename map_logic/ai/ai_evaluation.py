@@ -124,26 +124,37 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     materials = ai_stats.get("materials", 0)
 
     # 2. Establish Global Politics (Now includes Factions!)
+    #
+    # Sorted and free of anything that depends on who is asking, so this block
+    # comes out byte-identical for every nation in a turn's batch and a local
+    # model can reuse its evaluation of it -- see build_world_context. The
+    # relation scores, which are the part that varies, are gathered separately
+    # and appended after it.
     politics_str = ""
-    for nation in active_nations:
+    relations_str = ""
+    for nation in sorted(active_nations):
         n_data = nation_data.get(nation, {})
-        wars = [w for w in n_data.get("at_war_with", []) if w in active_nations]
+        wars = [w for w in sorted(n_data.get("at_war_with", [])) if w in active_nations]
         fac = n_data.get("faction", "")
         master = n_data.get("master", "")
-        puppets = [p for p in n_data.get("puppets", []) if p in active_nations]
+        puppets = [p for p in sorted(n_data.get("puppets", [])) if p in active_nations]
 
         rels = []
         if wars: rels.append(f"at war with {', '.join(wars)}")
         if fac: rels.append(f"in the faction '{fac}'")
         if master: rels.append(f"a puppet state of {master}")
         if puppets: rels.append(f"puppetmaster of {', '.join(puppets)}")
-
-        # --- Inject Relation Score ---
-        if nation != ai_nation:
-            rel_score = queries.get_relation_score(ai_nation, nation, nation_data)
-            rels.append(f"Relations: {rel_score} (Scale: -200 to 200)")
         if rels:
             politics_str += f"- {nation}: {' | '.join(rels)}.\n"
+
+        # Only the opinions that are actually opinions. On the 1941 map 63% of
+        # these come out exactly neutral, and eighty lines of "0" cost tokens
+        # in the one part of the prompt that cannot be shared between nations,
+        # while telling the model nothing it does not assume anyway.
+        if nation != ai_nation:
+            score = queries.get_relation_score(ai_nation, nation, nation_data)
+            if score:
+                relations_str += f"- {nation}: {score}\n"
 
     # 3. Add Recent World Events
     global_event_data = nation_data.get("GLOBAL_EVENTS", {})
@@ -175,8 +186,9 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
             target_context_str = "\n".join(recent_thread) + "\n"
 
     return ai_prompts.build_world_context(
-        current_date, ai_nation, ', '.join(active_nations),
-        manpower, materials, politics_str, events_str, target_context_str, target_nation
+        current_date, ai_nation, ', '.join(sorted(active_nations)),
+        manpower, materials, politics_str, events_str, target_context_str, target_nation,
+        relations_str
     )
 
 

@@ -48,7 +48,15 @@ def should_consult(candidates, wants_prose=False):
 
 
 def build_prompt(world, nation, candidates, limit, personality_note=""):
-    """The menu, as the leader's staff would put it."""
+    """The menu, as the leader's staff would put it.
+
+    The system half deliberately names nobody. It is sent ahead of the world
+    context, so a single "You are the leader of X" at the top would make every
+    nation's prompt differ from its first line and cost a local model a full
+    re-read of the whole world -- around 13 of the 15 seconds a call takes. Who
+    is being addressed is established in the context's own per-nation tail
+    instead, which sits after everything the nations share.
+    """
     from map_logic.ai import ai_candidates, ai_prompts
 
     lines = []
@@ -57,11 +65,10 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
     lines.append(f"  [{c.AI_DIRECTOR_NONE_CID}] do nothing this turn")
 
     system = (
-        f"You are the leader of {nation} in a grand strategy game. "
-        f"Your staff has prepared the options below. All of them are legal and "
+        f"You are the leader of a nation in a grand strategy game, named below. "
+        f"Your staff has prepared the options at the end. All of them are legal and "
         f"ready to execute this turn, and the staff rating is their own estimate "
         f"of how well each serves the nation.\n"
-        f"{personality_note}"
         f"Choose at most {limit}. You may follow the ratings or overrule them, "
         f"but you may only choose from this list.\n\n"
         + ai_prompts.VOICE_RULE +
@@ -70,7 +77,8 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
         '"messages": {"0": "In-character text of the message that action sends"}}\n'
         "Every index in \"picks\" must appear in \"messages\"."
     )
-    user = "Your options:\n" + "\n".join(lines) + "\n\nChoose."
+    user = (f"{personality_note}You are the leader of {nation}.\n"
+            "Your options:\n" + "\n".join(lines) + "\n\nChoose.")
     return system, user
 
 
