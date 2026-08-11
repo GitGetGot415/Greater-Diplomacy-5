@@ -2422,8 +2422,19 @@ def is_naval_unit(unit_type):
 def get_bombardment_range(unit_type):
     """Returns how many tiles this unit class can shell, or 0 if it cannot bombard.
 
-    Matched on the base class name so every level of the family qualifies, while
-    a unit loaded onto a Convoy/Truck ("Convoy (Artillery III)") does not."""
+    The unit's own bombard_range wins, so adding one in unit_data.json is all it
+    takes to give something a gun -- the AI already valued that stat, and the two
+    answers disagreeing meant it could price a barrage the unit could not fire.
+    The constant table is the fallback, matched on the base class name so every
+    level of a family qualifies.
+
+    A unit riding a Convoy/Truck ("Convoy (Artillery III)") still cannot shell:
+    that name is not in the unit library, so the stat lookup misses, and it is
+    not in the table either.
+    """
+    from_stats = (get_unit_library().get(unit_type) or {}).get("bombard_range")
+    if from_stats:
+        return int(from_stats)
     return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type), 0)
 
 def can_bombard(unit_type):

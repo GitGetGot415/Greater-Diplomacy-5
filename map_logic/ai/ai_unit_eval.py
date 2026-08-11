@@ -234,11 +234,13 @@ def _mean(values):
 def bombard_range(name, stats):
     """How far this unit shells, from its own stats first.
 
-    queries.get_bombardment_range answers from c.BOMBARDMENT_UNITS, keyed by
-    base class name -- fine for the shipped roster, but it means a unit that
-    gains a bombard_range in unit_data.json is invisible to it. Since the point
-    of this module is that editing the data changes the AI, the unit's own stats
-    win and the constant table is the fallback.
+    The stats-win-over-table rule now lives in queries.get_bombardment_range, so
+    what the AI values and what the turn processor lets a unit do are the same
+    number. They used to be derived separately, which meant a unit given a
+    bombard_range by hand was priced for a barrage it could never fire.
+
+    `stats` is still consulted first for callers holding a synthetic library the
+    real one has never heard of -- which is every test in this module.
     """
     from_stats = stats.get("bombard_range")
     if from_stats:
@@ -253,6 +255,10 @@ def evaluate(names, unit_library, ctx):
     set before being weighted together, so the weights in constants.py stay
     meaningful whatever scale unit_data.json is written on.
     """
+    # One incoming hit's worth per defender. Depends only on the context, not on
+    # the unit, so it is the same for every candidate.
+    share = ctx.volley / max(1.0, ctx.stack)
+
     raw = {}
     for name in names:
         stats = unit_library.get(name)
@@ -266,11 +272,10 @@ def evaluate(names, unit_library, ctx):
         # apply_group_damage: each defender eats max(0, volley/N - defense).
         # The floor keeps a unit whose defense exceeds its share from scoring
         # infinitely -- strong returns on defense, not unbounded ones.
-        share = ctx.volley / max(1.0, ctx.stack)
         bite = max(share * c.AI_MIN_DAMAGE_FRACTION, share - defense)
         durability = health / bite if bite > 0 else 0.0
 
-        raw[name] = (stats, attack, durability, health)
+        raw[name] = (stats, attack, durability, health, defense)
 
     if not raw:
         return {}
@@ -279,16 +284,22 @@ def evaluate(names, unit_library, ctx):
     mean_durability = _mean([v[2] for v in raw.values()]) or 1.0
 
     values = {}
-    for name, (stats, attack, durability, health) in raw.items():
+    for name, (stats, attack, durability, health, defense) in raw.items():
         offense = c.AI_W_OFFENSE * (attack / mean_attack)
 
-        # Dilution is worth the same whatever the body is made of: damage is
-        # divided by the NUMBER of defenders, so a 100 HP unit thins the share
-        # for the stack exactly as much as a 2500 HP one. Scaling this by health
-        # would count health twice -- durability above already has it -- and
-        # would wrongly make expensive units look like better screens. Flat, it
-        # does the one thing it should: makes a cheap body good value.
-        combat = offense + c.AI_W_DURABILITY * (durability / mean_durability) + c.AI_W_SOAK
+        # An extra body is worth what it actually absorbs, which is its DEFENSE.
+        # apply_group_damage deals sum(max(0, volley/N - defense_i)), so with
+        # defense 0 that sum is exactly `volley` for any N -- splitting a stack
+        # into more zero-defense bodies reduces incoming damage by nothing at
+        # all. This term used to be flat, on the reasoning that dividing damage
+        # across more defenders helps whatever the body is made of; the combat
+        # model says otherwise, and the flat version is why a nation with cheap
+        # manpower would fill its queues with militia. Scaled by health it would
+        # count health twice, since durability above already has it; scaled by
+        # what a body soaks, it does the one thing it should.
+        soak_share = min(defense, share) / share if share > 0 else 0.0
+        combat = (offense + c.AI_W_DURABILITY * (durability / mean_durability)
+                  + c.AI_W_SOAK * soak_share)
 
         bomb_range = bombard_range(name, stats)
         if bomb_range:

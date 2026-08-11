@@ -44,6 +44,18 @@ LIBRARY = {
 }
 
 
+#: Two units rigged to differ in exactly one thing: what they absorb.
+#: Against a volley of 2000 over a stack of 5 the share is 400, so Paper's bite
+#: is 400 and Plated's is the AI_MIN_DAMAGE_FRACTION floor of 40 -- ten times
+#: less. Giving Plated a tenth of the health therefore makes their durability
+#: identical, and their attack is equal, so any remaining gap in `combat` is the
+#: dilution term alone and can be asserted exactly.
+SOAK_PAIR = {
+    "Paper":  unit(attack=100, defense=0, health=1000),
+    "Plated": unit(attack=100, defense=400, health=100),
+}
+
+
 def econ(materials=10000, manpower=10000, fuel=1000,
          upkeep_mat=0, upkeep_man=0, upkeep_fuel=0):
     return {"total_inc": {"materials": materials, "manpower": manpower, "fuel": fuel},
@@ -131,6 +143,43 @@ class ValuationTests(unittest.TestCase):
                    "Absurd": unit(defense=999999, health=1000)}
         values = ue.evaluate(list(library), library, context(volley=2000.0, stack=5.0))
         self.assertEqual(values["Tough"].durability, values["Absurd"].durability)
+
+    def test_a_zero_defense_body_earns_no_dilution_credit(self):
+        """apply_group_damage deals sum(max(0, volley/N - defense)). At defense 0
+        that is exactly `volley` however many bodies share it, so splitting into
+        more of them absorbs nothing and must be worth nothing.
+
+        This used to be a flat bonus every unit collected, which made the
+        cheapest body in the game the best buy for any nation whose manpower was
+        cheap -- the reason the USA filled its queues with militia.
+        """
+        values = ue.evaluate(list(SOAK_PAIR), SOAK_PAIR, context(volley=2000.0, stack=5.0))
+        paper = values["Paper"]
+        self.assertAlmostEqual(paper.combat - paper.offense - c.AI_W_DURABILITY, 0.0)
+
+    def test_defense_still_earns_dilution_credit(self):
+        """The term is scaled, not deleted: armour that actually absorbs a hit
+        is still worth something purely for being an extra body."""
+        values = ue.evaluate(list(SOAK_PAIR), SOAK_PAIR, context(volley=2000.0, stack=5.0))
+        # The pair is built to have identical offense and identical durability,
+        # so the whole gap between them is the dilution term -- and Plated's
+        # defense covers the entire incoming share, so it earns the full weight.
+        gap = values["Plated"].combat - values["Paper"].combat
+        self.assertAlmostEqual(gap, c.AI_W_SOAK)
+
+    def test_a_cheap_body_does_not_beat_a_better_one_of_the_same_role(self):
+        """The militia case, in miniature: same manpower, a third of the
+        materials, and half of everything that matters in a fight. Cheapness
+        must not make up for it."""
+        library = {"Militia": unit(attack=110, defense=0, health=1100,
+                                   mat=300, man=1000, time=1),
+                   "Regulars": unit(attack=410, defense=0, health=2550,
+                                    mat=655, man=1000, time=2)}
+        # A nation whose manpower is far cheaper than its materials -- exactly
+        # the price ratio that used to flip this the wrong way.
+        prices = {"manpower": 2.5, "materials": 15.0, "fuel": 15.0}
+        values = ue.evaluate(list(library), library, context(prices=prices))
+        self.assertGreater(values["Regulars"].score, values["Militia"].score)
 
     def test_a_heavier_volley_makes_everything_less_durable(self):
         light = ue.evaluate(list(LIBRARY), LIBRARY, context(volley=500.0))
