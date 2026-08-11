@@ -79,5 +79,140 @@ class OrderResetTests(unittest.TestCase):
             self.assertIn(kind, c.ORDERS_BLOCKING_MOVEMENT)
 
 
+class BombardmentScreen:
+    """Three tiles in a row: home - near - far."""
+
+    def __init__(self, near_units=(), far_units=()):
+        self.map_data = {
+            "home": {"id": 1, "json_key": "home", "owner": "Avaria", "neighbors": [2],
+                     "units": []},
+            "near": {"id": 2, "json_key": "near", "owner": "Bruland", "neighbors": [1, 3],
+                     "units": list(near_units)},
+            "far": {"id": 3, "json_key": "far", "owner": "Bruland", "neighbors": [2],
+                    "units": list(far_units)},
+        }
+        self.id_to_province = {p["id"]: p for p in self.map_data.values()}
+        self.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
+                            "Bruland": {"at_war_with": ["Avaria"]}}
+
+
+def enemy(attack=500, health=2000):
+    return {"type": "Infantry Type 1936", "owner": "Bruland",
+            "attack": attack, "defense": 0, "health": health}
+
+
+class BombardmentTests(unittest.TestCase):
+    """The AI had no bombardment code at all -- it bought guns, priced them for
+    a barrage, then walked them into melee to swing a much smaller melee attack.
+    """
+
+    def gun(self, kind="Artillery III"):
+        return {"type": kind, "owner": "Avaria", "health": 200,
+                "order": {"type": "MOVE", "path": []}}
+
+    def test_a_gun_shells_an_adjacent_enemy_instead_of_charging_it(self):
+        screen = BombardmentScreen(near_units=[enemy()])
+        gun = self.gun()
+        fired = ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
+        self.assertTrue(fired)
+        self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
+
+    def test_a_gun_with_nothing_in_range_is_left_to_move(self):
+        screen = BombardmentScreen()
+        gun = self.gun()
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"]))
+        self.assertEqual(gun["order"], {"type": "MOVE", "path": []})
+
+    def test_an_ordinary_unit_never_bombards(self):
+        screen = BombardmentScreen(near_units=[enemy()])
+        rifles = self.gun("Infantry Type 1936")
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", rifles,
+                                                  screen.map_data["home"]))
+
+    def test_range_two_reaches_past_the_next_tile(self):
+        """A Railgun outranges an Artillery piece, and must use it."""
+        screen = BombardmentScreen(far_units=[enemy()])
+        short, long = self.gun("Artillery III"), self.gun("WW2 Railroad Gun")
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", short,
+                                                  screen.map_data["home"]))
+        self.assertTrue(ai_movement._try_bombard(screen, "Avaria", long,
+                                                 screen.map_data["home"]))
+        self.assertEqual(long["order"]["target_id"], 3)
+
+    def test_the_heaviest_enemy_stack_is_picked(self):
+        screen = BombardmentScreen(near_units=[enemy(attack=10, health=10)],
+                                   far_units=[enemy(attack=900, health=5000)])
+        gun = self.gun("WW2 Railroad Gun")
+        ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
+        self.assertEqual(gun["order"]["target_id"], 3)
+
+    def test_a_tile_holding_only_non_enemies_is_not_shelled(self):
+        neutral = dict(enemy(), owner="Cirenia")
+        screen = BombardmentScreen(near_units=[neutral])
+        gun = self.gun()
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun,
+                                                  screen.map_data["home"]))
+
+    def test_a_gun_riding_a_convoy_cannot_fire(self):
+        """The loaded name is not in the unit library and not in the table."""
+        screen = BombardmentScreen(near_units=[enemy()])
+        loaded = self.gun("Convoy (Artillery III)")
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", loaded,
+                                                  screen.map_data["home"]))
+
+
+def empty_ctx(**over):
+    ctx = {"unsafe_waters": set(), "friendly_nations": {"Avaria"}, "war_borders": set(),
+           "peace_borders": set(), "coastal_borders": set(), "unclaimed_targets": set(),
+           "active_battles": set(), "lost_battles": {}, "at_war": True,
+           "target_destinations": [], "naval_destinations": [],
+           "target_assignments": {}, "naval_assignments": {}}
+    ctx.update(over)
+    return ctx
+
+
+class BombardmentPriorityTests(unittest.TestCase):
+    """Where the barrage sits relative to the retreat decisions.
+
+    A gun that can shell should shell rather than charge -- but a fleet that is
+    losing should still withdraw rather than stand and fire, which is what putting
+    the attempt ahead of the naval retreat check would have caused.
+    """
+
+    def screen_with_a_losing_fleet(self):
+        screen = BombardmentScreen()
+        home = screen.map_data["home"]
+        home["neighbors"] = [2, 3]
+        screen.map_data["far"]["neighbors"] = [1, 2]
+        # A sea tile to run to, and an overwhelming enemy fleet in our own.
+        for key in ("home", "near", "far"):
+            screen.map_data[key]["terrain"] = "ocean"
+        ship = {"type": "Aircraft Carrier III", "owner": "Avaria", "health": 500,
+                "attack": 10, "defense": 0, "order": {"type": "MOVE", "path": []}}
+        home["units"] = [ship, dict(enemy(attack=99999, health=99999))]
+        screen.map_data["near"]["units"] = [enemy()]
+        return screen, ship
+
+    def test_a_losing_fleet_withdraws_instead_of_shelling(self):
+        screen, ship = self.screen_with_a_losing_fleet()
+        ai_movement._assign_unit_orders(
+            screen, "Avaria", [(ship, screen.map_data["home"])], empty_ctx(),
+            {1, 2, 3}, {1, 2, 3}, {})
+        self.assertNotEqual(ship["order"].get("type"), "BOMBARD")
+        self.assertTrue(ship["order"].get("path"), "it should be running")
+
+    def test_a_gun_holding_a_contested_tile_fires_while_it_holds(self):
+        """Bombarding does not stop a unit fighting where it stands, so a gun
+        pinned in a melee has no reason not to also shell the tile next door."""
+        screen = BombardmentScreen(near_units=[enemy()])
+        home = screen.map_data["home"]
+        gun = {"type": "Artillery III", "owner": "Avaria", "health": 200,
+               "attack": 100, "defense": 0, "order": {"type": "MOVE", "path": []}}
+        home["units"] = [gun, dict(enemy(attack=1, health=1))]
+        ai_movement._assign_unit_orders(
+            screen, "Avaria", [(gun, home)], empty_ctx(), {1, 2, 3}, set(), {})
+        self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
+
+
 if __name__ == "__main__":
     unittest.main()
