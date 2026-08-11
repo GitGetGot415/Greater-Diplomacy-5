@@ -26,19 +26,52 @@ def _unit_costs(unit_library, unit_name):
 # both read and adjust, so they're threaded through as a single `state` dict
 # rather than a long, easy-to-misorder parameter list.
 
+def _deficit_list(upkeep, income, targets):
+    """Which of the three resources this nation is overspending on.
+
+    `targets` is keyed the same way `upkeep` and `income` are, and the answer
+    comes back keyed by the unit stat that costs the resource, since every
+    caller wants to ask "does this unit cost something I am short of".
+    """
+    stat_for = {"manpower": "cost_manpower", "materials": "cost_materials",
+                "fuel": "cost_fuel"}
+    over = []
+    for res, stat in stat_for.items():
+        inc = income.get(res, 0)
+        ratio = upkeep.get(res, 0) / inc if inc > 0 else 1.0
+        if ratio > targets[res]:
+            over.append(stat)
+    return over
+
+
+def _disband_peacetime_militia(ai_name, my_provs, at_war):
+    """Militia are for wars. At peace, stand them down.
+
+    Runs after the purchase loop rather than before it, and skips any type on
+    order, because the purchase loop is name-blind and buys militia whenever its
+    own valuation rates them worth buying -- so from the other side of the pass
+    this rule was scrapping militia the nation had just paid for. Reading the
+    queue beforehand would have read last turn's.
+    """
+    if at_war:
+        return
+    on_order = {q.get("unit_type") for prov in my_provs
+                for q in prov.get("unit_queue", []) if q.get("unit_type")}
+    for prov in my_provs:
+        for u in prov.get("units", []):
+            if (u.get("owner") == ai_name
+                    and queries.get_base_unit_name(u.get("type", "")) == "Militia"
+                    and u.get("type", "") not in on_order
+                    and u.get("order", {}).get("type") != "DISBAND"):
+                u["order"] = {"type": "DISBAND", "turns_left": 1}
+
+
 def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_library):
     """Section 1: upkeep-vs-income ratios (including the pending build queue,
     so the AI doesn't bankrupt itself on units that haven't spawned yet) and
-    which resources are in deficit. Disbands standing Militia in peacetime."""
+    which resources are in deficit."""
     at_war = len(data.get("at_war_with", [])) > 0
     war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
-
-    # Disband Militia in peacetime
-    if not at_war:
-        for prov in my_provs:
-            for u in prov.get("units", []):
-                if u.get("owner") == ai_name and queries.get_base_unit_name(u.get("type", "")) == "Militia" and u.get("order", {}).get("type") != "DISBAND":
-                    u["order"] = {"type": "DISBAND", "turns_left": 1}
 
     target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
     target_mat = c.AI_UPKEEP_TARGETS["materials"] * war_mult
@@ -50,6 +83,16 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
     upk_man = econ["upkeep"]["manpower"]
     inc_fuel = econ["total_inc"]["fuel"]
     upk_fuel = econ["upkeep"]["fuel"]
+
+    income = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
+    targets = {"manpower": target_man, "materials": target_mat, "fuel": target_fuel}
+
+    # What the army standing on the map costs today, before anything on order.
+    # The disband decision keys off this and only this: counting the queue there
+    # made a nation delete real units to fund units that had not arrived yet,
+    # and then delete those too once they did.
+    standing_deficits = _deficit_list(
+        {"manpower": upk_man, "materials": upk_mat, "fuel": upk_fuel}, income, targets)
 
     # --- THE FIX: Include Pending Queue in Upkeep Projections ---
     # Prevents the AI from bankupting itself on units that haven't spawned yet
@@ -67,10 +110,8 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
     ratio_mat = upk_mat / inc_mat if inc_mat > 0 else 1.0
     ratio_fuel = upk_fuel / inc_fuel if inc_fuel > 0 else 1.0
 
-    deficits = []
-    if ratio_man > target_man: deficits.append("cost_manpower")
-    if ratio_mat > target_mat: deficits.append("cost_materials")
-    if ratio_fuel > target_fuel: deficits.append("cost_fuel")
+    deficits = _deficit_list(
+        {"manpower": upk_man, "materials": upk_mat, "fuel": upk_fuel}, income, targets)
 
     return {
         "at_war": at_war,
@@ -79,6 +120,7 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
         "upk_man": upk_man, "upk_mat": upk_mat, "upk_fuel": upk_fuel,
         "ratio_man": ratio_man, "ratio_mat": ratio_mat, "ratio_fuel": ratio_fuel,
         "deficits": deficits,
+        "standing_deficits": standing_deficits,
     }
 
 
@@ -127,24 +169,66 @@ def _update_fuel_conversion_slider(data, state):
         data["mat_to_fuel_slider"] = 0.0
 
 
-def _disband_worst_unit_if_deficit(data, my_provs, ai_name, deficits, unit_library):
-    """If any resource is in deficit, disbands whichever owned unit costs one
-    of the deficit resources and is either obsolete or weakest."""
+def _is_frontline(map_screen, ai_name, prov):
+    """Whether a province is in combat or has an enemy standing next door.
+
+    Same two questions the panic-militia pass asks, in the same order, since
+    "somewhere the war is" is one idea and not two.
+    """
+    if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
+        return True
+    for n_id in prov.get("neighbors", []):
+        n_prov = map_screen.id_to_province.get(n_id)
+        if not n_prov:
+            continue
+        for u in n_prov.get("units", []):
+            if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data):
+                return True
+    return False
+
+
+def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits,
+                                   unit_library, values=None):
+    """If any resource is in deficit, gives up the one unit worth least to this
+    nation that costs a resource it is short of.
+
+    It used to rank by raw `attack`, which is not what the AI buys by: the
+    purchase loop takes the argmax of ai_unit_eval's marginal score, so a nation
+    would pay for the unit its evaluator rated best and then delete that same
+    unit as its "worst" -- Japan, the German Reich and France were each buying
+    and disbanding one type in the same turn. Selling by the valuation it buys
+    with is the whole of the fix; obsolescence stays the first key, because that
+    part was always right.
+
+    Two things it will not do, both of which it used to:
+
+      - touch a unit that is fighting or has an enemy next door. Nothing here
+        ever looked at where a unit was standing, which is why they went missing
+        off the front line. If every candidate is at the front, give up nothing:
+        losing the war costs more than the deficit does.
+      - delete a type this nation is currently producing. Whatever the scores
+        say, paying for a unit and scrapping its twin in one turn is incoherent.
+    """
     if not deficits:
         return
 
-    owned_units = []
-    for prov in my_provs:
-        for u in prov.get("units", []):
-            if u.get("owner") == ai_name and u.get("order", {}).get("type") != "DISBAND":
-                owned_units.append(u)
+    values = values or {}
+    on_order = {q.get("unit_type") for prov in my_provs
+                for q in prov.get("unit_queue", []) if q.get("unit_type")}
 
     candidates = []
-    for u in owned_units:
-        u_type = u.get("type", "")
-        stats = unit_library.get(u_type, {})
-        if any(stats.get(res, 0) > 0 for res in deficits):
-            candidates.append((u, u_type, stats))
+    for prov in my_provs:
+        if _is_frontline(map_screen, ai_name, prov):
+            continue
+        for u in prov.get("units", []):
+            if u.get("owner") != ai_name or u.get("order", {}).get("type") == "DISBAND":
+                continue
+            u_type = u.get("type", "")
+            if u_type in on_order:
+                continue
+            stats = unit_library.get(u_type, {})
+            if any(stats.get(res, 0) > 0 for res in deficits):
+                candidates.append((u, u_type, stats))
 
     if not candidates:
         return
@@ -153,9 +237,11 @@ def _disband_worst_unit_if_deficit(data, my_provs, ai_name, deficits, unit_libra
     def sort_key(item):
         u, u_type, stats = item
         is_obs = queries.is_unit_obsolete(u_type, res_levels)
-        # Outdated units (is_obs=True) have priority (0)
-        # Tie-breaker: lowest attack
-        return (0 if is_obs else 1, stats.get("attack", 0))
+        value = values.get(u_type)
+        # Outdated units (is_obs=True) have priority (0). Then the one the
+        # nation's own valuation rates lowest. An unscored type sorts first
+        # among its peers, being one the evaluator would never have bought.
+        return (0 if is_obs else 1, value.score if value else 0.0, u_type)
 
     candidates.sort(key=sort_key)
 
@@ -375,7 +461,8 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
         pricing fuel against the nation's own income and reserves
     """
     target_man, target_mat = state["target_man"], state["target_mat"]
-    inc_man, inc_mat = state["inc_man"], state["inc_mat"]
+    target_fuel = state["target_fuel"]
+    inc_man, inc_mat, inc_fuel = state["inc_man"], state["inc_mat"], state["inc_fuel"]
     upk_man, upk_mat, upk_fuel = state["upk_man"], state["upk_mat"], state["upk_fuel"]
 
     values = state["unit_values"]
@@ -403,12 +490,23 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
         if ratio_mat >= target_mat or ratio_man >= target_man:
             break
 
+        # Fuel was accumulated below and never once read, so the loop bought
+        # tanks and ships until materials ran out no matter what they cost to
+        # run -- and the disband pass then deleted a unit every turn to pay for
+        # them. It cannot join the break above, though: most units burn no fuel
+        # at all, and stopping outright would leave a nation unable to afford
+        # armour and therefore unable to raise infantry either. So an army it
+        # cannot fuel stops it buying more of what needs fuel, and nothing else.
+        ratio_fuel = upk_fuel / inc_fuel if inc_fuel > 0 else 1.0
+        out_of_fuel = ratio_fuel >= target_fuel
+
         # Of the units it can deploy, which can it pay for right now?
         affordable = {
             name for name, value in values.items()
             if data.get("materials", 0) >= value.stats.get("cost_materials", 0)
             and data.get("manpower", 0) >= value.stats.get("cost_manpower", 0)
             and data.get("fuel", 0) >= value.stats.get("cost_fuel", 0)
+            and not (out_of_fuel and value.stats.get("cost_fuel", 0) > 0)
         }
 
         pick, marginal = ai_unit_eval.pick_next(values, have, targets, affordable=affordable)
@@ -424,7 +522,11 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
         # budget was gone by the time armour came up. The rule here is general:
         # save only for something genuinely better, and only if income actually
         # closes the gap in a few turns.
-        best_any, best_any_marginal = ai_unit_eval.pick_next(values, have, targets)
+        # Saving up for something it cannot run is the same mistake as buying
+        # it, so a nation over its fuel target does not bank money for a tank.
+        savable = {n: v for n, v in values.items()
+                   if not (out_of_fuel and v.stats.get("cost_fuel", 0) > 0)}
+        best_any, best_any_marginal = ai_unit_eval.pick_next(savable, have, targets)
         if (best_any and best_any_marginal >= floor
                 and (not pick or marginal < best_any_marginal * c.AI_SAVE_UP_THRESHOLD)
                 and _affordable_within(best_any.stats, data, state["econ"], c.AI_SAVE_UP_TURNS)):
@@ -673,7 +775,8 @@ def process_ai_economy_decisions(map_screen):
         _update_conscription_slider(data, state)
         _update_fuel_conversion_slider(data, state)
 
-        _disband_worst_unit_if_deficit(data, my_provs, ai_name, state["deficits"], unit_library)
+        _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name,
+                                       state["standing_deficits"], unit_library, all_values)
 
         # --- NEW: Panic Militia & Combat Queue Clearing ---
         force_tally = _panic_militia_and_tally_forces(
@@ -691,6 +794,9 @@ def process_ai_economy_decisions(map_screen):
 
         # Allow the AI to purchase multiple units per turn until its budget maxes out
         _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state)
+
+        # After the purchases, so it can see what was actually ordered.
+        _disband_peacetime_militia(ai_name, my_provs, state["at_war"])
 
         # --- AI CORING PRIORITY ---
         _apply_coring_priority(map_screen, ai_name, data, my_provs)
