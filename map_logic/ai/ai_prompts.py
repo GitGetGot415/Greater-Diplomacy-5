@@ -197,14 +197,39 @@ def get_unilateral_system_prompt(action_context):
         + action_rules_and_schema("event", "In-character dialogue reacting to the event in english")
     )
 
-def get_bilateral_system_prompt(accepted):
+def get_bilateral_system_prompt(accepted, allow_override=False, reason="", confidence=1.0):
+    """The prompt for answering a proposal.
+
+    When the staff are certain -- a structural rule, not a judgement -- the
+    decision is stated as settled and the model only phrases it, which is both
+    correct and cheaper to generate. When the call is genuinely marginal the
+    recommendation is offered with its reasoning and the leader may overrule it.
+
+    Every proposal used to take the first form: "you have already decided to
+    strongly ACCEPT", with no reasoning attached and no way to disagree.
+    """
     decision_str = 'ACCEPT' if accepted else 'REJECT'
+
+    if not allow_override:
+        return (
+            "You are an AI playing a grand strategy game. You act as the leader of your nation. "
+            f"You have already decided to strongly {decision_str} the diplomatic proposal. "
+            "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
+            "You may also take a diplomatic action in response to this proposal.\n"
+            + action_rules_and_schema("proposal", "In-character dialogue responding to the proposal in english")
+        )
+
+    strength = "low" if confidence < 0.4 else "moderate"
+    reasoning = f" Their reasoning: {reason}." if reason else ""
     return (
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
-        f"You have already decided to strongly {decision_str} the diplomatic proposal. "
-        "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
+        f"Your ministers recommend that you {decision_str} the diplomatic proposal.{reasoning} "
+        f"Their confidence in that recommendation is {strength}. "
+        "You may follow it, or overrule it if your own judgement differs -- say which in 'accepted'. "
         "You may also take a diplomatic action in response to this proposal.\n"
+        "- Set 'accepted' to true to agree to the proposal, or false to refuse it.\n"
         + action_rules_and_schema("proposal", "In-character dialogue responding to the proposal in english")
+        + ', "accepted": ' + ('true' if accepted else 'false')
     )
 
 def get_custom_message_system_prompt():

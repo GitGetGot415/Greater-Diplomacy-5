@@ -147,6 +147,7 @@ class LegalityTests(unittest.TestCase):
 
     def emitted(self, game):
         ai_diplomacy.process_basic_proactive_ai(game)
+        ai_diplomacy.process_proactive_llm_tasks(game)
         out = []
         for name, data in game.nation_data.items():
             if not isinstance(data, dict):
@@ -190,6 +191,7 @@ class LegalityTests(unittest.TestCase):
         for i in range(1, 8):
             game.set_war("N0", f"N{i}")
         ai_diplomacy.process_basic_proactive_ai(game)
+        ai_diplomacy.process_proactive_llm_tasks(game)
         for name, data in game.nation_data.items():
             if not isinstance(data, dict):
                 continue

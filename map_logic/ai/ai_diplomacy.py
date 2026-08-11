@@ -1,83 +1,93 @@
 import random
 from collections import namedtuple
-from map_logic.ai import (ai_candidates, ai_handler, ai_llm_runner, ai_opinion,
-                          ai_personality, ai_prompts, ai_world)
+from map_logic.ai import (ai_candidates, ai_director, ai_evaluation, ai_handler,
+                          ai_llm_runner, ai_opinion, ai_personality, ai_prompts,
+                          ai_world)
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
 
-def _attach_generated_message(nation_data, task, final_msg):
-    """Writes an LLM-generated line onto the action the task was queued for.
-
-    The action is only updated if it is still the one this task generated text
-    for, so a declaration the AI changed its mind about isn't overwritten.
-    """
-    target_info = diplomacy_messages.get_pending(nation_data, task["sender"], task["target"])
-    if target_info.get("action") == task["action_type"]:
-        target_info["message"] = final_msg
-
-
 def process_proactive_llm_tasks(map_screen):
-    """Processes all queued proactive diplomacy texts in a background ThreadPoolExecutor."""
-    tasks = map_screen.proactive_llm_tasks
-    
-    if not tasks:
+    """Lets each nation's leader choose from the options its staff prepared.
+
+    One request per nation, carrying that nation's whole menu, and the same
+    reply supplies the wording -- so this replaces both the old per-action text
+    batch and the decisions that were made in Python before it ran. Fewer
+    requests per turn than before, deciding considerably more.
+
+    Everything on a menu was built by the ordinary rules, so a reply can only
+    ever pick something the heuristic layer had already judged legal. A nation
+    with nothing to choose between is not asked at all, which on a large map is
+    most of them.
+    """
+    pending_choices = getattr(map_screen, "proactive_choices", None) or []
+    map_screen.proactive_llm_tasks = []
+
+    if not pending_choices:
         map_screen.proactive_llm_tasks_total = 0
         map_screen.proactive_llm_tasks_completed = 0
         return
-        
-    human_players = map_screen.active_players
-    current_ai_mode = ai_handler.get_ai_mode()
-    immersion = ai_handler.get_ai_immersion_level()
-    
-    # --- DYNAMIC LOADING BAR CALCULATION ---
-    task_count = 0
-    if current_ai_mode != "OFF":
-        if immersion == "ABSOLUTE":
-            # In Absolute mode, every single proactive task calls the LLM
-            task_count = len(tasks)
-        elif immersion == "FULL":
-            # In Full mode, only tasks targeting human players call the LLM
-            task_count = sum(1 for t in tasks if t["target"] in human_players)
-        # In Lite mode, proactive tasks return None immediately, so count remains 0
-        
-    map_screen.proactive_llm_tasks_total = task_count
+
+    world = ai_world.for_screen(map_screen)
+    mode = ai_handler.get_ai_mode()
+
+    def consulted(choice):
+        if mode == "OFF" or not ai_director.should_consult(choice["candidates"]):
+            return False
+        return not ai_evaluation._use_canned_reply(
+            mode, ai_handler.get_ai_immersion_level(), is_ai_to_ai=True,
+            has_custom_msg=False, nation=choice["nation"], world=world)
+
+    jobs = [choice for choice in pending_choices if consulted(choice)]
+
+    map_screen.proactive_llm_tasks_total = len(jobs)
     map_screen.proactive_llm_tasks_completed = 0
-    
-    max_threads = queries.get_ai_threads()
-    
-    map_screen.loading_status_text = f"Drafting Proactive Responses (0/{map_screen.proactive_llm_tasks_total})..."
-    
-    active_nations = set(queries.get_living_nations(map_screen.map_data))
+    map_screen.loading_status_text = f"Directing AI Nations (0/{len(jobs)})..."
+
     my_turn_id = ai_handler.CURRENT_TURN_ID
+    active_nations = set(queries.get_living_nations(map_screen.map_data))
 
-    def call(task):
-        return ai_handler.generate_proactive_text(
-            map_screen.nation_data, active_nations, task["sender"], task["target"],
-            task["context"], human_players, my_turn_id)
+    def call(choice):
+        nation = choice["nation"]
+        note = (f"Your temperament: "
+                f"{ai_personality.describe(map_screen.nation_data, nation, map_screen.scenario_settings)}.\n")
+        system, user = ai_director.build_prompt(
+            world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
+        context = ai_evaluation.get_world_context(
+            map_screen.nation_data, active_nations, nation)
+        return ai_handler._run_provider(mode, system, f"{context}\n{user}",
+                                        my_turn_id, None, raw=True)
 
-    def record(task, llm_msg):
-        # An empty answer is the same as no answer here.
-        _attach_generated_message(map_screen.nation_data, task,
-                                  llm_msg if llm_msg else task["fallback"])
-
-    def record_fallback(task):
-        _attach_generated_message(map_screen.nation_data, task, task["fallback"])
-
-    def count(task):
-        """Only the tasks the loading bar was sized for tick it along."""
-        if current_ai_mode == "OFF":
+    def record(choice, reply):
+        if not reply or reply.get("error"):
             return
-        if immersion == "ABSOLUTE" or (immersion == "FULL" and task["target"] in human_players):
-            map_screen.proactive_llm_tasks_completed += 1
-            map_screen.loading_status_text = f"Drafting Proactive Responses ({map_screen.proactive_llm_tasks_completed}/{map_screen.proactive_llm_tasks_total})..."
+        chosen, messages = ai_director.parse(reply, choice["candidates"],
+                                             c.AI_MAX_ACTIONS_PER_TURN)
+        choice["chosen"] = chosen
+        choice["messages"] = messages
 
-    ai_llm_runner.run_llm_batch(
-        tasks, call, record, record_fallback,
-        on_progress=count,
-        should_abort=lambda: map_screen.force_skip_llm,
-        max_workers=max_threads,
-        deadline=ai_llm_runner.turn_deadline())
+    def record_fallback(choice):
+        pass    # already holds the heuristic's own pick
+
+    def count(choice):
+        map_screen.proactive_llm_tasks_completed += 1
+        map_screen.loading_status_text = (
+            f"Directing AI Nations ({map_screen.proactive_llm_tasks_completed}"
+            f"/{map_screen.proactive_llm_tasks_total})...")
+
+    if jobs:
+        ai_llm_runner.run_llm_batch(
+            jobs, call, record, record_fallback,
+            on_progress=count,
+            should_abort=lambda: map_screen.force_skip_llm,
+            max_workers=queries.get_ai_threads(),
+            deadline=ai_llm_runner.turn_deadline())
+
+    for choice in pending_choices:
+        _execute_candidates(map_screen, choice["nation"], choice["pending"],
+                            choice["chosen"], choice.get("messages"))
+
+    map_screen.proactive_choices = []
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""
@@ -142,7 +152,7 @@ PROACTIVE_PROPOSALS = {
 
 
 def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
-                              context_target=None, parameters=None):
+                              context_target=None, parameters=None, message=None):
     """Queues one AI-initiated proposal and books the job that writes its text.
 
     Every section of the proactive pass builds the same three things -- the
@@ -153,10 +163,12 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     spec = PROACTIVE_PROPOSALS[action]
     fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(spec.fallback_key, spec.fallback)
 
+    # A war declaration's queued_message is the wargoal, not prose, so the
+    # leader's own wording never replaces it.
     entry = {
         "action": action,
         "turns": 0,
-        "message": spec.queued_message or fallback,
+        "message": spec.queued_message or (message.strip() if message else fallback),
     }
     if parameters:
         entry["parameters"] = parameters
@@ -165,22 +177,21 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     if spec.cooldown:
         queries.set_ai_diplo_cooldown(ai_name, target, action, map_screen.nation_data)
 
-    map_screen.proactive_llm_tasks.append({
-        "sender": ai_name,
-        "target": target,
-        "context": ai_prompts.get_proactive_action_context(action, context_target),
-        "fallback": fallback,
-        "action_type": action,
-    })
 
+def _execute_candidates(map_screen, ai_name, pending, candidates, messages=None):
+    """Turns the chosen candidates into queued proposals.
 
-def _execute_candidates(map_screen, ai_name, pending, candidates):
-    """Turns the chosen candidates into queued proposals."""
+    `messages` is the leader's own wording per candidate index, when one was
+    generated; without it each proposal carries its canned line, which is what
+    happens with the model off or after a Force Skip.
+    """
+    messages = messages or {}
     for candidate in candidates:
         _queue_proactive_proposal(
             map_screen, pending, ai_name, candidate.target, candidate.action,
             context_target=candidate.payload.get("context_target"),
-            parameters=candidate.payload.get("parameters"))
+            parameters=candidate.payload.get("parameters"),
+            message=messages.get(candidate.cid))
 
 
 def _decrement_diplo_cooldowns(data):
@@ -468,6 +479,57 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
                             break
 
 
+def _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_nations, world):
+    """Section 5.5: reconsiders what the leader asked for last turn.
+
+    The model can push for an action while answering a proposal. That used to be
+    executed on the spot, which meant a war declaration skipped the waiting
+    period, the border requirement and the need for a wargoal, and went ahead
+    with WARGOAL_NO_CB against a nation the AI might not be able to reach.
+
+    Requests are now offered here instead, and only if they clear exactly the
+    same checks as anything the staff proposed. A legal one carries a bonus,
+    because the leader wanting it is real information -- an illegal one is
+    dropped, with a rumour in the log so the pressure is still visible.
+    """
+    requests = data.get("ai_requests") or []
+    if not requests:
+        return
+    data["ai_requests"] = []
+
+    current_turn = queries.get_total_turns(map_screen.time_manager)
+    turns_to_wait = int(map_screen.scenario_settings.get(
+        "turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
+
+    for request in requests:
+        target = request.get("target")
+        action = request.get("action")
+        if action != "WAR_DECLARATION" or target not in active_nations or target == ai_name:
+            continue
+        if current_turn - request.get("turn", 0) > c.AI_REQUEST_LIFETIME:
+            continue
+
+        legal = (current_turn >= turns_to_wait
+                 and target not in my_enemies
+                 and target in world.neighbors.get(ai_name, ())
+                 and not queries.are_in_same_faction(ai_name, target, map_screen.nation_data)
+                 and not queries.has_active_truce(ai_name, target, map_screen.nation_data)
+                 and queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
+                 and ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target,
+                                                   "WAR_DECLARATION"))
+        if not legal:
+            diplomacy_events.log_global_event(
+                map_screen.nation_data,
+                f"RUMOR: {ai_name} weighed war with {target} and thought better of it.")
+            continue
+
+        desire = ai_opinion.war_desire(world, ai_name, target, map_screen.scenario_settings)
+        bag.add(ai_candidates.make(
+            "WAR_DECLARATION", target, min(1.0, desire + c.AI_LLM_REQUEST_BONUS),
+            f"our own government has pressed for this war since {request.get('reason') or 'last season'}",
+            context_target=target))
+
+
 def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world):
     """Section 6: a faction leader recruits nations it gets on with.
 
@@ -631,6 +693,7 @@ def _run_basic_proactive_ai(map_screen):
     # holds the reachability graph that used to be built here, plus the
     # per-pair answers each section below would otherwise sweep the map for.
     world = ai_world.for_screen(map_screen)
+    map_screen.proactive_choices = []
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
@@ -683,17 +746,25 @@ def _run_basic_proactive_ai(map_screen):
 
         _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world)
 
+        _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_nations, world)
+
         if not getattr(c, "DISABLE_FACTIONS", False):
             _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world)
 
         _offer_trades(bag, map_screen, ai_name, active_nations, world)
 
-        # With the model off this is simply the best few by score, which on its
-        # own is what fixes the starvation above. Phase 4 hands the same list to
-        # the model to choose from -- and because every entry was built by the
-        # ordinary rules, there is nothing illegal on it for it to pick.
-        chosen = bag.ranked(limit=c.AI_MAX_ACTIONS_PER_TURN)
-        _execute_candidates(map_screen, ai_name, pending, chosen)
+        # Held rather than executed. The director pass runs next and gives each
+        # nation's leader the chance to pick differently from its staff; without
+        # a model, or after a Force Skip, `chosen` is what actually happens.
+        ranked = bag.ranked()
+        if ranked:
+            map_screen.proactive_choices.append({
+                "nation": ai_name,
+                "pending": pending,
+                "candidates": ranked,
+                "chosen": ranked[:c.AI_MAX_ACTIONS_PER_TURN],
+                "messages": {},
+            })
 
         if is_already_at_war and not (my_master and my_type == c.PUPPET_TYPE_INTEGRATED):
             _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations)
@@ -1076,16 +1147,20 @@ def process_scripted_events(map_screen):
                                 }
 
                                 if ai_generate:
-                                    action_context = ai_prompts.get_proactive_action_context(eng_action, a_target)
-
+                                    # Generated here rather than queued. Scripted
+                                    # events run *after* the LLM pass, so anything
+                                    # appended to its task list was never picked
+                                    # up -- the ai_generate checkbox has quietly
+                                    # done nothing. There are only ever a handful
+                                    # of these in a turn, so an inline call costs
+                                    # little and makes the option real.
                                     fallback = custom_msg if custom_msg else "We have sent a diplomatic missive."
-                                    map_screen.proactive_llm_tasks.append({
-                                        "sender": nation_name,
-                                        "target": a_target,
-                                        "context": action_context,
-                                        "fallback": fallback,
-                                        "action_type": eng_action
-                                    })
+                                    generated = ai_handler.generate_proactive_text(
+                                        map_screen.nation_data, active_nations, nation_name,
+                                        a_target,
+                                        ai_prompts.get_proactive_action_context(eng_action, a_target),
+                                        human_players, ai_handler.CURRENT_TURN_ID)
+                                    pending[a_target]["message"] = generated or fallback
                             
                 if evt.get("fire_once", True) and i not in fired_events:
                     fired_events.append(i)

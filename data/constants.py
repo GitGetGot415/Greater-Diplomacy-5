@@ -947,6 +947,48 @@ AI_TRADE_OFFER_FRACTION = 0.5
 AI_TRADE_MIN_AMOUNT = 250
 
 # How each action reads in a prompt or an event log.
+# ==========================================
+# LLM DIRECTOR (map_logic/ai/ai_director.py)
+# ==========================================
+
+# Per-country override of whether a nation is model-driven, stored on
+# nation_data so it saves with everything else. AUTO defers to the global
+# immersion level.
+AI_TIER_AUTO = "AUTO"
+AI_TIER_ALWAYS = "ALWAYS"
+AI_TIER_NEVER = "NEVER"
+
+# The immersion levels, in order. MAJOR sits between FULL and ABSOLUTE: the
+# model drives the countries a player actually notices, which is great-power
+# diplomacy at a fraction of what ABSOLUTE costs.
+AI_IMMERSION_LEVELS = ("LITE", "FULL", "MAJOR", "ABSOLUTE")
+
+# Who counts as a major power: the strongest handful, plus everyone whose doings
+# a player would see anyway.
+AI_MAJOR_POWER_FRACTION = 0.15
+AI_MAJOR_POWER_MIN = 6
+AI_MAJOR_POWER_MAX = 12
+AI_MAJOR_POWER_PROVINCE_WEIGHT = 5.0   # size counts, but an army counts more
+
+# The index the model answers with to decline to act. Must not collide with a
+# candidate index, so it is not a number.
+AI_DIRECTOR_NONE_CID = "none"
+
+# A verdict at or above this confidence is stated to the model as settled and
+# cannot be overruled -- those are structural rules, not judgement calls. Below
+# it the recommendation is offered with its reasoning and the leader may differ.
+AI_VERDICT_OVERRIDE_MAX_CONFIDENCE = 0.85
+
+# An action the model pushed for while answering a proposal is filed rather than
+# executed, and reconsidered next turn against the ordinary rules. True restores
+# the old behaviour, where such an action skipped every war prerequisite.
+AI_LLM_DIRECT_RETALIATION = False
+AI_REQUEST_LIFETIME = 3          # turns a filed request stays worth acting on
+AI_REQUEST_REASON_LENGTH = 120
+# How much the leader having asked for it counts. Enough to break a tie, not
+# enough to carry a war the nation has no appetite for.
+AI_LLM_REQUEST_BONUS = 0.25
+
 AI_ACTION_PHRASES = {
     "WAR_DECLARATION": "declare war on",
     "CEASEFIRE": "offer a ceasefire to",

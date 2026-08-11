@@ -40,7 +40,8 @@ from data import queries
 class AIWorld:
     """Per-turn snapshot of the map, with memoised strength/relation queries."""
 
-    def __init__(self, map_data, nation_data, id_to_province, total_turns=0):
+    def __init__(self, map_data, nation_data, id_to_province, total_turns=0,
+                 human_players=()):
         self.map_data = map_data
         self.nation_data = nation_data
         self.id_to_province = id_to_province
@@ -83,6 +84,10 @@ class AIWorld:
         self._reachable = {}
         self._core_claim_targets = {}
         self._economies = None
+        self._major_powers = None
+        #: Who is playing, so "a country the player would notice" can be
+        #: answered. Empty is fine -- a spectator notices everyone equally.
+        self.human_players = list(human_players or ())
 
         self._sweep()
         self.border_graph = queries.build_national_border_graph(map_data, id_to_province)
@@ -351,6 +356,44 @@ class AIWorld:
         return cached
 
     # ------------------------------------------------------------------
+    # Standing
+    # ------------------------------------------------------------------
+
+    @property
+    def major_powers(self):
+        """The nations worth spending a model call on.
+
+        The strongest handful by army, economy and size -- plus everyone whose
+        doings a player would see anyway: who they are fighting, who they
+        border, and whoever leads a bloc. A great power the player will never
+        meet matters less here than the small neighbour they are at war with.
+        """
+        if self._major_powers is None:
+            living = [n for n in self.provs_by_owner
+                      if n not in c.UNPLAYABLE_NATIONS
+                      and isinstance(self.nation_data.get(n), dict)]
+
+            count = int(len(living) * c.AI_MAJOR_POWER_FRACTION) + 1
+            count = max(c.AI_MAJOR_POWER_MIN, min(c.AI_MAJOR_POWER_MAX, count))
+
+            ranked = sorted(living, key=lambda n: (
+                -(self.military(n) + self.econ_power(n) / 100.0
+                  + len(self.provs_by_owner.get(n, ())) * c.AI_MAJOR_POWER_PROVINCE_WEIGHT), n))
+
+            notable = set(ranked[:count])
+            for name in living:
+                data = self.nation_data.get(name, {})
+                if data.get("is_faction_leader"):
+                    notable.add(name)
+                for human in self.human_players:
+                    if human in queries.get_enemies(name, self.nation_data):
+                        notable.add(name)
+                    elif human in self.neighbors.get(name, ()):
+                        notable.add(name)
+            self._major_powers = notable
+        return self._major_powers
+
+    # ------------------------------------------------------------------
     # Economy
     # ------------------------------------------------------------------
 
@@ -375,7 +418,8 @@ def build(map_screen):
         total_turns = queries.get_total_turns(time_manager)
 
     return AIWorld(map_screen.map_data, map_screen.nation_data,
-                   map_screen.id_to_province, total_turns)
+                   map_screen.id_to_province, total_turns,
+                   human_players=getattr(map_screen, "active_players", ()))
 
 
 def for_screen(map_screen):

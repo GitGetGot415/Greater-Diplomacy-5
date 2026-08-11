@@ -9,10 +9,9 @@ working.
 import collections
 
 import data.constants as c
-from map_logic.ai import ai_opinion, ai_unit_eval
+from map_logic.ai import ai_opinion, ai_settings, ai_unit_eval
 from data import queries
 from map_logic.ai import ai_prompts
-from map_logic.ai import ai_settings
 
 
 def _to_int(value, default=0):
@@ -47,7 +46,36 @@ def _reply(message, source=None, accepted=None):
     return reply
 
 
-def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True):
+def llm_enabled_for(nation, world=None):
+    """Whether this particular nation is model-driven, or None for "use the
+    global rule".
+
+    A per-country setting always wins, so a player can make the rival they care
+    about model-driven without paying for the other forty. Otherwise ABSOLUTE
+    means everyone and MAJOR means the countries a player actually notices --
+    which is the mode worth recommending: great-power diplomacy at a fraction of
+    ABSOLUTE's cost.
+    """
+    if not nation:
+        return None
+
+    nation_data = getattr(world, "nation_data", None) or {}
+    tier = (nation_data.get(nation) or {}).get("llm_tier", c.AI_TIER_AUTO)
+    if tier == c.AI_TIER_ALWAYS:
+        return True
+    if tier == c.AI_TIER_NEVER:
+        return False
+
+    immersion = ai_settings.get_ai_immersion_level()
+    if immersion == "ABSOLUTE":
+        return True
+    if immersion == "MAJOR":
+        return world is not None and nation in world.major_powers
+    return None
+
+
+def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True,
+                      nation=None, world=None):
     """Whether this exchange skips the LLM and answers from the canned table.
 
     One rule for all three entry points. Proactive text passes
@@ -56,11 +84,17 @@ def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True):
     """
     if mode == "OFF":
         return True
+
+    decided = llm_enabled_for(nation, world)
+    if decided is not None:
+        return not decided
+
     if immersion == "ABSOLUTE":
         return False
     if immersion == "FULL":
         return is_ai_to_ai
-    # LITE: only a human's own words are worth generating a reply to.
+    # LITE (and any level an older build does not recognise): only a human's own
+    # words are worth generating a reply to.
     return not (has_custom_msg and not is_ai_to_ai)
 
 
@@ -305,34 +339,52 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     mode = ai_settings.get_ai_mode()
     immersion = ai_settings.get_ai_immersion_level()
 
-    accepted = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
-                                action_type, custom_msg, world=world,
-                                scenario_settings=scenario_settings).accepted
+    verdict = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
+                               action_type, custom_msg, world=world,
+                               scenario_settings=scenario_settings)
+    accepted = verdict.accepted
 
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
 
-    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip())):
+    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip()),
+                         nation=ai_nation, world=world):
         key = LITE_RESPONSE_KEYS.get(action_type,
                                      "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
         return _reply(ai_prompts.AI_FALLBACK_RESPONSES[key], accepted=accepted)
 
-    print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
+    print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
+
+    # A marginal judgement is exactly where a leader's own view should be allowed
+    # to differ from the staff's. A hard rule -- an integrated puppet cannot
+    # trade, we are already in a faction -- is not a judgement, and stays settled.
+    allow_override = verdict.confidence < c.AI_VERDICT_OVERRIDE_MAX_CONFIDENCE
 
     # --- Split logic between Proposals and Unilateral Declarations ---
     if action_type in c.UNILATERAL_ACTIONS:
         action_context = ai_prompts.get_unilateral_receive_context(action_type, sender_nation, custom_msg)
         system_prompt = ai_prompts.get_unilateral_system_prompt(action_context)
         user_prompt = f"{context}\n{action_context} Provide your reaction."
+        allow_override = False
     else:
         action_context = ai_prompts.get_bilateral_receive_context(action_type, sender_nation, custom_msg)
-        system_prompt = ai_prompts.get_bilateral_system_prompt(accepted)
-        user_prompt = f"{context}\n{action_context} Provide your response based on your decision."
+        system_prompt = ai_prompts.get_bilateral_system_prompt(
+            accepted, allow_override, verdict.reason, verdict.confidence)
+        user_prompt = f"{context}\n{action_context} Provide your response."
 
-    return ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
-                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted)
+    reply = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
+                                     ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted,
+                                     raw=True)
+    if reply is None:
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=accepted)
+
+    if allow_override and isinstance(reply.get("accepted"), bool):
+        accepted = reply["accepted"]
+
+    return _reply(reply.get("message", f"{mode} ERROR: reply had no 'message' field"),
+                  reply, accepted)
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None):
     from map_logic.ai import ai_handler
