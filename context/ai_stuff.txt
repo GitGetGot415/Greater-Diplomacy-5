@@ -124,11 +124,25 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               too small or too large -- UPKEEP_MODIFIERS["fuel"]
                               is 0.50 against 0.05 for materials, so fuel is
                               what actually binds
+  MAX_COMBAT_ATTACKERS        combat width. Not an AI setting, but the AI reads
+                              it in nine places, so raising it buys roughly
+                              proportionally more assault units per frontline
+                              tile and lets fronts hold proportionally more.
+                              Source-only: no scenario field, no editor field
+  AI_REINFORCE_COMBAT_WEIGHT  how hard a battle pulls units in, at full
+                              strength on an empty tile and fading to nothing
+                              as the firing line fills
+  AI_REAR_GUARD_PENALTY       how hard a quiet border pushes units away once one
+                              is standing there. The guard stays at one whatever
+                              the combat width is -- a quiet border is a
+                              garrison, not a firing line
   ai_turn_budget_seconds      (a setting) wall-clock ceiling per turn's model
                               work; whatever has not answered falls back
 
-Personalities are edited in the map editor under AI Personality, which pins
-them so nothing regenerates them. A scenario can also pin them by hand:
+Personalities are edited in the map editor under AI Personality -- the purple
+button on the left bar, which pins them so nothing regenerates them. It spent
+its first release invisible, drawn underneath the Claims button on the same
+row; test_editor_menu_layout now refuses to let two buttons share ground. A scenario can also pin them by hand:
   "ai_personality_overrides": {"German Reich": {"aggression": 0.9}}
 Traits are aggression, ambition, caution, loyalty, trust, all 0.0 to 1.0.
 Without either they are procedural, which means reproducible but historically
@@ -160,6 +174,20 @@ a target in range, which is also what stops artillery charging into melee.
 Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
 movement re-plan. They did not used to, which meant no AI unit was ever
 disbanded by anything.
+
+Combat width is read everywhere, including when moving. Only the top
+MAX_COMBAT_ATTACKERS units on a tile fire, so a tile already holding a full
+firing line sorts behind every tile with a slot left however much the weights
+want it (ai_movement._tile_pressure), and a battle's pull fades as the line
+fills -- full strength on an empty tile, nothing at all once it is full. Change
+the constant and both halves follow: at 5 a tile stops competing once five are
+there, at 10 it keeps asking until ten are. Movement used to reference the
+constant nowhere and balanced purely by "fewest units assigned", so stacks came
+out at total_units / targets regardless. Measured over 20 seeds at width 5,
+that change moved 4% of the army from bodies that could not fire to bodies that
+could. The headcount is deliberately a separate dict from the weighted one: the
+weights carry a battle pull and a rear-guard push, and a tile at -18 is not a
+tile holding minus eighteen men.
 
 Disbanding is a last resort and never touches the front. A unit standing in a
 battle or with an enemy next door is never given up, and neither is a type the
@@ -196,6 +224,37 @@ Every prompt states the voice (first person plural, never your own nation in
 the third person) via ai_prompts.VOICE_RULE, and a reply that opens by naming
 its own sender is dropped for the canned line rather than sent. Small models
 need telling; llama3 wrote "Switzerland accepts your offer" as Switzerland.
+
+Which lines the model wrote is recorded. A model's line and the table's used to
+be indistinguishable the moment they left ai_evaluation -- the fallback is
+substituted by dict.get's default and travels the identical path into the
+identical send. `llm` is set at the two places text is authored (_reply, and
+the director's per-candidate messages) and rides beside the `message` it
+belongs to through pending_diplomacy into both inbox copies, where the
+spectator's overview tints those rows orange. Messages written before this
+carry no flag and show as ordinary; there is nothing to recover it from.
+
+A message also records the action that produced it, because that lived only on
+the sender's pending_diplomacy entry and was deleted on resolution -- so every
+treaty announcement read "DIPLOMACY" forever afterwards. constants.
+MESSAGE_CATEGORIES turns it into WAR / PEACE / TRADE / FACTION / ACCESS /
+PUPPET / ALLIANCE for display only: the `type` field stays TEXT or DIPLOMACY,
+because that literal is what raises the popup and draws the gold bubble.
+
+
+WHAT A SPECTATOR CAN DO
+-----------------------
+
+Three switches in constants.py, all default True, all preserving what a
+spectator could already do: SPECTATOR_CAN_EDIT_PRODUCTION,
+SPECTATOR_CAN_EDIT_RESEARCH, SPECTATOR_CAN_EDIT_APPEARANCE. Turn one off to
+hand out the view without the power.
+
+R&D means three different things depending on who clicks it. The map editor
+authors what a nation *starts* with (the bulk checkbox list). A spectator picks
+a nation and gets its real tech tree, live queue included. A player gets their
+own. The chosen nation arrives as map_screen.viewing_research_country, which is
+the same hand-off channel editing_country uses for the identity editor.
 
 At ABSOLUTE, a nation with only one legal option is still asked -- choosing
 and phrasing come from the same call, so skipping it silently skipped the
