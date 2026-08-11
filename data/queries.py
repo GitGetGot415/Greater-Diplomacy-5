@@ -202,6 +202,7 @@ _JSON_CACHE = {
     "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
     "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None},
     "historical_leaders": {"path": c.HISTORICAL_LEADERS_PATH, "data": None},
+    "ai_responses": {"path": c.AI_RESPONSES_PATH, "data": None},
 }
 
 def scenario_has_scripted_events(nation_data):
@@ -400,6 +401,7 @@ def get_unit_library(): return _load_cached_json("unit_library")
 def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")
 def get_country_data(): return _load_cached_json("country_data")
+def get_ai_responses(): return _load_cached_json("ai_responses")
 def get_historical_leader_timeline(): return _load_cached_json("historical_leaders")
 
 def save_historical_leader_timeline(data):

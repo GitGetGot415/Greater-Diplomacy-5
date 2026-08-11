@@ -291,7 +291,12 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     of PROACTIVE_PROPOSALS.
     """
     spec = PROACTIVE_PROPOSALS[action]
-    fallback = ai_prompts.AI_FALLBACK_RESPONSES.get(spec.fallback_key, spec.fallback)
+    # Who it is being said to decides how it is said: a nation that knows it is
+    # outmatched declares war differently from one that knows it is not.
+    fallback = ai_prompts.resolve(spec.fallback_key, sender=ai_name, target=target,
+                                  nation_data=map_screen.nation_data,
+                                  map_data=map_screen.map_data,
+                                  default=spec.fallback)
 
     # A war declaration's queued_message is the wargoal, not prose, so the
     # leader's own wording never replaces it.

@@ -186,12 +186,11 @@ class ProactiveWordingTests(unittest.TestCase):
                          ["We have bled enough. Name your terms."])
 
     def test_an_empty_reply_falls_back_to_the_canned_line(self):
-        self.assertEqual(self.retaliate(""),
-                         [ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_CEASEFIRE"]])
+        self.assertIn(self.retaliate("")[0], ai_prompts.lines_for("PROACTIVE_CEASEFIRE"))
 
     def test_a_third_person_reply_falls_back_too(self):
-        self.assertEqual(self.retaliate("Switzerland offers a ceasefire."),
-                         [ai_prompts.AI_FALLBACK_RESPONSES["PROACTIVE_CEASEFIRE"]])
+        self.assertIn(self.retaliate("Switzerland offers a ceasefire.")[0],
+                      ai_prompts.lines_for("PROACTIVE_CEASEFIRE"))
 
     def test_a_call_to_arms_carries_its_own_words_as_well(self):
         self.nation_data["Switzerland"]["faction"] = "Pact"

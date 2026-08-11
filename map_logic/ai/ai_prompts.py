@@ -1,70 +1,241 @@
 # ==========================================
 # FALLBACK / MANUAL AI RESPONSES
 # ==========================================
+# Every line the AI says when the model is not consulted. These used to be a
+# fifty-entry dict compiled into this file, one string per situation, so the
+# same war produced the same sentence every time and nobody could add a line
+# without editing Python. They now live in data/json/ai_responses.json, read
+# through the same cache as unit_data.json and the rest -- see resolve() for
+# the shape, and the _README key in the file itself for the authoring notes.
 
-AI_FALLBACK_RESPONSES = {
-    "AI_OFF_ACCEPT": "We accept your proposal.",
-    "AI_OFF_REJECT": "We reject your proposal.",
-    "AI_OFF_MESSAGE": "Message received (AI is OFF).",
-    "GENERIC_ACCEPT": "We have made our decision.",
-    "GENERIC_MESSAGE": "Message received.",
-    "OLLAMA_ERROR": "Ollama server error or timeout.",
-    "API_ERROR": "API Error.",
-    "TIMEOUT": "Timeout.",
-    "BETRAYAL": "You will regret this betrayal.",
-    "ALLIANCE_BROKEN": "We won't forget this.",
-    "FACTION_ABANDONED": "We will not forget your abandonment.",
-    "FACTION_DISBANDED": "It is a shame to see our alliance broken.",
-    "ACCEPTED_HELP": "We gratefully accept your assistance in our conflicts.",
-    "ANSWERED_CALL": "We will answer your call to arms.",
-    "INVITE_IGNORED": "Your faction invitation was ignored and has expired.",
-    "JOIN_REQ_IGNORED": "Your request to join the faction was ignored and has expired.",
-    "CEASEFIRE_IGNORED": "Your ceasefire offer was ignored and has expired.",
-    "CALL_TO_ARMS_IGNORED": "Your call to arms was ignored and has expired.",
-    "CANT_JOIN_FACTION": "We cannot join a new faction while we are already bound to our own treaties.",
-    "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war.",
-    "KICKED_FROM_FACTION": "We will not forget being expelled from the alliance.",
-    "REJECT_JOIN_WAR_NO_ALLIANCE": "We wanted to join your wars, but our lack of formal alliance prevents it.",
-    "REQUEST_JOIN_WARS": "We request permission to join your ongoing wars.",
-    "FOLLOW_UP_DECLARATION": "Following through on our previous declaration.",
-    "BREAK_ALLIANCE": "We have broken our alliance.",
-    
-    "PROACTIVE_JOIN_WAR": "May we join you in your war?",
-    "PROACTIVE_DECLARE_WAR": "Your occupation of our rightful territory ends now!",
-    "PROACTIVE_JOIN_FACTION": "Our enemies are aligned, let us join your faction to stand against them.",
-    "PROACTIVE_CREATE_FACTION": "We propose establishing a new faction together.",
-    
-    "PROACTIVE_TRADE": "We propose a trade agreement.",
-    "ACCEPT_TRADE": "We gladly accept your trade offer.",
-    "REJECT_TRADE": "This trade is unacceptable to us.",
+import random
 
-    "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
-    "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
-    "CROSS_CALL_TO_ARMS": "Our diplomats crossed paths. We stand together in all our wars!",
-    "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!",
+import data.constants as c
+from data import queries
 
-    "PROACTIVE_CEASEFIRE": "We offer terms for a ceasefire.",
-    "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
-    "PROACTIVE_REQ_MILITARY_ACCESS": "As we both fight against a common foe, we request military access through your territory.",
-    "PROACTIVE_PEACE_TREATY": "This war has cost us both too much. We propose terms.",
-    "PROACTIVE_FACTION_INVITE": "Our cause would be stronger with you in it. Join us.",
-    "PROACTIVE_TRADE": "We propose an exchange to the benefit of us both.",
 
-    "ACCEPT_GENERIC": "We accepted your {action}.",
-    "REJECT_GENERIC": "We rejected your {action}.",
-    "ACCEPT_FACTION_ALREADY_IN": "We wanted to accept, but we are already in a faction.",
-    "ACCEPT_FACTION_JOIN_ALREADY_IN": "We cannot accept as you are already in a faction.",
-    "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties.",
+#: Bands for the `strength` condition, as a ratio of our military strength to
+#: theirs. Anything between the two reads as an even match.
+STRENGTH_WEAKER = 0.7
+STRENGTH_STRONGER = 1.4
 
-    # These two were looked up by diplomacy_processor without ever being
-    # defined here, so accepting a peace treaty or a military-access request
-    # delivered a message with no content.
-    "ACCEPT_PEACE": "We accept your terms. The war between us is over.",
-    "ACCEPT_MILITARY_ACCESS": "We accept your request for military access.",
+#: Bands for the `opinion` condition, on get_relation_score's scale.
+OPINION_HOSTILE = -20
+OPINION_WARM = 25
 
-    "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord.",
-    "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord."
-}
+
+def _situation(sender, target, nation_data, world=None, map_data=None):
+    """What is true of these two right now, in the terms a `when` block uses.
+
+    Everything here is either a direct read or already memoised on the turn's
+    snapshot, so describing the situation costs nothing worth measuring even
+    when every nation on a large map wants a line in the same turn.
+    """
+    facts = {}
+    if not sender or not target or nation_data is None:
+        return facts
+
+    facts["at_war"] = queries.are_at_war(sender, target, nation_data)
+    facts["same_faction"] = queries.are_in_same_faction(sender, target, nation_data)
+
+    score = queries.get_relation_score(sender, target, nation_data)
+    facts["opinion"] = ("hostile" if score <= OPINION_HOSTILE
+                        else "warm" if score >= OPINION_WARM else "cold")
+
+    # get_military_strength counts units on the map, so it wants map_data --
+    # handing it nation_data returns 0 for everybody and silently reads every
+    # war as an even match.
+    if world is not None:
+        mine, theirs = world.strength(sender), world.strength(target)
+    elif map_data is not None:
+        mine = queries.get_military_strength(sender, map_data)
+        theirs = queries.get_military_strength(target, map_data)
+    else:
+        # Nothing to compare with. Leaving the fact out means every group that
+        # tests it is skipped and the catch-all answers, which is the honest
+        # result -- better than guessing "even" and picking a line on it.
+        return facts
+
+    if theirs > 0:
+        ratio = mine / theirs
+    elif mine > 0:
+        # An enemy with no army at all is not an even match, whatever the bands
+        # happen to be set to.
+        ratio = STRENGTH_STRONGER * 2
+    else:
+        ratio = 1.0
+    facts["strength"] = ("weaker" if ratio < STRENGTH_WEAKER
+                         else "stronger" if ratio > STRENGTH_STRONGER else "even")
+    return facts
+
+
+def _matches(condition, facts):
+    """Whether one group's `when` block holds. A missing fact never matches, so
+    an unanswerable condition falls through to the catch-all rather than firing
+    on a guess."""
+    for key, wanted in condition.items():
+        if key not in facts:
+            return False
+        allowed = wanted if isinstance(wanted, list) else [wanted]
+        if facts[key] not in allowed:
+            return False
+    return True
+
+
+def _lines_for(entry, facts, rng):
+    """One line out of whatever shape this key holds.
+
+    A bare string is a key nobody has written variants for yet, and stays legal
+    forever -- that is what lets the file be filled in a bit at a time, and what
+    keeps a mod that trims it down to strings working.
+    """
+    if isinstance(entry, str):
+        return entry
+    if not isinstance(entry, list):
+        return None
+
+    # Bare strings in the list are the simplest authoring shape and by far the
+    # most common one in the shipped file: interchangeable lines, no conditions.
+    # They gather into one implicit catch-all group rather than each being their
+    # own, or only the first of them would ever be said.
+    # They sit below every explicit group, so a file that mixes the two shapes
+    # still lets a conditioned line win.
+    plain = [g for g in entry if isinstance(g, str)]
+    best, best_specificity = (plain or None), -1
+
+    for group in entry:
+        if not isinstance(group, dict):
+            continue
+        lines = group.get("lines")
+        if isinstance(lines, str):
+            lines = [lines]
+        if not isinstance(lines, list) or not lines:
+            continue
+        condition = group.get("when") or {}
+        if not isinstance(condition, dict) or not _matches(condition, facts):
+            continue
+        # The most specific group that holds wins; an unconditional one is the
+        # catch-all and only wins when nothing else did.
+        if len(condition) > best_specificity:
+            best, best_specificity = lines, len(condition)
+
+    if not best:
+        return None
+    return rng.choice(best)
+
+
+def all_responses():
+    """The whole table as loaded from disk."""
+    return queries.get_ai_responses()
+
+
+def lines_for(key):
+    """Every line this key could ever produce, conditions ignored.
+
+    For auditing and for tests: with variants in play "the line for X" is no
+    longer a single string, so anything checking that a literal has not drifted
+    from the table has to ask whether it is still one of them.
+    """
+    entry = all_responses().get(key)
+    if isinstance(entry, str):
+        return [entry]
+    if not isinstance(entry, list):
+        return []
+
+    out = []
+    for group in entry:
+        if isinstance(group, str):
+            out.append(group)
+            continue
+        if not isinstance(group, dict):
+            continue
+        lines = group.get("lines")
+        if isinstance(lines, str):
+            lines = [lines]
+        if isinstance(lines, list):
+            out.extend(line for line in lines if isinstance(line, str))
+    return out
+
+
+def resolve(key, sender=None, target=None, nation_data=None, world=None,
+            map_data=None, default=None, rng=None, fmt=None):
+    """The line this nation says for `key`, given who it is talking to.
+
+    Groups whose conditions hold are filtered, the most specific wins, and one
+    of its lines is picked at random -- so the same nation making the same
+    proposal twice does not say the same words twice. Passing no sender leaves
+    every condition unanswerable, which resolves to the unconditional group;
+    that is what the forty-odd call sites that have no second party do.
+
+    `fmt` is a dict rather than **kwargs because one of the placeholders this
+    has to fill is literally called {target}, which would collide with the
+    nation being addressed and silently swallow it.
+    """
+    entry = all_responses().get(key)
+    if entry is None:
+        return default
+
+    facts = (_situation(sender, target, nation_data, world, map_data)
+             if sender and target else {})
+    line = _lines_for(entry, facts, rng or random)
+    if line is None:
+        return default
+    return line.format(**fmt) if fmt else line
+
+
+class _FallbackTable:
+    """dict-alike over the JSON, so the call sites that predate it keep working.
+
+    Forty-odd places index AI_FALLBACK_RESPONSES directly or call .get on it.
+    Rewriting all of them to pass a sender and a target would be a large diff
+    for no benefit at most of them -- a timeout message has no second party --
+    so this stays, answering with the unconditional line, and the sites that do
+    have both migrate to resolve() where the variation is worth having.
+    """
+
+    def _flat(self):
+        return {k: _lines_for(v, {}, random)
+                for k, v in all_responses().items() if not k.startswith("_")}
+
+    def __getitem__(self, key):
+        line = resolve(key)
+        if line is None:
+            raise KeyError(key)
+        return line
+
+    def get(self, key, default=None):
+        line = resolve(key)
+        return default if line is None else line
+
+    def __contains__(self, key):
+        return not key.startswith("_") and key in all_responses()
+
+    def __iter__(self):
+        return iter(k for k in all_responses() if not k.startswith("_"))
+
+    def keys(self):
+        return list(self)
+
+    def items(self):
+        return self._flat().items()
+
+    def values(self):
+        return self._flat().values()
+
+    def __len__(self):
+        # Counted straight from the file: going through keys() would make
+        # list(table) recurse, since list() asks for a length hint first.
+        return sum(1 for k in all_responses() if not k.startswith("_"))
+
+    def __eq__(self, other):
+        return self._flat() == other if isinstance(other, dict) else NotImplemented
+
+    def __repr__(self):
+        return repr(self._flat())
+
+
+AI_FALLBACK_RESPONSES = _FallbackTable()
+
 
 # ==========================================
 # SYSTEM PROMPTS & CONTEXT GENERATORS

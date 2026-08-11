@@ -319,20 +319,26 @@ def _gather_ai_tasks(map_screen):
     return ai_tasks
 
 
-def _get_fallback_ai_result(task):
+def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None):
     """Unified helper to gracefully fail into standard canned responses if the LLM skips or is offline."""
     action = task["action"]
     if action == "CUSTOM_MSG":
-        msg = ai_prompts.AI_FALLBACK_RESPONSES["AI_OFF_MESSAGE"]
+        key, default = "AI_OFF_MESSAGE", "Message received."
     elif action in c.UNILATERAL_ACTIONS:
         fallback_map = {
             "WAR_DECLARATION": "BETRAYAL", "LEAVE_FACTION": "FACTION_ABANDONED",
             "DISBAND_FACTION": "FACTION_DISBANDED", "JOIN_WARS": "ACCEPTED_HELP",
             "BREAK_ALLIANCE": "ALLIANCE_BROKEN", "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
         }
-        msg = ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_map.get(action, "GENERIC_MESSAGE"), "Message received.")
+        key, default = fallback_map.get(action, "GENERIC_MESSAGE"), "Message received."
     else:
-        msg = ai_prompts.AI_FALLBACK_RESPONSES.get("AI_OFF_ACCEPT", "We accept your proposal.")
+        key, default = "AI_OFF_ACCEPT", "We accept your proposal."
+
+    # The task names both parties, so a declaration of war can read as the
+    # weaker or the stronger side declaring it rather than one flat sentence.
+    msg = ai_prompts.resolve(key, sender=task.get("sender"), target=task.get("target"),
+                             nation_data=nation_data, world=world, map_data=map_data,
+                             default=default)
 
     return {
         "accepted": True, "message": msg, "action": "NONE", "action_target": "NONE",
@@ -408,7 +414,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         ai_results[key_of(task)] = result
 
     def record_fallback(task):
-        ai_results[key_of(task)] = _get_fallback_ai_result(task)
+        ai_results[key_of(task)] = _get_fallback_ai_result(
+            task, map_screen.nation_data, verdict_world, map_screen.map_data)
 
     def count(task):
         """Only the tasks the loading bar was sized for tick it along."""

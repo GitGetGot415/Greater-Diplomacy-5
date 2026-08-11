@@ -373,7 +373,14 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
                          nation=ai_nation, world=world):
         key = LITE_RESPONSE_KEYS.get(action_type,
                                      "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
-        return _reply(ai_prompts.AI_FALLBACK_RESPONSES[key], accepted=accepted)
+        # Both parties are in hand here, so the line can suit the two of them --
+        # a betrayal reads differently from the weaker side than the stronger.
+        # This is the reply the player sees most: at anything below ABSOLUTE it
+        # answers most of the world's diplomacy.
+        return _reply(ai_prompts.resolve(key, sender=ai_nation, target=sender_nation,
+                                         nation_data=nation_data, world=world,
+                                         map_data=map_data),
+                      accepted=accepted)
 
     print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
