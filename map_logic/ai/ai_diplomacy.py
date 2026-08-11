@@ -351,9 +351,14 @@ def _declare_war_for_cores_and_claims(map_screen, ai_name, pending, queued_this_
     if not valid_war_targets:
         return
 
-    # ONLY look at nations we actually share a physical border with
+    # ONLY look at nations we actually share a physical border with.
+    # Sorted because the loop below takes the first candidate that passes and
+    # breaks: iterating the raw set meant which neighbour got invaded came down
+    # to string hash order, which is randomised per process, so the same save
+    # could start a different war on different launches. Alphabetical is a
+    # placeholder for the desirability score Phase 3 sorts by.
     my_neighbors = world.neighbors[ai_name]
-    valid_border_targets = [t for t in valid_war_targets if t in my_neighbors]
+    valid_border_targets = sorted(t for t in valid_war_targets if t in my_neighbors)
 
     for target in valid_border_targets:
         if target not in active_nations: continue
@@ -453,7 +458,9 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
     if current_turn < turns_to_wait:
         return
 
-    my_neighbors = world.neighbors[ai_name]
+    # Sorted for the same reason as the war-target loop above: this one also
+    # breaks after the first neighbour it successfully queues a claim against.
+    my_neighbors = sorted(world.neighbors[ai_name])
 
     for neighbor in my_neighbors:
         if neighbor not in active_nations: continue

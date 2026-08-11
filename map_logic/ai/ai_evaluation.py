@@ -6,6 +6,8 @@ Split out of map_logic/ai/ai_handler.py, which re-exports every name here so
 existing `ai_handler.evaluate_diplomatic_proposal(...)`-style call sites keep
 working.
 """
+import collections
+
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_prompts
@@ -136,18 +138,32 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     )
 
 
-def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None):
-    from map_logic.ai import ai_handler
+#: What the AI decided about an incoming proposal, and how firmly.
+#:
+#: `confidence` is 1.0 for every path today, which is what makes the extraction
+#: of this block a pure refactor. Phase 3 fills it in -- a hard rule (an
+#: integrated puppet cannot trade) stays at 1.0 while a marginal peace call
+#: drops -- and Phase 4 uses it to decide whether the model is allowed to
+#: overrule the recommendation. `reason` is the sentence shown to the model
+#: alongside it.
+Verdict = collections.namedtuple("Verdict", "accepted confidence reason")
 
-    if ai_handler._aborted(turn_id):
-        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
 
-    if human_players is None:
-        human_players = []
+def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type, custom_msg=""):
+    """Whether the AI accepts a proposal, decided without consulting the model.
 
-    mode = ai_settings.get_ai_mode()
-    immersion = ai_settings.get_ai_immersion_level()
+    Lifted out of evaluate_diplomatic_proposal unchanged. It was worth its own
+    function regardless -- it is the actual diplomatic brain and had no test
+    coverage at all -- but the specific reason to move it now is that Phase 4
+    lets the LLM overrule it. Doing both at once would mean changing behaviour
+    and restructuring untested code in the same step, so this lands first with
+    tests/test_ai_verdict.py pinning every branch, and the override arrives on
+    top of a known-good baseline.
 
+    Two quirks preserved deliberately, both addressed in Phase 3 rather than
+    here: the relation lookup omits id_to_province and so skips the claim
+    penalty, and `custom_msg` doubles as the peace terms string.
+    """
     ai_stats = nation_data.get(ai_nation, {})
     at_war = len(ai_stats.get("at_war_with", [])) > 0
     in_faction = bool(ai_stats.get("faction", ""))
@@ -221,6 +237,24 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         else:
             accepted = False
     # ------------------------------
+
+    return Verdict(accepted, 1.0, "")
+
+
+def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None):
+    from map_logic.ai import ai_handler
+
+    if ai_handler._aborted(turn_id):
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
+
+    if human_players is None:
+        human_players = []
+
+    mode = ai_settings.get_ai_mode()
+    immersion = ai_settings.get_ai_immersion_level()
+
+    accepted = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
+                                action_type, custom_msg).accepted
 
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)

@@ -210,6 +210,23 @@ class AIWorldParityTests(unittest.TestCase):
                              queries.get_nations_holding_our_cores_or_claims(n, self.map_data, self.nation_data),
                              n)
 
+    def test_core_claim_targets_are_only_ever_consumed_in_sorted_order(self):
+        """The war-target loop takes the first candidate that passes and breaks.
+
+        A set compares equal however it iterates, so this returning the same
+        nations as the query is not enough on its own -- if the two iterate them
+        in different orders, the AI invades a different neighbour. Both callers
+        in ai_diplomacy sort before iterating; this pins that the sorted forms
+        agree, which is the property those callers actually depend on.
+        """
+        self.nation_data["Avaria"]["claims"] = [4, 5, 7, 8]
+        world = ai_world.AIWorld(self.map_data, self.nation_data, self.id_to_province)
+        for n in NATIONS:
+            self.assertEqual(
+                sorted(world.core_claim_targets(n)),
+                sorted(queries.get_nations_holding_our_cores_or_claims(
+                    n, self.map_data, self.nation_data)), n)
+
     def test_core_claim_targets_exclude_unplayable_owners(self):
         self.map_data["10"]["cores"] = ["Avaria"]
         world = ai_world.AIWorld(self.map_data, self.nation_data, self.id_to_province)
