@@ -2672,22 +2672,46 @@ def get_default_b64(is_portrait=False):
         
     return cached
 
+#: country -> (flag_b64, portrait_b64) for the on-disk assets, or None where
+#: there is no file. Answering this needs a disk load, an alpha conversion, a
+#: rescale and a full-buffer base64 per country, and the answer cannot change
+#: while the game runs -- but scrub_default_images is called once per nation per
+#: history snapshot, so on a 130-turn 752-nation save it was being computed
+#: ~98,000 times and cost 8.9 seconds of every save.
+_local_image_b64_cache = {}
+
+
+def _local_image_b64(country):
+    """Base64 of this country's own flag/portrait files, memoised for the process."""
+    cached = _local_image_b64_cache.get(country)
+    if cached is None:
+        f_img = _load_and_scale_local_image(os.path.join(c.FLAGS_DIR, f"{country}.png"), c.FLAG_SIZE)
+        p_img = _load_and_scale_local_image(os.path.join(c.PORTRAITS_DIR, f"{country}.png"), c.PORTRAIT_SIZE)
+        cached = (encode_surf_to_b64(f_img) if f_img else None,
+                  encode_surf_to_b64(p_img) if p_img else None)
+        _local_image_b64_cache[country] = cached
+    return cached
+
+
 def scrub_default_images(nation_data_block):
     """Replaces large Base64 strings with 'DEFAULT' if they match the default images or local files."""
     def_flag = get_default_b64(is_portrait=False)
     def_port = get_default_b64(is_portrait=True)
-    
+
     for country, data in nation_data_block.items():
-        if data.get("flag_data") == def_flag: data["flag_data"] = "DEFAULT"
-        if data.get("portrait_data") == def_port: data["portrait_data"] = "DEFAULT"
-            
-        # Check against local country-specific files
-        f_img = _load_and_scale_local_image(os.path.join(c.FLAGS_DIR, f"{country}.png"), c.FLAG_SIZE)
-        if f_img and data.get("flag_data") == encode_surf_to_b64(f_img):
+        flag_b64, port_b64 = _local_image_b64(country)
+
+        # 'DEFAULT' means "rebuild it from the country's own file, or failing
+        # that the global default" -- so both comparisons collapse to the same
+        # replacement, and neither is worth storing. Guarded on truthiness so a
+        # nation with no flag_data at all does not gain the key here, which is
+        # what a bare `in` test would have done when the local file is absent.
+        stored_flag = data.get("flag_data")
+        if stored_flag and stored_flag in (def_flag, flag_b64):
             data["flag_data"] = "DEFAULT"
-            
-        p_img = _load_and_scale_local_image(os.path.join(c.PORTRAITS_DIR, f"{country}.png"), c.PORTRAIT_SIZE)
-        if p_img and data.get("portrait_data") == encode_surf_to_b64(p_img):
+
+        stored_port = data.get("portrait_data")
+        if stored_port and stored_port in (def_port, port_b64):
             data["portrait_data"] = "DEFAULT"
 
 def encode_surf_to_b64(surf, fmt="RGBA"):
@@ -3059,15 +3083,16 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 save_dict = build_save_dict(temp_map_context)
 
                 # 5. Perform the manual write operations in-place
+                from data.map import history_io
+
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
-                    json.dump(save_dict, f, indent=c.SAVE_INDENT)
+                    f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
 
                 with open(map_json_path, "w") as f:
-                    json.dump(temp_map_context.raw_json_data, f, indent=c.SAVE_INDENT)
+                    f.write(history_io.dump_text(temp_map_context.raw_json_data, indent=c.SAVE_INDENT))
 
                 if hasattr(temp_map_context, 'history'):
-                    with open(os.path.join(scenario_path, "history.json"), "w") as f:
-                        json.dump(temp_map_context.history, f, indent=c.HISTORY_INDENT)
+                    history_io.write(scenario_path, temp_map_context.history)
 
                 pygame.image.save(temp_map_context.political_map, os.path.join(scenario_path, "political.png"))
                 pygame.image.save(temp_map_context.terrain_map, os.path.join(scenario_path, "terrain.png"))

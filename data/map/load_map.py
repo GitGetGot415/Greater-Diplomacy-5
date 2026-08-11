@@ -7,6 +7,7 @@ from map_logic.turn_processing.time_handler import TimeHandler
 from data.io import country_io
 import data.constants as c
 from data import queries
+from data.map import history_io
 
 def _load_default_images(map_obj):
     """Helper to ensure image data keys exist."""
@@ -192,13 +193,9 @@ def load_map_assets(map_screen, load_path):
                 tech_data.get("req", {}), disabled_tech_keys)
 
     if load_path:
-        history_path = os.path.join(load_path, "history.json")
-        if os.path.exists(history_path):
-            try:
-                with open(history_path, "r") as f:
-                    map_screen.history = json.load(f)
-            except Exception as e:
-                print(f"Error loading history.json: {e}")
+        # Prefers the compressed form, falls back to the plain history.json that
+        # every save made before compression still carries.
+        map_screen.history = history_io.read(load_path)
 
     if map_screen.history_turn is not None and save_meta:
         turn_key = str(map_screen.history_turn)

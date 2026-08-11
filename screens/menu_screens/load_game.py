@@ -3,6 +3,7 @@ import json
 import pygame
 from ui import confirm_dialog
 from data import queries
+from data.map import history_io
 from gameState import FolderListState
 from ui_elements import Button, make_back_button
 import data.constants as c
@@ -72,14 +73,13 @@ class Load_Game(FolderListState):
         queries.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
 
     def open_history_menu(self, folder_name):
-        history_path = os.path.join(self.managed_dir, folder_name, "history.json")
-        history_data = {}
-        if os.path.exists(history_path):
-            with open(history_path, "r") as f:
-                history_data = json.load(f)
+        save_dir = os.path.join(self.managed_dir, folder_name)
+        history_data = history_io.read(save_dir)
 
         if not history_data:
-            confirm_dialog.show_info("No History", "History file is empty." if os.path.exists(history_path)
+            has_file = any(os.path.exists(os.path.join(save_dir, name))
+                           for name in (history_io.GZ_NAME, history_io.PLAIN_NAME))
+            confirm_dialog.show_info("No History", "History file is empty." if has_file
                                      else "No history available for this save.")
             return
 
