@@ -66,7 +66,7 @@ class Menu(GameState):
             self.sign_image = pygame.transform.scale(raw_image, new_size)
             self.sign_rect = self.sign_image.get_rect()
             self.sign_rect.right = c.SCREEN_WIDTH - 180
-            self.sign_rect.centery = (c.SCREEN_HEIGHT // 2) + 25
+            self.sign_rect.centery = (c.SCREEN_HEIGHT // 2) + 15
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
