@@ -36,6 +36,13 @@ async def prepare_turn(map_screen):
         map_screen.ai_world = ai_world.build(map_screen)
 
         try:
+            # --- AI-to-AI summits ---
+            # Before the proactive pass, so an agreement reached here is already
+            # binding when each nation works out what it wants to do.
+            map_screen.loading_status_text = "Holding Summits..."
+            ai_diplomacy.process_summits(map_screen)
+            await asyncio.sleep(0)
+
             # --- Basic Proactive AI & Grand Strategy ---
             print("[SYSTEM] Running Proactive AI...")
             ai_diplomacy.process_basic_proactive_ai(map_screen)

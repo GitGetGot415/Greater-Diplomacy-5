@@ -1,8 +1,8 @@
 import random
 from collections import namedtuple
-from map_logic.ai import (ai_candidates, ai_director, ai_evaluation, ai_handler,
-                          ai_llm_runner, ai_opinion, ai_personality, ai_prompts,
-                          ai_world)
+from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
+                          ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
+                          ai_personality, ai_prompts, ai_world)
 from map_logic.diplomacy import diplomacy_messages, diplomacy_events
 from data import queries
 import data.constants as c
@@ -88,6 +88,131 @@ def process_proactive_llm_tasks(map_screen):
                             choice["chosen"], choice.get("messages"))
 
     map_screen.proactive_choices = []
+
+def process_summits(map_screen):
+    """Convenes the AI-to-AI summits worth holding this turn.
+
+    Each pair is one job in the batch and its exchanges run sequentially inside
+    it, so the wall clock is rounds x latency rather than pairs x rounds x
+    latency. Costs nothing at all unless both sides of a pair are model-driven,
+    which in practice means MAJOR or ABSOLUTE.
+    """
+    if not ai_negotiation.enabled() or ai_handler.get_ai_mode() == "OFF":
+        return
+
+    world = ai_world.for_screen(map_screen)
+    total_turns = queries.get_total_turns(map_screen.time_manager)
+    active_nations = set(queries.get_living_nations(map_screen.map_data))
+
+    def model_driven(nation):
+        return ai_evaluation.llm_enabled_for(nation, world) is True
+
+    ai_nations = [n for n in queries.get_active_ai_nations(map_screen) if n in active_nations]
+    pairs = ai_negotiation.select_pairs(world, ai_nations, model_driven, total_turns)
+    if not pairs:
+        return
+
+    map_screen.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
+    my_turn_id = ai_handler.CURRENT_TURN_ID
+    mode = ai_handler.get_ai_mode()
+    settings = map_screen.scenario_settings
+
+    def say(speaker, listener, system, history):
+        context = ai_evaluation.get_world_context(
+            map_screen.nation_data, active_nations, speaker, listener)
+        transcript = "\n".join(history) if history else "(nothing said yet)"
+        reply = ai_handler._run_provider(
+            mode, system, f"{context}\nSo far:\n{transcript}\n\nSpeak.",
+            my_turn_id, None, raw=True)
+        if not reply or reply.get("error"):
+            return None, None
+        line = str(reply.get("message", "")).strip()[:c.AI_TRANSCRIPT_LINE_LENGTH]
+        return (line or None), reply
+
+    def call(pair):
+        a, b, history = pair["a"], pair["b"], []
+        for round_index in range(c.AI_NEGOTIATION_ROUNDS):
+            for speaker, listener in ((a, b), (b, a)):
+                prompt = (ai_negotiation.opening_prompt if not history
+                          else ai_negotiation.reply_prompt)(world, speaker, listener, settings)
+                line, _reply = say(speaker, listener, prompt, history)
+                if line is None:
+                    return {"transcript": history, "terms": [], "closing": None}
+                history.append(f"{speaker}: {line}")
+
+        closing, reply = say(a, b, ai_negotiation.closing_prompt(world, a, b, settings), history)
+        terms = []
+        if reply and reply.get("agreed"):
+            terms = ai_negotiation.validate_terms(world, a, b, reply.get("terms"))
+        if closing:
+            history.append(f"{a}: {closing}")
+        return {"transcript": history, "terms": terms, "closing": closing}
+
+    def record(pair, outcome):
+        pair["transcript"] = outcome.get("transcript") or []
+        pair["terms"] = outcome.get("terms") or []
+
+    def record_fallback(pair):
+        pass    # talks that never happened produce nothing, which is correct
+
+    def count(pair):
+        map_screen.summits_completed = getattr(map_screen, "summits_completed", 0) + 1
+        map_screen.loading_status_text = (
+            f"Holding Summits ({map_screen.summits_completed}/{len(pairs)})...")
+
+    map_screen.summits_completed = 0
+    ai_llm_runner.run_llm_batch(
+        pairs, call, record, record_fallback,
+        on_progress=count,
+        should_abort=lambda: map_screen.force_skip_llm,
+        max_workers=queries.get_ai_threads(),
+        deadline=ai_llm_runner.turn_deadline())
+
+    for pair in pairs:
+        if not pair["transcript"]:
+            continue
+        ai_negotiation.record_summit(map_screen.nation_data, pair["a"], pair["b"], total_turns)
+        agreed = ai_negotiation.apply_terms(
+            map_screen, pair["a"], pair["b"], pair["terms"], total_turns)
+        _publish_summit(map_screen, pair, agreed)
+
+
+def _publish_summit(map_screen, pair, agreed):
+    """Puts the summit where a player can find it.
+
+    The transcript goes into both participants' inboxes, which already keep a
+    sent copy, so a spectator sees the whole meeting. The headline goes into the
+    global log, which feeds get_world_context -- so nations that were not in the
+    room hear about it and react. And anyone bordering either party gets told
+    directly, because a summit a player never learns about may as well not have
+    happened.
+    """
+    a, b = pair["a"], pair["b"]
+    for line in pair["transcript"]:
+        speaker, _, said = line.partition(": ")
+        listener = b if speaker == a else a
+        diplomacy_messages.send_message(map_screen, speaker, listener, said, "TEXT")
+
+    if agreed:
+        summary = ai_negotiation.describe_terms(agreed)
+        diplomacy_events.log_global_event(
+            map_screen.nation_data, f"SUMMIT: {a} and {b} agreed {summary}.")
+        headline = f"Our attaches report that {a} and {b} met in private and agreed {summary}."
+    else:
+        diplomacy_events.log_global_event(
+            map_screen.nation_data, f"SUMMIT: {a} and {b} met, and agreed nothing.")
+        headline = f"Our attaches report that {a} and {b} met in private, but parted without agreement."
+
+    world = ai_world.for_screen(map_screen)
+    for human in getattr(map_screen, "active_players", ()):
+        if human in (a, b):
+            continue
+        neighbours = world.neighbors.get(human, ())
+        shares_bloc = any(queries.are_in_same_faction(human, side, map_screen.nation_data)
+                          for side in (a, b))
+        if a in neighbours or b in neighbours or shares_bloc:
+            diplomacy_messages.send_message(map_screen, "Foreign Ministry", human, headline, "TEXT")
+
 
 def process_basic_proactive_ai(map_screen):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""

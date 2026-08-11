@@ -1,4 +1,4 @@
-from map_logic.ai import ai_llm_runner, ai_prompts
+from map_logic.ai import ai_commitments, ai_llm_runner, ai_prompts
 import data.constants as c
 from data import queries
 
@@ -1054,6 +1054,9 @@ def _process_claim_queues(map_screen):
 
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
+    # Settles promises that ran their course or were broken this turn. After the
+    # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
+    ai_commitments.tick(map_screen)
     _flush_queued_ai_actions(map_screen)
 
     # --- 0. FIND ALIVE NATIONS ---

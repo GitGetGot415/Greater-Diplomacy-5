@@ -20,7 +20,7 @@ import math
 
 import data.constants as c
 from data import queries
-from map_logic.ai import ai_personality
+from map_logic.ai import ai_commitments, ai_personality
 
 
 def _clamp01(value):
@@ -100,6 +100,17 @@ def war_desire(world, nation, target, scenario_settings=None):
     goodwill = _clamp01(max(0.0, world.relation(nation, target)) / 200.0)
     restraint = (c.AI_W_RELATION * goodwill
                  + c.AI_W_OVEREXTENSION * war_load(world, nation))
+
+    # A promise not to attack, weighted by how much this nation's word is worth
+    # to it. A faithless country will still break a pact when the prize is big
+    # enough -- which is the interesting outcome, not a bug -- and pay for it.
+    restraint += ai_commitments.war_restraint(world.nation_data, nation, target,
+                                              scenario_settings)
+
+    # Nobody wants to be the third front for a nation that already spheres this
+    # target away from us by agreement.
+    if target in ai_commitments.is_sphered(world.nation_data, nation, target):
+        restraint += c.AI_COMMITMENT_WEIGHT
 
     return _clamp01(core - restraint)
 

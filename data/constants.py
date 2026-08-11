@@ -989,6 +989,40 @@ AI_REQUEST_REASON_LENGTH = 120
 # enough to carry a war the nation has no appetite for.
 AI_LLM_REQUEST_BONUS = 0.25
 
+# ==========================================
+# COMMITMENTS AND SUMMITS
+# (map_logic/ai/ai_commitments.py, ai_negotiation.py)
+# ==========================================
+
+# How much a non-aggression pact restrains a nation, before temperament. Scaled
+# by loyalty, so a faithless country breaks one when the prize is big enough and
+# a loyal one very nearly will not -- a pact that bound everyone identically
+# would be a rule rather than a promise.
+AI_COMMITMENT_WEIGHT = 0.55
+AI_COMMITMENT_MIN_HOLD = 0.25    # even the faithless honour a pact a little
+AI_COMMITMENT_HISTORY_MAX = 40   # settled promises kept per nation; this is saved
+AI_DEFAULT_REPUTATION = 0.7      # benefit of the doubt before any record exists
+
+# Summits. Each pair is one job, and the exchanges inside it are sequential, so
+# wall clock is rounds x latency rather than pairs x rounds x latency.
+AI_NEGOTIATION_MAX_PAIRS = 4
+AI_NEGOTIATION_ROUNDS = 2
+AI_NEGOTIATION_COOLDOWN = 6      # turns before the same pair meets again
+AI_NEGOTIATION_MIN_PRESSURE = 0.35
+AI_NEGOTIATION_DEFAULT_TURNS = 20
+AI_NEGOTIATION_MAX_TERM_TURNS = 60
+AI_TRANSCRIPT_LINE_LENGTH = 400
+AI_NEGOTIATION_MAX_TERMS = 4
+
+# What makes a pair worth convening, roughly in the order a historian would
+# expect. These are added, then scaled by how well the other side keeps its word.
+AI_PRESSURE_COMMON_ENEMY = 0.55      # co-belligerents who have formalised nothing
+AI_PRESSURE_WEARY_WAR = 0.60         # two exhausted enemies; this is how wars end
+AI_PRESSURE_FRIENDLY = 0.40          # friends without a bloc
+AI_PRESSURE_CONTESTED = 0.25         # a grievance not yet worth a war
+AI_PRESSURE_NEIGHBOUR = 0.15
+AI_PRESSURE_SALVAGEABLE_RELATION = -60   # below this there is nothing to discuss
+
 AI_ACTION_PHRASES = {
     "WAR_DECLARATION": "declare war on",
     "CEASEFIRE": "offer a ceasefire to",

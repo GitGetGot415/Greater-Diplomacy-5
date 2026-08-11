@@ -9,7 +9,7 @@ working.
 import collections
 
 import data.constants as c
-from map_logic.ai import ai_opinion, ai_settings, ai_unit_eval
+from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_unit_eval
 from data import queries
 from map_logic.ai import ai_prompts
 
@@ -236,13 +236,19 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     if action_type in ["JOIN_WARS", "CALL_TO_ARMS"]:
         if queries.are_in_same_faction(ai_nation, sender_nation, nation_data):
             accepted = True
+        elif ai_commitments.joint_war_target(nation_data, ai_nation, sender_nation):
+            # We promised to fight this war with them. Honouring it is the whole
+            # point of having agreed; refusing is a betrayal and priced as one.
+            return Verdict(True, 1.0, "we gave our word to fight this war alongside them")
 
     # Accept Military Access requests from nations fighting the same enemies as us,
     # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
         ai_enemies = set(ai_stats.get("at_war_with", []))
         sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
-        accepted = bool(ai_enemies & sender_enemies)
+        accepted = bool(ai_enemies & sender_enemies) or bool(
+            ai_commitments.active_with(nation_data, ai_nation, sender_nation,
+                                       ai_commitments.MILITARY_ACCESS))
 
     # NEW: AI Master-Puppet Faction Acceptance
     my_master = ai_stats.get("master", "")
