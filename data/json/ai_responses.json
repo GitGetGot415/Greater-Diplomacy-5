@@ -1,0 +1,149 @@
+{
+  "_README": [
+    "Every line the AI says when the language model is not consulted -- because",
+    "it is switched off, because this exchange is below the immersion level, or",
+    "because the turn's budget ran out. Edit freely; nothing here is compiled in.",
+    "",
+    "A key maps to either a plain string, or a list of variant groups. Each group",
+    "holds interchangeable 'lines' and may carry a 'when' that has to hold for the",
+    "group to be eligible. The most specific eligible group wins, and one of its",
+    "lines is chosen at random, so the same interaction stops reading identically",
+    "every time. A group with no 'when' is the catch-all and should come last.",
+    "",
+    "Conditions ('when'), all optional and all answered from the turn's snapshot:",
+    "  strength    'weaker' | 'even' | 'stronger'  -- us against them, militarily",
+    "  at_war      true | false                    -- are the two of us fighting",
+    "  same_faction true | false",
+    "  opinion     'hostile' | 'cold' | 'warm'     -- what we think of them",
+    "A condition naming a list matches if any entry does: {\"strength\": [\"weaker\", \"even\"]}.",
+    "",
+    "Placeholders: {target} in NOT_AT_WAR, {action} in the three GENERIC keys."
+  ],
+
+  "AI_OFF_ACCEPT": ["We accept your proposal.", "Agreed. Let it be so.", "This is acceptable to us."],
+  "AI_OFF_REJECT": ["We reject your proposal.", "No. Our answer is no.", "This we cannot accept."],
+  "AI_OFF_MESSAGE": "Message received (AI is OFF).",
+  "GENERIC_ACCEPT": ["We have made our decision.", "Our position is settled."],
+  "GENERIC_MESSAGE": ["Message received.", "Your message has reached us.", "Noted."],
+  "OLLAMA_ERROR": "Ollama server error or timeout.",
+  "API_ERROR": "API Error.",
+  "TIMEOUT": "Timeout.",
+
+  "BETRAYAL": [
+    {"when": {"strength": "weaker"},
+     "lines": ["You choose your moment well, knowing we cannot answer in kind.",
+               "We are the weaker party and you knew it. That is the whole of your courage.",
+               "You will find that a small nation cornered is not a cheap one."]},
+    {"when": {"strength": "stronger"},
+     "lines": ["You have picked a fight with the larger army. We accept.",
+               "This will be brief, and it will not go the way you imagine.",
+               "We had no quarrel with you. You will regret correcting that."]},
+    {"lines": ["You will regret this betrayal.",
+               "So it is war. We will remember who began it.",
+               "Very well. Let the matter be settled in the field."]}
+  ],
+
+  "PROACTIVE_DECLARE_WAR": [
+    {"when": {"strength": "weaker"},
+     "lines": ["We know what we are outmatched by. We march regardless.",
+               "Better to fall on our feet than live on our knees.",
+               "Our claim does not become smaller because your army is larger."]},
+    {"when": {"strength": "stronger"},
+     "lines": ["Your occupation of our rightful territory ends now.",
+               "Withdraw, or be withdrawn. Those are the terms.",
+               "You have held what is ours for long enough."]},
+    {"lines": ["Your occupation of our rightful territory ends now!",
+               "We have exhausted every other means. The army marches.",
+               "This has been coming for some time. Now it has come."]}
+  ],
+
+  "PROACTIVE_CEASEFIRE": [
+    {"when": {"strength": "weaker"},
+     "lines": ["We have lost enough. We ask you to stop.",
+               "Name terms we can live with and this ends today."]},
+    {"when": {"strength": "stronger"},
+     "lines": ["We could continue. We would rather not. Stand down and so will we.",
+               "There is nothing further we need from this war. Let it end."]},
+    {"lines": ["We offer terms for a ceasefire.",
+               "Neither of us is winning this. Let us stop pretending otherwise.",
+               "Enough. We propose the guns fall silent."]}
+  ],
+
+  "PROACTIVE_PEACE_TREATY": [
+    {"when": {"strength": "weaker"},
+     "lines": ["We propose terms while we still have terms to propose.",
+               "This war has cost us more than it can ever return. We sue for peace."]},
+    {"lines": ["This war has cost us both too much. We propose terms.",
+               "Let us write an ending before one is written for us.",
+               "We are ready to talk, if you are ready to listen."]}
+  ],
+
+  "PROACTIVE_TRADE": [
+    {"when": {"opinion": "warm"},
+     "lines": ["Between friends, an exchange that suits us both.",
+               "We have what you lack, and you have what we lack. Shall we?"]},
+    {"when": {"opinion": "hostile"},
+     "lines": ["We need not like each other to find this arrangement useful.",
+               "Commerce, nothing more. Read the terms."]},
+    {"lines": ["We propose an exchange to the benefit of us both.",
+               "A straightforward trade, if it interests you.",
+               "Our stores and yours are unevenly filled. We propose to fix that."]}
+  ],
+
+  "ACCEPT_TRADE": ["We gladly accept your trade offer.", "The terms suit us. Done.",
+                   "Agreed. The goods will move at once."],
+  "REJECT_TRADE": ["This trade is unacceptable to us.", "You ask too much for too little.",
+                   "We decline. Bring us something nearer to fair."],
+
+  "ACCEPT_PEACE": ["We accept your terms. The war between us is over.",
+                   "It is agreed. Let the guns stop.",
+                   "Signed. May neither of us need this again."],
+  "ACCEPT_MILITARY_ACCESS": ["We accept your request for military access.",
+                             "Your columns may pass. See that they only pass."],
+
+  "PROACTIVE_JOIN_WAR": ["May we join you in your war?", "Your enemies are ours. Let us fight them together."],
+  "PROACTIVE_JOIN_FACTION": ["Our enemies are aligned, let us join your faction to stand against them.",
+                             "We would rather stand inside your bloc than alone outside it."],
+  "PROACTIVE_CREATE_FACTION": ["We propose establishing a new faction together.",
+                               "Neither of us is aligned. Together we would be harder to swallow."],
+  "PROACTIVE_CALL_TO_ARMS": ["We request your aid in our ongoing conflicts!",
+                             "The pact is being tested. Honour it."],
+  "PROACTIVE_REQ_MILITARY_ACCESS": ["As we both fight against a common foe, we request military access through your territory.",
+                                    "We share an enemy. Let us share a road to reach them."],
+  "PROACTIVE_FACTION_INVITE": ["Our cause would be stronger with you in it. Join us.",
+                               "There is a seat at our table, if you want it."],
+
+  "ALLIANCE_BROKEN": ["We won't forget this.", "So much for our word to one another."],
+  "FACTION_ABANDONED": ["We will not forget your abandonment.", "You walked out. That will be remembered."],
+  "FACTION_DISBANDED": ["It is a shame to see our alliance broken.", "So the pact is dust. A waste."],
+  "KICKED_FROM_FACTION": ["We will not forget being expelled from the alliance.",
+                          "Thrown out like baggage. Noted."],
+  "ACCEPTED_HELP": ["We gratefully accept your assistance in our conflicts.",
+                    "Your help is welcome and will be repaid."],
+  "ANSWERED_CALL": ["We will answer your call to arms.", "We are coming. Hold."],
+  "BREAK_ALLIANCE": ["We have broken our alliance.", "Our alliance is at an end."],
+  "REQUEST_JOIN_WARS": ["We request permission to join your ongoing wars."],
+  "FOLLOW_UP_DECLARATION": ["Following through on our previous declaration."],
+
+  "INVITE_IGNORED": "Your faction invitation was ignored and has expired.",
+  "JOIN_REQ_IGNORED": "Your request to join the faction was ignored and has expired.",
+  "CEASEFIRE_IGNORED": "Your ceasefire offer was ignored and has expired.",
+  "CALL_TO_ARMS_IGNORED": "Your call to arms was ignored and has expired.",
+  "CANT_JOIN_FACTION": "We cannot join a new faction while we are already bound to our own treaties.",
+  "NOT_AT_WAR": "We would offer military aid to {target}, but they are not currently at war.",
+  "REJECT_JOIN_WAR_NO_ALLIANCE": "We wanted to join your wars, but our lack of formal alliance prevents it.",
+
+  "CROSS_FACTION_JOIN": "Our requests crossed paths. We are now united!",
+  "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
+  "CROSS_CALL_TO_ARMS": "Our diplomats crossed paths. We stand together in all our wars!",
+  "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!",
+
+  "ACCEPT_GENERIC": ["We accepted your {action}.", "Your {action} is agreed."],
+  "REJECT_GENERIC": ["We rejected your {action}.", "Your {action} is refused."],
+  "ACCEPT_FACTION_ALREADY_IN": "We wanted to accept, but we are already in a faction.",
+  "ACCEPT_FACTION_JOIN_ALREADY_IN": "We cannot accept as you are already in a faction.",
+  "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties.",
+
+  "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord.",
+  "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord."
+}

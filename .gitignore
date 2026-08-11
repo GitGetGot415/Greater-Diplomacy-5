@@ -37,4 +37,5 @@ main.spec
 !research_template.json
 !historical_leaders.json
 !historical_leaders_DEFAULT.json
+!ai_responses.json
 !building_data.json
