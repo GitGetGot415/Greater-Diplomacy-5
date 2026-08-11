@@ -112,6 +112,18 @@ class EngineBackstopTests(unittest.TestCase):
         self.assertFalse(self.apply("FACTION_INVITE", "Leader", "Free").blocked)
         self.assertEqual(self.nation_data["Free"]["faction"], "Pact")
 
+    def test_founding_one_is_a_different_act_and_stays_allowed(self):
+        """finalize_create_faction redirects to the master and makes it the
+        leader, so the result is a bloc the overlord is actually in -- not the
+        broken state this is all about, which is a subject aligned somewhere
+        its master is not."""
+        self.assertFalse(self.apply("CREATE_FACTION", "Subject", "Free").blocked)
+        fac = self.nation_data["Overlord"]["faction"]
+        self.assertTrue(fac)
+        self.assertTrue(self.nation_data["Overlord"]["is_faction_leader"])
+        self.assertEqual(self.nation_data["Subject"]["faction"], fac,
+                         "the puppet ends up in its master's faction, not outside it")
+
     def test_a_puppet_cannot_walk_out_alone(self):
         """The mirror of joining alone: it would strand the subject outside the
         faction its overlord is still in."""

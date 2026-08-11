@@ -412,10 +412,6 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
 def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):
     """Section 1.5: an unaligned nation at war looks for a faction to join, or
     else another unaligned co-belligerent to found one with."""
-    # A puppet has no alignment to seek; it holds whatever its master holds.
-    if not queries.can_choose_own_faction(ai_name, map_screen.nation_data):
-        return
-
     # Prevent sending multiple faction requests
     has_pending_faction_req = False
     for target_nation, info in pending.items():
@@ -446,7 +442,14 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
         target_leader = max(potential_leaders,
                             key=lambda n: (ai_opinion.alliance_appetite(
                                 world, ai_name, n, map_screen.scenario_settings), n))
-        if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target_leader, "JOIN_FACTION_REQ"):
+        # A puppet has no alignment to seek -- it holds whatever its master
+        # holds. Founding one is a different act and stays available:
+        # finalize_create_faction redirects to the master and makes it the
+        # leader, so the result is a bloc the overlord is actually in, not a
+        # subject aligned somewhere its master is not.
+        if (queries.can_choose_own_faction(ai_name, map_screen.nation_data)
+                and ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name,
+                                                  target_leader, "JOIN_FACTION_REQ")):
             bag.add(ai_candidates.make(
                 "JOIN_FACTION_REQ", target_leader,
                 max(c.AI_SCORE_DEFENSIVE_FACTION,
