@@ -477,6 +477,7 @@ SIZES = {
     "production": (130, 30),
     "orders": (100, 50),
     "small": (100, 40),
+    "ai_opinion": (100, 30),
     "puppet_option": (100, 30),
     "swap_hildehrand": (120, 30),
     "automation_option": (200, 30),

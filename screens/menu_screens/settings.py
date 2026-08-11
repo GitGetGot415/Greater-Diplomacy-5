@@ -24,15 +24,15 @@ SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
 SETTINGS_AI_PROVIDER_START_X = 10
 SETTINGS_AI_PROVIDER_STEP_X = 110
 SETTINGS_AI_IMMERSION_X = 10
-SETTINGS_AI_IMMERSION_ROWS_Y = (c.SCREEN_HEIGHT - 110, c.SCREEN_HEIGHT - 155,
-                                c.SCREEN_HEIGHT - 200, c.SCREEN_HEIGHT - 245)
+SETTINGS_AI_IMMERSION_ROWS_Y = (c.SCREEN_HEIGHT - 100, c.SCREEN_HEIGHT - 135,
+                                c.SCREEN_HEIGHT - 170, c.SCREEN_HEIGHT - 205)
 SETTINGS_CLEAR_BTN_GAP_X = 10
 SETTINGS_PATH_EDIT_OFFSET_X = -220
 SETTINGS_PATH_RESET_OFFSET_X = -110
 SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
 
 
-def make_option_buttons(options, on_select, current, size="small", color="blue", font_preset="button"):
+def make_option_buttons(options, on_select, current, size="ai_opinion", color="blue", font_preset="small"):
     """Builds a row/column of mutually exclusive buttons with the active one highlighted.
 
     Options are (x, y, value, label) tuples. Used for every "pick exactly one
