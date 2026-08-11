@@ -187,6 +187,36 @@ class Research_Screen(GameState):
 
         self.setup_nodes()
 
+    @property
+    def subject(self):
+        """Whose research this screen is showing.
+
+        A player sees their own. A spectator picks a nation first, and it
+        arrives on the map screen as `viewing_research_country` -- the same
+        hand-off channel `editing_country` already uses for the identity
+        editor, rather than a second mechanism doing the same job.
+        """
+        chosen = getattr(self.map_screen, "viewing_research_country", "")
+        return chosen or self.map_screen.player_country
+
+    @property
+    def subject_data(self):
+        return self.map_screen.nation_data[self.subject]
+
+    @property
+    def can_edit(self):
+        """Whether this viewer may change what the subject researches.
+
+        Tactical mode has always been read-only here. A spectator is the same
+        kind of onlooker, gated by its own switch so a host can hand out the
+        view without the power.
+        """
+        if self.map_screen.tactical_mode:
+            return False
+        if self.map_screen.player_country == "Spectator":
+            return c.SPECTATOR_CAN_EDIT_RESEARCH
+        return True
+
     def handle_events(self, events):
         for event in events:
             for el in self.elements:
@@ -403,8 +433,11 @@ class Research_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = []
-        if not self.map_screen or self.map_screen.player_country == "None": return
-        player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        # "is the subject a real nation" rather than "is the player not None":
+        # the literal "Spectator" is not a key in nation_data, which is what
+        # used to make this screen unreachable for them at all.
+        if not self.map_screen or self.subject not in self.map_screen.nation_data: return
+        player_data = self.subject_data
         res_levels = player_data.setdefault("research", {})
         queue = player_data.setdefault("research_queue", [])
         
@@ -413,11 +446,15 @@ class Research_Screen(GameState):
         if self.active_modal:
             st = self.active_modal["status"]
             panel_x, panel_y = self.complete_panel_x, self.complete_panel_y
-            
+
             self.elements.append(Button(panel_x + MODAL_CANCEL_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "small", "red", "Cancel", self.close_modal))
-            
-            if is_tactical:
-                self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", "Tactical: Read Only", lambda: None))
+
+            if not self.can_edit:
+                # The one slot the action button lives in, so an onlooker has no
+                # route to modal_start_research or modal_pause_research at all
+                # rather than a disabled-looking button that still fires.
+                label = "Tactical: Read Only" if is_tactical else "Spectator: Read Only"
+                self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", label, lambda: None))
             else:
                 if st == "AVAILABLE":
                     if len(queue) >= c.RESEARCH_SLOTS:
@@ -548,7 +585,9 @@ class Research_Screen(GameState):
         self.close_modal()
 
     def start_or_resume_research(self, tech_name):
-        player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        if not self.can_edit:
+            return
+        player_data = self.subject_data
         progress_cache = player_data.setdefault("research_progress", {})
         total_cost = self.tech_cost(tech_name)
         points_remaining = progress_cache.pop(tech_name, total_cost)
@@ -560,7 +599,9 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def pause_research(self, tech_name):
-        player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        if not self.can_edit:
+            return
+        player_data = self.subject_data
         queue = player_data.get("research_queue", [])
         progress_cache = player_data.setdefault("research_progress", {})
         for i, project in enumerate(queue):
@@ -666,7 +707,7 @@ class Research_Screen(GameState):
         hud_font = fonts.get("button")
         surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y))
 
-        queue = self.map_screen.nation_data[self.map_screen.player_country].get("research_queue", [])
+        queue = self.subject_data.get("research_queue", [])
         for i in range(c.RESEARCH_SLOTS):
             y_off = hud_rect.top + HUD_FIRST_SLOT_OFFSET_Y + (i * HUD_SLOT_STEP_Y)
             if i < len(queue):
@@ -832,8 +873,8 @@ class Research_Screen(GameState):
                 y_off += MODAL_LINE_STEP_Y
                 
             elif entity in self.building_library:
-                if entity == "Basic Factory" and self.map_screen and self.map_screen.player_country != "None":
-                    s = queries.get_building_cost(entity, self.map_screen.player_country, self.map_screen.map_data, self.building_library)
+                if entity == "Basic Factory" and self.map_screen and self.subject in self.map_screen.nation_data:
+                    s = queries.get_building_cost(entity, self.subject, self.map_screen.map_data, self.building_library)
                 else:
                     s = self.building_library[entity]
 
@@ -858,7 +899,7 @@ class Research_Screen(GameState):
             y_off += MODAL_ENTITY_PADDING_Y # Padding between items
 
     def render_completed_text_list(self, surface):
-        player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        player_data = self.subject_data
         res_levels = player_data.get("research", {})
         
         text_font = fonts.get("button")
@@ -918,7 +959,10 @@ class Research_Screen(GameState):
         pygame.draw.line(surface, (200, 200, 200), (0, HEADER_HEIGHT), (c.SCREEN_WIDTH, HEADER_HEIGHT), 2)
 
         font = fonts.get("heading1")
-        ts = font.render(f"VIEWING: {self.current_category}", True, (255, 255, 255))
+        # Whose tree this is, once it can be somebody else's. A player is only
+        # ever looking at their own, so naming them there would be noise.
+        looking_at = "" if self.subject == self.map_screen.player_country else f"{self.subject} -- "
+        ts = font.render(f"{looking_at}VIEWING: {self.current_category}", True, (255, 255, 255))
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 
         # --- DYNAMIC OUTPUT CALCULATION ---
@@ -930,7 +974,7 @@ class Research_Screen(GameState):
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)
         else:
-            player_data = self.map_screen.nation_data[self.map_screen.player_country]
+            player_data = self.subject_data
             res_levels = player_data.get("research", {})
             self.draw_connections(surface, res_levels)
 

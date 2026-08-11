@@ -211,8 +211,22 @@ def render_buttons(map_screen):
         return lambda: (editor_action(map_screen) if (map_screen.is_editor or map_screen.player_country == "Spectator")
                         else map_screen.change_state(player_state))
 
+    def research_callback():
+        """Three different things, because R&D means three different things.
+
+        The map editor authors what a nation *starts* with, so it keeps the bulk
+        checkbox list. A spectator wants to watch and steer a live programme, so
+        they pick a nation and get the real tech tree. A player gets their own.
+        """
+        if map_screen.is_editor:
+            editor_menus.open_map_research_editor(map_screen)
+        elif map_screen.player_country == "Spectator":
+            editor_menus.spec_select_research_country(map_screen)
+        else:
+            map_screen.viewing_research_country = ""
+            map_screen.change_state("RESEARCH")
+
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
-    research_callback = editor_or(editor_menus.open_map_research_editor, "RESEARCH")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
     # The left-hand bar: one column, one size, one colour, one row per entry.

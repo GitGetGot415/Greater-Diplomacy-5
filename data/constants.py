@@ -857,7 +857,12 @@ UNIT_BOX_TEXT_COLOR = (255, 255, 255)
 # AI & SPECTATOR CONFIGURATION
 # ==========================================
 
+# What a spectator is allowed to change, as opposed to merely watch. All three
+# default to True, which is what a spectator could already do before the
+# switches existed; turn one off to make that screen read-only for them.
 SPECTATOR_CAN_EDIT_PRODUCTION = True
+SPECTATOR_CAN_EDIT_RESEARCH = True
+SPECTATOR_CAN_EDIT_APPEARANCE = True
 
 # --- NEW: Expeditionary Force Weight ---
 # A higher number means the AI prefers defending its own borders over helping allies.
