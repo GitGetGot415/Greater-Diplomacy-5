@@ -65,13 +65,31 @@ map_logic/ai/
                      nation's own scarcity. There is no list of good units
   ai_tech_eval.py    what a tech is worth, from what it unlocks
   ai_personality.py  five traits per nation, seeded from the scenario so a save
-                     is reproducible
+                     is reproducible. Editable: map editor -> AI Personality
   ai_opinion.py      war, peace, trade and alliance appetite as degrees
   ai_candidates.py   the menu of legal moves, and the arbiter that ranks it
   ai_commitments.py  promises between nations, and what breaking one costs
   ai_negotiation.py  summits
   ai_director.py     the model choosing from the menu
   ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
+
+
+TWO THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
+---------------------------------------------------------------
+
+An extra body is worth what it ABSORBS, not a flat bonus. apply_group_damage
+deals sum(max(0, volley/N - defense)), so at defense 0 that sum is exactly the
+volley whatever N is -- splitting a stack into more zero-defense bodies absorbs
+nothing at all. Crediting every body equally made the cheapest unit in the game
+the best buy for any nation with spare manpower, which is how a country ends up
+with eighty militia and no infantry.
+
+A building tech is worth what it ADDS. Upgrading a factory deletes the level
+below it and costs a flat 30,000 at every tier, so Lvl 25 gains exactly what
+Lvl 2 does. Scoring the new building's whole output overstated it by a factor
+of the level, which made unreachable tiers look like the best deals on the
+board. And a level further ahead than the nation has actually built is worth
+nothing, because a province can only ever queue the next item in its chain.
 
 
 TUNING
@@ -81,15 +99,41 @@ data/constants.py, the AI blocks. The ones worth knowing:
 
   AI_WAR_DESIRE_THRESHOLD     how keen a nation must be to declare war
   AI_LINE_SPEND_RATIO         bodies versus firepower, as a share of spending
+  AI_W_SOAK                   what one more body is worth, scaled by the share
+                              of a hit its defense actually absorbs
   AI_TECH_ECONOMY_WEIGHT      industry versus army in research
+  AI_BUILDING_PAYBACK_TURNS   how long a building gets to earn back its cost.
+                              Separate from AI_TECH_ECONOMY_HORIZON, which
+                              scales income against an army -- sharing one
+                              number made every building in the game a loss
+  AI_MAX_BUILDING_RESEARCH_LEAD   levels of building tech the AI will research
+                              ahead of what it has built
   AI_COMMITMENT_WEIGHT        how much a pact restrains, before loyalty
   AI_MAX_ACTIONS_PER_TURN     proposals a nation may have in flight
   AI_NEGOTIATION_MAX_PAIRS    summits per turn
   ai_turn_budget_seconds      (a setting) wall-clock ceiling per turn's model
                               work; whatever has not answered falls back
 
-Scenarios can pin personalities with ai_personality_overrides, e.g.
+Personalities are edited in the map editor under AI Personality, which pins
+them so nothing regenerates them. A scenario can also pin them by hand:
   "ai_personality_overrides": {"German Reich": {"aggression": 0.9}}
 Traits are aggression, ambition, caution, loyalty, trust, all 0.0 to 1.0.
-Without an override they are procedural, which means historically arbitrary --
-worth authoring for the historical scenarios.
+Without either they are procedural, which means reproducible but historically
+arbitrary -- this seed gives the 1939 German Reich 0.51 aggression and the
+USSR 0.04, so the historical scenarios are worth authoring.
+
+
+RULES WORTH KNOWING
+-------------------
+
+Puppets cannot settle their own wars, only wars against their own master --
+the mirror of the rule that they may only declare war on their master. The
+backstop is in treaty_effects.apply_treaty_effect, where every path converges.
+
+Bombardment is free, draws no return fire, ignores the combat-width cap, and
+a bombarding unit still fights on its own tile. The AI shells whenever it has
+a target in range, which is also what stops artillery charging into melee.
+
+Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
+movement re-plan. They did not used to, which meant no AI unit was ever
+disbanded by anything.
