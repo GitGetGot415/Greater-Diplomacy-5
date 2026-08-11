@@ -1,1 +1,0 @@
-- macOS version now comes with a readme on how to bypass the "Main is damaged and can't be opened. You should move it to the Bin." text that prevents people from playing on that version
