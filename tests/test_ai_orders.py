@@ -161,14 +161,35 @@ class BombardmentTests(unittest.TestCase):
                                                   screen.map_data["home"]))
 
 
+#: Everything _build_target_assignments hands to _assign_unit_orders. Kept in
+#: one place and checked against the real builder below, because a hand-rolled
+#: double that quietly lacks a key the real one supplies is a test that passes
+#: for the wrong reason -- or, as here, fails in a file about bombardment.
+ASSIGNMENT_KEYS = ("target_destinations", "naval_destinations",
+                   "target_assignments", "naval_assignments",
+                   "target_stacks", "naval_stacks")
+
+
 def empty_ctx(**over):
     ctx = {"unsafe_waters": set(), "friendly_nations": {"Avaria"}, "war_borders": set(),
            "peace_borders": set(), "coastal_borders": set(), "unclaimed_targets": set(),
-           "active_battles": set(), "lost_battles": {}, "at_war": True,
-           "target_destinations": [], "naval_destinations": [],
-           "target_assignments": {}, "naval_assignments": {}}
+           "active_battles": set(), "lost_battles": {}, "at_war": True}
+    ctx.update({key: [] if key.endswith("destinations") else {} for key in ASSIGNMENT_KEYS})
     ctx.update(over)
     return ctx
+
+
+class CtxFixtureTests(unittest.TestCase):
+    def test_the_fixture_carries_what_the_real_builder_produces(self):
+        built = ai_movement._build_target_assignments(
+            [], {"peace_borders": set(), "coastal_borders": set(), "war_borders": set(),
+                 "unclaimed_targets": set(), "all_unclaimed_coasts": set(),
+                 "enemy_targets": set(), "all_enemy_coasts": set(),
+                 "enemy_coastal_waters": set(), "expedition_targets": set()},
+            {"active_battles": set(), "friendly_convoys": set(), "convoy_in_combat": set(),
+             "convoy_near_ship": set(), "convoy_near_coast": set()},
+            at_war=True)
+        self.assertEqual(set(built), set(ASSIGNMENT_KEYS))
 
 
 class BombardmentPriorityTests(unittest.TestCase):

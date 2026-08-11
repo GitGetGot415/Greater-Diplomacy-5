@@ -857,7 +857,12 @@ UNIT_BOX_TEXT_COLOR = (255, 255, 255)
 # AI & SPECTATOR CONFIGURATION
 # ==========================================
 
+# What a spectator is allowed to change, as opposed to merely watch. All three
+# default to True, which is what a spectator could already do before the
+# switches existed; turn one off to make that screen read-only for them.
 SPECTATOR_CAN_EDIT_PRODUCTION = True
+SPECTATOR_CAN_EDIT_RESEARCH = True
+SPECTATOR_CAN_EDIT_APPEARANCE = True
 
 # --- NEW: Expeditionary Force Weight ---
 # A higher number means the AI prefers defending its own borders over helping allies.
@@ -1207,6 +1212,7 @@ AI_CONVOY_DANGER_COAST_WEIGHT = 10 # Priority for convoys near enemy borders/coa
 AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea is this much faster (2.0 = 2x faster)
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
+AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 
@@ -1278,6 +1284,51 @@ UNILATERAL_ACTIONS = [
     "CANCEL_MILITARY_ACCESS",
     "REVOKE_MILITARY_ACCESS"
 ]
+
+# What kind of act a message announced, for anyone reading a list of them.
+#
+# A message's `type` is either TEXT or DIPLOMACY and cannot become more
+# specific: the literal "DIPLOMACY" is what raises the popup and what draws the
+# gold bubble, so widening it would change behaviour rather than labelling it.
+# The action is recorded on the message instead and resolved through here for
+# display, which is why a spectator's overview used to be a column of the word
+# DIPLOMACY with a trade, a war and a faction invite all indistinguishable.
+#
+# An action with no entry reads DIPLOMACY, so a mod adding one is unlabelled
+# rather than broken.
+MESSAGE_CATEGORIES = {
+    "WAR_DECLARATION": "WAR",
+    "CALL_TO_ARMS": "WAR",
+    "JOIN_WARS": "WAR",
+    "JUSTIFY_WARGOAL": "WAR",
+
+    "CEASEFIRE": "PEACE",
+    "PEACE_TREATY": "PEACE",
+
+    "TRADE": "TRADE",
+
+    "FACTION_INVITE": "FACTION",
+    "JOIN_FACTION_REQ": "FACTION",
+    "CREATE_FACTION": "FACTION",
+    "LEAVE_FACTION": "FACTION",
+    "DISBAND_FACTION": "FACTION",
+    "KICK_FACTION_MEMBER": "FACTION",
+
+    "REQ_MILITARY_ACCESS": "ACCESS",
+    "CANCEL_MILITARY_ACCESS": "ACCESS",
+    "REVOKE_MILITARY_ACCESS": "ACCESS",
+
+    "ANNEX_PUPPET": "PUPPET",
+    "RELEASE_PUPPET": "PUPPET",
+    "TAKE_PUPPETS": "PUPPET",
+
+    "BREAK_ALLIANCE": "ALLIANCE",
+}
+
+# Row background for a message a model wrote, in the spectator's overview.
+# Deliberately close to the table's own dark ground -- it has to be legible
+# behind bright text and readable at a glance down a column, not shout.
+MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
 
 # Proposals that require the target to explicitly Accept or Reject
 BILATERAL_ACTIONS = [

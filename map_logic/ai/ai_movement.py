@@ -14,10 +14,36 @@ def build_neighbor_index(id_to_province):
         for p_id, prov in id_to_province.items()
     }
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None):
+def _tile_pressure(assignments, stacks, tile):
+    """How reluctant we are to send one more unit to `tile`.
+
+    Only the top MAX_COMBAT_ATTACKERS units on a tile ever fire, so the body
+    after that adds nothing to the volley however much the weights want it
+    there. A saturated tile therefore sorts behind every tile that still has a
+    slot, and the existing weighted count decides among the rest exactly as
+    before.
+
+    This is the only thing in this file that reads combat width. Everything
+    else the AI does already scaled with it -- what to buy, what a unit is
+    worth, how strong a border is -- while movement spread units evenly across
+    targets and never asked how many could fight once they arrived. Lower the
+    width and it kept piling five onto a tile where three did nothing; raise it
+    and it kept trickling one at a time and never massed anywhere.
+
+    `stacks` is a true unit count, kept apart from `assignments` because that
+    one carries preference weights (a battle pulls at -20, a quiet border pushes
+    at +50) and so cannot answer "is this tile full?" on its own.
+    """
+    return (1 if stacks.get(tile, 0) >= c.MAX_COMBAT_ATTACKERS else 0,
+            assignments.get(tile, 0))
+
+
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if unsafe_waters is None:
         unsafe_waters = {}
+    if target_stacks is None:
+        target_stacks = {}
     if water_ids is None:
         water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
     if neighbor_ids is None:
@@ -101,7 +127,8 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by cost.
     if valid_paths:
         # A cell's head is the tile the path ends on.
-        best_cell = min(valid_paths, key=lambda p: (target_assignments.get(p[1][0], 0), p[0]))[1]
+        best_cell = min(valid_paths,
+                        key=lambda p: _tile_pressure(target_assignments, target_stacks, p[1][0]) + (p[0],))[1]
 
         # If the best path is just staying where we are, return an empty array so we don't move
         if best_cell[0] == start_id:
@@ -440,17 +467,36 @@ def _build_target_assignments(units_info, borders, battles, at_war):
             elif c_id in convoy_near_coast:
                 naval_assignments[c_id] -= c.AI_CONVOY_DANGER_COAST_WEIGHT
 
-    # Active Battle Reinforcement Priority
-    for b_id in active_battles:
-        if b_id in target_assignments:
-            target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT
+    # How many units are really on each target, kept clear of the weights
+    # below so _tile_pressure can ask whether a tile is full of fighters rather
+    # than merely unpopular. Counted before the battle pull, which now needs to
+    # know how full a tile already is.
+    target_stacks = {t_id: 0 for t_id in target_destinations}
+    naval_stacks = {t_id: 0 for t_id in naval_destinations}
 
     # Pre-count units already AT the targets
     for unit, prov in units_info:
         if prov["id"] in target_assignments:
             target_assignments[prov["id"]] += 1
+            target_stacks[prov["id"]] += 1
         if prov["id"] in naval_assignments:
             naval_assignments[prov["id"]] += 1
+            naval_stacks[prov["id"]] += 1
+
+    # Active Battle Reinforcement Priority, fading as the firing line fills.
+    #
+    # A flat pull said "this battle is worth 20 units" whatever the combat width
+    # was, so a wider front drew no more men than a narrow one -- capping the
+    # stack stopped the AI wasting bodies but never made it mass any. Scaling by
+    # the share of the line still empty means the pull runs out exactly at
+    # width: at 5 a tile stops competing once 5 are there, at 10 it keeps asking
+    # until 10 are. Same strength as before on an empty tile, so a battle still
+    # outranks a quiet border by the same margin it always did.
+    width = max(1, c.MAX_COMBAT_ATTACKERS)
+    for b_id in active_battles:
+        if b_id in target_assignments:
+            room = max(0, width - target_stacks.get(b_id, 0)) / width
+            target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT * room
 
     # --- STRATEGIC WEIGHTING FIX ---
     # 1. Coasts are low priority. Inflate their count so units prefer land borders.
@@ -458,14 +504,16 @@ def _build_target_assignments(units_info, borders, battles, at_war):
         if c_id in target_assignments and c_id not in peace_borders and c_id not in war_borders:
             target_assignments[c_id] += 1
 
-    # 2. Push the main army to the frontlines! Only keep 1 guard per peace/coastal border during war or expansion.
+    # 2. Push the main army to the frontlines! Only keep 1 guard per peace/coastal
+    # border during war or expansion. The guard stays at one whatever the combat
+    # width is: a quiet border is a garrison, not a firing line.
     if at_war or unclaimed_targets:
         for p_id in peace_borders:
             if target_assignments.get(p_id, 0) >= 1:
-                target_assignments[p_id] += 50
+                target_assignments[p_id] += c.AI_REAR_GUARD_PENALTY
         for c_id in coastal_borders:
             if target_assignments.get(c_id, 0) >= 1:
-                target_assignments[c_id] += 50
+                target_assignments[c_id] += c.AI_REAR_GUARD_PENALTY
 
     # 3. Penalize expedition targets so the AI defends its homeland fronts FIRST.
     for e_id in expedition_targets:
@@ -477,6 +525,8 @@ def _build_target_assignments(units_info, borders, battles, at_war):
         "naval_destinations": naval_destinations,
         "target_assignments": target_assignments,
         "naval_assignments": naval_assignments,
+        "target_stacks": target_stacks,
+        "naval_stacks": naval_stacks,
     }
 
 
@@ -539,6 +589,24 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
     naval_destinations = ctx["naval_destinations"]
     target_assignments = ctx["target_assignments"]
     naval_assignments = ctx["naval_assignments"]
+    target_stacks = ctx["target_stacks"]
+    naval_stacks = ctx["naval_stacks"]
+
+    def claim(tile, from_tile=None):
+        """Books one unit onto `tile`, freeing the tile it left.
+
+        The counts have to move as orders are issued, not only reflect where
+        everyone started, or the second unit this turn would see the same empty
+        battle tile the first one did.
+        """
+        target_assignments[tile] = target_assignments.get(tile, 0) + 1
+        target_stacks[tile] = target_stacks.get(tile, 0) + 1
+        if from_tile is not None and from_tile in target_assignments:
+            target_assignments[from_tile] -= 1
+            target_stacks[from_tile] = max(0, target_stacks.get(from_tile, 0) - 1)
+
+    def pressure(tile):
+        return _tile_pressure(target_assignments, target_stacks, tile)
 
     for unit, prov in units_info:
         u_type = unit.get("type", "")
@@ -625,7 +693,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             adjacent_unclaimed = [n for n in adjacent_unclaimed if queries.can_convoy_enter(prov, map_screen.id_to_province.get(n)) and n not in unsafe_waters]
 
         if adjacent_unclaimed and not is_naval_combatant:
-            best_adj = min(adjacent_unclaimed, key=lambda t: target_assignments.get(t, 0))
+            best_adj = min(adjacent_unclaimed, key=pressure)
 
             speed = unit.get("speed", 1)
             unit["order"]["path"] = [best_adj]
@@ -661,18 +729,16 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                     if next_options:
                         # Pick the adjacent unclaimed tile with the least attackers to spread the expansion
-                        next_step = min(next_options, key=lambda t: target_assignments.get(t, 0))
+                        next_step = min(next_options, key=pressure)
                         unit["order"]["path"].append(next_step)
-                        target_assignments[next_step] = target_assignments.get(next_step, 0) + 1
+                        claim(next_step)
                         curr_node = next_step
                     else:
                         # Reached a dead end (e.g. hit an ocean or claimed border)
                         break
             # -----------------------------------------------------------------------
 
-            target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
-            if curr_id in target_assignments:
-                target_assignments[curr_id] -= 1
+            claim(best_adj, from_tile=curr_id)
             continue
 
         if at_war and not is_naval_combatant:
@@ -685,7 +751,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
             if adjacent_targets:
                 # Pick the adjacent enemy with the least attackers currently assigned
-                best_adj = min(adjacent_targets, key=lambda t: target_assignments.get(t, 0))
+                best_adj = min(adjacent_targets, key=pressure)
 
                 speed = unit.get("speed", 1)
                 unit["order"]["path"] = [best_adj]
@@ -721,33 +787,36 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                         if next_options:
                             # Pick the adjacent hostile tile with the least attackers to spread the invasion
-                            next_step = min(next_options, key=lambda t: target_assignments.get(t, 0))
+                            next_step = min(next_options, key=pressure)
                             unit["order"]["path"].append(next_step)
-                            target_assignments[next_step] = target_assignments.get(next_step, 0) + 1
+                            claim(next_step)
                             curr_node = next_step
                         else:
                             # Reached a dead end (e.g. hit an ocean or friendly border)
                             break
 
-                target_assignments[best_adj] = target_assignments.get(best_adj, 0) + 1
-                if curr_id in target_assignments:
-                    target_assignments[curr_id] -= 1
+                claim(best_adj, from_tile=curr_id)
                 continue
 
         # Branch routing logic between ground forces and naval forces
         if is_naval_combatant:
             targets = naval_destinations
             assignments = naval_assignments
+            stacks = naval_stacks
         else:
             targets = target_destinations
             assignments = target_assignments
+            stacks = target_stacks
 
         if not targets:
             continue
 
-        # Bypass the depth limiter for fully garrisoned borders
-        # Filter out targets that have the +50 "fully garrisoned" penalty applied
-        priority_targets = [t for t in targets if assignments.get(t, 0) < 50]
+        # Bypass the depth limiter for fully garrisoned borders: drop anything
+        # carrying the rear-guard penalty, and anything already holding a full
+        # firing line, since neither has anything to gain from one more body.
+        priority_targets = [t for t in targets
+                            if assignments.get(t, 0) < c.AI_REAR_GUARD_PENALTY
+                            and stacks.get(t, 0) < c.MAX_COMBAT_ATTACKERS]
         search_targets = priority_targets if priority_targets else targets
 
         # Route to the nearest border/enemy/coast/convoy that needs reinforcements
@@ -764,7 +833,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             unsafe_waters=unsafe_waters,
             unit_speed=unit.get("speed", 1),
             water_ids=water_ids,
-            neighbor_ids=neighbor_ids
+            neighbor_ids=neighbor_ids,
+            target_stacks=stacks
         )
 
         if path:
@@ -789,11 +859,16 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                 unit["order"]["path"] = final_path
 
-            # Tell the system this unit is taking this target, reducing its priority
+            # Tell the system this unit is taking this target, reducing its
+            # priority -- and filling a slot on it, so the next unit to look
+            # sees a tile one body closer to full rather than the same one this
+            # unit just claimed.
             if curr_id in assignments:
                 assignments[curr_id] -= 1
+                stacks[curr_id] = max(0, stacks.get(curr_id, 0) - 1)
             if path[-1] in assignments:
                 assignments[path[-1]] += 1
+                stacks[path[-1]] = stacks.get(path[-1], 0) + 1
 
 
 def _cancel_opposing_transitions(ai_nations, nation_units):

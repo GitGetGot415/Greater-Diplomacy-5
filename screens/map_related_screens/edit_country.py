@@ -51,7 +51,14 @@ def render_edit_country_buttons(edit_screen):
     edit_screen.elements = []
 
     edit_screen.btn_cancel = Button(*EDIT_COUNTRY_CANCEL_POS, "small", "red", "Cancel", edit_screen.exit_screen)
-    edit_screen.btn_save = Button(*EDIT_COUNTRY_SAVE_POS, "medium", "green", "Save Changes", edit_screen.save_and_exit)
+
+    # save_and_exit is the only place this screen writes anything back, so
+    # taking it away is the whole of read-only: drawing on the canvas still
+    # works and is discarded on the way out, which is what Cancel already does.
+    if edit_screen.can_edit:
+        edit_screen.btn_save = Button(*EDIT_COUNTRY_SAVE_POS, "medium", "green", "Save Changes", edit_screen.save_and_exit)
+    else:
+        edit_screen.btn_save = Button(*EDIT_COUNTRY_SAVE_POS, "medium", "grey", "Spectator: Read Only", lambda: None)
 
     # Switch country graphics configuration handler
     edit_screen.btn_switch_appearance = Button(
@@ -337,7 +344,21 @@ class Edit_Country_Screen(GameState):
             self.map_screen.show_feedback(f"Appearance copied from {chosen_country}!")
         queries.open_listbox_selector(self, "Switch Appearance Profile", "Select Target Country look:", items, cb)
 
+    @property
+    def can_edit(self):
+        """Whether this viewer may commit changes to the country's appearance.
+
+        A spectator has always been able to edit anyone's identity outright.
+        The switch exists so a host can hand out the view without the power;
+        it defaults to True, so nothing anybody could do yesterday stops.
+        """
+        if self.map_screen and self.map_screen.player_country == "Spectator":
+            return c.SPECTATOR_CAN_EDIT_APPEARANCE
+        return True
+
     def save_and_exit(self):
+        if not self.can_edit:
+            return
         p_data = self.map_screen.nation_data[self.editing_country]
         p_data["name"] = self.country_name
         p_data["adjective"] = self.adjective

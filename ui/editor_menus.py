@@ -40,14 +40,15 @@ def _launch_editor_screen(map_screen, class_name, *args, needs_countries=False):
 
 
 def _launch_table(map_screen, title, columns, rows, empty_message="Nothing to show.",
-                  needs_countries=False, on_row_click=None):
+                  needs_countries=False, on_row_click=None, row_tint=None):
     """Opens a full-screen sortable table over `rows`."""
     if needs_countries and not _has_active_countries(map_screen):
         return
     from ui.table_screen import TableScreen
     _launch(map_screen, TableScreen(map_screen, title, columns, rows,
                                     empty_message=empty_message,
-                                    on_row_click=on_row_click))
+                                    on_row_click=on_row_click,
+                                    row_tint=row_tint))
 
 
 def editor_load_map(map_screen):
@@ -122,6 +123,26 @@ def spec_select_edit_country(map_screen):
         map_screen.next_state, map_screen.done = "EDIT_COUNTRY", True
     queries.open_listbox_selector(map_screen, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
 
+def spec_select_research_country(map_screen):
+    """Asks a Spectator whose tech tree to open, the way Identity asks whose
+    country to edit.
+
+    The R&D button used to hand a spectator the scenario-authoring checkbox
+    list, which says what a nation has finished but not what it is working on.
+    The real screen shows both -- it just had no way of being pointed at
+    anybody other than the player, which is why spectators were diverted away
+    from it in the first place.
+    """
+    if not _has_active_countries(map_screen):
+        return
+    items = sorted(queries.get_living_nations(map_screen.map_data))
+    def cb(val):
+        map_screen.viewing_research_country = val
+        map_screen.next_state, map_screen.done = "RESEARCH", True
+    queries.open_listbox_selector(map_screen, "Select Nation's Research",
+                                  "Select Nation to View Research:", items, cb)
+
+
 def open_editor_date(map_screen):
     """Opens a native screen to edit the game's starting date."""
     _launch_editor_screen(map_screen, "Editor_Date_Screen")
@@ -173,6 +194,8 @@ def open_spectator_messages(map_screen):
     if not _has_active_countries(map_screen):
         return
 
+    from map_logic.diplomacy import diplomacy_messages
+
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -202,8 +225,13 @@ def open_spectator_messages(map_screen):
                         "date_sort": sort_val,
                         "sender": sender,
                         "receiver": c_name,
-                        "type": msg.get("type", "TEXT"),
-                        "message": msg.get("content", "")
+                        # What kind of act it was, not merely that it was
+                        # diplomatic -- which is all this column could say
+                        # before the action was recorded on the message.
+                        "type": diplomacy_messages.message_category(msg),
+                        "message": msg.get("content", ""),
+                        "parameters": msg.get("parameters"),
+                        "llm": bool(msg.get("llm")),
                     })
 
     all_msgs.sort(key=lambda m: m["date_sort"], reverse=True)
@@ -216,21 +244,36 @@ def open_spectator_messages(map_screen):
         TableColumn("type", "Type", 100),
         TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
     ]
-    hint = "Click a message to read it in full."
+    hint = "Click a message to read it in full. Orange = written by the model."
 
     # The column has to truncate -- there is no width at which some message
     # does not overflow -- so a row opens the whole thing instead.
     def open_message(row):
         from ui.text_detail_screen import TextDetailScreen
+        body = row.get("message", "")
+
+        # The sent copies are dropped above, so the surviving copy is always
+        # the recipient's -- the terms read from their side, named rather than
+        # called "You", since the reader is neither party.
+        terms = diplomacy_messages.describe_trade(row.get("parameters"),
+                                                  subject=row.get("receiver", "They"))
+        if terms:
+            body = f"{body}\n\nTerms:\n" + "\n".join(terms)
+
+        marks = [row.get("date", ""), row.get("type", "")]
+        marks.append("written by the model" if row.get("llm") else "standard response")
         _launch(map_screen, TextDetailScreen(
             map_screen,
             f"{row.get('sender', '?')} to {row.get('receiver', '?')}",
-            row.get("message", ""),
-            subtitle=f"{row.get('date', '')}   |   {row.get('type', '')}"))
+            body,
+            subtitle="   |   ".join(m for m in marks if m)))
+
+    def tint(row):
+        return c.MESSAGE_LLM_ROW_COLOR if row.get("llm") else None
 
     _launch_table(map_screen, f"Global Messages Overview  ({hint})", columns, all_msgs,
                   empty_message="No messages have been sent yet.",
-                  on_row_click=open_message)
+                  on_row_click=open_message, row_tint=tint)
 
 def open_map_research_editor(map_screen):
     """Opens a native screen to edit research for countries currently existing on the map."""

@@ -310,7 +310,7 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
     if result is None:
         return _reply(canned, accepted=accepted)
     return _reply(result.get("message", f"{mode} ERROR: reply had no 'message' field"),
-                  result, accepted)
+                  result, accepted, llm=bool(result.get("message")))
 
 def call_ollama(system_prompt, user_prompt, turn_id=None):
     """Helper to hit local Ollama instance with direct socket control for instant termination."""

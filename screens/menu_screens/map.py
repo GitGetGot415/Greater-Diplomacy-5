@@ -126,7 +126,11 @@ def render_buttons(map_screen):
     map_screen.btn_ed_date = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), image=icons.get("clock"), show_text=False)
     map_screen.btn_ed_edited = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), font_preset="normal")
     map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
-    map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 9, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
+    # Row 11, not 9: btn_gp_claims is row 9 and is also visible in the editor, so
+    # this button spent its whole existence hidden underneath it, pixel for pixel,
+    # with a click there firing both callbacks. test_editor_menu_layout keeps the
+    # rows distinct now rather than trusting the next number picked by hand.
+    map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
     map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
 
     # Gameplay Buttons
@@ -207,8 +211,22 @@ def render_buttons(map_screen):
         return lambda: (editor_action(map_screen) if (map_screen.is_editor or map_screen.player_country == "Spectator")
                         else map_screen.change_state(player_state))
 
+    def research_callback():
+        """Three different things, because R&D means three different things.
+
+        The map editor authors what a nation *starts* with, so it keeps the bulk
+        checkbox list. A spectator wants to watch and steer a live programme, so
+        they pick a nation and get the real tech tree. A player gets their own.
+        """
+        if map_screen.is_editor:
+            editor_menus.open_map_research_editor(map_screen)
+        elif map_screen.player_country == "Spectator":
+            editor_menus.spec_select_research_country(map_screen)
+        else:
+            map_screen.viewing_research_country = ""
+            map_screen.change_state("RESEARCH")
+
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
-    research_callback = editor_or(editor_menus.open_map_research_editor, "RESEARCH")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
     # The left-hand bar: one column, one size, one colour, one row per entry.

@@ -45,6 +45,20 @@ class NoNetworkTestCase(unittest.TestCase):
         setattr(module, name, value)
         self.addCleanup(lambda: setattr(module, name, original))
 
+    def set_mode(self, mode, immersion="LITE"):
+        """Both modules, deliberately.
+
+        ai_handler re-exports the settings getters by value -- `from ai_settings
+        import get_ai_mode` -- so the two names are separate bindings, and
+        patching one leaves the other answering from the developer's real
+        settings file. ai_diplomacy asks ai_handler; these tests used to patch
+        only ai_settings, so whether they tested anything depended on what the
+        machine running them had last saved in Settings.
+        """
+        for module in (ai_settings, ai_handler):
+            self.patch(module, "get_ai_mode", lambda m=mode: m)
+            self.patch(module, "get_ai_immersion_level", lambda i=immersion: i)
+
 
 class ValidationTests(NoNetworkTestCase):
     def setUp(self):
@@ -128,7 +142,7 @@ class EndToEndTests(NoNetworkTestCase):
                 (game.nation_data[nation].get("pending_diplomacy") or {}).items()}
 
     def test_with_no_model_the_staff_choice_stands(self):
-        self.patch(ai_settings, "get_ai_mode", lambda: "OFF")
+        self.set_mode("OFF")
         game = self.make_game()
         self.run_pass(game)
         self.assertTrue(self.queued(game, "A"), "nothing was queued at all")
@@ -136,12 +150,11 @@ class EndToEndTests(NoNetworkTestCase):
     def test_force_skip_produces_exactly_what_no_model_would(self):
         """The invariant that makes Force Skip safe: abandoning the batch must
         leave the same turn a model-free game would have had."""
-        self.patch(ai_settings, "get_ai_mode", lambda: "OFF")
+        self.set_mode("OFF")
         baseline = self.make_game()
         self.run_pass(baseline)
 
-        self.patch(ai_settings, "get_ai_mode", lambda: "CLAUDE")
-        self.patch(ai_settings, "get_ai_immersion_level", lambda: "ABSOLUTE")
+        self.set_mode("CLAUDE", "ABSOLUTE")
         skipped = self.make_game()
         skipped.force_skip_llm = True
         self.run_pass(skipped)
@@ -150,8 +163,7 @@ class EndToEndTests(NoNetworkTestCase):
             self.assertEqual(self.queued(skipped, nation), self.queued(baseline, nation), nation)
 
     def test_a_reply_can_change_which_action_is_taken(self):
-        self.patch(ai_settings, "get_ai_mode", lambda: "CLAUDE")
-        self.patch(ai_settings, "get_ai_immersion_level", lambda: "ABSOLUTE")
+        self.set_mode("CLAUDE", "ABSOLUTE")
 
         seen = {}
 
@@ -166,12 +178,11 @@ class EndToEndTests(NoNetworkTestCase):
         self.assertTrue(seen.get("asked"), "the director never consulted the model")
 
     def test_a_provider_error_leaves_the_staff_choice_intact(self):
-        self.patch(ai_settings, "get_ai_mode", lambda: "OFF")
+        self.set_mode("OFF")
         baseline = self.make_game()
         self.run_pass(baseline)
 
-        self.patch(ai_settings, "get_ai_mode", lambda: "CLAUDE")
-        self.patch(ai_settings, "get_ai_immersion_level", lambda: "ABSOLUTE")
+        self.set_mode("CLAUDE", "ABSOLUTE")
         self.patch(ai_handler, "_run_provider",
                    lambda *a, **k: ai_handler._provider_error("API ERROR: boom"))
         broken = self.make_game()
