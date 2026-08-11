@@ -1086,13 +1086,42 @@ def get_best_preferred_unit(player_research, unit_library, preference_list):
                     return test_name
     return None
 
+def _best_unit_for_role(player_research, unit_library, role, preference_list):
+    """Highest-scoring unlocked unit filling a role, by stats rather than by name.
+
+    These two used to walk a hand-written list in constants.py backwards, so the
+    last entry won: Main Battle Tanks and Destroyers the moment either was
+    researched, whatever they cost, and Heavy Tanks, Artillery, Submarines and
+    Carriers never. They keep their signatures because the random map generator
+    seeds starting armies with them and mods may call them, but the answer now
+    comes from map_logic.ai.ai_unit_eval like every other unit decision.
+
+    The old preference list survives as the fallback for a caller with no
+    research at all, where there is nothing to score.
+    """
+    from map_logic.ai import ai_unit_eval
+
+    candidates = ai_unit_eval.buildable_units(player_research, unit_library)
+    if candidates:
+        prices = {res: 1.0 for res in ai_unit_eval.RESOURCES}
+        ctx = ai_unit_eval.context(prices, volley=1000.0, stack=c.MAX_COMBAT_ATTACKERS)
+        best = ai_unit_eval.best_by_role(
+            ai_unit_eval.evaluate(candidates, unit_library, ctx), role)
+        if best:
+            return best
+    return get_best_preferred_unit(player_research, unit_library, preference_list)
+
 def get_best_offensive_unit(player_research, unit_library):
-    """Finds the highest preference offensive unit the nation has unlocked."""
-    return get_best_preferred_unit(player_research, unit_library, c.AI_OFFENSIVE_UNIT_PREFERENCE)
+    """Finds the best offensive unit the nation has unlocked."""
+    from map_logic.ai import ai_unit_eval
+    return _best_unit_for_role(player_research, unit_library,
+                               ai_unit_eval.ROLE_ASSAULT, c.AI_OFFENSIVE_UNIT_PREFERENCE)
 
 def get_best_naval_unit(player_research, unit_library):
-    """Finds the highest preference naval unit the nation has unlocked."""
-    return get_best_preferred_unit(player_research, unit_library, c.AI_NAVAL_UNIT_PREFERENCE)
+    """Finds the best naval unit the nation has unlocked."""
+    from map_logic.ai import ai_unit_eval
+    return _best_unit_for_role(player_research, unit_library,
+                               ai_unit_eval.ROLE_NAVAL, c.AI_NAVAL_UNIT_PREFERENCE)
 
 REQ_GROUP_KEYS = ("OR", "AND")
 

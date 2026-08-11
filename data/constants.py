@@ -879,6 +879,17 @@ AI_BORDER_DISTRACTION_MULTIPLIER = 0.5 # Multiplier for border units actively en
 # AI RECRUITMENT PREFERENCES
 # ==========================================
 
+# LEGACY. These lists no longer decide anything -- map_logic/ai/ai_unit_eval.py
+# scores every unit the nation can actually build from its stats, so a change to
+# unit_data.json changes what the AI builds without anyone editing a list here.
+# Kept defined because mods read them, and because get_best_offensive_unit /
+# get_best_naval_unit still exist as (now stat-derived) wrappers.
+#
+# For the record, what they used to do: get_best_preferred_unit walks them in
+# REVERSE, so the last entry won. That meant the AI always reached for Main
+# Battle Tanks and Destroyers the moment it had a single level of either,
+# whatever they cost, and never built Heavy Tanks, Super Heavy Tanks, Artillery,
+# Submarines or Carriers at all -- three of those aren't even on the lists.
 AI_OFFENSIVE_UNIT_PREFERENCE = [
     "Cavalry",
     # the stuff below requires fuel, make sure the ai can handle it
@@ -896,6 +907,86 @@ AI_NAVAL_UNIT_PREFERENCE = [
     # "Aircraft Carrier"
 ]
 
+# ==========================================
+# AI UNIT VALUATION (map_logic/ai/ai_unit_eval.py)
+# ==========================================
+# Weights for the stat-derived replacement for the lists above. They are applied
+# to values normalised against the mean of whatever the nation can currently
+# build, so they stay meaningful after any rebalance of unit_data.json.
+
+# What a unit contributes, given how combat actually resolves:
+#  - only the top MAX_COMBAT_ATTACKERS by attack deal damage, so offence is raw attack
+#  - incoming damage is split across ALL defenders, then each subtracts its own
+#    defense flat, so a cheap high-defense body is worth far more than its stats
+#    suggest and every extra body thins the share for the whole stack
+AI_W_OFFENSE = 1.0
+AI_W_DURABILITY = 1.0
+# Flat, not scaled by health: damage is divided by the NUMBER of defenders, so
+# every body thins the volley for the stack by the same amount whatever it is
+# made of. Its real effect is to make cheap units better value per point of pain.
+AI_W_SOAK = 0.35
+AI_W_BOMBARD = 0.6      # bombardment ignores the combat-width cap and takes no return fire
+
+# Floor on the damage a unit takes, as a fraction of its share of the volley.
+# Without it, defense >= share divides by zero and an unkillable unit scores
+# infinitely; with it, stacking defense has strong but finite returns.
+AI_MIN_DAMAGE_FRACTION = 0.10
+
+# A unit that takes ten turns to build is worth less than the same value
+# arriving now. 0.5 = value scales with the square root of build time.
+AI_TIME_EXPONENT = 0.5
+
+# Turns of upkeep counted against a unit's purchase price.
+AI_UPKEEP_HORIZON = 20
+
+# Floor on how scarce a resource can get, so pricing saturates instead of
+# dividing by zero when a nation has no income and no stockpile of something.
+AI_MIN_RESOURCE_SLACK = 0.05
+
+# Army composition. Targets are per frontline tile; a role at its target is
+# multiplied by AI_ROLE_DIMINISH, so roles trade off against each other instead
+# of being bought to a hardcoded ratio.
+AI_ROLE_DIMINISH = 0.35
+
+# How much to spend on depth versus firepower, as a ratio of resources -- NOT of
+# unit counts. Only MAX_COMBAT_ATTACKERS units per tile can fire, so the assault
+# target is a count the combat rules hand us directly; bodies then get a
+# comparable share of the budget, which at 1.0 means "about as much again".
+#
+# It has to be expressed as spend rather than as a number of units, because a
+# heavy tank costs seventeen infantry. A count-based depth target quietly
+# committed 90% of the budget to armour and produced an army that lost to every
+# mixed composition in a round-robin under the real combat rules.
+#
+# 2.0 was picked by measurement, not taste: armies built at each ratio were
+# fought against eleven fixed compositions under the real combat rules, and
+# 1.5-3.0 all win comfortably while 4.0 collapses into pure infantry and loses
+# to everything. Sitting in the middle of that plateau rather than at its edge.
+AI_LINE_SPEND_RATIO = 2.0
+AI_BOMBARD_SPEND_RATIO = 0.15   # guns are support, not the main line
+AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
+
+# A unit is ASSAULT when this much of its combat value comes from attack rather
+# than from staying alive and taking up space; everything else on land is a LINE
+# body. Below 0.5 on purpose: a unit that does most of its work shooting still
+# has to survive to do it, so the best attackers are never pure offence.
+AI_ASSAULT_OFFENSE_SHARE = 0.45
+
+# Stop buying when the best remaining option is worth less than this fraction of
+# the best option overall -- the AI has better uses for the resources.
+AI_MARGINAL_FLOOR = 0.15
+
+# Saving up. If the best unit the nation cannot yet afford is worth more than
+# this much more than the best it can, it banks the turn's budget instead --
+# but only when income actually closes the gap inside AI_SAVE_UP_TURNS, so a
+# nation with no industry never sits waiting for a tank it will never afford.
+AI_SAVE_UP_THRESHOLD = 0.6
+AI_SAVE_UP_TURNS = 4
+
+# Fallback for how hard the enemy hits when a nation is at peace and has no
+# frontline to measure, expressed as a multiple of the mean buildable attack.
+AI_PEACETIME_THREAT_MULTIPLIER = 3.0
+
 AI_UPKEEP_TARGETS = {
     "manpower": 0.80,
     "materials": 0.60,
@@ -906,7 +997,8 @@ AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 
-AI_MAX_NAVY_RATIO = 0.5 # Maximum percentage of an AI's army that can be navy
+AI_MAX_NAVY_RATIO = 0.5 # LEGACY: superseded by AI_NAVY_PER_COAST_TILE
+AI_NAVY_PER_COAST_TILE = 0.5 # Warships wanted per coastal tile, as a role target
 AI_CONVOY_ESCORT_WEIGHT = 1 # Negative weight to pull pathing warships towards convoys
 AI_CONVOY_COMBAT_WEIGHT = 50 # MASSIVE priority to escort convoys actively being attacked
 AI_CONVOY_DANGER_SHIP_WEIGHT = 25 # Priority for convoys near enemy ships
