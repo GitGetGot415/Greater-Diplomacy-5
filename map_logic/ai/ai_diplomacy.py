@@ -402,6 +402,10 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
 def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):
     """Section 1.5: an unaligned nation at war looks for a faction to join, or
     else another unaligned co-belligerent to found one with."""
+    # A puppet has no alignment to seek; it holds whatever its master holds.
+    if not queries.can_choose_own_faction(ai_name, map_screen.nation_data):
+        return
+
     # Prevent sending multiple faction requests
     has_pending_faction_req = False
     for target_nation, info in pending.items():
@@ -682,6 +686,9 @@ def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, w
             continue
         other_data = map_screen.nation_data.get(other, {})
         if other_data.get("faction"):
+            continue
+        # Courting somebody else's subject is courting their overlord's answer.
+        if not queries.can_choose_own_faction(other, map_screen.nation_data):
             continue
         if queries.are_at_war(ai_name, other, map_screen.nation_data):
             continue

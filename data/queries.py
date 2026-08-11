@@ -816,6 +816,21 @@ def can_negotiate_peace(nation, other, nation_data):
     return not master or master == other
 
 
+def can_choose_own_faction(nation, nation_data):
+    """Whether `nation` may join, be invited into, or leave a faction alone.
+
+    A puppet's alignment is its master's, exactly as its wars are -- it follows
+    its overlord in and out through pull_puppets_into_faction and its opposite,
+    and has no say of its own. Nothing checked this either, so a subject could
+    sit in a faction its master had never joined: in saves/Madagascar but not
+    France, French Madagascar was in the Axis while Vichy France was in nothing.
+
+    Founding a faction is deliberately not covered. finalize_create_faction
+    already redirects to the master, so the puppet is not acting alone there.
+    """
+    return not nation_data.get(nation, {}).get("master", "")
+
+
 def needs_military_access_request(moving_nation, target_owner, nation_data):
     """False if moving_nation can already enter target_owner's territory.
 

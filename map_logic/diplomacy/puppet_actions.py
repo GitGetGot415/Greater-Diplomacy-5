@@ -131,6 +131,13 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
             if unit.get("owner") == puppet:
                 unit["owner"] = master
 
+    # Every province above went through conquer_province, which retires the
+    # loser once its last one changes hands -- but a puppet that already held
+    # nothing never enters that loop, and used to stay on its faction's roster
+    # for the rest of the game.
+    from map_logic.turn_processing.edit_province_ownership import retire_landless_nation
+    retire_landless_nation(map_screen, puppet)
+
     break_puppet_link(nation_data, master, puppet)
 
     log_global_event(nation_data, f"{master} has fully annexed {puppet}.")

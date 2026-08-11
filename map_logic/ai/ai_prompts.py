@@ -62,7 +62,8 @@ AI_FALLBACK_RESPONSES = {
     "ACCEPT_PEACE": "We accept your terms. The war between us is over.",
     "ACCEPT_MILITARY_ACCESS": "We accept your request for military access.",
 
-    "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord."
+    "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord.",
+    "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord."
 }
 
 # ==========================================

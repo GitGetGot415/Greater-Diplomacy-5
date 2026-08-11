@@ -255,6 +255,17 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     if my_master == sender_nation and action_type in ["FACTION_INVITE", "CREATE_FACTION", "JOIN_FACTION_REQ"]:
         accepted = True
 
+    # A puppet does not choose its own alignment, either way round: it cannot
+    # accept an invitation, and there is no point letting one in, since it holds
+    # whatever its master holds. Structural, so nothing may overrule it.
+    # CREATE_FACTION is exempt -- finalize_create_faction redirects to the
+    # master, so founding one is the overlord's act, not the subject's.
+    if action_type in ["FACTION_INVITE", "JOIN_FACTION_REQ"] and my_master != sender_nation:
+        if not (queries.can_choose_own_faction(ai_nation, nation_data)
+                and queries.can_choose_own_faction(sender_nation, nation_data)):
+            return Verdict(False, 1.0,
+                           "a subject state does not choose its own alliances")
+
     # 2. Check for Join Faction Requests (If we are the leader)
     if action_type == "JOIN_FACTION_REQ" and ai_stats.get("is_faction_leader", False):
         relation_score = queries.get_relation_score(ai_nation, sender_nation, nation_data)

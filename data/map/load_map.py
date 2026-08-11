@@ -23,6 +23,51 @@ def _load_default_images(map_obj):
         if not n_data.get("portrait_data"):
             n_data["portrait_data"] = "DEFAULT"
 
+def repair_faction_rosters(nation_data, map_data):
+    """Drops from every faction roster the members who should never have been on it.
+
+    Two states the engine now prevents but older saves are already in, because
+    nothing checked either one:
+
+      - a puppet in a faction its master is not in. A subject holds whatever its
+        master holds; it does not sign its own pacts. saves/Madagascar but not
+        France has French Madagascar in the Axis while Vichy France, its master,
+        is in nothing at all.
+      - a nation holding no territory still on a roster. The cleanup that took a
+        defeated nation off one only ever ran for a puppet the player had
+        created, so an ordinary conquest left a ghost: saves/Tannu Tuva Gone but
+        not forgotten carries three, of which only Tannu Tuva is a puppet.
+
+    Membership is cleared; nothing else about the nation is touched, and no
+    nation is deleted. Each repair is logged, so a roster changing between one
+    session and the next is traceable rather than mysterious.
+    """
+    from map_logic.diplomacy.diplomacy_events import log_global_event
+
+    has_land = set()
+    for prov in map_data.values():
+        owner = prov.get("owner")
+        if owner:
+            has_land.add(owner)
+
+    for name, data in list(nation_data.items()):
+        if not isinstance(data, dict) or not data.get("faction"):
+            continue
+
+        master = data.get("master", "")
+        if master and nation_data.get(master, {}).get("faction", "") != data["faction"]:
+            reason = f"its master {master} is not in it"
+        elif name not in has_land:
+            reason = "it holds no territory"
+        else:
+            continue
+
+        log_global_event(nation_data,
+                         f"{name} is no longer counted among {data['faction']}: {reason}.")
+        data["faction"] = ""
+        data["is_faction_leader"] = False
+
+
 def load_map_assets(map_screen, load_path):
     # Ensure no residual data from a previous map persists during the load
     map_screen.map_data = {}
@@ -405,6 +450,10 @@ def load_map_assets(map_screen, load_path):
     if save_version != c.GAME_VERSION:
         queries.migrate_units_to_current_stats(map_screen.map_data, unit_lib)
         print(f"[SYSTEM] Migrated save from version '{save_version or 'unversioned'}' to '{c.GAME_VERSION}'.")
+
+    # --- REPAIR FACTION ROSTERS ---
+    # Runs before the pre-war maps below, which are built off the rosters.
+    repair_faction_rosters(map_screen.nation_data, map_screen.map_data)
 
     # Init Pre-War Maps for Factions starting at war
     map_screen.nation_data.setdefault("FACTION_WAR_MAPS", {})

@@ -65,12 +65,16 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None):
 
     if action == "FACTION_INVITE":
         # The accepter is being invited into the proposer's faction.
+        if not queries.can_choose_own_faction(accepter, nation_data):
+            return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[accepter].get("faction", ""):
             return _blocked("ACCEPT_FACTION_ALREADY_IN")
         finalize_faction_join(map_data, nation_data, proposer, accepter)
 
     elif action == "JOIN_FACTION_REQ":
         # The proposer is asking to join the accepter's faction.
+        if not queries.can_choose_own_faction(proposer, nation_data):
+            return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[proposer].get("faction", ""):
             return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
         finalize_faction_join(map_data, nation_data, accepter, proposer)
