@@ -179,6 +179,19 @@ class RetireLandlessTests(unittest.TestCase):
         own.retire_landless_nation(screen, "Doomed")
         self.assertEqual(self.nation_data["Bystander"]["pending_diplomacy"], {})
 
+    def test_its_own_proposals_die_with_it(self):
+        """Territory changes hands in phase 2 and diplomacy resolves in phase 1,
+        so an offer queued before the last province fell would still land the
+        turn after -- which is how a dead Luxembourg founded "The Luxembourg
+        Pact" on turn 15 and reappeared on a roster it had just left."""
+        screen = self.build()
+        self.nation_data["Doomed"]["pending_diplomacy"] = {
+            "Bystander": {"action": "CREATE_FACTION", "turns": 1}}
+        self.nation_data["Doomed"]["diplo_responses"] = {"Empire": {"verdict": "ACCEPT"}}
+        own.retire_landless_nation(screen, "Doomed")
+        self.assertEqual(self.nation_data["Doomed"]["pending_diplomacy"], {})
+        self.assertEqual(self.nation_data["Doomed"]["diplo_responses"], {})
+
     def test_the_master_stops_listing_it_as_a_puppet(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")

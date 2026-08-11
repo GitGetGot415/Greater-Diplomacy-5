@@ -91,6 +91,14 @@ def retire_landless_nation(map_screen, nation):
         if fac:
             leave_faction(map_screen.nation_data, nation)
 
+        # Its own proposals die with it. Territory changes hands in phase 2 and
+        # diplomacy resolves in phase 1, so an offer queued before the last
+        # province fell would otherwise still land the turn after -- which is
+        # how a dead Luxembourg founded "The Luxembourg Pact" on turn 15 of a
+        # test run and reappeared on a roster it had just been taken off.
+        data["pending_diplomacy"] = {}
+        data["diplo_responses"] = {}
+
         master = data.get("master", "")
         if master and master in map_screen.nation_data:
             if nation in map_screen.nation_data[master].get("puppets", []):
