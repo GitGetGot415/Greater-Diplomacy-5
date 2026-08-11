@@ -194,21 +194,34 @@ def _deliver(nation_data, owner, entry):
         del inbox[c.INBOX_MAX_MESSAGES:]
 
 
-def send_message(map_screen, sender, receiver, content, msg_type="TEXT"):
+def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=None):
+    """Delivers one message to the receiver and files a sent copy for the sender.
+
+    `extra` is stamped onto both copies. It exists for the terms of a trade: the
+    numbers live on the sender's pending_diplomacy entry, which is deleted the
+    moment the offer resolves, so a player who accepted a trade had no way to
+    see afterwards what they had agreed to. Recorded on the message itself it
+    outlives the offer, and costs nothing to persist -- nation_data is
+    serialized wholesale by build_save_dict.
+    """
     nation_data = map_screen.nation_data
     date_str = map_screen.time_manager.get_date_string()
 
     # 1. Deliver the message to the receiver
-    _deliver(nation_data, receiver, {
+    incoming = {
         "sender": sender, "content": content, "type": msg_type,
         "read": False, "spectator_read": False, "date": date_str
-    })
+    }
+    incoming.update(extra or {})
+    _deliver(nation_data, receiver, incoming)
 
     # 2. Save a "Sent" copy to the sender's inbox
-    _deliver(nation_data, sender, {
+    outgoing = {
         "sender": f"To: {receiver}", "content": content, "type": msg_type,
         "read": True, "spectator_read": True, "date": date_str
-    })
+    }
+    outgoing.update(extra or {})
+    _deliver(nation_data, sender, outgoing)
 
 # ==========================================
 # OUTGOING ANNOUNCEMENTS
@@ -261,6 +274,12 @@ def announcement_for(action, custom_msg=""):
     return default
 
 
-def send_treaty_message(map_screen, sender, receiver, action, custom_msg=""):
-    """Announces an outgoing diplomatic action to its recipient."""
-    send_message(map_screen, sender, receiver, announcement_for(action, custom_msg), "DIPLOMACY")
+def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None):
+    """Announces an outgoing diplomatic action to its recipient.
+
+    A trade's `parameters` ride along on the message so its terms survive the
+    offer being resolved and cleared -- see send_message.
+    """
+    extra = {"parameters": parameters} if parameters else None
+    send_message(map_screen, sender, receiver, announcement_for(action, custom_msg),
+                 "DIPLOMACY", extra=extra)

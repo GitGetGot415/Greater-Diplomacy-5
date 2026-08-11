@@ -40,12 +40,14 @@ def _launch_editor_screen(map_screen, class_name, *args, needs_countries=False):
 
 
 def _launch_table(map_screen, title, columns, rows, empty_message="Nothing to show.",
-                  needs_countries=False):
+                  needs_countries=False, on_row_click=None):
     """Opens a full-screen sortable table over `rows`."""
     if needs_countries and not _has_active_countries(map_screen):
         return
     from ui.table_screen import TableScreen
-    _launch(map_screen, TableScreen(map_screen, title, columns, rows, empty_message=empty_message))
+    _launch(map_screen, TableScreen(map_screen, title, columns, rows,
+                                    empty_message=empty_message,
+                                    on_row_click=on_row_click))
 
 
 def editor_load_map(map_screen):
@@ -214,9 +216,21 @@ def open_spectator_messages(map_screen):
         TableColumn("type", "Type", 100),
         TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
     ]
+    hint = "Click a message to read it in full."
 
-    _launch_table(map_screen, "Global Messages Overview", columns, all_msgs,
-                  empty_message="No messages have been sent yet.")
+    # The column has to truncate -- there is no width at which some message
+    # does not overflow -- so a row opens the whole thing instead.
+    def open_message(row):
+        from ui.text_detail_screen import TextDetailScreen
+        _launch(map_screen, TextDetailScreen(
+            map_screen,
+            f"{row.get('sender', '?')} to {row.get('receiver', '?')}",
+            row.get("message", ""),
+            subtitle=f"{row.get('date', '')}   |   {row.get('type', '')}"))
+
+    _launch_table(map_screen, f"Global Messages Overview  ({hint})", columns, all_msgs,
+                  empty_message="No messages have been sent yet.",
+                  on_row_click=open_message)
 
 def open_map_research_editor(map_screen):
     """Opens a native screen to edit research for countries currently existing on the map."""

@@ -3,6 +3,7 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from ui import text_utils
 from data import queries
+from map_logic.diplomacy import diplomacy_messages
 
 # ==========================================
 # LAYOUT
@@ -21,9 +22,14 @@ POPUP_CLOSE_INSET_X = 30
 POPUP_CLOSE_INSET_Y = 5
 
 class DiplomaticPopup:
-    def __init__(self, sender, text, index):
+    def __init__(self, sender, text, index, message=None):
         self.width = POPUP_WIDTH
         self.height = POPUP_HEIGHT
+        #: The inbox entry this came from, so the popup can tell when it has
+        #: been dealt with. Kept by identity rather than copied: marking the
+        #: message read is what the Messages screen already does, and this reads
+        #: the same object.
+        self.message = message
         
         # Start positions
         start_x = POPUP_START_X
@@ -119,13 +125,56 @@ def spawn_popups_for_player(map_screen):
                 if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                     content += "\n(See Messages to accept or decline)"
 
-                popup = DiplomaticPopup(sender, content, idx)
+                popup = DiplomaticPopup(sender, content, idx, message=msg)
                 map_screen.diplomatic_popups.append(popup)
             msg["popup_shown"] = True
+
+
+def is_spent(map_screen, popup):
+    """Whether this popup has stopped telling the player anything new.
+
+    Two ways it can: the message has been read, or the request it was announcing
+    has been answered. Neither used to close it -- popups were created and then
+    never looked at again, so accepting a trade left its alert sitting on screen
+    until it was dismissed by hand, next to an offer that no longer existed.
+
+    Closing one by hand is deliberately not the same thing: the X leaves the
+    message unread, because dismissing an alert is not reading your mail.
+    """
+    msg = popup.message
+    if msg is None:
+        return False
+    if msg.get("read"):
+        return True
+
+    sender = msg.get("sender", "")
+    if not sender or sender.startswith("To: "):
+        return False
+
+    # Was this announcing a request, and has that request been dealt with?
+    action, turns = queries.get_diplomatic_status(
+        sender, map_screen.player_country, map_screen.nation_data)
+    if turns > 0 and action in c.BILATERAL_ACTIONS:
+        answered, _ = diplomacy_messages.get_response_status(
+            map_screen.nation_data, map_screen.player_country, sender)
+        return bool(answered)
+    return False
+
+
+def close_spent_popups(map_screen):
+    """Drops every popup that has been read or answered. Called each frame."""
+    popups = getattr(map_screen, 'diplomatic_popups', None)
+    if not popups:
+        return
+    map_screen.diplomatic_popups = [p for p in popups if not is_spent(map_screen, p)]
 
 def handle_events(map_screen, event):
     if not hasattr(map_screen, 'diplomatic_popups'):
         return False
+
+    # A popup that has been dealt with must not swallow the click that lands on
+    # where it used to be, so it goes before anything is hit-tested.
+    close_spent_popups(map_screen)
 
     # Process from top-most (last in list) to bottom-most
     for i in reversed(range(len(map_screen.diplomatic_popups))):
@@ -150,6 +199,7 @@ def handle_events(map_screen, event):
 def draw(map_screen, surface):
     if not hasattr(map_screen, 'diplomatic_popups'):
         return
+    close_spent_popups(map_screen)
     for popup in map_screen.diplomatic_popups:
         popup.draw(surface)
 

@@ -779,7 +779,10 @@ def _process_pass1_immediate_actions(map_screen):
                 elif action in ("FACTION_INVITE", "JOIN_FACTION_REQ", "REQ_MILITARY_ACCESS",
                                 "CEASEFIRE", "CREATE_FACTION", "TRADE"):
                     # Nothing happens on the sender's side; the offer just travels.
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg)
+                    # A trade's terms travel with it, so both sides can still
+                    # read what was agreed after the offer itself is cleared.
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
+                                        parameters=info.get("parameters"))
 
                 elif action == "PEACE_TREATY":
                     # The terms ARE the message, so this one formats rather than

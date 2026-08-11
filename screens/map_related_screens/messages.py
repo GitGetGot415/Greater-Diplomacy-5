@@ -474,33 +474,51 @@ class Messages_Screen(GameState):
         inbox = p_data.get("inbox", [])
         
         display_thread = []
-        
+        archived_terms = False
+
         # 1. Build thread with historical messages (reversed so oldest is at index 0)
         for msg in reversed(inbox):
             if msg.get("sender") == self.selected_recipient or msg.get("sender") == f"To: {self.selected_recipient}":
+                is_player = msg["sender"].startswith("To: ")
+
                 # Detect newlines and split them back into multiple visual bubbles automatically
                 lines_split = [t for t in msg["content"].split("\n") if t.strip()]
                 for idx, sub_text in enumerate(lines_split):
                     # Only append the date to the first bubble if it's a split message
                     show_date = msg.get("date", "") if idx == 0 else ""
-                    
+
                     display_thread.append({
-                        "content": sub_text, 
-                        "is_player": msg["sender"].startswith("To: "), 
+                        "content": sub_text,
+                        "is_player": is_player,
                         "is_draft": False,
                         "is_diplo": msg.get("type") == "DIPLOMACY",
                         "date": show_date
                     })
-                        
-        # --- SHOW WHAT AN INCOMING TRADE ACTUALLY ASKS FOR ---
-        # The offer travels as prose only -- the AI's covering line, or the
-        # sender's own -- while the numbers stay on the sender's pending entry.
-        # Without this a player was asked to accept or reject terms they could
-        # not see. Read from the sender's side and inverted, since the keys are
-        # written from the proposer's point of view.
+
+                # --- WHAT THIS TRADE ACTUALLY ASKED FOR ---
+                # The offer travels as prose only -- the AI's covering line, or
+                # the sender's own -- so without this a player was asked to
+                # accept terms they could not see, and after accepting had no
+                # record of what they had agreed to. The numbers ride on the
+                # message now, so they stay put once the offer is resolved and
+                # its pending entry cleared. Keys are written from the
+                # PROPOSER's point of view, so the sent copy reads them
+                # straight and the received copy reads them inverted.
+                for line in diplomacy_messages.describe_trade(
+                        msg.get("parameters"), viewer_is_proposer=is_player):
+                    archived_terms = True
+                    display_thread.append({
+                        "content": line, "is_player": is_player, "is_draft": False,
+                        "is_diplo": True, "date": "",
+                    })
+
+        # Saves made before the terms were recorded on the message still have
+        # them on the sender's pending entry, which is the only place they ever
+        # lived. Read from there when the thread carried none.
         their_offer = diplomacy_messages.get_pending(
             self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
-        if their_offer.get("action") == "TRADE" and their_offer.get("turns", 0) > 0:
+        if (not archived_terms and their_offer.get("action") == "TRADE"
+                and their_offer.get("turns", 0) > 0):
             for line in diplomacy_messages.describe_trade(their_offer.get("parameters")):
                 display_thread.append({
                     "content": line, "is_player": False, "is_draft": False,
