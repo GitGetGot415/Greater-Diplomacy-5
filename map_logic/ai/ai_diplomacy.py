@@ -237,7 +237,9 @@ def process_basic_proactive_ai(map_screen):
 #:                  sensible message instead of a KeyError. Two of the seven
 #:                  sections used to index the table directly and would crash.
 #: queued_message-- overrides what is stored on the queued action itself; only
-#:                  a war declaration uses it, to name the wargoal
+#:                  a war declaration uses it, to name the wargoal. The words
+#:                  the leader says then ride on the entry's `prose` instead,
+#:                  since `message` is taken -- see _queue_proactive_proposal
 #: cooldown      -- whether queueing also starts a cooldown against the target
 ProactiveProposal = namedtuple("ProactiveProposal",
                                "fallback_key fallback queued_message cooldown")
@@ -300,18 +302,26 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
                                   map_data=map_screen.map_data,
                                   default=spec.fallback)
 
-    # A war declaration's queued_message is the wargoal, not prose, so the
-    # leader's own wording never replaces it -- and is therefore not the
-    # leader's wording to record either.
-    wrote_it = bool(message and message.strip()) and not spec.queued_message
+    # What the leader actually says. For every action but one this is also what
+    # gets queued, so it was written straight into `message` and nowhere else.
+    #
+    # A war declaration is the exception: its queued `message` is the wargoal
+    # the rules act on, so it takes that slot and the words had nowhere to go.
+    # Both the model's line and the situational fallback computed just above
+    # were therefore dropped on the floor for the one action a player is most
+    # likely to be reading -- every declaration in the game arrived as the same
+    # hardcoded sentence, and the nine PROACTIVE_DECLARE_WAR lines in
+    # ai_responses.json had never been used once.
+    words = message.strip() if message and message.strip() else fallback
     entry = {
         "action": action,
         "turns": 0,
-        "message": spec.queued_message or (message.strip() if message else fallback),
+        "message": spec.queued_message or words,
+        "prose": words,
         # The model's line and the canned one used to land in `message`
         # indistinguishably, which is the whole reason nothing downstream could
         # tell a leader's own words from the table's.
-        "llm": wrote_it,
+        "llm": bool(message and message.strip()),
     }
     if parameters:
         entry["parameters"] = parameters

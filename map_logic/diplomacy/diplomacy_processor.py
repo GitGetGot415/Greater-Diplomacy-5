@@ -727,8 +727,16 @@ def _process_pass1_immediate_actions(map_screen):
                     # Store active wargoal in war data
                     map_screen.nation_data[country_name].setdefault("wargoals", {})[target] = {"type": custom_msg}
                     log_global_event(map_screen.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!")
-                    send_message(map_screen, country_name, target,
-                                 f"We have declared war! Goal: {custom_msg}", "DIPLOMACY")
+                    # `custom_msg` is the wargoal here, not anything anyone said,
+                    # so the words come off `prose` -- which is where they had to
+                    # go once the wargoal took the message field. This line used
+                    # to be a hardcoded sentence that ignored the model and the
+                    # canned table alike, so at ABSOLUTE every war in the game
+                    # was declared in exactly the same words.
+                    words = info.get("prose") or "We have declared war!"
+                    goal = f" Goal: {custom_msg}" if custom_msg else ""
+                    send_message(map_screen, country_name, target, f"{words}{goal}",
+                                 "DIPLOMACY", extra={"action": action}, llm=wrote_it)
                     finalize_war(map_screen.map_data, map_screen.nation_data, country_name, target)
                     actions_to_clear.append(target)
 
@@ -736,7 +744,7 @@ def _process_pass1_immediate_actions(map_screen):
                     if not queries.are_in_same_faction(country_name, target, map_screen.nation_data):
                         send_message(map_screen, country_name, target,
                                      ai_prompts.AI_FALLBACK_RESPONSES["REJECT_JOIN_WAR_NO_ALLIANCE"],
-                                     "DIPLOMACY")
+                                     "DIPLOMACY", extra={"action": action})
                         actions_to_clear.append(target)
                     else:
                         # DO NOT execute the war join here! Just send the proposal message.
@@ -799,7 +807,8 @@ def _process_pass1_immediate_actions(map_screen):
                     # The terms ARE the message, so this one formats rather than
                     # falling back.
                     send_message(map_screen, country_name, target,
-                                 f"We propose a peace treaty: {custom_msg}.", "DIPLOMACY")
+                                 f"We propose a peace treaty: {custom_msg}.", "DIPLOMACY",
+                                 extra={"action": action})
 
                 elif action == "DISBAND_FACTION":
                     fac = map_screen.nation_data[country_name].get("faction", "")

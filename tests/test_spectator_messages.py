@@ -227,6 +227,94 @@ class EndToEndMarkingTests(unittest.TestCase):
         self.assertFalse(self.answer()["llm"])
 
 
+class WarDeclarationTests(unittest.TestCase):
+    """The one action whose words had nowhere to live.
+
+    WAR_DECLARATION is the only proposal with a queued_message, and it is the
+    wargoal the rules act on -- so it took the `message` field and both the
+    model's line and the situational fallback were computed and then dropped.
+    The send site then built its own hardcoded sentence, so every war in the
+    game was declared in identical words at every immersion level, and the nine
+    PROACTIVE_DECLARE_WAR lines in ai_responses.json were dead text.
+    """
+
+    def declare(self, model_line=None):
+        from map_logic.ai import ai_diplomacy
+        from map_logic.diplomacy import diplomacy_processor
+        game = StubMapScreen(["A", "B"], human_players=[])
+        pending = game.nation_data["A"].setdefault("pending_diplomacy", {})
+        ai_diplomacy._queue_proactive_proposal(
+            game, pending, "A", "B", "WAR_DECLARATION", message=model_line)
+        entry = dict(pending["B"])
+        diplomacy_processor._process_pass1_immediate_actions(game)
+        received = next(m for m in game.nation_data["B"]["inbox"]
+                        if not str(m.get("sender", "")).startswith("To:"))
+        return entry, received
+
+    def test_the_wargoal_still_reaches_the_rules(self):
+        """Whatever else changes, `message` has to stay the wargoal: it is what
+        gets written into wargoals[target]."""
+        entry, _ = self.declare("Some prose entirely.")
+        self.assertEqual(entry["message"], c.WARGOAL_TAKE_CLAIMS)
+
+    def test_the_leaders_own_words_are_sent(self):
+        _entry, msg = self.declare("You have held what is ours for long enough.")
+        self.assertIn("You have held what is ours for long enough.", msg["content"])
+        self.assertTrue(msg["llm"])
+
+    def test_the_goal_is_still_readable_in_the_message(self):
+        _entry, msg = self.declare("Anything.")
+        self.assertIn(c.WARGOAL_TAKE_CLAIMS, msg["content"])
+
+    def test_with_no_model_a_canned_line_is_used_rather_than_a_constant(self):
+        from map_logic.ai import ai_prompts
+        _entry, msg = self.declare(None)
+        lines = ai_prompts.lines_for("PROACTIVE_DECLARE_WAR")
+        self.assertTrue(any(line in msg["content"] for line in lines),
+                        f"{msg['content']!r} is not one of the war-declaration lines")
+        self.assertFalse(msg.get("llm"))
+
+    def test_a_declaration_reads_as_war_not_diplomacy(self):
+        _entry, msg = self.declare("Anything.")
+        self.assertEqual(dm.message_category(msg), "WAR")
+
+    def test_a_player_declaring_war_still_gets_a_sentence(self):
+        """The human path queues the wargoal through toggle_diplomacy_action and
+        never sets prose, so it has to keep working without one."""
+        from map_logic.diplomacy import diplomacy_processor
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        diplomacy_processor.toggle_diplomacy_action(
+            game.nation_data, "A", "B", "WAR_DECLARATION", custom_msg=c.WARGOAL_TAKE_CLAIMS)
+        diplomacy_processor._process_pass1_immediate_actions(game)
+        msg = next(m for m in game.nation_data["B"]["inbox"]
+                   if not str(m.get("sender", "")).startswith("To:"))
+        self.assertIn(c.WARGOAL_TAKE_CLAIMS, msg["content"])
+        self.assertEqual(dm.message_category(msg), "WAR")
+
+    def test_the_words_suit_who_is_being_declared_on(self):
+        """A nation that knows it is outmatched declares war differently from
+        one that knows it is not -- which is what the fallback table is for and
+        what this action never reached."""
+        from map_logic.ai import ai_diplomacy, ai_prompts
+
+        game = StubMapScreen(["Strong", "Weak"], human_players=[])
+        for prov in list(game.map_data.values())[:6]:
+            prov["owner"] = "Strong"
+            prov["units"] = [{"type": "Infantry Type 1936", "owner": "Strong",
+                              "health": 1000, "attack": 100, "defense": 50}]
+
+        def prose(sender, target):
+            pending = {}
+            ai_diplomacy._queue_proactive_proposal(
+                game, pending, sender, target, "WAR_DECLARATION")
+            return pending[target]["prose"]
+
+        weaker = {prose("Weak", "Strong") for _ in range(30)}
+        stronger = {prose("Strong", "Weak") for _ in range(30)}
+        self.assertTrue(weaker.isdisjoint(stronger),
+                        f"both sides used the same words: {weaker & stronger}")
+
+
 class OverviewTests(unittest.TestCase):
     """The spectator's table, built from a real map."""
 

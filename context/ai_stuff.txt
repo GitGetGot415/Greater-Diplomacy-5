@@ -220,6 +220,15 @@ ai_prompts.resolve() is the accessor; AI_FALLBACK_RESPONSES still exists as a
 read-through mapping for the forty-odd sites that have nobody to compare
 against. Add lines by editing the JSON -- nothing is compiled in.
 
+A war declaration keeps its words on the queued entry's `prose`, not its
+`message`: WAR_DECLARATION is the only proposal with a queued_message and that
+is the wargoal the rules act on, so it owns `message`. Until the words were
+given their own field they were computed and dropped, and the send site wrote
+its own hardcoded sentence -- so every war in the game was declared in
+identical words at every immersion level, and PROACTIVE_DECLARE_WAR's nine
+lines had never been used. Anything else that ever needs a queued_message will
+need the same treatment.
+
 Every prompt states the voice (first person plural, never your own nation in
 the third person) via ai_prompts.VOICE_RULE, and a reply that opens by naming
 its own sender is dropped for the canned line rather than sent. Small models
