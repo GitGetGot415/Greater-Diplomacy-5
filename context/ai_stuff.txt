@@ -1,8 +1,95 @@
-OFF: ai is COMPLETELY off, always use fallbacks
+HOW THE AI WORKS
+================
 
-LITE: ai is off, unless someone sends a custom message to them, in which case an ai reply can be generated
+Two layers. The heuristic layer decides everything and runs always, with or
+without a language model. The model layer, when switched on, chooses between
+options the heuristic layer has already built and judged legal.
 
-FULL: ai is on, so it should always send an ai generated message (this message should be written with knowledge about the current situation and what the message is supposed to say)
-the only exception to this is if the ai is sending a message to another ai, which the player will most likely not read
+That order matters: the model never invents an action, names a country, or
+starts a war the rules forbid, because it only ever picks from a list that was
+built by the ordinary rules. Turn the model off and the game plays the same way,
+just without the prose and the summits.
 
-ABSOLUTE: like full ai but the ai will send an ai message to other ai even though the player won't read it
+
+IMMERSION LEVELS (Settings -> the red buttons)
+----------------------------------------------
+
+OFF       the model is never called; everything answers from the canned table
+
+LITE      the model is off unless a human writes a custom message, in which case
+          a reply is generated for it
+
+FULL      the model handles anything a human is involved in. AI talking to AI
+          stays canned, since nobody would read it
+
+MAJOR     the model additionally drives the countries a player actually notices:
+          the strongest handful, anyone at war with or bordering a human, and
+          faction leaders. On the 1939 map that is about 8 nations of 36.
+          Great-power diplomacy without ABSOLUTE's cost -- this is the one to
+          recommend to most people
+
+ABSOLUTE  every AI nation is model-driven, and AI nations hold summits with each
+          other. Slow, and the reason to run it is that the world starts making
+          agreements you were never part of and can read about afterwards
+
+Per country, nation_data["llm_tier"] of ALWAYS / NEVER / AUTO overrides the
+level, so a player can make one rival model-driven without paying for forty.
+
+
+WHAT THE MODEL ACTUALLY DECIDES
+-------------------------------
+
+1. Which action a nation takes. Once per nation per turn it receives that
+   nation's whole menu of legal moves -- scored, with reasons -- and picks up to
+   three. The same reply supplies the wording, so this replaced the old
+   per-message text pass rather than adding to it. A nation with nothing to
+   choose between is not asked at all.
+
+2. Whether to accept a proposal, when the call is marginal. A structural rule
+   (an integrated puppet cannot trade) is stated as settled; a judgement call
+   arrives as a recommendation with its reasoning and can be overruled.
+
+3. What is agreed at a summit (ABSOLUTE, or MAJOR between two major powers).
+
+Anything it asks for that the rules do not allow is dropped, with a rumour in
+the global log so the pressure is still visible.
+
+
+THE HEURISTIC LAYER
+-------------------
+
+map_logic/ai/
+  ai_world.py        one snapshot of the map per turn; every strength, border
+                     and relation query answers from it
+  ai_unit_eval.py    what a unit is worth to a nation, from its stats and that
+                     nation's own scarcity. There is no list of good units
+  ai_tech_eval.py    what a tech is worth, from what it unlocks
+  ai_personality.py  five traits per nation, seeded from the scenario so a save
+                     is reproducible
+  ai_opinion.py      war, peace, trade and alliance appetite as degrees
+  ai_candidates.py   the menu of legal moves, and the arbiter that ranks it
+  ai_commitments.py  promises between nations, and what breaking one costs
+  ai_negotiation.py  summits
+  ai_director.py     the model choosing from the menu
+  ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
+
+
+TUNING
+------
+
+data/constants.py, the AI blocks. The ones worth knowing:
+
+  AI_WAR_DESIRE_THRESHOLD     how keen a nation must be to declare war
+  AI_LINE_SPEND_RATIO         bodies versus firepower, as a share of spending
+  AI_TECH_ECONOMY_WEIGHT      industry versus army in research
+  AI_COMMITMENT_WEIGHT        how much a pact restrains, before loyalty
+  AI_MAX_ACTIONS_PER_TURN     proposals a nation may have in flight
+  AI_NEGOTIATION_MAX_PAIRS    summits per turn
+  ai_turn_budget_seconds      (a setting) wall-clock ceiling per turn's model
+                              work; whatever has not answered falls back
+
+Scenarios can pin personalities with ai_personality_overrides, e.g.
+  "ai_personality_overrides": {"German Reich": {"aggression": 0.9}}
+Traits are aggression, ambition, caution, loyalty, trust, all 0.0 to 1.0.
+Without an override they are procedural, which means historically arbitrary --
+worth authoring for the historical scenarios.
