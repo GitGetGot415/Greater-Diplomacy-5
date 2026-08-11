@@ -6,19 +6,12 @@ Split out of map_logic/ai/ai_handler.py, which re-exports every name here so
 existing `ai_handler.evaluate_diplomatic_proposal(...)`-style call sites keep
 working.
 """
-import json
-from data.platform import IS_WEB
+import collections
 
-if not IS_WEB:
-    from google import genai
-    from google.genai import types
-else:
-    genai = None
-    types = None
 import data.constants as c
+from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_unit_eval
 from data import queries
 from map_logic.ai import ai_prompts
-from map_logic.ai import ai_settings
 
 
 def _to_int(value, default=0):
@@ -53,7 +46,36 @@ def _reply(message, source=None, accepted=None):
     return reply
 
 
-def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True):
+def llm_enabled_for(nation, world=None):
+    """Whether this particular nation is model-driven, or None for "use the
+    global rule".
+
+    A per-country setting always wins, so a player can make the rival they care
+    about model-driven without paying for the other forty. Otherwise ABSOLUTE
+    means everyone and MAJOR means the countries a player actually notices --
+    which is the mode worth recommending: great-power diplomacy at a fraction of
+    ABSOLUTE's cost.
+    """
+    if not nation:
+        return None
+
+    nation_data = getattr(world, "nation_data", None) or {}
+    tier = (nation_data.get(nation) or {}).get("llm_tier", c.AI_TIER_AUTO)
+    if tier == c.AI_TIER_ALWAYS:
+        return True
+    if tier == c.AI_TIER_NEVER:
+        return False
+
+    immersion = ai_settings.get_ai_immersion_level()
+    if immersion == "ABSOLUTE":
+        return True
+    if immersion == "MAJOR":
+        return world is not None and nation in world.major_powers
+    return None
+
+
+def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True,
+                      nation=None, world=None):
     """Whether this exchange skips the LLM and answers from the canned table.
 
     One rule for all three entry points. Proactive text passes
@@ -62,11 +84,17 @@ def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True):
     """
     if mode == "OFF":
         return True
+
+    decided = llm_enabled_for(nation, world)
+    if decided is not None:
+        return not decided
+
     if immersion == "ABSOLUTE":
         return False
     if immersion == "FULL":
         return is_ai_to_ai
-    # LITE: only a human's own words are worth generating a reply to.
+    # LITE (and any level an older build does not recognise): only a human's own
+    # words are worth generating a reply to.
     return not (has_custom_msg and not is_ai_to_ai)
 
 
@@ -145,18 +173,52 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     )
 
 
-def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None):
-    from map_logic.ai import ai_handler
+#: What the AI decided about an incoming proposal, and how firmly.
+#:
+#: `confidence` is 1.0 for every path today, which is what makes the extraction
+#: of this block a pure refactor. Phase 3 fills it in -- a hard rule (an
+#: integrated puppet cannot trade) stays at 1.0 while a marginal peace call
+#: drops -- and Phase 4 uses it to decide whether the model is allowed to
+#: overrule the recommendation. `reason` is the sentence shown to the model
+#: alongside it.
+Verdict = collections.namedtuple("Verdict", "accepted confidence reason")
 
-    if ai_handler._aborted(turn_id):
-        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
 
-    if human_players is None:
-        human_players = []
+def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
+    """The peace type being offered.
 
-    mode = ai_settings.get_ai_mode()
-    immersion = ai_settings.get_ai_immersion_level()
+    will_ai_accept_peace takes this as `peace_type` but is handed `custom_msg`,
+    which works only because the terms *are* the message. Anything that attaches
+    prose to a peace proposal -- a script, or the model once it is allowed to
+    write one -- makes every startswith() check silently false and the offer is
+    accepted by the catch-all. The proposal's own parameters win where they
+    exist, and the message is the fallback.
+    """
+    pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
+    params = pending.get("parameters") if isinstance(pending, dict) else None
+    if isinstance(params, dict):
+        declared = params.get("peace_type") or params.get("terms")
+        if declared:
+            return str(declared)
+    return custom_msg or ""
 
+
+def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
+                     custom_msg="", world=None, scenario_settings=None):
+    """Whether the AI accepts a proposal, decided without consulting the model.
+
+    Lifted out of evaluate_diplomatic_proposal unchanged. It was worth its own
+    function regardless -- it is the actual diplomatic brain and had no test
+    coverage at all -- but the specific reason to move it now is that Phase 4
+    lets the LLM overrule it. Doing both at once would mean changing behaviour
+    and restructuring untested code in the same step, so this lands first with
+    tests/test_ai_verdict.py pinning every branch, and the override arrives on
+    top of a known-good baseline.
+
+    Two quirks preserved deliberately, both addressed in Phase 3 rather than
+    here: the relation lookup omits id_to_province and so skips the claim
+    penalty, and `custom_msg` doubles as the peace terms string.
+    """
     ai_stats = nation_data.get(ai_nation, {})
     at_war = len(ai_stats.get("at_war_with", [])) > 0
     in_faction = bool(ai_stats.get("faction", ""))
@@ -174,13 +236,19 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     if action_type in ["JOIN_WARS", "CALL_TO_ARMS"]:
         if queries.are_in_same_faction(ai_nation, sender_nation, nation_data):
             accepted = True
+        elif ai_commitments.joint_war_target(nation_data, ai_nation, sender_nation):
+            # We promised to fight this war with them. Honouring it is the whole
+            # point of having agreed; refusing is a betrayal and priced as one.
+            return Verdict(True, 1.0, "we gave our word to fight this war alongside them")
 
     # Accept Military Access requests from nations fighting the same enemies as us,
     # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
         ai_enemies = set(ai_stats.get("at_war_with", []))
         sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
-        accepted = bool(ai_enemies & sender_enemies)
+        accepted = bool(ai_enemies & sender_enemies) or bool(
+            ai_commitments.active_with(nation_data, ai_nation, sender_nation,
+                                       ai_commitments.MILITARY_ACCESS))
 
     # NEW: AI Master-Puppet Faction Acceptance
     my_master = ai_stats.get("master", "")
@@ -202,7 +270,19 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
 
     # 3. Evaluate peace deals dynamically using the centralized query
     if action_type in ["PEACE_TREATY", "CEASEFIRE"]:
-        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, custom_msg, map_data, nation_data)
+        terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
+        if world is not None:
+            accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
+                                                scenario_settings)
+            appetite = ai_opinion.peace_appetite(world, ai_nation, sender_nation,
+                                                 scenario_settings)
+            # A marginal call is exactly where a leader's own judgement should
+            # be allowed to differ, which is what Phase 4 reads this for.
+            confidence = min(1.0, abs(appetite - c.AI_PEACE_CEASEFIRE_THRESHOLD) * 2.5)
+            reason = (f"we are {'losing ground and weary of' if appetite > 0.5 else 'holding our own in'} "
+                      f"this war with {sender_nation}")
+            return Verdict(accepted, max(0.15, confidence), reason)
+        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, terms, map_data, nation_data)
 
     # --- NEW AI TRADE LOGIC ---
     elif action_type == "TRADE":
@@ -224,37 +304,93 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         ai_gives_fuel = params.get("take_fuel", 0)
 
         if puppet_state != "NONE" or is_sender_integrated or is_my_integrated:
-            accepted = False
-        elif ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
+            # A structural impossibility, not a judgement call -- nothing should
+            # be allowed to talk us out of it.
+            return Verdict(False, 1.0, "the terms are not ours to agree to")
+
+        if world is not None:
+            # Priced against our own scarcity and shaded by how much we like
+            # them, replacing "accept only if we give literally nothing" -- which
+            # is why no AI ever agreed to a deal a player would call fair.
+            econ = world.economies.get(ai_nation, {})
+            prices = ai_unit_eval.resource_prices(econ, ai_stats)
+            net = ai_opinion.trade_appetite(
+                world, ai_nation, sender_nation,
+                receive={"materials": ai_takes_mats, "fuel": ai_takes_fuel},
+                give={"materials": ai_gives_mats, "fuel": ai_gives_fuel},
+                prices=prices, scenario_settings=scenario_settings)
+            accepted = net > 0
+            scale = max(1.0, abs(net) + prices.get("materials", 1.0) * 100.0)
+            return Verdict(accepted, max(0.2, min(1.0, abs(net) / scale)),
+                           "the exchange favours us" if accepted else "we give up more than we gain")
+
+        if ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
             accepted = True
         else:
             accepted = False
     # ------------------------------
 
+    return Verdict(accepted, 1.0, "")
+
+
+def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None):
+    from map_logic.ai import ai_handler
+
+    if ai_handler._aborted(turn_id):
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
+
+    if human_players is None:
+        human_players = []
+
+    mode = ai_settings.get_ai_mode()
+    immersion = ai_settings.get_ai_immersion_level()
+
+    verdict = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
+                               action_type, custom_msg, world=world,
+                               scenario_settings=scenario_settings)
+    accepted = verdict.accepted
+
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
 
-    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip())):
+    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip()),
+                         nation=ai_nation, world=world):
         key = LITE_RESPONSE_KEYS.get(action_type,
                                      "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
         return _reply(ai_prompts.AI_FALLBACK_RESPONSES[key], accepted=accepted)
 
-    print(f"[LLM CALL] {ai_nation} generating flavor text for {action_type} from {sender_nation}... (Mode: {mode})")
+    print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
+
+    # A marginal judgement is exactly where a leader's own view should be allowed
+    # to differ from the staff's. A hard rule -- an integrated puppet cannot
+    # trade, we are already in a faction -- is not a judgement, and stays settled.
+    allow_override = verdict.confidence < c.AI_VERDICT_OVERRIDE_MAX_CONFIDENCE
 
     # --- Split logic between Proposals and Unilateral Declarations ---
     if action_type in c.UNILATERAL_ACTIONS:
         action_context = ai_prompts.get_unilateral_receive_context(action_type, sender_nation, custom_msg)
         system_prompt = ai_prompts.get_unilateral_system_prompt(action_context)
         user_prompt = f"{context}\n{action_context} Provide your reaction."
+        allow_override = False
     else:
         action_context = ai_prompts.get_bilateral_receive_context(action_type, sender_nation, custom_msg)
-        system_prompt = ai_prompts.get_bilateral_system_prompt(accepted)
-        user_prompt = f"{context}\n{action_context} Provide your response based on your decision."
+        system_prompt = ai_prompts.get_bilateral_system_prompt(
+            accepted, allow_override, verdict.reason, verdict.confidence)
+        user_prompt = f"{context}\n{action_context} Provide your response."
 
-    return ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
-                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted)
+    reply = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
+                                     ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted,
+                                     raw=True)
+    if reply is None:
+        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=accepted)
+
+    if allow_override and isinstance(reply.get("accepted"), bool):
+        accepted = reply["accepted"]
+
+    return _reply(reply.get("message", f"{mode} ERROR: reply had no 'message' field"),
+                  reply, accepted)
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None):
     from map_logic.ai import ai_handler
@@ -307,30 +443,11 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
     system_prompt = ai_prompts.get_proactive_system_prompt(ai_nation, target_nation, action_context)
     user_prompt = f"{context}\nWrite the message."
 
-    if mode == "OLLAMA":
-        result = ai_handler.call_ollama(system_prompt, user_prompt, turn_id)
-        return result.get("message", "OLLAMA ERROR: Unknown Format") if result else "OLLAMA ERROR: No response"
-
-    if mode in ai_handler.OPENAI_COMPATIBLE_PROVIDERS:
-        get_url, get_key, get_model = ai_handler.OPENAI_COMPATIBLE_PROVIDERS[mode]
-        result = ai_handler.call_openai_compatible(get_url(), get_key(), get_model(), system_prompt, user_prompt, turn_id)
-        return result.get("message", f"{mode} ERROR: Unknown Format") if result else f"{mode} ERROR: No response"
-
-    if mode == "CLAUDE":
-        result = ai_handler.call_claude(ai_settings.get_claude_api_key(), ai_settings.get_claude_model(),
-                                         system_prompt, user_prompt, turn_id)
-        return result.get("message", "CLAUDE ERROR: Unknown Format") if result else "CLAUDE ERROR: No response"
-
-    try:
-        client = genai.Client(api_key=ai_settings.get_gemini_api_key())
-        response = client.models.generate_content(
-            model=ai_settings.get_gemini_model(),
-            contents=f"{system_prompt}\n\n{user_prompt}",
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-
-        if ai_handler._aborted(turn_id): return None
-
-        return json.loads(response.text).get("message", "JSON ERROR: Parsed fine but missing 'message' key.")
-    except Exception as e:
-        return f"API ERROR: {str(e)}"
+    # This used to be its own copy of ai_handler's provider ladder, built its
+    # own genai client, and reported provider failures as the message itself --
+    # so a bad API key was delivered to the player as the text of a war
+    # declaration. None means "no answer", and the caller uses its fallback line.
+    result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True)
+    if not result or result.get("error"):
+        return None
+    return result.get("message")

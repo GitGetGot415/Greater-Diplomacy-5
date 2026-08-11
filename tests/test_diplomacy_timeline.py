@@ -280,25 +280,35 @@ class TextMessageTests(unittest.TestCase):
 class ProactiveAITests(unittest.TestCase):
     """The AI should reliably get its requests out every turn."""
 
+    @staticmethod
+    def run_proactive(game):
+        """The full proactive sequence.
+
+        It is two passes now: the first works out each nation's legal options
+        and scores them, the second lets the leader choose from that menu and
+        queues the result. With the model off the second is pure bookkeeping,
+        but nothing is queued until it runs, so a caller that only invokes the
+        first sees no diplomacy at all.
+        """
+        from map_logic.ai import ai_diplomacy
+        ai_diplomacy.process_basic_proactive_ai(game)
+        ai_diplomacy.process_proactive_llm_tasks(game)
+
     def test_call_to_arms_survives_the_rest_of_the_pass(self):
         """Section 3's Join Wars used to overwrite section 2's Call to Arms."""
-        from map_logic.ai import ai_diplomacy
-
         # A and B are allies with different wars, so both sections want the same slot
         game = StubMapScreen(["A", "B", "X", "Y"], human_players=["B"])
         game.set_faction("Pact", "A", "B")
         game.set_war("A", "X")
         game.set_war("B", "Y")
 
-        ai_diplomacy.process_basic_proactive_ai(game)
+        self.run_proactive(game)
 
         self.assertEqual(game.pending_action("A", "B"), "CALL_TO_ARMS",
                          "A's call to arms was overwritten before it could be sent")
 
     def test_a_faction_request_does_not_abort_the_rest_of_the_ai(self):
         """A stray break used to skip every AI processed after the requester."""
-        from map_logic.ai import ai_diplomacy
-
         # A leads a faction and fights X. C and Z are unfactioned and fight X too,
         # so C asks to join A -- and Z, processed after C, must still get its turn.
         game = StubMapScreen(["A", "C", "X", "Z"], human_players=["A"])
@@ -307,7 +317,7 @@ class ProactiveAITests(unittest.TestCase):
         game.set_war("C", "X")
         game.set_war("Z", "X")
 
-        ai_diplomacy.process_basic_proactive_ai(game)
+        self.run_proactive(game)
 
         self.assertEqual(game.pending_action("C", "A"), "JOIN_FACTION_REQ")
         self.assertTrue(game.nation_data["Z"]["pending_diplomacy"],
@@ -323,6 +333,7 @@ class ProactiveAITests(unittest.TestCase):
         game.set_war("B", "Y")
 
         ai_diplomacy.process_basic_proactive_ai(game)
+        ai_diplomacy.process_proactive_llm_tasks(game)
 
         cooldowns = game.nation_data["A"].get("diplo_cooldowns", {}).get("B", {})
         self.assertEqual(cooldowns.get("CALL_TO_ARMS", 0), 0)

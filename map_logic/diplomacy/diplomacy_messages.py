@@ -1,4 +1,6 @@
 
+import data.constants as c
+
 # ==========================================
 # PENDING DIPLOMACY ACCESS
 # ==========================================
@@ -136,31 +138,38 @@ def cancel_text_message(nation_data, player_name, target_name):
         return "Draft cleared."
     return "No drafted message to clear."
 
+def _deliver(nation_data, owner, entry):
+    """Puts one message at the top of a nation's inbox, oldest trimmed off.
+
+    Inboxes are serialized wholesale into the save with the rest of
+    nation_data and nothing ever pruned them, so a long game grew them without
+    bound. Newest-first, so the tail is what falls off the end.
+    """
+    data = nation_data.get(owner)
+    if not data:
+        return
+
+    inbox = data.setdefault("inbox", [])
+    inbox.insert(0, entry)
+    if len(inbox) > c.INBOX_MAX_MESSAGES:
+        del inbox[c.INBOX_MAX_MESSAGES:]
+
+
 def send_message(map_screen, sender, receiver, content, msg_type="TEXT"):
     nation_data = map_screen.nation_data
     date_str = map_screen.time_manager.get_date_string()
-    
+
     # 1. Deliver the message to the receiver
-    receiver_data = nation_data.get(receiver)
-    if receiver_data:
-        if "inbox" not in receiver_data:
-            receiver_data["inbox"] = []
-        
-        receiver_data["inbox"].insert(0, {
-            "sender": sender, "content": content, "type": msg_type, 
-            "read": False, "spectator_read": False, "date": date_str
-        })
+    _deliver(nation_data, receiver, {
+        "sender": sender, "content": content, "type": msg_type,
+        "read": False, "spectator_read": False, "date": date_str
+    })
 
     # 2. Save a "Sent" copy to the sender's inbox
-    sender_data = nation_data.get(sender)
-    if sender_data:
-        if "inbox" not in sender_data:
-            sender_data["inbox"] = []
-            
-        sender_data["inbox"].insert(0, {
-            "sender": f"To: {receiver}", "content": content, "type": msg_type, 
-            "read": True, "spectator_read": True, "date": date_str
-        })
+    _deliver(nation_data, sender, {
+        "sender": f"To: {receiver}", "content": content, "type": msg_type,
+        "read": True, "spectator_read": True, "date": date_str
+    })
 
 # ==========================================
 # OUTGOING ANNOUNCEMENTS

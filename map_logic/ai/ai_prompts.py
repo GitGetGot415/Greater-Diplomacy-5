@@ -46,6 +46,9 @@ AI_FALLBACK_RESPONSES = {
     "PROACTIVE_CEASEFIRE": "We offer terms for a ceasefire.",
     "PROACTIVE_CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
     "PROACTIVE_REQ_MILITARY_ACCESS": "As we both fight against a common foe, we request military access through your territory.",
+    "PROACTIVE_PEACE_TREATY": "This war has cost us both too much. We propose terms.",
+    "PROACTIVE_FACTION_INVITE": "Our cause would be stronger with you in it. Join us.",
+    "PROACTIVE_TRADE": "We propose an exchange to the benefit of us both.",
 
     "ACCEPT_GENERIC": "We accepted your {action}.",
     "REJECT_GENERIC": "We rejected your {action}.",
@@ -101,6 +104,12 @@ def get_proactive_action_context(action_type, target=None):
         return "proposing to create a new faction together to combat mutual threats"
     elif action_type == "REQ_MILITARY_ACCESS":
         return "requesting military access through your territory since we are both fighting a common enemy"
+    elif action_type == "PEACE_TREATY":
+        return "offering terms to end the war between us, which has gone badly for us"
+    elif action_type == "FACTION_INVITE":
+        return "inviting you into our faction, since we are on good terms and would both be stronger for it"
+    elif action_type == "TRADE":
+        return "proposing an exchange of resources, each of us sending what the other lacks"
     elif action_type.startswith("ACCEPT_"):
         return f"accepting the {action_type.replace('ACCEPT_', '').replace('_', ' ').lower()} proposal"
     elif action_type.startswith("REJECT_"):
@@ -188,14 +197,39 @@ def get_unilateral_system_prompt(action_context):
         + action_rules_and_schema("event", "In-character dialogue reacting to the event in english")
     )
 
-def get_bilateral_system_prompt(accepted):
+def get_bilateral_system_prompt(accepted, allow_override=False, reason="", confidence=1.0):
+    """The prompt for answering a proposal.
+
+    When the staff are certain -- a structural rule, not a judgement -- the
+    decision is stated as settled and the model only phrases it, which is both
+    correct and cheaper to generate. When the call is genuinely marginal the
+    recommendation is offered with its reasoning and the leader may overrule it.
+
+    Every proposal used to take the first form: "you have already decided to
+    strongly ACCEPT", with no reasoning attached and no way to disagree.
+    """
     decision_str = 'ACCEPT' if accepted else 'REJECT'
+
+    if not allow_override:
+        return (
+            "You are an AI playing a grand strategy game. You act as the leader of your nation. "
+            f"You have already decided to strongly {decision_str} the diplomatic proposal. "
+            "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
+            "You may also take a diplomatic action in response to this proposal.\n"
+            + action_rules_and_schema("proposal", "In-character dialogue responding to the proposal in english")
+        )
+
+    strength = "low" if confidence < 0.4 else "moderate"
+    reasoning = f" Their reasoning: {reason}." if reason else ""
     return (
         "You are an AI playing a grand strategy game. You act as the leader of your nation. "
-        f"You have already decided to strongly {decision_str} the diplomatic proposal. "
-        "The details are already finalized, don't ask for further clarification, and don't ask to discuss it further. "
+        f"Your ministers recommend that you {decision_str} the diplomatic proposal.{reasoning} "
+        f"Their confidence in that recommendation is {strength}. "
+        "You may follow it, or overrule it if your own judgement differs -- say which in 'accepted'. "
         "You may also take a diplomatic action in response to this proposal.\n"
+        "- Set 'accepted' to true to agree to the proposal, or false to refuse it.\n"
         + action_rules_and_schema("proposal", "In-character dialogue responding to the proposal in english")
+        + ', "accepted": ' + ('true' if accepted else 'false')
     )
 
 def get_custom_message_system_prompt():

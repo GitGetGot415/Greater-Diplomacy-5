@@ -1,6 +1,6 @@
 import asyncio
 from map_logic.diplomacy import diplomacy_logic
-from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, automation_logic
+from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, ai_world, automation_logic
 from map_logic.turn_processing import combat_processor, movement_processor, economy_processor, research_processor
 import data.constants as c
 from data import queries
@@ -28,35 +28,57 @@ async def prepare_turn(map_screen):
         if is_tactical:
             map_screen.player_unit["owner"] = "TACTICAL_HIDDEN"
 
-        # --- Basic Proactive AI & Grand Strategy ---
-        print("[SYSTEM] Running Proactive AI...")
-        ai_diplomacy.process_basic_proactive_ai(map_screen)
-        await asyncio.sleep(0)
+        # One sweep of the map answers the border/strength/relation questions
+        # every AI pass below would otherwise re-derive per nation, per target.
+        # Built after the tactical hide so the masked unit is excluded from
+        # strength exactly as it is from every other AI query, and torn down in
+        # the finally so nothing can read a stale one next turn.
+        map_screen.ai_world = ai_world.build(map_screen)
 
-        map_screen.loading_status_text = "Running AI Research..."
-        print("[SYSTEM] Running AI Research...")
-        ai_research.process_ai_research(map_screen)
-        await asyncio.sleep(0)
+        try:
+            # --- AI-to-AI summits ---
+            # Before the proactive pass, so an agreement reached here is already
+            # binding when each nation works out what it wants to do.
+            map_screen.loading_status_text = "Holding Summits..."
+            ai_diplomacy.process_summits(map_screen)
+            await asyncio.sleep(0)
 
-        map_screen.loading_status_text = "Running AI Economy & Construction..."
-        print("[SYSTEM] Running AI Economy & Construction...")
-        ai_construction.process_ai_economy_decisions(map_screen)
-        await asyncio.sleep(0)
+            # --- Basic Proactive AI & Grand Strategy ---
+            print("[SYSTEM] Running Proactive AI...")
+            ai_diplomacy.process_basic_proactive_ai(map_screen)
+            await asyncio.sleep(0)
 
-        map_screen.loading_status_text = "Generating AI Movement Orders..."
-        print("[SYSTEM] Generating AI Movement Orders...")
+            map_screen.loading_status_text = "Running AI Research..."
+            print("[SYSTEM] Running AI Research...")
+            ai_research.process_ai_research(map_screen)
+            await asyncio.sleep(0)
 
-        ai_movement.process_ai_unit_orders(map_screen)
-        await asyncio.sleep(0)
+            map_screen.loading_status_text = "Running AI Economy & Construction..."
+            print("[SYSTEM] Running AI Economy & Construction...")
+            ai_construction.process_ai_economy_decisions(map_screen)
+            await asyncio.sleep(0)
 
-        map_screen.loading_status_text = "Drafting Proactive Responses..."
-        print("[SYSTEM] Drafting Proactive Responses...")
-        ai_diplomacy.process_proactive_llm_tasks(map_screen)
-        await asyncio.sleep(0)
+            map_screen.loading_status_text = "Generating AI Movement Orders..."
+            print("[SYSTEM] Generating AI Movement Orders...")
 
-        # --- TACTICAL RESTORE ---
-        if is_tactical:
-            map_screen.player_unit["owner"] = map_screen.player_country
+            ai_movement.process_ai_unit_orders(map_screen)
+            await asyncio.sleep(0)
+
+            map_screen.loading_status_text = "Drafting Proactive Responses..."
+            print("[SYSTEM] Drafting Proactive Responses...")
+            ai_diplomacy.process_proactive_llm_tasks(map_screen)
+            await asyncio.sleep(0)
+        finally:
+            # --- TACTICAL RESTORE ---
+            # In a finally because an AI pass that raises used to leave the
+            # player's own unit owned by TACTICAL_HIDDEN for the rest of the game.
+            if is_tactical:
+                map_screen.player_unit["owner"] = map_screen.player_country
+
+            # Every AI pass is done. Scripted events below can hand provinces
+            # between nations, which would make the cached fronts and strengths
+            # wrong, so the snapshot never outlives the passes it was built for.
+            map_screen.ai_world = None
     else:
         print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
 

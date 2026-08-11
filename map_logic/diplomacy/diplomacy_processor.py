@@ -1,4 +1,4 @@
-from map_logic.ai import ai_llm_runner, ai_prompts
+from map_logic.ai import ai_commitments, ai_llm_runner, ai_prompts
 import data.constants as c
 from data import queries
 
@@ -117,13 +117,29 @@ def _decay_modifiers_and_truces(map_screen):
         temp_mods = data.get("temp_modifiers", {})
         for target, mods in temp_mods.items():
             for mod_name in list(mods.keys()):
-                if mods[mod_name] > 0:
-                    mods[mod_name] -= 1
-                elif mods[mod_name] < 0:
-                    mods[mod_name] += 1
+                entry = mods[mod_name]
+                value = queries.modifier_value(entry)
+                decay = queries.modifier_decay(entry)
+                turns = queries.modifier_turns(entry)
 
-                if mods[mod_name] == 0:
+                # Fade toward zero by `decay` a turn. A decay of 0 is a grudge
+                # that does not soften on its own -- it ends when its `turns`
+                # run out, or never.
+                if value > 0:
+                    value = max(0, value - decay)
+                elif value < 0:
+                    value = min(0, value + decay)
+
+                if turns is not None:
+                    turns -= 1
+
+                if value == 0 or (turns is not None and turns <= 0):
                     del mods[mod_name]
+                elif isinstance(entry, dict):
+                    entry["value"] = value
+                    entry["turns"] = turns
+                else:
+                    mods[mod_name] = value
 
         # --- DECAY TRUCES ---
         truces = data.get("truces", {})
@@ -367,6 +383,13 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
 
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
+    # Diplomacy resolves after the AI phases have torn down their snapshot, so
+    # this pass builds its own. Verdicts read relations, war odds and prices off
+    # it; without one they fall back to the old threshold rules.
+    from map_logic.ai import ai_world
+    verdict_world = ai_world.for_screen(map_screen)
+    scenario_settings = getattr(map_screen, "scenario_settings", None)
+
     def call(task):
         if task["action"] == "CUSTOM_MSG":
             return ai_handler.process_custom_message(
@@ -375,7 +398,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         return ai_handler.evaluate_diplomatic_proposal(
             map_screen.nation_data, map_screen.map_data, active_nations_list, task["target"],
             task["sender"], task["action"], task.get("content", ""),
-            human_players, my_turn_id)
+            human_players, my_turn_id, world=verdict_world,
+            scenario_settings=scenario_settings)
 
     def key_of(task):
         return (task["sender"], task["target"], task["action"])
@@ -410,7 +434,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         answerable, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
-        max_workers=queries.get_ai_threads())
+        max_workers=queries.get_ai_threads(),
+        deadline=ai_llm_runner.turn_deadline())
 
     return ai_results
 
@@ -464,7 +489,25 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
             queries.set_ai_diplo_cooldown(country_name, act_target, ai_action, map_screen.nation_data)
 
     if ai_action == "WAR_DECLARATION":
-        if queries.are_in_same_faction(country_name, act_target, map_screen.nation_data):
+        if not c.AI_LLM_DIRECT_RETALIATION:
+            # Filed as a request rather than executed. Declaring here skipped
+            # every prerequisite the proactive pass enforces -- the waiting
+            # period at the start of a game, the requirement to share a border,
+            # the need for a wargoal at all -- and went to war with WARGOAL_NO_CB
+            # on a nation the AI might not even be able to reach. Next turn's
+            # candidate generation drains this and puts it through the same
+            # legality and desirability checks as everything else, so a demand
+            # that survives is one the nation could legitimately have made.
+            requests = map_screen.nation_data[country_name].setdefault("ai_requests", [])
+            requests.append({
+                "action": "WAR_DECLARATION", "target": act_target,
+                "reason": reply_dict.get("message", "")[:c.AI_REQUEST_REASON_LENGTH],
+                "turn": queries.get_total_turns(map_screen.time_manager),
+            })
+            log_global_event(
+                map_screen.nation_data,
+                f"RUMOR: Hawks in {country_name} are pressing for war with {act_target}.")
+        elif queries.are_in_same_faction(country_name, act_target, map_screen.nation_data):
             if queries.is_faction_leader(country_name, map_screen.nation_data):
                 delayed_responses.append((country_name, act_target, "KICK_FACTION_MEMBER", 0, "You are expelled from the faction."))
             else:
@@ -476,6 +519,17 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
     elif ai_action == "JOIN_WARS":
         if queries.are_in_same_faction(country_name, act_target, map_screen.nation_data):
             delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_JOIN_WAR", "We stand with you.")))
+        elif not c.AI_LLM_DIRECT_RETALIATION:
+            # Asking to join a non-faction-mate's war used to silently expand
+            # into a declaration on every one of that nation's enemies at once.
+            # Filed as requests, one per enemy, each judged on its own merits.
+            requests = map_screen.nation_data[country_name].setdefault("ai_requests", [])
+            for enemy in queries.get_enemies(act_target, map_screen.nation_data):
+                requests.append({
+                    "action": "WAR_DECLARATION", "target": enemy,
+                    "reason": f"to stand with {act_target}",
+                    "turn": queries.get_total_turns(map_screen.time_manager),
+                })
         else:
             target_enemies = queries.get_enemies(act_target, map_screen.nation_data)
             if target_enemies:
@@ -1000,6 +1054,9 @@ def _process_claim_queues(map_screen):
 
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
+    # Settles promises that ran their course or were broken this turn. After the
+    # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
+    ai_commitments.tick(map_screen)
     _flush_queued_ai_actions(map_screen)
 
     # --- 0. FIND ALIVE NATIONS ---

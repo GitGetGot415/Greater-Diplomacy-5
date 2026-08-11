@@ -74,6 +74,8 @@ SETTINGS_FIELDS = (
     _field("kimi_api_key", "kimi_api_key", lambda: ""),
     _field("deepseek_model", "deepseek_model", lambda: c.DEFAULT_DEEPSEEK_MODEL),
     _field("kimi_model", "kimi_model", lambda: c.DEFAULT_KIMI_MODEL),
+    _field("ai_turn_budget_seconds", "ai_turn_budget_seconds",
+           lambda: c.DEFAULT_AI_TURN_BUDGET_SECONDS),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

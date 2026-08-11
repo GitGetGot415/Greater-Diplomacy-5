@@ -759,9 +759,17 @@ class Map(GameState):
         self.proactive_llm_tasks_total = 0
         self.proactive_llm_tasks_completed = 0
         self.proactive_llm_tasks = []
+        # Each AI nation's menu of legal moves, held between the proactive
+        # pass that builds it and the director pass that picks from it.
+        self.proactive_choices = []
         self.responsive_tasks_total = 0
         self.responsive_tasks_completed = 0
         self.diplomatic_popups = []
+
+        # Per-turn AI map snapshot (map_logic/ai/ai_world.py). Only ever set
+        # while the AI passes of prepare_turn are running; None the rest of the
+        # time, which is what stops anything reading last turn's answers.
+        self.ai_world = None
 
         # Initialize variables previously hidden by getattr
         self.fog_map = None

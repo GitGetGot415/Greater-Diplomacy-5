@@ -34,6 +34,11 @@ MAX_MAIL_DRAFT_LENGTH = 120
 UNIT_NAME_MAX_LENGTH = 50
 COUNTRY_NAME_MAX_LENGTH = 50
 
+# How many messages a nation's inbox keeps. Inboxes live in nation_data and
+# are saved wholesale, so an uncapped one grows the save file for the whole
+# length of a game. Newest first, so the oldest fall off the end.
+INBOX_MAX_MESSAGES = 300
+
 # Economy Data
 BASE_YIELDS = {
     "manpower": 100,
@@ -336,7 +341,17 @@ PROVINCE_UI = {
 
 DEFAULT_AI_MODE = "OFF" # LLM AI is opt-in; off until the player picks a provider
 AI_MODE_REENABLE_FALLBACK = "OLLAMA" # Provider selected when re-enabling AI from OFF with no prior mode
-DEFAULT_AI_THREADS = 1 # Added default thread count
+# How many LLM requests a turn's batch has in flight at once, when the player
+# hasn't moved the slider. A hosted provider answers concurrent requests
+# independently, so fanning out is close to free throughput; a local Ollama is
+# one model on one GPU, and four concurrent generations there just thrash it.
+DEFAULT_AI_THREADS = 4
+DEFAULT_AI_THREADS_LOCAL = 1
+
+# Wall-clock ceiling for one turn's LLM batch, in seconds. Whatever hasn't come
+# back by then falls back, so a slow or unreachable provider costs a wait rather
+# than a hung turn. 0 disables the limit.
+DEFAULT_AI_TURN_BUDGET_SECONDS = 45
 
 # --- Unified Settings UI Layout ---
 SETTINGS_BOX_X = 140
@@ -843,6 +858,19 @@ AI_EXPEDITION_WEIGHT = 5
 # AI PROACTIVE DIPLOMACY THRESHOLDS
 # ==========================================
 
+# ==========================================
+# AI PERSONALITY (map_logic/ai/ai_personality.py)
+# ==========================================
+
+# Seed every nation's procedural temperament is derived from. A scenario stores
+# its own on first use, so changing this only affects scenarios that never had
+# one; changing it will not reroll personalities in a save already underway.
+DEFAULT_AI_PERSONALITY_SEED = "greater-diplomacy-5"
+
+# What counts as a trait worth mentioning when describing a nation.
+AI_TRAIT_NOTABLE_HIGH = 0.68
+AI_TRAIT_NOTABLE_LOW = 0.32
+
 AI_RELATION_FACTION_THRESHOLD = 50
 AI_WAR_STRENGTH_THRESHOLD = 1.2 # AI must be 20% stronger on the shared border to declare war
 AI_GLOBAL_STRENGTH_THRESHOLD = 0.8 # AI must have at least 80% of the target's total alliance + economic power to consider war
@@ -850,6 +878,183 @@ AI_DIPLO_COOLDOWN = 12 # How many turns before AI can retry a rejected/ignored p
 AI_WAR_COOLDOWN = 12
 AI_CLAIM_COOLDOWN = 12 # How many turns the AI waits before trying to fabricate another claim
 AI_WEAK_NEIGHBOR_STRENGTH_RATIO = 0.60 # Target must be this much weaker (e.g. 60% of AI's power) to be bullied with claims
+
+# ==========================================
+# AI DESIRE WEIGHTS (map_logic/ai/ai_opinion.py)
+# ==========================================
+# War used to be two thresholds and nothing else. These turn the same
+# quantities into degrees, and add the things the old logic had no way to say:
+# that we like them, that we are already fighting two wars, that we promised not
+# to. The odds terms and the appetite terms each sum to 1.0, so a nation with
+# perfect odds and maximum appetite sits at 2.0 before restraint pulls it back.
+
+# How the two halves of the decision trade off. They are averaged rather than
+# added -- see the note in war_desire -- so these sum to 1.0.
+AI_W_ODDS = 0.55            # can we win
+AI_W_APPETITE = 0.45        # do we want to
+
+AI_W_BORDER = 0.6           # local superiority on the shared front
+AI_W_GLOBAL = 0.4           # overall alliance and economic weight
+AI_ODDS_STEEPNESS = 6.0     # how sharply confidence turns over around the crossover
+
+AI_W_CLAIM = 0.45           # how much of their land we already claim
+AI_W_AGGRO = 0.35           # temperament, independent of the odds
+AI_W_AMBITION = 0.20        # appetite for land we have no claim on yet
+
+AI_W_RELATION = 0.55        # good relations suppress war. Previously: nothing did.
+AI_W_OVEREXTENSION = 0.45   # every war already being fought makes the next one less appealing
+
+# Measured over 20 turns of the 1939 scenario against the old boolean, which
+# declared 33 wars and ended 8. This gives 23 declared and 7 ended: a
+# noticeably less trigger-happy world where a larger share of wars actually
+# resolve, without making it inert. 0.62 gives 16/6 and 0.70 gives 11/7, both
+# too quiet for a scenario that should catch fire.
+AI_WAR_DESIRE_THRESHOLD = 0.55
+# Lower than the war bar: fabricating a claim is a step toward a war, taken
+# before the odds are settled, and it is how a war becomes legal at all.
+AI_CLAIM_DESIRE_THRESHOLD = 0.45
+AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committed
+
+# Peace. Losing, tired and cautious all push toward the table.
+AI_W_PEACE_LOSING = 0.5
+AI_W_PEACE_WEARINESS = 0.35
+AI_W_PEACE_CAUTION = 0.15
+AI_WAR_WEARINESS_TURNS = 25.0
+AI_PEACE_CEASEFIRE_THRESHOLD = 0.5
+# Giving up land takes more than agreeing to stop. Above zero and reachable,
+# where the old rule refused a claims demand unconditionally -- which is the
+# reason AI wars never once ended with territory changing hands.
+AI_PEACE_CEDE_LAND_THRESHOLD = 0.72
+
+# Trade. How much a good relationship discounts what we hand over.
+AI_TRADE_GOODWILL_DISCOUNT = 0.5
+
+# Alliances and faction invitations.
+AI_W_ALLY_RELATION = 0.5
+AI_W_ALLY_SHARED_ENEMY = 0.35
+AI_W_ALLY_WEAKNESS = 0.15   # the weak seek protection
+AI_ALLIANCE_DESIRE_THRESHOLD = 0.55
+
+# How many proposals one nation may have in flight at once. The pass used to
+# allow exactly one per target with no comparison between them, so whichever
+# section ran first won the slot.
+AI_MAX_ACTIONS_PER_TURN = 3
+
+# Proposing a trade. Stock counts toward what a nation can spare, spread over
+# this many turns, so a full warehouse is tradeable but not all at once.
+AI_TRADE_STOCK_TURNS = 20.0
+AI_TRADE_OFFER_FRACTION = 0.5
+AI_TRADE_MIN_AMOUNT = 250
+
+# How each action reads in a prompt or an event log.
+# ==========================================
+# LLM DIRECTOR (map_logic/ai/ai_director.py)
+# ==========================================
+
+# Per-country override of whether a nation is model-driven, stored on
+# nation_data so it saves with everything else. AUTO defers to the global
+# immersion level.
+AI_TIER_AUTO = "AUTO"
+AI_TIER_ALWAYS = "ALWAYS"
+AI_TIER_NEVER = "NEVER"
+
+# The immersion levels, in order. MAJOR sits between FULL and ABSOLUTE: the
+# model drives the countries a player actually notices, which is great-power
+# diplomacy at a fraction of what ABSOLUTE costs.
+AI_IMMERSION_LEVELS = ("LITE", "FULL", "MAJOR", "ABSOLUTE")
+
+# Who counts as a major power: the strongest handful, plus everyone whose doings
+# a player would see anyway.
+AI_MAJOR_POWER_FRACTION = 0.15
+AI_MAJOR_POWER_MIN = 6
+AI_MAJOR_POWER_MAX = 12
+AI_MAJOR_POWER_PROVINCE_WEIGHT = 5.0   # size counts, but an army counts more
+
+# The index the model answers with to decline to act. Must not collide with a
+# candidate index, so it is not a number.
+AI_DIRECTOR_NONE_CID = "none"
+
+# A verdict at or above this confidence is stated to the model as settled and
+# cannot be overruled -- those are structural rules, not judgement calls. Below
+# it the recommendation is offered with its reasoning and the leader may differ.
+AI_VERDICT_OVERRIDE_MAX_CONFIDENCE = 0.85
+
+# An action the model pushed for while answering a proposal is filed rather than
+# executed, and reconsidered next turn against the ordinary rules. True restores
+# the old behaviour, where such an action skipped every war prerequisite.
+AI_LLM_DIRECT_RETALIATION = False
+AI_REQUEST_LIFETIME = 3          # turns a filed request stays worth acting on
+AI_REQUEST_REASON_LENGTH = 120
+# How much the leader having asked for it counts. Enough to break a tie, not
+# enough to carry a war the nation has no appetite for.
+AI_LLM_REQUEST_BONUS = 0.25
+
+# ==========================================
+# COMMITMENTS AND SUMMITS
+# (map_logic/ai/ai_commitments.py, ai_negotiation.py)
+# ==========================================
+
+# How much a non-aggression pact restrains a nation, before temperament. Scaled
+# by loyalty, so a faithless country breaks one when the prize is big enough and
+# a loyal one very nearly will not -- a pact that bound everyone identically
+# would be a rule rather than a promise.
+AI_COMMITMENT_WEIGHT = 0.55
+AI_COMMITMENT_MIN_HOLD = 0.25    # even the faithless honour a pact a little
+AI_COMMITMENT_HISTORY_MAX = 40   # settled promises kept per nation; this is saved
+AI_DEFAULT_REPUTATION = 0.7      # benefit of the doubt before any record exists
+
+# Summits. Each pair is one job, and the exchanges inside it are sequential, so
+# wall clock is rounds x latency rather than pairs x rounds x latency.
+AI_NEGOTIATION_MAX_PAIRS = 4
+AI_NEGOTIATION_ROUNDS = 2
+AI_NEGOTIATION_COOLDOWN = 6      # turns before the same pair meets again
+AI_NEGOTIATION_MIN_PRESSURE = 0.35
+AI_NEGOTIATION_DEFAULT_TURNS = 20
+AI_NEGOTIATION_MAX_TERM_TURNS = 60
+AI_TRANSCRIPT_LINE_LENGTH = 400
+AI_NEGOTIATION_MAX_TERMS = 4
+
+# What makes a pair worth convening, roughly in the order a historian would
+# expect. These are added, then scaled by how well the other side keeps its word.
+AI_PRESSURE_COMMON_ENEMY = 0.55      # co-belligerents who have formalised nothing
+AI_PRESSURE_WEARY_WAR = 0.60         # two exhausted enemies; this is how wars end
+AI_PRESSURE_FRIENDLY = 0.40          # friends without a bloc
+AI_PRESSURE_CONTESTED = 0.25         # a grievance not yet worth a war
+AI_PRESSURE_NEIGHBOUR = 0.15
+AI_PRESSURE_SALVAGEABLE_RELATION = -60   # below this there is nothing to discuss
+
+AI_ACTION_PHRASES = {
+    "WAR_DECLARATION": "declare war on",
+    "CEASEFIRE": "offer a ceasefire to",
+    "PEACE_TREATY": "offer peace terms to",
+    "JOIN_FACTION_REQ": "ask to join the faction of",
+    "CREATE_FACTION": "propose founding a faction with",
+    "FACTION_INVITE": "invite into our faction",
+    "CALL_TO_ARMS": "call to arms",
+    "JOIN_WARS": "offer to join the wars of",
+    "REQ_MILITARY_ACCESS": "request military access through",
+    "TRADE": "propose a trade with",
+    "BREAK_ALLIANCE": "break our alliance with",
+}
+
+# Baseline desirability for actions with no appetite function of their own.
+# Access is cheap to ask for and often the difference between being able to
+# fight a shared war at all -- but it is a tactical convenience, and loses to
+# anything that changes who a nation's friends are.
+AI_SCORE_MILITARY_ACCESS = 0.55
+
+# A nation at war with no allies at all wants that fixed more than it wants
+# anything else, whatever it happens to think of the only bloc on offer.
+AI_SCORE_DEFENSIVE_FACTION = 0.78
+AI_SCORE_CALL_TO_ARMS = 0.50
+AI_SCORE_JOIN_WARS = 0.45
+AI_SCORE_CEASEFIRE_UNREACHABLE = 0.80   # a war we physically cannot fight is pure cost
+AI_SCORE_TRADE = 0.40                   # useful, rarely urgent
+
+# How badly a war must be going before the AI sues for peace. Below the bar at
+# which it would accept a ceasefire offered to it: asking costs standing, so it
+# waits a little longer than it would to say yes.
+AI_PEACE_OFFER_THRESHOLD = 0.62
 TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
 MIN_TURNS_FOR_CEASEFIRE = 2 # Turns that must occur before the ai allows ceasefires
@@ -864,6 +1069,17 @@ AI_BORDER_DISTRACTION_MULTIPLIER = 0.5 # Multiplier for border units actively en
 # AI RECRUITMENT PREFERENCES
 # ==========================================
 
+# LEGACY. These lists no longer decide anything -- map_logic/ai/ai_unit_eval.py
+# scores every unit the nation can actually build from its stats, so a change to
+# unit_data.json changes what the AI builds without anyone editing a list here.
+# Kept defined because mods read them, and because get_best_offensive_unit /
+# get_best_naval_unit still exist as (now stat-derived) wrappers.
+#
+# For the record, what they used to do: get_best_preferred_unit walks them in
+# REVERSE, so the last entry won. That meant the AI always reached for Main
+# Battle Tanks and Destroyers the moment it had a single level of either,
+# whatever they cost, and never built Heavy Tanks, Super Heavy Tanks, Artillery,
+# Submarines or Carriers at all -- three of those aren't even on the lists.
 AI_OFFENSIVE_UNIT_PREFERENCE = [
     "Cavalry",
     # the stuff below requires fuel, make sure the ai can handle it
@@ -881,6 +1097,86 @@ AI_NAVAL_UNIT_PREFERENCE = [
     # "Aircraft Carrier"
 ]
 
+# ==========================================
+# AI UNIT VALUATION (map_logic/ai/ai_unit_eval.py)
+# ==========================================
+# Weights for the stat-derived replacement for the lists above. They are applied
+# to values normalised against the mean of whatever the nation can currently
+# build, so they stay meaningful after any rebalance of unit_data.json.
+
+# What a unit contributes, given how combat actually resolves:
+#  - only the top MAX_COMBAT_ATTACKERS by attack deal damage, so offence is raw attack
+#  - incoming damage is split across ALL defenders, then each subtracts its own
+#    defense flat, so a cheap high-defense body is worth far more than its stats
+#    suggest and every extra body thins the share for the whole stack
+AI_W_OFFENSE = 1.0
+AI_W_DURABILITY = 1.0
+# Flat, not scaled by health: damage is divided by the NUMBER of defenders, so
+# every body thins the volley for the stack by the same amount whatever it is
+# made of. Its real effect is to make cheap units better value per point of pain.
+AI_W_SOAK = 0.35
+AI_W_BOMBARD = 0.6      # bombardment ignores the combat-width cap and takes no return fire
+
+# Floor on the damage a unit takes, as a fraction of its share of the volley.
+# Without it, defense >= share divides by zero and an unkillable unit scores
+# infinitely; with it, stacking defense has strong but finite returns.
+AI_MIN_DAMAGE_FRACTION = 0.10
+
+# A unit that takes ten turns to build is worth less than the same value
+# arriving now. 0.5 = value scales with the square root of build time.
+AI_TIME_EXPONENT = 0.5
+
+# Turns of upkeep counted against a unit's purchase price.
+AI_UPKEEP_HORIZON = 20
+
+# Floor on how scarce a resource can get, so pricing saturates instead of
+# dividing by zero when a nation has no income and no stockpile of something.
+AI_MIN_RESOURCE_SLACK = 0.05
+
+# Army composition. Targets are per frontline tile; a role at its target is
+# multiplied by AI_ROLE_DIMINISH, so roles trade off against each other instead
+# of being bought to a hardcoded ratio.
+AI_ROLE_DIMINISH = 0.35
+
+# How much to spend on depth versus firepower, as a ratio of resources -- NOT of
+# unit counts. Only MAX_COMBAT_ATTACKERS units per tile can fire, so the assault
+# target is a count the combat rules hand us directly; bodies then get a
+# comparable share of the budget, which at 1.0 means "about as much again".
+#
+# It has to be expressed as spend rather than as a number of units, because a
+# heavy tank costs seventeen infantry. A count-based depth target quietly
+# committed 90% of the budget to armour and produced an army that lost to every
+# mixed composition in a round-robin under the real combat rules.
+#
+# 2.0 was picked by measurement, not taste: armies built at each ratio were
+# fought against eleven fixed compositions under the real combat rules, and
+# 1.5-3.0 all win comfortably while 4.0 collapses into pure infantry and loses
+# to everything. Sitting in the middle of that plateau rather than at its edge.
+AI_LINE_SPEND_RATIO = 2.0
+AI_BOMBARD_SPEND_RATIO = 0.15   # guns are support, not the main line
+AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
+
+# A unit is ASSAULT when this much of its combat value comes from attack rather
+# than from staying alive and taking up space; everything else on land is a LINE
+# body. Below 0.5 on purpose: a unit that does most of its work shooting still
+# has to survive to do it, so the best attackers are never pure offence.
+AI_ASSAULT_OFFENSE_SHARE = 0.45
+
+# Stop buying when the best remaining option is worth less than this fraction of
+# the best option overall -- the AI has better uses for the resources.
+AI_MARGINAL_FLOOR = 0.15
+
+# Saving up. If the best unit the nation cannot yet afford is worth more than
+# this much more than the best it can, it banks the turn's budget instead --
+# but only when income actually closes the gap inside AI_SAVE_UP_TURNS, so a
+# nation with no industry never sits waiting for a tank it will never afford.
+AI_SAVE_UP_THRESHOLD = 0.6
+AI_SAVE_UP_TURNS = 4
+
+# Fallback for how hard the enemy hits when a nation is at peace and has no
+# frontline to measure, expressed as a multiple of the mean buildable attack.
+AI_PEACETIME_THREAT_MULTIPLIER = 3.0
+
 AI_UPKEEP_TARGETS = {
     "manpower": 0.80,
     "materials": 0.60,
@@ -891,7 +1187,8 @@ AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 
-AI_MAX_NAVY_RATIO = 0.5 # Maximum percentage of an AI's army that can be navy
+AI_MAX_NAVY_RATIO = 0.5 # LEGACY: superseded by AI_NAVY_PER_COAST_TILE
+AI_NAVY_PER_COAST_TILE = 0.5 # Warships wanted per coastal tile, as a role target
 AI_CONVOY_ESCORT_WEIGHT = 1 # Negative weight to pull pathing warships towards convoys
 AI_CONVOY_COMBAT_WEIGHT = 50 # MASSIVE priority to escort convoys actively being attacked
 AI_CONVOY_DANGER_SHIP_WEIGHT = 25 # Priority for convoys near enemy ships
@@ -919,6 +1216,22 @@ AI_CONVERSION_MIN_MATERIALS = 500
 AI_CONVERSION_PANIC_MATERIALS = 5000
 AI_CONVERSION_PANIC_FUEL = 500
 AI_CONVERSION_EMERGENCY_MATERIALS = 50000
+
+# How much an economic tech's per-turn yield counts against a military tech's
+# one-off improvement to the units on offer. The two are in different units --
+# income per turn versus a better division -- so this is the exchange rate
+# between them, and raising it makes the AI build its economy before its army.
+AI_TECH_ECONOMY_WEIGHT = 1.0
+
+# How many of the RESEARCH_SLOTS are held for a tech that unlocks a unit.
+# Economic techs are repeatable and compound, so on value alone they take every
+# slot forever -- true enough about this economy, and a terrible way to fight a
+# war. Which military tech fills the slot still comes from the valuation.
+AI_RESEARCH_MILITARY_SLOTS = 1
+
+# How many turns of extra income an economic tech is credited with. Longer means
+# more willingness to invest in industry before army.
+AI_TECH_ECONOMY_HORIZON = 30.0
 
 MAX_RESEARCH_TURN_SIMULATION = 5000
 
@@ -964,11 +1277,26 @@ REL_MOD_RECENT_WAR = -20
 REL_MOD_RECENT_FACTION = -20
 REL_MOD_COMMON_ENEMY = 20
 
+# How a puppet and its master regard each other. Asymmetric on purpose: a
+# master is fonder of the puppet it installed than the puppet is of the master.
+REL_MOD_MASTER_OF = 50   # our view of a nation we puppeted
+REL_MOD_PUPPET_OF = 20   # our view of the nation that puppeted us
+
 REL_MOD_PER_CLAIM = -5
 REL_MOD_MAX_CLAIM_PENALTY = -50
 
 REL_MOD_REMOVE_CORE = -30
 REL_MOD_MAX_REMOVE_CORE_PENALTY = -150
+
+# Consequences of keeping or breaking your word. The broken-promise grudge is
+# deliberately durable -- decay 0, and long -- because a betrayal nobody
+# remembers next decade is not a betrayal, it is a free move.
+REL_MOD_BROKEN_COMMITMENT = -40
+REL_MOD_BROKEN_COMMITMENT_TURNS = 60
+REL_MOD_HONORED_COMMITMENT = 15
+REL_MOD_REFUSED_CALL_TO_ARMS = -25
+REL_MOD_FOUGHT_TOGETHER = 10
+REL_MOD_GIFT = 10
 
 COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
 COLOR_REL_POS = (0, 255, 0)         # Green at 100

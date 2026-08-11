@@ -24,7 +24,8 @@ SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
 SETTINGS_AI_PROVIDER_START_X = 10
 SETTINGS_AI_PROVIDER_STEP_X = 110
 SETTINGS_AI_IMMERSION_X = 10
-SETTINGS_AI_IMMERSION_ROWS_Y = (c.SCREEN_HEIGHT - 110, c.SCREEN_HEIGHT - 155, c.SCREEN_HEIGHT - 200)
+SETTINGS_AI_IMMERSION_ROWS_Y = (c.SCREEN_HEIGHT - 110, c.SCREEN_HEIGHT - 155,
+                                c.SCREEN_HEIGHT - 200, c.SCREEN_HEIGHT - 245)
 SETTINGS_CLEAR_BTN_GAP_X = 10
 SETTINGS_PATH_EDIT_OFFSET_X = -220
 SETTINGS_PATH_RESET_OFFSET_X = -110
@@ -77,9 +78,12 @@ def render_settings_buttons(settings_screen):
         ], settings_screen.set_ai_mode, settings_screen.ai_mode))
 
         # AI immersion level picker
+        # MAJOR sits between FULL and ABSOLUTE: the model drives the countries a
+        # player actually notices, which is great-power diplomacy at a fraction
+        # of what ABSOLUTE costs.
         settings_screen.elements.extend(make_option_buttons([
             (SETTINGS_AI_IMMERSION_X, y, level, f"{level} AI")
-            for y, level in zip(SETTINGS_AI_IMMERSION_ROWS_Y, ("LITE", "FULL", "ABSOLUTE"))
+            for y, level in zip(SETTINGS_AI_IMMERSION_ROWS_Y, c.AI_IMMERSION_LEVELS)
         ], settings_screen.set_ai_immersion_level, settings_screen.ai_immersion_level, color="red"))
 
         # --- API KEY & MODEL CLEAR BUTTONS ---
@@ -280,6 +284,10 @@ class Settings(GameState):
         self.ai_mode = mode
         self.controller.ai_mode = mode
         self.active_input = None # Deselect input box when switching modes
+        # Provider clients and the shared HTTP session are cached between turns;
+        # drop them so the next call is built against the provider just picked.
+        from map_logic.ai import ai_handler
+        ai_handler.reset_clients()
         self.refresh_ui()
 
     def set_ai_immersion_level(self, level):

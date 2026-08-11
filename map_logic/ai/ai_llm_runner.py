@@ -19,12 +19,27 @@ the AI package without closing a cycle.
 """
 
 import concurrent.futures
+import time
 
 from data.platform import IS_WEB
 
 
+def turn_deadline():
+    """When this turn's LLM work must be done by, or None for no limit.
+
+    Both batch call sites want the same budget measured from when their own
+    batch starts, so they ask for it here rather than each reading the setting
+    and doing the arithmetic.
+    """
+    from data import queries
+
+    budget = queries.get_ai_turn_budget_seconds()
+    return time.monotonic() + budget if budget else None
+
+
 def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
-                  should_abort=None, max_workers=1, poll=0.1, sequential=None):
+                  should_abort=None, max_workers=1, poll=0.1, sequential=None,
+                  deadline=None):
     """Runs `call(job)` for every job and hands each answer back as it lands.
 
     - `call(job)` produces the answer. It runs on a worker thread, or inline on
@@ -38,6 +53,15 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
       counts towards its loading bar.
     - `should_abort()` is polled between drains; it is the Force Skip button.
       Already-finished requests still keep their real answers.
+    - `deadline` is a time.monotonic() stamp past which the batch gives up on
+      whatever is still out. A provider that has gone slow or unreachable then
+      costs the budget rather than the turn, and every abandoned job takes its
+      fallback -- which, once the director lands, is the heuristic's own choice.
+
+    The deadline deliberately folds into the same predicate as `should_abort`
+    rather than adding a second give-up path: the two want identical handling,
+    and the one thing worse than a turn that hangs is two ways of ending it that
+    disagree about which in-flight answers still count.
 
     `sequential` defaults to IS_WEB: Pyodide has no real OS threads, and AI
     networking is disabled on web anyway (see ai_handler's IS_WEB guard), so
@@ -47,17 +71,24 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     if not jobs:
         return
 
+    def give_up():
+        if should_abort and should_abort():
+            return True
+        return deadline is not None and time.monotonic() >= deadline
+
     # Skipping before any request goes out costs nothing and avoids spawning
     # threads only to cancel them. Nothing counts towards the bar here --
     # the user asked not to wait for this batch at all.
-    if should_abort and should_abort():
+    if give_up():
         for job in jobs:
             on_fallback(job)
         return
 
     if IS_WEB if sequential is None else sequential:
         for job in jobs:
-            if not _settle_inline(job, call, on_result):
+            if give_up():
+                on_fallback(job)
+            elif not _settle_inline(job, call, on_result):
                 on_fallback(job)
             if on_progress:
                 on_progress(job)
@@ -68,7 +99,7 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     abandoned = False
 
     while futures:
-        if should_abort and should_abort():
+        if give_up():
             abandoned = True
             for future in futures:
                 future.cancel()

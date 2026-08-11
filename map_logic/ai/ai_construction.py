@@ -1,6 +1,7 @@
 import random
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_unit_eval, ai_world
 
 
 def _unit_costs(unit_library, unit_name):
@@ -21,7 +22,7 @@ def _unit_costs(unit_library, unit_name):
 # and army-composition targets, tally what it already has (disbanding or
 # panic-building along the way), spend down its budget on units, then spend
 # whatever's left on cores and buildings. Several of these phases share
-# mutable running totals (upkeep, force_tank, unit counts) that later phases
+# mutable running totals (upkeep, role counts, the unit valuation) that later phases
 # both read and adjust, so they're threaded through as a single `state` dict
 # rather than a long, easy-to-misorder parameter list.
 
@@ -81,15 +82,19 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
     }
 
 
-def _update_conscription_slider(data, force_tank, tank_cost_mat, state):
+def _update_conscription_slider(data, state):
     """If AI has excess manpower but needs materials, convert manpower to
-    materials. 1.0 = keep all, 0.0 = convert all."""
+    materials. 1.0 = keep all, 0.0 = convert all.
+
+    The first branch used to be "save up for a tank we are below quota on".
+    There is no quota any more -- the purchase loop buys what is worth the most
+    and stops when it stops being worth it -- so the slider keys purely off the
+    upkeep ratios, which is what the remaining branches always did.
+    """
     ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
     ratio_man, target_man = state["ratio_man"], state["target_man"]
 
-    if force_tank and data.get("materials", 0) < tank_cost_mat and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
-        data["conscription_slider"] = 0.5 # Convert 50% to save for tanks
-    elif ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
+    if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
         data["conscription_slider"] = 0.5 # Convert 50%
     elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
         data["conscription_slider"] = 0.25 # Emergency: Convert 75%
@@ -97,21 +102,21 @@ def _update_conscription_slider(data, force_tank, tank_cost_mat, state):
         data["conscription_slider"] = 1.0 # Normal (keep 100%)
 
 
-def _update_fuel_conversion_slider(data, force_tank, tank_cost_mat, tank_cost_fuel, state):
+def _update_fuel_conversion_slider(data, state):
     """Fetches this AI's legal maximum materials->fuel conversion and decides
-    how much of it to actually use this turn."""
+    how much of it to actually use this turn.
+
+    The tank-quota branch is gone with the quota; what is left is the ratio
+    logic, which now pairs naturally with unit pricing -- converting materials
+    into fuel makes fuel cheaper, which makes fuel-burning units score better
+    on the next pass without either side knowing about the other.
+    """
     ratio_fuel, target_fuel = state["ratio_fuel"], state["target_fuel"]
     ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
 
     max_conversion = queries.get_max_fuel_conversion(data)
 
-    # If the ai is low on fuel but has a lot of materials, let them use this feature to balance out their economy
-    if force_tank:
-        if data.get("fuel", 0) < tank_cost_fuel and data.get("materials", 0) > tank_cost_mat:
-            data["mat_to_fuel_slider"] = max_conversion # Need fuel for tank
-        else:
-            data["mat_to_fuel_slider"] = 0.0 # Stop burning materials to save up for tanks
-    elif max_conversion > 0:
+    if max_conversion > 0:
         if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
             data["mat_to_fuel_slider"] = max_conversion * 0.5 # Convert using 50% of their LEGAL MAXIMUM capability
         elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
@@ -159,13 +164,11 @@ def _disband_worst_unit_if_deficit(data, my_provs, ai_name, deficits, unit_libra
     worst_unit["order"] = {"type": "DISBAND", "turns_left": 1}
 
 
-def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_library, state):
+def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_library, state, roles):
     """Section: per-province pass that clears losing tiles' build queues,
     panic-queues a Militia on any core threatened by an adjacent enemy, and
-    tallies current + queued forces (by category) and land/sea border counts."""
-    infantry_count = 0
-    naval_count = 0
-    tank_count = 0
+    tallies current + queued forces (by role) and land/sea border counts."""
+    role_counts = {}
     land_border_count = 0
     sea_border_count = 0
 
@@ -243,7 +246,8 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                         state["upk_man"] += militia_upkeep["manpower"]
                         state["upk_mat"] += militia_upkeep["materials"]
                         state["upk_fuel"] += militia_upkeep["fuel"]
-                        infantry_count += 1
+                        militia_role = roles.get(militia_name, ai_unit_eval.ROLE_LINE)
+                        role_counts[militia_role] = role_counts.get(militia_role, 0) + 1
 
                         order = {
                             "unit_type": militia_name,
@@ -254,18 +258,16 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
 
         # Count what we have and what is already on order, together --
         # the two loops applied the same rule and differed only in which
-        # key holds the unit's name.
+        # key holds the unit's name. Bucketed by the role the unit's own stats
+        # put it in, rather than by ai_force_category's substring match on the
+        # name, so a renamed or newly added unit counts as whatever it is.
         standing = [u.get("type", "") for u in prov.get("units", [])
                     if u.get("owner") == ai_name]
         ordered = [q.get("unit_type", "") for q in prov.get("unit_queue", [])]
         for u_type in standing + ordered:
-            category = queries.ai_force_category(u_type)
-            if category == queries.AI_FORCE_INFANTRY:
-                infantry_count += 1
-            elif category == queries.AI_FORCE_TANKS:
-                tank_count += 1
-            elif category == queries.AI_FORCE_NAVY:
-                naval_count += 1
+            role = roles.get(u_type)
+            if role:
+                role_counts[role] = role_counts.get(role, 0) + 1
 
         # Check neighbors to determine land/sea ratios
         is_land_border = False
@@ -284,159 +286,184 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
             sea_border_count += 1
 
     return {
-        "infantry_count": infantry_count,
-        "tank_count": tank_count,
-        "naval_count": naval_count,
+        "role_counts": role_counts,
         "land_border_count": land_border_count,
         "sea_border_count": sea_border_count,
     }
 
 
-def _compute_target_navy_ratio(land_border_count, sea_border_count):
-    """If they have a tiny coast BUT they have land borders to focus on,
-    ignore the navy. Otherwise protect tiny island nations with a normal ratio."""
-    total_borders = land_border_count + sea_border_count
-    if total_borders == 0:
-        return 0.0
+def _naval_need(land_border_count, sea_border_count):
+    """How many warships this nation's coastline justifies.
 
+    A count, where this used to be a percentage of the whole army. The
+    percentage had to be enforced by buying ships first whenever the fleet was
+    below quota; a count is just another role target, so ships compete on value
+    against everything else through the same marginal loop -- and an island
+    nation ends up with a fleet because its coastline is long, not because a
+    ratio said so.
+
+    The tiny-coast rule survives: two beach tiles and a land war on the other
+    side is not a reason to build a navy.
+    """
+    if sea_border_count <= 0:
+        return 0.0
     if sea_border_count < c.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
         return 0.0
+    return float(sea_border_count) * c.AI_NAVY_PER_COAST_TILE
 
-    return min(c.AI_MAX_NAVY_RATIO, sea_border_count / total_borders)
+
+def _recruit_sites(map_screen, ai_name, my_provs):
+    """Where each kind of unit can be built, worked out once for the whole turn.
+
+    The same gates the Production screen applies to a player -- cored, not in
+    combat, the right industry, and a coast for anything that floats -- but
+    there are only three answers, not one per unit. Deriving them per candidate
+    per iteration meant rescanning every province the nation owns up to six
+    hundred times a turn, which was most of what this pass cost.
+    """
+    usable = [p for p in my_provs
+              if queries.has_core(ai_name, p)
+              and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data)]
+
+    militia = [p for p in usable if queries.has_industry(p)]
+    factory = [p for p in usable if queries.has_basic_factory(p)]
+    naval = [p for p in factory if p.get("is_coastal", False)
+             and queries.borders_ocean(p, map_screen.id_to_province)]
+    return {"militia": militia, "factory": factory, "naval": naval}
+
+
+def _sites_for(sites, unit_name):
+    """Which of the three lists this unit is allowed to be built in."""
+    if queries.is_naval_unit(unit_name):
+        return sites["naval"]
+    if queries.get_base_unit_name(unit_name) == "Militia":
+        return sites["militia"]
+    return sites["factory"]
+
+
+def _affordable_within(stats, data, econ, turns):
+    """Whether this nation's income closes the gap on this unit inside `turns`.
+
+    The guard on saving up: a nation with no materials income must never sit on
+    its hands waiting for a tank it will never be able to buy.
+    """
+    for res in ai_unit_eval.RESOURCES:
+        shortfall = stats.get(f"cost_{res}", 0) - data.get(res, 0)
+        if shortfall <= 0:
+            continue
+        income = econ.get("total_inc", {}).get(res, 0)
+        if income <= 0 or shortfall / income > turns:
+            return False
+    return True
 
 
 def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state):
-    """Section: spends this nation's budget on units, up to 50 purchases,
-    stopping once its upkeep ratios hit target or it can no longer afford
-    (or field) anything else."""
-    target_man, target_mat, target_fuel = state["target_man"], state["target_mat"], state["target_fuel"]
-    inc_man, inc_mat, inc_fuel = state["inc_man"], state["inc_mat"], state["inc_fuel"]
-    force_tank = state["force_tank"]
-    best_tank = state["best_tank"]
-    min_tank_count = state["min_tank_count"]
-    target_navy_ratio = state["target_navy_ratio"]
+    """Spends this nation's budget on whatever is worth the most to it right now.
 
+    Every purchase is the argmax of ai_unit_eval's marginal score over what the
+    nation can currently afford and deploy, with prices recomputed as the
+    stockpile drains. Nothing in here names a unit or a ratio.
+
+    What this replaces, and why none of it is missed:
+      - the force-tank quota (one tank per 2000 materials of income), including
+        the branch where a nation below quota stopped buying anything at all and
+        hoarded for a tank it could not afford
+      - AI_INFANTRY_TO_TANK_RATIO, which resolved to 1:1 in almost every game
+      - the naval ratio branch, so a navy now competes on merit against a target
+        derived from actual coastline
+      - the fuel_shortage boolean and both of its fallback branches, subsumed by
+        pricing fuel against the nation's own income and reserves
+    """
+    target_man, target_mat = state["target_man"], state["target_mat"]
+    inc_man, inc_mat = state["inc_man"], state["inc_mat"]
     upk_man, upk_mat, upk_fuel = state["upk_man"], state["upk_mat"], state["upk_fuel"]
-    infantry_count, tank_count, naval_count = state["infantry_count"], state["tank_count"], state["naval_count"]
+
+    values = state["unit_values"]
+    targets = state["role_targets"]
+    have = dict(state["role_counts"])
+
+    if not values:
+        return
+
+    best_overall = max((v.score for v in values.values()), default=0.0)
+    floor = best_overall * c.AI_MARGINAL_FLOOR
+
+    sites = _recruit_sites(map_screen, ai_name, my_provs)
+    deployable = {name: _sites_for(sites, name) for name in values}
+    values = {n: v for n, v in values.items() if deployable[n]}
+    if not values:
+        return
 
     failsafe = 0
     while failsafe < 50:
         failsafe += 1
 
-        # Re-evaluate ratios dynamically inside the loop
         ratio_man = upk_man / inc_man if inc_man > 0 else 1.0
         ratio_mat = upk_mat / inc_mat if inc_mat > 0 else 1.0
-        ratio_fuel = upk_fuel / inc_fuel if inc_fuel > 0 else 1.0
-
-        # Stop recruiting if we've reached our target army size
-        if not force_tank and (ratio_mat >= target_mat or ratio_man >= target_man):
+        if ratio_mat >= target_mat or ratio_man >= target_man:
             break
 
-        fuel_shortage = ratio_fuel >= target_fuel
+        # Of the units it can deploy, which can it pay for right now?
+        affordable = {
+            name for name, value in values.items()
+            if data.get("materials", 0) >= value.stats.get("cost_materials", 0)
+            and data.get("manpower", 0) >= value.stats.get("cost_manpower", 0)
+            and data.get("fuel", 0) >= value.stats.get("cost_fuel", 0)
+        }
 
-        total_units = infantry_count + tank_count + naval_count
-        current_navy_ratio = naval_count / max(1, total_units)
+        pick, marginal = ai_unit_eval.pick_next(values, have, targets, affordable=affordable)
 
-        # --- Dynamic Army Composition Ratio ---
-        mat_to_man_ratio = inc_man / max(1.0, inc_mat)
-        dynamic_tank_ratio = max(1, int(mat_to_man_ratio * c.AI_INFANTRY_TO_TANK_RATIO))
-
-        unit_name_to_build = None
-
-        # 0. Force Tank Check (Highest Priority if below minimum)
-        if force_tank:
-            unit_name_to_build = best_tank
-
-        # 1. Naval Check (Priority if below ratio)
-        if not unit_name_to_build and current_navy_ratio < target_navy_ratio:
-            if not fuel_shortage:
-                unit_name_to_build = queries.get_best_naval_unit(data.get("research", {}), unit_library)
-
-        # 2. Force a tank if our infantry ratio is too high
-        if not unit_name_to_build and (infantry_count / max(1, tank_count)) > dynamic_tank_ratio:
-            if not fuel_shortage:
-                unit_name_to_build = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
-
-        # 3. Default to Infantry / Guard
-        if not unit_name_to_build:
-            unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=not fuel_shortage)
-
-        unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
-
-        # --- SECONDARY FUEL CHECK (Upfront Cost vs Income) ---
-        # If we passed the income ratio checks but we simply don't have enough
-        # stockpiled fuel to buy the unit, hard fallback to basic infantry!
-        if cost_fuel > 0 and data.get("fuel", 0) < cost_fuel:
-            if force_tank:
-                break # Save up for the tank! Do not waste resources on infantry.
-
-            unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=False)
-            unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
-
-        # Nothing buildable at all (e.g. every unit family this nation could
-        # field has been disabled for the scenario) -- stop for this nation
-        # this turn instead of proceeding with a unit name that doesn't exist.
-        if not unit_name_to_build:
+        # Would something it cannot pay for today be markedly better? Then bank
+        # the money instead of spending it on the cheapest thing available.
+        #
+        # The old loop got this right for the wrong reason: a hardcoded quota of
+        # one tank per 2000 materials of income, which made it stop buying
+        # entirely until the tank was paid for -- and hang forever if it never
+        # could be. Without any equivalent the AI simply never bought anything
+        # expensive, because there was always an affordable infantryman and the
+        # budget was gone by the time armour came up. The rule here is general:
+        # save only for something genuinely better, and only if income actually
+        # closes the gap in a few turns.
+        best_any, best_any_marginal = ai_unit_eval.pick_next(values, have, targets)
+        if (best_any and best_any_marginal >= floor
+                and (not pick or marginal < best_any_marginal * c.AI_SAVE_UP_THRESHOLD)
+                and _affordable_within(best_any.stats, data, state["econ"], c.AI_SAVE_UP_TURNS)):
             break
 
-        # Find a province capable of recruiting (Exclude tiles in combat AND non-cores)
-        if queries.get_base_unit_name(unit_name_to_build) == "Militia":
-            factory_provs = [p for p in my_provs if queries.has_industry(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and queries.has_core(ai_name, p)]
-        else:
-            factory_provs = [p for p in my_provs if queries.has_basic_factory(p) and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data) and queries.has_core(ai_name, p)]
+        if not pick or marginal < floor:
+            break
 
-        # --- NEW: Filter to coastal factories only if building a naval unit ---
-        is_naval_recruit = queries.is_naval_unit(unit_name_to_build)
-        if is_naval_recruit:
-            valid_recruit_provs = [p for p in factory_provs if p.get("is_coastal", False) and queries.borders_ocean(p, map_screen.id_to_province)]
-        else:
-            valid_recruit_provs = factory_provs
+        stats = pick.stats
+        cost_mat = stats.get("cost_materials", 0)
+        cost_man = stats.get("cost_manpower", 0)
+        cost_fuel = stats.get("cost_fuel", 0)
 
-        # --- Fallback if AI tries to build a ship but has no coastal factories ---
-        if is_naval_recruit and not valid_recruit_provs:
-            # Force basic infantry fallback here as well so the turn isn't wasted
-            unit_name_to_build = queries.get_highest_infantry(data, tech_tree, unit_library, allow_fuel_units=False)
-            unit_stats, cost_mat, cost_man, cost_fuel = _unit_costs(unit_library, unit_name_to_build)
-            is_naval_recruit = False
-            valid_recruit_provs = factory_provs
+        data["materials"] -= cost_mat
+        data["manpower"] -= cost_man
+        data["fuel"] -= cost_fuel
 
-        # Can we afford the upfront cost AND have a valid province?
-        if valid_recruit_provs and data.get("materials", 0) >= cost_mat and data.get("manpower", 0) >= cost_man and data.get("fuel", 0) >= cost_fuel:
-            # Pick the province with the shortest queue! Do not overload a province!
-            target_prov = min(valid_recruit_provs, key=lambda p: len(p.get("unit_queue", [])))
+        upkeep = queries.get_unit_upkeep(stats)
+        upk_man += upkeep["manpower"]
+        upk_mat += upkeep["materials"]
+        upk_fuel += upkeep["fuel"]
+        have[pick.role] = have.get(pick.role, 0) + 1
 
-            data["materials"] -= cost_mat
-            data["manpower"] -= cost_man
-            data["fuel"] -= cost_fuel
+        # Spread the load rather than stacking one province's queue.
+        target_prov = min(deployable[pick.name], key=lambda p: len(p.get("unit_queue", [])))
+        target_prov.setdefault("unit_queue", []).append({
+            "unit_type": pick.name,
+            "turns_remaining": max(1, stats.get("production_time", 1)),
+            "refund": {"cost_materials": cost_mat, "cost_manpower": cost_man,
+                       "cost_fuel": cost_fuel},
+        })
 
-            # Track loops internal variables so the ratio math is valid on the next loop
-            unit_upkeep = queries.get_unit_upkeep(unit_stats)
-            upk_man += unit_upkeep["manpower"]
-            upk_mat += unit_upkeep["materials"]
-            upk_fuel += unit_upkeep["fuel"]
-
-            if is_naval_recruit:
-                naval_count += 1
-            elif queries.is_ai_tank(unit_name_to_build):
-                tank_count += 1
-                # Recalculate force_tank so we don't accidentally buy way more tanks than the minimum!
-                if force_tank and tank_count >= min_tank_count:
-                    force_tank = False
-            else:
-                infantry_count += 1
-
-            order = {
-                "unit_type": unit_name_to_build,
-                "turns_remaining": max(1, unit_stats.get("production_time", 1)),
-                "refund": {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
-            }
-            target_prov.setdefault("unit_queue", []).append(order)
-        else:
-            break # Can't afford it or out of valid factories. Exit recruitment loop.
+        # The stockpile just shrank, so what is scarce may have changed. Only
+        # the prices moved, so this rescores rather than re-deriving.
+        values = ai_unit_eval.reprice(
+            values, ai_unit_eval.resource_prices(state["econ"], data))
 
     state["upk_man"], state["upk_mat"], state["upk_fuel"] = upk_man, upk_mat, upk_fuel
-    state["infantry_count"], state["tank_count"], state["naval_count"] = infantry_count, tank_count, naval_count
-    state["force_tank"] = force_tank
+    state["role_counts"] = have
 
 
 def _apply_coring_priority(map_screen, ai_name, data, my_provs):
@@ -580,6 +607,10 @@ def process_ai_economy_decisions(map_screen):
 
     all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
 
+    # Border and coast counts, and the enemy stacks each nation is facing, all
+    # come off this turn's snapshot rather than being re-derived per nation.
+    world = ai_world.for_screen(map_screen)
+
     # Pre-group provinces by owner for efficiency
     nation_provs = {}
     for prov in map_screen.map_data.values():
@@ -607,45 +638,56 @@ def process_ai_economy_decisions(map_screen):
         # --- 1. EVALUATE RECRUITMENT RATIOS ---
         state = _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_library)
 
-        # --- DYNAMIC TANK OVERRIDE LOGIC ---
-        best_tank = queries.get_best_offensive_unit(data.get("research", {}), unit_library)
-        min_tank_count = queries.get_minimum_tank_count(state["inc_mat"])
+        # --- 1b. VALUE EVERY UNIT THIS NATION COULD FIELD ---
+        # Scored against the war it is actually in: what its fronts are being
+        # hit with, and how well armoured the things it is shooting at are.
+        # Existing unit types are valued alongside the buildable ones purely so
+        # the tally below can bucket them by the same rule; only the buildable
+        # set is ever purchased from.
+        candidates = ai_unit_eval.buildable_units(data.get("research", {}), unit_library)
+        owned_types = {u.get("type", "") for p in my_provs for u in p.get("units", [])
+                       if u.get("owner") == ai_name}
+        owned_types |= {q.get("unit_type", "") for p in my_provs
+                        for q in p.get("unit_queue", [])}
 
-        current_tank_count = 0
-        for prov in my_provs:
-            for u in prov.get("units", []) + prov.get("unit_queue", []):
-                u_type = u.get("type", "") if "type" in u else u.get("unit_type", "")
-                if queries.is_ai_tank(u_type):
-                    if isinstance(u, dict) and u.get("owner", ai_name) == ai_name:
-                        current_tank_count += 1
+        volley, enemy_def, enemy_stack = ai_unit_eval.threat_profile(
+            world, ai_name, unit_library, candidates)
+        frontline = len(world.land_border_tiles.get(ai_name, ())) if world else len(my_provs)
+        coast = len(world.coast_tiles.get(ai_name, ())) if world else 0
 
-        force_tank = (current_tank_count < min_tank_count) and (best_tank is not None)
-        tank_cost_mat = 0
-        tank_cost_fuel = 0
-        if force_tank:
-            t_stats = unit_library.get(best_tank, {})
-            tank_cost_mat = t_stats.get("cost_materials", 0)
-            tank_cost_fuel = t_stats.get("cost_fuel", 0)
+        unit_prices = ai_unit_eval.resource_prices(econ, data)
+        unit_ctx = ai_unit_eval.context(
+            unit_prices,
+            volley=volley, stack=max(1.0, c.MAX_COMBAT_ATTACKERS),
+            enemy_def=enemy_def, enemy_stack=enemy_stack,
+            frontline=max(1, frontline), coast=coast,
+            budget=ai_unit_eval.spending_budget(econ, data, unit_prices))
 
-        # --- DYNAMIC AI CONSCRIPTION LOGIC ---
-        _update_conscription_slider(data, force_tank, tank_cost_mat, state)
+        all_values = ai_unit_eval.evaluate(
+            sorted(set(candidates) | {t for t in owned_types if t}), unit_library, unit_ctx)
+        roles = {name: value.role for name, value in all_values.items()}
+        buildable_values = {n: v for n, v in all_values.items() if n in set(candidates)}
 
-        # --- DYNAMIC AI CONVERSION FIX ---
-        _update_fuel_conversion_slider(data, force_tank, tank_cost_mat, tank_cost_fuel, state)
+        # Sliders no longer have a tank quota to save up for; they key off the
+        # same upkeep ratios they always did.
+        _update_conscription_slider(data, state)
+        _update_fuel_conversion_slider(data, state)
 
         _disband_worst_unit_if_deficit(data, my_provs, ai_name, state["deficits"], unit_library)
 
-        # --- NEW: Guard Target & Dynamic Naval Calculation (Outside Loop for Speed) ---
         # --- NEW: Panic Militia & Combat Queue Clearing ---
-        force_tally = _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_library, state)
-
-        target_navy_ratio = _compute_target_navy_ratio(force_tally["land_border_count"], force_tally["sea_border_count"])
+        force_tally = _panic_militia_and_tally_forces(
+            map_screen, ai_name, data, my_provs, unit_library, state, roles)
 
         state.update(force_tally)
-        state["force_tank"] = force_tank
-        state["best_tank"] = best_tank
-        state["min_tank_count"] = min_tank_count
-        state["target_navy_ratio"] = target_navy_ratio
+        state["econ"] = econ
+        state["unit_values"] = buildable_values
+        state["unit_context"] = unit_ctx
+        state["role_targets"] = ai_unit_eval.role_targets(
+            unit_ctx,
+            naval_need=_naval_need(force_tally["land_border_count"],
+                                   force_tally["sea_border_count"]),
+            values=buildable_values)
 
         # Allow the AI to purchase multiple units per turn until its budget maxes out
         _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state)

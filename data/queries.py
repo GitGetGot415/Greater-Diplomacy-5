@@ -361,7 +361,24 @@ def save_global_settings(controller):
                              **settings_schema.from_controller(controller))
 
 def get_ai_threads():
-    return get_settings().get("ai_threads", c.DEFAULT_AI_THREADS)
+    """How many LLM requests to keep in flight, defaulting by provider.
+
+    An explicit slider setting always wins. Without one, a hosted provider gets
+    the parallel default and a local Ollama gets one -- four concurrent
+    generations against a single local model make the whole batch slower, not
+    faster.
+    """
+    saved = get_settings().get("ai_threads")
+    if saved:
+        return saved
+
+    from map_logic.ai import ai_settings
+    return c.DEFAULT_AI_THREADS_LOCAL if ai_settings.get_ai_mode() == "OLLAMA" else c.DEFAULT_AI_THREADS
+
+
+def get_ai_turn_budget_seconds():
+    """Wall-clock ceiling for one turn's LLM batch; 0 means no limit."""
+    return get_settings().get("ai_turn_budget_seconds", c.DEFAULT_AI_TURN_BUDGET_SECONDS)
 
 # --- REFACTORED GETTERS (No paths needed here anymore!) ---
 def get_settings(): return _load_cached_json("settings")
@@ -1069,13 +1086,42 @@ def get_best_preferred_unit(player_research, unit_library, preference_list):
                     return test_name
     return None
 
+def _best_unit_for_role(player_research, unit_library, role, preference_list):
+    """Highest-scoring unlocked unit filling a role, by stats rather than by name.
+
+    These two used to walk a hand-written list in constants.py backwards, so the
+    last entry won: Main Battle Tanks and Destroyers the moment either was
+    researched, whatever they cost, and Heavy Tanks, Artillery, Submarines and
+    Carriers never. They keep their signatures because the random map generator
+    seeds starting armies with them and mods may call them, but the answer now
+    comes from map_logic.ai.ai_unit_eval like every other unit decision.
+
+    The old preference list survives as the fallback for a caller with no
+    research at all, where there is nothing to score.
+    """
+    from map_logic.ai import ai_unit_eval
+
+    candidates = ai_unit_eval.buildable_units(player_research, unit_library)
+    if candidates:
+        prices = {res: 1.0 for res in ai_unit_eval.RESOURCES}
+        ctx = ai_unit_eval.context(prices, volley=1000.0, stack=c.MAX_COMBAT_ATTACKERS)
+        best = ai_unit_eval.best_by_role(
+            ai_unit_eval.evaluate(candidates, unit_library, ctx), role)
+        if best:
+            return best
+    return get_best_preferred_unit(player_research, unit_library, preference_list)
+
 def get_best_offensive_unit(player_research, unit_library):
-    """Finds the highest preference offensive unit the nation has unlocked."""
-    return get_best_preferred_unit(player_research, unit_library, c.AI_OFFENSIVE_UNIT_PREFERENCE)
+    """Finds the best offensive unit the nation has unlocked."""
+    from map_logic.ai import ai_unit_eval
+    return _best_unit_for_role(player_research, unit_library,
+                               ai_unit_eval.ROLE_ASSAULT, c.AI_OFFENSIVE_UNIT_PREFERENCE)
 
 def get_best_naval_unit(player_research, unit_library):
-    """Finds the highest preference naval unit the nation has unlocked."""
-    return get_best_preferred_unit(player_research, unit_library, c.AI_NAVAL_UNIT_PREFERENCE)
+    """Finds the best naval unit the nation has unlocked."""
+    from map_logic.ai import ai_unit_eval
+    return _best_unit_for_role(player_research, unit_library,
+                               ai_unit_eval.ROLE_NAVAL, c.AI_NAVAL_UNIT_PREFERENCE)
 
 REQ_GROUP_KEYS = ("OR", "AND")
 
@@ -1993,14 +2039,14 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     master_a = nation_data.get(nation_a, {}).get("master", "")
     master_b = nation_data.get(nation_b, {}).get("master", "")
     if master_b == nation_a:
-        score += 50
+        score += c.REL_MOD_MASTER_OF
     elif master_a == nation_b:
-        score += 20
+        score += c.REL_MOD_PUPPET_OF
                 
     # Apply all decaying temporary modifiers
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})
-    for mod_val in temp_mods.values():
-        score += mod_val
+    for entry in temp_mods.values():
+        score += modifier_value(entry)
         
     if id_to_province:
         claims_a = nation_data.get(nation_a, {}).get("claims", [])
@@ -2026,15 +2072,69 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
         
     return score
 
-def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data):
-    """Adds or updates a temporary relation modifier. General opinions stack."""
+# A relation modifier is stored either as a bare int -- every modifier written
+# before this existed, and every one in an old save -- or as a dict carrying how
+# fast it fades and how long it lasts:
+#
+#     -40                                              decays 1/turn, as always
+#     {"value": -40, "decay": 0, "turns": 60, ...}     durable: 60 turns, no fade
+#
+# Nothing migrates in place. An int keeps behaving exactly as it always has, for
+# as long as it exists, and a mixed dict is fine. Grudges that actually last are
+# what make a betrayal cost something later.
+
+def modifier_value(entry):
+    """The score contribution of a modifier, in either storage form."""
+    if isinstance(entry, dict):
+        try:
+            return int(entry.get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+    try:
+        return int(entry)
+    except (TypeError, ValueError):
+        return 0
+
+
+def modifier_decay(entry):
+    """How much this modifier fades toward zero per turn. 0 means never."""
+    if isinstance(entry, dict):
+        try:
+            return max(0, int(entry.get("decay", 1)))
+        except (TypeError, ValueError):
+            return 1
+    return 1
+
+
+def modifier_turns(entry):
+    """Turns left before it expires outright, or None for no expiry."""
+    if isinstance(entry, dict) and entry.get("turns") is not None:
+        try:
+            return int(entry["turns"])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data,
+                           decay=1, turns=None, reason=""):
+    """Adds or updates a temporary relation modifier. General opinions stack.
+
+    decay/turns/reason are keyword arguments with the old behaviour as their
+    defaults, so every existing call site is unchanged.
+    """
     if nation_a not in nation_data: return
     mods = nation_data.setdefault(nation_a, {}).setdefault("temp_modifiers", {}).setdefault(nation_b, {})
-    
+
     if mod_name == "general":
-        mods["general"] = mods.get("general", 0) + value
-    else:
+        value = modifier_value(mods.get("general", 0)) + value
+
+    if decay == 1 and turns is None and not reason:
+        # Plain form for a plain modifier, so saves stay readable and old builds
+        # can still make sense of the common case.
         mods[mod_name] = value
+    else:
+        mods[mod_name] = {"value": value, "decay": decay, "turns": turns, "reason": reason}
 
 def lerp_color(c1, c2, t):
     """Linearly interpolates between two RGB color tuples by factor t (0.0-1.0)."""
@@ -2747,20 +2847,26 @@ def has_wargoal(nation, target_nation, nation_data, map_data=None):
                 return True
     return target_nation in nation_data.get(nation, {}).get("wargoals", {})
 
-def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
-    """Calculates if the AI believes it is strong enough to defeat the target (CTW)."""
+def power_ratio(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
+    """(border_ratio, global_ratio) between two nations.
+
+    The two quantities ai_thinks_it_can_win compares against its thresholds,
+    exposed as numbers so a caller can reason in degrees instead of a yes/no --
+    which is what lets a bold nation gamble on odds a careful one turns down.
+    ai_thinks_it_can_win is written in terms of this so the two cannot drift.
+    """
     if not id_to_province:
         id_to_province = {prov["id"]: prov for prov in map_data.values()}
 
     my_border_str, target_border_str = get_border_strength(ai_nation, target_nation, map_data, id_to_province, nation_data)
-    
+
     # Prevent division by zero if they have literally no troops on the border
     target_border_str = max(1, target_border_str)
-    
+
     # Consider total alliance strength, economy, and distractions
     my_alliance_str = get_alliance_military_strength(ai_nation, map_data, nation_data)
     target_alliance_str = get_alliance_military_strength(target_nation, map_data, nation_data)
-    
+
     my_econ_power = get_economic_power(ai_nation, nation_data) / 100.0
     target_econ_power = get_economic_power(target_nation, nation_data) / 100.0
 
@@ -2770,9 +2876,15 @@ def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_
     # Add the target's distraction to our perceived power
     my_total_power = my_alliance_str + my_econ_power + target_distraction_str
     target_total_power = max(1.0, target_alliance_str + target_econ_power)
-    
+
+    return my_border_str / target_border_str, my_total_power / target_total_power
+
+def ai_thinks_it_can_win(ai_nation, target_nation, map_data, nation_data, id_to_province=None):
+    """Calculates if the AI believes it is strong enough to defeat the target (CTW)."""
+    border_ratio, global_ratio = power_ratio(ai_nation, target_nation, map_data, nation_data, id_to_province)
+
     # AI needs local border superiority AND overall global viability
-    return my_border_str >= (target_border_str * c.AI_WAR_STRENGTH_THRESHOLD) and my_total_power >= (target_total_power * c.AI_GLOBAL_STRENGTH_THRESHOLD)
+    return border_ratio >= c.AI_WAR_STRENGTH_THRESHOLD and global_ratio >= c.AI_GLOBAL_STRENGTH_THRESHOLD
 
 def is_weaker_neighbor(ai_nation, target_nation, map_data, nation_data):
     """Returns True if the target nation's total power is significantly lower than the AI's."""

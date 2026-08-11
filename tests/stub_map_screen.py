@@ -40,8 +40,14 @@ class StubMapScreen:
         self.responsive_tasks_total = 0
         self.responsive_tasks_completed = 0
         self.proactive_llm_tasks = []
+        # Each AI nation's menu of legal moves, held between the proactive
+        # pass that builds it and the director pass that picks from it.
+        self.proactive_choices = []
         self.proactive_tasks_total = 0
         self.proactive_tasks_completed = 0
+        # Set only while prepare_turn's AI passes run; the diplomacy engine
+        # these tests drive never has one, and must not need one.
+        self.ai_world = None
 
         self.feedback = []
         self.scenario_settings = {}
