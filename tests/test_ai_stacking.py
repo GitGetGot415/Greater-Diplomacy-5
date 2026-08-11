@@ -92,6 +92,39 @@ class BuilderTests(WidthTestCase):
         self.assertEqual(built["target_stacks"][1], 1)
         self.assertGreaterEqual(built["target_assignments"][1], c.AI_REAR_GUARD_PENALTY)
 
+    def pull_on_battle(self, units_present, width):
+        """How badly a battle tile holding `units_present` wants one more."""
+        self.set_width(width)
+        prov = {"id": 1}
+        built = self.build([({}, prov)] * units_present, active_battles={1})
+        return built["target_assignments"][1]
+
+    def test_an_empty_front_pulls_as_hard_as_it_ever_did(self):
+        """The scaling changes how the pull fades, not how strong it starts."""
+        self.assertAlmostEqual(self.pull_on_battle(0, 5), -c.AI_REINFORCE_COMBAT_WEIGHT)
+
+    def test_the_pull_fades_as_the_firing_line_fills(self):
+        self.assertLess(self.pull_on_battle(1, 5), self.pull_on_battle(4, 5))
+
+    def test_a_wider_front_keeps_asking_for_men_a_narrow_one_would_not(self):
+        """The other half of the user's question. Same board, same four men
+        standing there: at width 5 the tile has nearly stopped competing, at
+        width 10 it is still calling for the rest of a firing line."""
+        self.assertLess(self.pull_on_battle(4, 10), self.pull_on_battle(4, 5))
+
+    def test_a_full_line_stops_asking(self):
+        self.assertGreaterEqual(self.pull_on_battle(5, 5), 0)
+
+    def test_an_overfull_line_is_not_penalised_twice(self):
+        """Past the cap the pull is clamped off rather than turning into a
+        second, unbounded push. _tile_pressure already sorts a full tile last;
+        letting the pull go negative as well would make an over-stacked battle
+        repel harder the more men were on it, which is a retreat, not a rule
+        about firing lines."""
+        five = self.pull_on_battle(5, 5)
+        seven = self.pull_on_battle(7, 5)
+        self.assertEqual(seven - five, 2, "only the two extra bodies should count")
+
     def test_a_battle_tile_counts_its_bodies_not_its_pull(self):
         """The battle bias is subtracted before the units are counted, so a
         headcount that shared the weighted dict would come out negative -- and

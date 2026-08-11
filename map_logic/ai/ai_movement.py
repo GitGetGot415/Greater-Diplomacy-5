@@ -467,14 +467,10 @@ def _build_target_assignments(units_info, borders, battles, at_war):
             elif c_id in convoy_near_coast:
                 naval_assignments[c_id] -= c.AI_CONVOY_DANGER_COAST_WEIGHT
 
-    # Active Battle Reinforcement Priority
-    for b_id in active_battles:
-        if b_id in target_assignments:
-            target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT
-
     # How many units are really on each target, kept clear of the weights
     # below so _tile_pressure can ask whether a tile is full of fighters rather
-    # than merely unpopular.
+    # than merely unpopular. Counted before the battle pull, which now needs to
+    # know how full a tile already is.
     target_stacks = {t_id: 0 for t_id in target_destinations}
     naval_stacks = {t_id: 0 for t_id in naval_destinations}
 
@@ -486,6 +482,21 @@ def _build_target_assignments(units_info, borders, battles, at_war):
         if prov["id"] in naval_assignments:
             naval_assignments[prov["id"]] += 1
             naval_stacks[prov["id"]] += 1
+
+    # Active Battle Reinforcement Priority, fading as the firing line fills.
+    #
+    # A flat pull said "this battle is worth 20 units" whatever the combat width
+    # was, so a wider front drew no more men than a narrow one -- capping the
+    # stack stopped the AI wasting bodies but never made it mass any. Scaling by
+    # the share of the line still empty means the pull runs out exactly at
+    # width: at 5 a tile stops competing once 5 are there, at 10 it keeps asking
+    # until 10 are. Same strength as before on an empty tile, so a battle still
+    # outranks a quiet border by the same margin it always did.
+    width = max(1, c.MAX_COMBAT_ATTACKERS)
+    for b_id in active_battles:
+        if b_id in target_assignments:
+            room = max(0, width - target_stacks.get(b_id, 0)) / width
+            target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT * room
 
     # --- STRATEGIC WEIGHTING FIX ---
     # 1. Coasts are low priority. Inflate their count so units prefer land borders.
