@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-10T14:42:36.677515",
+    "generated_at": "2026-08-11T14:48:14.345327",
     "date": {
         "day": 15,
         "month": 2,
@@ -43788,24 +43788,7 @@
                 "German Reich"
             ],
             "is_coastal": true,
-            "units": [
-                {
-                    "type": "Destroyer VIII",
-                    "owner": "German Reich",
-                    "health": 2600.0,
-                    "max_health": 2600,
-                    "speed": 1,
-                    "attack": 2000,
-                    "defense": 170,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "2nd Destroyer (VIII)",
-                    "naval_unit": true
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -55931,7 +55914,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Coal": 100
+            },
             "buildings": [
                 "Factory Lvl 1"
             ]
@@ -57333,7 +57318,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Coal": 50
+            },
             "buildings": []
         },
         "(69, 4, 0)": {

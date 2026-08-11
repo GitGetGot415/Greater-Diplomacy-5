@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-10T14:42:39.189334",
+    "generated_at": "2026-08-11T14:30:30.628043",
     "date": {
         "day": 15,
         "month": 5,
@@ -57170,7 +57170,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {
-                "Coal": 50
+                "Coal": 100
             },
             "buildings": [
                 "Factory Lvl 1"

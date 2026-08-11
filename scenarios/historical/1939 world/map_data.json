@@ -11919,24 +11919,7 @@
             338
         ],
         "owner": "German Reich",
-        "units": [
-            {
-                "type": "Destroyer VIII",
-                "owner": "German Reich",
-                "health": 2600.0,
-                "max_health": 2600,
-                "speed": 1,
-                "attack": 2000,
-                "defense": 170,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
-            }
-        ],
+        "units": [],
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
@@ -37544,7 +37527,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Coal": 100
+        },
         "cores": [
             "Korea"
         ],
@@ -40663,7 +40648,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "Korea"
         ],

@@ -142,7 +142,7 @@ UNIT_SECTIONS = [
         UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
-            "cost_fuel": linear(20, 1), "production_time": const(2),
+            "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
         # Same reasoning as Motorized Infantry Type above for health/attack/range.
         # Defense keeps its old linear(100, 5) ramp starting exactly at 1940 (index
@@ -152,7 +152,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
-            "cost_fuel": linear(20, 1), "production_time": const(2),
+            "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
         # Identical to Mechanized Infantry Type in every stat except double attack
         # and double cost_materials - the premium tier Armored Personnel Carriers
@@ -161,7 +161,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(150, 15),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(4000, 40), "cost_manpower": const(1000),
-            "cost_fuel": linear(20, 1), "production_time": const(3),
+            "cost_fuel": linear(10, 1), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),
