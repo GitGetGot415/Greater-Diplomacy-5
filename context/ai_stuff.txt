@@ -198,5 +198,11 @@ its own sender is dropped for the canned line rather than sent. Small models
 need telling; llama3 wrote "Switzerland accepts your offer" as Switzerland.
 
 At ABSOLUTE, a nation with only one legal option is still asked -- choosing
-and phrasing come from the same call, so skipping the choice used to silently
-skip the wording and send a canned line at every immersion level.
+and phrasing come from the same call, so skipping it silently skipped the
+wording. Measured on the 1939 map, that took the director from 19.6 to 22.6
+calls a turn: the cost lever is still doing its job, since most nations still
+have nothing on their menu at all. If a turn feels slow at ABSOLUTE the thing
+to check is ai_threads (1 by default) and whether the provider is actually
+answering -- an unreachable Ollama makes every call wait out its timeout, and
+ai_turn_budget_seconds then caps each turn at that budget rather than the
+work.
