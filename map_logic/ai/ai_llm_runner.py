@@ -31,17 +31,45 @@ from data.platform import IS_WEB
 BatchOutcome = namedtuple("BatchOutcome", "total served abandoned reason")
 
 
-def turn_deadline():
-    """When this turn's LLM work must be done by, or None for no limit.
+def begin_turn(map_screen):
+    """Opens the turn's LLM budget, once, before any phase spends from it.
 
-    Both batch call sites want the same budget measured from when their own
-    batch starts, so they ask for it here rather than each reading the setting
-    and doing the arithmetic.
+    Without this every phase measured `ai_turn_budget_seconds` from its own
+    start, so the three of them spent it three times over: a setting reading 45
+    bought 135 seconds of model time, and the first phase in the turn -- summits
+    -- could take a full third of it and still be told it was inside budget.
     """
     from data import queries
 
     budget = queries.get_ai_turn_budget_seconds()
-    return time.monotonic() + budget if budget else None
+    map_screen.llm_deadline = time.monotonic() + budget if budget else None
+
+
+def turn_deadline(map_screen=None, share=1.0):
+    """This phase's slice of what the turn has left, or None for no limit.
+
+    A share rather than a fixed number of seconds, taken against the remaining
+    budget at the moment the phase starts: a phase that comes in under costs the
+    ones after it nothing, and a phase that would otherwise run long cannot
+    empty the turn. The last phase passes 1.0 and takes the remainder.
+
+    Called with no screen -- or before begin_turn, which is how the older tests
+    and any caller outside a turn reach it -- it falls back to the whole budget
+    measured from now, which is what it used to do for everyone.
+    """
+    from data import queries
+
+    end = getattr(map_screen, "llm_deadline", None)
+    if end is None:
+        budget = queries.get_ai_turn_budget_seconds()
+        if not budget:
+            return None
+        end = time.monotonic() + budget
+
+    remaining = end - time.monotonic()
+    if remaining <= 0:
+        return time.monotonic()
+    return time.monotonic() + remaining * max(0.0, min(1.0, share))
 
 
 def report_unserved(map_screen, outcome, what):
@@ -51,29 +79,69 @@ def report_unserved(map_screen, outcome, what):
     say: the loading bar counted up to whatever it reached, and then the turn
     carried on. On one thread against a local model that can be one nation of
     twelve, which reads as the game having quietly given up -- and it names the
-    two settings that decide how many are reachable, since neither is guessable
+    settings that decide how many are reachable, since none of them is guessable
     from the outside.
+
+    ai_threads is named only where it would help. A hosted provider answers
+    concurrent requests independently, so more of them is close to free
+    throughput; a local Ollama is one model on one GPU, and telling someone to
+    raise a number that will make their turn slower is worse than saying
+    nothing.
     """
     if not outcome or not outcome.abandoned:
+        return
+    if outcome.reason == "unaffordable":
+        # Nothing was spent and nothing was lost, so there is nothing to
+        # explain. This report exists to account for time that went somewhere
+        # the player could not see; a phase that declined to start took none.
+        print(f"[AI] {what}: skipped, too little of the turn's budget left to "
+              f"be worth starting.")
         return
     if outcome.reason == "skipped":
         note = (f"{what}: skipped {outcome.abandoned} of {outcome.total}; "
                 f"they used their staff's plan.")
     else:
         from data import queries
+        from map_logic.ai import ai_settings
+
         budget = queries.get_ai_turn_budget_seconds()
-        note = (f"{what}: {outcome.served} of {outcome.total} answered inside the "
-                f"{budget}s budget; the other {outcome.abandoned} used their staff's "
-                f"plan. Raise ai_turn_budget_seconds or ai_threads to reach more.")
+        levers = "ai_turn_budget_seconds"
+        if ai_settings.get_ai_mode() != "OLLAMA":
+            levers += " or ai_threads"
+        note = (f"{what}: {outcome.served} of {outcome.total} answered inside this "
+                f"phase's share of the {budget}s turn budget; the other "
+                f"{outcome.abandoned} used their staff's plan. Raise "
+                f"{levers} to reach more.")
     print(f"[AI] {note}")
     show = getattr(map_screen, "show_feedback", None)
     if show:
         show(note)
 
 
+def affordable(deadline, calls):
+    """Whether `deadline` leaves room for that many requests.
+
+    A phase whose share cannot cover the smallest useful piece of work spends
+    the share anyway and produces nothing: it starts a request, gets cut off
+    at the deadline, and hands the next phase a budget shorter by the whole
+    slice. Better to decline and let the time go to somebody who can use it.
+
+    Unmeasured means unknown, and unknown is not a reason to refuse -- the
+    first batch of a session finds out what a call costs by making one.
+    """
+    if deadline is None:
+        return True
+    from map_logic.ai import ai_handler
+
+    typical = ai_handler.typical_call_seconds()
+    if not typical:
+        return True
+    return deadline - time.monotonic() >= typical * calls
+
+
 def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
                   should_abort=None, max_workers=1, poll=0.1, sequential=None,
-                  deadline=None):
+                  deadline=None, min_calls=1):
     """Runs `call(job)` for every job and hands each answer back as it lands.
 
     - `call(job)` produces the answer. It runs on a worker thread, or inline on
@@ -132,6 +200,21 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
             on_fallback(job)
         return BatchOutcome(len(jobs), 0, len(jobs), tally["reason"])
 
+    # Declining is not the same as running out, and is checked after it: a
+    # deadline already in the past is a batch with no budget, which is what
+    # "budget" has always meant. This is the other case -- time left, but not
+    # enough of it to finish the smallest piece of work this batch can show
+    # for itself, so the slice goes to the next phase instead of being spent
+    # on a request that will be cut off. `min_calls` is that smallest piece:
+    # one, where a job is a single request; two for a summit, because one
+    # leader speaking with nobody answering is not a meeting and is not
+    # published.
+    if not affordable(deadline, min_calls):
+        tally["reason"] = "unaffordable"
+        for job in jobs:
+            on_fallback(job)
+        return BatchOutcome(len(jobs), 0, len(jobs), "unaffordable")
+
     if IS_WEB if sequential is None else sequential:
         for job in jobs:
             if give_up():
@@ -152,6 +235,7 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
             abandoned = True
             for future in futures:
                 future.cancel()
+            _hang_up()
 
             for future, job in futures.items():
                 # A request that came back just before the cancel still counts;
@@ -182,6 +266,28 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
 
     return BatchOutcome(len(jobs), tally["served"],
                         len(jobs) - tally["served"], tally["reason"])
+
+
+def _hang_up():
+    """Ends the requests a batch has just stopped waiting for.
+
+    future.cancel() only refuses to *start* a job; the one already blocked
+    reading a reply is untouched by it, and by shutdown(wait=False) too. So the
+    request a batch abandoned went on streaming into the next phase, spending
+    17 to 19 seconds of a budget that had been handed to somebody else, and its
+    answer was discarded on arrival because the batch that asked for it had
+    already recorded a fallback.
+
+    Imported here rather than at module scope on purpose: this file is a leaf
+    (see the module docstring) and ai_handler is not, so the import has to
+    happen after both are loaded.
+    """
+    try:
+        from map_logic.ai import ai_handler
+        ai_handler.abort_active_requests()
+    except Exception:
+        # Never let tidying up be the thing that ends a turn.
+        pass
 
 
 def _settle_inline(job, call, on_result):

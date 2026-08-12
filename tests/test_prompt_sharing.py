@@ -12,6 +12,7 @@ Nothing about that is visible from reading the prompt, and any future edit that
 puts a nation's name back at the top would silently undo it. Hence this file.
 """
 
+import inspect
 import os
 import sys
 import unittest
@@ -146,6 +147,89 @@ class RelationTrimTests(unittest.TestCase):
         data["Alpha"]["relations"] = {}
         context = ai_evaluation.get_world_context(data, set(NATIONS), "Alpha")
         self.assertIn("You are the leader of Alpha", context)
+
+
+class AcrossPhasesTests(unittest.TestCase):
+    """The same saving, one level up: a turn is three phases, not one batch.
+
+    Directing nations, holding summits and answering proposals each build their
+    own system half, and Ollama used to put that half in front of the world --
+    so the three phases shared their first eight characters and each one paid to
+    read the whole world again. That is nine seconds of a fifteen-second share,
+    three times a turn, and it is invisible from any single phase.
+    """
+
+    def combined(self, system, user):
+        """What call_ollama actually puts on the wire."""
+        from map_logic.ai import ai_handler
+
+        sent = {}
+
+        def capture(payload_url, *a, **k):
+            raise AssertionError("this test must not reach the network")
+
+        # Built by hand rather than by calling call_ollama, which would need a
+        # socket; the assembly under test is one line and this mirrors it.
+        source = inspect.getsource(ai_handler.call_ollama)
+        self.assertIn('combined_prompt = f"{user_prompt}\\n\\n{system_prompt}"', source,
+                      "the world is no longer first in the prompt Ollama receives")
+        return f"{user}\n\n{system}"
+
+    def phase_prompts(self):
+        from map_logic.ai import ai_prompts
+
+        data = nation_data()
+        prompts = []
+
+        for nation in NATIONS[:2]:
+            context = ai_evaluation.get_world_context(data, set(NATIONS), nation)
+            bag = ac.Collector(nation, {})
+            bag.add(ac.make("TRADE", NATIONS[-1], 0.5, "because"))
+            system, user = ai_director.build_prompt(None, nation, bag.ranked(), 3)
+            prompts.append(self.combined(system, f"{context}\n{user}"))
+
+        context = ai_evaluation.get_world_context(data, set(NATIONS), "Alpha", "Beta")
+        prompts.append(self.combined(
+            ai_prompts.get_bilateral_system_prompt(True, False, "friendly", 1.0),
+            f"{context}\nThey offer a trade. Provide your response."))
+
+        context = ai_evaluation.get_world_context(data, set(NATIONS), "Gamma", "Delta")
+        prompts.append(self.combined(
+            ai_prompts.get_custom_message_system_prompt(),
+            f"{context}\nMessage from Delta: 'hello'"))
+
+        return prompts
+
+    def test_a_turns_phases_share_the_world_they_are_all_looking_at(self):
+        """Asserted as "the whole world head is inside the shared prefix"
+        rather than as a percentage: four toy nations make the world small
+        next to the per-nation tail, so a ratio here would measure the fixture.
+        On the 1941 map the same structure comes out at 84% shared against 0%
+        with the halves the other way round.
+        """
+        prompts = self.phase_prompts()
+        shared = os.path.commonprefix(prompts)
+        head = prompts[0][:prompts[0].index("--- YOU ---")]
+        self.assertTrue(shared.startswith(head),
+                        "the world picture is not shared across the phases; each "
+                        "one will pay to read it again")
+
+    def test_the_politics_block_survives_the_phase_boundary(self):
+        shared = os.path.commonprefix(self.phase_prompts())
+        self.assertIn("--- GLOBAL POLITICS ---", shared)
+
+    def test_no_phase_states_its_task_before_the_shared_part_ends(self):
+        """The failure this class exists for. Any instruction in front of the
+        world costs the entire saving, and each phase's own tests would still
+        pass."""
+        shared = os.path.commonprefix(self.phase_prompts())
+        for giveaway in ("Reply ONLY with", "Your staff has prepared", "JSON"):
+            self.assertNotIn(giveaway, shared)
+
+    def test_each_phase_still_gets_its_own_instructions(self):
+        prompts = self.phase_prompts()
+        self.assertIn("Your staff has prepared", prompts[0])
+        self.assertNotIn("Your staff has prepared", prompts[-1])
 
 
 class VoiceStillStatedTests(unittest.TestCase):

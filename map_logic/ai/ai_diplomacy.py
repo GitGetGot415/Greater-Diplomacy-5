@@ -1,4 +1,5 @@
 import random
+import time
 from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
                           ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
@@ -118,7 +119,7 @@ def process_proactive_llm_tasks(map_screen):
             on_progress=count,
             should_abort=lambda: map_screen.force_skip_llm,
             max_workers=queries.get_ai_threads(),
-            deadline=ai_llm_runner.turn_deadline())
+            deadline=ai_llm_runner.turn_deadline(map_screen, c.AI_BUDGET_SHARE_DIRECTOR))
         ai_llm_runner.report_unserved(map_screen, outcome, "Directing AI nations")
 
     for choice in pending_choices:
@@ -126,6 +127,17 @@ def process_proactive_llm_tasks(map_screen):
                             choice["chosen"], choice.get("messages"))
 
     map_screen.proactive_choices = []
+
+def _complete_exchanges(history):
+    """The part of a cut-short summit that reads as a meeting.
+
+    One side speaking and the other never answering is not a summit, it is a
+    nation talking to itself, and publishing it would put a half-line in two
+    inboxes and start the pair's cooldown for nothing. An odd trailing line is
+    dropped; an even transcript is kept whole.
+    """
+    return history[:len(history) - len(history) % 2]
+
 
 def process_summits(map_screen):
     """Convenes the AI-to-AI summits worth holding this turn.
@@ -167,16 +179,48 @@ def process_summits(map_screen):
         line = str(reply.get("message", "")).strip()[:c.AI_TRANSCRIPT_LINE_LENGTH]
         return (line or None), reply
 
+    deadline = ai_llm_runner.turn_deadline(map_screen, c.AI_BUDGET_SHARE_SUMMITS)
+
+    def out_of_time():
+        return deadline is not None and time.monotonic() >= deadline
+
     def call(pair):
-        a, b, history = pair["a"], pair["b"], []
+        """One whole meeting, checking the clock between its own lines.
+
+        A summit is five sequential requests, and the batch runner can only
+        give up between jobs -- so a summit that could not finish inside the
+        budget used to spend all of it and then be thrown away entire, unserved
+        and unrecorded. Measured on the 1941 map that was the first 45 seconds
+        of every turn, buying nothing at all, before the nations that the player
+        actually reads had been asked anything.
+
+        Now it stops where it stands and keeps what was said. Two leaders who
+        got one exchange in did meet; they simply did not get as far as terms,
+        which is what `terms: []` says.
+
+        Each line lands on `pair["said"]` as it is spoken rather than only in
+        the return value, because the return value is exactly what a summit cut
+        off mid-request does not get to produce: the clock can only be checked
+        between requests, so the one that overruns takes the whole meeting with
+        it unless the earlier lines are already somewhere the caller can read.
+        """
+        a, b = pair["a"], pair["b"]
+        history = pair["said"]
         for round_index in range(c.AI_NEGOTIATION_ROUNDS):
             for speaker, listener in ((a, b), (b, a)):
+                if out_of_time():
+                    return {"transcript": _complete_exchanges(history),
+                            "terms": [], "closing": None}
                 prompt = (ai_negotiation.opening_prompt if not history
                           else ai_negotiation.reply_prompt)(world, speaker, listener, settings)
                 line, _reply = say(speaker, listener, prompt, history)
                 if line is None:
-                    return {"transcript": history, "terms": [], "closing": None}
+                    return {"transcript": _complete_exchanges(history),
+                            "terms": [], "closing": None}
                 history.append(f"{speaker}: {line}")
+
+        if out_of_time():
+            return {"transcript": list(history), "terms": [], "closing": None}
 
         closing, reply = say(a, b, ai_negotiation.closing_prompt(world, a, b, settings), history)
         terms = []
@@ -184,14 +228,20 @@ def process_summits(map_screen):
             terms = ai_negotiation.validate_terms(world, a, b, reply.get("terms"))
         if closing:
             history.append(f"{a}: {closing}")
-        return {"transcript": history, "terms": terms, "closing": closing}
+        return {"transcript": list(history), "terms": terms, "closing": closing}
 
     def record(pair, outcome):
         pair["transcript"] = outcome.get("transcript") or []
         pair["terms"] = outcome.get("terms") or []
 
     def record_fallback(pair):
-        pass    # talks that never happened produce nothing, which is correct
+        # Talks that never started produce nothing, which is correct. Talks cut
+        # off in the middle of a request produce what they managed before it --
+        # a meeting that reached no terms, rather than nine seconds of the
+        # turn's budget spent and nothing to show for it. Terms are left as
+        # select_pairs made them: only the closing reply ever sets them, and a
+        # summit that was abandoned never got that far.
+        pair["transcript"] = _complete_exchanges(pair["said"])
 
     def count(pair):
         map_screen.summits_completed = getattr(map_screen, "summits_completed", 0) + 1
@@ -204,7 +254,7 @@ def process_summits(map_screen):
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
         max_workers=queries.get_ai_threads(),
-        deadline=ai_llm_runner.turn_deadline())
+        deadline=deadline, min_calls=2)
     ai_llm_runner.report_unserved(map_screen, outcome, "Holding summits")
 
     for pair in pairs:

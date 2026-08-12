@@ -94,7 +94,11 @@ def select_pairs(world, ai_nations, is_model_driven, total_turns, limit=None):
         if a in taken or b in taken:
             continue
         taken.update((a, b))
-        pairs.append({"a": a, "b": b, "pressure": value, "transcript": [], "terms": []})
+        # `said` fills line by line while the meeting runs, so a summit the
+        # turn's budget cuts off mid-request still leaves what was spoken
+        # somewhere the caller can read it; `transcript` is what survives.
+        pairs.append({"a": a, "b": b, "pressure": value,
+                      "said": [], "transcript": [], "terms": []})
         if len(pairs) >= limit:
             break
     return pairs

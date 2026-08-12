@@ -16,6 +16,7 @@ call site.
 """
 import json
 import threading
+import time
 import urllib.parse
 import http.client
 import socket
@@ -106,19 +107,36 @@ def reset_clients():
         _GEMINI_CLIENT["client"] = None
         _GEMINI_CLIENT["key"] = None
 
-def abort_ai_generation():
-    """Forcefully kills local AI generation by dropping OS sockets and flushing VRAM."""
-    # 1. Close all active HTTP TCP sockets to instantly snap threads out of blocking I/O
+def abort_active_requests():
+    """Drops the sockets of any request still out, leaving the model loaded.
+
+    Cancelling a future does nothing to a worker already blocked reading a
+    reply, and shutdown(wait=False) returns while it carries on: a batch that
+    gave up on its deadline used to leave its last request streaming into the
+    *next* phase's budget, which cost 17 to 19 seconds of every phase after the
+    first and threw the answer away when it arrived.
+
+    Deliberately without the unload below. The one thing that makes a local
+    model affordable here is that it keeps the world context it has already
+    read (see ai_prompts.build_world_context), and flushing VRAM to save a few
+    seconds would make every following call pay to read it again.
+    """
+    # --- THE TRUE OS-LEVEL SOCKET KILL ---
+    # This forces the blocking recv() in the background threads to instantly throw an exception
     for conn in list(ACTIVE_OLLAMA_CONNECTIONS):
         try:
-            # --- THE TRUE OS-LEVEL SOCKET KILL ---
-            # This forces the blocking recv() in the background threads to instantly throw an exception
             if getattr(conn, 'sock', None):
                 conn.sock.shutdown(socket.SHUT_RDWR)
             conn.close()
         except Exception:
             pass
     ACTIVE_OLLAMA_CONNECTIONS.clear()
+
+
+def abort_ai_generation():
+    """Forcefully kills local AI generation by dropping OS sockets and flushing VRAM."""
+    # 1. Close all active HTTP TCP sockets to instantly snap threads out of blocking I/O
+    abort_active_requests()
 
     # 2. Tell Ollama to abort and unload to free up the GPU immediately
     if get_ai_mode() == "OLLAMA":
@@ -269,6 +287,33 @@ def call_gemini(system_prompt, user_prompt, turn_id=None):
         return _provider_error(f"API ERROR: {str(e)}")
 
 
+#: What one request has been costing lately, in seconds. Zero until one has
+#: been made and timed.
+#:
+#: Measured rather than assumed because it is not knowable from anywhere else:
+#: it depends on the machine, the model, the size of the world being described
+#: and whether the model is loaded at all -- on one local llama3 it ranges from
+#: 5 seconds warm to 18 cold. A turn needs the number to decide whether a
+#: phase's share of the budget can cover the work it is about to start, rather
+#: than spending the share finding out it could not.
+_CALL_SECONDS = [0.0]
+
+#: How much of the new measurement each request contributes. Low enough that a
+#: single cold start does not convince the game every call now costs 18s.
+_CALL_SECONDS_WEIGHT = 0.4
+
+
+def typical_call_seconds():
+    """A smoothed estimate of one request's wall clock. 0 means nothing yet."""
+    return _CALL_SECONDS[0]
+
+
+def _time_call(seconds):
+    previous = _CALL_SECONDS[0]
+    _CALL_SECONDS[0] = (seconds if not previous else
+                        previous + (seconds - previous) * _CALL_SECONDS_WEIGHT)
+
+
 def _call_provider(mode, system_prompt, user_prompt, turn_id):
     """One request to whichever provider is configured.
 
@@ -276,6 +321,14 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
     Force Skip, or the turn moving on while it was out. Gemini is the
     else-branch, so an unrecognised mode still answers.
     """
+    started = time.monotonic()
+    try:
+        return _dispatch(mode, system_prompt, user_prompt, turn_id)
+    finally:
+        _time_call(time.monotonic() - started)
+
+
+def _dispatch(mode, system_prompt, user_prompt, turn_id):
     if mode == "OLLAMA":
         return call_ollama(system_prompt, user_prompt, turn_id)
 
@@ -323,7 +376,21 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
 
     # 1. Combine system and user prompts to prevent 400 errors on lightweight models
     # that lack a system prompt block in their instruction template (like many 0.5b models).
-    combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+    #
+    # The world goes first and the instructions last, which is the whole reason
+    # a turn is affordable here. Every caller in the game builds its user half
+    # as "<the world> <this nation's situation> <the task>", and the world is
+    # around ninety percent of it and identical for every request in a turn --
+    # but the system half differs by phase, so putting it in front made a
+    # summit prompt, a director prompt and a proposal reply share their first
+    # eight characters. Measured on the 1941 map: 0% shared across phases
+    # against 84% this way round, and a local model re-reads from the first
+    # token that differs -- nine seconds of every phase's budget, spent
+    # re-reading a world that had not changed since the phase before.
+    #
+    # Ollama is the only provider that concatenates the two halves; the rest
+    # have a system field of their own and are unaffected.
+    combined_prompt = f"{user_prompt}\n\n{system_prompt}"
 
     payload = {
         "model": model_name,

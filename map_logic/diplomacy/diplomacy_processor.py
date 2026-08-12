@@ -1,4 +1,4 @@
-from map_logic.ai import ai_commitments, ai_llm_runner, ai_prompts
+from map_logic.ai import ai_commitments, ai_evaluation, ai_llm_runner, ai_prompts
 import data.constants as c
 from data import queries
 
@@ -437,12 +437,46 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
                   or t["action"] in c.BILATERAL_ACTIONS
                   or t["action"] == "CUSTOM_MSG"]
 
+    # The player's own correspondence goes to the front. This batch is the whole
+    # map's diplomacy -- 192 proposals on the 1941 scenario -- and it runs in the
+    # order pending_diplomacy happens to be in, so when the budget ran out it was
+    # arbitrary who got a real verdict. A human waiting on an answer to something
+    # they sent should never be the one who gets a fallback because forty AI
+    # trade offers happened to sort ahead of them.
+    def _player_first(task):
+        return 0 if (task["sender"] in human_players
+                     or task["target"] in human_players) else 1
+
+    answerable.sort(key=_player_first)
+
+    # Only the ones that will actually ask the model are put under the model's
+    # budget. At MAJOR immersion 177 of those 192 proposals are answered from
+    # the rules in microseconds without a network call anywhere -- and they were
+    # being abandoned by a deadline that exists to bound *model* time, so a slow
+    # local llama3 answering twelve nations left a hundred and eighty proposals
+    # resolved by a fallback verdict instead of the evaluation they were owed.
+    #
+    # This only decides which queue a task joins. Both queues run the same
+    # `call`, which asks _use_canned_reply again for itself, so a task sorted
+    # into the wrong one still gets exactly the answer it would have got.
+    def _needs_model(task):
+        is_ai_to_ai = (task["sender"] not in human_players
+                       and task["target"] not in human_players)
+        return not ai_evaluation._use_canned_reply(
+            mode, immersion, is_ai_to_ai, bool(task.get("content", "").strip()),
+            task["target"], verdict_world)
+
+    for task in [t for t in answerable if not _needs_model(t)]:
+        record(task, call(task))
+        count(task)
+
+    asking = [t for t in answerable if _needs_model(t)]
     outcome = ai_llm_runner.run_llm_batch(
-        answerable, call, record, record_fallback,
+        asking, call, record, record_fallback,
         on_progress=count,
         should_abort=lambda: map_screen.force_skip_llm,
         max_workers=queries.get_ai_threads(),
-        deadline=ai_llm_runner.turn_deadline())
+        deadline=ai_llm_runner.turn_deadline(map_screen, c.AI_BUDGET_SHARE_RESPONSES))
     ai_llm_runner.report_unserved(map_screen, outcome, "Answering proposals")
 
     return ai_results

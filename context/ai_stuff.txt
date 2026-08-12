@@ -136,10 +136,15 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               is standing there. The guard stays at one whatever
                               the combat width is -- a quiet border is a
                               garrison, not a firing line
-  ai_turn_budget_seconds      (a setting) wall-clock ceiling per batch of model
-                              work; whatever has not answered falls back. There
-                              are three batches a turn -- directing, answering
-                              proposals, summits -- and each gets its own budget
+  ai_turn_budget_seconds      (a setting) wall-clock ceiling on model work for
+                              a whole turn; whatever has not answered falls
+                              back. Opened once by prepare_turn, and the three
+                              phases that spend it draw shares from the same
+                              clock
+  AI_BUDGET_SHARE_SUMMITS     what each phase may take of whatever the turn has
+  AI_BUDGET_SHARE_DIRECTOR    left when it starts, in the order they run. A
+  AI_BUDGET_SHARE_RESPONSES   phase that finishes early hands the rest forward;
+                              the last takes the remainder
   ai_threads                  (a setting) how many model calls are in flight at
                               once. 1 by default, which against a local model
                               means one nation per call in series
@@ -270,14 +275,23 @@ a nation and gets its real tech tree, live queue included. A player gets their
 own. The chosen nation arrives as map_screen.viewing_research_country, which is
 the same hand-off channel editing_country uses for the identity editor.
 
-EVERY NATION ASKED IN A TURN SENDS THE SAME PROMPT PREFIX. A local model
-re-reads a prompt from the first token that differs from the last one it saw,
-and the world picture is ~90% of what gets sent. So build_world_context puts
-everything true regardless of who is asking first -- date, the nation list, the
-politics block, world events -- and only then says who it is talking to, what
-that nation owns, and how it regards the others. ai_director's system half
-names nobody for the same reason: it is sent ahead of the context, so one "You
-are the leader of X" at the top costs the entire saving.
+EVERY REQUEST IN A TURN SENDS THE SAME PROMPT PREFIX. A local model re-reads a
+prompt from the first token that differs from the last one it saw, and the
+world picture is ~90% of what gets sent. So build_world_context puts everything
+true regardless of who is asking first -- date, the nation list, the politics
+block, world events -- and only then says who it is talking to, what that
+nation owns, and how it regards the others. ai_director's system half names
+nobody for the same reason.
+
+And call_ollama sends the user half BEFORE the system half, which is the same
+trick one level up. Every caller builds its user half as "<the world> <this
+nation's situation> <the task>"; the system half is what differs between the
+three phases of a turn. With it in front, a summit prompt, a director prompt
+and a proposal reply shared their first eight characters and each phase paid
+to read the whole world again -- ~9s of a ~15s share, three times a turn.
+Measured on the 1941 map: 0% shared across phases against 84% this way round.
+Ollama is the only provider that concatenates the halves; the rest have a
+system field of their own.
 
 Measured on the 1941 map, 12 majors, llama3 via Ollama: 179s before, 28s after
 -- 15s a call became 2.3s, because 13s of every call was re-reading a world
@@ -287,6 +301,52 @@ nothing about it is visible from reading a prompt. Neutral relation scores are
 left out of the tail for the same budget (63% of them on that map), with the
 prompt saying an unlisted nation is neutral.
 
+WHAT A TURN'S MODEL TIME IS ALLOWED TO BE SPENT ON. ai_turn_budget_seconds is
+opened once, by prepare_turn, and the three phases take shares of what is left
+when each of them starts. Before, each phase read the setting from its own
+start: 45 bought 135, and summits -- which run first -- could take a third of
+the model's time before the nations a player reads had been asked anything.
+
+Three things a phase must not do with its share:
+
+  * Spend it on work that cannot finish. A summit is five sequential requests
+    inside one batch job, and a batch can only give up between jobs, so a
+    summit that ran long spent the whole share and was then discarded entire.
+    It now checks the clock between its own lines and keeps what was said --
+    _complete_exchanges drops an odd trailing line, because one leader speaking
+    with nobody answering is not a meeting. And run_llm_batch's min_calls
+    declines a share too small to finish the smallest useful piece of work
+    (2 for a summit), leaving the time to the next phase instead.
+
+  * Leave the request running when it stops waiting. future.cancel() only
+    refuses to start a job and shutdown(wait=False) returns while the worker
+    is still blocked reading, so each phase's abandoned request went on
+    streaming into the next phase's budget -- 17-19s of it -- and its answer
+    was thrown away on arrival. ai_handler.abort_active_requests severs the
+    socket, deliberately without abort_ai_generation's model unload: flushing
+    VRAM would cost every following call the shared prefix above.
+
+  * Starve work the model never sees. The response phase gathers every
+    proposal on the map (192 on the 1941 scenario) but at MAJOR only ~15 of
+    them ask the model; the rest are decided from the rules in microseconds.
+    They are run outside the batch entirely, so a slow model cannot leave a
+    hundred and eighty proposals holding a fallback verdict. The player's own
+    correspondence sorts to the front of what is left.
+
+How long a request costs is measured, not assumed -- ai_handler.typical_call_
+seconds, smoothed, ignoring requests we severed ourselves. It ranges from ~5s
+warm and cache-shared to ~18s on a cold model on the same machine, so nothing
+static could stand in for it.
+
+WHAT IT ACTUALLY BUYS. 1941 map, 12 majors, llama3 on one thread. A director
+call is ~8s for the first of a turn -- the world moved since the last one, so
+the shared prefix does not match and it is re-read -- then ~5s each while it
+holds. So the director alone wants ~50s for ten nations, which is why the
+default budget is 120 and not 45. Measured over three consecutive turns at 120:
+5-6 nations directed per turn, and eleven different nations inside two turns,
+because llm_last_turn puts whoever waited longest at the front. At 45 it is 2-3
+a turn. The setting has no UI: it lives in data/json/settings_config.json.
+
 When the budget cannot reach everyone, whoever has waited longest goes first.
 The batch runs in list order and that order used to be the scenario file's, so
 the same nation won the budget every single turn and the rest were never asked
@@ -294,8 +354,13 @@ once -- at MAJOR on one thread against a local model, twelve major powers came
 down to whichever appeared earliest in the file. nation_data["llm_last_turn"]
 is the stamp, written whether or not the reply was usable so a nation with a
 failing provider cannot hold the front of the queue. And a batch that runs out
-now says so, naming the two settings that decide how many it can reach; before,
+now says so, naming the setting that decides how many it can reach; before,
 serving one nation of twelve looked exactly like having nothing to say.
+ai_threads is named only when the provider is not Ollama -- one model on one
+GPU gets slower when asked to generate several at once, and telling someone to
+raise it there would be advice that makes their next turn worse. A phase that
+declined its share (min_calls above) says so on the console and not to the
+player: nothing was spent, so there is nothing to account for.
 
 At ABSOLUTE, a nation with only one legal option is still asked -- choosing
 and phrasing come from the same call, so skipping it silently skipped the

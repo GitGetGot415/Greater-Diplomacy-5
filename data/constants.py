@@ -348,10 +348,34 @@ AI_MODE_REENABLE_FALLBACK = "OLLAMA" # Provider selected when re-enabling AI fro
 DEFAULT_AI_THREADS = 4
 DEFAULT_AI_THREADS_LOCAL = 1
 
-# Wall-clock ceiling for one turn's LLM batch, in seconds. Whatever hasn't come
+# Wall-clock ceiling for one turn's LLM work, in seconds. Whatever hasn't come
 # back by then falls back, so a slow or unreachable provider costs a wait rather
 # than a hung turn. 0 disables the limit.
-DEFAULT_AI_TURN_BUDGET_SECONDS = 45
+#
+# 45 while the three phases below each measured it from their own start, which
+# meant it bought 135 and turns took two minutes. Now that it means what it
+# says, 120 is roughly what those turns were already costing -- and it is what
+# MAJOR against a local model actually needs. Measured on the 1941 map with
+# llama3: a director call is ~8s for the first of a turn, because the world has
+# changed since the last one and the model must re-read it, then ~5s each while
+# the prefix holds. Ten major powers is ~50s of the budget on its own, before
+# the proposals all ten of them send have been answered.
+DEFAULT_AI_TURN_BUDGET_SECONDS = 120
+
+# How that budget is divided between the three phases that spend it, in the
+# order the turn runs them. Each takes this fraction of whatever is *left* when
+# it starts, so a phase that finishes early hands the rest forward and none of
+# them can leave the ones after it with nothing.
+#
+# Three phases used to ask for the budget separately, each measuring it from its
+# own start, so a setting that says 45 seconds bought 135 and the first phase in
+# the turn could spend a third of the model's time without the other two ever
+# knowing. Summits get the smallest share because they are the most expendable:
+# two pairs talking, against ten nations deciding and every proposal on the map
+# waiting for an answer.
+AI_BUDGET_SHARE_SUMMITS = 0.2
+AI_BUDGET_SHARE_DIRECTOR = 0.5
+AI_BUDGET_SHARE_RESPONSES = 1.0     # whatever the first two left
 
 # --- Unified Settings UI Layout ---
 SETTINGS_BOX_X = 140

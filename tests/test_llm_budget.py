@@ -242,15 +242,39 @@ class ReportingTests(unittest.TestCase):
             screen, ai_llm_runner.BatchOutcome(3, 3, 0, ""), "Directing")
         self.assertEqual(screen.notes, [])
 
-    def test_running_out_of_budget_tells_the_player_and_names_the_levers(self):
-        screen = FakeScreen(["A"])
-        ai_llm_runner.report_unserved(
-            screen, ai_llm_runner.BatchOutcome(12, 1, 11, "budget"), "Directing AI nations")
-        self.assertEqual(len(screen.notes), 1)
-        note = screen.notes[0]
+    def note_at(self, mode):
+        """The note the player would see with this provider selected.
+
+        Patched rather than read: ai_settings answers from the developer's own
+        settings file, so an unpatched test here would pass or fail on whatever
+        provider this machine last saved.
+        """
+        from map_logic.ai import ai_settings
+
+        original = ai_settings.get_ai_mode
+        ai_settings.get_ai_mode = lambda: mode
+        try:
+            screen = FakeScreen(["A"])
+            ai_llm_runner.report_unserved(
+                screen, ai_llm_runner.BatchOutcome(12, 1, 11, "budget"),
+                "Directing AI nations")
+            self.assertEqual(len(screen.notes), 1)
+            return screen.notes[0]
+        finally:
+            ai_settings.get_ai_mode = original
+
+    def test_running_out_of_budget_tells_the_player_and_names_the_lever(self):
+        note = self.note_at("OLLAMA")
         self.assertIn("1 of 12", note)
         self.assertIn("ai_turn_budget_seconds", note)
-        self.assertIn("ai_threads", note)
+
+    def test_a_hosted_provider_is_told_it_can_fan_out(self):
+        self.assertIn("ai_threads", self.note_at("GEMINI"))
+
+    def test_a_local_model_is_not_told_to_run_more_at_once(self):
+        """One model on one GPU: concurrent generations thrash it, so
+        recommending more threads would make the next turn slower."""
+        self.assertNotIn("ai_threads", self.note_at("OLLAMA"))
 
     def test_a_deliberate_skip_does_not_nag_about_settings(self):
         screen = FakeScreen(["A"])

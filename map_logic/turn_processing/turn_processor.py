@@ -1,6 +1,7 @@
 import asyncio
 from map_logic.diplomacy import diplomacy_logic
-from map_logic.ai import ai_movement, ai_research, ai_construction, ai_diplomacy, ai_world, automation_logic
+from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy,
+                          ai_llm_runner, ai_world, automation_logic)
 from map_logic.turn_processing import combat_processor, movement_processor, economy_processor, research_processor
 import data.constants as c
 from data import queries
@@ -16,6 +17,11 @@ async def prepare_turn(map_screen):
     """
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
+
+    # The turn's model time starts running here, once, and the three phases
+    # below draw shares from the same clock. They used to ask for the budget
+    # separately, each measuring it from its own start, so `45` bought 135.
+    ai_llm_runner.begin_turn(map_screen)
 
     # --- NEW: Check if AI is turned off ---
     ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, map_screen.scenario_settings)
