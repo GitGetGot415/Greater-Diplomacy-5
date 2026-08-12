@@ -2,6 +2,15 @@ import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules, edit_province_ownership
 import random # Imported for the random tiebreaker
+from collections import namedtuple
+
+#: What one head-on clash left behind. `survivors1`/`survivors2` are everyone
+#: still alive on each side, which is what tells a caller who died; `fought` is
+#: the id()s of the units that were actually in the battle, which is what tells
+#: it who has to stop here. The two differ whenever somebody crossed the same
+#: edge without a war of their own.
+MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
+
 
 def apply_group_damage(total_atk, target_units):
     """Distributes total attack among target units, reduced by their individual defense."""
@@ -110,17 +119,30 @@ def process_pinning(map_screen):
         
         friendly_defenders = [u for u in defenders if not queries.are_at_war(tile_owner, u.get("owner"), map_screen.nation_data)]
         if not friendly_defenders: continue
-        
-        # Only top attackers deal damage
-        total_defender_atk = queries.get_group_attack_sum(friendly_defenders)
-        
+
         hostile_attackers = [
             info for info in attackers_info
             if queries.are_at_war(tile_owner, info[0].get("owner"), map_screen.nation_data)
         ]
-        
+
         if not hostile_attackers: continue
-        
+
+        # "Not at war with the tile's owner" is not the same as "in this fight".
+        # A third country sitting here on military access is at war with neither
+        # side, and used to both add its attack to the defence and eat the
+        # charge's damage. Keep only the defenders these attackers are actually
+        # fighting.
+        friendly_defenders = [
+            u for u in friendly_defenders
+            if any(queries.are_at_war(u.get("owner"), a.get("owner"), map_screen.nation_data)
+                   for a, _ in hostile_attackers)
+        ]
+        if not friendly_defenders: continue
+
+        # Only top attackers deal damage, and the volley is split across the
+        # whole charge -- the same pooled rule process_combat uses.
+        total_defender_atk = queries.get_group_attack_sum(friendly_defenders)
+
         damage_per_attacker = total_defender_atk / len(hostile_attackers)
         attackers_survive = False
         
@@ -176,51 +198,65 @@ def process_pinning(map_screen):
                         # Pinned! Cannot attack outwards. Must defend.
                         order["path"] = []
 
-def resolve_meeting_engagement(prov1, prov2, units1, units2):
+def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     """Fights one meeting engagement: units1 (crossing into prov2) against
     units2 (crossing into prov1). Removes the dead from their provinces and
     combat-locks survivors only when both sides have survivors -- a one-sided
     result leaves the winners free to keep advancing this turn.
+
+    The two sides are gathered by direction of travel, not by flag, so either
+    of them can hold several nations at once and not all of them are in the
+    fight. Who shoots at whom is combat_rules.firing_lines' answer, the same one
+    the tile fight uses: one pooled volley per column, split across every hostile
+    unit coming the other way, and a nation crossing alongside a belligerent
+    without a war of its own is neither shot at nor stopped.
 
     Shared by the turn-start pass (combat_processor.process_meeting_engagements,
     using combat_rules.find_meeting_pairs) and the mid-movement pass
     (movement_processor.process_movement), since a swap is the same fight
     whichever step of the turn it happens on.
 
-    Returns (surviving_units1, surviving_units2).
+    Returns a MeetingResult. `survivors1`/`survivors2` are every living unit on
+    each side, bystanders included -- the movement pass subtracts them from what
+    it handed in to find the dead. `fought` is the id()s of the units that were
+    actually in a firing line, which is what the callers gate "stop here" on.
     """
-    # Unpack Convoys Caught in Land Engagements
+    lines = combat_rules.firing_lines([units1, units2], nation_data)
+    fought = {id(u) for line in lines for u in line.units}
+
+    # Unpack Convoys Caught in Land Engagements -- only those in the fight.
     is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
     if is_land_engagement:
         for u in units1 + units2:
-            if u.get("type", "").startswith("Convoy"):
+            if id(u) in fought and u.get("type", "").startswith("Convoy"):
                 queries.revert_transport(u)
 
-    # Sort and cap attackers
-    atk1 = queries.get_group_attack_sum(units1)
-    atk2 = queries.get_group_attack_sum(units2)
+    # Measured before any of it lands, so the exchange is simultaneous.
+    volleys = [(line, queries.get_group_attack_sum(line.units)) for line in lines]
+    for line, volley in volleys:
+        apply_group_damage(volley, line.targets)
+        for u in line.units + line.targets:
+            u["_in_combat_this_turn"] = True
 
-    apply_group_damage(atk2, units1)
-    apply_group_damage(atk1, units2)
-
-    for u in units1 + units2:
-        u["_in_combat_this_turn"] = True
-
-    # Only lock them in combat if the enemy survived!
     surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
     surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
 
-    if surviving_units2:
-        for u in surviving_units1:
+    # Only lock them in combat if the enemy survived -- and only the ones who
+    # were fighting. A bystander crossing at the same moment walks on.
+    fighters1 = [u for u in surviving_units1 if id(u) in fought]
+    fighters2 = [u for u in surviving_units2 if id(u) in fought]
+
+    if fighters2:
+        for u in fighters1:
             u["_combat_locked"] = True
-    if surviving_units1:
-        for u in surviving_units2:
+    if fighters1:
+        for u in fighters2:
             u["_combat_locked"] = True
 
     prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
     prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
 
-    return surviving_units1, surviving_units2
+    return MeetingResult(surviving_units1, surviving_units2, fought)
 
 def process_meeting_engagements(map_screen):
     """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
@@ -230,77 +266,76 @@ def process_meeting_engagements(map_screen):
     # the next engagement its province takes part in.
     for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
-        resolve_meeting_engagement(prov1, prov2, units1, units2)
+        resolve_meeting_engagement(prov1, prov2, units1, units2, map_screen.nation_data)
 
 def process_combat(map_screen):
-    """Calculates turn-based damage for units sharing a province."""
+    """Fights everyone sharing a province, one pooled volley per nation.
+
+    A nation fires once a turn, however many enemies it is facing here: its
+    volley is split across every hostile unit on the tile, so three enemies
+    means a third of the damage each rather than three full volleys. The pair
+    loop this replaced fired a nation's whole attack separately at each enemy,
+    which meant a crowded tile did more total damage the more sides joined it --
+    a nation at war with three of the others present dealt triple its own attack.
+
+    A nation on the tile with nobody to fight -- passing through on military
+    access, or at war with somebody who is not standing here -- takes no part.
+    Not just no damage: its convoys stay loaded, its orders survive, and its
+    ships are not scuttled by other people's war.
+    """
     for province in map_screen.map_data.values():
         units = province.get("units", [])
         if len(units) < 2:
             continue
-            
+
         is_land = not queries.is_water_province(province)
 
-        # Unpack Convoys Caught on Land
-        if is_land and queries.is_province_in_active_combat(province, map_screen.nation_data):
+        lines = combat_rules.firing_lines([units], map_screen.nation_data)
+        fighters = {line.owner for line in lines}
+
+        # Unpack Convoys Caught on Land -- only the ones in the battle.
+        if is_land:
             for u in units:
-                if u.get("type", "").startswith("Convoy"):
+                if u.get("owner") in fighters and u.get("type", "").startswith("Convoy"):
                     queries.revert_transport(u)
-            
-        # Group units by owner to calculate total attack per side
-        sides = {}
-        for u in units:
-            owner = u["owner"]
-            if owner not in sides:
-                sides[owner] = {"units": [], "total_atk": 0}
-            sides[owner]["units"].append(u)
 
-        owners = list(sides.keys())
-        
-        # Sort and cap attackers for each side
-        for owner in owners:
-            sides[owner]["total_atk"] = queries.get_group_attack_sum(sides[owner]["units"])
+        # Every volley is measured before any of it lands, so the fight is
+        # simultaneous: a nation wiped out this turn still fires this turn, and
+        # nobody's share depends on who happened to be resolved first.
+        volleys = [(line, queries.get_group_attack_sum(line.units)) for line in lines]
 
-        combat_occurred = False
-        
-        for i in range(len(owners)):
-            for j in range(i + 1, len(owners)):
-                nation_a = owners[i]
-                nation_b = owners[j]
-                
-                # Check if they are actually at war
-                at_war = queries.are_at_war(nation_a, nation_b, map_screen.nation_data)
-                
-                if at_war:
-                    combat_occurred = True
-                    # Side A attacks Side B
-                    apply_group_damage(sides[nation_a]["total_atk"], sides[nation_b]["units"])
-                    # Side B attacks Side A
-                    apply_group_damage(sides[nation_b]["total_atk"], sides[nation_a]["units"])
-                    
-                    for u in sides[nation_a]["units"] + sides[nation_b]["units"]:
-                        u["_in_combat_this_turn"] = True
+        for line, volley in volleys:
+            apply_group_damage(volley, line.targets)
+            for u in line.units + line.targets:
+                u["_in_combat_this_turn"] = True
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]
         province["units"] = surviving_units
 
         # Wipe queues and destroy misplaced naval units ONLY if combat is still ongoing
-        if combat_occurred:
-            is_land = not queries.is_water_province(province)
-            
-            # Check if there are STILL enemies present after the combat phase
-            still_in_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
-            
+        if lines:
+            # Pinned by its OWN enemies, not by anyone else's. The tile-wide test
+            # that used to sit here froze a bystander in place because two other
+            # countries were shooting at each other around it. Read after the
+            # dead are cleared, so a side that wiped its enemy out is free again.
+            still_fighting = {
+                owner for owner in fighters
+                if queries.is_nation_in_combat_here(owner, province, map_screen.nation_data)
+            }
+
             for u in surviving_units:
-                if still_in_combat:
+                if u.get("owner") not in fighters:
+                    continue
+
+                if u.get("owner") in still_fighting:
                     if "order" in u and "path" in u["order"]:
                         u["order"]["path"] = []
-                
+
                 # Immediately destroy warships caught in land combat
                 if is_land and queries.is_warship(u.get("type", "")):
                     u["health"] = 0
-            
+
             # Filter dead ships out
             province["units"] = [u for u in surviving_units if u.get("health", 0) > 0]
 

@@ -4,6 +4,7 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
 from ui_elements import draw_combat_stats, draw_bombardment_stats
+from map_logic.turn_processing import combat_rules
 
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
 GARRISON_FLAG_SIZE = (18, 12)
@@ -126,8 +127,19 @@ def draw_sidebar_info(map_screen, surface):
         current_y += 10 # Padding before next section
 
         # 5. Combat Detection
-        owners_present = list(set(u.get("owner", "Unknown") for u in units))
+        owners_present = []
+        for u in units:
+            owner = u.get("owner", "Unknown")
+            if owner not in owners_present:
+                owners_present.append(owner)
         is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
+
+        # Who is actually shooting at whom, read off the same rule the turn
+        # resolves by. A nation can stand in the middle of a battle on military
+        # access without being in it, and listing it as a side -- with its top
+        # units highlighted as the ones dealing damage -- was simply untrue.
+        engaged_sides = [line.owner for line in
+                         combat_rules.firing_lines([units], map_screen.nation_data)]
 
         # --- Active Garrison / Combat Zone ---
         # While a fight is active, the Combat Zone display (grouped by side) fully
@@ -153,7 +165,9 @@ def draw_sidebar_info(map_screen, surface):
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         elif is_combat:
-            for side_id in owners_present:
+            def draw_side(side_id, engaged):
+                nonlocal current_y
+
                 side_data = map_screen.nation_data.get(side_id, {})
                 side_display = side_data.get("name", side_id)
                 side_color = map_screen.nation_colors.get(side_id, (200, 200, 200))
@@ -175,7 +189,9 @@ def draw_sidebar_info(map_screen, surface):
                 # Only the top MAX_COMBAT_ATTACKERS units (by attack) actually deal
                 # damage each combat round -- highlight those rows so it's clear
                 # which units are pulling their weight vs. just sitting on the tile.
-                engaged_ids = {id(eu) for eu in queries.get_top_attackers(side_units)}
+                # A side that is not in this fight fires nothing, so nothing of
+                # theirs is highlighted however good its units are.
+                engaged_ids = {id(eu) for eu in queries.get_top_attackers(side_units)} if engaged else set()
                 for u in side_units:
                     u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
                     unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
@@ -215,6 +231,20 @@ def draw_sidebar_info(map_screen, surface):
                         current_y += 18
 
                 current_y += 10
+
+            for side_id in engaged_sides:
+                draw_side(side_id, True)
+
+            # Everyone else is here by military access or by a war that is not
+            # being fought on this tile. They are worth showing -- they are in
+            # the way, and they may join -- but they are not in the battle.
+            bystanders = [o for o in owners_present if o not in engaged_sides]
+            if bystanders:
+                header = map_screen.small_font.render("--- PRESENT, NOT ENGAGED ---", True, c.UI_TEXT_MUTED)
+                surface.blit(header, (text_x, current_y))
+                current_y += 22
+                for side_id in bystanders:
+                    draw_side(side_id, False)
         else:
             for u in units:
                 u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))

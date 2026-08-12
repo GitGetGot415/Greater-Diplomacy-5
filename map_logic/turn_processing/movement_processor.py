@@ -189,16 +189,22 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
-        survivors1, survivors2 = combat_processor.resolve_meeting_engagement(prov1, prov2, units1, units2)
-        survivor_ids = {id(m) for m in survivors1 + survivors2}
+        result = combat_processor.resolve_meeting_engagement(
+            prov1, prov2, units1, units2, map_screen.nation_data)
+        survivors = result.survivors1 + result.survivors2
+        survivor_ids = {id(m) for m in survivors}
         dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
 
         # A mutual standoff digs both sides in for the rest of this turn; a
-        # one-sided win leaves the winners free to keep advancing.
-        for m in survivors1 + survivors2:
+        # one-sided win leaves the winners free to keep advancing. Only the
+        # units that were actually in the battle are held -- somebody crossing
+        # the same edge without a war of their own keeps marching.
+        for m in survivors:
             m.pop("_combat_locked", None)
-        if survivors1 and survivors2:
-            for m in survivors1 + survivors2:
+        fighters1 = [m for m in result.survivors1 if id(m) in result.fought]
+        fighters2 = [m for m in result.survivors2 if id(m) in result.fought]
+        if fighters1 and fighters2:
+            for m in fighters1 + fighters2:
                 m["_skip_remaining_steps"] = True
 
     if not dead_ids:

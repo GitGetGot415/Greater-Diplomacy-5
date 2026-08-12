@@ -4,6 +4,40 @@ import data.constants as c
 from data import queries
 from map_logic.rendering import map_utils, symbol_loader
 from map_logic.rendering.font_manager import fonts
+from map_logic.turn_processing import combat_rules
+
+def combat_strengths(sides, nation_data, friendly_nations):
+    """What a predicted fight is worth to the player: (friendly, enemy, involved).
+
+    Read off combat_rules.firing_lines, the same rule the turn resolver fights
+    by, so the bubble's colour cannot promise a result the turn will not
+    produce. The weighting is the whole point on a crowded tile: a nation
+    fighting you *and* two others sends you a third of its fire, not all of it,
+    and summing raw group attack per side painted those fights red when they
+    were comfortably winnable.
+
+    `involved` is "a friendly nation is in the firing lines", not "a friendly
+    nation is standing here" -- an ally waiting out somebody else's battle on
+    military access draws the grey bubble of a fight that is not yours.
+    """
+    friendly_atk = 0.0
+    enemy_atk = 0.0
+    involved = False
+
+    for line in combat_rules.firing_lines(sides, nation_data):
+        volley = queries.get_group_attack_sum(line.units)
+        on_friendly = sum(1 for u in line.targets if u.get("owner") in friendly_nations)
+        share = on_friendly / len(line.targets)
+
+        if line.owner in friendly_nations:
+            involved = True
+            friendly_atk += volley * (1.0 - share)
+        elif on_friendly:
+            involved = True
+            enemy_atk += volley * share
+
+    return friendly_atk, enemy_atk, involved
+
 
 def draw_combat_bubbles(self_map, surface):
     """Draws combat indicators on the map to visualize predicted battles."""
@@ -39,50 +73,26 @@ def draw_combat_bubbles(self_map, surface):
                 if pred["loc"] not in allowed:
                     continue
     
-        friendly_atk = 0
-        enemy_atk = 0
-        involved = False
-        
         if pred["type"] == "meeting":
-            side1 = pred["side1"]
-            side2 = pred["side2"]
-            
-            # Incorporate combat scaling rules here too
-            atk1 = queries.get_group_attack_sum(side1)
-            atk2 = queries.get_group_attack_sum(side2)
-            
-            s1_owner = side1[0]["owner"] if side1 else ""
-            s2_owner = side2[0]["owner"] if side2 else ""
-            
-            if s1_owner in friendly_nations:
-                friendly_atk, enemy_atk, involved = atk1, atk2, True
-            elif s2_owner in friendly_nations:
-                friendly_atk, enemy_atk, involved = atk2, atk1, True
-                
+            # Two sides, so a unit only fights across the divide.
+            sides = [pred["side1"], pred["side2"]]
+
             p1 = self_map.id_to_province[pred["loc"][0]]["center"]
             p2 = self_map.id_to_province[pred["loc"][1]]["center"]
             cx = (p1[0] + p2[0]) / 2
             cy = (p1[1] + p2[1]) / 2
-            
+
         else:
-            forces = pred["forces"]
-            
-            friendly_present = [o for o in forces.keys() if o in friendly_nations]
-            if friendly_present:
-                involved = True
-                for owner, units in forces.items():
-                    # Incorporate combat scaling rules
-                    atk = queries.get_group_attack_sum(units)
-                    if owner in friendly_present:
-                        friendly_atk += atk
-                    else:
-                        # Only add to enemy_atk if they are actively hostile to the friendly forces here
-                        if any(queries.are_at_war(owner, f, self_map.nation_data) for f in friendly_present):
-                            enemy_atk += atk
-                            
+            # One side: everyone standing on the tile can reach everyone else.
+            sides = [[u for units in pred["forces"].values() for u in units]]
+
             prov = self_map.id_to_province[pred["loc"]]
             cx, cy = prov["center"]
-            
+
+        friendly_atk, enemy_atk, involved = combat_strengths(
+            sides, self_map.nation_data, friendly_nations)
+
+
         # Determine Color Based on Simulation
         if not involved:
             color = (150, 150, 150) # Grey (Unrelated Battle / Spectating)
