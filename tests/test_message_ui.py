@@ -124,6 +124,54 @@ class PopupLifetimeTests(unittest.TestCase):
         self.assertEqual(self.screen.diplomatic_popups, [])
 
 
+class TacticalModeTests(unittest.TestCase):
+    """A tactical player commands a division, not a country.
+
+    Their host's diplomacy is the AI's business -- it is handed the whole
+    country on purpose -- and every screen an alert would send them to is
+    read-only for them, so an alert is an interruption with nothing behind it.
+    """
+
+    def setUp(self):
+        self.msg = {"sender": "Avaria", "content": "We propose a trade.",
+                    "type": "DIPLOMACY", "read": False, "date": "1 January 1939"}
+        self.screen = Screen({"Player": nation(inbox=[self.msg]), "Avaria": nation()})
+        self.screen.tactical_mode = True
+
+    def test_no_alert_is_raised(self):
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+        self.assertEqual(self.screen.diplomatic_popups, [])
+
+    def test_an_alert_already_up_is_taken_down(self):
+        """Declaring independence is the only way the mode changes mid-game, but
+        this runs every frame, so it must be the one that holds either way."""
+        self.screen.diplomatic_popups = [
+            diplomatic_popups.DiplomaticPopup("Avaria", "hello", 0)]
+
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+
+        self.assertEqual(self.screen.diplomatic_popups, [])
+
+    def test_the_message_is_not_saved_up_to_flood_them_later(self):
+        """Declaring independence turns tactical mode off. A player who has just
+        founded a country should not be handed a stack of alerts about treaties
+        their old host signed."""
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+
+        self.screen.tactical_mode = False
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+
+        self.assertEqual(self.screen.diplomatic_popups, [])
+
+    def test_a_strategic_player_still_gets_them(self):
+        """Guards the tests above against passing for the wrong reason."""
+        self.screen.tactical_mode = False
+
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+
+        self.assertEqual(len(self.screen.diplomatic_popups), 1)
+
+
 class ArchivedTradeTermsTests(unittest.TestCase):
     """The terms have to outlive the offer that carried them."""
 
