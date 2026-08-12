@@ -61,6 +61,15 @@ class SharedPrefixTests(unittest.TestCase):
                            f"only {share:.0%} of the prompt is shared; a local model "
                            f"will re-read the world for every nation")
 
+    def test_the_combat_model_is_shared_world_knowledge(self):
+        """How war works is the same for everyone, so it belongs in the prefix.
+
+        Put in the per-phase tail instead it would be re-read once per nation
+        per phase, which is the cost the rest of this file exists to prevent.
+        """
+        shared = os.path.commonprefix(self.prompts)
+        self.assertIn("--- HOW BATTLES WORK ---", shared)
+
     def test_the_world_picture_is_inside_the_shared_part(self):
         shared = os.path.commonprefix(self.prompts)
         self.assertIn("--- GLOBAL POLITICS ---", shared)

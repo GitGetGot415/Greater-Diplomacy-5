@@ -88,6 +88,12 @@ class Orders_Screen(GameState):
         # Index of the unit currently waiting for the player to click a tile to shell
         self.bombarding_unit_index = None
 
+        # True on a province where the player commands nothing: every unit is
+        # listed, none of them is editable. Set per province in
+        # start_with_province, but defined here so a screen built and painted
+        # before its first handoff is not a special case.
+        self.read_only = False
+
         self.scroll_y = 0
         self.max_scroll_y = 0
         self.row_height = 80
@@ -109,6 +115,12 @@ class Orders_Screen(GameState):
 
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
+
+        # A province you command nothing in is still worth reading -- what is
+        # standing on the front you are about to walk into, and what orders it
+        # already has. The panel shows every unit there and edits none of them.
+        self.read_only = not any(u.get("owner") == self.map_screen.player_country
+                                 for u in units)
         
         if self.map_screen.tactical_mode:
             # TACTICAL MODE: Lock to player unit
@@ -123,7 +135,10 @@ class Orders_Screen(GameState):
                 self.selected_unit_index = player_unit_indices[0]
             else:
                 self.selected_unit_index = None
-            
+
+        if self.read_only:
+            self.selected_unit_index = None
+
         self.refresh_ui()
 
     def exit_screen(self):
@@ -136,6 +151,8 @@ class Orders_Screen(GameState):
         super().exit_screen()
 
     def select_unit(self, index):
+        if getattr(self, "read_only", False):
+            return
         if self.map_screen.tactical_mode:
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
             return
@@ -170,8 +187,11 @@ class Orders_Screen(GameState):
         is_tactical = self.map_screen.tactical_mode
         player_research = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {})
 
-        # Display all units owned by the player, regardless of mode
-        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+        # Display all units owned by the player, regardless of mode -- or
+        # everybody's, when none of them are ours and this is a read-only look.
+        read_only = getattr(self, "read_only", False)
+        player_units = [u for u in units
+                        if read_only or u.get("owner") == self.map_screen.player_country]
         
         total_content_h = len(player_units) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
@@ -180,7 +200,7 @@ class Orders_Screen(GameState):
         row_guard = self.content_hover_guard()
 
         # --- Select All & Clear Orders Buttons ---
-        if player_units:
+        if player_units and not read_only:
             if len(player_units) > 1:
                 all_color = "grey" if is_tactical else ("blue" if self.selected_unit_index == "ALL" else "grey")
                 btn_all = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", all_color, "Select All", lambda: self.select_unit("ALL"), font_preset="normal")
@@ -196,7 +216,7 @@ class Orders_Screen(GameState):
 
         display_index = 0
         for i, unit in enumerate(units):
-            if unit.get("owner") != self.map_screen.player_country:
+            if not read_only and unit.get("owner") != self.map_screen.player_country:
                 continue
                 
             is_tactical_other = is_tactical and unit is not self.map_screen.player_unit
@@ -212,14 +232,37 @@ class Orders_Screen(GameState):
                 unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM), "medium_square")
 
                 # Create the button with the icon and set show_text=False
+                if read_only:
+                    color = "grey"
                 btn_sel = Button(self.PANEL_X + UNIT_ICON_OFFSET_X, y_pos, "medium_square", color, "",
                                 lambda idx=i: self.select_unit(idx), 
                                 image=unit_icon, 
                                 show_text=False)
+                btn_sel.disabled = read_only
                 self.elements.append(btn_sel)
                 
                 order = unit.get("order", {})
                 order_type = order.get("type", "")
+
+                # Read-only: one row per unit saying whose it is and what it is
+                # doing, and not one button that would change any of it.
+                if read_only:
+                    owner_name = unit.get("owner", "Unknown")
+                    doing = order_type or "MOVE"
+                    if doing == "MOVE" and order.get("path"):
+                        doing = "MOVING"
+                    elif doing == "MOVE":
+                        doing = "HOLDING"
+                    btn_info = Button(self.PANEL_X + ACTION_START_OFFSET_X, y_pos,
+                                      "orders_panel", "grey",
+                                      f"{owner_name} - {doing}", lambda: None,
+                                      font_preset="normal")
+                    btn_info.disabled = True
+                    btn_info.is_scrollable = True
+                    btn_info.click_guard = row_guard
+                    self.elements.append(btn_info)
+                    display_index += 1
+                    continue
 
                 # Combat / Location checks
                 player_country = self.map_screen.player_country
@@ -657,6 +700,9 @@ class Orders_Screen(GameState):
             return
 
         # --- Standard Order Placement Click ---
+        if getattr(self, "read_only", False):
+            return
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
             # If the click is inside the panel, ignore it completely
             if panel_rect.collidepoint(event.pos):

@@ -328,6 +328,15 @@ def process_movement(map_screen):
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
+                # Both lane orders are decisions about one tile's fight. Marching
+                # somewhere else makes them meaningless at best and misleading at
+                # worst, so neither follows the army across the map -- being
+                # ignored where it does not apply is not the same as being right.
+                # A stale RESERVE in particular used to sit on a unit forever and
+                # quietly keep it out of every battle it ever stood in.
+                unit.pop("lane_target", None)
+                unit.pop("combat_stance", None)
+
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
                     queries.revert_transport(unit)

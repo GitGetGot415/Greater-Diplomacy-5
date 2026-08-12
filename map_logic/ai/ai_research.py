@@ -123,7 +123,7 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
     frontline = len(world.land_border_tiles.get(ai_name, ())) if world else 1
 
     ctx = ai_unit_eval.context(
-        prices, volley=volley, stack=max(1.0, c.MAX_COMBAT_ATTACKERS),
+        prices, volley=volley, stack=max(1.0, c.LANE_SLOTS_TYPICAL),
         enemy_def=enemy_def, enemy_stack=enemy_stack,
         frontline=max(1, frontline),
         coast=len(world.coast_tiles.get(ai_name, ())) if world else 0,

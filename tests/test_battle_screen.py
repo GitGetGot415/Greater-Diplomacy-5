@@ -1,0 +1,422 @@
+"""The lane manager, against a real booted game.
+
+tests/test_screen_smoke.py only walks controller.states, and this is a modal
+pushed onto the stack rather than a registered state, so nothing else would ever
+construct it. The build-and-paint half here is that missing coverage; the rest is
+the part worth testing on its own -- that what the screen writes onto a unit is
+read back by the resolver, and that an impossible order is ignored rather than
+raising in the middle of a turn.
+"""
+
+import os
+import sys
+import unittest
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import pygame
+
+import data.constants as c
+from data import queries
+from map_logic.turn_processing import combat_rules
+from screens.map_related_screens import battle_screen
+from tests import app_harness
+
+
+class BattleScreenTestCase(unittest.TestCase):
+    """A real province, with a three-lane fight forced onto it.
+
+    A and B are allies, so they share one side. X and Y are at war with the pair
+    and with each other, so they are two separate sides rather than one -- which
+    is what gives the player two lanes to choose between and the tile a third
+    they are only watching.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.controller, cls.surface = app_harness.boot()
+        cls.map = app_harness.boot_map()
+
+    def setUp(self):
+        game_map = self.map
+        names = [n for n in game_map.nation_data
+                 if queries.is_playable(n, game_map.nation_data)][:4]
+        self.a, self.b, self.x, self.y = names
+
+        for name, allies, enemies in ((self.a, [self.b], [self.x, self.y]),
+                                      (self.b, [self.a], [self.x, self.y]),
+                                      (self.x, [], [self.a, self.b, self.y]),
+                                      (self.y, [], [self.a, self.b, self.x])):
+            game_map.nation_data[name]["allied_with"] = list(allies)
+            game_map.nation_data[name]["at_war_with"] = list(enemies)
+
+        self.province = next(p for p in game_map.map_data.values()
+                             if not queries.is_water_province(p))
+        library = queries.get_unit_library()
+        self.province["units"] = [queries.create_unit_dict("Infantry", name, library)
+                                  for name in names for _ in range(5)]
+
+        game_map.selected_province = self.province
+        game_map.visible_provinces = None
+        game_map.player_country = self.a
+        self.addCleanup(self.province.pop, "units", None)
+
+    def screen(self):
+        return battle_screen.Battle_Screen(self.map, self.province)
+
+    def battle(self):
+        return combat_rules.build_battle([self.province["units"]], self.map.nation_data)
+
+    def mine(self, battle):
+        """The player's own half of the first side it fights on."""
+        for lane in battle.lanes:
+            for side in (lane.a, lane.b):
+                if self.a in side.nations:
+                    return next(m for m in side.members if m.nation == self.a)
+        return None
+
+
+class BuildAndPaintTests(BattleScreenTestCase):
+    def test_the_screen_builds_and_paints(self):
+        screen = self.screen()
+        screen.refresh_ui()
+        screen.draw(self.surface)
+
+        self.assertTrue(screen.battle.lanes)
+        self.assertTrue(screen.elements)
+
+    def test_it_survives_an_idle_event_pump(self):
+        screen = self.screen()
+        screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(640, 360), rel=(0, 0),
+                                                 buttons=(0, 0, 0)),
+                              pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+        screen.draw(self.surface)
+
+    def test_selecting_the_other_lane_repaints(self):
+        screen = self.screen()
+        self.assertGreater(len(screen.battle.lanes), 1)
+
+        screen._select(1)
+        screen.draw(self.surface)
+
+        self.assertEqual(screen.selected_lane, 1)
+
+    def test_a_tile_with_no_fight_on_it_says_so_rather_than_raising(self):
+        self.province["units"] = [
+            queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
+
+        screen = self.screen()
+        screen.draw(self.surface)
+
+        self.assertEqual(screen.battle.lanes, [])
+
+    def test_fog_of_war_hides_the_order_of_battle(self):
+        self.map.visible_provinces = set()
+        self.addCleanup(setattr, self.map, "visible_provinces", None)
+
+        screen = self.screen()
+        screen.draw(self.surface)
+
+        self.assertFalse(screen.visible)
+        # Nothing but the footer buttons: no lane rows, no unit rows.
+        self.assertFalse([el for el in screen.elements if getattr(el, "pane", None)])
+
+
+class LaneOrderTests(BattleScreenTestCase):
+    def test_sending_a_unit_to_a_lane_is_read_back_by_the_resolver(self):
+        screen = self.screen()
+        lane = next(lane for lane in screen.battle.lanes
+                    if self.a in lane.a.nations or self.a in lane.b.nations)
+        far = lane.b if self.a in lane.a.nations else lane.a
+        opponent = far.nations[0]
+
+        unit = screen.bench()[0]
+        screen.send_to_lane(unit, lane)
+
+        self.assertEqual(unit["lane_target"], opponent)
+        seated = {id(u) for l in self.battle().lanes
+                  for side in (l.a, l.b) for u in side.front}
+        self.assertIn(id(unit), seated)
+
+    def test_holding_a_unit_back_keeps_it_out_of_the_front(self):
+        screen = self.screen()
+        unit = self.mine(screen.battle).front[0]
+
+        screen.toggle_stance(unit)
+
+        self.assertEqual(unit["combat_stance"], "RESERVE")
+        self.assertNotIn(id(unit), {id(u) for u in self.mine(self.battle()).front})
+
+    def test_holding_is_a_toggle(self):
+        screen = self.screen()
+        unit = self.mine(screen.battle).front[0]
+
+        screen.toggle_stance(unit)
+        screen.toggle_stance(unit)
+
+        self.assertNotIn("combat_stance", unit)
+
+    def test_clearing_lane_orders_removes_both_keys(self):
+        screen = self.screen()
+        for unit in screen.my_units():
+            unit["lane_target"] = "somewhere"
+            unit["combat_stance"] = "RESERVE"
+
+        screen.clear_orders()
+
+        for unit in screen.my_units():
+            self.assertNotIn("lane_target", unit)
+            self.assertNotIn("combat_stance", unit)
+
+    def test_an_impossible_lane_target_is_ignored_rather_than_raising(self):
+        """A pin survives in the save; the enemy it names may not survive the war."""
+        for unit in [u for u in self.province["units"] if u["owner"] == self.a]:
+            unit["lane_target"] = "A Nation That Is Not Here"
+
+        battle = self.battle()
+
+        self.assertIn(self.a, battle.engaged)
+        self.assertTrue(self.mine(battle).front)
+
+    def test_the_screen_only_offers_the_player_s_own_units(self):
+        screen = self.screen()
+        self.assertTrue(screen.my_units())
+        for unit in screen.my_units():
+            self.assertEqual(unit["owner"], self.a)
+
+
+class ObserverTests(BattleScreenTestCase):
+    """A battle you are not in is still worth reading."""
+
+    def setUp(self):
+        super().setUp()
+        # Somebody with no units anywhere near this tile.
+        self.map.player_country = next(
+            n for n in self.map.nation_data
+            if queries.is_playable(n, self.map.nation_data)
+            and n not in (self.a, self.b, self.x, self.y))
+
+    def test_both_sides_of_a_foreign_lane_are_shown(self):
+        screen = self.screen()
+        lane, near, far = screen.current()
+
+        self.assertIsNotNone(near)
+        self.assertIsNotNone(far)
+        self.assertEqual({near.nations, far.nations}, {lane.a.nations, lane.b.nations})
+        self.assertFalse(screen.is_mine(near))
+        self.assertFalse(screen.is_mine(far))
+
+    def test_every_lane_is_listed_not_just_your_own(self):
+        screen = self.screen()
+        self.assertEqual(len(screen.battle.lanes), 3)
+        self.assertEqual(screen.my_lanes(), [])
+        self.assertEqual(len([el for el in screen.elements
+                              if getattr(el, "pane", None) == battle_screen.PANE_LANES]), 3)
+
+    def test_nothing_in_a_foreign_battle_is_editable(self):
+        screen = self.screen()
+        rows = [el for el in screen.elements
+                if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
+                                                 battle_screen.PANE_ENEMY,
+                                                 battle_screen.PANE_RESERVE)]
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertTrue(getattr(row, "disabled", False),
+                            "a unit the player does not command was clickable")
+
+    def test_it_paints_and_switches_lanes(self):
+        screen = self.screen()
+        screen.draw(self.surface)
+        screen._select(1)
+        screen.draw(self.surface)
+        self.assertEqual(screen.selected_lane, 1)
+
+    def test_the_title_says_view_rather_than_manage(self):
+        self.assertIn("View Battle", self.screen().get_panel_title())
+
+    def test_there_is_nothing_to_clear(self):
+        screen = self.screen()
+        labels = [getattr(el, "text", "") for el in screen.elements]
+        self.assertNotIn("Clear Lane Orders", labels)
+
+
+class TacticalModeTests(BattleScreenTestCase):
+    """Commanding one division, not a country.
+
+    Orders_Screen has enforced this since tactical mode existed; the lane
+    manager did not, so the one screen you open in the middle of a battle handed
+    the whole army back.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.map.tactical_mode = True
+        self.map.player_unit = next(u for u in self.province["units"]
+                                    if u["owner"] == self.a)
+        self.addCleanup(setattr, self.map, "tactical_mode", False)
+        self.addCleanup(setattr, self.map, "player_unit", None)
+
+    def test_only_the_tactical_unit_is_yours_to_move(self):
+        screen = self.screen()
+
+        self.assertEqual([id(u) for u in screen.my_units()],
+                         [id(self.map.player_unit)])
+
+    def test_your_own_countrymen_are_not_editable(self):
+        screen = self.screen()
+        theirs = [u for u in self.province["units"]
+                  if u["owner"] == self.a and u is not self.map.player_unit]
+
+        self.assertTrue(theirs)
+        for unit in theirs:
+            self.assertFalse(screen.can_command(unit))
+
+    def test_the_bench_offers_nobody_else(self):
+        screen = self.screen()
+
+        for unit in screen.bench():
+            self.assertIs(unit, self.map.player_unit)
+
+    def test_a_row_for_a_unit_you_do_not_command_is_disabled(self):
+        screen = self.screen()
+        editable = [el for el in screen.elements
+                    if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
+                                                     battle_screen.PANE_RESERVE)
+                    and not getattr(el, "disabled", False)]
+
+        # At most the one division, wherever it happens to be standing.
+        self.assertLessEqual(len(editable), 1)
+
+    def test_clearing_lane_orders_leaves_the_rest_of_the_army_alone(self):
+        screen = self.screen()
+        others = [u for u in self.province["units"]
+                  if u["owner"] == self.a and u is not self.map.player_unit]
+        for unit in others:
+            unit["combat_stance"] = "RESERVE"
+
+        screen.clear_orders()
+
+        for unit in others:
+            self.assertEqual(unit.get("combat_stance"), "RESERVE")
+
+
+class RowPaintingTests(BattleScreenTestCase):
+    """Rows are painted over rather than labelled, so painting is the test."""
+
+    def test_a_bombarding_unit_paints_its_guns_too(self):
+        library = queries.get_unit_library()
+        gunner = next((name for name, stats in library.items()
+                       if "bombard_attack" in stats), None)
+        self.assertIsNotNone(gunner, "no bombarding unit type in the library")
+
+        self.province["units"].append(queries.create_unit_dict(gunner, self.a, library))
+        screen = self.screen()
+        screen.draw(self.surface)
+
+    def test_every_row_carries_something_to_paint(self):
+        screen = self.screen()
+        painted = {pane: len(rows) for pane, rows in screen.row_paint.items()}
+        rows = {}
+        for el in screen.elements:
+            pane = getattr(el, "pane", None)
+            if pane:
+                rows[pane] = rows.get(pane, 0) + 1
+
+        self.assertTrue(rows)
+        self.assertEqual(painted, rows)
+
+    def test_your_side_is_listed_first_whichever_half_of_the_lane_it_is(self):
+        screen = self.screen()
+        for lane in screen.battle.lanes:
+            near, _far = screen.near_far(lane)
+            if screen.is_mine(lane.a) or screen.is_mine(lane.b):
+                self.assertTrue(screen.is_mine(near))
+
+
+class ReadOnlyOrdersTests(BattleScreenTestCase):
+    """The Orders screen on a province the player commands nothing in."""
+
+    def orders_screen(self, player):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        self.map.player_country = player
+        screen = Orders_Screen()
+        screen.start_with_province(self.province, self.map)
+        return screen
+
+    def test_a_foreign_province_lists_every_unit_read_only(self):
+        outsider = next(n for n in self.map.nation_data
+                        if queries.is_playable(n, self.map.nation_data)
+                        and n not in (self.a, self.b, self.x, self.y))
+        screen = self.orders_screen(outsider)
+
+        self.assertTrue(screen.read_only)
+        self.assertIsNone(screen.selected_unit_index)
+        screen.draw(self.surface)
+
+    def test_a_read_only_province_accepts_no_move_orders(self):
+        import pygame as pg
+
+        outsider = next(n for n in self.map.nation_data
+                        if queries.is_playable(n, self.map.nation_data)
+                        and n not in (self.a, self.b, self.x, self.y))
+        screen = self.orders_screen(outsider)
+        before = [list(u.get("order", {}).get("path", [])) for u in self.province["units"]]
+
+        screen.additional_events(
+            pg.event.Event(pg.MOUSEBUTTONDOWN, pos=(640, 360), button=1))
+
+        after = [list(u.get("order", {}).get("path", [])) for u in self.province["units"]]
+        self.assertEqual(before, after)
+
+    def test_your_own_province_is_still_editable(self):
+        screen = self.orders_screen(self.a)
+
+        self.assertFalse(screen.read_only)
+        self.assertIsNotNone(screen.selected_unit_index)
+
+
+class ButtonSwapTests(BattleScreenTestCase):
+    """Manage Battle takes Give Orders' slot exactly while the tile is fighting."""
+
+    def visible_pair(self):
+        from screens.menu_screens import map as map_module
+
+        shown = {}
+
+        def set_btn(btn, visible, enabled, text, color="green"):
+            shown[id(btn)] = visible
+
+        map_module.set_orders_or_battle(self.map, set_btn, True)
+        return shown[id(self.map.btn_go_orders)], shown[id(self.map.btn_go_battle)]
+
+    def test_a_fighting_tile_shows_the_battle_button(self):
+        self.assertEqual(self.visible_pair(), (False, True))
+
+    def test_a_quiet_tile_shows_give_orders(self):
+        self.province["units"] = [
+            queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
+        self.assertEqual(self.visible_pair(), (True, False))
+
+    def test_a_battle_you_are_not_in_still_offers_the_button(self):
+        """Reading somebody else's front is how you find out it is collapsing."""
+        self.map.player_country = next(
+            n for n in self.map.nation_data
+            if queries.is_playable(n, self.map.nation_data)
+            and n not in (self.a, self.b, self.x, self.y))
+
+        from screens.menu_screens import map as map_module
+
+        enabled = {}
+
+        def set_btn(btn, visible, is_enabled, text, color="green"):
+            enabled[id(btn)] = (visible, is_enabled)
+
+        map_module.set_orders_or_battle(self.map, set_btn, False)
+        self.assertEqual(enabled[id(self.map.btn_go_battle)], (True, True))
+
+
+if __name__ == "__main__":
+    unittest.main()

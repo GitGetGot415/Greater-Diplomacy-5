@@ -30,6 +30,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering.country_names import update_country_centers as calc_country_centers
 from map_logic.setup import player_setup
 from screens.editor_screens import scripted_events_editor
+from screens.map_related_screens import battle_screen
 
 # ============================================================================ #
 #                                   LAYOUT                                     #
@@ -266,6 +267,10 @@ def render_buttons(map_screen):
 
     # Domestic Set
     map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: map_screen.change_state("ORDERS"), image=icons.get("paper"), show_text=False)
+    # Shares BTN_ORDERS_Y with Give Orders: only one of the two is ever visible,
+    # and on a tile that is fighting it is this one. The lane manager carries a
+    # button back to Orders, so nothing there becomes unreachable.
+    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: battle_screen.open_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
     map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: map_screen.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
 
     # Foreign Set. Rows overlap deliberately -- only one of the buttons sharing
@@ -357,7 +362,7 @@ def render_buttons(map_screen):
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
-        map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_go_orders, map_screen.btn_go_production,
+        map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_go_orders, map_screen.btn_go_battle, map_screen.btn_go_production,
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
         map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
@@ -375,6 +380,33 @@ def render_buttons(map_screen):
 # ============================================================================ #
 #                            DYNAMIC BUTTON UPDATES                            #
 # ============================================================================ #
+
+def set_orders_or_battle(map_screen, set_btn, has_player_units):
+    """One slot, two buttons: Manage Battle takes over while the tile is fighting.
+
+    They share BTN_ORDERS_Y deliberately -- a tile is either being fought over or
+    it is not, and the lane manager is the thing you want on it when it is. What
+    the swap costs is Disband/Repair/Bombard and retreat orders, so the battle
+    screen carries a button through to Orders rather than stranding them.
+
+    Neither needs units of your own to open. Somebody else's battle is worth
+    reading -- it is how you find out whether the front you are about to walk
+    into is already collapsing -- and both screens refuse to edit units you do
+    not command, so viewing costs nothing. What gates them is fog of war.
+    """
+    province = map_screen.selected_province
+    visible = queries.is_province_visible(map_screen, province["id"])
+    in_battle = visible and queries.is_province_in_active_combat(province,
+                                                                 map_screen.nation_data)
+    has_units = bool(province.get("units"))
+
+    label = "Manage Battle" if has_player_units else "View Battle"
+    set_btn(map_screen.btn_go_battle, in_battle, visible, label, "red")
+
+    orders_label = "Give Orders" if has_player_units else "View Units"
+    set_btn(map_screen.btn_go_orders, not in_battle, visible and has_units,
+            orders_label, "blue" if has_player_units else "grey")
+
 
 def update_button_states(map_screen):
     """Dynamically updates button visibility, colors, and text every frame using explicit attributes."""
@@ -572,6 +604,7 @@ def update_button_states(map_screen):
             # Allow Spectator to view production lines
             is_land = not queries.is_water_province(map_screen.selected_province)
             set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")
+            set_orders_or_battle(map_screen, set_btn, False)
 
         # --- PLAYER ---
         else:
@@ -580,7 +613,7 @@ def update_button_states(map_screen):
             is_tactical = map_screen.tactical_mode
 
             if owner == map_screen.player_country:
-                set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
+                set_orders_or_battle(map_screen, set_btn, has_player_units)
 
                 if is_tactical:
                     set_btn(map_screen.btn_go_production, True, False, "Tactical: Disabled", "grey")
@@ -588,7 +621,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
 
             elif queries.is_playable(owner, map_screen.nation_data):
-                set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
+                set_orders_or_battle(map_screen, set_btn, has_player_units)
 
                 if is_tactical:
                     # Disable all foreign interactions
@@ -735,7 +768,7 @@ def update_button_states(map_screen):
                     map_screen.btn_revoke_mil_access.visible = False
 
             else:
-                set_btn(map_screen.btn_go_orders, True, has_player_units, "Give Orders", "blue")
+                set_orders_or_battle(map_screen, set_btn, has_player_units)
 
 
 class Map(GameState):
@@ -1335,11 +1368,19 @@ class Map(GameState):
             self.deselect_province()
 
     def handle_orders_key(self):
-        if self.selected_province and not self.selection_mode:
-            owner = self.selected_province.get("owner", "Unclaimed")
-            has_player_units = queries.has_units_in_province(self.player_country, self.selected_province)
-            if owner == self.player_country or has_player_units:
-                self.change_state("ORDERS")
+        """Q. Opens whichever of the two the button in that slot is offering.
+
+        Not gated on owning anything here: both screens read a province you have
+        no units in, and refuse to edit units you do not command.
+        """
+        if not self.selected_province or self.selection_mode:
+            return
+        if not queries.is_province_visible(self, self.selected_province["id"]):
+            return
+        if queries.is_province_in_active_combat(self.selected_province, self.nation_data):
+            battle_screen.open_battle_screen(self)
+        elif self.selected_province.get("units"):
+            self.change_state("ORDERS")
 
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this

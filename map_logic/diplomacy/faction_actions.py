@@ -144,7 +144,18 @@ def finalize_faction_leave(nation_data, leaver):
         queries.clear_faction_pre_war_map_if_peace(fac, nation_data)
 
 def join_faction_wars(map_data, nation_data, joiner, faction_member):
-    """Pulls the joining nation into all active wars of the target faction member."""
+    """Pulls the joining nation into all active wars of the target faction member.
+
+    Except the ones it has already settled. A truce is a signed peace with a
+    number of turns left on it, and a call to arms is not a reason to tear one
+    up -- it used to be, silently: Japan made peace with the Guangxi Clique, and
+    the following turn five Chinese Unified Front members called Guangxi to arms
+    and put the war straight back on both lists with twelve turns still on the
+    truce. The player saw a peace they had signed simply not take.
+
+    The pact is still honoured for every other war of the caller. Only the
+    settled one is left alone, and only for as long as the truce lasts.
+    """
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war
 
     fac = nation_data[faction_member].get("faction", "")
@@ -153,6 +164,12 @@ def join_faction_wars(map_data, nation_data, joiner, faction_member):
 
     wars = nation_data[faction_member].get("at_war_with", [])
     for enemy in wars:
+        # Read both ways round. A truce is bilateral, but a save written before
+        # pull_puppets_into_peace recorded it on both sides can hold it on one,
+        # and a peace that only one party remembers is still a peace.
+        if (queries.has_active_truce(joiner, enemy, nation_data)
+                or queries.has_active_truce(enemy, joiner, nation_data)):
+            continue
         link_war(nation_data, joiner, enemy)
 
         # Recursive puppet pull logic for new wars joined

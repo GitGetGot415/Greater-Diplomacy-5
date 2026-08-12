@@ -4,10 +4,11 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
 from ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui import flag_icons
 from map_logic.turn_processing import combat_rules
 
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
-GARRISON_FLAG_SIZE = (18, 12)
+GARRISON_FLAG_SIZE = flag_icons.ROW_FLAG_SIZE
 
 # How fast the mouse wheel scrolls the Buildings/Garrison area
 SIDEBAR_SCROLL_STEP = c.SCROLL_STEP
@@ -127,19 +128,13 @@ def draw_sidebar_info(map_screen, surface):
         current_y += 10 # Padding before next section
 
         # 5. Combat Detection
-        owners_present = []
-        for u in units:
-            owner = u.get("owner", "Unknown")
-            if owner not in owners_present:
-                owners_present.append(owner)
         is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
 
-        # Who is actually shooting at whom, read off the same rule the turn
+        # Who is actually fighting whom, read off the same rule the turn
         # resolves by. A nation can stand in the middle of a battle on military
         # access without being in it, and listing it as a side -- with its top
         # units highlighted as the ones dealing damage -- was simply untrue.
-        engaged_sides = [line.owner for line in
-                         combat_rules.firing_lines([units], map_screen.nation_data)]
+        battle = combat_rules.build_battle([units], map_screen.nation_data)
 
         # --- Active Garrison / Combat Zone ---
         # While a fight is active, the Combat Zone display (grouped by side) fully
@@ -165,7 +160,13 @@ def draw_sidebar_info(map_screen, surface):
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
         elif is_combat:
-            def draw_side(side_id, engaged):
+            def draw_side(side_id, side_units, front_ids=None, reserve_count=0):
+                """One nation's rows in one lane. `front_ids` are the fighters.
+
+                The rows are handed in rather than filtered out of the tile,
+                because a nation holding a slot in two lanes appears twice and
+                must not list its whole army under each of them.
+                """
                 nonlocal current_y
 
                 side_data = map_screen.nation_data.get(side_id, {})
@@ -173,32 +174,34 @@ def draw_sidebar_info(map_screen, surface):
                 side_color = map_screen.nation_colors.get(side_id, (200, 200, 200))
 
                 # Flag next to the side/category name -- individual unit rows below stay as-is
-                flag_w, flag_h = GARRISON_FLAG_SIZE
-                side_flag_data = side_data.get("flag_data", "DEFAULT")
-                flag_surf = queries.decode_b64_to_surf(side_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=side_id)
-                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (map_screen.small_font.get_height() - flag_h) // 2
-                surface.blit(flag_surf, (text_x, flag_y))
-                pygame.draw.rect(surface, (100, 100, 100), (text_x, flag_y, flag_w, flag_h), 1)
+                name_x = flag_icons.draw_flag_centered(
+                    surface, side_id, map_screen.nation_data, text_x, current_y,
+                    map_screen.small_font.get_height())
 
                 title = map_screen.small_font.render(f"{side_display}:", True, side_color)
-                surface.blit(title, (text_x + flag_w + 6, current_y))
+                surface.blit(title, (name_x, current_y))
+
+                # The split is the thing worth reading at a glance: a nation with
+                # forty units and six in the front rank is not fielding forty.
+                if front_ids or reserve_count:
+                    tally = map_screen.small_font.render(
+                        f"{len(front_ids)} front / {reserve_count} reserve", True, c.UI_TEXT_MUTED)
+                    surface.blit(tally, (info_rect.right - 10 - tally.get_width(), current_y))
                 current_y += 22
 
-                side_units = [u for u in units if u.get("owner") == side_id]
-                # Only the top MAX_COMBAT_ATTACKERS units (by attack) actually deal
-                # damage each combat round -- highlight those rows so it's clear
-                # which units are pulling their weight vs. just sitting on the tile.
-                # A side that is not in this fight fires nothing, so nothing of
-                # theirs is highlighted however good its units are.
-                engaged_ids = {id(eu) for eu in queries.get_top_attackers(side_units)} if engaged else set()
+                # Highlighted rows are the front rank -- the units that will
+                # actually trade fire -- read straight off the resolver's answer
+                # rather than restated here. A side not in this fight fires
+                # nothing, so nothing of theirs is highlighted however good it is.
+                engaged_ids = front_ids or set()
                 for u in side_units:
                     u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
                     unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
                     has_bombard = 'bombard_attack' in unit_stats
                     row_height = 20 + (18 if has_bombard else 0)
 
-                    if id(u) in engaged_ids:
+                    in_front = id(u) in engaged_ids
+                    if in_front:
                         highlight_w = info_rect.right - (text_x + 5) - 10
                         highlight_surf = pygame.Surface((highlight_w, row_height), pygame.SRCALPHA)
                         highlight_surf.fill((*c.COLOR_SUCCESS_GREEN, 55))
@@ -206,8 +209,9 @@ def draw_sidebar_info(map_screen, surface):
 
                     row_x = text_x + 10
 
-                    # Unit name
-                    name_surf = map_screen.small_font.render(f"- {u_name}", True, c.UI_TEXT_LIGHT)
+                    # Unit name, dimmed for anything not in the front rank
+                    name_color = c.UI_TEXT_LIGHT if in_front else c.UI_TEXT_MUTED
+                    name_surf = map_screen.small_font.render(f"- {u_name}", True, name_color)
                     surface.blit(name_surf, (row_x, current_y))
                     row_x += name_surf.get_width() + 6
 
@@ -232,19 +236,35 @@ def draw_sidebar_info(map_screen, surface):
 
                 current_y += 10
 
-            for side_id in engaged_sides:
-                draw_side(side_id, True)
+            # Grouped by lane, because that is the unit of the fight: damage
+            # never crosses between them, so listing every nation in one column
+            # would show a battle that is not happening. Inside a lane the rows
+            # are per nation, since a side is a coalition and each member has
+            # its own share of the width.
+            for lane in battle.lanes:
+                heading = map_screen.small_font.render(
+                    f"LANE {lane.index + 1}  -  {len(lane.a.front)} v {len(lane.b.front)}"
+                    f"  of {lane.slots}", True, c.UI_TEXT_MUTED)
+                surface.blit(heading, (text_x, current_y))
+                current_y += 20
 
-            # Everyone else is here by military access or by a war that is not
-            # being fought on this tile. They are worth showing -- they are in
-            # the way, and they may join -- but they are not in the battle.
-            bystanders = [o for o in owners_present if o not in engaged_sides]
-            if bystanders:
+                for lane_side in (lane.a, lane.b):
+                    for member in lane_side.members:
+                        draw_side(member.nation,
+                                  list(member.front) + list(member.reserve),
+                                  front_ids={id(u) for u in member.front},
+                                  reserve_count=len(member.reserve))
+
+            # Everyone else is here by military access, by a war that is not
+            # being fought on this tile, or because the enemy they came for
+            # could not spare a unit for them. They are worth showing -- they
+            # are in the way, and they may join -- but they are not in a lane.
+            if battle.bystanders:
                 header = map_screen.small_font.render("--- PRESENT, NOT ENGAGED ---", True, c.UI_TEXT_MUTED)
                 surface.blit(header, (text_x, current_y))
                 current_y += 22
-                for side_id in bystanders:
-                    draw_side(side_id, False)
+                for side_id in battle.bystanders:
+                    draw_side(side_id, [u for u in units if u.get("owner") == side_id])
         else:
             for u in units:
                 u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
@@ -258,14 +278,9 @@ def draw_sidebar_info(map_screen, surface):
                 row_x += name_surf.get_width() + 4
 
                 # Owner flag instead of a country name string
-                flag_w, flag_h = GARRISON_FLAG_SIZE
-                owner_flag_data = map_screen.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
-                flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
-                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (name_surf.get_height() - flag_h) // 2
-                surface.blit(flag_surf, (row_x, flag_y))
-                pygame.draw.rect(surface, (100, 100, 100), (row_x, flag_y, flag_w, flag_h), 1)
-                row_x += flag_w + 6
+                row_x = flag_icons.draw_flag_centered(
+                    surface, u_owner_id, map_screen.nation_data, row_x, current_y,
+                    name_surf.get_height())
 
                 # Condensed, icon-based combat stats, matching the production tab's style
                 draw_combat_stats(

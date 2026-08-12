@@ -262,6 +262,19 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
     context = f"Current Date: {current_date}\n"
     context += f"CRITICAL RULE: The ONLY nations that currently exist in this world are: {active_nations_str}.\n"
     context += "Do NOT mention, reference, or interact with any country, empire, or nation not explicitly on this list.\n\n"
+    # How war works, for a model deciding whether to start or end one. World
+    # knowledge, identical for everyone asked this turn, so it costs nothing:
+    # it sits in the shared prefix a local model evaluates once and reuses.
+    context += "--- HOW BATTLES WORK ---\n"
+    context += ("A contested tile splits into separate battles, one per pair of hostile sides, "
+                "and damage never crosses between them. Allies fight as one side and share its "
+                "front between them, so a small ally is never swallowed by a larger one but "
+                "never hoards room it has no troops for either. Only a fixed number of units "
+                "per side fight at once; the rest wait in reserve, untouched, and rotate in as "
+                "the front rank dies, so numbers past that limit do not win a battle faster. "
+                "You only ever exchange fire with nations you are actually at war with, even "
+                "when fighting alongside allies who are at war with others. Artillery bombards "
+                "from outside every battle and is the only way to reach a reserve.\n\n")
     context += "--- GLOBAL POLITICS ---\n"
     context += politics_str
 

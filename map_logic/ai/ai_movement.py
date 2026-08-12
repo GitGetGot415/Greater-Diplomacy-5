@@ -2,6 +2,7 @@
 import heapq
 import data.constants as c
 from data import queries
+from map_logic.turn_processing import combat_rules
 
 def build_neighbor_index(id_to_province):
     """Maps each tile to its neighbours that actually exist on the map.
@@ -14,14 +15,34 @@ def build_neighbor_index(id_to_province):
         for p_id, prov in id_to_province.items()
     }
 
-def _tile_pressure(assignments, stacks, tile):
+def _tile_depth(capacity, tile):
+    """How many units `tile` can actually use: a front rank, and its relief.
+
+    Under the lane model a tile's front slots depend on how many ways the fight
+    there splits, so this is looked up per tile rather than read off a single
+    constant -- `capacity` holds combat_rules.nation_front_capacity's answer for
+    the nation doing the planning. A tile nobody measured (a quiet border, an
+    empty target) falls back to a typical one-enemy lane, which is the fight
+    that would open there if one started.
+
+    The relief rank is counted because a body behind the front is not wasted the
+    way it would be if it were surplus: it rotates in as the units ahead of it
+    die. Bodies past that are the wasted ones, and under lanes they are wasted
+    completely -- they absorb nothing at all while they wait.
+    """
+    slots = capacity.get(tile) if capacity else None
+    if not slots:
+        slots = c.LANE_SLOTS_TYPICAL
+    return max(1.0, slots * c.AI_RESERVE_DEPTH)
+
+
+def _tile_pressure(assignments, stacks, tile, capacity=None):
     """How reluctant we are to send one more unit to `tile`.
 
-    Only the top MAX_COMBAT_ATTACKERS units on a tile ever fire, so the body
-    after that adds nothing to the volley however much the weights want it
-    there. A saturated tile therefore sorts behind every tile that still has a
-    slot, and the existing weighted count decides among the rest exactly as
-    before.
+    A tile holding a full front rank and a full relief rank has nothing to gain
+    from the next body, however much the weights want it there, so it sorts
+    behind every tile with room and the existing weighted count decides among
+    the rest exactly as before.
 
     This is the only thing in this file that reads combat width. Everything
     else the AI does already scaled with it -- what to buy, what a unit is
@@ -34,16 +55,18 @@ def _tile_pressure(assignments, stacks, tile):
     one carries preference weights (a battle pulls at -20, a quiet border pushes
     at +50) and so cannot answer "is this tile full?" on its own.
     """
-    return (1 if stacks.get(tile, 0) >= c.MAX_COMBAT_ATTACKERS else 0,
+    return (1 if stacks.get(tile, 0) >= _tile_depth(capacity, tile) else 0,
             assignments.get(tile, 0))
 
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if unsafe_waters is None:
         unsafe_waters = {}
     if target_stacks is None:
         target_stacks = {}
+    if target_capacity is None:
+        target_capacity = {}
     if water_ids is None:
         water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
     if neighbor_ids is None:
@@ -128,7 +151,8 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     if valid_paths:
         # A cell's head is the tile the path ends on.
         best_cell = min(valid_paths,
-                        key=lambda p: _tile_pressure(target_assignments, target_stacks, p[1][0]) + (p[0],))[1]
+                        key=lambda p: _tile_pressure(target_assignments, target_stacks, p[1][0],
+                                                     target_capacity) + (p[0],))[1]
 
         # If the best path is just staying where we are, return an empty array so we don't move
         if best_cell[0] == start_id:
@@ -417,7 +441,7 @@ def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations
     }
 
 
-def _build_target_assignments(units_info, borders, battles, at_war):
+def _build_target_assignments(units_info, borders, battles, at_war, capacity=None):
     """Picks the destination sets (land and naval) this nation's units can be
     routed to, and tallies + weights how many units are already assigned to
     each one so orders spread out rather than piling onto one tile."""
@@ -483,19 +507,20 @@ def _build_target_assignments(units_info, borders, battles, at_war):
             naval_assignments[prov["id"]] += 1
             naval_stacks[prov["id"]] += 1
 
-    # Active Battle Reinforcement Priority, fading as the firing line fills.
+    # Active Battle Reinforcement Priority, fading as the front and its relief
+    # fill up.
     #
     # A flat pull said "this battle is worth 20 units" whatever the combat width
     # was, so a wider front drew no more men than a narrow one -- capping the
     # stack stopped the AI wasting bodies but never made it mass any. Scaling by
-    # the share of the line still empty means the pull runs out exactly at
-    # width: at 5 a tile stops competing once 5 are there, at 10 it keeps asking
-    # until 10 are. Same strength as before on an empty tile, so a battle still
-    # outranks a quiet border by the same margin it always did.
-    width = max(1, c.MAX_COMBAT_ATTACKERS)
+    # the share still empty means the pull runs out exactly where the tile stops
+    # being able to use another body: at a front rank plus one relief rank. Same
+    # strength as before on an empty tile, so a battle still outranks a quiet
+    # border by the same margin it always did.
     for b_id in active_battles:
         if b_id in target_assignments:
-            room = max(0, width - target_stacks.get(b_id, 0)) / width
+            depth = _tile_depth(capacity, b_id)
+            room = max(0, depth - target_stacks.get(b_id, 0)) / depth
             target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT * room
 
     # --- STRATEGIC WEIGHTING FIX ---
@@ -527,6 +552,7 @@ def _build_target_assignments(units_info, borders, battles, at_war):
         "naval_assignments": naval_assignments,
         "target_stacks": target_stacks,
         "naval_stacks": naval_stacks,
+        "target_capacity": capacity or {},
     }
 
 
@@ -550,9 +576,10 @@ def _bombardment_target(map_screen, ai_name, prov, bomb_range):
 def _try_bombard(map_screen, ai_name, unit, prov):
     """Orders a barrage if this unit has a gun and anything to point it at.
 
-    Bombardment costs nothing, draws no return fire, and is the one thing in the
-    game not capped by MAX_COMBAT_ATTACKERS -- and a bombarding unit still
-    fights on its own tile, so the shot is pure profit. The AI had no
+    Bombardment costs nothing, draws no return fire, and sits outside the lane
+    system entirely -- it is the only thing in the game that reaches a unit
+    waiting in reserve, which under the lane model is most of a deep stack. A
+    bombarding unit still fights on its own tile, so the shot is pure profit. The AI had no
     bombardment code at all: it bought artillery, valued it for a barrage, and
     then walked it into melee to swing a melee attack a fraction the size.
 
@@ -591,6 +618,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
     naval_assignments = ctx["naval_assignments"]
     target_stacks = ctx["target_stacks"]
     naval_stacks = ctx["naval_stacks"]
+    target_capacity = ctx["target_capacity"]
 
     def claim(tile, from_tile=None):
         """Books one unit onto `tile`, freeing the tile it left.
@@ -606,7 +634,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             target_stacks[from_tile] = max(0, target_stacks.get(from_tile, 0) - 1)
 
     def pressure(tile):
-        return _tile_pressure(target_assignments, target_stacks, tile)
+        return _tile_pressure(target_assignments, target_stacks, tile, target_capacity)
 
     for unit, prov in units_info:
         u_type = unit.get("type", "")
@@ -813,10 +841,10 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
         # Bypass the depth limiter for fully garrisoned borders: drop anything
         # carrying the rear-guard penalty, and anything already holding a full
-        # firing line, since neither has anything to gain from one more body.
+        # front and relief, since neither has anything to gain from one more body.
         priority_targets = [t for t in targets
                             if assignments.get(t, 0) < c.AI_REAR_GUARD_PENALTY
-                            and stacks.get(t, 0) < c.MAX_COMBAT_ATTACKERS]
+                            and stacks.get(t, 0) < _tile_depth(target_capacity, t)]
         search_targets = priority_targets if priority_targets else targets
 
         # Route to the nearest border/enemy/coast/convoy that needs reinforcements
@@ -834,7 +862,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             unit_speed=unit.get("speed", 1),
             water_ids=water_ids,
             neighbor_ids=neighbor_ids,
-            target_stacks=stacks
+            target_stacks=stacks,
+            target_capacity=target_capacity
         )
 
         if path:
@@ -869,6 +898,48 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             if path[-1] in assignments:
                 assignments[path[-1]] += 1
                 stacks[path[-1]] = stacks.get(path[-1], 0) + 1
+
+
+def _rotate_damaged_units(map_screen, ai_name, active_battles):
+    """Pulls shot-up units out of the front rank when a fresh one can take the slot.
+
+    The only thing the lane model asks of a commander that movement cannot
+    express. A reserve takes no damage and recovers morale, so a unit down to a
+    fraction of its health is worth more waiting than standing -- but only if
+    somebody healthier is behind it, since an empty slot is worse than a hurt one
+    and an uncovered lane dissolves entirely.
+
+    Without this the AI would field its casualties until they died while a human
+    rotated theirs, which is a real edge and an invisible one.
+    """
+    for prov_id in active_battles:
+        province = map_screen.id_to_province.get(prov_id)
+        if not province:
+            continue
+
+        mine = [u for u in province.get("units", ()) if u.get("owner") == ai_name]
+        if len(mine) < 2:
+            continue
+
+        battle = combat_rules.build_battle([province.get("units", ())], map_screen.nation_data)
+        slots = combat_rules.slots_held(battle, ai_name)
+        if not slots:
+            continue
+
+        def health_fraction(unit):
+            return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
+
+        # Anything past the slots is standing in reserve regardless, so that is
+        # exactly how many units can be held back without leaving one empty.
+        # The worst-hurt go first.
+        spare = max(0, len(mine) - slots)
+        wounded = sorted((u for u in mine if health_fraction(u) < c.AI_ROTATE_HEALTH_FRACTION),
+                         key=health_fraction)
+
+        for unit in mine:
+            unit.pop("combat_stance", None)
+        for unit in wounded[:spare]:
+            unit["combat_stance"] = "RESERVE"
 
 
 def _cancel_opposing_transitions(ai_nations, nation_units):
@@ -958,7 +1029,17 @@ def _generate_unit_orders(map_screen):
         battles = _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations,
                                              unsafe_waters, borders["all_enemy_coasts"], borders["enemy_coastal_waters"])
 
-        assignments = _build_target_assignments(units_info, borders, battles, at_war)
+        # What each destination's fight can actually seat for us, asked of the
+        # combat rules rather than restated here. A tile splitting three ways
+        # gives us fewer slots than one where we face a single enemy.
+        capacity = {
+            t_id: combat_rules.nation_front_capacity(
+                ai_name, map_screen.id_to_province[t_id], map_screen.nation_data)
+            for t_id in battles["active_battles"]
+            if t_id in map_screen.id_to_province
+        }
+
+        assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity)
 
         # If no targets at all (e.g. island with no neighbors), skip this nation entirely.
         if not assignments["target_destinations"]:
@@ -974,6 +1055,7 @@ def _generate_unit_orders(map_screen):
         }
 
         _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
+        _rotate_damaged_units(map_screen, ai_name, battles["active_battles"])
 
     # --- Anti-Swap Cleanup ---
     _cancel_opposing_transitions(ai_nations, nation_units)

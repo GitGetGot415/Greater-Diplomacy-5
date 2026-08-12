@@ -237,7 +237,7 @@ class AIWorld:
             units = prov.get("units", [])
             friendly_units = [u for u in units if u.get("owner") in friendly]
             top_units = sorted(friendly_units, key=queries.calculate_unit_strength,
-                               reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+                               reverse=True)[:int(c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH)]
 
             for u in top_units:
                 base_str = queries.calculate_unit_strength(u)

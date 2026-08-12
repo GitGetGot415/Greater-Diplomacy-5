@@ -28,6 +28,12 @@ _controller = None
 _surface = None
 _map = None
 
+#: Which states were still unbuilt the moment the controller was constructed.
+#: boot() is cached per interpreter and boot_map() fills MAP in, so a test that
+#: asks "is MAP built lazily?" gets a different answer depending on which files
+#: discovery happened to run first. Recorded once, at boot, so it cannot.
+STATES_UNBUILT_AT_BOOT = set()
+
 # A real historical scenario, so the map-related screens get real provinces,
 # units, research and diplomacy to render rather than a stub. Loads in well
 # under a second headlessly.
@@ -66,6 +72,8 @@ def boot():
     pygame.init()
     _surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
     _controller = main.Controller()
+    STATES_UNBUILT_AT_BOOT.update(
+        name for name, screen in _controller.states.items() if screen is None)
     return _controller, _surface
 
 

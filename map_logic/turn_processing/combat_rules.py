@@ -21,10 +21,41 @@ as the resolver walks them. That ordering is load-bearing: a unit killed in one
 engagement is removed from its province, so it must not still be counted in the
 next engagement that province takes part in.
 
-**Who then shoots at whom, once they are in the same place.** `firing_lines`,
-below. Four callers need that answer -- the tile fight, the head-on fight, the
+**Who then duels whom, once they are in the same place.** `build_battle`, below.
+Four callers need that answer -- the tile fight, the head-on fight, the
 prediction bubble and the sidebar's combat roster -- which is three more than
 have ever agreed on it.
+
+A tile is not one pot. It is a container that splits into *lanes*: one duel per
+pair of hostile **sides**. A side is a coalition -- everyone here who is fighting
+this particular enemy together -- not a single nation, which is why two allies
+facing two allies is one battle rather than four separate quarrels.
+`c.COMBAT_WIDTH` is a budget for the whole tile, divided among the lanes, and
+damage never crosses a lane boundary. Units past a side's allowance wait in
+reserve, where they neither deal damage nor take it -- bombardment is the only
+thing that reaches them.
+
+The invariants the rest of the game is entitled to assume:
+
+1. A nation fires **once** per resolution. A unit holding two fronts -- which
+   is how a nation short of men faces more than one hostile side at a time --
+   splits its attack between them rather than firing twice. It takes fire from
+   both, which is what being outnumbered on two fronts costs.
+2. Every lane has exactly two sides, and damage never crosses between lanes.
+3. A side's slot allowance is shared between its members by max-min fair split
+   (see `share_slots`), so a big ally cannot squeeze a small one out and a
+   small one cannot hoard width it has no units for.
+4. Total front units across every lane equals `c.COMBAT_WIDTH`, unless a floor
+   forced it higher -- `c.MIN_LANE_SLOTS_PER_SIDE` per side, or the one unit
+   every member nation present is guaranteed -- or there were not enough units
+   present to fill the tile.
+5. A nation is in *every* lane it is in. It seats one unit in each before any
+   lane gets a second, and if it runs out it doubles units up rather than
+   abandoning a front. Nobody dodges a fight by looking the other way, and
+   nobody is spared one by their enemy being short of men.
+6. A member only ever shoots at units it is personally at war with. Standing
+   beside an ally does not enlist you in that ally's other wars.
+7. Hostility is read both ways round (see below).
 
 Imports data.queries in-function only -- queries is a cycle participant, and
 this module is meant to be safe to import from anywhere.
@@ -32,44 +63,67 @@ this module is meant to be safe to import from anywhere.
 
 from collections import namedtuple
 
-#: One nation's contribution to one fight: `units` fire a single pooled volley
-#: at `targets`, and at nothing else.
-FiringLine = namedtuple("FiringLine", "owner units targets")
+import data.constants as c
+
+#: One nation's contribution to one side of one duel. `slots` is its share of
+#: the side's allowance; `front` fire and are fired at; `reserve` are present and
+#: pinned but untouched until a front slot opens; `targets` are the opposing
+#: front units this nation is actually at war with, which is everything it may
+#: shoot at.
+#:
+#: `reserve` is a nation's units left out of every front rank, attributed to its
+#: highest-priority lane so the UI lists them exactly once -- it is not "the
+#: reserve of this duel specifically".
+LaneMember = namedtuple("LaneMember", "nation slots front reserve targets")
+
+#: One side of one duel: the coalition fighting it, and their units pooled.
+#:
+#: `front` and `reserve` are the members' own lists flattened in member order,
+#: so anything that only cares about "who is trading fire here" can read the
+#: side and ignore the breakdown. `side_index` is which of `sides` the coalition
+#: came from, which is what stops a head-on clash pairing a column with itself.
+LaneSide = namedtuple("LaneSide", "nations side_index slots members front reserve")
+
+#: One duel: two sides, and the per-side slot allowance they were given.
+#: `index` is stable and is what the UI numbers lanes by.
+Lane = namedtuple("Lane", "index slots a b")
+
+#: The whole fight in one place -- one tile, or one edge between two.
+#:
+#: engaged    -- nations holding a front slot in at least one lane, in
+#:               first-appearance order
+#: bystanders -- nations present and in no lane, same order: here on military
+#:               access, or at war with somebody who is not standing here
+#: width      -- distinct units holding a front slot anywhere in this fight
+#: shares     -- {id(unit): fronts it is holding}, so a unit spread over two
+#:               duels fires one volley split between them rather than two
+Battle = namedtuple("Battle", "lanes engaged bystanders width shares")
 
 
-def firing_lines(sides, nation_data):
-    """Which units each nation's volley lands on, for one fight.
+def _hostile(nation_data):
+    """Two-way war test.
 
-    `sides` is a list of unit lists. One side is a tile: everyone standing here
-    can fight everyone else standing here. Two sides is a head-on clash between
-    tiles, where a unit fights only across the divide -- two nations at war with
-    each other while marching the same way settle it where they land, not while
-    they cross.
-
-    Returns a FiringLine for every nation that has somebody to shoot at, in
-    first-appearance order. A nation with no enemy among the units it can reach
-    is absent from the result entirely: it is here by military access, or at war
-    with somebody who is not, and takes no part in the fight at all -- no damage
-    dealt, none taken, and none of the things a battle does to the units caught
-    in it.
-
-    A volley belongs to a column, not to a flag: a nation with units marching
-    both ways down the same edge fields one firing line per direction, since
-    those are two bodies of troops meeting two different enemies.
-
-    Hostility is read both ways round. A scenario or an editor can leave one
-    nation's war list out of step with the other's, and the pairwise loop this
-    replaced resolved that case differently depending on the order the units
-    happened to sit in the province -- which is not a rule, it is an accident.
+    A scenario or an editor can leave one nation's war list out of step with the
+    other's, and the pairwise loop this module replaced resolved that case
+    differently depending on the order the units happened to sit in the
+    province -- which is not a rule, it is an accident.
     """
     from data import queries
 
     def hostile(a, b):
         return (queries.are_at_war(a, b, nation_data)
                 or queries.are_at_war(b, a, nation_data))
+    return hostile
 
-    # Group into columns -- (which side, whose) -- keeping first-appearance
-    # order so the same fight always resolves the same way.
+
+def _columns(sides):
+    """Group units into (side_index, owner) columns, in first-appearance order.
+
+    Keeping first-appearance order is what makes the same fight always resolve
+    the same way. A volley belongs to a column, not to a flag: a nation with
+    units marching both ways down the same edge fields one column per direction,
+    since those are two bodies of troops meeting two different enemies.
+    """
     columns = []
     seen = {}
     for side_index, side in enumerate(sides):
@@ -82,19 +136,460 @@ def firing_lines(sides, nation_data):
                 seen[key] = len(columns)
                 columns.append((side_index, owner, []))
             columns[seen[key]][2].append(unit)
+    return columns
 
+
+def _coalition_groups(columns, nation_data):
+    """Column indices merged into coalitions, each group in column order.
+
+    Pairing every hostile pair of nations would break the case the lane model
+    exists for: in a real alliance war A is at war with both X and Y, so A+B
+    against X+Y would spawn four duels rather than the two the front actually
+    has. Two columns merge when they are on the same side, not at war, and
+    friendly both ways round -- allies, faction partners, or an imperial family.
+    A neutral standing here on access merges with nobody.
+
+    Where nobody is allied this degrades exactly to one coalition per nation, so
+    it is a strict generalisation of the pairwise answer rather than a different
+    rule for a special case.
+    """
+    from data import queries
+
+    hostile = _hostile(nation_data)
+    parent = list(range(len(columns)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for i in range(len(columns)):
+        for j in range(i + 1, len(columns)):
+            side_i, owner_i, _ = columns[i]
+            side_j, owner_j, _ = columns[j]
+            if side_i != side_j or owner_i == owner_j or hostile(owner_i, owner_j):
+                continue
+            if (owner_j in queries.friendly_nations_view(owner_i, nation_data)
+                    and owner_i in queries.friendly_nations_view(owner_j, nation_data)):
+                root_i, root_j = find(i), find(j)
+                # The lower index always wins, so a group's root is its earliest
+                # member and walking columns in order yields the groups in order.
+                if root_i != root_j:
+                    parent[max(root_i, root_j)] = min(root_i, root_j)
+
+    groups = {}
+    for i in range(len(columns)):
+        groups.setdefault(find(i), []).append(i)
+    # Never iterate the union-find map itself -- dict insertion order here is
+    # ascending root index, which is column order.
+    return list(groups.values())
+
+
+def coalitions(owners, nation_data):
+    """The coalitions a list of nation names falls into, for tests and the UI."""
+    columns = _columns([[{"owner": owner} for owner in owners]])
+    return [[columns[i][1] for i in group]
+            for group in _coalition_groups(columns, nation_data)]
+
+
+def lane_slots(num_lanes, width=None):
+    """How many units each side of a lane may seat, given how many lanes there are."""
+    if num_lanes <= 0:
+        return 0
+    if width is None:
+        width = c.COMBAT_WIDTH
+    return max(c.MIN_LANE_SLOTS_PER_SIDE, width // (2 * num_lanes))
+
+
+def _duels(columns, coalition_groups, hostile, across_only):
+    """Pairs of coalition-group indices to fight as lanes, in a stable order.
+
+    One lane per pair of hostile coalitions, and that is the whole rule. An
+    earlier version matched the two groups member to member round-robin, which
+    put A against X and B against Y and left A and Y unable to touch each other
+    while standing on the same tile at war -- the "strange how that works" save,
+    where Germany and the United Kingdom shared a province and fought different
+    people. A front is not a set of private quarrels.
+
+    A pair becomes a lane as soon as *any* member of one is at war with any
+    member of the other. Which of them may then shoot which is settled per
+    member, in _targets_for -- an ally standing here does not inherit the war.
+    """
+    def can_fight(i, j):
+        return ((not across_only or columns[i][0] != columns[j][0])
+                and hostile(columns[i][1], columns[j][1]))
+
+    duels = []
+    for gi in range(len(coalition_groups)):
+        for gj in range(gi + 1, len(coalition_groups)):
+            left, right = coalition_groups[gi], coalition_groups[gj]
+            if any(can_fight(i, j) for i in left for j in right):
+                duels.append((gi, gj))
+    return duels
+
+
+def share_slots(demands, slots):
+    """Max-min fair split of `slots` among members wanting `demands`.
+
+    Allies on one side share the side's width rather than cutting it into equal
+    pieces, because equal pieces waste it: nine units and one unit given three
+    slots each fields four when it could field six. Each pass hands the
+    remaining width out evenly among whoever still wants more and drops anyone
+    satisfied, so the width flows to where there are bodies for it.
+
+    The guarantee that comes with it is the important half. A member can never
+    be pushed below what an even split would have given it -- it only ever
+    receives *less* than its even share by not wanting the rest. Nine against
+    one over six slots is 5/1; five against five is 3/3, and no amount of extra
+    units on one side moves that.
+
+    `demands` is a list, and ties are broken by its order, so the caller's
+    ordering (column order, i.e. first appearance) is what makes this
+    deterministic.
+    """
+    alloc = [0] * len(demands)
+    remaining = slots
+    wanting = [i for i, want in enumerate(demands) if want > 0]
+
+    while remaining > 0 and wanting:
+        # max(1, ...) so the last few slots are handed out one at a time in
+        # member order rather than the loop stalling on a share of zero.
+        share = max(1, remaining // len(wanting))
+        for i in list(wanting):
+            if remaining <= 0:
+                break
+            take = min(share, demands[i] - alloc[i], remaining)
+            alloc[i] += take
+            remaining -= take
+            if alloc[i] >= demands[i]:
+                wanting.remove(i)
+
+    # Nobody present is left with nothing to fight with, even when there are
+    # more allies here than there is width to go round. The same call the
+    # MIN_LANE_SLOTS_PER_SIDE floor makes one level up: a small ally that turned
+    # up is in the battle, and the width gives way rather than the ally.
+    for i, want in enumerate(demands):
+        if want > 0 and alloc[i] == 0:
+            alloc[i] = 1
+    return alloc
+
+
+def _lane_membership(columns, coalition_groups, duels, can_fight):
+    """Which lanes each column fights in, and who it may shoot at there.
+
+    Returns ({column: [duel_index, ...]}, {(column, duel): [opposing columns]}).
+
+    A column joins its coalition's lane only if it is at war with somebody on
+    the other side of it. An ally that turned up to fight a different enemy is
+    standing here, not fighting here: it would otherwise eat width in a battle
+    where it can neither deal nor take a shot.
+    """
+    lanes_of = {}
+    foes = {}
+    for duel_index, (left_group, right_group) in enumerate(duels):
+        for mine, theirs in ((coalition_groups[left_group], coalition_groups[right_group]),
+                             (coalition_groups[right_group], coalition_groups[left_group])):
+            for i in mine:
+                enemies = [j for j in theirs if can_fight(i, j)]
+                if not enemies:
+                    continue
+                lanes_of.setdefault(i, []).append(duel_index)
+                foes[(i, duel_index)] = enemies
+    return lanes_of, foes
+
+
+def _availability(columns):
+    """{column: units, in the order that column would rather field them}.
+
+    Worked out once per column rather than once per lane it fights in: this is
+    a sort, and build_battle runs every frame for the sidebar and the map's
+    combat bubbles.
+
+    Holding a unit back is a preference, not a veto. A nation that held
+    everything back would otherwise vanish from a fight it is standing in the
+    middle of -- which is what a stale flag on a wounded unit did: Nationalist
+    China's only unit on a tile refused to fight Japan and the battle silently
+    did not happen.
+    """
+    available = {}
+    for i, (_side, _owner, units) in enumerate(columns):
+        # sorted() is stable, so equal-attack units keep their province order.
+        pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK),
+                      reverse=True)
+        available[i] = [u for u in pool if u.get("combat_stance") != "RESERVE"] or pool
+    return available
+
+
+def _caps(coalition_groups, duels, lanes_of, available, slots):
+    """{(column, duel): slots} -- each side's allowance split among its members.
+
+    The split is max-min fair (see share_slots), so allies pool their width
+    instead of quartering it. A member's demand is simply how many units it
+    brought: asking for more than that would take width off an ally that has
+    bodies for it.
+    """
+    caps = {}
+    for duel_index, groups in enumerate(duels):
+        for group_index in groups:
+            members = [i for i in coalition_groups[group_index]
+                       if duel_index in lanes_of.get(i, ())]
+            demands = [len(available[i]) for i in members]
+            for i, allowance in zip(members, share_slots(demands, slots)):
+                caps[(i, duel_index)] = allowance
+    return caps
+
+
+def _seat(columns, duels, lanes_of, foes, caps, available):
+    """Which units hold which front slots. Returns {(column, duel): [units]}.
+
+    Per nation, in priority order: honour a valid `lane_target` pin, then seat
+    one unit in every lane it is in, then fill lanes to the nation's allowance
+    in priority order. Priority is the heaviest enemy first, so the depth goes
+    where the fighting is.
+
+    Mandatory coverage before depth is what stops a nation concentrating
+    everything into one duel and letting the others dissolve, which would let a
+    defender take zero damage from an enemy that had committed to fighting it.
+    """
+    def enemy_weight(column_index, duel_index):
+        return sum(u.get("attack", c.DEFAULT_UNIT_ATK)
+                   for j in foes[(column_index, duel_index)]
+                   for u in columns[j][2])
+
+    seats = {}
+    for column_index in range(len(columns)):
+        my_lanes = lanes_of.get(column_index)
+        if not my_lanes:
+            continue
+        my_lanes = sorted(my_lanes, key=lambda d: (-enemy_weight(column_index, d), d))
+        for duel_index in my_lanes:
+            seats[(column_index, duel_index)] = []
+
+        fieldable = available[column_index]
+        pinned = set()
+
+        # A pin names an enemy nation, not a lane -- "fight these people" is the
+        # gesture, and it survives the lanes being redrawn around it.
+        for unit in fieldable:
+            target = unit.get("lane_target")
+            if not target:
+                continue
+            for duel_index in my_lanes:
+                if all(columns[j][1] != target for j in foes[(column_index, duel_index)]):
+                    continue
+                if len(seats[(column_index, duel_index)]) < caps[(column_index, duel_index)]:
+                    seats[(column_index, duel_index)].append(unit)
+                    pinned.add(id(unit))
+                break
+
+        rest = [u for u in fieldable if id(u) not in pinned]
+
+        for duel_index in my_lanes:
+            if not rest:
+                break
+            if not seats[(column_index, duel_index)]:
+                seats[(column_index, duel_index)].append(rest.pop(0))
+
+        for duel_index in my_lanes:
+            while rest and len(seats[(column_index, duel_index)]) < caps[(column_index, duel_index)]:
+                seats[(column_index, duel_index)].append(rest.pop(0))
+
+        # A nation with fewer units than fronts holds every one of them anyway,
+        # by fighting on more than one. Leaving a front empty used to dissolve
+        # the duel, so a lone defender facing two attackers was fought by
+        # whichever of them happened to be heavier and simply ignored the other.
+        # Firing once a turn is a rule about a nation's output; it was never a
+        # reason for an enemy standing in front of it to be unable to attack.
+        for duel_index in my_lanes:
+            if seats[(column_index, duel_index)]:
+                continue
+            for unit in fieldable:
+                seats[(column_index, duel_index)].append(unit)
+                break
+
+    return seats
+
+
+def _lane_shares(seats):
+    """How many fronts each unit is holding, by id.
+
+    A unit spread over two duels still fires one volley, so its attack is
+    divided between them. Without that this is the pair loop the multiparty
+    work removed, where a nation at war with three others dealt triple its own
+    attack. It takes fire from both, though, which is what being outnumbered on
+    two fronts is supposed to cost.
+    """
+    shares = {}
+    for units in seats.values():
+        for unit in units:
+            shares[id(unit)] = shares.get(id(unit), 0) + 1
+    return shares
+
+
+def build_battle(sides, nation_data, width=None):
+    """Who duels whom, and who is in the front rank, for one fight.
+
+    `sides` is a list of unit lists. One side is a tile: everyone standing here
+    can fight everyone else standing here. Two sides is a head-on clash between
+    tiles, where a lane's two halves must come from different sides -- two
+    nations at war with each other while marching the same way settle it where
+    they land, not while they cross.
+
+    Every pair of hostile coalitions with units here becomes a lane, and allies
+    on one side of it share the width between them. A nation facing two separate
+    hostile coalitions holds both fronts at once, splitting its volley between
+    them rather than abandoning either -- see _lane_shares. The dissolve below is
+    therefore a guard rather than a rule: it can only fire if a column turned up
+    with no units at all.
+    """
+    hostile = _hostile(nation_data)
+    columns = _columns(sides)
     across_only = len(sides) > 1
 
-    lines = []
-    for side_index, owner, units in columns:
-        targets = [unit
-                   for other_side, other_owner, other_units in columns
-                   if (other_side != side_index or not across_only)
-                   and hostile(owner, other_owner)
-                   for unit in other_units]
-        if targets:
-            lines.append(FiringLine(owner, units, targets))
-    return lines
+    def can_fight(i, j):
+        return ((not across_only or columns[i][0] != columns[j][0])
+                and hostile(columns[i][1], columns[j][1]))
+
+    groups = _coalition_groups(columns, nation_data)
+    duels = _duels(columns, groups, hostile, across_only)
+    slots = lane_slots(len(duels), width)
+    lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
+    available = _availability(columns)
+    caps = _caps(groups, duels, lanes_of, available, slots)
+    seats = _seat(columns, duels, lanes_of, foes, caps, available)
+
+    def front(group_index, duel_index):
+        return [u for i in groups[group_index]
+                for u in seats.get((i, duel_index), ())]
+
+    # A lane needs both halves. With the coverage pass in _seat this can only
+    # happen if a column is empty, which _columns makes impossible -- kept as a
+    # guard so a future change cannot silently delete a fight instead of failing.
+    live = [duel_index
+            for duel_index, (left, right) in enumerate(duels)
+            if front(left, duel_index) and front(right, duel_index)]
+
+    # Everything a nation did not seat in a *surviving* lane, attributed once,
+    # to the lane it would reinforce first.
+    live_set = set(live)
+    seated_ids = {id(u)
+                  for (_column, duel_index), units in seats.items()
+                  if duel_index in live_set
+                  for u in units}
+    # seats was filled in each column's own priority order, so the first
+    # surviving lane found here is the one that column would reinforce first.
+    reserve_lane = {}
+    for column_index, duel_index in seats:
+        if duel_index in live_set:
+            reserve_lane.setdefault(column_index, duel_index)
+
+    lanes = []
+    engaged = {}
+    for duel_index in live:
+        left, right = duels[duel_index]
+
+        def members_of(group_index, duel_index=duel_index):
+            out = []
+            for i in groups[group_index]:
+                if duel_index not in lanes_of.get(i, ()):
+                    continue
+                reserve = ([u for u in columns[i][2] if id(u) not in seated_ids]
+                           if reserve_lane.get(i) == duel_index else [])
+                out.append((i, reserve))
+            return out
+
+        def side_for(group_index, duel_index=duel_index):
+            members = []
+            for i, reserve in members_of(group_index):
+                # Only what this member is personally at war with. An ally is
+                # not enlisted in wars it never joined by standing next to you.
+                targets = [u for j in foes[(i, duel_index)]
+                           for u in seats.get((j, duel_index), ())]
+                members.append(LaneMember(columns[i][1], caps[(i, duel_index)],
+                                          seats[(i, duel_index)], reserve, targets))
+                engaged[columns[i][1]] = None
+            # Every column in a coalition came from the same side of the fight;
+            # _coalition_groups never merges across one.
+            return LaneSide(tuple(m.nation for m in members),
+                            columns[groups[group_index][0]][0],
+                            slots, members,
+                            [u for m in members for u in m.front],
+                            [u for m in members for u in m.reserve])
+
+        lanes.append(Lane(len(lanes), slots, side_for(left), side_for(right)))
+
+    present = {}
+    for _side, owner, _units in columns:
+        present[owner] = None
+
+    shares = _lane_shares({key: units for key, units in seats.items()
+                           if key[1] in live_set})
+
+    return Battle(lanes,
+                  list(engaged),
+                  [owner for owner in present if owner not in engaged],
+                  # Distinct units, since one holding two fronts is one unit
+                  # fighting, not two.
+                  len({id(u) for lane in lanes for side in (lane.a, lane.b)
+                       for u in side.front}),
+                  shares)
+
+
+def volley(units, shares=None):
+    """Attack of a front rank, with any unit fighting on two fronts counted once.
+
+    `shares` is Battle.shares. Omitting it reads every unit as holding this
+    front alone, which is what a caller measuring a hypothetical rank wants.
+    """
+    return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
+               for u in units)
+
+
+def exchange(battle):
+    """[(targets, total_attack)] for every nation in every lane.
+
+    One shot per member rather than one per side, because a side is a coalition
+    and its members do not all share the same war. Where everyone on one side is
+    at war with everyone on the other -- the ordinary case -- this is exactly
+    the pooled answer, since every member's targets are the whole enemy front.
+
+    Measured but not applied, so a caller can land them all at once. That is
+    what keeps a fight simultaneous: a nation wiped out this turn still fires
+    this turn, and nobody's share depends on who happened to resolve first.
+    """
+    shots = []
+    for lane in battle.lanes:
+        for side in (lane.a, lane.b):
+            for member in side.members:
+                if member.targets:
+                    shots.append((member.targets, volley(member.front, battle.shares)))
+    return shots
+
+
+def slots_held(battle, nation):
+    """How many front slots `nation` was given across this whole fight.
+
+    One answer, because two callers used to work it out from the lane list
+    themselves and both would have had to learn that a side's allowance is now
+    split between its members.
+    """
+    return sum(member.slots
+               for lane in battle.lanes
+               for side in (lane.a, lane.b)
+               for member in side.members
+               if member.nation == nation)
+
+
+def nation_front_capacity(nation, province, nation_data, width=None):
+    """How many front slots `nation` could fill on this tile.
+
+    What the AI needs to answer "is this tile full for me?". A tile with no
+    fight on it answers with a typical lane, since that is what would open if
+    one started.
+    """
+    battle = build_battle([list(province.get("units", ()))], nation_data, width)
+    return slots_held(battle, nation) or c.LANE_SLOTS_TYPICAL
 
 
 def movers_into(province, dest_id, visible_to=None):

@@ -774,7 +774,28 @@ ECONOMY_WEIGHT_FUEL = 20
 # Used in queries.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
 MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 
-MAX_COMBAT_ATTACKERS = 12 # Only the top x units will deal damage in combat
+# ==========================================
+# COMBAT WIDTH
+# ==========================================
+# A tile does not fight as one pot. It splits into lanes -- one duel per pair of
+# hostile powers standing on it -- and these three numbers decide how many units
+# get to be in those duels. See map_logic/turn_processing/combat_rules.py.
+
+# Total units that fire on one tile, across every lane. Not per nation: the
+# number this replaced was applied per nation column, so five countries on a
+# tile fired five times twelve.
+COMBAT_WIDTH = 12
+
+# Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
+# of the fight by a fifty-unit one. When lanes * 2 * this exceeds COMBAT_WIDTH
+# the floor wins and the tile fields more than COMBAT_WIDTH -- at 12/2 that
+# needs four separate duels on one tile.
+MIN_LANE_SLOTS_PER_SIDE = 2
+
+# Slots per side in a typical lane: one lane, one enemy, which is what most
+# fights are. This is the number the AI reasons with, since it cannot know in
+# advance how many ways a tile will split.
+LANE_SLOTS_TYPICAL = COMBAT_WIDTH // 2
 
 # ==========================================
 # BOMBARDMENT
@@ -1182,18 +1203,35 @@ AI_NAVAL_UNIT_PREFERENCE = [
 # to values normalised against the mean of whatever the nation can currently
 # build, so they stay meaningful after any rebalance of unit_data.json.
 
+# Waves deep a tile is worth reinforcing to: one front rank, and one relief rank
+# to replace it as it dies. Bodies past this cannot reach a front slot before the
+# tile resolves, and under the lane model they absorb nothing while they wait --
+# which is the single biggest difference from the model this replaced, where
+# every extra body thinned the volley for the whole stack.
+AI_RESERVE_DEPTH = 2.0
+
+# Below this share of its health, a unit is worth more in reserve than in the
+# front rank -- a reserve takes no damage and recovers morale. Only ever applied
+# when a healthier unit is free to take the slot, since an empty slot dissolves
+# the lane and is worse than a hurt one holding it.
+AI_ROTATE_HEALTH_FRACTION = 0.4
+
 # What a unit contributes, given how combat actually resolves:
-#  - only the top MAX_COMBAT_ATTACKERS by attack deal damage, so offence is raw attack
-#  - incoming damage is split across ALL defenders, then each subtracts its own
-#    defense flat, so a cheap high-defense body is worth far more than its stats
-#    suggest and every extra body thins the share for the whole stack
+#  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
+#    ordinary one-enemy fight -- so offence is raw attack
+#  - incoming damage is split across the enemy front IN THAT LANE, then each
+#    subtracts its own defense flat, so a cheap high-defense body is worth far
+#    more than its stats suggest
 AI_W_OFFENSE = 1.0
 AI_W_DURABILITY = 1.0
-# Flat, not scaled by health: damage is divided by the NUMBER of defenders, so
-# every body thins the volley for the stack by the same amount whatever it is
-# made of. Its real effect is to make cheap units better value per point of pain.
+# Flat, not scaled by health: damage is divided by the number of defenders in the
+# lane, so every body in the front rank thins the volley for that rank by the
+# same amount whatever it is made of. A body PAST the front thins nothing at all
+# -- that is what AI_RESERVE_DEPTH is for, and why this is no longer a reason to
+# buy bodies without limit. Its real effect is to make cheap units better value
+# per point of pain, up to the depth the tile can use.
 AI_W_SOAK = 0.35
-AI_W_BOMBARD = 0.6      # bombardment ignores the combat-width cap and takes no return fire
+AI_W_BOMBARD = 0.6      # bombardment sits outside every lane and takes no return fire
 
 # Floor on the damage a unit takes, as a fraction of its share of the volley.
 # Without it, defense >= share divides by zero and an unkillable unit scores
@@ -1217,21 +1255,27 @@ AI_MIN_RESOURCE_SLACK = 0.05
 AI_ROLE_DIMINISH = 0.35
 
 # How much to spend on depth versus firepower, as a ratio of resources -- NOT of
-# unit counts. Only MAX_COMBAT_ATTACKERS units per tile can fire, so the assault
-# target is a count the combat rules hand us directly; bodies then get a
-# comparable share of the budget, which at 1.0 means "about as much again".
+# unit counts. Only a lane's front rank fires, so the assault target is a count
+# the combat rules hand us directly; bodies then get a comparable share of the
+# budget, which at 1.0 means "about as much again".
 #
 # It has to be expressed as spend rather than as a number of units, because a
 # heavy tank costs seventeen infantry. A count-based depth target quietly
 # committed 90% of the budget to armour and produced an army that lost to every
 # mixed composition in a round-robin under the real combat rules.
 #
-# 2.0 was picked by measurement, not taste: armies built at each ratio were
-# fought against eleven fixed compositions under the real combat rules, and
-# 1.5-3.0 all win comfortably while 4.0 collapses into pure infantry and loses
-# to everything. Sitting in the middle of that plateau rather than at its edge.
-AI_LINE_SPEND_RATIO = 2.0
-AI_BOMBARD_SPEND_RATIO = 0.15   # guns are support, not the main line
+# 2.0 was picked by measurement under the model the lane system replaced, where
+# an extra body always thinned somebody's volley and depth therefore had
+# unbounded if diminishing value. It does not any more: useful line bodies are
+# LANE_SLOTS_TYPICAL x frontline x (AI_RESERVE_DEPTH - 1), which at depth 2.0 is
+# the same count as the assault target, and a 1:1 spend split is what that
+# implies. That is a derivation, not a measurement -- the harness the old number
+# came from was run offline and does not exist in tests/, so re-measuring under
+# the lane rules is outstanding work, recorded in context/TODO.txt.
+AI_LINE_SPEND_RATIO = 1.0
+# Guns went from support to the only thing that reaches a reserve, and deep
+# reserve stacks are the formation the lane model encourages.
+AI_BOMBARD_SPEND_RATIO = 0.25
 AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
 
 # A unit is ASSAULT when this much of its combat value comes from attack rather

@@ -9,14 +9,19 @@ Rebalancing unit_data.json changed nothing about how the AI played.
 Everything here is derived instead, and it is derived from how combat actually
 resolves rather than from a general notion of "good stats":
 
-  - Only the top MAX_COMBAT_ATTACKERS units by attack deal damage
-    (queries.get_group_attack_sum), so offence is raw attack, and a sixth
-    attacker on a tile contributes nothing. That is what the role targets below
-    are for.
-  - Incoming damage is divided across ALL defenders and then each subtracts its
-    own defense, flat, per hit (combat_processor.apply_group_damage). So defense
-    is worth much more than its magnitude suggests, and every additional body
-    thins the share for the entire stack.
+  - A tile splits into lanes -- one duel per pair of hostile powers on it --
+    and only a lane's front rank deals damage. LANE_SLOTS_TYPICAL of them in an
+    ordinary one-enemy fight (combat_rules.build_battle), so offence is raw
+    attack and the unit after that contributes nothing. That is what the role
+    targets below are for.
+  - Incoming damage is divided across the enemy front rank IN THAT LANE and
+    then each defender subtracts its own defense, flat, per hit
+    (combat_processor.apply_group_damage). So defense is worth much more than
+    its magnitude suggests. Bodies past the front absorb NOTHING -- they wait in
+    reserve, untouchable, which is worth something as a queue of replacements
+    and nothing at all as protection. Under the pot this replaced they thinned
+    the volley for the whole stack, which is why AI_RESERVE_DEPTH now caps how
+    many of them are worth buying.
   - Morale is decremented but never read back in combat, and terrain never
     affects it. Neither is scored, because neither does anything.
 
@@ -37,9 +42,9 @@ from data import queries
 
 RESOURCES = ("manpower", "materials", "fuel")
 
-ROLE_ASSAULT = "ASSAULT"    # gets into the firing five and does the killing
-ROLE_LINE = "LINE"          # bodies that dilute the volley and hold the tile
-ROLE_BOMBARD = "BOMBARD"    # shells from safety, ignores the combat-width cap
+ROLE_ASSAULT = "ASSAULT"    # holds a front slot and does the killing
+ROLE_LINE = "LINE"          # the relief rank: holds the tile, rotates into the front as it dies
+ROLE_BOMBARD = "BOMBARD"    # shells from outside every lane, the only thing that reaches a reserve
 ROLE_NAVAL = "NAVAL"
 
 LAND_ROLES = (ROLE_ASSAULT, ROLE_LINE, ROLE_BOMBARD)
@@ -94,21 +99,26 @@ def spending_budget(econ, stockpile, prices):
 def effective_attack(attack, ctx):
     """How much of a unit's attack actually lands, given who it is shooting at.
 
-    apply_group_damage splits the firing group's total attack across every
-    defender and then each subtracts its own defense, flat. So attack is not
-    worth its face value: a unit whose share of the volley never exceeds the
-    enemy's defense contributes literally nothing, however many of them there
+    apply_group_damage splits the front rank's total attack across the enemy
+    front rank and then each defender subtracts its own defense, flat. So attack
+    is not worth its face value: a unit whose share of the volley never exceeds
+    the enemy's defense contributes literally nothing, however many of them there
     are, and no amount of cheapness fixes that.
 
-    Evaluated for a full firing line of this unit (MAX_COMBAT_ATTACKERS of them)
+    Evaluated for a full front rank of this unit (LANE_SLOTS_TYPICAL of them)
     rather than one in isolation, because one unit's attack alone almost never
-    clears a defense value on its own, while five of them routinely do -- scoring
-    it solo would write off every light unit in the game.
+    clears a defense value on its own, while a rank of them routinely does --
+    scoring it solo would write off every light unit in the game.
+
+    `ctx.enemy_stack` is a FRONT size, not a whole-tile headcount. Passing the
+    stack would report each enemy eating a share of the volley that the lane
+    never divides that far, and the error runs in the direction that makes deep
+    enemy stacks look safe to attack.
     """
-    group = attack * c.MAX_COMBAT_ATTACKERS
+    group = attack * c.LANE_SLOTS_TYPICAL
     per_defender = group / max(1.0, ctx.enemy_stack)
     landed = max(0.0, per_defender - ctx.enemy_def) * max(1.0, ctx.enemy_stack)
-    return landed / c.MAX_COMBAT_ATTACKERS
+    return landed / c.LANE_SLOTS_TYPICAL
 
 
 # ----------------------------------------------------------------------------
@@ -376,9 +386,13 @@ def role_targets(ctx, naval_need, values=None):
     building 83% infantry and not one tank.
 
     Within the budget:
-      - assault is additionally capped by the combat rules, since only
-        MAX_COMBAT_ATTACKERS units per tile ever fire and the sixth hitter on a
-        tile contributes nothing
+      - assault is additionally capped by the combat rules, since only a lane's
+        front rank fires and the unit after that contributes nothing
+      - depth is capped too, which is new. Under the pot this replaced an extra
+        body always thinned somebody's volley, so depth had unbounded if
+        diminishing value; under lanes a body past the relief rank absorbs
+        nothing at all, so it is pure waste and AI_LINE_SPEND_RATIO is no longer
+        the only thing bounding it
       - depth and guns take their share by *spend*, because a heavy tank costs
         seventeen infantry and a count-based split silently commits the whole
         budget to armour
@@ -387,12 +401,14 @@ def role_targets(ctx, naval_need, values=None):
     exists; without one it falls back to plain counts.
     """
     frontline = max(1.0, float(ctx.frontline))
-    width_cap = max(c.AI_MIN_ROLE_TARGET, c.MAX_COMBAT_ATTACKERS * frontline)
+    width_cap = max(c.AI_MIN_ROLE_TARGET, c.LANE_SLOTS_TYPICAL * frontline)
+    depth_cap = max(c.AI_MIN_ROLE_TARGET, width_cap * (c.AI_RESERVE_DEPTH - 1.0))
 
     if not values or ctx.budget <= 0:
         return {
             ROLE_ASSAULT: width_cap,
-            ROLE_LINE: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_LINE_SPEND_RATIO),
+            ROLE_LINE: min(depth_cap,
+                           max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_LINE_SPEND_RATIO)),
             ROLE_BOMBARD: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_BOMBARD_SPEND_RATIO),
             ROLE_NAVAL: max(0.0, naval_need),
         }
@@ -414,6 +430,7 @@ def role_targets(ctx, naval_need, values=None):
         targets[role] = max(c.AI_MIN_ROLE_TARGET, count)
 
     targets[ROLE_ASSAULT] = min(targets[ROLE_ASSAULT], width_cap)
+    targets[ROLE_LINE] = min(targets[ROLE_LINE], depth_cap)
     targets[ROLE_NAVAL] = max(0.0, naval_need)
     return targets
 
@@ -480,7 +497,12 @@ def threat_profile(world, nation, unit_library, candidates):
                     continue
                 volleys.append(queries.get_group_attack_sum(hostile))
                 defenses.append(_mean(float(u.get("defense", 0)) for u in hostile))
-                stacks.append(len(hostile))
+                # A FRONT size, not a headcount: the volley is divided across
+                # the enemy's front rank in one lane, and everything behind it
+                # is out of reach. Handing the whole stack over reported each
+                # body eating a share the lane never divides that far, which
+                # made deep enemy stacks look safe to walk into.
+                stacks.append(min(len(hostile), c.LANE_SLOTS_TYPICAL))
 
     if volleys:
         return (max(1.0, _mean(volleys)), max(0.0, _mean(defenses)), max(1.0, _mean(stacks)))
@@ -488,5 +510,5 @@ def threat_profile(world, nation, unit_library, candidates):
     peers = [unit_library[n] for n in candidates if n in unit_library]
     mean_attack = _mean(float(s.get("attack", 0)) for s in peers)
     mean_defense = _mean(float(s.get("defense", 0)) for s in peers)
-    volley = max(1.0, mean_attack * c.MAX_COMBAT_ATTACKERS * c.AI_PEACETIME_THREAT_MULTIPLIER)
-    return volley, mean_defense, float(c.MAX_COMBAT_ATTACKERS)
+    volley = max(1.0, mean_attack * c.LANE_SLOTS_TYPICAL * c.AI_PEACETIME_THREAT_MULTIPLIER)
+    return volley, mean_defense, float(c.LANE_SLOTS_TYPICAL)

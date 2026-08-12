@@ -167,7 +167,7 @@ class BombardmentTests(unittest.TestCase):
 #: for the wrong reason -- or, as here, fails in a file about bombardment.
 ASSIGNMENT_KEYS = ("target_destinations", "naval_destinations",
                    "target_assignments", "naval_assignments",
-                   "target_stacks", "naval_stacks")
+                   "target_stacks", "naval_stacks", "target_capacity")
 
 
 def empty_ctx(**over):
