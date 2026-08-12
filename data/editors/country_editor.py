@@ -11,6 +11,8 @@ import json
 
 import colorsys
 from data import queries
+from data.io.country_io import DEFAULT_NATION_COLOR
+from data.io.json_io import load_json_or_empty
 from ui import confirm_dialog
 
 PATH = c.COUNTRIES_DATA_PATH
@@ -51,7 +53,7 @@ class CountryEditor:
 
         self.color_btn = tk.Button(editor_frame, text="Pick Color", command=self.pick_color)
         self.color_btn.grid(row=5, column=0, columnspan=2, sticky="we", pady=5)
-        self.current_color = [150, 150, 150]
+        self.current_color = list(DEFAULT_NATION_COLOR)
 
         tk.Button(editor_frame, text="Save/Update Country", bg="#4CAF50", fg="white", 
                   command=self.save_country).grid(row=6, column=0, columnspan=3, sticky="we")
@@ -228,11 +230,7 @@ class CountryEditor:
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def load_data(self):
-        if os.path.exists(PATH):
-            try:
-                with open(PATH, "r") as f: return json.load(f)
-            except: return {}
-        return {}
+        return load_json_or_empty(PATH)
 
     def pick_color(self):
         color = colorchooser.askcolor(title="Choose Country Color")
@@ -258,7 +256,7 @@ class CountryEditor:
         self.id_ent.insert(0, int_id)
         self.name_ent.delete(0, tk.END)
         self.name_ent.insert(0, country.get("name", int_id))
-        self.current_color = country.get("color", [150, 150, 150])
+        self.current_color = country.get("color", DEFAULT_NATION_COLOR)
         hex_color = '#%02x%02x%02x' % tuple(self.current_color)
         self.color_preview.config(bg=hex_color)
         
@@ -291,7 +289,7 @@ class CountryEditor:
             country_row = tk.Frame(self.scrollable_frame, pady=2, padx=5)
             country_row.pack(fill="x", expand=True)
 
-            rgb = self.data[int_id].get("color", [150, 150, 150])
+            rgb = self.data[int_id].get("color", DEFAULT_NATION_COLOR)
             hex_color = '#%02x%02x%02x' % tuple(rgb)
 
             tk.Label(country_row, bg=hex_color, width=3, relief="ridge").pack(side="left")

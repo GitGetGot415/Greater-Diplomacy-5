@@ -282,6 +282,27 @@ class GameState:
     def refresh_ui(self):
         pass
 
+    def sync_entries(self):
+        """Pulls live text out of on-screen fields before they get rebuilt or saved.
+
+        Two ways to tag a field, both read here so no screen has to write this
+        loop again: `entry_ref` (the dict it edits) plus `entry_key` writes the
+        text straight back, and `entry_apply` hands the text to a callable for
+        anything whose storage isn't a plain dict slot.
+
+        Four editors each had their own copy of this keyed on a different
+        marker attribute -- entry_ref, tech_key, turn_key -- which meant a field
+        tagged for one screen was silently invisible to the others.
+        """
+        for el in self.elements:
+            apply = getattr(el, "entry_apply", None)
+            if apply is not None:
+                apply(el.text)
+                continue
+            entry = getattr(el, "entry_ref", None)
+            if entry is not None:
+                entry[el.entry_key] = el.text
+
     # ---------------------------------------------------------------- #
     #                     STANDARD VERTICAL LISTS                      #
     # ---------------------------------------------------------------- #
@@ -322,6 +343,17 @@ class GameState:
             y = top + (i * row_h) + scroll
             if y + row_h > cull_top and y < cull_bottom:
                 yield i, y
+
+    def content_hover_guard(self):
+        """A `click_guard` for rows a screen laid out by hand rather than through
+        layout_list_rows: it keeps a click landing in a row's cropped sliver,
+        outside the visible content rect, from firing.
+
+        layout_list_rows publishes the same thing as scroll_click_guard; this is
+        for the panels that place their own rows and only need the guard.
+        """
+        rect = self.scroll_content_rect
+        return lambda: bool(rect) and rect.collidepoint(pygame.mouse.get_pos())
 
     def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15,
                             attr="scroll_y", limit_attr="max_scroll",
@@ -566,8 +598,9 @@ class FolderListState(GameState):
 
         pop_rect = pygame.Rect((0, 0), self.delete_popup_size)
         pop_rect.center = center or (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-        ui_bars.draw_modal_box(surface, pop_rect, bg_color=(60, 20, 20),
-                               border_color=(255, 50, 50), border_width=3)
+        bg, border, border_width = c.PANEL_THEME_DANGER
+        ui_bars.draw_modal_box(surface, pop_rect, bg_color=bg,
+                               border_color=border, border_width=border_width)
 
         msg = fonts.get("heading2").render(f"Delete '{self.deleting_item}'?", True, (255, 255, 255))
         surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
@@ -590,11 +623,29 @@ class MapOverlayScreen(GameState):
     # Whether the wheel scrolls the panel even when the cursor is off it.
     scroll_anywhere = False
 
+    # Panel chrome, the same contract ModalScreen declares -- unpack one of
+    # constants' PANEL_THEME_* tuples into the first three. Every subclass used
+    # to pass these to ui_bars.draw_modal_box by hand, and then draw its own
+    # title underneath, so a panel's look lived in its draw_content body rather
+    # than anywhere you could see all of them at once.
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    #: Header text drawn inside the panel. Override get_panel_title() instead
+    #: for one that names a nation or otherwise changes with the screen.
+    PANEL_TITLE = None
+    TITLE_PRESET = "heading1"
+    TITLE_Y_OFFSET = 15
+    #: Whether __init__ centres panel_rect on the screen. False for the panels
+    #: that place themselves (the diplomacy overlays sit off-centre so the map
+    #: they are about stays visible beside them).
+    CENTER_PANEL = True
+
     def __init__(self, map_screen, panel_rect=None):
         super().__init__()
         self.map_screen = map_screen
         self.player = map_screen.player_country
         self.panel_rect = panel_rect
+        if panel_rect is not None and self.CENTER_PANEL:
+            self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.scroll_y = 0
         self.max_scroll = 0
 
@@ -628,6 +679,23 @@ class MapOverlayScreen(GameState):
 
     def get_clicked_province(self, mouse_pos):
         return queries.get_clicked_province(mouse_pos, self.map_screen)
+
+    def get_panel_title(self):
+        """The header drawn inside the panel, or None for a bare box."""
+        return self.PANEL_TITLE
+
+    def draw_panel(self, surface):
+        """Draws the bordered panel and its title -- call this from draw_content.
+
+        Wherever a screen draws other things first (the peace screen previews
+        the post-treaty map underneath its panel), call this at the point the
+        old draw_modal_box call sat, so the layering is unchanged.
+        """
+        ui_bars.draw_panel_frame(surface, self.panel_rect, self.get_panel_title(),
+                                 bg=self.PANEL_BG, border=self.PANEL_BORDER,
+                                 border_width=self.PANEL_BORDER_WIDTH,
+                                 title_dy=self.TITLE_Y_OFFSET,
+                                 font_preset=self.TITLE_PRESET)
 
     def update(self):
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)

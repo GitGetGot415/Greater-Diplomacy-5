@@ -13,6 +13,18 @@ import threading
 IS_WEB = sys.platform == "emscripten"
 
 
+def downloads_dir():
+    """Where an exported file goes, and where an import dialog opens.
+
+    `str(Path.home() / "Downloads")` was written out in six places across
+    queries, edit_country and view_assets, each with its own local pathlib
+    import. On web there is no real home directory to resolve, so callers
+    write into the virtual FS and hand the result to download_file().
+    """
+    from pathlib import Path
+    return str(Path.home() / "Downloads")
+
+
 def run_background(fn, *args, **kwargs):
     """Fire-and-forget a unit of work without blocking the caller's frame.
 

@@ -1,7 +1,6 @@
 # screens/map_related_screens/edit_country.py
 import pygame
 import os
-from pathlib import Path
 import unicodedata
 from gameState import GameState, resolve_keybind
 from ui_elements import process_text_input, draw_text_box, Button
@@ -9,6 +8,8 @@ import ui_elements
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
+from data.platform import downloads_dir
+from data.io.country_io import DEFAULT_NATION_COLOR
 from map_logic.rendering import country_names
 
 # ==========================================
@@ -159,14 +160,14 @@ class Edit_Country_Screen(GameState):
         self.adjective = ""
         self.leader_name = ""
         self.leader_title = ""
-        self.new_map_color = [150, 150, 150]
+        self.new_map_color = list(DEFAULT_NATION_COLOR)
 
         # Original state trackers for unsaved changes popup
         self.orig_country_name = ""
         self.orig_adjective = ""
         self.orig_leader_name = ""
         self.orig_leader_title = ""
-        self.orig_map_color = [150, 150, 150]
+        self.orig_map_color = list(DEFAULT_NATION_COLOR)
         
         self.palette = c.EDITOR_COLOR_PALETTE
 
@@ -182,7 +183,7 @@ class Edit_Country_Screen(GameState):
         self.adjective = p_data.get("adjective", "")
         self.leader_name = p_data.get("leader_name", "")
         self.leader_title = p_data.get("leader_title", "")
-        self.new_map_color = list(p_data.get("color", [150, 150, 150]))
+        self.new_map_color = list(p_data.get("color", DEFAULT_NATION_COLOR))
 
         # Track the original baseline to check for unsaved changes on exit
         self.orig_country_name = self.country_name
@@ -224,25 +225,25 @@ class Edit_Country_Screen(GameState):
         # Slice to [:3] so we only pass RGB to the picker, dropping the Alpha
         queries.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
 
-    def export_flag(self):
-        downloads_path = str(Path.home() / "Downloads")
-        safe_name = "".join(c for c in self.country_name if c.isalnum() or c in " _-") or "Flag"
-        export_path = os.path.join(downloads_path, f"{safe_name}_flag.png")
+    def _export_image(self, surf, suffix, fallback_name):
+        """Writes one of the country's images out to Downloads.
+
+        The flag and portrait buttons were the same eight lines apart from
+        which surface and which filename suffix.
+        """
+        safe_name = "".join(ch for ch in self.country_name if ch.isalnum() or ch in " _-") or fallback_name
+        export_path = os.path.join(downloads_dir(), f"{safe_name}_{suffix}.png")
         try:
-            pygame.image.save(self.flag_surf, export_path)
-            self.map_screen.show_feedback(f"Exported to Downloads")
-        except Exception as e:
+            pygame.image.save(surf, export_path)
+            self.map_screen.show_feedback("Exported to Downloads")
+        except Exception:
             self.map_screen.show_feedback("Failed to export")
 
+    def export_flag(self):
+        self._export_image(self.flag_surf, "flag", "Flag")
+
     def export_portrait(self):
-        downloads_path = str(Path.home() / "Downloads")
-        safe_name = "".join(c for c in self.country_name if c.isalnum() or c in " _-") or "Portrait"
-        export_path = os.path.join(downloads_path, f"{safe_name}_portrait.png")
-        try:
-            pygame.image.save(self.portrait_surf, export_path)
-            self.map_screen.show_feedback(f"Exported to Downloads")
-        except Exception as e:
-            self.map_screen.show_feedback("Failed to export")
+        self._export_image(self.portrait_surf, "portrait", "Portrait")
 
     def import_flag(self):
         def on_picked(file_path):
@@ -335,7 +336,7 @@ class Edit_Country_Screen(GameState):
             self.adjective = src_data.get("adjective", "")
             self.leader_name = src_data.get("leader_name", "")
             self.leader_title = src_data.get("leader_title", "")
-            self.new_map_color = list(src_data.get("color", [150, 150, 150]))
+            self.new_map_color = list(src_data.get("color", DEFAULT_NATION_COLOR))
             
             self.flag_surf = queries.decode_b64_to_surf(src_data.get("flag_data", "DEFAULT"), self.flag_size, is_portrait=False, country_name=chosen_country)
             self.portrait_surf = queries.decode_b64_to_surf(src_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=chosen_country)

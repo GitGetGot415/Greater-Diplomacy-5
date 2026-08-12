@@ -4,13 +4,13 @@ from data import queries
 from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
 from ui_elements import Button
-from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
 from screens.map_related_screens.diplomacy_screen_widgets import build_choice_button
 
 
 class Declare_War_Screen(MapOverlayScreen):
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
 
     def __init__(self, map_screen, target_nation):
         # Widen the panel to fit buttons side-by-side
@@ -115,9 +115,11 @@ class Declare_War_Screen(MapOverlayScreen):
             self.map_screen.show_feedback("War Declaration Queued!" if not self.is_editing else "War Declaration Updated!")
             self.done = True
 
+    def get_panel_title(self):
+        return f"Declare War: {self.target_nation}"
+
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
-        ui_bars.draw_centered_title(surface, f"Declare War: {self.target_nation}", self.panel_rect.y + 20)
+        self.draw_panel(surface)
 
 
 def open_wargoal_selection_menu(map_screen, target_nation):

@@ -12,6 +12,10 @@ from screens.map_related_screens.diplomacy_screen_widgets import build_choice_bu
 
 class Peace_Screen(MapOverlayScreen):
     overlay_alpha = 0
+    # Docked above the bottom bar rather than centred, and translucent so the
+    # projected post-treaty map stays readable underneath it.
+    CENTER_PANEL = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM_OVER_MAP
 
     def __init__(self, map_screen, target_nation):
         # Restructured to be a wide, short banner docked cleanly above the bottom UI bar
@@ -131,13 +135,15 @@ class Peace_Screen(MapOverlayScreen):
         self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
         self.done = True
 
+    def get_panel_title(self):
+        return f"Peace Terms: {self.target_nation}"
+
     def draw_content(self, surface):
         draw_projected_peace_map(surface, self.map_screen, self.terms[self.selected_term_idx],
                                  self.map_screen.player_country, self.target_nation)
 
         # Draw the Banner
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 40, 30, 230), border_color=(50, 255, 50), border_width=3)
-        ui_bars.draw_centered_title(surface, f"Peace Terms: {self.target_nation}", self.panel_rect.y + 15)
+        self.draw_panel(surface)
 
         small_font = fonts.get("normal")
         acc_surf = small_font.render(self.acceptance_text, True, self.acceptance_color)

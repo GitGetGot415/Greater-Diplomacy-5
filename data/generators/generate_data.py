@@ -12,18 +12,12 @@ needs to touch any other code.
 """
 import sys
 import os
-import json
 import argparse
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import data.constants as c
 from data.generators import recipes as r
-
-
-def dump_compact(value):
-    """Same style as the tkinter unit editor's custom_json_dump: tight,
-    single-line, ', '/': ' separators, no indent."""
-    return json.dumps(value, separators=(', ', ': '))
+from data.io.json_io import dump_compact
 
 
 def render_flat_file(sections, spacer):

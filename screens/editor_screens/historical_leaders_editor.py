@@ -21,6 +21,7 @@ import pygame
 from gameState import GameState
 import data.constants as c
 from data import queries
+from data.io.country_io import DEFAULT_NATION_COLOR
 from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
@@ -127,28 +128,17 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         }
 
     # ------------------------------------------------------------------ #
-    #                          FIELD <-> DATA SYNC                       #
-    # ------------------------------------------------------------------ #
-
-    def _sync_entries(self):
-        """Pulls live text out of on-screen fields before they get rebuilt or saved."""
-        for el in self.elements:
-            entry = getattr(el, "entry_ref", None)
-            if entry is not None:
-                entry[el.entry_key] = el.text
-
-    # ------------------------------------------------------------------ #
     #                               ACTIONS                               #
     # ------------------------------------------------------------------ #
 
     def select_country(self, country):
-        self._sync_entries()
+        self.sync_entries()
         self.active_country = country
         self._scroll_timeline = 0
         self.refresh_ui()
 
     def add_country(self):
-        self._sync_entries()
+        self.sync_entries()
         all_playable = sorted(name for name, stats in queries.get_country_data().items()
                               if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS)
         available = [n for n in all_playable if n not in self.data]
@@ -186,7 +176,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
     def add_entry(self):
         if not self.active_country:
             return
-        self._sync_entries()
+        self.sync_entries()
         entries = self.data[self.active_country]
 
         if entries:
@@ -213,15 +203,15 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         self.refresh_ui()
 
     def delete_entry(self, entry):
-        self._sync_entries()
+        self.sync_entries()
         entries = self.data.get(self.active_country, [])
         entries[:] = [e for e in entries if e is not entry]
         self.refresh_ui()
 
     def pick_color(self, entry):
-        self._sync_entries()
+        self.sync_entries()
         current = entry.get("color") or queries.get_country_data().get(
-            self.active_country, {}).get("color", [150, 150, 150])
+            self.active_country, {}).get("color", DEFAULT_NATION_COLOR)
 
         def on_pick(rgb):
             entry["color"] = list(rgb)
@@ -230,7 +220,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         queries.open_color_picker(self, f"{self.active_country} Color", current, on_pick)
 
     def clear_color(self, entry):
-        self._sync_entries()
+        self.sync_entries()
         entry["color"] = None
         self.refresh_ui()
 
@@ -240,7 +230,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         entry -- same storage format country_data already uses, so a set
         entry overrides the country's normal appearance and a cleared one
         (None) just falls back to whatever the country already has."""
-        self._sync_entries()
+        self.sync_entries()
 
         def on_picked(file_path):
             if not file_path:
@@ -261,7 +251,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         self._pick_image(entry, "flag_data", c.FLAGS_DIR, c.FLAG_SIZE, "Flag")
 
     def clear_flag(self, entry):
-        self._sync_entries()
+        self.sync_entries()
         entry["flag_data"] = None
         self.refresh_ui()
 
@@ -269,12 +259,12 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         self._pick_image(entry, "portrait_data", c.PORTRAITS_DIR, c.PORTRAIT_SIZE, "Portrait")
 
     def clear_portrait(self, entry):
-        self._sync_entries()
+        self.sync_entries()
         entry["portrait_data"] = None
         self.refresh_ui()
 
     def save(self):
-        self._sync_entries()
+        self.sync_entries()
         cleaned = {}
         for country, entries in self.data.items():
             parsed = []

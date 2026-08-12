@@ -5,12 +5,14 @@ from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
 from ui_elements import Button, draw_text_box
 from map_logic.rendering.font_manager import fonts
-from ui.bars import ui_bars, resource_hud
+from ui.bars import resource_hud
 from ui.screen_runner import _run_pygame_sub_screen
 from screens.map_related_screens.diplomacy_screen_widgets import build_choice_row
 
 
 class Trade_Screen(MapOverlayScreen):
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+
     # Which text attribute each of the four number boxes edits.
     FIELD_ATTRS = {
         "GIVE_MATS": "give_mats_str",
@@ -173,9 +175,11 @@ class Trade_Screen(MapOverlayScreen):
                 if status == "CANCEL":
                     self.active_input = None
 
+    def get_panel_title(self):
+        return f"Trade Agreement: {self.target_nation}"
+
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 50), border_color=(100, 200, 100), border_width=3)
-        ui_bars.draw_centered_title(surface, f"Trade Agreement: {self.target_nation}", self.panel_rect.y + 15)
+        self.draw_panel(surface)
 
         font_med = fonts.get("heading2")
         font_small = fonts.get("normal")

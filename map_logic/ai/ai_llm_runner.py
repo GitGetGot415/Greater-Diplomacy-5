@@ -32,6 +32,26 @@ from data.platform import IS_WEB
 BatchOutcome = namedtuple("BatchOutcome", "total served abandoned reason")
 
 
+def make_progress_counter(map_screen, label, done_attr, total):
+    """An `on_progress` callback that ticks a counter and retitles the bar.
+
+    All three phases wrote the same closure: bump `map_screen.<done_attr>`, then
+    format "Label (done/total)...". `total` is either an attribute name on
+    map_screen or a plain number, since the summit phase counts a local list
+    rather than publishing a total.
+
+    The returned callable takes (and ignores) the job, which is the shape
+    run_llm_batch hands its on_progress.
+    """
+    def count(_job=None):
+        done = getattr(map_screen, done_attr, 0) + 1
+        setattr(map_screen, done_attr, done)
+        limit = getattr(map_screen, total, 0) if isinstance(total, str) else total
+        map_screen.loading_status_text = f"{label} ({done}/{limit})..."
+
+    return count
+
+
 def begin_turn(map_screen):
     """Opens the turn's LLM budget, once, before any phase spends from it.
 

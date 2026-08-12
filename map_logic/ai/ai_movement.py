@@ -273,7 +273,7 @@ def _discover_borders_and_targets(map_screen, ai_name, my_provs, enemies, friend
                         enemy_coastal_waters.add(n_id)
 
             # Identify unclaimed islands globally
-            elif owner in ["Unclaimed", "None", ""]:
+            elif owner in c.UNOWNED_LAND_OWNERS:
                 all_unclaimed_coasts.add(prov["id"])
 
         # --- Distant Allied Wars / Expedition Targets ---
@@ -306,7 +306,7 @@ def _discover_borders_and_targets(map_screen, ai_name, my_provs, enemies, friend
             if n_owner in enemies:
                 is_war_border = True
                 enemy_targets.add(n_id)
-            elif n_owner in ["Unclaimed", "None", ""]:
+            elif n_owner in c.UNOWNED_LAND_OWNERS:
                 unclaimed_targets.add(n_id)
             elif n_owner != ai_name and n_owner not in c.WATER_NATIONS and not queries.are_in_same_faction(ai_name, n_owner, map_screen.nation_data):
                 is_peace_border = True
@@ -724,7 +724,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                         # Check if it's a valid tile to push into
                         n_owner = n_prov.get("owner", "Unclaimed")
-                        if n_owner in ["Unclaimed", "None", ""]:
+                        if n_owner in c.UNOWNED_LAND_OWNERS:
                             next_options.append(n_id)
 
                     if next_options:
@@ -782,7 +782,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                             # Check if it's a valid tile to push into
                             n_owner = n_prov.get("owner", "Unclaimed")
-                            if queries.is_hostile_territory(ai_name, n_owner, map_screen.nation_data) or n_owner in ["Unclaimed", "None", ""]:
+                            if queries.is_hostile_territory(ai_name, n_owner, map_screen.nation_data) or n_owner in c.UNOWNED_LAND_OWNERS:
                                 next_options.append(n_id)
 
                         if next_options:

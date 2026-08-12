@@ -584,6 +584,28 @@ MODAL_TITLE_Y_OFFSET = 14
 HUD_PANEL_BG = (30, 30, 50)
 HUD_PANEL_BORDER = (100, 100, 250)
 
+# Tool-window panel themes: (background, border, border width). Unpack one
+# straight into a MapOverlayScreen subclass and it gets the whole look:
+#
+#     class Declare_War_Screen(MapOverlayScreen):
+#         PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
+#
+# Seventeen panels used to pass their own hand-picked RGB straight to
+# ui_bars.draw_modal_box -- no two calls alike, several a couple of RGB points
+# apart from each other, and two files repeating the same tuple twice. The
+# border is what carries a panel's identity, so the backgrounds are all
+# MODAL_BG apart from the deliberately red-tinted danger one.
+PANEL_THEME_DANGER  = ((40, 30, 30), (255, 50, 50), 3)   # declaring war, leaving, wiping the map
+PANEL_THEME_CONFIRM = (MODAL_BG, (76, 175, 80), 3)       # agreeing to something: peace, trade
+PANEL_THEME_INFO    = (MODAL_BG, UI_ACCENT_BLUE, 2)      # showing state: puppets, diplomacy
+PANEL_THEME_EDIT    = (MODAL_BG, (255, 152, 0), 2)       # editing scenario data: research, date
+PANEL_THEME_SPECIAL = (MODAL_BG, (150, 100, 250), 2)     # brushes and personality tuning
+
+# The same two themes for panels that sit over the live map and want it to
+# stay half-visible behind them -- the alpha is the point, not decoration.
+PANEL_THEME_CONFIRM_OVER_MAP = ((30, 40, 30, 230), PANEL_THEME_CONFIRM[1], 3)
+PANEL_THEME_INFO_OVER_MAP    = ((*HUD_PANEL_BG, 230), UI_ACCENT_BLUE, 2)
+
 # Pixels per wheel notch. GameState.scroll_speed mirrors this; panels that roll
 # their own wheel handling should read it from here rather than redeclaring it.
 SCROLL_STEP = 30
@@ -714,15 +736,27 @@ DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 DEFAULT_UNIT_MORALE = 100.0
 
+#: The roman numeral alphabet, largest first. Both directions of the conversion
+#: read it, so they cannot disagree about which symbols exist: queries.py's
+#: roman_to_int used to know only I/V/X while _gen_roman could emit L and C, so
+#: a tier numeral past XLIX parsed as a smaller number (or as zero) and the tier
+#: suffix silently failed to strip off a unit's name.
+ROMAN_SYMBOL_VALUES = (
+    ("M", 1000), ("CM", 900), ("D", 500), ("CD", 400),
+    ("C", 100), ("XC", 90), ("L", 50), ("XL", 40),
+    ("X", 10), ("IX", 9), ("V", 5), ("IV", 4), ("I", 1),
+)
+
+#: Single-letter values, for parsing in the subtractive-notation direction.
+ROMAN_LETTER_VALUES = {sym: val for sym, val in ROMAN_SYMBOL_VALUES if len(sym) == 1}
+
+
 def _gen_roman(n):
-    val = [100, 90, 50, 40, 10, 9, 5, 4, 1]
-    syb = ["C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
-    res, i = "", 0
-    while n > 0:
-        for _ in range(n // val[i]):
-            res += syb[i]
-            n -= val[i]
-        i += 1
+    res = ""
+    for sym, val in ROMAN_SYMBOL_VALUES:
+        while n >= val:
+            res += sym
+            n -= val
     return res
 
 ROMAN_NUMERALS = {i: _gen_roman(i) for i in range(1, 101)}

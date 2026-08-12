@@ -396,19 +396,16 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         ai_results[key_of(task)] = _get_fallback_ai_result(
             task, map_screen.nation_data, verdict_world, map_screen.map_data)
 
-    def count(task):
-        """One tick per task the model was actually asked about.
-
-        This used to restate the immersion rules to decide which tasks the bar
-        had been sized for -- a fourth copy of them, and it had drifted: there
-        was no MAJOR branch at all, so the whole phase ran with the bar reading
-        0/0 at the level the game recommends. The queue below is now the same
-        list the bar is sized from, so there is nothing left to keep in step.
-        """
-        map_screen.responsive_tasks_completed += 1
-        map_screen.loading_status_text = (
-            f"Processing Global Responses ({map_screen.responsive_tasks_completed}"
-            f"/{map_screen.responsive_tasks_total})...")
+    # One tick per task the model was actually asked about.
+    #
+    # This used to restate the immersion rules to decide which tasks the bar had
+    # been sized for -- a fourth copy of them, and it had drifted: there was no
+    # MAJOR branch at all, so the whole phase ran with the bar reading 0/0 at the
+    # level the game recommends. The queue below is now the same list the bar is
+    # sized from, so there is nothing left to keep in step.
+    count = ai_llm_runner.make_progress_counter(
+        map_screen, "Processing Global Responses",
+        "responsive_tasks_completed", "responsive_tasks_total")
 
     # Filtered once, up front. The three paths used to disagree about an
     # action that is neither a known proposal nor a custom message: two

@@ -90,20 +90,8 @@ class TurnEditorScreen(ModalScreen):
     def tab(self):
         return self.tabs[self.active_tab]
 
-    @property
-    def listening_for(self):
-        """Keeps the global BACK keybind from closing the editor mid-edit."""
-        return any(getattr(el, "turn_key", None) and el.active for el in self.elements)
-
-    def _sync_entries(self):
-        """Pulls live text out of the on-screen fields before they are rebuilt or saved."""
-        for el in self.elements:
-            key = getattr(el, "turn_key", None)
-            if key is not None:
-                self.tab["values"][key] = el.text
-
     def select_tab(self, key):
-        self._sync_entries()
+        self.sync_entries()
         self.active_tab = key
         self.scroll_y = 0
         self.refresh_ui()
@@ -117,7 +105,7 @@ class TurnEditorScreen(ModalScreen):
         self.refresh_ui()
 
     def save_all(self):
-        self._sync_entries()
+        self.sync_entries()
         for tab in self.tabs.values():
             overrides = tab["overrides"]
             overrides.clear()
@@ -146,7 +134,7 @@ class TurnEditorScreen(ModalScreen):
                 tab["overrides"].clear()
                 tab["disabled_set"].clear()
                 tab["values"] = {btype: str(default) for btype, default in tab["defaults"].items()}
-            # Drop the on-screen fields so save_all's _sync_entries() can't pull
+            # Drop the on-screen fields so save_all's sync_entries() can't pull
             # their stale (pre-reset) text back over the defaults we just set.
             self.elements = []
             self.save_all()
@@ -162,7 +150,7 @@ class TurnEditorScreen(ModalScreen):
     # ------------------------------------------------------------------ #
 
     def refresh_ui(self):
-        self._sync_entries()
+        self.sync_entries()
         p = self.panel_rect
         self.elements = []
 
@@ -192,7 +180,8 @@ class TurnEditorScreen(ModalScreen):
         for i, y in self._row_layout:
             btype = names[i]
             field = TextField(check_x - 10 - 100, y, 100, 28, self.tab["values"][btype], numeric=True)
-            field.turn_key = btype
+            field.entry_ref = self.tab["values"]
+            field.entry_key = btype
             field.is_scrollable = True
             field.click_guard = self.scroll_click_guard
             self.elements.append(field)

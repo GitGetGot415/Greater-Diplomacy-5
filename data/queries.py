@@ -10,7 +10,7 @@ import random
 import threading
 import shutil
 import zipfile
-from data.platform import run_background, IS_WEB, download_file, sync_persisted_dir
+from data.platform import run_background, IS_WEB, download_file, downloads_dir, sync_persisted_dir
 from datetime import datetime
 
 import pygame
@@ -922,7 +922,7 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
         if turn_start_owner != current_owner:
             target_owner = turn_start_owner
 
-    if target_owner in ["Unclaimed", "None", "Ocean", "Lakes"]: return True
+    if target_owner in c.OWNERLESS_OWNERS: return True
     if are_at_war(moving_nation, target_owner, nation_data): return True
 
     return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
@@ -2403,9 +2403,15 @@ def get_unit_tech_key(base_name):
     return c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
 
 def roman_to_int(s):
-    """Converts a roman numeral string to an integer."""
+    """Converts a roman numeral string to an integer.
+
+    Reads its symbol table from constants, so it understands exactly the
+    numerals _gen_roman can produce. It used to carry its own {I, V, X} and
+    score everything else as zero, which disagreed with both the generator and
+    with get_base_item_name's [IVXLCDM]+ regex above.
+    """
     if not s: return 0
-    rom_val = {'I': 1, 'V': 5, 'X': 10}
+    rom_val = c.ROMAN_LETTER_VALUES
     res, i = 0, 0
     while i < len(s):
         s1 = rom_val.get(s[i], 0)
@@ -3416,51 +3422,22 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
 # FILE & ZIP IMPORT QUERIES
 # ==========================================
 
-def export_dir_as_zip(source_dir, zip_name, parent=None):
-    """Zips a folder and sends it to the user.
-
-    Counterpart to extract_and_flatten_zip, and the single implementation
-    behind every "Export" button (saves, scenarios) so the destination and the
-    success/error dialogs stay identical.
+def _export_to_downloads(file_name, produce, parent=None):
+    """Sends a file to the user, however it gets made.
 
     Desktop: written straight into the real Downloads folder. Web: there is no
-    real filesystem to write into, so the zip is built in the browser's
-    virtual FS and then handed to platform.download_file(), which uses
-    pygbag's JS bridge to actually push it out to the user's real Downloads
-    folder as a browser download.
+    real filesystem to write into, so it is built in the browser's virtual FS
+    and then handed to platform.download_file(), which uses pygbag's JS bridge
+    to push it out to the user's real Downloads folder as a browser download.
+
+    `produce(dest_path)` is the only part that differs between exporting a
+    zipped folder and copying one file -- the destination, the web/desktop
+    split and the success/error dialogs were written out twice, identically.
     """
-    from pathlib import Path
     from ui import confirm_dialog
     try:
-        zip_path = zip_name if IS_WEB else os.path.join(str(Path.home() / "Downloads"), zip_name)
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root_dir, _dirs, files in os.walk(source_dir):
-                for file in files:
-                    full = os.path.join(root_dir, file)
-                    zipf.write(full, os.path.relpath(full, source_dir))
-
-        if IS_WEB:
-            download_file(zip_path)
-            confirm_dialog.show_success("Export Success", f"{zip_name} downloaded.", tk_parent=parent)
-        else:
-            confirm_dialog.show_success("Export Success", f"Exported to Downloads as {zip_name}", tk_parent=parent)
-        return zip_path
-    except Exception as e:
-        confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
-        return None
-
-def export_json_file(source_path, file_name, parent=None):
-    """Copies a single JSON file to the user's Downloads folder.
-
-    Single-file counterpart to export_dir_as_zip -- same desktop-writes-
-    directly / web-downloads-via-JS-bridge split, just without the zip step
-    since there's only one file to move.
-    """
-    from pathlib import Path
-    from ui import confirm_dialog
-    try:
-        dest_path = file_name if IS_WEB else os.path.join(str(Path.home() / "Downloads"), file_name)
-        shutil.copy2(source_path, dest_path)
+        dest_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
+        produce(dest_path)
 
         if IS_WEB:
             download_file(dest_path)
@@ -3472,13 +3449,31 @@ def export_json_file(source_path, file_name, parent=None):
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
+def export_dir_as_zip(source_dir, zip_name, parent=None):
+    """Zips a folder and sends it to the user.
+
+    Counterpart to extract_and_flatten_zip, and the single implementation
+    behind every "Export" button (saves, scenarios).
+    """
+    def zip_it(dest_path):
+        with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root_dir, _dirs, files in os.walk(source_dir):
+                for file in files:
+                    full = os.path.join(root_dir, file)
+                    zipf.write(full, os.path.relpath(full, source_dir))
+
+    return _export_to_downloads(zip_name, zip_it, parent)
+
+def export_json_file(source_path, file_name, parent=None):
+    """Copies a single JSON file to the user's Downloads folder."""
+    return _export_to_downloads(file_name, lambda dest: shutil.copy2(source_path, dest), parent)
+
 def import_json_file(game_state, title, on_loaded):
     """Prompts for a .json file, parses it, and hands the parsed object to
     on_loaded(data). Validating the shape and writing it anywhere is left to
     the caller -- different JSON files have different schemas, this just
     covers the shared "pick a file, parse it, report a read error" part.
     """
-    from pathlib import Path
     from ui import confirm_dialog
 
     def _after_pick(file_path):
@@ -3492,7 +3487,7 @@ def import_json_file(game_state, title, on_loaded):
             return
         on_loaded(data)
 
-    open_file_browser(game_state, title, str(Path.home() / "Downloads"),
+    open_file_browser(game_state, title, downloads_dir(),
                       extensions=[".json"], on_result=_after_pick)
 
 def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
@@ -3521,7 +3516,7 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
         except Exception as e:
             confirm_dialog.show_error("Import Error", str(e))
 
-    open_file_browser(game_state, "Select Zip File", str(Path.home() / "Downloads"),
+    open_file_browser(game_state, "Select Zip File", downloads_dir(),
                       extensions=[".zip"], on_result=_after_pick)
 
 def import_mod_file(game_state, on_success=None):
@@ -3540,7 +3535,6 @@ def import_mod_file(game_state, on_success=None):
     game is restarted -- Python only imports a module once per process, so
     anything already running has already loaded the unmodded version.
     """
-    from pathlib import Path
     from ui import confirm_dialog
 
     def _do_copy(file_path):
@@ -3573,7 +3567,7 @@ def import_mod_file(game_state, on_success=None):
             lambda confirmed: _do_copy(file_path) if confirmed else None,
         )
 
-    open_file_browser(game_state, "Select Mod (.py) File", str(Path.home() / "Downloads"),
+    open_file_browser(game_state, "Select Mod (.py) File", downloads_dir(),
                       extensions=[".py"], on_result=_after_pick)
 
 def ask_directory(game_state, title, initialdir, on_result):

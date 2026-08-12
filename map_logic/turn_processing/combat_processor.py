@@ -319,7 +319,7 @@ def check_for_post_combat_captures(map_screen):
             # to prevent order-of-execution advantages in movement processing.
             eval_owner = turn_start_owner if current_owner != turn_start_owner else current_owner
             
-            if eval_owner in ["Unclaimed", "None", "Ocean", "Lakes"] or queries.are_at_war(u["owner"], eval_owner, map_screen.nation_data):
+            if eval_owner in c.OWNERLESS_OWNERS or queries.are_at_war(u["owner"], eval_owner, map_screen.nation_data):
                 valid_capturer_units.append(u)
 
         if not valid_capturer_units:

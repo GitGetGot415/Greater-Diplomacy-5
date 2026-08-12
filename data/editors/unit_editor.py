@@ -7,8 +7,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 import tkinter as tk
 from tkinter import messagebox
 import data.constants as c
-import json
 from data import queries
+from data.io.json_io import dump_compact, load_json_or_empty
 
 PATH = c.UNIT_DATA_PATH
 
@@ -49,17 +49,14 @@ class UnitEditor:
         self.refresh_list()
 
     def load_data(self):
-        if os.path.exists(PATH):
-            with open(PATH, "r") as f: return json.load(f)
-        return {}
+        return load_json_or_empty(PATH)
 
     def custom_json_dump(self, data_dict, filepath):
         """Custom dumper to keep top-level items on new lines, but inner dicts compact."""
         lines = ["{"]
         items = list(data_dict.items())
         for i, (key, val) in enumerate(items):
-            # separators=(', ', ': ') removes trailing spaces around formatting to keep it tight
-            val_str = json.dumps(val, separators=(', ', ': '))
+            val_str = dump_compact(val)
             comma = "," if i < len(items) - 1 else ""
             lines.append(f'    "{key}": {val_str}{comma}')
         lines.append("}")

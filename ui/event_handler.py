@@ -192,7 +192,7 @@ def handle_map_events(map_screen, event):
                 elif map_screen.editor_mode == "CORE":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
                         # If painting with Unclaimed, wipe the tile
-                        if map_screen.brush_nation in ["Unclaimed", "None", ""]:
+                        if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
                             edit_province_ownership.clear_cores(map_screen, map_screen.hovered_province)
                         else:
                             edit_province_ownership.add_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
@@ -200,7 +200,7 @@ def handle_map_events(map_screen, event):
                 # --- CLAIM MODE ---
                 elif map_screen.editor_mode == "CLAIM":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-                        if map_screen.brush_nation in ["Unclaimed", "None", ""]:
+                        if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
                             edit_province_ownership.clear_claims(map_screen, map_screen.hovered_province)
                         else:
                             edit_province_ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)

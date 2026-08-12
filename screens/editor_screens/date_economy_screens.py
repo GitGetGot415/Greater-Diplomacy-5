@@ -6,7 +6,6 @@ from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import Button, TextField, make_back_button
 from ui import confirm_dialog
-from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
 
 # ==========================================
@@ -15,10 +14,13 @@ from ui.screen_runner import _run_pygame_sub_screen
 
 class Editor_Date_Screen(MapOverlayScreen):
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_TITLE = "Set Start Date"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 440, 420))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
 
         tm = map_screen.time_manager
@@ -82,8 +84,7 @@ class Editor_Date_Screen(MapOverlayScreen):
         self.done = True
 
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 40), border_color=(255, 152, 0), border_width=2)
-        ui_bars.draw_centered_title(surface, "Set Start Date", self.panel_rect.y + 20, "heading2")
+        self.draw_panel(surface)
 
 # ==========================================
 # STARTING ECONOMY EDITOR
@@ -91,10 +92,12 @@ class Editor_Date_Screen(MapOverlayScreen):
 
 class Starting_Economy_Edit_Screen(MapOverlayScreen):
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 360))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.country_id = country_id
 
@@ -129,17 +132,22 @@ class Starting_Economy_Edit_Screen(MapOverlayScreen):
             self.map_screen.show_feedback(f"Saved economy for {self.country_id}")
         self.done = True
 
+    def get_panel_title(self):
+        return f"{self.country_id} Economy"
+
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 40, 30), border_color=(33, 150, 243), border_width=2)
-        ui_bars.draw_centered_title(surface, f"{self.country_id} Economy", self.panel_rect.y + 20, "heading2")
+        self.draw_panel(surface)
 
 class Starting_Economy_List_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+    PANEL_TITLE = "Starting Economy Editor"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 620, 560))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
         self.refresh_ui()
@@ -185,6 +193,5 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
         confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", on_confirm)
 
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 40, 30), border_color=(76, 175, 80), border_width=2)
-        ui_bars.draw_centered_title(surface, "Starting Economy Editor", self.panel_rect.y + 20, "heading2")
+        self.draw_panel(surface)
         self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 90, self.list_view_h)

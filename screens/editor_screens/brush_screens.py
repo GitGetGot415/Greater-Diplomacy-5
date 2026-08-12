@@ -6,7 +6,6 @@ from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import Button, TextField, make_back_button
 from ui import confirm_dialog
-from ui.bars import ui_bars
 from map_logic.rendering.font_manager import fonts
 
 # ==========================================
@@ -16,10 +15,13 @@ from map_logic.rendering.font_manager import fonts
 class Convoy_Converter_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+    PANEL_TITLE = "Convert Units"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, province):
         super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.province = province
         self.unit_lib = queries.get_unit_library()
@@ -102,8 +104,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(76, 175, 80), border_width=2)
-        ui_bars.draw_centered_title(surface, "Convert Units", p.y + 20, "heading2")
+        self.draw_panel(surface)
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
 
 # ==========================================
@@ -113,10 +114,13 @@ class Convoy_Converter_Screen(MapOverlayScreen):
 class Resource_Brush_Screen(MapOverlayScreen):
     pans_camera = False
     RESOURCE_TYPES = ["Iron", "Coal", "Oil", "Wheat", "None"]
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_TITLE = "Resource Brush"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 300))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.selected_resource = "Iron"
         self.amount_field = TextField(0, 0, 150, 40, "50", numeric=True)
@@ -161,8 +165,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(35, 20, 45), border_color=(156, 39, 176), border_width=2)
-        ui_bars.draw_centered_title(surface, "Resource Brush", p.y + 20, "heading2")
+        self.draw_panel(surface)
 
         label = fonts.get("normal").render("Amount:", True, c.UI_TEXT_BRIGHT)
         surface.blit(label, label.get_rect(midright=(p.centerx - 85, p.y + 210)))
@@ -173,6 +176,10 @@ class Resource_Brush_Screen(MapOverlayScreen):
 
 class Clear_Map_Screen(MapOverlayScreen):
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
+    PANEL_TITLE = "Clear Map Items"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     OPTIONS = [
         "all units", "all buildings", "all resources",
@@ -184,7 +191,6 @@ class Clear_Map_Screen(MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 600, 420))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
 
         self.selected_option = self.OPTIONS[0]
@@ -340,5 +346,4 @@ class Clear_Map_Screen(MapOverlayScreen):
         confirm_dialog.ask_yes_no("Confirm Clear", msg, on_confirm)
 
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 20, 20), border_color=(244, 67, 54), border_width=2)
-        ui_bars.draw_centered_title(surface, "Clear Map Items", self.panel_rect.y + 20, "heading2")
+        self.draw_panel(surface)

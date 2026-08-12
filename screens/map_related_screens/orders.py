@@ -177,7 +177,7 @@ class Orders_Screen(GameState):
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
 
         self.scroll_content_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+        row_guard = self.content_hover_guard()
 
         # --- Select All & Clear Orders Buttons ---
         if player_units:

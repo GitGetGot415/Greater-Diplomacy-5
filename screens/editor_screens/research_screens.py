@@ -19,10 +19,12 @@ class Research_Edit_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     ROW_HEIGHT = 36
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, screen_title, base_data, tech_tree, on_save):
         super().__init__(map_screen, pygame.Rect(0, 0, 640, c.SCREEN_HEIGHT - 100))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.screen_title = screen_title
         self.tech_tree = tech_tree
@@ -44,16 +46,15 @@ class Research_Edit_Screen(MapOverlayScreen):
         self.tech_state[tech] = ("checkbox", not self.tech_state[tech][1])
         self.refresh_ui()
 
-    def _sync_entries(self):
-        """Pulls live text out of on-screen entry fields before they get rebuilt or saved."""
-        for el in self.elements:
-            tech = getattr(el, "tech_key", None)
-            if tech is not None:
-                _, _, max_lvl = self.tech_state[tech]
-                self.tech_state[tech] = ("entry", el.text, max_lvl)
+    def _store_entry(self, tech, text):
+        """Writes one field's text back. The state is a tuple rather than a
+        plain dict slot, so the fields tag themselves with entry_apply and
+        GameState.sync_entries routes through here."""
+        _, _, max_lvl = self.tech_state[tech]
+        self.tech_state[tech] = ("entry", text, max_lvl)
 
     def refresh_ui(self):
-        self._sync_entries()
+        self.sync_entries()
         p = self.panel_rect
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
@@ -78,7 +79,7 @@ class Research_Edit_Screen(MapOverlayScreen):
             else:
                 _, text, _max_lvl = kind
                 field = TextField(p.right - 160, y, 100, 30, text, numeric=True)
-                field.tech_key = tech
+                field.entry_apply = lambda text, t=tech: self._store_entry(t, text)
                 field.is_scrollable = True
                 field.click_guard = self.scroll_click_guard
                 self.elements.append(field)
@@ -86,7 +87,7 @@ class Research_Edit_Screen(MapOverlayScreen):
         self.list_view_h = view_h
 
     def save(self):
-        self._sync_entries()
+        self.sync_entries()
         new_data = {}
         for tech, state in self.tech_state.items():
             if state[0] == "checkbox":
@@ -101,10 +102,12 @@ class Research_Edit_Screen(MapOverlayScreen):
         self.on_save(new_data)
         self.done = True
 
+    def get_panel_title(self):
+        return self.screen_title
+
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(255, 152, 0), border_width=2)
-        ui_bars.draw_centered_title(surface, self.screen_title, p.y + 15, "heading2")
+        self.draw_panel(surface)
 
         font = fonts.get("normal")
         small_font = fonts.get("small")
@@ -130,10 +133,13 @@ class Research_Edit_Screen(MapOverlayScreen):
 class Research_List_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_TITLE = "Map Research Editor"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 500, c.SCREEN_HEIGHT - 120))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
         self.default_research = self._get_default_research()
@@ -279,6 +285,5 @@ class Research_List_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(255, 152, 0), border_width=2)
-        ui_bars.draw_centered_title(surface, "Map Research Editor", p.y + 20, "heading2")
+        self.draw_panel(surface)
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 170, self.list_view_h)

@@ -61,14 +61,16 @@ def _import_project_modules():
 
     from data.platform import IS_WEB, restore_persisted_dir
 
-    # py2app / PyInstaller bundle fix: set working directory
+    # py2app / PyInstaller bundle fix: set working directory.
+    #
+    # mod_loader.BASE_DIR is already the answer -- it is the game folder for
+    # every build shape, worked out once with the packaging caveats spelled out
+    # in its docstring. This used to restate the same frozen/PyInstaller/py2app
+    # branch with a py2app arm written a different way (dirname(__file__)),
+    # which happens to land in the same place only because py2app leaves this
+    # script loose in Contents/Resources rather than zipping it.
     if getattr(sys, 'frozen', False):
-        if hasattr(sys, '_MEIPASS'):
-            # PyInstaller: assets are alongside the executable
-            os.chdir(os.path.dirname(sys.executable))
-        else:
-            # py2app / other
-            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        os.chdir(mod_loader.BASE_DIR)
 
     import platform
     import pygame

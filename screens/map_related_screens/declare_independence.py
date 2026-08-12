@@ -2,7 +2,6 @@ import pygame
 import copy
 from gameState import MapOverlayScreen
 import data.constants as c
-from ui.bars import ui_bars
 from ui import text_utils
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
@@ -16,6 +15,8 @@ class Declare_Independence_Screen(MapOverlayScreen):
     overlay_alpha = 200
     input_y = 200
     input_rect_x = 400
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
+    PANEL_TITLE = "Declare Independence"
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH // 2 - 350, c.SCREEN_HEIGHT // 2 - 200, 700, 420))
@@ -190,9 +191,9 @@ class Declare_Independence_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         panel_rect = self.panel_rect
-        ui_bars.draw_modal_box(surface, panel_rect, bg_color=(40, 30, 30), border_color=(255, 50, 50), border_width=3)
-        ui_bars.draw_centered_title(surface, "Declare Independence", panel_rect.y + 20)
-        
+        self.draw_panel(surface)
+
+
         font = fonts.get("normal")
         desc = [
             "Declaring independence will permanently separate",

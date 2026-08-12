@@ -5,7 +5,6 @@ import data.constants as c
 from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import Button, TextField, make_back_button
-from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
 from ui.table_screen import truncate
 from map_logic.rendering.font_manager import fonts
@@ -26,6 +25,10 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     """
     pans_camera = False
     overlay_alpha = 220
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    PANEL_TITLE = "Global Diplomacy & Factions"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     ROW_HEIGHT = 30
     NAT_W = 260
@@ -39,7 +42,6 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 1240, 660))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
 
         self.countries = sorted(queries.get_living_nations(map_screen.map_data))
@@ -261,8 +263,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(30, 30, 45), border_color=(33, 150, 243), border_width=2)
-        ui_bars.draw_centered_title(surface, "Global Diplomacy & Factions", p.y + 14, "heading2")
+        self.draw_panel(surface)
 
         small = fonts.get("small")
         surface.blit(small.render("Nations:", True, c.UI_TEXT_DIM), (self.nat_x, self.nations_top - 20))

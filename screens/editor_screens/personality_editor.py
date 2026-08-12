@@ -16,7 +16,6 @@ import data.constants as c
 from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import Button, Slider, make_back_button
-from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
 from map_logic.rendering.font_manager import fonts
 from map_logic.ai import ai_personality
@@ -33,13 +32,15 @@ TRAIT_POLES = {
 
 class Personality_Edit_Screen(MapOverlayScreen):
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     SLIDER_W = 300
     ROW_STEP = 62
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 520, 520))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.country_id = country_id
 
@@ -89,11 +90,12 @@ class Personality_Edit_Screen(MapOverlayScreen):
         self.map_screen.show_feedback(f"Saved personality for {self.country_id}")
         self.done = True
 
+    def get_panel_title(self):
+        return f"{self.country_id} Personality"
+
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(38, 30, 46),
-                               border_color=(150, 100, 250), border_width=2)
-        ui_bars.draw_centered_title(surface, f"{self.country_id} Personality", p.y + 20, "heading2")
+        self.draw_panel(surface)
 
         small = fonts.get("small")
         for name, slider in self.sliders.items():
@@ -112,10 +114,13 @@ class Personality_Edit_Screen(MapOverlayScreen):
 class Personality_List_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_TITLE = "AI Personalities"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 620, 560))
-        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
         self.back_state = "MAP"
         self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
         self.refresh_ui()
@@ -150,9 +155,7 @@ class Personality_List_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         p = self.panel_rect
-        ui_bars.draw_modal_box(surface, p, bg_color=(38, 30, 46),
-                               border_color=(150, 100, 250), border_width=2)
-        ui_bars.draw_centered_title(surface, "AI Personalities", p.y + 20, "heading2")
+        self.draw_panel(surface)
         note = fonts.get("small").render(
             "Unmarked nations use procedural traits, seeded from the scenario.",
             True, c.UI_TEXT_MUTED)

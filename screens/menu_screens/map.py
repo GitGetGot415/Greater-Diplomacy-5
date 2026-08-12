@@ -1216,7 +1216,7 @@ class Map(GameState):
             if confirm:
                 for province in self.map_data.values():
                     owner = province.get("owner", "Unclaimed")
-                    province["cores"] = [owner] if owner not in ["Unclaimed", "None", "Ocean", "Lakes"] else []
+                    province["cores"] = [owner] if owner not in c.OWNERLESS_OWNERS else []
                 self.show_feedback("Auto-assigned all cores!")
                 if self.map_mode == "CORES":
                     self.refresh_cores_map()
@@ -1464,7 +1464,7 @@ class Map(GameState):
                 del self.default_research[k]
                 updated_count += 1
                 
-        self.nation_colors = {name: tuple(stats.get("color", [150, 150, 150])) for name, stats in self.nation_data.items()}
+        self.nation_colors = country_io.nation_colors_from(self.nation_data)
         self.refresh_political_map()
         self.refresh_relations_map()
         

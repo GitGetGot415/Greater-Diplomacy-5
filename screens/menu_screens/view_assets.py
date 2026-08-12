@@ -1,14 +1,13 @@
 import pygame
 import os
 import shutil
-from pathlib import Path
 from gameState import GameState
 from ui.bars import ui_bars
 from ui import text_utils
 from ui.scroll_panes import ScrollPanes
 from ui_elements import Button, make_back_button
 from map_logic.rendering.font_manager import fonts
-from data.platform import IS_WEB, download_file
+from data.platform import IS_WEB, download_file, downloads_dir
 import data.constants as c
 
 # ==========================================
@@ -245,12 +244,12 @@ class View_Assets(ScrollPanes, GameState):
                 download_file(src)
                 self.download_status = "Downloaded"
             else:
-                downloads_dir = str(Path.home() / "Downloads")
-                os.makedirs(downloads_dir, exist_ok=True)
+                dest_dir = downloads_dir()
+                os.makedirs(dest_dir, exist_ok=True)
                 # copy() (not copy2()) so the download gets today's mtime instead of
                 # inheriting the source asset's, which can be months old and would
                 # otherwise bury it in a Downloads folder sorted by date modified.
-                shutil.copy(src, os.path.join(downloads_dir, self.current_file))
+                shutil.copy(src, os.path.join(dest_dir, self.current_file))
                 self.download_status = "Saved to Downloads"
             self.download_status_color = c.COLOR_SUCCESS_GREEN
         except Exception as e:

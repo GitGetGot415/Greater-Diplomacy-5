@@ -24,6 +24,12 @@ def get_nation_colors():
     return nation_colors_from(load_all_country_data())
 
 def get_country_stats(name):
-    """Returns the dictionary for a specific country"""
+    """Returns the dictionary for a specific country.
+
+    The fallback is DEFAULT_NATION_COLOR rather than a grey of its own: this is
+    the disk-side counterpart of nation_colors_from, and the two used to hand
+    back different shades for the same missing nation, so a rebellion coloured
+    from here came out visibly darker than the same nation everywhere else.
+    """
     data = load_all_country_data()
-    return data.get(name, {"color": [80,80,80]})
+    return data.get(name, {"color": list(DEFAULT_NATION_COLOR)})

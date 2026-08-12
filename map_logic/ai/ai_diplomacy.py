@@ -106,11 +106,9 @@ def process_proactive_llm_tasks(map_screen):
     def record_fallback(choice):
         pass    # already holds the heuristic's own pick
 
-    def count(choice):
-        map_screen.proactive_llm_tasks_completed += 1
-        map_screen.loading_status_text = (
-            f"Directing AI Nations ({map_screen.proactive_llm_tasks_completed}"
-            f"/{map_screen.proactive_llm_tasks_total})...")
+    count = ai_llm_runner.make_progress_counter(
+        map_screen, "Directing AI Nations",
+        "proactive_llm_tasks_completed", "proactive_llm_tasks_total")
 
     if jobs:
         outcome = ai_llm_runner.run_llm_batch(
@@ -248,10 +246,8 @@ def process_summits(map_screen):
         # summit that was abandoned never got that far.
         pair["transcript"] = _complete_exchanges(pair["said"])
 
-    def count(pair):
-        map_screen.summits_completed += 1
-        map_screen.loading_status_text = (
-            f"Holding Summits ({map_screen.summits_completed}/{len(pairs)})...")
+    count = ai_llm_runner.make_progress_counter(
+        map_screen, "Holding Summits", "summits_completed", len(pairs))
 
     outcome = ai_llm_runner.run_llm_batch(
         pairs, call, record, record_fallback,

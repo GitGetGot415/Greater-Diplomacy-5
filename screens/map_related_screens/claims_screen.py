@@ -9,7 +9,14 @@ from ui.screen_runner import _run_pygame_sub_screen
 
 
 class Claims_Screen(MapOverlayScreen):
+    # Docked to the left so the claimed provinces stay visible beside it.
+    CENTER_PANEL = False
     overlay_alpha = 0
+
+    # Panel list metrics, shared by the drawing pass and the scroll measurement.
+    SECTION_HEADER_H = 30
+    SECTION_ROW_H = 25
+    SECTION_GAP = 10
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(80, 120, 380, c.SCREEN_HEIGHT - 240))
@@ -206,23 +213,127 @@ class Claims_Screen(MapOverlayScreen):
         self.map_screen.show_feedback(f"Returning territory to {recipient} (1 turn).")
         self.refresh_ui()
 
+    # ------------------------------------------------------------------ #
+    #                          PANEL CONTENTS                            #
+    # ------------------------------------------------------------------ #
+
+    def _nation_label(self, tag):
+        return self.map_screen.nation_data.get(tag, {}).get("name", tag)
+
+    def _nation_color(self, tag):
+        return self.map_screen.nation_colors.get(tag, (255, 255, 255))
+
+    def _panel_sections(self):
+        """The panel's contents, as a list of (header, header colour, rows,
+        empty-state text) where each row is (text, colour).
+
+        Drawing and scroll measurement both walk this one list. They used to be
+        a drawing loop and a parallel `40 + len(...) * 25` expression sitting
+        next to each other, so the scrollbar could be sized from a height the
+        rows on screen didn't actually add up to.
+        """
+        if self.view_mode == "GLOBAL":
+            rows = [(f"- Prov {item['prov_id']} ({self._nation_label(item['nation'])})",
+                     self._nation_color(item["nation"]))
+                    for item in self.global_claims_list]
+            return [("All Map Claims:", c.COLOR_GOLD_HIGHLIGHT, rows, "No claims on the map.")]
+
+        if self.view_mode == "YOURS":
+            queued = []
+            for q in self.queue:
+                prov = self.map_screen.id_to_province.get(q["prov_id"])
+                owner = prov.get("owner", "Unknown") if prov else "Unknown"
+                queued.append((f"- Prov {q['prov_id']} ({self._nation_label(owner)}): "
+                               f"{q['turns_left']} turns left", c.UI_TEXT_LIGHT))
+
+            active = []
+            for pid in self.display_claims:
+                prov = self.map_screen.id_to_province.get(pid)
+                owner = prov.get("owner", "Unknown") if prov else "Unknown"
+
+                revoke_item = next((r for r in self.revoke_queue if r["prov_id"] == pid), None)
+                if revoke_item:
+                    status_text = f" (Revoking in {revoke_item['turns_left']})"
+                    color = (255, 100, 100)
+                elif pid in self.core_ids:
+                    status_text = " (Auto-Claimed Core)"
+                    color = (255, 150, 200)
+                else:
+                    status_text = ""
+                    color = (200, 200, 200)
+
+                active.append((f"- Prov {pid} ({self._nation_label(owner)}){status_text}", color))
+
+            return [
+                ("Queued Claims:", c.MENU_BOTTOM_TEXT_LINK_COLOR, queued, "No claims queued."),
+                ("Active Claims:", c.COLOR_GOLD_HIGHLIGHT, active, "No active claims."),
+            ]
+
+        # THEIRS: what other nations are claiming off us, justified or standing.
+        def foreign_row(item, label):
+            color = self._nation_color(item["nation"])
+            text = f"- Prov {item['prov_id']} ({self._nation_label(item['nation'])}): {label}"
+            if item["prov_id"] in self.return_ids:
+                text += " (Returning in 1 turn)"
+                color = c.COLOR_SUCCESS_GREEN
+            return text, color
+
+        justifying = [foreign_row(item, f"Actively Justifying ({item['turns']}t)")
+                      for item in self.foreign_claims_list if item["type"] == "QUEUE"]
+        standing = [foreign_row(item, "Auto-Claimed Core" if item["type"] == "CORE" else "Active Claim")
+                    for item in self.foreign_claims_list if item["type"] != "QUEUE"]
+
+        return [
+            ("Actively Justifying:", c.MENU_BOTTOM_TEXT_LINK_COLOR, justifying,
+             "No nations are actively justifying claims on you."),
+            ("Claims on You:", (255, 100, 100), standing,
+             "No foreign claims on your territory."),
+        ]
+
+    def _sections_height(self, sections):
+        """How tall _draw_section will render the whole list. Same constants,
+        so the scrollbar and the rows can never disagree."""
+        total = 0
+        for i, (_header, _color, rows, _empty) in enumerate(sections):
+            if i:
+                total += self.SECTION_GAP
+            total += self.SECTION_HEADER_H
+            total += len(rows) * self.SECTION_ROW_H if rows else self.SECTION_ROW_H
+        return total
+
+    def _draw_section(self, surface, y, section):
+        """Draws one header plus its rows (or its empty-state line). Returns the
+        y the next section starts at."""
+        header, header_color, rows, empty_text = section
+        surface.blit(fonts.get("heading2").render(header, True, header_color),
+                     (self.panel_rect.x + 20, y))
+        y += self.SECTION_HEADER_H
+
+        tiny_font = fonts.get("normal")
+        if not rows:
+            surface.blit(tiny_font.render(empty_text, True, c.UI_TEXT_MUTED),
+                         (self.panel_rect.x + 30, y))
+            return y + self.SECTION_ROW_H
+
+        for text, color in rows:
+            surface.blit(tiny_font.render(text, True, color), (self.panel_rect.x + 30, y))
+            y += self.SECTION_ROW_H
+        return y
+
     def draw_content(self, surface):
         # Draw territorial highlights (data is rebuilt in _refresh_claims_data(),
         # not here, since it only changes on claim mutations / view-mode switches)
         claims = self.claims
         queue = self.queue
-        revoke_queue = self.revoke_queue
-        return_queue = self.return_queue
         revoke_ids = self.revoke_ids
         return_ids = self.return_ids
         core_ids = self.core_ids
-        foreign_claims_list = self.foreign_claims_list
         foreign_claims_map = self.foreign_claims_map
         global_claims_list = self.global_claims_list
 
         if self.view_mode == "GLOBAL":
             for item in global_claims_list:
-                color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
+                color = self._nation_color(item["nation"])
                 overlay_renderer.draw_map_highlight(surface, self.map_screen, item["prov_id"], color, base_radius=4)
 
         elif self.view_mode == "YOURS":
@@ -243,7 +354,7 @@ class Claims_Screen(MapOverlayScreen):
         else:
             for pid, claims_on_tile in foreign_claims_map.items():
                 for i, claim_info in enumerate(claims_on_tile):
-                    color = self.map_screen.nation_colors.get(claim_info["nation"], (255, 255, 255))
+                    color = self._nation_color(claim_info["nation"])
                     is_just = (claim_info["type"] == "QUEUE")
 
                     if pid in return_ids:
@@ -256,23 +367,13 @@ class Claims_Screen(MapOverlayScreen):
                                        border_color=c.MODAL_BORDER)
 
         font = fonts.get("heading1")
-        sub_font = fonts.get("heading2")
-        tiny_font = fonts.get("normal")
-
         title = font.render("Territory Claims", True, (255, 255, 255))
         surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
 
-        display_claims = self.display_claims
-
-        if self.view_mode == "GLOBAL":
-            content_h = 40 + (len(global_claims_list) * 25 if global_claims_list else 25)
-        elif self.view_mode == "YOURS":
-            content_h = 40 + (len(queue) * 25 if queue else 25) + 40 + (len(display_claims) * 25 if display_claims else 25)
-        else:
-            content_h = 40 + (len(foreign_claims_list) * 25 if foreign_claims_list else 25)
+        sections = self._panel_sections()
 
         viewport_h = self.panel_rect.height - 95
-        self.max_scroll = min(0, viewport_h - content_h - 20)
+        self.max_scroll = min(0, viewport_h - self._sections_height(sections) - 20)
         self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
 
         clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, viewport_h)
@@ -280,116 +381,10 @@ class Claims_Screen(MapOverlayScreen):
         with ui_bars.clip_scroll_region(surface, clip_rect,
                                         draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
             y_off = self.panel_rect.y + 100 + self.scroll_y
-
-            if self.view_mode == "GLOBAL":
-                surface.blit(sub_font.render("All Map Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
-                y_off += 30
-
-                if not global_claims_list:
-                    surface.blit(tiny_font.render("No claims on the map.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
-                else:
-                    for item in global_claims_list:
-                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
-
-                        txt = tiny_font.render(f"- Prov {item['prov_id']} ({nation_name})", True, color)
-                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                        y_off += 25
-
-            elif self.view_mode == "YOURS":
-                surface.blit(sub_font.render("Queued Claims:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
-                y_off += 30
-
-                if not queue:
-                    surface.blit(tiny_font.render("No claims queued.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
-                    y_off += 25
-                else:
-                    for q in queue:
-                        prov = self.map_screen.id_to_province.get(q["prov_id"])
-                        owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                        owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-                        txt = tiny_font.render(f"- Prov {q['prov_id']} ({owner_name}): {q['turns_left']} turns left", True, c.UI_TEXT_LIGHT)
-                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                        y_off += 25
-
-                y_off += 10
-
-                surface.blit(sub_font.render("Active Claims:", True, c.COLOR_GOLD_HIGHLIGHT), (self.panel_rect.x + 20, y_off))
-                y_off += 30
-
-                if not display_claims:
-                    surface.blit(tiny_font.render("No active claims.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
-                else:
-                    for pid in display_claims:
-                        prov = self.map_screen.id_to_province.get(pid)
-                        owner = prov.get("owner", "Unknown") if prov else "Unknown"
-                        owner_name = self.map_screen.nation_data.get(owner, {}).get("name", owner)
-
-                        is_core = pid in core_ids
-                        revoke_item = next((r for r in revoke_queue if r["prov_id"] == pid), None)
-
-                        if revoke_item:
-                            status_text = f" (Revoking in {revoke_item['turns_left']})"
-                            color = (255, 100, 100)
-                        elif is_core:
-                            status_text = " (Auto-Claimed Core)"
-                            color = (255, 150, 200)
-                        else:
-                            status_text = ""
-                            color = (200, 200, 200)
-
-                        txt = tiny_font.render(f"- Prov {pid} ({owner_name}){status_text}", True, color)
-                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                        y_off += 25
-            else:
-                queued_foreign = [item for item in foreign_claims_list if item["type"] == "QUEUE"]
-                active_foreign = [item for item in foreign_claims_list if item["type"] != "QUEUE"]
-
-                surface.blit(sub_font.render("Actively Justifying:", True, c.MENU_BOTTOM_TEXT_LINK_COLOR), (self.panel_rect.x + 20, y_off))
-                y_off += 30
-
-                if not queued_foreign:
-                    surface.blit(tiny_font.render("No nations are actively justifying claims on you.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
-                    y_off += 25
-                else:
-                    for item in queued_foreign:
-                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
-
-                        txt_str = f"- Prov {item['prov_id']} ({nation_name}): Actively Justifying ({item['turns']}t)"
-                        if item["prov_id"] in return_ids:
-                            txt_str += f" (Returning in 1 turn)"
-                            color = c.COLOR_SUCCESS_GREEN
-
-                        txt = tiny_font.render(txt_str, True, color)
-                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                        y_off += 25
-
-                y_off += 10
-
-                surface.blit(sub_font.render("Claims on You:", True, (255, 100, 100)), (self.panel_rect.x + 20, y_off))
-                y_off += 30
-
-                if not active_foreign:
-                    surface.blit(tiny_font.render("No foreign claims on your territory.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
-                else:
-                    for item in active_foreign:
-                        nation_name = self.map_screen.nation_data.get(item["nation"], {}).get("name", item["nation"])
-                        color = self.map_screen.nation_colors.get(item["nation"], (255, 255, 255))
-
-                        if item["type"] == "CORE":
-                            txt_str = f"- Prov {item['prov_id']} ({nation_name}): Auto-Claimed Core"
-                        else:
-                            txt_str = f"- Prov {item['prov_id']} ({nation_name}): Active Claim"
-
-                        if item["prov_id"] in return_ids:
-                            txt_str += f" (Returning in 1 turn)"
-                            color = c.COLOR_SUCCESS_GREEN
-
-                        txt = tiny_font.render(txt_str, True, color)
-                        surface.blit(txt, (self.panel_rect.x + 30, y_off))
-                        y_off += 25
-
+            for i, section in enumerate(sections):
+                if i:
+                    y_off += self.SECTION_GAP
+                y_off = self._draw_section(surface, y_off, section)
 
         # Draws nothing when the content fits inside the box.
         self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 90,

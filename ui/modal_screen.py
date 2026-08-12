@@ -107,20 +107,6 @@ class ModalScreen(ScrollPanes, GameState):
         btn.is_selected = checked
         return btn
 
-    # -- field <-> data sync -------------------------------------------- #
-
-    def sync_entries(self):
-        """Pulls live text out of on-screen fields before they get rebuilt or saved.
-
-        A field carrying `entry_ref` (the dict it edits) and `entry_key` writes
-        itself back. Three editors each had their own version of this keyed on a
-        different marker attribute; this is the general one.
-        """
-        for el in self.elements:
-            entry = getattr(el, "entry_ref", None)
-            if entry is not None:
-                entry[el.entry_key] = el.text
-
     # -- drawing -------------------------------------------------------- #
 
     def label(self, surface, text, pos, color=c.UI_TEXT_DIM, preset="small"):

@@ -126,15 +126,17 @@ def finalize_war(map_data, nation_data, a, b):
     if fac_b and not queries.is_faction_at_war(fac_b, nation_data):
         queries.save_faction_pre_war_map(fac_b, map_data, nation_data)
 
+    # Going to war ends passage between the two, both the standing grant and any
+    # request still in flight. This used to inline the grant half only, so a
+    # REQ_MILITARY_ACCESS pending when war was declared survived it and could
+    # still be answered mid-war; the puppet and faction paths, which go through
+    # sever_military_access, always cleared both.
+    sever_military_access(nation_data, a, b)
+
     for country, other in [(a, b), (b, a)]:
         if add_enemy(nation_data, country, other):
             # NEW: Track war duration for ceasefire cooldowns
             nation_data[country].setdefault("war_durations", {})[other] = 0
-
-        # Clear military access when going to war
-        access = nation_data[country].get("military_access", [])
-        if other in access:
-            access.remove(other)
 
         # Clear faction war cooldowns so allies can be called in
         faction = nation_data[country].get("faction", "")

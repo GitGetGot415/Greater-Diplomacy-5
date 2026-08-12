@@ -169,6 +169,52 @@ def _aborted(turn_id=None):
     return FORCE_SKIP or (turn_id is not None and turn_id != CURRENT_TURN_ID)
 
 
+def _parse_reply_json(text, fallback=None):
+    """A provider's reply, parsed -- or the raw text as a plain message.
+
+    All four providers make the same promise: unparseable output is handed back
+    as something the game can still show, not thrown away as an API failure.
+    They each spelled that out separately, and Gemini's copy had drifted into
+    reporting a decode error as a failed call, which it isn't.
+
+    `fallback` formats the unparseable text (Ollama's says "JSON ERROR:" so a
+    local model's mangled output is distinguishable from a real cable).
+    """
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"message": text if fallback is None else fallback(text)}
+
+
+def _request_json(url, payload, headers, extract, turn_id=None):
+    """POSTs to an HTTP provider and unwraps its reply, or reports the failure.
+
+    The abort checks, the HTTP-status branch and the exception branch are the
+    same for every REST provider; only the endpoint, the request shape and
+    where the text sits in the response differ, so those are the arguments.
+    `extract` pulls the assistant's text out of the decoded response body.
+
+    Aborts return None at each of the three points a Force Skip can land, so a
+    request the player has walked away from never writes into the next turn.
+    """
+    if _aborted(turn_id):
+        return None
+
+    try:
+        response = _session().post(url, json=payload, headers=headers, timeout=120)
+        if _aborted(turn_id):
+            return None
+
+        if response.status_code >= 400:
+            return _provider_error(f"HTTP ERROR {response.status_code}: {response.text}")
+
+        return _parse_reply_json(extract(response.json()))
+    except Exception as e:
+        if _aborted(turn_id):
+            return None
+        return _provider_error(f"API ERROR: {str(e)}")
+
+
 #: ChatGPT, DeepSeek, and Kimi (Moonshot) all speak the same OpenAI-style chat
 #: completions REST API, so one caller and this lookup of
 #: (endpoint, api key getter, model getter) covers all three instead of writing
@@ -182,9 +228,6 @@ OPENAI_COMPATIBLE_PROVIDERS = {
 
 def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn_id=None):
     """Hits an OpenAI-style /chat/completions endpoint (DeepSeek, Moonshot/Kimi)."""
-    if _aborted(turn_id):
-        return None
-
     payload = {
         "model": model,
         "messages": [
@@ -195,31 +238,14 @@ def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn
     }
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
-    try:
-        response = _session().post(url, json=payload, headers=headers, timeout=120)
-        if _aborted(turn_id):
-            return None
-
-        if response.status_code >= 400:
-            return _provider_error(f"HTTP ERROR {response.status_code}: {response.text}")
-
-        content = response.json()["choices"][0]["message"]["content"]
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            return {"message": content}
-    except Exception as e:
-        if _aborted(turn_id):
-            return None
-        return _provider_error(f"API ERROR: {str(e)}")
+    return _request_json(url, payload, headers,
+                         lambda body: body["choices"][0]["message"]["content"],
+                         turn_id)
 
 
 def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
     """Hits Anthropic's Messages API, which uses its own auth headers and
     request/response shape rather than the OpenAI-style ones above."""
-    if _aborted(turn_id):
-        return None
-
     payload = {
         "model": model,
         "max_tokens": 1024,
@@ -232,23 +258,9 @@ def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
         "anthropic-version": c.CLAUDE_API_VERSION,
     }
 
-    try:
-        response = _session().post(c.CLAUDE_API_URL, json=payload, headers=headers, timeout=120)
-        if _aborted(turn_id):
-            return None
-
-        if response.status_code >= 400:
-            return _provider_error(f"HTTP ERROR {response.status_code}: {response.text}")
-
-        content = response.json()["content"][0]["text"]
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            return {"message": content}
-    except Exception as e:
-        if _aborted(turn_id):
-            return None
-        return _provider_error(f"API ERROR: {str(e)}")
+    return _request_json(c.CLAUDE_API_URL, payload, headers,
+                         lambda body: body["content"][0]["text"],
+                         turn_id)
 
 
 def call_gemini(system_prompt, user_prompt, turn_id=None):
@@ -272,14 +284,7 @@ def call_gemini(system_prompt, user_prompt, turn_id=None):
         if _aborted(turn_id):
             return None
 
-        try:
-            return json.loads(response.text)
-        except json.JSONDecodeError:
-            # The other three providers hand back unparseable output as the
-            # message rather than throwing it away; this one used to let the
-            # decode error fall into the handler below and report itself as an
-            # API failure, which it isn't.
-            return {"message": response.text}
+        return _parse_reply_json(response.text)
     except Exception as e:
         if _aborted(turn_id):
             return None
@@ -451,11 +456,9 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
                 chunk = json.loads(line_str)
                 full_text += chunk.get("message", {}).get("content", "")
 
-        # Parse the final reconstructed string
-        try:
-            return json.loads(full_text)
-        except json.JSONDecodeError:
-            return {"message": f"JSON ERROR: {full_text}"} # Fallback if it fails strict parsing
+        # Parse the final reconstructed string. Its fallback is prefixed so a
+        # local model's mangled output reads as such, not as a diplomatic cable.
+        return _parse_reply_json(full_text, lambda t: f"JSON ERROR: {t}")
 
     except Exception as e:
         # If the connection was forcefully closed by the skip button, fail silently

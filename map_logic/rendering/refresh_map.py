@@ -165,26 +165,38 @@ def _build_map_surface(map_screen, get_owner_and_color):
     
     return new_surf
 
+#: Colour for a tile nobody owns, in every map mode that draws one.
+UNOWNED_COLOR = (255, 255, 255)
+
+
+def _refresh_mode(map_screen, label, attr, mode, get_data):
+    """Builds one map-mode surface, stores it, and swaps it in if it's showing.
+
+    Every refresh_*_map function below wrapped its own get_data in this same
+    four steps -- time it, build it, `if map_screen.map_mode == "...":
+    active_map = ...`, print the timing -- with only the attribute and the mode
+    string changing, so adding a mode meant copying the wrapper again and
+    remembering to change both strings.
+    """
+    timer = pygame.time.get_ticks()
+    surface = _build_map_surface(map_screen, get_data)
+    setattr(map_screen, attr, surface)
+    if map_screen.map_mode == mode:
+        map_screen.active_map = surface
+    print(f"{label} map refreshed in {pygame.time.get_ticks() - timer} ms")
+    return surface
+
+
 def refresh_political_map(map_screen):
     """Rebuilds the entire political map surface instantly using a NumPy LUT."""
-    timer = pygame.time.get_ticks()
-    
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        color = map_screen.nation_colors.get(owner, (255, 255, 255))
-        return owner, color
-        
-    map_screen.political_map = _build_map_surface(map_screen, get_data)
-    
-    if map_screen.map_mode == "POLITICAL":
-        map_screen.active_map = map_screen.political_map
-        
-    print(f"Political map refreshed in {pygame.time.get_ticks() - timer} ms")
+        return owner, map_screen.nation_colors.get(owner, UNOWNED_COLOR)
+
+    _refresh_mode(map_screen, "Political", "political_map", "POLITICAL", get_data)
 
 def refresh_relations_map(map_screen):
     """Rebuilds the relations map surface instantly using a NumPy LUT."""
-    timer = pygame.time.get_ticks()
-    
     # Scoring a pair walks every province to tally claims, and the answer only
     # depends on who owns the tile -- so resolve it once per nation, not once
     # per tile.
@@ -194,8 +206,8 @@ def refresh_relations_map(map_screen):
         owner = data.get("owner", "Unclaimed")
         color = color_by_owner.get(owner)
         if color is None:
-            if owner in ["Unclaimed", "None", ""]:
-                color = (255, 255, 255)
+            if owner in c.UNOWNED_LAND_OWNERS:
+                color = UNOWNED_COLOR
             elif owner == map_screen.player_country:
                 color = (0, 0, 255)
             else:
@@ -204,25 +216,18 @@ def refresh_relations_map(map_screen):
             color_by_owner[owner] = color
         return owner, color
 
-    map_screen.relations_map = _build_map_surface(map_screen, get_data)
-    
-    if map_screen.map_mode == "RELATIONS":
-        map_screen.active_map = map_screen.relations_map
-        
-    print(f"Relations map refreshed in {pygame.time.get_ticks() - timer} ms")
+    _refresh_mode(map_screen, "Relations", "relations_map", "RELATIONS", get_data)
 
 def refresh_cores_map(map_screen):
     """Rebuilds the cores map surface instantly using a NumPy LUT."""
-    timer = pygame.time.get_ticks()
-    
     def get_data(data):
         cores = data.get("cores", [])
         if not cores:
             owner = "Unclaimed"
-            color = map_screen.nation_colors.get(owner, (255, 255, 255))
+            color = map_screen.nation_colors.get(owner, UNOWNED_COLOR)
         elif len(cores) == 1:
             owner = cores[0]
-            color = map_screen.nation_colors.get(owner, (255, 255, 255))
+            color = map_screen.nation_colors.get(owner, UNOWNED_COLOR)
         else:
             owner = ",".join(sorted(cores)) 
             r = g = b = valid = 0
@@ -230,19 +235,13 @@ def refresh_cores_map(map_screen):
                 c_color = map_screen.nation_colors.get(core_name)
                 if c_color:
                     r += c_color[0]; g += c_color[1]; b += c_color[2]; valid += 1
-            color = (r // valid, g // valid, b // valid) if valid > 0 else (255, 255, 255)
+            color = (r // valid, g // valid, b // valid) if valid > 0 else UNOWNED_COLOR
         return owner, color
-        
-    map_screen.cores_map = _build_map_surface(map_screen, get_data)
-    
-    if map_screen.map_mode == "CORES":
-        map_screen.active_map = map_screen.cores_map
-        
-    print(f"Cores map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+    _refresh_mode(map_screen, "Cores", "cores_map", "CORES", get_data)
 
 def refresh_factions_map(map_screen):
     """Rebuilds the factions map surface instantly using a NumPy LUT."""
-    timer = pygame.time.get_ticks()
     faction_colors = {}
     
     def get_faction_color(fac_name):
@@ -253,8 +252,8 @@ def refresh_factions_map(map_screen):
         owner = data.get("owner", "Unclaimed")
         fac = map_screen.nation_data.get(owner, {}).get("faction", "")
         
-        if owner in ["Unclaimed", "None", ""]:
-            color = (255, 255, 255)
+        if owner in c.UNOWNED_LAND_OWNERS:
+            color = UNOWNED_COLOR
         elif not fac:
             color = (150, 150, 150) # Neutral grey for non-faction countries
         else:
@@ -266,17 +265,10 @@ def refresh_factions_map(map_screen):
             color = faction_colors[fac]
         return owner, color
         
-    map_screen.factions_map = _build_map_surface(map_screen, get_data)
-    
-    if map_screen.map_mode == "FACTIONS":
-        map_screen.active_map = map_screen.factions_map
-        
-    print(f"Factions map refreshed in {pygame.time.get_ticks() - timer} ms")
+    _refresh_mode(map_screen, "Factions", "factions_map", "FACTIONS", get_data)
 
 def refresh_faction_territories_map(map_screen):
     """Rebuilds the map showing pre-war faction borders, or current borders if at peace."""
-    timer = pygame.time.get_ticks()
-    
     player_fac = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
     members = queries.get_faction_members(player_fac, map_screen.nation_data) if player_fac else []
     pre_war_map = map_screen.nation_data.get("FACTION_WAR_MAPS", {}).get(player_fac, {})
@@ -288,29 +280,25 @@ def refresh_faction_territories_map(map_screen):
         if is_at_war:
             if str(data["id"]) in pre_war_map:
                 owner = pre_war_map[str(data["id"])]
-                color = map_screen.nation_colors.get(owner, (255, 255, 255))
+                color = map_screen.nation_colors.get(owner, UNOWNED_COLOR)
             else:
                 if curr_owner in members:
                     possible_cores = [c for c in data.get("cores", []) if c not in members]
                     owner = possible_cores[0] if possible_cores else "Unclaimed"
                 else:
                     owner = curr_owner
-                color = (255, 255, 255) if owner in ["Unclaimed", "None", ""] else (100, 100, 100)
+                color = UNOWNED_COLOR if owner in c.UNOWNED_LAND_OWNERS else (100, 100, 100)
         else:
             owner = curr_owner
             if owner in members:
-                color = map_screen.nation_colors.get(owner, (255, 255, 255))
+                color = map_screen.nation_colors.get(owner, UNOWNED_COLOR)
             else:
-                color = (255, 255, 255) if owner in ["Unclaimed", "None", ""] else (100, 100, 100)
-                
+                color = UNOWNED_COLOR if owner in c.UNOWNED_LAND_OWNERS else (100, 100, 100)
+
         return owner, color
-        
-    map_screen.faction_territories_map = _build_map_surface(map_screen, get_data)
-    
-    if map_screen.map_mode == "FACTION_TERRITORIES":
-        map_screen.active_map = map_screen.faction_territories_map
-        
-    print(f"Faction Territories map refreshed in {pygame.time.get_ticks() - timer} ms")
+
+    _refresh_mode(map_screen, "Faction Territories", "faction_territories_map",
+                  "FACTION_TERRITORIES", get_data)
 
 def refresh_fog_map(map_screen):
     """Builds a semi-transparent fog surface to darken unseen provinces."""

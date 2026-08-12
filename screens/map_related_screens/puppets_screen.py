@@ -13,6 +13,8 @@ class Puppets_Screen(MapOverlayScreen):
     # The panel covers most of the screen, so the wheel always drives the list.
     scroll_anywhere = True
     pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    PANEL_TITLE = "Your Subjects"
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200))
@@ -31,7 +33,7 @@ class Puppets_Screen(MapOverlayScreen):
 
         self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90,
                                                self.panel_rect.width - 10, self.panel_rect.height - 100)
-        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+        row_guard = self.content_hover_guard()
 
         y_pos = self.panel_rect.y + 100 + self.scroll_y
         for idx, p in enumerate(puppets):
@@ -123,8 +125,7 @@ class Puppets_Screen(MapOverlayScreen):
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def draw_content(self, surface):
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2)
-        ui_bars.draw_centered_title(surface, "Your Subjects", self.panel_rect.y + 15)
+        self.draw_panel(surface)
 
         font_body = fonts.get("heading2")
 
@@ -182,6 +183,11 @@ class Puppets_Screen(MapOverlayScreen):
 
 class Create_Integrated_Puppet_Screen(MapOverlayScreen):
     overlay_alpha = 0
+    # Docked to the left so the cores being carved out stay visible, and
+    # translucent for the same reason.
+    CENTER_PANEL = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO_OVER_MAP
+    PANEL_TITLE = "Create Integrated Puppet"
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240))
@@ -212,7 +218,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
 
         self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 110,
                                                self.panel_rect.width - 10, self.panel_rect.height - 120)
-        row_guard = lambda rect=self.scroll_content_rect: rect.collidepoint(pygame.mouse.get_pos())
+        row_guard = self.content_hover_guard()
 
         queue = self.map_screen.nation_data.get(self.player, {}).get("release_puppet_queue", [])
         queued_cores = [q["core_nation"] for q in queue]
@@ -297,8 +303,7 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                         overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], color_map[qc], base_radius=10)
                         break
 
-        ui_bars.draw_modal_box(surface, self.panel_rect, bg_color=(30, 30, 50, 230), border_color=(100, 150, 255), border_width=2)
-        ui_bars.draw_centered_title(surface, "Create Integrated Puppet", self.panel_rect.y + 10)
+        self.draw_panel(surface)
 
         tiny_font = fonts.get("normal")
 
