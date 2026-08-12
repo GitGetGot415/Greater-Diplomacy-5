@@ -139,6 +139,10 @@ max_length=(insert number here) (vscode search)
 idk:
 - FOR SOME REASON UNITS THAT ARE FAST CAN BE QUEUED TO MOVE SLOW?????
 - GROUP UP UNITS IF YOU ZOOM OUT!!! (make this a togglable setting please)
+  (this is now a readability idea only -- the frame cost of drawing every unit
+  box zoomed out is dealt with, see the /rendering note in general_info.txt.
+  443ms a frame on a late-game army, 15ms now, so grouping is worth doing if
+  the map looks cluttered and worth nothing if it does not)
 - refresh issues need to be fixed (WHAT REFRESH ISSUES???)
 - 55815440+GitGetGot415@users.noreply.github.com
 

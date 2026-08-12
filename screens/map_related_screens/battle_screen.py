@@ -151,11 +151,40 @@ class Battle_Screen(ModalScreen):
         """Whether this particular unit takes orders from the player."""
         return any(u is unit for u in self.my_units())
 
+    def seated(self):
+        """ids of every unit holding a front slot in any lane on this tile."""
+        return {id(u) for lane in self.battle.lanes
+                for side in (lane.a, lane.b) for u in side.front}
+
     def bench(self):
         """Our units in no front rank anywhere -- the pool a lane draws from."""
-        seated = {id(u) for lane in self.battle.lanes
-                  for side in (lane.a, lane.b) for u in side.front}
+        seated = self.seated()
         return [u for u in self.my_units() if id(u) not in seated]
+
+    def side_bench(self, side):
+        """The whole side's reserves: ours first, then everyone else's here.
+
+        An ally's reserves are not the player's to move, and their rows say so
+        by being dead. They are still the most important thing on the column:
+        they are what steps into the front rank as it dies, so a side that looks
+        outnumbered three to six may be nothing of the kind. Showing only our
+        own made every fight look like we were holding it alone.
+
+        "Everyone else" includes our own nation's other divisions in tactical
+        mode, where the player commands one of them and the rest are the host's
+        -- the same units the front column already lists without giving away.
+        """
+        seated = self.seated()
+        mine = self.bench()
+        commanded = {id(u) for u in mine}
+
+        rest = [u for u in self.province.get("units", [])
+                if u.get("owner") in side.nations
+                and id(u) not in seated and id(u) not in commanded]
+        # Grouped by nation so the flags read as blocks; sorted() is stable, so
+        # within a nation they keep the order they stand in on the tile.
+        rest.sort(key=lambda u: side.nations.index(u.get("owner")))
+        return mine + rest
 
     # ------------------------------------------------------------------ #
     #                              COMMANDS                              #
@@ -240,10 +269,15 @@ class Battle_Screen(ModalScreen):
         self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
         self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
 
-        # The reserve column is the player's own bench when they are in this
-        # fight, and both sides' reserves when they are only watching.
-        if self.is_mine(near) or self.is_mine(far):
-            self._unit_rows(PANE_RESERVE, self.bench(), lane, editable=True, is_bench=True)
+        # The reserve column is our side's bench when we are in this fight --
+        # ours to move, our allies' to count -- and both sides' when we are only
+        # watching.
+        if self.is_mine(near):
+            self._unit_rows(PANE_RESERVE, self.side_bench(near), lane,
+                            editable=True, is_bench=True)
+        elif self.is_mine(far):
+            self._unit_rows(PANE_RESERVE, self.side_bench(far), lane,
+                            editable=True, is_bench=True)
         else:
             self._unit_rows(PANE_RESERVE, list(near.reserve) + list(far.reserve),
                             lane, editable=False)
@@ -432,10 +466,15 @@ class Battle_Screen(ModalScreen):
         far_label = "ENEMY SIDE" if self.is_mine(near) else side_name(far).upper()
         if self.map_screen.tactical_mode and self.is_mine(near):
             near_label = "YOUR SIDE (tactical: one division is yours)"
-        if self.is_mine(near) or self.is_mine(far):
-            reserve_label = f"YOUR RESERVE ({len(self.bench())})"
-        else:
+        our_side = near if self.is_mine(near) else (far if self.is_mine(far) else None)
+        if our_side is None:
             reserve_label = f"RESERVES ({len(near.reserve) + len(far.reserve)})"
+        else:
+            ours = len(self.bench())
+            allied = len(self.side_bench(our_side)) - ours
+            reserve_label = f"YOUR RESERVE ({ours})"
+            if allied:
+                reserve_label = f"SIDE RESERVE ({ours} yours / {allied} allied)"
 
         headings = (
             (PANE_FRONT, f"{near_label} ({len(near.front)}/{lane.slots})"),

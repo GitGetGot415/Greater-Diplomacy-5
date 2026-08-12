@@ -227,6 +227,74 @@ class PeacetimeMilitiaTests(unittest.TestCase):
         self.assertEqual(theirs["order"]["type"], "MOVE")
 
 
+class TacticalPlayerTests(unittest.TestCase):
+    """A tactical-mode player's own division is not the host's to scrap.
+
+    In tactical mode the player commands one unit and the AI is handed the
+    country around them on purpose (get_active_ai_nations empties the human
+    player list), so both passes here are the host deciding what to do with the
+    player's unit. From the player's side it would look like their division
+    simply vanished.
+    """
+
+    def militia(self, owner="Avaria"):
+        return {"type": "Militia I", "owner": owner, "health": 400,
+                "order": {"type": "MOVE", "path": []}}
+
+    def tactical(self, screen, unit):
+        screen.tactical_mode = True
+        screen.player_unit = unit
+        return screen
+
+    def cull(self, screen, provs):
+        ai_construction._disband_worst_unit_if_deficit(
+            screen, screen.nation_data["Avaria"],
+            [p for p in provs if p["owner"] == "Avaria"], "Avaria",
+            ["cost_fuel"], LIBRARY, {})
+        return [u for p in provs for u in p["units"]
+                if u.get("order", {}).get("type") == "DISBAND"]
+
+    def test_the_deficit_cull_gives_up_the_next_unit_instead(self):
+        """Skipped at selection rather than refused at the end, so the host
+        still balances its books -- it just gives up somebody else."""
+        me, spare = unit("Scout Car"), unit("Scout Car")
+        provs = [province(1, [me, spare])]
+
+        scrapped = self.cull(self.tactical(Screen(provs), me), provs)
+
+        self.assertEqual(scrapped, [spare])
+
+    def test_nothing_goes_when_the_player_is_the_only_candidate(self):
+        me = unit("Scout Car")
+        provs = [province(1, [me])]
+
+        self.assertEqual(self.cull(self.tactical(Screen(provs), me), provs), [])
+
+    def test_a_player_playing_as_militia_is_not_stood_down_at_peace(self):
+        me, spare = self.militia(), self.militia()
+
+        ai_construction._disband_peacetime_militia(
+            "Avaria", [province(1, [me, spare])], at_war=False, protected=me)
+
+        self.assertEqual(me["order"]["type"], "MOVE")
+        self.assertEqual(spare["order"]["type"], "DISBAND")
+
+    def test_strategic_mode_protects_nobody(self):
+        """player_unit outlives tactical mode -- declaring independence turns
+        the mode off and leaves the attribute set. It is the mode that decides."""
+        me = unit("Scout Car")
+        provs = [province(1, [me])]
+        screen = Screen(provs)
+        screen.tactical_mode = False
+        screen.player_unit = me
+
+        self.assertEqual(self.cull(screen, provs), [me])
+
+    def test_a_screen_with_no_tactical_mode_at_all_is_survivable(self):
+        """The editor's map tools build screens without either attribute."""
+        self.assertIsNone(ai_construction.tactical_player_unit(Screen([province(1, [])])))
+
+
 class FuelGuardTests(unittest.TestCase):
     """upk_fuel was accumulated by the purchase loop and never once read.
 

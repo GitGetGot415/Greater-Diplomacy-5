@@ -187,6 +187,112 @@ class LaneOrderTests(BattleScreenTestCase):
             self.assertEqual(unit["owner"], self.a)
 
 
+class SideReserveTests(BattleScreenTestCase):
+    """The reserve column is the side's, not just ours.
+
+    An ally's reserves are what steps into the front rank as it dies, so a side
+    that reads three against six may be nothing of the kind. Listing only our own
+    made every fight look like we were holding it alone.
+    """
+
+    def our_side(self, screen):
+        _lane, near, _far = screen.current()
+        return near
+
+    def rows(self, screen):
+        return [el for el in screen.elements
+                if getattr(el, "pane", None) == battle_screen.PANE_RESERVE]
+
+    def test_our_ally_s_reserves_are_listed_beside_ours(self):
+        screen = self.screen()
+
+        owners = {u["owner"] for u in screen.side_bench(self.our_side(screen))}
+
+        self.assertIn(self.a, owners)
+        self.assertIn(self.b, owners)
+
+    def test_ours_come_first(self):
+        """The rows a player can actually act on are the ones at the top."""
+        screen = self.screen()
+        bench = screen.side_bench(self.our_side(screen))
+
+        self.assertEqual([u["owner"] for u in bench[:len(screen.bench())]],
+                         [self.a] * len(screen.bench()))
+
+    def test_nobody_from_the_other_side_is_on_it(self):
+        screen = self.screen()
+        _lane, _near, far = screen.current()
+
+        owners = {u["owner"] for u in screen.side_bench(self.our_side(screen))}
+
+        self.assertFalse(owners & set(far.nations))
+
+    def test_a_unit_already_fighting_is_not_in_reserve(self):
+        screen = self.screen()
+        seated = screen.seated()
+
+        for unit in screen.side_bench(self.our_side(screen)):
+            self.assertNotIn(id(unit), seated)
+
+    def test_an_ally_s_row_is_dead(self):
+        """They are not ours to move -- the whole reason they can be shown."""
+        screen = self.screen()
+        theirs = {id(u) for u in screen.side_bench(self.our_side(screen))
+                  if u["owner"] != self.a}
+
+        self.assertTrue(theirs)
+        for rect, (unit, _note) in screen.row_paint[battle_screen.PANE_RESERVE]:
+            if id(unit) in theirs:
+                row = next(el for el in self.rows(screen) if el.rect == rect)
+                self.assertTrue(getattr(row, "disabled", False))
+
+    def test_our_own_rows_still_send_units_to_the_lane(self):
+        screen = self.screen()
+        editable = [el for el in self.rows(screen) if not getattr(el, "disabled", False)]
+
+        self.assertEqual(len(editable), len(screen.bench()))
+
+    def test_the_heading_counts_both(self):
+        screen = self.screen()
+        screen.draw(self.surface)
+
+        allied = len(screen.side_bench(self.our_side(screen))) - len(screen.bench())
+        self.assertTrue(allied)
+
+    def test_in_tactical_mode_the_rest_of_the_host_country_shows_too(self):
+        """One division is the player's; the other four are their host's, and
+        the front column already lists them without giving anything away."""
+        resting = self.screen().seated()
+        self.map.tactical_mode = True
+        self.map.player_unit = next(u for u in self.province["units"]
+                                    if u["owner"] == self.a and id(u) not in resting)
+        self.addCleanup(setattr, self.map, "tactical_mode", False)
+        self.addCleanup(setattr, self.map, "player_unit", None)
+
+        screen = self.screen()
+        bench = screen.side_bench(self.our_side(screen))
+
+        self.assertEqual([u for u in bench if screen.can_command(u)],
+                         [self.map.player_unit])
+        self.assertGreater(len([u for u in bench if u["owner"] == self.a]), 1)
+
+    def test_an_observer_still_sees_both_sides(self):
+        """Unchanged: a fight you are in shows your side's bench, one you are
+        only watching shows everybody's."""
+        self.map.player_country = next(
+            n for n in self.map.nation_data
+            if queries.is_playable(n, self.map.nation_data)
+            and n not in (self.a, self.b, self.x, self.y))
+        self.addCleanup(setattr, self.map, "player_country", self.a)
+
+        screen = self.screen()
+        _lane, near, far = screen.current()
+        listed = {id(u) for _rect, (u, _note)
+                  in screen.row_paint[battle_screen.PANE_RESERVE]}
+
+        self.assertEqual(listed, {id(u) for u in list(near.reserve) + list(far.reserve)})
+
+
 class ObserverTests(BattleScreenTestCase):
     """A battle you are not in is still worth reading."""
 

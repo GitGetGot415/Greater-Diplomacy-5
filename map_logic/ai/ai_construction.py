@@ -44,7 +44,25 @@ def _deficit_list(upkeep, income, targets):
     return over
 
 
-def _disband_peacetime_militia(ai_name, my_provs, at_war):
+def tactical_player_unit(map_screen):
+    """The division a tactical-mode player *is*, or None.
+
+    Their host country is run by the AI on purpose -- get_active_ai_nations
+    empties the human player list in tactical mode so the country still makes
+    its own strategy -- which means the two passes below are the AI deciding
+    what to do with the player's own unit. Standing down peacetime militia or
+    culling for a deficit would delete the player out of their own game, and
+    from their side it looks like the unit simply vanished.
+
+    Both passes skip it at selection rather than refusing to disband at the end,
+    so the host still balances its books; it just gives up the next unit along.
+    """
+    if not getattr(map_screen, "tactical_mode", False):
+        return None
+    return getattr(map_screen, "player_unit", None)
+
+
+def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None):
     """Militia are for wars. At peace, stand them down.
 
     Runs after the purchase loop rather than before it, and skips any type on
@@ -52,6 +70,9 @@ def _disband_peacetime_militia(ai_name, my_provs, at_war):
     own valuation rates them worth buying -- so from the other side of the pass
     this rule was scrapping militia the nation had just paid for. Reading the
     queue beforehand would have read last turn's.
+
+    `protected` is the tactical player's own unit, which is never given up --
+    playing as a militiaman at peace would otherwise end the game a turn in.
     """
     if at_war:
         return
@@ -60,6 +81,7 @@ def _disband_peacetime_militia(ai_name, my_provs, at_war):
     for prov in my_provs:
         for u in prov.get("units", []):
             if (u.get("owner") == ai_name
+                    and u is not protected
                     and queries.get_base_unit_name(u.get("type", "")) == "Militia"
                     and u.get("type", "") not in on_order
                     and u.get("order", {}).get("type") != "DISBAND"):
@@ -208,11 +230,14 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
         losing the war costs more than the deficit does.
       - delete a type this nation is currently producing. Whatever the scores
         say, paying for a unit and scrapping its twin in one turn is incoherent.
+      - delete the unit a tactical-mode player is playing as. See
+        tactical_player_unit.
     """
     if not deficits:
         return
 
     values = values or {}
+    protected = tactical_player_unit(map_screen)
     on_order = {q.get("unit_type") for prov in my_provs
                 for q in prov.get("unit_queue", []) if q.get("unit_type")}
 
@@ -222,6 +247,8 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
             continue
         for u in prov.get("units", []):
             if u.get("owner") != ai_name or u.get("order", {}).get("type") == "DISBAND":
+                continue
+            if u is protected:
                 continue
             u_type = u.get("type", "")
             if u_type in on_order:
@@ -796,7 +823,8 @@ def process_ai_economy_decisions(map_screen):
         _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state)
 
         # After the purchases, so it can see what was actually ordered.
-        _disband_peacetime_militia(ai_name, my_provs, state["at_war"])
+        _disband_peacetime_militia(ai_name, my_provs, state["at_war"],
+                                   protected=tactical_player_unit(map_screen))
 
         # --- AI CORING PRIORITY ---
         _apply_coring_priority(map_screen, ai_name, data, my_provs)

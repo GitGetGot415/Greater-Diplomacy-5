@@ -103,10 +103,30 @@ class DiplomaticPopup:
 
 
 def spawn_popups_for_player(map_screen):
+    """Raises an alert for every unseen diplomatic message in the player's inbox.
+
+    Nobody it is not addressed to gets one. A spectator has no diplomacy of
+    their own, and neither does a tactical-mode player: their country is run by
+    the AI, every screen the alert would send them to is read-only for them, and
+    the inbox it is announcing belongs to their host rather than to them.
+
+    The messages are still marked shown. Declaring independence turns tactical
+    mode off mid-game, and a player who has just founded a country should not be
+    handed a stack of alerts about treaties their old host signed.
+    """
     if not hasattr(map_screen, 'diplomatic_popups'):
         map_screen.diplomatic_popups = []
 
     if map_screen.player_country in ["None", "Spectator", "Editor"]:
+        return
+
+    if getattr(map_screen, 'tactical_mode', False):
+        # Runs every frame the player is in control, so this also takes down any
+        # alert that was already up when the mode changed.
+        map_screen.diplomatic_popups = []
+        for msg in map_screen.nation_data.get(map_screen.player_country, {}).get("inbox", []):
+            if msg.get("type") == "DIPLOMACY":
+                msg["popup_shown"] = True
         return
 
     p_data = map_screen.nation_data.get(map_screen.player_country, {})
