@@ -62,9 +62,11 @@ class Battle_Screen(ModalScreen):
 
     def __init__(self, map_screen, province):
         self.province = province
-        super().__init__(map_screen, self.get_panel_title())
-
+        # Both set before super(), because ModalScreen.__init__ asks for the
+        # title and the title depends on whether any of these units are ours.
+        self.map_screen = map_screen
         self.player = map_screen.player_country
+        super().__init__(map_screen, self.get_panel_title())
         # Hotseat and fog of war: the same rule the sidebar uses. A province you
         # cannot see is not one whose order of battle you get to read.
         self.visible = queries.is_province_visible(map_screen, province["id"])
@@ -90,15 +92,22 @@ class Battle_Screen(ModalScreen):
                 if self.player in (lane.a.nation, lane.b.nation)]
 
     def current(self):
-        """(lane, mine, theirs) for the selected lane, or (None, None, None)."""
+        """(lane, near, far) for the selected lane, or (None, None, None).
+
+        `near` is the player's side when they hold one, so their own units are
+        always in the same column. Otherwise it is simply lane.a: a battle you
+        are not in is still worth watching, and both halves of it are shown --
+        read-only, since you command nobody in either.
+        """
         if not self.battle.lanes:
             return None, None, None
         lane = self.battle.lanes[min(self.selected_lane, len(self.battle.lanes) - 1)]
-        if lane.a.nation == self.player:
-            return lane, lane.a, lane.b
         if lane.b.nation == self.player:
             return lane, lane.b, lane.a
-        return lane, None, lane.a
+        return lane, lane.a, lane.b
+
+    def is_mine(self, side):
+        return side is not None and side.nation == self.player
 
     def my_units(self):
         return [u for u in self.province.get("units", [])
@@ -174,9 +183,11 @@ class Battle_Screen(ModalScreen):
         btn_y = p.bottom - 52
         self.elements.append(
             self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
-        self.elements.append(
-            self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
-                        self.clear_orders))
+        # Nothing to clear on a tile you command nothing on.
+        if self.my_units():
+            self.elements.append(
+                self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
+                            self.clear_orders))
         self.elements.append(
             self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
 
@@ -184,20 +195,31 @@ class Battle_Screen(ModalScreen):
             return
 
         self._lane_rows()
-        lane, mine, theirs = self.current()
-        if mine is not None:
-            self._unit_rows(PANE_FRONT, mine.front, lane, editable=True)
+        lane, near, far = self.current()
+        self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
+        self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
+
+        # The reserve column is the player's own bench when they are in this
+        # fight, and both sides' reserves when they are only watching.
+        if self.is_mine(near) or self.is_mine(far):
             self._unit_rows(PANE_RESERVE, self.bench(), lane, editable=True, is_bench=True)
-        if theirs is not None:
-            self._unit_rows(PANE_ENEMY, theirs.front, lane, editable=False)
+        else:
+            self._unit_rows(PANE_RESERVE, list(near.reserve) + list(far.reserve),
+                            lane, editable=False)
 
     def _lane_rows(self):
         rect = self.regions[PANE_LANES]
+        # Every lane is selectable; the player's are picked out in colour so a
+        # crowded tile still reads at a glance.
         mine = {id(lane) for lane in self.my_lanes()}
         for i, y in self.pane_rows(PANE_LANES, len(self.battle.lanes), rect.y, rect.height):
             lane = self.battle.lanes[i]
-            label = text_utils.truncate_chars(
-                f"{i + 1}. {lane.a.nation} v {lane.b.nation}", (LANE_COL_W - 14) // 9)
+            # Truncate each name rather than the joined string, so the second
+            # nation is never the half that disappears -- "Soviet Union v ..."
+            # names one side of a duel and is useless for picking between two.
+            room = max(4, ((LANE_COL_W - 14) // 9 - 6) // 2)
+            label = (f"{i + 1}. {text_utils.truncate_chars(lane.a.nation, room)}"
+                     f" v {text_utils.truncate_chars(lane.b.nation, room)}")
             colour = "blue" if id(lane) in mine else "grey"
             btn = self.button(rect.x, y, LANE_COL_W, colour, label,
                               lambda idx=i: self._select(idx))
@@ -213,6 +235,8 @@ class Battle_Screen(ModalScreen):
 
             if not editable:
                 label = f"{name}  {int(unit.get('health', 0))}hp"
+                if unit.get("owner") != self.player:
+                    label = f"[{unit.get('owner', '?')[:3].upper()}] " + label
                 btn = self.button(rect.x, y, rect.width, "grey",
                                   text_utils.truncate_chars(label, (rect.width - 14) // 9),
                                   lambda: None)
@@ -235,7 +259,8 @@ class Battle_Screen(ModalScreen):
 
     def get_panel_title(self):
         owner = self.province.get("owner", "Unclaimed")
-        return f"Manage Battle - Province {self.province.get('id')} ({owner})"
+        verb = "Manage" if self.my_units() else "View"
+        return f"{verb} Battle - Province {self.province.get('id')} ({owner})"
 
     def draw_body(self, surface):
         p = self.panel_rect
@@ -250,15 +275,24 @@ class Battle_Screen(ModalScreen):
                        (p.x + self.PAD, self.list_top), preset="normal")
             return
 
-        lane, mine, theirs = self.current()
+        lane, near, far = self.current()
         summary = (f"Combat width {self.battle.width} of {c.COMBAT_WIDTH}   |   "
                    f"{len(self.battle.lanes)} lane(s)   |   {lane.slots} slots per side")
+        if not (self.is_mine(near) or self.is_mine(far)):
+            summary += "   |   OBSERVING - you have no units in this duel"
         self.label(surface, summary, (p.x + self.PAD, p.y + 44))
 
+        near_label = "YOUR FRONT" if self.is_mine(near) else f"{near.nation} FRONT"
+        far_label = "YOUR FRONT" if self.is_mine(far) else f"{far.nation} FRONT"
+        if self.is_mine(near) or self.is_mine(far):
+            reserve_label = f"YOUR RESERVE ({len(self.bench())})"
+        else:
+            reserve_label = f"RESERVES ({len(near.reserve) + len(far.reserve)})"
+
         headings = (
-            (PANE_FRONT, f"YOUR FRONT ({len(mine.front)}/{lane.slots})" if mine else "NOT YOUR LANE"),
-            (PANE_ENEMY, f"{theirs.nation} FRONT ({len(theirs.front)}/{lane.slots})" if theirs else ""),
-            (PANE_RESERVE, f"RESERVE ({len(self.bench()) if mine else 0})"),
+            (PANE_FRONT, f"{near_label} ({len(near.front)}/{lane.slots})"),
+            (PANE_ENEMY, f"{far_label} ({len(far.front)}/{lane.slots})"),
+            (PANE_RESERVE, reserve_label),
         )
         for pane, text in headings:
             rect = self.regions[pane]

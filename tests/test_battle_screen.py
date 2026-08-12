@@ -179,6 +179,104 @@ class LaneOrderTests(BattleScreenTestCase):
             self.assertEqual(unit["owner"], self.a)
 
 
+class ObserverTests(BattleScreenTestCase):
+    """A battle you are not in is still worth reading."""
+
+    def setUp(self):
+        super().setUp()
+        # Somebody with no units anywhere near this tile.
+        self.map.player_country = next(
+            n for n in self.map.nation_data
+            if queries.is_playable(n, self.map.nation_data)
+            and n not in (self.a, self.b, self.x, self.y))
+
+    def test_both_sides_of_a_foreign_lane_are_shown(self):
+        screen = self.screen()
+        lane, near, far = screen.current()
+
+        self.assertIsNotNone(near)
+        self.assertIsNotNone(far)
+        self.assertEqual({near.nation, far.nation}, {lane.a.nation, lane.b.nation})
+        self.assertFalse(screen.is_mine(near))
+        self.assertFalse(screen.is_mine(far))
+
+    def test_every_lane_is_listed_not_just_your_own(self):
+        screen = self.screen()
+        self.assertEqual(len(screen.battle.lanes), 2)
+        self.assertEqual(screen.my_lanes(), [])
+        self.assertEqual(len([el for el in screen.elements
+                              if getattr(el, "pane", None) == battle_screen.PANE_LANES]), 2)
+
+    def test_nothing_in_a_foreign_battle_is_editable(self):
+        screen = self.screen()
+        rows = [el for el in screen.elements
+                if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
+                                                 battle_screen.PANE_ENEMY,
+                                                 battle_screen.PANE_RESERVE)]
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertTrue(getattr(row, "disabled", False),
+                            "a unit the player does not command was clickable")
+
+    def test_it_paints_and_switches_lanes(self):
+        screen = self.screen()
+        screen.draw(self.surface)
+        screen._select(1)
+        screen.draw(self.surface)
+        self.assertEqual(screen.selected_lane, 1)
+
+    def test_the_title_says_view_rather_than_manage(self):
+        self.assertIn("View Battle", self.screen().get_panel_title())
+
+    def test_there_is_nothing_to_clear(self):
+        screen = self.screen()
+        labels = [getattr(el, "text", "") for el in screen.elements]
+        self.assertNotIn("Clear Lane Orders", labels)
+
+
+class ReadOnlyOrdersTests(BattleScreenTestCase):
+    """The Orders screen on a province the player commands nothing in."""
+
+    def orders_screen(self, player):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        self.map.player_country = player
+        screen = Orders_Screen()
+        screen.start_with_province(self.province, self.map)
+        return screen
+
+    def test_a_foreign_province_lists_every_unit_read_only(self):
+        outsider = next(n for n in self.map.nation_data
+                        if queries.is_playable(n, self.map.nation_data)
+                        and n not in (self.a, self.b, self.x, self.y))
+        screen = self.orders_screen(outsider)
+
+        self.assertTrue(screen.read_only)
+        self.assertIsNone(screen.selected_unit_index)
+        screen.draw(self.surface)
+
+    def test_a_read_only_province_accepts_no_move_orders(self):
+        import pygame as pg
+
+        outsider = next(n for n in self.map.nation_data
+                        if queries.is_playable(n, self.map.nation_data)
+                        and n not in (self.a, self.b, self.x, self.y))
+        screen = self.orders_screen(outsider)
+        before = [list(u.get("order", {}).get("path", [])) for u in self.province["units"]]
+
+        screen.additional_events(
+            pg.event.Event(pg.MOUSEBUTTONDOWN, pos=(640, 360), button=1))
+
+        after = [list(u.get("order", {}).get("path", [])) for u in self.province["units"]]
+        self.assertEqual(before, after)
+
+    def test_your_own_province_is_still_editable(self):
+        screen = self.orders_screen(self.a)
+
+        self.assertFalse(screen.read_only)
+        self.assertIsNotNone(screen.selected_unit_index)
+
+
 class ButtonSwapTests(BattleScreenTestCase):
     """Manage Battle takes Give Orders' slot exactly while the tile is fighting."""
 
@@ -200,6 +298,23 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.province["units"] = [
             queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
         self.assertEqual(self.visible_pair(), (True, False))
+
+    def test_a_battle_you_are_not_in_still_offers_the_button(self):
+        """Reading somebody else's front is how you find out it is collapsing."""
+        self.map.player_country = next(
+            n for n in self.map.nation_data
+            if queries.is_playable(n, self.map.nation_data)
+            and n not in (self.a, self.b, self.x, self.y))
+
+        from screens.menu_screens import map as map_module
+
+        enabled = {}
+
+        def set_btn(btn, visible, is_enabled, text, color="green"):
+            enabled[id(btn)] = (visible, is_enabled)
+
+        map_module.set_orders_or_battle(self.map, set_btn, False)
+        self.assertEqual(enabled[id(self.map.btn_go_battle)], (True, True))
 
 
 if __name__ == "__main__":

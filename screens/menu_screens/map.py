@@ -388,11 +388,24 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
     it is not, and the lane manager is the thing you want on it when it is. What
     the swap costs is Disband/Repair/Bombard and retreat orders, so the battle
     screen carries a button through to Orders rather than stranding them.
+
+    Neither needs units of your own to open. Somebody else's battle is worth
+    reading -- it is how you find out whether the front you are about to walk
+    into is already collapsing -- and both screens refuse to edit units you do
+    not command, so viewing costs nothing. What gates them is fog of war.
     """
-    in_battle = queries.is_province_in_active_combat(map_screen.selected_province,
-                                                     map_screen.nation_data)
-    set_btn(map_screen.btn_go_battle, in_battle, has_player_units, "Manage Battle", "red")
-    set_btn(map_screen.btn_go_orders, not in_battle, has_player_units, "Give Orders", "blue")
+    province = map_screen.selected_province
+    visible = queries.is_province_visible(map_screen, province["id"])
+    in_battle = visible and queries.is_province_in_active_combat(province,
+                                                                 map_screen.nation_data)
+    has_units = bool(province.get("units"))
+
+    label = "Manage Battle" if has_player_units else "View Battle"
+    set_btn(map_screen.btn_go_battle, in_battle, visible, label, "red")
+
+    orders_label = "Give Orders" if has_player_units else "View Units"
+    set_btn(map_screen.btn_go_orders, not in_battle, visible and has_units,
+            orders_label, "blue" if has_player_units else "grey")
 
 
 def update_button_states(map_screen):
@@ -591,6 +604,7 @@ def update_button_states(map_screen):
             # Allow Spectator to view production lines
             is_land = not queries.is_water_province(map_screen.selected_province)
             set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")
+            set_orders_or_battle(map_screen, set_btn, False)
 
         # --- PLAYER ---
         else:
@@ -1354,16 +1368,19 @@ class Map(GameState):
             self.deselect_province()
 
     def handle_orders_key(self):
-        if self.selected_province and not self.selection_mode:
-            owner = self.selected_province.get("owner", "Unclaimed")
-            has_player_units = queries.has_units_in_province(self.player_country, self.selected_province)
-            if owner == self.player_country or has_player_units:
-                # Same swap the button makes, so the keybind never opens a screen
-                # the button on screen is not offering.
-                if queries.is_province_in_active_combat(self.selected_province, self.nation_data):
-                    battle_screen.open_battle_screen(self)
-                else:
-                    self.change_state("ORDERS")
+        """Q. Opens whichever of the two the button in that slot is offering.
+
+        Not gated on owning anything here: both screens read a province you have
+        no units in, and refuse to edit units you do not command.
+        """
+        if not self.selected_province or self.selection_mode:
+            return
+        if not queries.is_province_visible(self, self.selected_province["id"]):
+            return
+        if queries.is_province_in_active_combat(self.selected_province, self.nation_data):
+            battle_screen.open_battle_screen(self)
+        elif self.selected_province.get("units"):
+            self.change_state("ORDERS")
 
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this
