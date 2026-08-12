@@ -7,6 +7,33 @@ import data.constants as c
 SYMBOLS = {}
 COLORED_SYMBOLS = {}
 
+#: What each requested name resolved to in SYMBOLS, or None for "no such icon".
+#: The resolution in _resolve_name tries five fallbacks in turn and two of them
+#: walk every loaded symbol building a regex per key. The map asks for one symbol
+#: per unit box per frame, so at 178 loaded symbols that was 200,000 re.escape
+#: calls a second and 40% of a zoomed-out frame -- the whole of the lag when a
+#: player zoomed out with units showing.
+RESOLVED_NAMES = {}
+
+#: (base_name, color, alpha, size) -> the scaled surface. Shared with every
+#: caller asking for the same picture, so what comes back is read-only: pass
+#: `alpha` to get_symbol rather than calling set_alpha on the result, or the next
+#: caller inherits it. Everything else here already copies before it mutates.
+SCALED_SYMBOLS = {}
+
+#: Zoom is continuous, so every notch of it mints a new size. Emptied wholesale
+#: rather than evicted one at a time -- these are small surfaces and the cache
+#: refills from whatever is on screen inside a frame.
+SCALED_CACHE_LIMIT = 4000
+
+
+def clear_caches():
+    """Drops everything derived from SYMBOLS. Called when SYMBOLS changes."""
+    RESOLVED_NAMES.clear()
+    SCALED_SYMBOLS.clear()
+    COLORED_SYMBOLS.clear()
+
+
 def load_symbols():
     """Load small icons for units, factories, etc."""
     path = c.ASSETS_DIR
@@ -20,6 +47,10 @@ def load_symbols():
             # Load and keep transparency
             img = pygame.image.load(os.path.join(path, file)).convert_alpha()
             SYMBOLS[name] = img
+
+    # A mod can add or replace art, and both caches below are keyed on names
+    # that were resolved against the old set.
+    clear_caches()
 
 # --- NEW: NumPy Colorizer ---
 def colorize_red_image(img, new_color):
@@ -60,8 +91,21 @@ def colorize_red_image(img, new_color):
 
     return new_img
 
-def get_symbol(name, zoom, color=None):
-    """Returns scaled icon. Generates and caches colored variants if a color is provided."""
+def _resolve_name(name):
+    """Which SYMBOLS key `name` should draw, or None if nothing matches.
+
+    Pure name arithmetic and the same answer every time for a given set of
+    loaded symbols, which is the only reason it is safe to memoise -- see
+    RESOLVED_NAMES for why it is worth memoising.
+    """
+    if name in RESOLVED_NAMES:
+        return RESOLVED_NAMES[name]
+    resolved = _resolve_name_uncached(name)
+    RESOLVED_NAMES[name] = resolved
+    return resolved
+
+
+def _resolve_name_uncached(name):
     # 1. Resolve base name
     base_name = name
 
@@ -126,32 +170,56 @@ def get_symbol(name, zoom, color=None):
     if base_name not in SYMBOLS:
         return None
 
-    base_img = SYMBOLS[base_name]
+    return base_name
 
-    # 2. Colorize and Cache if a color is requested
+
+def get_symbol(name, zoom, color=None, alpha=255):
+    """Returns the scaled icon, or None if no loaded symbol matches the name.
+
+    The surface is shared with every other caller asking for the same picture at
+    the same size, so treat what comes back as read-only. That is what `alpha` is
+    for: setting it afterwards would leave the next caller of that name and size
+    holding a see-through icon.
+    """
+    base_name = _resolve_name(name)
+    if base_name is None:
+        return None
+
+    base_img = SYMBOLS[base_name]
+    # Custom per-symbol scale overrides, on top of the global 0.5.
+    size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
+
+    key = (base_name, color, alpha, size)
+    scaled = SCALED_SYMBOLS.get(key)
+    if scaled is not None:
+        return scaled
+
+    # Colorize and cache if a color is requested. Kept separate from the scaled
+    # cache: colorizing is the expensive half and is worth keeping across zooms.
     if color:
-        cache_key = (base_name, color)
-        if cache_key not in COLORED_SYMBOLS:
-            # Generate the colored version once and cache it
-            COLORED_SYMBOLS[cache_key] = colorize_red_image(base_img, color)
-        
-        target_img = COLORED_SYMBOLS[cache_key]
+        colour_key = (base_name, color)
+        if colour_key not in COLORED_SYMBOLS:
+            COLORED_SYMBOLS[colour_key] = colorize_red_image(base_img, color)
+        target_img = COLORED_SYMBOLS[colour_key]
     else:
         target_img = base_img
 
-    # 3. Scale the final image dynamically based on camera zoom and custom base scales
-    # Check constants for a specific scale override, default to 1.0
-    custom_scale = c.SYMBOL_BASE_SCALES.get(base_name, 1.0)
-    return _scale_img(target_img, zoom, custom_scale)
+    scaled = pygame.transform.scale(target_img, size)
+    if alpha < 255:
+        scaled.set_alpha(alpha)
 
-def _scale_img(img, zoom, custom_scale=1.0):
-    # Get original proportions
+    if len(SCALED_SYMBOLS) >= SCALED_CACHE_LIMIT:
+        SCALED_SYMBOLS.clear()
+    SCALED_SYMBOLS[key] = scaled
+    return scaled
+
+
+def _scaled_size(img, zoom, custom_scale=1.0):
+    """The pixel size this symbol is drawn at, keeping its proportions."""
     orig_w, orig_h = img.get_size()
-    
+
     # Multiply the global 0.5 scale by our custom scale multiplier
     scale_factor = zoom * 0.5 * custom_scale
-    
-    target_w = max(4, int(orig_w * scale_factor))
-    target_h = max(4, int(orig_h * scale_factor))
-    
-    return pygame.transform.scale(img, (target_w, target_h))
+
+    return (max(4, int(orig_w * scale_factor)),
+            max(4, int(orig_h * scale_factor)))

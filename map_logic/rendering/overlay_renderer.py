@@ -6,6 +6,13 @@ from map_logic.rendering import map_utils, symbol_loader
 from map_logic.rendering.font_manager import fonts
 from map_logic.turn_processing import combat_rules
 
+#: How far outside the viewport a province centre may sit and still be drawn.
+#: A province is culled by its centre, but what hangs off it is much bigger than
+#: a point: a stack of unit boxes for six nations at full zoom is a few hundred
+#: pixels tall, and cropping one at the screen edge would make it pop.
+CULL_MARGIN = 250
+
+
 def combat_strengths(sides, nation_data, friendly_nations):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
@@ -134,6 +141,23 @@ def draw_combat_bubbles(self_map, surface):
                     inner = pygame.transform.scale(inner, (radius_x * 2, radius_y * 2))
                     
                 surface.blit(inner, (int(sx) - radius_x, int(sy) - radius_y))
+
+def status_icon(map_screen, name):
+    """A faded, tilted overlay badge -- training, disbanding, converting, building.
+
+    Four call sites wrote this out identically, each ending in set_alpha on what
+    get_symbol handed back. That surface is now shared between every caller
+    asking for the same picture at the same size, so the fade has to be part of
+    the request rather than something done to the result: "Hammer" at 1.5x is
+    both this badge and the main menu's mods button, and whichever drew last
+    would have decided how solid the other one looked.
+    """
+    icon = symbol_loader.get_symbol(name, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE,
+                                    alpha=c.OVERLAY_STATUS_ICON_ALPHA)
+    if not icon:
+        return None
+    return map_utils.apply_tilt(icon, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+
 
 def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0, is_justifying=False):
     """Draws a highlighted ellipse over a province for diplomatic or contextual screens."""
@@ -393,29 +417,33 @@ def draw_overlay_content(map_screen, surface):
         for offset in offsets:
             sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
             sx, sy = int(sx), int(sy)
-            
-            # Culling: only draw if within screen width
-            if -50 < sx < surface.get_width() + 50:
-                
+
+            # Culling. The height half of this was missing, so a zoomed-in map
+            # composed and blitted the icons for every tile above and below the
+            # viewport -- most of the map, at the zoom people actually fight at.
+            # The margin is generous because these are centre points and a tall
+            # stack of unit boxes or a big building sprite hangs well outside it.
+            if (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
+                    and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+
                 # --- UNIT VIEW ---
                 if map_screen.secondary_mode == "UNITS":
-                    if province["units"]:
+                    # .get, like every other read of this key below it. A
+                    # province dict is not guaranteed to carry one -- the editor
+                    # and the map tools both build provinces without it.
+                    if province.get("units"):
                         draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
                         
                     if not is_partial and queries.is_training_troops(province):
-                        training_sym = symbol_loader.get_symbol(c.ICON_TRAINING, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        training_sym = status_icon(map_screen, c.ICON_TRAINING)
                         if training_sym:
-                            training_sym = map_utils.apply_tilt(training_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
-                            training_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = training_sym.get_rect(center=(sx, sy))
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
                     if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
-                        disband_sym = symbol_loader.get_symbol(c.ICON_DISBANDING, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        disband_sym = status_icon(map_screen, c.ICON_DISBANDING)
                         if disband_sym:
-                            disband_sym = map_utils.apply_tilt(disband_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
-                            disband_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
@@ -432,10 +460,8 @@ def draw_overlay_content(map_screen, surface):
                             else:
                                 convert_icon = base_icon
                         if convert_icon:
-                            convert_sym = symbol_loader.get_symbol(convert_icon, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                            convert_sym = status_icon(map_screen, convert_icon)
                             if convert_sym:
-                                convert_sym = map_utils.apply_tilt(convert_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
-                                convert_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                                 rect = convert_sym.get_rect(center=(sx, sy))
                                 surface.blit(convert_sym, rect)
 
@@ -502,10 +528,8 @@ def draw_overlay_content(map_screen, surface):
                     
                     # Draw Construction Hammer
                     if queries.is_constructing_building(province):
-                        hammer_sym = symbol_loader.get_symbol(c.ICON_CONSTRUCTION, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE)
+                        hammer_sym = status_icon(map_screen, c.ICON_CONSTRUCTION)
                         if hammer_sym:
-                            hammer_sym = map_utils.apply_tilt(hammer_sym, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
-                            hammer_sym.set_alpha(c.OVERLAY_STATUS_ICON_ALPHA)
                             rect = hammer_sym.get_rect(center=(sx, sy))
                             surface.blit(hammer_sym, rect)
                 
@@ -556,32 +580,134 @@ def draw_overlay_content(map_screen, surface):
                                     pygame.draw.rect(surface, (255, 255, 255), rect, 1)
                                     current_x += w_scaled + icon_spacing
 
+#: Composed unit boxes, keyed by everything that is drawn into one. Building a
+#: box means a fresh surface, a colorized symbol, two font renders and a
+#: supersampled downscale, and a zoomed-out map asks for a few hundred of them a
+#: frame -- almost all repeats, since "German Reich, Infantry, 3" looks the same
+#: on every tile it appears. Keyed on the drawn size rather than the zoom so a
+#: box survives the zoom lerp settling.
+UNIT_BOXES = {}
+
+#: Same reasoning as symbol_loader.SCALED_CACHE_LIMIT: dropped wholesale, since
+#: it refills from what is on screen within a frame.
+UNIT_BOX_CACHE_LIMIT = 2000
+
+
+def unit_box_size(map_screen):
+    """The on-screen size of one unit box at the current zoom and tilt."""
+    # Dampened Scaling rules
+    display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
+    scaled_w = max(20, int(c.UNIT_BOX_WIDTH * display_scale))
+    scaled_h = max(8, int(c.UNIT_BOX_HEIGHT * display_scale))
+    if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
+        scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
+    return scaled_w, scaled_h, display_scale
+
+
+def _cache_box(key, build):
+    box = UNIT_BOXES.get(key)
+    if box is None:
+        box = build()
+        if len(UNIT_BOXES) >= UNIT_BOX_CACHE_LIMIT:
+            UNIT_BOXES.clear()
+        UNIT_BOXES[key] = box
+    return box
+
+
+def unit_box(symbol_name, border_color, count, inverted, size):
+    """One nation's box: its colour, the unit it leads with, and how many.
+
+    Drawn at UNIT_BOX_WIDTH x UNIT_BOX_HEIGHT and supersampled down to `size`,
+    which is what keeps it crisp at any zoom. `inverted` is the tactical-mode
+    player's own division, drawn black on white so they can find themselves.
+    """
+    def build():
+        internal_w = c.UNIT_BOX_WIDTH
+        internal_h = c.UNIT_BOX_HEIGHT
+        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
+
+        if inverted:
+            box_surf.fill((255, 255, 255))
+            pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
+            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
+            text_color = (0, 0, 0)
+            shadow_color = (255, 255, 255)
+        else:
+            box_surf.fill(c.UNIT_BOX_BG_COLOR)
+            pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
+            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color)
+            text_color = c.UNIT_BOX_TEXT_COLOR
+            shadow_color = (0, 0, 0)
+
+        text_x = 10
+        if symbol:
+            # Constrain the symbol itself if it's too wide
+            max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
+            if symbol.get_width() > max_sym_w:
+                ratio = max_sym_w / symbol.get_width()
+                new_h = max(1, int(symbol.get_height() * ratio))
+                symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
+
+            sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
+            box_surf.blit(symbol, sym_rect)
+            text_x = sym_rect.right + 8
+
+        # Draw Unit Count Text
+        font = fonts.get("button")
+        count_str = str(count)
+        count_txt = font.render(count_str, True, text_color)
+        shadow_txt = font.render(count_str, True, shadow_color)
+
+        # --- TEXT COMPRESSION FIX (UNIFORM SCALE) ---
+        # Ensure we never pass a 0 or negative width to smoothscale
+        max_text_w = max(1, internal_w - text_x - 6)
+
+        # If the text is wider than the space we have, scale it down uniformly to fit
+        if count_txt.get_width() > max_text_w:
+            scale_ratio = max_text_w / count_txt.get_width()
+            new_w = int(max_text_w)
+            new_h = max(1, int(count_txt.get_height() * scale_ratio))
+            count_txt = pygame.transform.smoothscale(count_txt, (new_w, new_h))
+            shadow_txt = pygame.transform.smoothscale(shadow_txt, (new_w, new_h))
+
+        txt_y = (internal_h // 2) - (count_txt.get_height() // 2)
+        box_surf.blit(shadow_txt, (text_x + 2, txt_y + 2))
+        box_surf.blit(count_txt, (text_x, txt_y))
+
+        # Supersampling/Anti-aliasing final stretch down
+        return pygame.transform.smoothscale(box_surf, size)
+
+    return _cache_box((symbol_name, tuple(border_color), count, inverted, size), build)
+
+
+def unknown_box(size):
+    """The box a tile gets under partial vision: somebody is there, no more."""
+    def build():
+        internal_w = c.UNIT_BOX_WIDTH
+        internal_h = c.UNIT_BOX_HEIGHT
+        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
+        box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40)))
+        pygame.draw.rect(box_surf, (150, 150, 150), box_surf.get_rect(), 4)
+
+        font = fonts.get("button")
+        txt = font.render("?", True, getattr(c, 'UNIT_BOX_TEXT_COLOR', (255, 255, 255)))
+        box_surf.blit(txt, txt.get_rect(center=(internal_w // 2, internal_h // 2)))
+
+        return pygame.transform.smoothscale(box_surf, size)
+
+    return _cache_box(("?", (), 0, False, size), build)
+
+
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
     units = province.get("units", [])
     if not units:
         return
 
+    scaled_w, scaled_h, display_scale = unit_box_size(map_screen)
+
     if is_partial:
-        internal_w = c.UNIT_BOX_WIDTH
-        internal_h = c.UNIT_BOX_HEIGHT
-        display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
-        scaled_w = max(20, int(internal_w * display_scale))
-        scaled_h = max(8, int(internal_h * display_scale))
-        if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
-            scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
-        
-        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
-        box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40)))
-        pygame.draw.rect(box_surf, (150, 150, 150), box_surf.get_rect(), 4)
-        
-        font = fonts.get("button")
-        txt = font.render("?", True, getattr(c, 'UNIT_BOX_TEXT_COLOR', (255, 255, 255)))
-        txt_rect = txt.get_rect(center=(internal_w // 2, internal_h // 2))
-        box_surf.blit(txt, txt_rect)
-        
-        final_surf = pygame.transform.smoothscale(box_surf, (scaled_w, scaled_h))
-        rect = final_surf.get_rect(center=(sx, int(sy)))
-        surface.blit(final_surf, rect)
+        final_surf = unknown_box((scaled_w, scaled_h))
+        surface.blit(final_surf, final_surf.get_rect(center=(sx, int(sy))))
         return
 
     # 1. Group units by owner so we can draw stacked boxes for each nation
@@ -590,17 +716,6 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
         owner = u.get("owner", "Unclaimed")
         units_by_owner.setdefault(owner, []).append(u)
 
-    # Base high-res rendering dimensions
-    internal_w = c.UNIT_BOX_WIDTH
-    internal_h = c.UNIT_BOX_HEIGHT
-    
-    # Dampened Scaling rules
-    display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
-    scaled_w = max(20, int(internal_w * display_scale))
-    scaled_h = max(8, int(internal_h * display_scale))
-    if map_screen.camera.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
-        scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
-        
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
 
     # 2. Calculate the vertical offset to perfectly center the entire stack over the province
@@ -647,64 +762,13 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
             symbol_name = "Truck"
         else:
             symbol_name = unit_type
-            
-        # Create unscaled, high-res subsurface to preserve crispness
-        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
-        
+
         # --- TACTICAL MODE INVERSION ---
         is_player_tactical = map_screen.tactical_mode and map_screen.player_unit is best_unit
-        
-        if is_player_tactical:
-            box_surf.fill((255, 255, 255))
-            pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
-            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
-            text_color = (0, 0, 0)
-            shadow_color = (255, 255, 255)
-        else:
-            box_surf.fill(c.UNIT_BOX_BG_COLOR)
-            pygame.draw.rect(box_surf, owner_color, box_surf.get_rect(), 4)
-            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=owner_color)
-            text_color = c.UNIT_BOX_TEXT_COLOR
-            shadow_color = (0, 0, 0)
-        
-        text_x = 10
-        if symbol:
-            # Constrain the symbol itself if it's too wide
-            max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
-            if symbol.get_width() > max_sym_w:
-                ratio = max_sym_w / symbol.get_width()
-                new_h = max(1, int(symbol.get_height() * ratio))
-                symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
-            
-            sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
-            box_surf.blit(symbol, sym_rect)
-            text_x = sym_rect.right + 8
-            
-        # Draw Unit Count Text
-        font = fonts.get("button")
-        count_str = str(unit_count)
-        count_txt = font.render(count_str, True, text_color)
-        shadow_txt = font.render(count_str, True, shadow_color)
 
-        # --- TEXT COMPRESSION FIX (UNIFORM SCALE) ---
-        # Ensure we never pass a 0 or negative width to smoothscale
-        max_text_w = max(1, internal_w - text_x - 6) 
-        
-        # If the text is wider than the space we have, scale it down uniformly to fit
-        if count_txt.get_width() > max_text_w:
-            scale_ratio = max_text_w / count_txt.get_width()
-            new_w = int(max_text_w)
-            new_h = max(1, int(count_txt.get_height() * scale_ratio))
-            count_txt = pygame.transform.smoothscale(count_txt, (new_w, new_h))
-            shadow_txt = pygame.transform.smoothscale(shadow_txt, (new_w, new_h))
-        
-        txt_y = (internal_h // 2) - (count_txt.get_height() // 2)
-        box_surf.blit(shadow_txt, (text_x + 2, txt_y + 2))
-        box_surf.blit(count_txt, (text_x, txt_y))
-        
-        # Supersampling/Anti-aliasing final stretch down
-        final_surf = pygame.transform.smoothscale(box_surf, (scaled_w, scaled_h))
-        
+        final_surf = unit_box(symbol_name, owner_color, unit_count,
+                              is_player_tactical, (scaled_w, scaled_h))
+
         # Blit using the stacked Y coordinate
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
         surface.blit(final_surf, rect)
