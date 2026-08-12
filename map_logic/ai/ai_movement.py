@@ -922,8 +922,7 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
             continue
 
         battle = combat_rules.build_battle([province.get("units", ())], map_screen.nation_data)
-        slots = sum(lane.slots for lane in battle.lanes
-                    for side in (lane.a, lane.b) if side.nation == ai_name)
+        slots = combat_rules.slots_held(battle, ai_name)
         if not slots:
             continue
 

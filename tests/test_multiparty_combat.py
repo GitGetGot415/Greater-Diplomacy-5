@@ -136,9 +136,16 @@ def five_nation_tile():
 
 
 def lanes_of(screen, prov):
-    """{(nation, nation): lane} for the fight on this tile, keys order-free."""
+    """{(nation, nation): lane} for the fight on this tile, keys order-free.
+
+    A lane's half is a side, so one lane can answer for several pairs -- every
+    nation on the left against every nation on the right. The key is "these two
+    can shoot each other here", which is the question every caller is asking.
+    """
     battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
-    return {frozenset((lane.a.nation, lane.b.nation)): lane for lane in battle.lanes}
+    return {frozenset((mine, theirs)): lane
+            for lane in battle.lanes
+            for mine in lane.a.nations for theirs in lane.b.nations}
 
 
 class OneVolleyPerNationTests(unittest.TestCase):
@@ -462,7 +469,8 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
         # B and C are at war with each other, and marching shoulder to shoulder.
         battle = combat_rules.build_battle([[b, cc], a], screen.nation_data)
 
-        pairs = {frozenset((lane.a.nation, lane.b.nation)) for lane in battle.lanes}
+        pairs = {frozenset((mine, theirs)) for lane in battle.lanes
+                 for mine in lane.a.nations for theirs in lane.b.nations}
         self.assertEqual(pairs, {frozenset(("B", "A")), frozenset(("C", "A"))})
         self.assertNotIn(frozenset(("B", "C")), pairs)
 

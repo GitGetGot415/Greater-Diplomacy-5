@@ -41,6 +41,11 @@ PANE_ENEMY = "enemy"
 PANE_RESERVE = "reserve"
 
 LANE_COL_W = 210
+
+
+def side_name(side):
+    """A side in words, for anywhere a flag will not fit."""
+    return " + ".join(side.nations)
 ROW_H = 30
 HEADER_H = 26
 
@@ -89,7 +94,7 @@ class Battle_Screen(ModalScreen):
     def my_lanes(self):
         """The lanes this player holds a side in, which are the editable ones."""
         return [lane for lane in self.battle.lanes
-                if self.player in (lane.a.nation, lane.b.nation)]
+                if self.player in lane.a.nations or self.player in lane.b.nations]
 
     def current(self):
         """(lane, near, far) for the selected lane, or (None, None, None).
@@ -102,12 +107,12 @@ class Battle_Screen(ModalScreen):
         if not self.battle.lanes:
             return None, None, None
         lane = self.battle.lanes[min(self.selected_lane, len(self.battle.lanes) - 1)]
-        if lane.b.nation == self.player:
+        if self.player in lane.b.nations:
             return lane, lane.b, lane.a
         return lane, lane.a, lane.b
 
     def is_mine(self, side):
-        return side is not None and side.nation == self.player
+        return side is not None and self.player in side.nations
 
     def my_units(self):
         return [u for u in self.province.get("units", [])
@@ -125,8 +130,10 @@ class Battle_Screen(ModalScreen):
 
     def send_to_lane(self, unit, lane):
         """Pins a unit to the duel against whoever is on the other side."""
-        opponent = lane.b.nation if lane.a.nation == self.player else lane.a.nation
-        unit["lane_target"] = opponent
+        far = lane.b if self.player in lane.a.nations else lane.a
+        # A pin names an enemy nation; build_battle resolves it back to whichever
+        # lane has that nation on the other side.
+        unit["lane_target"] = far.nations[0]
         unit.pop("combat_stance", None)
         self.refresh_ui()
 
@@ -218,8 +225,8 @@ class Battle_Screen(ModalScreen):
             # nation is never the half that disappears -- "Soviet Union v ..."
             # names one side of a duel and is useless for picking between two.
             room = max(4, ((LANE_COL_W - 14) // 9 - 6) // 2)
-            label = (f"{i + 1}. {text_utils.truncate_chars(lane.a.nation, room)}"
-                     f" v {text_utils.truncate_chars(lane.b.nation, room)}")
+            label = (f"{i + 1}. {text_utils.truncate_chars(side_name(lane.a), room)}"
+                     f" v {text_utils.truncate_chars(side_name(lane.b), room)}")
             colour = "blue" if id(lane) in mine else "grey"
             btn = self.button(rect.x, y, LANE_COL_W, colour, label,
                               lambda idx=i: self._select(idx))
@@ -282,8 +289,8 @@ class Battle_Screen(ModalScreen):
             summary += "   |   OBSERVING - you have no units in this duel"
         self.label(surface, summary, (p.x + self.PAD, p.y + 44))
 
-        near_label = "YOUR FRONT" if self.is_mine(near) else f"{near.nation} FRONT"
-        far_label = "YOUR FRONT" if self.is_mine(far) else f"{far.nation} FRONT"
+        near_label = "YOUR SIDE" if self.is_mine(near) else side_name(near).upper()
+        far_label = "ENEMY SIDE" if self.is_mine(near) else side_name(far).upper()
         if self.is_mine(near) or self.is_mine(far):
             reserve_label = f"YOUR RESERVE ({len(self.bench())})"
         else:

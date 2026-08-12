@@ -11,9 +11,13 @@ The rule, from the request that specified it:
     units shatter or retreat.
 
 Three fixtures were given with it, and the first three tests here are those
-fixtures. They are also what rules the pairwise model out: pairing every hostile
-nation reproduces the free-for-all but gives the alliance case four duels rather
-than two, because in a real alliance war A is at war with both X and Y.
+fixtures. They are also what rules two simpler models out. Pairing every hostile
+nation gives the alliance case four duels of quarter width, because in a real
+alliance war A is at war with both X and Y. Pairing the allies off one-to-one
+instead gives two, but then A can never touch Y even though both are standing
+here at war -- the "strange how that works" save, where Germany and the United
+Kingdom shared a province and fought different people. A lane is between two
+SIDES, and every hostile pair on the tile is inside one.
 
 tests/test_multiparty_combat.py holds the damage arithmetic and the bystander
 rules; this file is the spec for lane construction, width, reserves and
@@ -41,16 +45,31 @@ def tile(screen, troops, owner=None):
 
 
 def pairs_of(battle):
-    return [frozenset((lane.a.nation, lane.b.nation)) for lane in battle.lanes]
+    """Every nation pair that shares a lane -- who can actually shoot whom."""
+    return [frozenset((mine, theirs)) for lane in battle.lanes
+            for mine in lane.a.nations for theirs in lane.b.nations]
+
+
+def sides_of(battle):
+    return [(frozenset(lane.a.nations), frozenset(lane.b.nations))
+            for lane in battle.lanes]
 
 
 def side_for(battle, nation):
-    """The first LaneSide `nation` holds anywhere in this battle."""
+    """The first LaneSide `nation` fights on anywhere in this battle."""
     for lane in battle.lanes:
         for side in (lane.a, lane.b):
-            if side.nation == nation:
+            if nation in side.nations:
                 return side
     return None
+
+
+def member_for(battle, nation):
+    """`nation`'s own half of the first side it fights on: its slots and units."""
+    side = side_for(battle, nation)
+    if side is None:
+        return None
+    return next(m for m in side.members if m.nation == nation)
 
 
 def alliance_tile(per_nation=8):
@@ -77,31 +96,31 @@ def free_for_all_tile(per_nation=8):
 
 
 class TheFixturesFromTheRequestTests(unittest.TestCase):
-    def test_two_allies_against_two_allies_form_two_lanes(self):
+    def test_two_allies_against_two_allies_form_one_lane(self):
         screen, prov, _troops = alliance_tile()
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
 
-        self.assertEqual(len(battle.lanes), 2)
-        self.assertEqual(set(pairs_of(battle)),
-                         {frozenset(("A", "X")), frozenset(("B", "Y"))})
-        for lane in battle.lanes:
-            self.assertEqual(lane.slots, c.COMBAT_WIDTH // 4)
+        self.assertEqual(len(battle.lanes), 1)
+        self.assertEqual(sides_of(battle), [(frozenset(("A", "B")), frozenset(("X", "Y")))])
+        self.assertEqual(battle.lanes[0].slots, c.COMBAT_WIDTH // 2)
 
-    def test_the_alliance_case_is_not_four_lanes(self):
-        """The regression guard on the coalition rule.
+    def test_everyone_at_war_here_is_in_the_lane_together(self):
+        """The regression guard, and the bug from 'strange how that works'.
 
-        A is at war with X *and* Y, and B with both as well, so the hostility
-        graph has four edges. Pairing on those edges is the obvious
-        implementation and it produces a front nobody asked for: four duels of
-        half the width, with each ally fighting both enemies at once.
+        Two earlier models both failed this. Pairing on the four hostility edges
+        gives four duels of quarter width. Pairing the coalitions off member to
+        member gives two, but leaves A unable to touch Y and B unable to touch X
+        while all four stand on the same tile at war -- which is how Germany and
+        the United Kingdom shared province 640 and fought different people.
         """
         screen, prov, _troops = alliance_tile()
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
 
-        self.assertNotIn(frozenset(("A", "Y")), pairs_of(battle))
-        self.assertNotIn(frozenset(("B", "X")), pairs_of(battle))
+        self.assertEqual(set(pairs_of(battle)),
+                         {frozenset(("A", "X")), frozenset(("A", "Y")),
+                          frozenset(("B", "X")), frozenset(("B", "Y"))})
 
     def test_three_mutually_hostile_powers_form_a_triangle(self):
         screen, prov, _troops = free_for_all_tile()
@@ -130,12 +149,41 @@ class WidthTests(unittest.TestCase):
     def test_a_lane_never_falls_below_the_floor(self):
         self.assertEqual(combat_rules.lane_slots(99), c.MIN_LANE_SLOTS_PER_SIDE)
 
+    def test_allies_share_the_width_they_can_use(self):
+        """Nine units and one should field six, not four.
+
+        Splitting a side's allowance evenly is the obvious rule and it wastes
+        the half the small ally has no bodies for. share_slots hands the
+        leftovers back, so the width ends up where the troops are.
+        """
+        self.assertEqual(combat_rules.share_slots([9, 1], 6), [5, 1])
+
+    def test_an_ally_can_never_be_pushed_below_an_even_split(self):
+        """The other half of the same rule, and the reason it is max-min fair.
+
+        However many units the big ally brings, it cannot take more than its
+        even share off one that can use it. Six slots between two nations that
+        both want five is three each -- the 50/50 point -- and fifty units on
+        one side does not move it.
+        """
+        self.assertEqual(combat_rules.share_slots([5, 5], 6), [3, 3])
+        self.assertEqual(combat_rules.share_slots([50, 5], 6), [3, 3])
+
+    def test_every_ally_present_gets_into_the_fight(self):
+        """Four allies and two slots: the floor gives way, not the ally.
+
+        The same call MIN_LANE_SLOTS_PER_SIDE makes one level up. A nation that
+        marched here and is standing in the battle is in the battle, even when
+        that means the side fields more than its allowance.
+        """
+        self.assertEqual(combat_rules.share_slots([9, 1, 1, 1], 2), [1, 1, 1, 1])
+
     def test_a_small_ally_is_not_squeezed_out_by_a_large_one(self):
-        """The whole point of giving every matchup its own slice of the width.
+        """The whole point of sharing rather than halving.
 
         Under the pot this replaced, SMALL's two units stood in the same fight
         as BIG's fifty and had the enemy volley divided across all fifty-two
-        bodies. Here SMALL gets a lane of its own and fights in it.
+        bodies. Here SMALL holds its own slots on the shared front.
         """
         screen = StubMapScreen()
         screen.add_nation("BIG", at_war_with=["X"])
@@ -150,14 +198,16 @@ class WidthTests(unittest.TestCase):
         prov = tile(screen, troops, owner="BIG")
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
-        small = side_for(battle, "SMALL")
+        small = member_for(battle, "SMALL")
+        big = member_for(battle, "BIG")
 
         self.assertIsNotNone(small, "the small ally was pushed out of the fight")
         self.assertEqual(len(small.front), len(troops["SMALL"]))
-        self.assertGreaterEqual(
-            next(lane.slots for lane in battle.lanes
-                 if "SMALL" in (lane.a.nation, lane.b.nation)),
-            c.MIN_LANE_SLOTS_PER_SIDE)
+        # Sharing, not halving: BIG takes the width SMALL has no bodies for,
+        # rather than the two of them cutting the side in half and BIG fielding
+        # three while SMALL wastes one.
+        self.assertEqual(small.slots + big.slots, battle.lanes[0].slots)
+        self.assertGreater(big.slots, small.slots)
 
     def test_one_unit_holds_at_most_one_front_slot(self):
         """Or a nation at war with two powers here fires the same units twice."""
@@ -258,8 +308,8 @@ class TargetingTests(unittest.TestCase):
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
         against_c = next(lane for lane in battle.lanes
-                         if {lane.a.nation, lane.b.nation} == {"A", "C"})
-        a_side = against_c.a if against_c.a.nation == "A" else against_c.b
+                         if {*lane.a.nations, *lane.b.nations} == {"A", "C"})
+        a_side = against_c.a if "A" in against_c.a.nations else against_c.b
 
         self.assertEqual(len(a_side.front), 2)
 
@@ -273,6 +323,74 @@ class TargetingTests(unittest.TestCase):
         self.assertIn(id(troops["A"][0]),
                       {id(u) for lane in battle.lanes
                        for side in (lane.a, lane.b) for u in side.front})
+
+
+class CoalitionTests(unittest.TestCase):
+    """A side is a coalition, and a coalition is not a merged war list."""
+
+    def half_committed_tile(self):
+        """ALLY stands with BIG but never joined the war against SMALLFOE."""
+        screen = StubMapScreen()
+        screen.add_nation("BIG", at_war_with=["FOE", "SMALLFOE"])
+        screen.add_nation("ALLY", at_war_with=["FOE"])
+        screen.add_nation("FOE", at_war_with=["BIG", "ALLY"])
+        screen.add_nation("SMALLFOE", at_war_with=["BIG"])
+        screen.nation_data["BIG"]["allied_with"] = ["ALLY"]
+        screen.nation_data["ALLY"]["allied_with"] = ["BIG"]
+        screen.nation_data["FOE"]["allied_with"] = ["SMALLFOE"]
+        screen.nation_data["SMALLFOE"]["allied_with"] = ["FOE"]
+
+        troops = {n: [unit(n, attack=10) for _ in range(3)]
+                  for n in ("BIG", "ALLY", "FOE", "SMALLFOE")}
+        return screen, tile(screen, troops, owner="BIG"), troops
+
+    def test_a_member_never_shoots_somebody_it_is_at_peace_with(self):
+        """Standing beside an ally does not enlist you in that ally's wars."""
+        screen, prov, troops = self.half_committed_tile()
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        ally = member_for(battle, "ALLY")
+        untouchable = {id(u) for u in troops["SMALLFOE"]}
+
+        self.assertTrue(ally.targets)
+        self.assertFalse(untouchable & {id(u) for u in ally.targets})
+
+    def test_and_takes_no_fire_from_them_either(self):
+        screen, _prov, troops = self.half_committed_tile()
+
+        for u in troops["BIG"] + troops["FOE"]:
+            u["attack"] = 0
+        combat_processor.process_combat(screen)
+
+        self.assertEqual(damage_taken(troops["ALLY"]), 0)
+
+    def test_a_member_with_nobody_to_shoot_stays_out_of_the_side(self):
+        """It would otherwise eat width in a battle it cannot take part in."""
+        screen = StubMapScreen()
+        screen.add_nation("BIG", at_war_with=["FOE"])
+        screen.add_nation("NEUTRAL_ALLY", at_war_with=[])
+        screen.add_nation("FOE", at_war_with=["BIG"])
+        screen.nation_data["BIG"]["allied_with"] = ["NEUTRAL_ALLY"]
+        screen.nation_data["NEUTRAL_ALLY"]["allied_with"] = ["BIG"]
+
+        prov = tile(screen, {"BIG": [unit("BIG", attack=10)],
+                             "NEUTRAL_ALLY": [unit("NEUTRAL_ALLY", attack=99)],
+                             "FOE": [unit("FOE", attack=10)]}, owner="BIG")
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertEqual(sides_of(battle), [(frozenset(("BIG",)), frozenset(("FOE",)))])
+        self.assertEqual(battle.bystanders, ["NEUTRAL_ALLY"])
+
+    def test_slots_held_is_the_answer_the_ai_asks_for(self):
+        """Two callers used to work this out from the lane list themselves."""
+        screen, prov, _troops = self.half_committed_tile()
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertEqual(combat_rules.slots_held(battle, "BIG"),
+                         combat_rules.nation_front_capacity("BIG", prov,
+                                                            screen.nation_data))
 
 
 class DissolveTests(unittest.TestCase):
@@ -390,7 +508,7 @@ class HeldBackTests(unittest.TestCase):
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
 
         self.assertEqual(len(battle.lanes), 1)
-        self.assertEqual([id(u) for u in side_for(battle, "CHI").front], [id(lone)])
+        self.assertEqual([id(u) for u in member_for(battle, "CHI").front], [id(lone)])
 
         combat_processor.process_combat(screen)
         self.assertGreater(damage_taken([lone]), 0)
@@ -433,8 +551,10 @@ class DeterminismTests(unittest.TestCase):
     """The same input must resolve the same way, every time and everywhere."""
 
     def signature(self, battle):
-        return [(lane.index, lane.slots, side.nation, [id(u) for u in side.front])
-                for lane in battle.lanes for side in (lane.a, lane.b)]
+        return [(lane.index, lane.slots, member.nation, member.slots,
+                 [id(u) for u in member.front])
+                for lane in battle.lanes for side in (lane.a, lane.b)
+                for member in side.members]
 
     def test_the_same_fight_resolves_identically_twice(self):
         screen, prov, _troops = free_for_all_tile()
@@ -478,7 +598,7 @@ class ChargeProbeTests(unittest.TestCase):
         prov = tile(screen, {"DEF": garrison, "ATK": charge})
         fight = combat_rules.build_battle([prov["units"]], screen.nation_data)
         actual = {id(u) for lane in fight.lanes
-                  for side in (lane.a, lane.b) if side.nation == "ATK"
+                  for side in (lane.a, lane.b) if "ATK" in side.nations
                   for u in side.front}
 
         self.assertEqual(predicted, actual)

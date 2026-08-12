@@ -241,18 +241,22 @@ def draw_sidebar_info(map_screen, surface):
 
             # Grouped by lane, because that is the unit of the fight: damage
             # never crosses between them, so listing every nation in one column
-            # would show a battle that is not happening.
+            # would show a battle that is not happening. Inside a lane the rows
+            # are per nation, since a side is a coalition and each member has
+            # its own share of the width.
             for lane in battle.lanes:
                 heading = map_screen.small_font.render(
-                    f"LANE {lane.index + 1}  -  {lane.slots} v {lane.slots}", True, c.UI_TEXT_MUTED)
+                    f"LANE {lane.index + 1}  -  {len(lane.a.front)} v {len(lane.b.front)}"
+                    f"  of {lane.slots}", True, c.UI_TEXT_MUTED)
                 surface.blit(heading, (text_x, current_y))
                 current_y += 20
 
                 for lane_side in (lane.a, lane.b):
-                    draw_side(lane_side.nation,
-                              list(lane_side.front) + list(lane_side.reserve),
-                              front_ids={id(u) for u in lane_side.front},
-                              reserve_count=len(lane_side.reserve))
+                    for member in lane_side.members:
+                        draw_side(member.nation,
+                                  list(member.front) + list(member.reserve),
+                                  front_ids={id(u) for u in member.front},
+                                  reserve_count=len(member.reserve))
 
             # Everyone else is here by military access, by a war that is not
             # being fought on this tile, or because the enemy they came for

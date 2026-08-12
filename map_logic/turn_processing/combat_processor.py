@@ -156,13 +156,19 @@ def process_pinning(map_screen):
         shots_at_defenders = []
         for lane in probe.lanes:
             for firing, receiving in ((lane.a, lane.b), (lane.b, lane.a)):
-                shot = combat_rules.volley(firing.front, probe.shares)
-                if receiving.side_index == CHARGE_SIDE:
-                    share = shot / len(receiving.front)
-                    for target in receiving.front:
-                        incoming_on_charge[id(target)] = incoming_on_charge.get(id(target), 0.0) + share
-                else:
-                    shots_at_defenders.append((receiving.front, shot))
+                # Per firing nation, not per side: exactly what exchange() does,
+                # so the probe and the fight it predicts cannot disagree about
+                # who a coalition member is actually shooting at.
+                for member in firing.members:
+                    if not member.targets:
+                        continue
+                    shot = combat_rules.volley(member.front, probe.shares)
+                    if receiving.side_index == CHARGE_SIDE:
+                        share = shot / len(member.targets)
+                        for target in member.targets:
+                            incoming_on_charge[id(target)] = incoming_on_charge.get(id(target), 0.0) + share
+                    else:
+                        shots_at_defenders.append((member.targets, shot))
 
         # A charge deeper than the lane can seat always has survivors, because
         # the surplus sits in reserve where nothing can reach it. Fifty militia

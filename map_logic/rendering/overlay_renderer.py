@@ -20,6 +20,10 @@ def combat_strengths(sides, nation_data, friendly_nations):
     `involved` is "a friendly nation holds a front slot", not "a friendly nation
     is standing here" -- an ally waiting out somebody else's battle on military
     access draws the grey bubble of a fight that is not yours.
+
+    A lane's half is a whole side, so an ally fighting beside you counts towards
+    the strength of the fight you are reading. That is the honest number: they
+    are the ones the enemy has to shoot at instead of you.
     """
     friendly_atk = 0.0
     enemy_atk = 0.0
@@ -27,7 +31,8 @@ def combat_strengths(sides, nation_data, friendly_nations):
 
     battle = combat_rules.build_battle(sides, nation_data)
     for lane in battle.lanes:
-        mine = [side for side in (lane.a, lane.b) if side.nation in friendly_nations]
+        mine = [side for side in (lane.a, lane.b)
+                if any(nation in friendly_nations for nation in side.nations)]
         # Two friends fighting each other is not a fight you are in either way.
         if len(mine) != 1:
             continue

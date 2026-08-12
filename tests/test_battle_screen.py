@@ -26,7 +26,13 @@ from tests import app_harness
 
 
 class BattleScreenTestCase(unittest.TestCase):
-    """A real province, with a two-lane fight forced onto it."""
+    """A real province, with a three-lane fight forced onto it.
+
+    A and B are allies, so they share one side. X and Y are at war with the pair
+    and with each other, so they are two separate sides rather than one -- which
+    is what gives the player two lanes to choose between and the tile a third
+    they are only watching.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -41,8 +47,8 @@ class BattleScreenTestCase(unittest.TestCase):
 
         for name, allies, enemies in ((self.a, [self.b], [self.x, self.y]),
                                       (self.b, [self.a], [self.x, self.y]),
-                                      (self.x, [self.y], [self.a, self.b]),
-                                      (self.y, [self.x], [self.a, self.b])):
+                                      (self.x, [], [self.a, self.b, self.y]),
+                                      (self.y, [], [self.a, self.b, self.x])):
             game_map.nation_data[name]["allied_with"] = list(allies)
             game_map.nation_data[name]["at_war_with"] = list(enemies)
 
@@ -64,10 +70,11 @@ class BattleScreenTestCase(unittest.TestCase):
         return combat_rules.build_battle([self.province["units"]], self.map.nation_data)
 
     def mine(self, battle):
+        """The player's own half of the first side it fights on."""
         for lane in battle.lanes:
             for side in (lane.a, lane.b):
-                if side.nation == self.a:
-                    return side
+                if self.a in side.nations:
+                    return next(m for m in side.members if m.nation == self.a)
         return None
 
 
@@ -121,8 +128,9 @@ class LaneOrderTests(BattleScreenTestCase):
     def test_sending_a_unit_to_a_lane_is_read_back_by_the_resolver(self):
         screen = self.screen()
         lane = next(lane for lane in screen.battle.lanes
-                    if self.a in (lane.a.nation, lane.b.nation))
-        opponent = lane.b.nation if lane.a.nation == self.a else lane.a.nation
+                    if self.a in lane.a.nations or self.a in lane.b.nations)
+        far = lane.b if self.a in lane.a.nations else lane.a
+        opponent = far.nations[0]
 
         unit = screen.bench()[0]
         screen.send_to_lane(unit, lane)
@@ -196,16 +204,16 @@ class ObserverTests(BattleScreenTestCase):
 
         self.assertIsNotNone(near)
         self.assertIsNotNone(far)
-        self.assertEqual({near.nation, far.nation}, {lane.a.nation, lane.b.nation})
+        self.assertEqual({near.nations, far.nations}, {lane.a.nations, lane.b.nations})
         self.assertFalse(screen.is_mine(near))
         self.assertFalse(screen.is_mine(far))
 
     def test_every_lane_is_listed_not_just_your_own(self):
         screen = self.screen()
-        self.assertEqual(len(screen.battle.lanes), 2)
+        self.assertEqual(len(screen.battle.lanes), 3)
         self.assertEqual(screen.my_lanes(), [])
         self.assertEqual(len([el for el in screen.elements
-                              if getattr(el, "pane", None) == battle_screen.PANE_LANES]), 2)
+                              if getattr(el, "pane", None) == battle_screen.PANE_LANES]), 3)
 
     def test_nothing_in_a_foreign_battle_is_editable(self):
         screen = self.screen()
