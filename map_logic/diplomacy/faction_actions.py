@@ -87,6 +87,7 @@ def finalize_disband_faction(nation_data, leader):
     pull_puppets_out_of_faction(leader, nation_data)
 
 def finalize_faction_join(map_data, nation_data, host, joiner):
+    """Returns True if the join happened, False if it was skipped."""
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
 
     # A puppet has no alignment of its own; it follows its master in through
@@ -95,19 +96,29 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
     # treaty layer because crossed invitations in diplomacy_processor call
     # straight in, and had no check of any kind.
     if not queries.can_choose_own_faction(joiner, nation_data):
-        return
+        return False
+
+    # Already in a faction (possibly a different one than `host`'s): joining
+    # here would silently overwrite that membership without ever leaving the
+    # old faction, so skip rather than corrupt the old faction's bookkeeping.
+    if nation_data[joiner].get("faction", ""):
+        return False
 
     fac = nation_data[host].get("faction", "")
-    if fac:
-        nation_data[joiner]["faction"] = fac
-        nation_data[joiner]["is_faction_leader"] = False
+    if not fac:
+        return False
 
-        settle_with_faction(nation_data, joiner, fac)
+    nation_data[joiner]["faction"] = fac
+    nation_data[joiner]["is_faction_leader"] = False
 
-        if queries.is_faction_at_war(fac, nation_data):
-            queries.add_member_to_pre_war_map(joiner, fac, map_data, nation_data)
+    settle_with_faction(nation_data, joiner, fac)
 
-        pull_puppets_into_faction(joiner, fac, map_data, nation_data)
+    if queries.is_faction_at_war(fac, nation_data):
+        queries.add_member_to_pre_war_map(joiner, fac, map_data, nation_data)
+
+    pull_puppets_into_faction(joiner, fac, map_data, nation_data)
+
+    return True
 
 def finalize_faction_leave(nation_data, leaver):
     """A nation walks out of its faction. Everyone left behind resents it.

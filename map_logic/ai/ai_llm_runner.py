@@ -1,9 +1,10 @@
 """One driver for the game's batches of LLM calls.
 
-Two turn phases fan a list of prompts out to the model and collect the answers:
-the proactive-message pass in map_logic/ai/ai_diplomacy.py and the
-proposal-response pass in map_logic/diplomacy/diplomacy_processor.py. Both had
-their own copy of the same ~60 lines -- the ThreadPoolExecutor, the
+Three turn phases fan a list of prompts out to the model and collect the
+answers: the summit pass and the proactive-message pass, both in
+map_logic/ai/ai_diplomacy.py, and the proposal-response pass in
+map_logic/diplomacy/diplomacy_processor.py. The original two had their own
+copy of the same ~60 lines -- the ThreadPoolExecutor, the
 `wait(timeout=0.1, FIRST_COMPLETED)` drain loop, the Force Skip cancel path,
 the `shutdown(cancel_futures=)` fallback for older Pythons, and the sequential
 web path -- and the two copies had drifted apart in how they treat a worker
@@ -11,8 +12,8 @@ that raises and a request that lands just as the user hits Force Skip.
 
 What stays with the callers is what genuinely differs: which handler to call
 for a job, how to record an answer, what the fallback answer is, and whether a
-given job counts towards the loading bar. The six progress predicates in the
-two phases are deliberately *not* merged -- they key off different things.
+given job counts towards the loading bar. The progress predicates in the three
+phases are deliberately *not* merged -- they key off different things.
 
 Kept a leaf (stdlib plus data.platform) so it can be imported from anywhere in
 the AI package without closing a cycle.

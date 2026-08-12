@@ -15,9 +15,8 @@ def _longest_waiting_first(map_screen, jobs):
     scenario file's -- so it never varied. Whenever the turn budget could not
     cover every nation (one thread and a local model is enough to do that with
     a single call), the same nation won every turn and the rest were never
-    consulted once. In saves/it kinda just stopped for some reason the loading
-    bar promised twelve and the German Reich, the first major power in the file,
-    took the whole budget on turn after turn.
+    consulted once: the loading bar promised twelve, but the German Reich, the
+    first major power in the file, took the whole budget on turn after turn.
 
     The stamp lives in nation_data, so it is saved and restored with everything
     else, and a nation that has never been consulted sorts first.

@@ -144,17 +144,13 @@ UNIT_SECTIONS = [
             "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
-        # Same reasoning as Motorized Infantry Type above for health/attack/range.
-        # Defense keeps its old linear(100, 5) ramp starting exactly at 1940 (index
-        # 30) via piecewise, so 1940-2010 values are unchanged and 1910-1939 tiers
-        # simply carry no armor bonus over plain Infantry.
         UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
-        # Identical to Mechanized Infantry Type in every stat except double attack
+        # Identical to Mechanized Infantry Type in every stat except 1.5x attack
         # and double cost_materials - the premium tier Armored Personnel Carriers
         # open the door to once Infantry Fighting Vehicles are researched.
         UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 101), {
@@ -297,7 +293,7 @@ UNIT_SECTIONS = [
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
             "health": linear(600, 100),
-            # attack climbs 300/level through IX, jumps to 4000 at X, then 100/level
+            # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
             "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000),

@@ -246,12 +246,13 @@ def _resolve_simultaneous_clashes(map_screen):
                 b_action = b_info.get("action")
 
                 if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
-                    finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_b, nation_a)
-                    log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
+                    if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_b, nation_a):
+                        log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                     _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
                 elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
-                    finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_a, nation_b)
+                    if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_a, nation_b):
+                        log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                     _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
                 elif a_action == "WAR_DECLARATION" and b_action in _WAR_CANCELS:
