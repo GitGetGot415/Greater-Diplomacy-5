@@ -364,29 +364,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     mode = ai_handler.get_ai_mode()
     immersion = ai_handler.get_ai_immersion_level()
 
-    # --- DYNAMIC LOADING BAR CALCULATION ---
-    task_count = 0
-    if mode != "OFF":
-        for t in ai_tasks:
-            is_human_related = (t["sender"] in human_players or t["target"] in human_players)
-
-            if immersion == "ABSOLUTE":
-                # In Absolute, every task calls the LLM, so count them all
-                task_count += 1
-            elif immersion == "FULL":
-                # In Full, only process if a human is involved
-                if is_human_related:
-                    task_count += 1
-            elif immersion == "LITE":
-                # In Lite, only process if human sent a message or if it's a responding CUSTOM_MSG
-                if is_human_related and (t["action"] == "CUSTOM_MSG" or bool(t.get("content", "").strip())):
-                    task_count += 1
-
-    map_screen.responsive_tasks_total = task_count
     map_screen.responsive_tasks_completed = 0
-
-    map_screen.loading_status_text = f"Processing Global Responses (0/{map_screen.responsive_tasks_total})..."
-
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
     # Diplomacy resolves after the AI phases have torn down their snapshot, so
@@ -418,16 +396,18 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
             task, map_screen.nation_data, verdict_world, map_screen.map_data)
 
     def count(task):
-        """Only the tasks the loading bar was sized for tick it along."""
-        if mode == "OFF":
-            return
-        is_human_related = (task["sender"] in human_players or task["target"] in human_players)
-        if (immersion == "ABSOLUTE"
-                or (immersion == "FULL" and is_human_related)
-                or (immersion == "LITE" and is_human_related
-                    and (task["action"] == "CUSTOM_MSG" or bool(task.get("content", "").strip())))):
-            map_screen.responsive_tasks_completed += 1
-            map_screen.loading_status_text = f"Processing Global Responses ({map_screen.responsive_tasks_completed}/{map_screen.responsive_tasks_total})..."
+        """One tick per task the model was actually asked about.
+
+        This used to restate the immersion rules to decide which tasks the bar
+        had been sized for -- a fourth copy of them, and it had drifted: there
+        was no MAJOR branch at all, so the whole phase ran with the bar reading
+        0/0 at the level the game recommends. The queue below is now the same
+        list the bar is sized from, so there is nothing left to keep in step.
+        """
+        map_screen.responsive_tasks_completed += 1
+        map_screen.loading_status_text = (
+            f"Processing Global Responses ({map_screen.responsive_tasks_completed}"
+            f"/{map_screen.responsive_tasks_total})...")
 
     # Filtered once, up front. The three paths used to disagree about an
     # action that is neither a known proposal nor a custom message: two
@@ -466,11 +446,16 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
             mode, immersion, is_ai_to_ai, bool(task.get("content", "").strip()),
             task["target"], verdict_world)
 
+    asking = [t for t in answerable if _needs_model(t)]
+
+    # Sized from the queue itself, so the bar counts the work the player is
+    # actually waiting on rather than a separately-maintained guess at it.
+    map_screen.responsive_tasks_total = len(asking)
+    map_screen.loading_status_text = f"Processing Global Responses (0/{len(asking)})..."
+
     for task in [t for t in answerable if not _needs_model(t)]:
         record(task, call(task))
-        count(task)
 
-    asking = [t for t in answerable if _needs_model(t)]
     outcome = ai_llm_runner.run_llm_batch(
         asking, call, record, record_fallback,
         on_progress=count,

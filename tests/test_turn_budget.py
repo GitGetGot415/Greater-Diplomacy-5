@@ -136,6 +136,112 @@ class FakeClock:
         return self.now
 
 
+class NoLimitTests(Patcher):
+    """0 means the turn takes as long as the world needs, and FORCE SKIP AI is
+    what ends it early.
+
+    A ceiling chosen in advance cannot know whether a given turn's wait is
+    worth it; the player watching the loading bar can. So every mechanism that
+    exists to stop work short has to stand down completely at 0, or "no limit"
+    quietly becomes "no limit except this one".
+    """
+
+    def setUp(self):
+        self.budget(0)
+        self.screen = StubMapScreen(["A", "B"])
+        ai_llm_runner.begin_turn(self.screen)
+
+    def test_no_phase_gets_a_deadline(self):
+        for share in (c.AI_BUDGET_SHARE_SUMMITS, c.AI_BUDGET_SHARE_DIRECTOR,
+                      c.AI_BUDGET_SHARE_RESPONSES):
+            self.assertIsNone(ai_llm_runner.turn_deadline(self.screen, share))
+
+    def test_nothing_is_declined_as_unaffordable(self):
+        """The guard that hands a too-small share to the next phase has no
+        share to measure when there is no ceiling."""
+        self.patch(ai_handler, "_CALL_SECONDS", [600.0])
+        self.assertTrue(ai_llm_runner.affordable(None, 99))
+
+    def test_a_batch_runs_every_job_however_long_it_takes(self):
+        served = []
+        outcome = ai_llm_runner.run_llm_batch(
+            list(range(5)), lambda job: time.sleep(0.02) or job,
+            lambda job, res: served.append(job), lambda job: None,
+            sequential=True, deadline=None)
+        self.assertEqual(served, list(range(5)))
+        self.assertEqual(outcome.abandoned, 0)
+
+    def test_force_skip_still_ends_it(self):
+        """The whole argument for removing the ceiling."""
+        fell_back = []
+        outcome = ai_llm_runner.run_llm_batch(
+            list(range(5)), lambda job: job, lambda job, res: None,
+            fell_back.append, sequential=True, deadline=None,
+            should_abort=lambda: True)
+        self.assertEqual(outcome.reason, "skipped")
+        self.assertEqual(len(fell_back), 5)
+
+    def test_a_turn_that_reaches_everyone_says_nothing(self):
+        screen = StubMapScreen(["A"])
+        screen.notes = []
+        screen.show_feedback = screen.notes.append
+        ai_llm_runner.report_unserved(
+            screen, ai_llm_runner.BatchOutcome(12, 12, 0, ""), "Directing AI nations")
+        self.assertEqual(screen.notes, [])
+
+
+class SkipButtonReachableTests(Patcher):
+    """Removing the ceiling only works if the button is on screen.
+
+    Drawn for real onto a surface rather than asserted against the condition in
+    the source: the button only exists as a rect the event handler can hit, and
+    a test that restated the visibility rule would agree with a broken one.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from tests import app_harness
+        app_harness.boot()          # fonts and a display, which drawing needs
+
+    def counters(self, **overrides):
+        screen = StubMapScreen(["A"])
+        counters = {"proactive_tasks_total": 1, "proactive_tasks_completed": 0,
+                    "proactive_llm_tasks_total": 0, "proactive_llm_tasks_completed": 0,
+                    "responsive_tasks_total": 0, "responsive_tasks_completed": 0,
+                    "refresh_tasks_total": 7, "refresh_tasks_completed": 0,
+                    "summits_total": 0, "summits_completed": 0,
+                    "multi_turns_total": 0, "multi_turn_abort_requested": False}
+        counters.update(overrides)
+        for name, value in counters.items():
+            setattr(screen, name, value)
+        return screen
+
+    def drawn(self, screen):
+        """Whether the loading screen offers a way out, this frame."""
+        import pygame
+        from map_logic.turn_processing import loading_screen
+
+        screen.force_skip_btn_rect = None
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        loading_screen.draw_turn_loading_screen(screen, surface)
+        return getattr(screen, "force_skip_btn_rect", None) is not None
+
+    def test_a_summit_can_be_skipped(self):
+        """Summits are the first model work of a turn and used to set none of
+        the counters the button keys off, so the one phase with nothing else
+        started yet was the one phase with no way out of it."""
+        self.assertTrue(self.drawn(self.counters(summits_total=2)))
+
+    def test_directing_can_be_skipped(self):
+        self.assertTrue(self.drawn(self.counters(proactive_llm_tasks_total=10)))
+
+    def test_answering_can_be_skipped(self):
+        self.assertTrue(self.drawn(self.counters(responsive_tasks_total=15)))
+
+    def test_a_turn_with_no_model_work_offers_no_button(self):
+        self.assertFalse(self.drawn(self.counters()))
+
+
 class SummitClockTests(Patcher):
     """A summit is five requests. It has to watch the clock between them."""
 
@@ -580,6 +686,29 @@ class ModelBudgetOnlyBoundsModelWorkTests(Patcher):
         order, _ = self.run_tasks(game, "ABSOLUTE")
         self.assertEqual(len(order), len(self.TASKS))
 
+    def test_the_bar_does_not_count_work_that_finishes_instantly(self):
+        """Sizing it from every gathered proposal instead of the queue would
+        put a bar on screen that jumps most of the way in the first frame and
+        then crawls -- the 192-against-15 gap, drawn."""
+        from map_logic.ai import ai_handler, ai_settings
+        from map_logic.diplomacy import diplomacy_processor
+
+        for module in (ai_settings, ai_handler):
+            self.patch(module, "get_ai_mode", lambda: "CLAUDE")
+            self.patch(module, "get_ai_immersion_level", lambda: "LITE")
+        self.patch(ai_llm_runner, "run_llm_batch",
+                   lambda jobs, *a, **kw: ai_llm_runner.BatchOutcome(len(jobs), 0, 0, ""))
+
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+        tasks = [
+            {"sender": "A", "target": "B", "action": "TRADE", "content": "Coal for oil."},
+            {"sender": "B", "target": "C", "action": "TRADE", "content": "Coal for oil."},
+            {"sender": "C", "target": "B", "action": "TRADE", "content": "Coal for oil."},
+        ]
+        diplomacy_processor._execute_ai_tasks(game, tasks, ["A", "B", "C"])
+        self.assertEqual(game.responsive_tasks_total, 1,
+                         "the bar is counting proposals the model never sees")
+
     def test_words_a_human_wrote_are_always_worth_the_model(self):
         """LITE's whole rule is that a person's own message gets a written
         reply and AI-to-AI traffic does not, so which side of that line a task
@@ -609,6 +738,35 @@ class ModelBudgetOnlyBoundsModelWorkTests(Patcher):
         ], ["A", "B", "C"])
         self.assertEqual([(t["sender"], t["target"]) for t in captured["jobs"]],
                          [("A", "B")])
+
+    def test_the_loading_bar_is_sized_from_the_queue_it_is_watching(self):
+        """It used to be sized by a fourth copy of the immersion rules, which
+        had no MAJOR branch at all -- so the phase ran with the bar reading 0/0
+        at the level the game recommends, and a player waiting on a turn with
+        no ceiling had nothing telling them how much was left."""
+        game = StubMapScreen(["A", "B", "C"], human_players=[])
+        order, _ = self.run_tasks(game, "ABSOLUTE")
+        self.assertEqual(game.responsive_tasks_total, len(order))
+        self.assertGreater(game.responsive_tasks_total, 0)
+
+    def test_the_bar_counts_up_as_the_queue_drains(self):
+        game = StubMapScreen(["A", "B", "C"], human_players=[])
+        # A batch skipped before it starts deliberately ticks nothing along --
+        # the player asked not to wait for it -- so the flag has to be down for
+        # this to be about the bar rather than about Force Skip.
+        game.force_skip_llm = False
+
+        from map_logic.ai import ai_handler, ai_settings
+        from map_logic.diplomacy import diplomacy_processor
+
+        for module in (ai_settings, ai_handler):
+            self.patch(module, "get_ai_mode", lambda: "CLAUDE")
+            self.patch(module, "get_ai_immersion_level", lambda: "ABSOLUTE")
+        self.patch(ai_handler, "_run_provider", lambda *a, **k: None)
+
+        diplomacy_processor._execute_ai_tasks(
+            game, [dict(t) for t in self.TASKS], ["A", "B", "C"])
+        self.assertEqual(game.responsive_tasks_completed, game.responsive_tasks_total)
 
     def test_the_report_counts_only_what_was_asked_of_the_model(self):
         """"10 of 192 answered" was measuring the wrong thing: 177 of those

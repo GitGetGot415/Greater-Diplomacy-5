@@ -162,6 +162,12 @@ def process_summits(map_screen):
     if not pairs:
         return
 
+    # Published before the first request goes out, because the loading screen
+    # keys the Force Skip button off these counters and this phase used to set
+    # none of them -- leaving the first model work of the turn with nothing on
+    # screen to stop it.
+    map_screen.summits_total = len(pairs)
+    map_screen.summits_completed = 0
     map_screen.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
     my_turn_id = ai_handler.CURRENT_TURN_ID
     mode = ai_handler.get_ai_mode()
@@ -244,11 +250,10 @@ def process_summits(map_screen):
         pair["transcript"] = _complete_exchanges(pair["said"])
 
     def count(pair):
-        map_screen.summits_completed = getattr(map_screen, "summits_completed", 0) + 1
+        map_screen.summits_completed += 1
         map_screen.loading_status_text = (
             f"Holding Summits ({map_screen.summits_completed}/{len(pairs)})...")
 
-    map_screen.summits_completed = 0
     outcome = ai_llm_runner.run_llm_batch(
         pairs, call, record, record_fallback,
         on_progress=count,

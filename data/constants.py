@@ -349,18 +349,23 @@ DEFAULT_AI_THREADS = 4
 DEFAULT_AI_THREADS_LOCAL = 1
 
 # Wall-clock ceiling for one turn's LLM work, in seconds. Whatever hasn't come
-# back by then falls back, so a slow or unreachable provider costs a wait rather
-# than a hung turn. 0 disables the limit.
+# back by then falls back. 0, the default, means no ceiling: every nation that
+# was going to be asked gets asked, however long that takes.
 #
-# 45 while the three phases below each measured it from their own start, which
-# meant it bought 135 and turns took two minutes. Now that it means what it
-# says, 120 is roughly what those turns were already costing -- and it is what
-# MAJOR against a local model actually needs. Measured on the 1941 map with
-# llama3: a director call is ~8s for the first of a turn, because the world has
-# changed since the last one and the model must re-read it, then ~5s each while
-# the prefix holds. Ten major powers is ~50s of the budget on its own, before
-# the proposals all ten of them send have been answered.
-DEFAULT_AI_TURN_BUDGET_SECONDS = 120
+# The ceiling existed so a slow or unreachable provider cost a wait rather than
+# a hung turn -- but FORCE SKIP AI on the loading screen already does that, and
+# does it better, because a player watching the bar knows whether the wait is
+# worth it and a number chosen in advance does not. What the ceiling actually
+# did was cut the world's diplomacy off partway through every single turn, at a
+# point unrelated to anything happening in the game.
+#
+# What it costs, measured on the 1941 map at MAJOR with llama3 on one thread:
+# ~8s for the first director call of a turn (the world moved since the last
+# one, so the model re-reads it) and ~5s after while the prefix holds. Twelve
+# major powers plus their proposals is a two to three minute turn. Set this to
+# a number of seconds if you would rather have a short turn than a complete
+# one; nothing else in the game reads it.
+DEFAULT_AI_TURN_BUDGET_SECONDS = 0
 
 # How that budget is divided between the three phases that spend it, in the
 # order the turn runs them. Each takes this fraction of whatever is *left* when

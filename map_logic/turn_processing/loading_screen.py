@@ -96,15 +96,32 @@ def draw_turn_loading_screen(map_screen, surface):
         map_screen.multi_turn_abort_btn_rect = abort_btn_rect
         return
 
-    # Render the 4 distinct phases
-    draw_bar(center_y - 100, "1. Analyzing Global Strategy", map_screen.proactive_tasks_completed, map_screen.proactive_tasks_total)
-    draw_bar(center_y - 100 + spacing, "2. Drafting Proactive Diplomatics", map_screen.proactive_llm_tasks_completed, map_screen.proactive_llm_tasks_total)
-    draw_bar(center_y - 100 + spacing*2, "3. Processing Global Responses", map_screen.responsive_tasks_completed, map_screen.responsive_tasks_total)
-    draw_bar(center_y - 100 + spacing*3, "4. Re-Rendering World Maps", map_screen.refresh_tasks_completed, map_screen.refresh_tasks_total)
+    # Render the distinct phases, in the order prepare_turn runs them. Summits
+    # go first and are drawn only when there are any, since they need ABSOLUTE
+    # or two model-driven majors and most turns have none -- an empty bar every
+    # turn would be worse than no bar.
+    top = center_y - 100
+    summits = getattr(map_screen, "summits_total", 0)
+    if summits:
+        draw_bar(top, "1. Holding Summits", map_screen.summits_completed, summits)
+        top += spacing
+
+    draw_bar(top, "2. Analyzing Global Strategy", map_screen.proactive_tasks_completed, map_screen.proactive_tasks_total)
+    draw_bar(top + spacing, "3. Drafting Proactive Diplomatics", map_screen.proactive_llm_tasks_completed, map_screen.proactive_llm_tasks_total)
+    draw_bar(top + spacing*2, "4. Processing Global Responses", map_screen.responsive_tasks_completed, map_screen.responsive_tasks_total)
+    draw_bar(top + spacing*3, "5. Re-Rendering World Maps", map_screen.refresh_tasks_completed, map_screen.refresh_tasks_total)
 
     # --- Draw the Force Skip Button ---
-    # Only show it if there are LLM tasks that might get stuck
-    if map_screen.proactive_llm_tasks_total > 0 or map_screen.responsive_tasks_total > 0:
+    # Only show it if there are LLM tasks that might get stuck.
+    #
+    # Summits belong in that list. They are the first model work of a turn and
+    # run before either of the other two counters has been set, so the one
+    # phase where nothing else has started yet was the one phase with no way
+    # out of it -- which matters a great deal now that ai_turn_budget_seconds
+    # can be 0 and this button is the only thing that ends a turn early.
+    if (map_screen.proactive_llm_tasks_total > 0
+            or map_screen.responsive_tasks_total > 0
+            or getattr(map_screen, "summits_total", 0) > 0):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
         mx, my = pygame.mouse.get_pos()
         

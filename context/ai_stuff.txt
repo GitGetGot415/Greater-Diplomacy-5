@@ -138,9 +138,11 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               garrison, not a firing line
   ai_turn_budget_seconds      (a setting) wall-clock ceiling on model work for
                               a whole turn; whatever has not answered falls
-                              back. Opened once by prepare_turn, and the three
-                              phases that spend it draw shares from the same
-                              clock
+                              back. 0, the default, means no ceiling and lets a
+                              turn take as long as the world needs -- FORCE SKIP
+                              AI is what ends one early. Given a number, it is
+                              opened once by prepare_turn and the three phases
+                              that spend it draw shares from the same clock
   AI_BUDGET_SHARE_SUMMITS     what each phase may take of whatever the turn has
   AI_BUDGET_SHARE_DIRECTOR    left when it starts, in the order they run. A
   AI_BUDGET_SHARE_RESPONSES   phase that finishes early hands the rest forward;
@@ -301,13 +303,21 @@ nothing about it is visible from reading a prompt. Neutral relation scores are
 left out of the tail for the same budget (63% of them on that map), with the
 prompt saying an unlisted nation is neutral.
 
-WHAT A TURN'S MODEL TIME IS ALLOWED TO BE SPENT ON. ai_turn_budget_seconds is
-opened once, by prepare_turn, and the three phases take shares of what is left
-when each of them starts. Before, each phase read the setting from its own
-start: 45 bought 135, and summits -- which run first -- could take a third of
+WHAT A TURN'S MODEL TIME IS ALLOWED TO BE SPENT ON. ai_turn_budget_seconds
+defaults to 0, which means no ceiling: every nation that was going to be asked
+gets asked, however long the turn takes. FORCE SKIP AI on the loading screen is
+what ends one early, and it is the better instrument -- a player watching the
+bar knows whether this particular wait is worth it, and a number chosen in
+advance does not. What the ceiling did in practice was cut the world's
+diplomacy off partway through every turn at a point unrelated to the game.
+
+Set it to a number of seconds and the ceiling comes back. Then it is opened
+once, by prepare_turn, and the three phases take shares of what is left when
+each of them starts. Before that it was read per phase, from that phase's own
+start, so 45 bought 135 -- and summits, which run first, could take a third of
 the model's time before the nations a player reads had been asked anything.
 
-Three things a phase must not do with its share:
+Three things a phase must not do with a share, when there is one:
 
   * Spend it on work that cannot finish. A summit is five sequential requests
     inside one batch job, and a batch can only give up between jobs, so a
@@ -338,14 +348,31 @@ seconds, smoothed, ignoring requests we severed ourselves. It ranges from ~5s
 warm and cache-shared to ~18s on a cold model on the same machine, so nothing
 static could stand in for it.
 
-WHAT IT ACTUALLY BUYS. 1941 map, 12 majors, llama3 on one thread. A director
-call is ~8s for the first of a turn -- the world moved since the last one, so
-the shared prefix does not match and it is re-read -- then ~5s each while it
-holds. So the director alone wants ~50s for ten nations, which is why the
-default budget is 120 and not 45. Measured over three consecutive turns at 120:
-5-6 nations directed per turn, and eleven different nations inside two turns,
-because llm_last_turn puts whoever waited longest at the front. At 45 it is 2-3
-a turn. The setting has no UI: it lives in data/json/settings_config.json.
+WHAT A TURN COSTS. 1941 map, MAJOR, llama3 on one thread. A director call is
+~8s for the first of a turn -- the world moved since the last one, so the
+shared prefix does not match and it is re-read -- then ~5s each while it holds.
+Measured with no ceiling: everything served, 10 of 10 nations directed, all 44
+proposals that wanted the model answered, ~60 model calls, 8 to 10 minutes a
+turn. With a ceiling of 120s it is 5-6 nations a turn; at 45s, 2-3. Either way
+llm_last_turn puts whoever waited longest at the front, so a ceiling spreads
+the majors over several turns rather than starving the same ones forever.
+
+The setting has no UI -- it lives in data/json/settings_config.json, which is
+gitignored, so changing the default in constants.py does not reach an existing
+install.
+
+FORCE SKIP AI has to be reachable in every phase that can block, which is what
+made 0 safe to default to. It is drawn when any of the three LLM counters is
+non-zero, and summits set none of them until this was fixed: they are the first
+model work of a turn, so the one phase with nothing else started yet was the
+one phase with no way out of it. summits_total exists for that, and is reset in
+trigger_ai_thread beside the others so last turn's count cannot leave a button
+on screen for a phase that is not running.
+
+The response bar is sized from the queue it is watching rather than from a
+restatement of the immersion rules -- there were four copies of those, and the
+loading-bar copy had no MAJOR branch at all, so the phase ran showing 0/0 at
+the level the game recommends.
 
 When the budget cannot reach everyone, whoever has waited longest goes first.
 The batch runs in list order and that order used to be the scenario file's, so

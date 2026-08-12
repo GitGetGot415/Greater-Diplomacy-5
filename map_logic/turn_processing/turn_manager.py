@@ -65,6 +65,12 @@ def trigger_ai_thread(map_screen):
     
     map_screen.responsive_tasks_total = -1
     map_screen.responsive_tasks_completed = 0
+
+    # Summits are drawn only when there are any, so this has to go back to zero
+    # or last turn's count would keep a bar and a Force Skip button on screen
+    # for a phase that is not running.
+    map_screen.summits_total = 0
+    map_screen.summits_completed = 0
     
     # Map Refresh always executes exactly 7 background render passes now
     map_screen.refresh_tasks_total = 7
