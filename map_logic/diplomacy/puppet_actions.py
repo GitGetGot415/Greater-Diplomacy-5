@@ -95,10 +95,18 @@ def pull_puppets_into_war(master, target, map_data, nation_data):
     apply_to_puppets_recursively(master, nation_data, _add_war)
 
 def pull_puppets_into_peace(master, target, nation_data):
+    """A master's peace settles its puppets' half of the same war.
+
+    The truce is written both ways, like the war it replaces. Writing it only on
+    the puppet's side left the other party with no record of a peace it had just
+    agreed to, so anything that reads a truce to decide whether a war may start
+    -- a call to arms, an AI declaration -- saw nothing standing in its way.
+    """
     def _remove_war(p):
         remove_enemy(nation_data, p, target)
         remove_enemy(nation_data, target, p)
         nation_data[p].setdefault("truces", {})[target] = c.TRUCE_TURNS
+        nation_data.setdefault(target, {}).setdefault("truces", {})[p] = c.TRUCE_TURNS
     apply_to_puppets_recursively(master, nation_data, _remove_war)
 
 def pull_puppets_into_faction(master, fac, map_data, nation_data):

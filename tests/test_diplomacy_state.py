@@ -52,6 +52,82 @@ class WarListTests(unittest.TestCase):
         self.assertFalse(agreements.remove_enemy(data, "Nobody", "B"))
 
 
+class CallToArmsTests(unittest.TestCase):
+    """A pact does not undo a peace you already signed.
+
+    From the "says i signed peace but shows still at war w guangxi" save. Japan
+    made peace with the Guangxi Clique on turn 7 -- the war gone from both lists,
+    a twelve-turn truce on both -- and on turn 8 it was back with the truce still
+    at eleven. war_durations had no entry for the new war, which is link_war's
+    signature rather than finalize_war's, and Guangxi's inbox held five
+    CALL_TO_ARMS and JOIN_WARS messages from its faction. join_faction_wars
+    linked every war the caller had and never looked at a truce.
+    """
+
+    def setUp(self):
+        self.data = {
+            "JOINER": {"at_war_with": [], "faction": "PACT",
+                       "truces": {"SETTLED": 12}, "diplo_cooldowns": {}},
+            "CALLER": {"at_war_with": ["SETTLED", "STILL_FIGHTING"],
+                       "faction": "PACT", "truces": {}, "diplo_cooldowns": {}},
+            "SETTLED": {"at_war_with": ["CALLER"], "truces": {"JOINER": 12}},
+            "STILL_FIGHTING": {"at_war_with": ["CALLER"], "truces": {}},
+        }
+
+    def answer_the_call(self):
+        agreements.join_faction_wars({}, self.data, "JOINER", "CALLER")
+
+    def test_a_truce_survives_the_call(self):
+        self.answer_the_call()
+
+        self.assertNotIn("SETTLED", self.data["JOINER"]["at_war_with"])
+        self.assertNotIn("JOINER", self.data["SETTLED"]["at_war_with"])
+
+    def test_the_pact_is_still_honoured_for_everything_else(self):
+        """Skipping the settled war is not the same as refusing the call."""
+        self.answer_the_call()
+
+        self.assertIn("STILL_FIGHTING", self.data["JOINER"]["at_war_with"])
+
+    def test_a_one_sided_truce_still_counts(self):
+        """Older saves hold a puppet's truce on one side only."""
+        del self.data["JOINER"]["truces"]["SETTLED"]
+
+        self.answer_the_call()
+
+        self.assertNotIn("SETTLED", self.data["JOINER"]["at_war_with"])
+
+    def test_an_expired_truce_does_not(self):
+        self.data["JOINER"]["truces"]["SETTLED"] = 0
+        self.data["SETTLED"]["truces"]["JOINER"] = 0
+
+        self.answer_the_call()
+
+        self.assertIn("SETTLED", self.data["JOINER"]["at_war_with"])
+
+
+class PuppetPeaceTests(unittest.TestCase):
+    def test_a_master_s_peace_leaves_a_truce_on_both_sides(self):
+        """The war is removed both ways, so the truce that replaces it must be.
+
+        Recorded on the puppet alone, the other party had no record of a peace
+        it had just agreed to, and everything that reads a truce to decide
+        whether a war may start saw nothing in the way.
+        """
+        data = {
+            "MASTER": {"puppets": ["PUPPET"], "at_war_with": []},
+            "PUPPET": {"at_war_with": ["FOE"], "master": "MASTER", "truces": {}},
+            "FOE": {"at_war_with": ["PUPPET", "MASTER"], "truces": {}},
+        }
+
+        agreements.pull_puppets_into_peace("MASTER", "FOE", data)
+
+        self.assertEqual(data["PUPPET"]["at_war_with"], [])
+        self.assertNotIn("PUPPET", data["FOE"]["at_war_with"])
+        self.assertGreater(data["PUPPET"]["truces"]["FOE"], 0)
+        self.assertGreater(data["FOE"]["truces"]["PUPPET"], 0)
+
+
 class MilitaryAccessTests(unittest.TestCase):
     def test_access_is_dropped_both_ways(self):
         data = {"A": {"military_access": ["B"]}, "B": {"military_access": ["A"]}}
