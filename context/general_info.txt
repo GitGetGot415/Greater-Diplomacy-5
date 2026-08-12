@@ -35,6 +35,16 @@ map_logic
         - random map and scenario stuff
     /rendering
         - shows the ui bars, buttons, symbols, etc
+        - this is the one part of the game with a frame budget, and what makes
+          it affordable is that a zoomed-out map draws a few dozen distinct
+          pictures a few hundred times rather than a few hundred distinct
+          pictures. So symbol_loader caches both halves of get_symbol (the name
+          resolution, which walks every loaded symbol building a regex per key,
+          and the scaled surface) and overlay_renderer.UNIT_BOXES caches the
+          composed unit box. All three are shared, so what they hand back is
+          READ-ONLY -- that is why get_symbol takes an alpha instead of letting
+          callers set one. Together with the missing height half of the overlay
+          cull, that was 443ms a frame on a late-game army and is now 15ms
     /setup
         - handles the starting setup for choosing countries at the beginning of a scenario
     /turn_processing
@@ -67,7 +77,10 @@ screens
           you command nothing there, and in tactical mode both narrow to the one
           division you command. Its rows are painted rather than labelled (flags
           and the sidebar's stat icons), which is what draw_panes(foregrounds=)
-          in ui/scroll_panes.py is for
+          in ui/scroll_panes.py is for. Every column on it is a SIDE's, not a
+          nation's -- including the reserve, where an ally's units are listed
+          dead beside your live ones, because they are what steps into the front
+          rank as it dies
     /editor_screens
         - screens only used by the map editor tool (date/economy, research, brushes,
           diplomacy editor, scripted events editor, historical leaders editor, turn editor)

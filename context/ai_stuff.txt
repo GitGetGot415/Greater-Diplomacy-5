@@ -305,6 +305,16 @@ deficit it answers to is the standing army's, not the standing army's plus
 whatever is on order -- counting the queue there had nations deleting real
 units to fund units that had not arrived.
 
+Nor is the division a TACTICAL-MODE PLAYER is playing as. Their host country is
+run by the AI on purpose -- get_active_ai_nations empties the human player list
+in tactical mode, so the country still makes its own strategy around them --
+which means both disband passes were the AI deciding what to do with the
+player's own unit. Standing down peacetime militia or culling for a deficit
+would have deleted the player out of their own game, and from their side it
+would look like the division simply vanished. Skipped at selection rather than
+refused at the end, so the host still balances its books; it gives up the next
+unit along (ai_construction.tactical_player_unit).
+
 Fuel is checked when buying, not only when regretting. Most units burn none,
 so a fuel shortage does not stop the purchase loop the way materials do; it
 removes fuel-burning units from what is affordable and from what is worth
@@ -368,6 +378,33 @@ which direction it was is on the row already, in the sender and the message.
 test_spectator_messages measures every label against the column the game
 actually builds, since nothing else would notice a label drawn over its
 neighbour.
+
+
+WHAT A TACTICAL PLAYER CAN DO
+-----------------------------
+
+Command one division. Everything else about their country belongs to the AI,
+which is the whole shape of the mode rather than an omission: queries
+.get_active_ai_nations empties the human player list when tactical_mode is on,
+so the host runs its own economy, diplomacy and strategy around the player.
+
+What follows from that, in the three places it was not being followed:
+
+  - the host may not scrap them. See the disband note above.
+  - no diplomatic popups. The alerts announce the host's inbox, not the
+    player's, and every screen one would send them to is read-only for them, so
+    an alert is an interruption with nothing behind it. The messages are still
+    marked shown, because declaring independence turns tactical mode off
+    mid-game and a player who has just founded a country should not be handed a
+    stack of alerts about treaties their old host signed
+    (diplomatic_popups.spawn_popups_for_player).
+  - one division is editable, not the whole army. Orders_Screen has enforced
+    this since the mode existed; the battle screen now does too, and both show
+    the countrymen they will not take orders for rather than hiding them.
+
+Declaring independence is the way out, and it is the only thing that turns the
+mode off mid-game -- map_screen.player_unit outlives it, so it is always the
+mode and never the attribute that decides whether a unit is protected.
 
 
 WHAT A SPECTATOR CAN DO
