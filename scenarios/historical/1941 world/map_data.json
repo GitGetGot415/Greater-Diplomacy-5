@@ -15203,7 +15203,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "United Kingdom"
         ],
@@ -48491,7 +48493,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Morocco"
         ],

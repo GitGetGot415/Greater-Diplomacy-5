@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-11T14:30:30.628043",
+    "generated_at": "2026-08-12T13:51:50.659297",
     "date": {
         "day": 15,
         "month": 5,
@@ -29441,7 +29441,7 @@
                 "Bulgaria": 100,
                 "Romania": 100
             },
-            "faction": "Axis",
+            "faction": "",
             "is_faction_leader": false,
             "master": "Italy",
             "puppet_type": "Integrated",
@@ -29669,7 +29669,7 @@
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
-            "faction": "Allies",
+            "faction": "",
             "is_faction_leader": false,
             "master": "Belgium",
             "puppet_type": "Integrated",
@@ -40314,6 +40314,21 @@
             "adjective": "Canadian",
             "pending_diplomacy": {},
             "diplo_responses": {}
+        },
+        "GLOBAL_EVENTS": {
+            "is_playable": false,
+            "log": [
+                "Belgian Congo is no longer counted among Allies: its master Belgium is not in it.",
+                "Italian East Africa is no longer counted among Axis: it holds no territory."
+            ],
+            "news_flash": [
+                "Italian East Africa is no longer counted among Axis: it holds no territory.",
+                "Belgian Congo is no longer counted among Allies: its master Belgium is not in it."
+            ],
+            "at_war_with": [],
+            "allied_with": [],
+            "pending_diplomacy": {},
+            "diplo_responses": {}
         }
     },
     "provinces": {
@@ -47369,7 +47384,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Coal": 50
+            },
             "buildings": [
                 "Factory Lvl 1"
             ]
@@ -62518,7 +62535,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(45, 5, 0)": {

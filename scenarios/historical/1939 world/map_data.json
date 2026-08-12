@@ -15182,7 +15182,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "United Kingdom"
         ],
@@ -17678,7 +17680,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "Poland"
         ],
@@ -18139,7 +18143,9 @@
         "buildings": [
             "Factory Lvl 1"
         ],
-        "resources": {},
+        "resources": {
+            "Coal": 50
+        },
         "cores": [
             "German Reich"
         ],
@@ -49270,7 +49276,9 @@
         "unit_queue": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Morocco"
         ],
