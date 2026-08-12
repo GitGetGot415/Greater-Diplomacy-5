@@ -64,7 +64,10 @@ screens
         - battle_screen.py is the lane manager, which replaces the Give Orders button
           on a tile that is fighting -- see combat_rules.py for the model it edits.
           Both it and orders.py open on any province you can see, read-only when
-          you command nothing there
+          you command nothing there, and in tactical mode both narrow to the one
+          division you command. Its rows are painted rather than labelled (flags
+          and the sidebar's stat icons), which is what draw_panes(foregrounds=)
+          in ui/scroll_panes.py is for
     /editor_screens
         - screens only used by the map editor tool (date/economy, research, brushes,
           diplomacy editor, scripted events editor, historical leaders editor, turn editor)
@@ -73,6 +76,8 @@ ui
     - reusable widgets, dialogs, and framework glue used by many screens
       (top/bottom/side/corner ui bars, modals, popups, event dispatch) --
       NOT where standalone feature screens live, see screens/ for those
+    - flag_icons.py: cached row-sized national flags, for lists that name a
+      country on every row (garrison, combat roster, lane manager)
     - button-building lives with the screen that builds them, not here: the map's
       buttons are in screens/menu_screens/map.py, edit country's in
       screens/map_related_screens/edit_country.py, settings' in

@@ -266,13 +266,15 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
     # knowledge, identical for everyone asked this turn, so it costs nothing:
     # it sits in the shared prefix a local model evaluates once and reuses.
     context += "--- HOW BATTLES WORK ---\n"
-    context += ("A contested tile splits into separate duels, one per pair of hostile powers, "
-                "and damage never crosses between them. Only a fixed number of units per side "
-                "fight in each duel; the rest wait in reserve, untouched, and rotate in as the "
-                "front rank dies. So numbers past that limit do not win a battle faster, and a "
-                "small ally holds its own duel rather than being swallowed by a larger one. "
-                "Artillery bombards from outside every duel and is the only way to reach a "
-                "reserve.\n\n")
+    context += ("A contested tile splits into separate battles, one per pair of hostile sides, "
+                "and damage never crosses between them. Allies fight as one side and share its "
+                "front between them, so a small ally is never swallowed by a larger one but "
+                "never hoards room it has no troops for either. Only a fixed number of units "
+                "per side fight at once; the rest wait in reserve, untouched, and rotate in as "
+                "the front rank dies, so numbers past that limit do not win a battle faster. "
+                "You only ever exchange fire with nations you are actually at war with, even "
+                "when fighting alongside allies who are at war with others. Artillery bombards "
+                "from outside every battle and is the only way to reach a reserve.\n\n")
     context += "--- GLOBAL POLITICS ---\n"
     context += politics_str
 

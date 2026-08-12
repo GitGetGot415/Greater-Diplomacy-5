@@ -79,8 +79,8 @@ THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
 
 An extra body is worth what it ABSORBS, and past the front rank that is
 nothing. apply_group_damage deals sum(max(0, volley/N - defense)) across the
-enemy front IN ONE LANE, so N is the lane's slot count, not the size of the
-stack. A body in the front absorbs what its defense stops; a body behind it
+units a firing nation may legally hit IN ONE LANE, so N is that nation's share
+of the opposing front -- never the size of the stack behind it. A body in the front absorbs what its defense stops; a body behind it
 absorbs nothing whatsoever -- it is a replacement, not a shield, which is why
 AI_RESERVE_DEPTH caps how many of them are worth buying at one front rank plus
 one relief rank. Under the pot this replaced, N was every hostile unit on the
@@ -143,11 +143,13 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               frontline tile and lets fronts hold proportionally
                               more. Source-only: no scenario field, no editor
                               field
-  MIN_LANE_SLOTS_PER_SIDE     floor on a lane's per-side allowance, so a small
-                              ally is never squeezed out of a fight by a large
-                              one. When lanes x 2 x this exceeds COMBAT_WIDTH
-                              the floor wins and the tile fields more than the
-                              width
+  MIN_LANE_SLOTS_PER_SIDE     floor on a lane's per-side allowance. A side is a
+                              coalition and shares that allowance between its
+                              members (share_slots), so this is the floor on
+                              what the whole side gets; every member present is
+                              separately guaranteed one unit in. When either
+                              floor bites, it wins and the tile fields more than
+                              the width
   LANE_SLOTS_TYPICAL          slots per side in a one-enemy fight, which is what
                               most fights are. The number the AI reasons with,
                               since it cannot know in advance how many ways a
@@ -213,33 +215,62 @@ Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
 movement re-plan. They did not used to, which meant no AI unit was ever
 disbanded by anything.
 
-COMBAT IS FOUGHT IN LANES, and the width is a budget for the whole tile.
+COMBAT IS FOUGHT IN LANES BETWEEN SIDES, and the width is a budget for the whole
+tile.
 
-A contested tile splits into duels -- one per pair of hostile powers standing on
-it. Allies are merged into coalitions first and matched member to member, so two
-allies facing two allies fight two duels rather than four; where nobody is
-allied that collapses to one duel per hostile pair, which is the free-for-all
-case. COMBAT_WIDTH is divided among those duels, with MIN_LANE_SLOTS_PER_SIDE as
-a floor so a two-unit ally standing beside a fifty-unit one still gets a lane of
-its own. This is the whole point of the model: under the pot it replaced, the
-width was applied per nation column, so five countries on a tile fired five
-times the width, and damage divided across every hostile unit present, so bodies
-were a way to thin somebody else's volley.
+A contested tile splits into duels -- one per pair of hostile SIDES standing on
+it. A side is a coalition: everyone here fighting this particular enemy
+together, merged from the columns that are on the same side, not at war, and
+friendly both ways round. Two allies facing two allies is therefore ONE lane
+with four nations in it, not two duels and not four; where nobody is allied a
+coalition is one nation and it collapses to one duel per hostile pair, which is
+the free-for-all case. COMBAT_WIDTH is divided among the lanes, with
+MIN_LANE_SLOTS_PER_SIDE as a floor. This is the whole point of the model: under
+the pot it replaced, the width was applied per nation column, so five countries
+on a tile fired five times the width, and damage divided across every hostile
+unit present, so bodies were a way to thin somebody else's volley.
+
+Two earlier versions of the pairing rule were wrong and are worth naming, since
+both look reasonable. Pairing on raw hostility edges gives the alliance case
+four duels of quarter width, because in a real alliance war A is at war with
+both X and Y. Pairing the coalitions off member to member gives two, but then A
+can never touch Y while both stand on the tile at war -- the 'strange how that
+works' save, where Germany and the United Kingdom shared province 640 and fought
+different people while Vichy France's spare units sat in reserve. Every hostile
+pair on a tile is inside a lane together.
+
+ALLIES SHARE THEIR SIDE'S WIDTH, max-min fair (combat_rules.share_slots). Each
+pass hands the remaining slots out evenly among whoever still wants more and
+drops anyone satisfied, so nine units beside one field six rather than four --
+splitting the side evenly would waste the half the small ally has no bodies for.
+The guarantee that comes with it is the half that matters: a member can never be
+pushed BELOW an even split, so six slots between two nations that both want five
+is three each whatever the bigger one brings. And every member present gets at
+least one unit in even when there are more allies than width, which is the same
+call MIN_LANE_SLOTS_PER_SIDE makes one level up -- the width gives way, not the
+ally.
+
+A MEMBER ONLY SHOOTS WHAT IT IS PERSONALLY AT WAR WITH. Standing beside an ally
+does not enlist you in that ally's other wars, so a faction member that never
+joined a particular war deals nothing to it and takes nothing from it. Where
+everyone on one side is at war with everyone on the other -- the ordinary case
+-- that is exactly the pooled answer, so it costs nothing to have.
 
 Damage never crosses a lane boundary. A nation fires ONCE per turn, so a unit
 holding two fronts splits its attack between them rather than firing twice --
-that is what stops a nation at war with two powers present dealing double. It
-takes fire from both, which is what being outnumbered on two fronts costs.
+that is what stops a nation facing two hostile coalitions here dealing double.
+It takes fire from both, which is what being outnumbered on two fronts costs.
 
 A nation is in EVERY lane it is in. It seats one unit in each before any lane
 gets a second, and if it runs out of units it doubles them up rather than
 abandoning a front. Nobody dodges a fight by looking the other way, and nobody
-is spared one by their enemy being short of men. The first version of this rule
+is spared one by their enemy being short of men. An early version of this rule
 let a lone defender be fought only by whichever attacker was heavier: in the
 'uh oh' save the Soviet Union had one unit on a tile with both Romania and
 Germany, and Germany simply could not join in. Combat width was not the cause
 and is not the fix -- one unit a side against a width of twelve was nowhere near
-binding.
+binding. (That tile is one lane now anyway, since Romania and Germany are both
+Axis and fight as one side.)
 
 Holding a unit back (combat_stance) is a preference, not a veto: it is honoured
 only while somebody else can take the slot. A nation that held everything back

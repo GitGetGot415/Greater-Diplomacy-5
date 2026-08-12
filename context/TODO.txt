@@ -73,7 +73,11 @@ units out on a health threshold, AI_ROTATE_HEALTH_FRACTION.)
   - within-turn reallocation of lane slots a lane cannot use. across turns this
     already works for free (rout somebody, their lane stops existing and the
     rest widen); within one turn it needs a two-pass water-fill, since demand
-    depends on the slot count and the slot count depends on demand
+    depends on the slot count and the slot count depends on demand.
+    (half of this landed with sides: allies now water-fill their share of one
+    side, combat_rules.share_slots. what is left is doing the same BETWEEN
+    lanes, where a nation short of men leaves one lane under-filled and the
+    others cannot borrow the room)
   - re-measure AI_LINE_SPEND_RATIO under the lane rules. the old 2.0 came from
     fighting armies built at each ratio against eleven fixed compositions, and
     that harness was run offline and is not in tests/. 1.0 is derived, not
