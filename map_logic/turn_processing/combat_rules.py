@@ -1,12 +1,14 @@
-"""One definition of which units meet head-on between two tiles.
+"""The rules of a fight, in the one place both the resolver and the map read.
 
-A meeting engagement is two garrisons swapping places: the units in province P
-ordered into Q, against the units in Q ordered into P. Two places need to know
-about them -- the prediction bubble the player sees before ending their turn
-(data/queries.py) and the combat that actually resolves
-(map_logic/turn_processing/combat_processor.py) -- and each carried its own
-implementation of the same rule, so a change to one silently made the bubble
-lie about the other.
+Two questions live here.
+
+**Which units meet head-on between two tiles.** A meeting engagement is two
+garrisons swapping places: the units in province P ordered into Q, against the
+units in Q ordered into P. Two places need to know about them -- the prediction
+bubble the player sees before ending their turn (data/queries.py) and the combat
+that actually resolves (map_logic/turn_processing/combat_processor.py) -- and
+each carried its own implementation of the same rule, so a change to one
+silently made the bubble lie about the other.
 
 Only the resolution side has ever been the truth, so this is that version,
 with one addition the prediction side needs: `visible_to`. In a hotseat game
@@ -19,9 +21,80 @@ as the resolver walks them. That ordering is load-bearing: a unit killed in one
 engagement is removed from its province, so it must not still be counted in the
 next engagement that province takes part in.
 
+**Who then shoots at whom, once they are in the same place.** `firing_lines`,
+below. Four callers need that answer -- the tile fight, the head-on fight, the
+prediction bubble and the sidebar's combat roster -- which is three more than
+have ever agreed on it.
+
 Imports data.queries in-function only -- queries is a cycle participant, and
 this module is meant to be safe to import from anywhere.
 """
+
+from collections import namedtuple
+
+#: One nation's contribution to one fight: `units` fire a single pooled volley
+#: at `targets`, and at nothing else.
+FiringLine = namedtuple("FiringLine", "owner units targets")
+
+
+def firing_lines(sides, nation_data):
+    """Which units each nation's volley lands on, for one fight.
+
+    `sides` is a list of unit lists. One side is a tile: everyone standing here
+    can fight everyone else standing here. Two sides is a head-on clash between
+    tiles, where a unit fights only across the divide -- two nations at war with
+    each other while marching the same way settle it where they land, not while
+    they cross.
+
+    Returns a FiringLine for every nation that has somebody to shoot at, in
+    first-appearance order. A nation with no enemy among the units it can reach
+    is absent from the result entirely: it is here by military access, or at war
+    with somebody who is not, and takes no part in the fight at all -- no damage
+    dealt, none taken, and none of the things a battle does to the units caught
+    in it.
+
+    A volley belongs to a column, not to a flag: a nation with units marching
+    both ways down the same edge fields one firing line per direction, since
+    those are two bodies of troops meeting two different enemies.
+
+    Hostility is read both ways round. A scenario or an editor can leave one
+    nation's war list out of step with the other's, and the pairwise loop this
+    replaced resolved that case differently depending on the order the units
+    happened to sit in the province -- which is not a rule, it is an accident.
+    """
+    from data import queries
+
+    def hostile(a, b):
+        return (queries.are_at_war(a, b, nation_data)
+                or queries.are_at_war(b, a, nation_data))
+
+    # Group into columns -- (which side, whose) -- keeping first-appearance
+    # order so the same fight always resolves the same way.
+    columns = []
+    seen = {}
+    for side_index, side in enumerate(sides):
+        for unit in side:
+            owner = unit.get("owner")
+            if not owner:
+                continue
+            key = (side_index, owner)
+            if key not in seen:
+                seen[key] = len(columns)
+                columns.append((side_index, owner, []))
+            columns[seen[key]][2].append(unit)
+
+    across_only = len(sides) > 1
+
+    lines = []
+    for side_index, owner, units in columns:
+        targets = [unit
+                   for other_side, other_owner, other_units in columns
+                   if (other_side != side_index or not across_only)
+                   and hostile(owner, other_owner)
+                   for unit in other_units]
+        if targets:
+            lines.append(FiringLine(owner, units, targets))
+    return lines
 
 
 def movers_into(province, dest_id, visible_to=None):
