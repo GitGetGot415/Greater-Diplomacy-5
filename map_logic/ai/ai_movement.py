@@ -900,6 +900,49 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 stacks[path[-1]] = stacks.get(path[-1], 0) + 1
 
 
+def _rotate_damaged_units(map_screen, ai_name, active_battles):
+    """Pulls shot-up units out of the front rank when a fresh one can take the slot.
+
+    The only thing the lane model asks of a commander that movement cannot
+    express. A reserve takes no damage and recovers morale, so a unit down to a
+    fraction of its health is worth more waiting than standing -- but only if
+    somebody healthier is behind it, since an empty slot is worse than a hurt one
+    and an uncovered lane dissolves entirely.
+
+    Without this the AI would field its casualties until they died while a human
+    rotated theirs, which is a real edge and an invisible one.
+    """
+    for prov_id in active_battles:
+        province = map_screen.id_to_province.get(prov_id)
+        if not province:
+            continue
+
+        mine = [u for u in province.get("units", ()) if u.get("owner") == ai_name]
+        if len(mine) < 2:
+            continue
+
+        battle = combat_rules.build_battle([province.get("units", ())], map_screen.nation_data)
+        slots = sum(lane.slots for lane in battle.lanes
+                    for side in (lane.a, lane.b) if side.nation == ai_name)
+        if not slots:
+            continue
+
+        def health_fraction(unit):
+            return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
+
+        # Anything past the slots is standing in reserve regardless, so that is
+        # exactly how many units can be held back without leaving one empty.
+        # The worst-hurt go first.
+        spare = max(0, len(mine) - slots)
+        wounded = sorted((u for u in mine if health_fraction(u) < c.AI_ROTATE_HEALTH_FRACTION),
+                         key=health_fraction)
+
+        for unit in mine:
+            unit.pop("combat_stance", None)
+        for unit in wounded[:spare]:
+            unit["combat_stance"] = "RESERVE"
+
+
 def _cancel_opposing_transitions(ai_nations, nation_units):
     """Anti-swap cleanup: if a unit is ordered A->B and another (identical
     type and health) is ordered B->A, cancel both -- otherwise they'd cross
@@ -1013,6 +1056,7 @@ def _generate_unit_orders(map_screen):
         }
 
         _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
+        _rotate_damaged_units(map_screen, ai_name, battles["active_battles"])
 
     # --- Anti-Swap Cleanup ---
     _cancel_opposing_transitions(ai_nations, nation_units)

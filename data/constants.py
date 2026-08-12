@@ -1210,6 +1210,12 @@ AI_NAVAL_UNIT_PREFERENCE = [
 # every extra body thinned the volley for the whole stack.
 AI_RESERVE_DEPTH = 2.0
 
+# Below this share of its health, a unit is worth more in reserve than in the
+# front rank -- a reserve takes no damage and recovers morale. Only ever applied
+# when a healthier unit is free to take the slot, since an empty slot dissolves
+# the lane and is worse than a hurt one holding it.
+AI_ROTATE_HEALTH_FRACTION = 0.4
+
 # What a unit contributes, given how combat actually resolves:
 #  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
 #    ordinary one-enemy fight -- so offence is raw attack

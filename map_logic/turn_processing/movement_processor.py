@@ -328,6 +328,12 @@ def process_movement(map_screen):
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
 
+                # A lane pin names an enemy on the tile it was given on. Marching
+                # somewhere else makes it meaningless at best and misleading at
+                # worst, so it does not follow the army across the map -- being
+                # ignored where it does not apply is not the same as being right.
+                unit.pop("lane_target", None)
+
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
                     queries.revert_transport(unit)

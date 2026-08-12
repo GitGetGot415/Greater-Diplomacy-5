@@ -46,8 +46,13 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_map_is_built_lazily(self):
         """MAP is intentionally None until a scenario is chosen; if that ever
-        changes, flip_state()'s Map-construction branch needs revisiting."""
-        self.assertIsNone(self.controller.states["MAP"])
+        changes, flip_state()'s Map-construction branch needs revisiting.
+
+        Read off what boot() recorded rather than off the live controller: it is
+        cached per interpreter, and any earlier test file that called boot_map()
+        will have filled MAP in by the time this runs.
+        """
+        self.assertIn("MAP", app_harness.STATES_UNBUILT_AT_BOOT)
 
     def test_screens_expose_the_gamestate_protocol(self):
         missing = []

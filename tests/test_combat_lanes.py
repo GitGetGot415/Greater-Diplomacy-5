@@ -389,5 +389,71 @@ class ChargeProbeTests(unittest.TestCase):
                         "a charge deeper than the lane was wiped out in one probe")
 
 
+class LaneOrderLifetimeTests(unittest.TestCase):
+    """lane_target names an enemy on one tile, so it must not outlive the tile."""
+
+    def test_a_lane_pin_is_dropped_when_the_unit_marches_away(self):
+        from map_logic.turn_processing import movement_processor
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        mover = unit("A", attack=10, path=["p2"])
+        mover["lane_target"] = "B"
+        home = screen.add_province("p1", "A", units=[mover])
+        away = screen.add_province("p2", "A")
+        home["neighbors"] = ["p2"]
+        away["neighbors"] = ["p1"]
+        mover["_current_province_id"] = "p1"
+
+        movement_processor.process_movement(screen)
+
+        self.assertEqual(mover["_current_province_id"], "p2")
+        self.assertNotIn("lane_target", mover)
+
+
+class AiRotationTests(unittest.TestCase):
+    def test_the_ai_pulls_a_shot_up_unit_out_when_a_fresh_one_can_take_the_slot(self):
+        from map_logic.ai import ai_movement
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        hurt = unit("A", attack=10, health=10)
+        hurt["max_health"] = 100
+        fresh = [unit("A", attack=10, health=100) for _ in range(c.LANE_SLOTS_TYPICAL)]
+        for u in fresh:
+            u["max_health"] = 100
+        prov = tile(screen, {"A": [hurt] + fresh, "B": [unit("B", attack=10)]})
+
+        ai_movement._rotate_damaged_units(screen, "A", {prov["id"]})
+
+        self.assertEqual(hurt.get("combat_stance"), "RESERVE")
+        self.assertNotIn(id(hurt),
+                         {id(u) for lane in combat_rules.build_battle(
+                             [prov["units"]], screen.nation_data).lanes
+                          for side in (lane.a, lane.b) for u in side.front})
+
+    def test_a_hurt_unit_holds_its_slot_when_nobody_can_replace_it(self):
+        """An empty slot dissolves the lane, which is worse than a hurt unit in it."""
+        from map_logic.ai import ai_movement
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        hurt = [unit("A", attack=10, health=5) for _ in range(2)]
+        for u in hurt:
+            u["max_health"] = 100
+        prov = tile(screen, {"A": hurt, "B": [unit("B", attack=10)]})
+
+        ai_movement._rotate_damaged_units(screen, "A", {prov["id"]})
+
+        for u in hurt:
+            self.assertNotIn("combat_stance", u)
+
+
 if __name__ == "__main__":
     unittest.main()
