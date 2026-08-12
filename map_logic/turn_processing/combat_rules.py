@@ -299,8 +299,12 @@ def _lane_membership(columns, coalition_groups, duels, can_fight):
     return lanes_of, foes
 
 
-def _available(units):
-    """A column's units in the order it would rather field them.
+def _availability(columns):
+    """{column: units, in the order that column would rather field them}.
+
+    Worked out once per column rather than once per lane it fights in: this is
+    a sort, and build_battle runs every frame for the sidebar and the map's
+    combat bubbles.
 
     Holding a unit back is a preference, not a veto. A nation that held
     everything back would otherwise vanish from a fight it is standing in the
@@ -308,12 +312,16 @@ def _available(units):
     China's only unit on a tile refused to fight Japan and the battle silently
     did not happen.
     """
-    # sorted() is stable, so equal-attack units keep their province order.
-    pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)
-    return [u for u in pool if u.get("combat_stance") != "RESERVE"] or pool
+    available = {}
+    for i, (_side, _owner, units) in enumerate(columns):
+        # sorted() is stable, so equal-attack units keep their province order.
+        pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK),
+                      reverse=True)
+        available[i] = [u for u in pool if u.get("combat_stance") != "RESERVE"] or pool
+    return available
 
 
-def _caps(columns, coalition_groups, duels, lanes_of, slots):
+def _caps(coalition_groups, duels, lanes_of, available, slots):
     """{(column, duel): slots} -- each side's allowance split among its members.
 
     The split is max-min fair (see share_slots), so allies pool their width
@@ -326,13 +334,13 @@ def _caps(columns, coalition_groups, duels, lanes_of, slots):
         for group_index in groups:
             members = [i for i in coalition_groups[group_index]
                        if duel_index in lanes_of.get(i, ())]
-            demands = [len(_available(columns[i][2])) for i in members]
+            demands = [len(available[i]) for i in members]
             for i, allowance in zip(members, share_slots(demands, slots)):
                 caps[(i, duel_index)] = allowance
     return caps
 
 
-def _seat(columns, duels, lanes_of, foes, caps):
+def _seat(columns, duels, lanes_of, foes, caps, available):
     """Which units hold which front slots. Returns {(column, duel): [units]}.
 
     Per nation, in priority order: honour a valid `lane_target` pin, then seat
@@ -350,7 +358,7 @@ def _seat(columns, duels, lanes_of, foes, caps):
                    for u in columns[j][2])
 
     seats = {}
-    for column_index, (_side, _owner, units) in enumerate(columns):
+    for column_index in range(len(columns)):
         my_lanes = lanes_of.get(column_index)
         if not my_lanes:
             continue
@@ -358,12 +366,12 @@ def _seat(columns, duels, lanes_of, foes, caps):
         for duel_index in my_lanes:
             seats[(column_index, duel_index)] = []
 
-        available = _available(units)
+        fieldable = available[column_index]
         pinned = set()
 
         # A pin names an enemy nation, not a lane -- "fight these people" is the
         # gesture, and it survives the lanes being redrawn around it.
-        for unit in available:
+        for unit in fieldable:
             target = unit.get("lane_target")
             if not target:
                 continue
@@ -375,7 +383,7 @@ def _seat(columns, duels, lanes_of, foes, caps):
                     pinned.add(id(unit))
                 break
 
-        rest = [u for u in available if id(u) not in pinned]
+        rest = [u for u in fieldable if id(u) not in pinned]
 
         for duel_index in my_lanes:
             if not rest:
@@ -396,7 +404,7 @@ def _seat(columns, duels, lanes_of, foes, caps):
         for duel_index in my_lanes:
             if seats[(column_index, duel_index)]:
                 continue
-            for unit in available:
+            for unit in fieldable:
                 seats[(column_index, duel_index)].append(unit)
                 break
 
@@ -447,8 +455,9 @@ def build_battle(sides, nation_data, width=None):
     duels = _duels(columns, groups, hostile, across_only)
     slots = lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
-    caps = _caps(columns, groups, duels, lanes_of, slots)
-    seats = _seat(columns, duels, lanes_of, foes, caps)
+    available = _availability(columns)
+    caps = _caps(groups, duels, lanes_of, available, slots)
+    seats = _seat(columns, duels, lanes_of, foes, caps, available)
 
     def front(group_index, duel_index):
         return [u for i in groups[group_index]
