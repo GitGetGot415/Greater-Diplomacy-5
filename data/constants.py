@@ -774,7 +774,32 @@ ECONOMY_WEIGHT_FUEL = 20
 # Used in queries.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
 MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 
-MAX_COMBAT_ATTACKERS = 12 # Only the top x units will deal damage in combat
+# ==========================================
+# COMBAT WIDTH
+# ==========================================
+# A tile does not fight as one pot. It splits into lanes -- one duel per pair of
+# hostile powers standing on it -- and these three numbers decide how many units
+# get to be in those duels. See map_logic/turn_processing/combat_rules.py.
+
+# Total units that fire on one tile, across every lane. Not per nation: the
+# number this replaced was applied per nation column, so five countries on a
+# tile fired five times twelve.
+COMBAT_WIDTH = 12
+
+# Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
+# of the fight by a fifty-unit one. When lanes * 2 * this exceeds COMBAT_WIDTH
+# the floor wins and the tile fields more than COMBAT_WIDTH -- at 12/2 that
+# needs four separate duels on one tile.
+MIN_LANE_SLOTS_PER_SIDE = 2
+
+# Slots per side in a typical lane: one lane, one enemy, which is what most
+# fights are. This is the number the AI reasons with, since it cannot know in
+# advance how many ways a tile will split.
+LANE_SLOTS_TYPICAL = COMBAT_WIDTH // 2
+
+# TEMPORARY, deleted once the AI reads lane slots. The old per-nation cap, kept
+# only so the sites that have not moved to the lane model yet keep working.
+MAX_COMBAT_ATTACKERS = LANE_SLOTS_TYPICAL
 
 # ==========================================
 # BOMBARDMENT
