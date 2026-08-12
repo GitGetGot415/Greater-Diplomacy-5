@@ -148,7 +148,7 @@ UNIT_SECTIONS = [
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
-            "cost_fuel": linear(10, 1), "production_time": const(2),
+            "cost_fuel": linear(10, 1), "production_time": const(3),
         }),
         # Identical to Mechanized Infantry Type in every stat except 1.5x attack
         # and double cost_materials - the premium tier Armored Personnel Carriers

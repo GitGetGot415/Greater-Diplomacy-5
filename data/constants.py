@@ -774,7 +774,7 @@ ECONOMY_WEIGHT_FUEL = 20
 # Used in queries.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
 MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 
-MAX_COMBAT_ATTACKERS = 5 # Only the top 5 units will deal damage in combat
+MAX_COMBAT_ATTACKERS = 5 # Only the top x units will deal damage in combat
 
 # ==========================================
 # BOMBARDMENT
