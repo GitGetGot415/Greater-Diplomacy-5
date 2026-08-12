@@ -242,6 +242,99 @@ class ObserverTests(BattleScreenTestCase):
         self.assertNotIn("Clear Lane Orders", labels)
 
 
+class TacticalModeTests(BattleScreenTestCase):
+    """Commanding one division, not a country.
+
+    Orders_Screen has enforced this since tactical mode existed; the lane
+    manager did not, so the one screen you open in the middle of a battle handed
+    the whole army back.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.map.tactical_mode = True
+        self.map.player_unit = next(u for u in self.province["units"]
+                                    if u["owner"] == self.a)
+        self.addCleanup(setattr, self.map, "tactical_mode", False)
+        self.addCleanup(setattr, self.map, "player_unit", None)
+
+    def test_only_the_tactical_unit_is_yours_to_move(self):
+        screen = self.screen()
+
+        self.assertEqual([id(u) for u in screen.my_units()],
+                         [id(self.map.player_unit)])
+
+    def test_your_own_countrymen_are_not_editable(self):
+        screen = self.screen()
+        theirs = [u for u in self.province["units"]
+                  if u["owner"] == self.a and u is not self.map.player_unit]
+
+        self.assertTrue(theirs)
+        for unit in theirs:
+            self.assertFalse(screen.can_command(unit))
+
+    def test_the_bench_offers_nobody_else(self):
+        screen = self.screen()
+
+        for unit in screen.bench():
+            self.assertIs(unit, self.map.player_unit)
+
+    def test_a_row_for_a_unit_you_do_not_command_is_disabled(self):
+        screen = self.screen()
+        editable = [el for el in screen.elements
+                    if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
+                                                     battle_screen.PANE_RESERVE)
+                    and not getattr(el, "disabled", False)]
+
+        # At most the one division, wherever it happens to be standing.
+        self.assertLessEqual(len(editable), 1)
+
+    def test_clearing_lane_orders_leaves_the_rest_of_the_army_alone(self):
+        screen = self.screen()
+        others = [u for u in self.province["units"]
+                  if u["owner"] == self.a and u is not self.map.player_unit]
+        for unit in others:
+            unit["combat_stance"] = "RESERVE"
+
+        screen.clear_orders()
+
+        for unit in others:
+            self.assertEqual(unit.get("combat_stance"), "RESERVE")
+
+
+class RowPaintingTests(BattleScreenTestCase):
+    """Rows are painted over rather than labelled, so painting is the test."""
+
+    def test_a_bombarding_unit_paints_its_guns_too(self):
+        library = queries.get_unit_library()
+        gunner = next((name for name, stats in library.items()
+                       if "bombard_attack" in stats), None)
+        self.assertIsNotNone(gunner, "no bombarding unit type in the library")
+
+        self.province["units"].append(queries.create_unit_dict(gunner, self.a, library))
+        screen = self.screen()
+        screen.draw(self.surface)
+
+    def test_every_row_carries_something_to_paint(self):
+        screen = self.screen()
+        painted = {pane: len(rows) for pane, rows in screen.row_paint.items()}
+        rows = {}
+        for el in screen.elements:
+            pane = getattr(el, "pane", None)
+            if pane:
+                rows[pane] = rows.get(pane, 0) + 1
+
+        self.assertTrue(rows)
+        self.assertEqual(painted, rows)
+
+    def test_your_side_is_listed_first_whichever_half_of_the_lane_it_is(self):
+        screen = self.screen()
+        for lane in screen.battle.lanes:
+            near, _far = screen.near_far(lane)
+            if screen.is_mine(lane.a) or screen.is_mine(lane.b):
+                self.assertTrue(screen.is_mine(near))
+
+
 class ReadOnlyOrdersTests(BattleScreenTestCase):
     """The Orders screen on a province the player commands nothing in."""
 

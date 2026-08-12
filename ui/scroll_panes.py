@@ -106,13 +106,18 @@ class ScrollPanes:
                 return True
         return False
 
-    def draw_panes(self, surface, rects=None, backdrops=None):
+    def draw_panes(self, surface, rects=None, backdrops=None, foregrounds=None):
         """Draws each pane's rows clipped to its own rect, then the fixed chrome.
 
         `backdrops` is an optional {pane_name: callable(surface)} drawn inside
         the clip region but *underneath* that pane's elements -- row striping,
         card frames and the like, which have to crop with the widgets sitting on
         them but must not paint over them.
+
+        `foregrounds` is the mirror of it, drawn inside the same clip region but
+        *over* the elements. That is what a row made of more than a text label
+        needs -- a flag, a line of stat icons -- since a Button can only render
+        one string and the decoration has to crop with the row it belongs to.
         """
         from ui.bars import ui_bars  # deferred: keeps this module a leaf
 
@@ -128,6 +133,8 @@ class ScrollPanes:
                 for el in self.elements:
                     if getattr(el, "pane", None) == name:
                         el.draw(surface)
+                if foregrounds and name in foregrounds:
+                    foregrounds[name](surface)
 
         for el in self.elements:
             if not getattr(el, "pane", None):

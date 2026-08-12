@@ -30,9 +30,10 @@ import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules
 from map_logic.rendering.font_manager import fonts
-from ui import text_utils
+from ui import flag_icons
 from ui.bars import ui_bars
 from ui.modal_screen import ModalScreen
+from ui_elements import draw_combat_stats, draw_bombardment_stats
 
 #: Panes, left to right. Lane list, then the selected lane's three columns.
 PANE_LANES = "lanes"
@@ -40,14 +41,19 @@ PANE_FRONT = "front"
 PANE_ENEMY = "enemy"
 PANE_RESERVE = "reserve"
 
-LANE_COL_W = 210
+LANE_COL_W = 250
+#: Two lines: the unit and its flag, then its stats. The sidebar shows the same
+#: stats on the same icons, and a lane manager that showed less than the panel
+#: it opens from would be the wrong way round.
+ROW_H = 46
+HEADER_H = 26
+#: Flags a lane row shows per side before it gives up and counts the rest.
+LANE_FLAGS_SHOWN = 3
 
 
 def side_name(side):
     """A side in words, for anywhere a flag will not fit."""
     return " + ".join(side.nations)
-ROW_H = 30
-HEADER_H = 26
 
 
 class Battle_Screen(ModalScreen):
@@ -77,6 +83,10 @@ class Battle_Screen(ModalScreen):
         self.visible = queries.is_province_visible(map_screen, province["id"])
         self.selected_lane = 0
         self.regions = {}
+        # {pane: [(rect, payload)]}, filled by refresh_ui and read by the
+        # foreground painters. Safe to cache because GameState.scroll_by calls
+        # refresh_ui on every wheel notch, so the rects never go stale.
+        self.row_paint = {}
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -107,16 +117,39 @@ class Battle_Screen(ModalScreen):
         if not self.battle.lanes:
             return None, None, None
         lane = self.battle.lanes[min(self.selected_lane, len(self.battle.lanes) - 1)]
-        if self.player in lane.b.nations:
-            return lane, lane.b, lane.a
-        return lane, lane.a, lane.b
+        return (lane,) + self.near_far(lane)
 
     def is_mine(self, side):
         return side is not None and self.player in side.nations
 
+    def near_far(self, lane):
+        """A lane's two sides, the player's first when they hold one.
+
+        Every reading of a lane orders it this way -- the row in the list, the
+        summary line, the two columns -- so a player never has to work out which
+        half of "6 v 3" is theirs.
+        """
+        if self.player in lane.b.nations:
+            return lane.b, lane.a
+        return lane.a, lane.b
+
     def my_units(self):
-        return [u for u in self.province.get("units", [])
+        """The units on this tile the player may actually give orders to.
+
+        In tactical mode a player commands one division, not a country, so the
+        lane manager has to narrow to it the same way the Orders screen does --
+        otherwise the one screen you open in the middle of a battle is the one
+        that hands you the whole army back.
+        """
+        mine = [u for u in self.province.get("units", [])
                 if u.get("owner") == self.player]
+        if self.map_screen.tactical_mode:
+            return [u for u in mine if u is self.map_screen.player_unit]
+        return mine
+
+    def can_command(self, unit):
+        """Whether this particular unit takes orders from the player."""
+        return any(u is unit for u in self.my_units())
 
     def bench(self):
         """Our units in no front rank anywhere -- the pool a lane draws from."""
@@ -185,6 +218,7 @@ class Battle_Screen(ModalScreen):
         self.rebuild()
         self._layout()
         self.elements = []
+        self.row_paint = {}
         p = self.panel_rect
 
         btn_y = p.bottom - 52
@@ -215,54 +249,153 @@ class Battle_Screen(ModalScreen):
                             lane, editable=False)
 
     def _lane_rows(self):
+        """One row per lane: the two sides' flags, and how the fight stands.
+
+        Buttons carry no text -- _paint_lanes draws over them. A Button renders
+        one string and a side is a row of flags, so the label was the wrong
+        shape for it well before the names stopped fitting in the column.
+        """
         rect = self.regions[PANE_LANES]
         # Every lane is selectable; the player's are picked out in colour so a
         # crowded tile still reads at a glance.
         mine = {id(lane) for lane in self.my_lanes()}
+        self.row_paint[PANE_LANES] = []
         for i, y in self.pane_rows(PANE_LANES, len(self.battle.lanes), rect.y, rect.height):
             lane = self.battle.lanes[i]
-            # Truncate each name rather than the joined string, so the second
-            # nation is never the half that disappears -- "Soviet Union v ..."
-            # names one side of a duel and is useless for picking between two.
-            room = max(4, ((LANE_COL_W - 14) // 9 - 6) // 2)
-            label = (f"{i + 1}. {text_utils.truncate_chars(side_name(lane.a), room)}"
-                     f" v {text_utils.truncate_chars(side_name(lane.b), room)}")
             colour = "blue" if id(lane) in mine else "grey"
-            btn = self.button(rect.x, y, LANE_COL_W, colour, label,
+            btn = self.button(rect.x, y, LANE_COL_W, colour, "",
                               lambda idx=i: self._select(idx))
             btn.is_selected = (i == self.selected_lane)
             self.add_pane_row(PANE_LANES, btn)
+            self.row_paint[PANE_LANES].append((btn.rect, lane))
 
     def _unit_rows(self, pane, unit_list, lane, editable, is_bench=False):
         rect = self.regions[pane]
+        self.row_paint[pane] = []
         for i, y in self.pane_rows(pane, len(unit_list), rect.y, rect.height):
             unit = unit_list[i]
-            name = queries.get_condensed_unit_name(unit.get("type", "Unit"))
             held = unit.get("combat_stance") == "RESERVE"
+            can_edit = editable and self.can_command(unit)
 
-            if not editable:
-                label = f"{name}  {int(unit.get('health', 0))}hp"
-                if unit.get("owner") != self.player:
-                    label = f"[{unit.get('owner', '?')[:3].upper()}] " + label
-                btn = self.button(rect.x, y, rect.width, "grey",
-                                  text_utils.truncate_chars(label, (rect.width - 14) // 9),
-                                  lambda: None)
+            if not can_edit:
+                btn = self.button(rect.x, y, rect.width, "grey", "", lambda: None)
                 btn.disabled = True
+                note = ""
             elif is_bench:
-                label = f"{'HELD ' if held else ''}{name}  ->  lane {lane.index + 1}"
-                btn = self.button(rect.x, y, rect.width, "orange" if held else "green",
-                                  text_utils.truncate_chars(label, (rect.width - 14) // 9),
+                btn = self.button(rect.x, y, rect.width, "orange" if held else "green", "",
                                   lambda u=unit, l=lane: self.send_to_lane(u, l))
+                note = f"{'HELD  ' if held else ''}->  lane {lane.index + 1}"
             else:
-                label = f"{name}  {int(unit.get('health', 0))}hp  [Hold]"
-                btn = self.button(rect.x, y, rect.width, "blue",
-                                  text_utils.truncate_chars(label, (rect.width - 14) // 9),
+                btn = self.button(rect.x, y, rect.width, "blue", "",
                                   lambda u=unit: self.toggle_stance(u))
+                note = "[Hold]"
             self.add_pane_row(pane, btn)
+            self.row_paint[pane].append((btn.rect, (unit, note)))
+
+    # -- painting -------------------------------------------------------- #
+
+    def _paint_lanes(self, surface):
+        """`1.  [flag][flag]  v  [flag][flag]      6 v 3`"""
+        small = fonts.get("small")
+        for rect, lane in self.row_paint.get(PANE_LANES, ()):
+            x = rect.x + 8
+            top = rect.y + (rect.height - small.get_height()) // 2
+
+            number = small.render(f"{lane.index + 1}.", True, c.UI_TEXT_LIGHT)
+            surface.blit(number, (x, top))
+            x += number.get_width() + 6
+
+            near, far = self.near_far(lane)
+            for n, side in enumerate((near, far)):
+                if n:
+                    versus = small.render("v", True, c.UI_TEXT_MUTED)
+                    surface.blit(versus, (x, top))
+                    x += versus.get_width() + 6
+                x = self._paint_side_flags(surface, side, x, rect, small)
+
+            tally = small.render(f"{len(near.front)} v {len(far.front)}",
+                                 True, c.UI_TEXT_MUTED)
+            surface.blit(tally, (rect.right - 10 - tally.get_width(), top))
+
+    def _paint_side_flags(self, surface, side, x, rect, font):
+        """A side's flags in a row, counting the overflow rather than truncating.
+
+        A coalition of six will not fit in the column, and a truncated list of
+        flags is worse than a short one with a number: it looks like the whole
+        side is two nations.
+        """
+        for nation in side.nations[:LANE_FLAGS_SHOWN]:
+            x = flag_icons.draw_flag_centered(surface, nation, self.map_screen.nation_data,
+                                              x, rect.y, rect.height)
+        extra = len(side.nations) - LANE_FLAGS_SHOWN
+        if extra > 0:
+            more = font.render(f"+{extra}", True, c.UI_TEXT_MUTED)
+            surface.blit(more, (x, rect.y + (rect.height - font.get_height()) // 2))
+            x += more.get_width() + 6
+        return x
+
+    def _paint_units(self, pane):
+        """The stat block the sidebar shows, on the row it belongs to.
+
+        Same helpers at labeled=False, so the two readings of a unit cannot
+        drift. Bombardment goes on the end of the stat line rather than a third
+        line of its own: pane_rows lays out one height for every row in a pane,
+        and a gunner is not worth making every infantry row taller for.
+        """
+        def paint(surface):
+            small = fonts.get("small")
+            library = queries.get_unit_library()
+            for rect, (unit, note) in self.row_paint.get(pane, ()):
+                owner = unit.get("owner", "?")
+                x = flag_icons.draw_flag_centered(surface, owner, self.map_screen.nation_data,
+                                                  rect.x + 6, rect.y + 2, small.get_height())
+
+                dim = owner != self.player or not self.can_command(unit)
+                name = queries.get_condensed_unit_name(unit.get("type", "Unit"))
+                name_surf = small.render(name, True,
+                                         c.UI_TEXT_MUTED if dim else c.UI_TEXT_LIGHT)
+                surface.blit(name_surf, (x, rect.y + 2))
+
+                if note:
+                    note_surf = small.render(note, True, c.UI_TEXT_LIGHT)
+                    surface.blit(note_surf, (rect.right - 8 - note_surf.get_width(), rect.y + 2))
+
+                stat_y = rect.y + 2 + small.get_height() + 2
+                end_x = draw_combat_stats(
+                    surface, small, "", unit.get("attack", 0), unit.get("defense", 0),
+                    int(unit.get("health", 0)), unit.get("speed", 0),
+                    rect.x + 10, stat_y, (200, 200, 200), labeled=False)
+
+                stats = library.get(unit.get("type", ""), {})
+                if "bombard_attack" in stats:
+                    draw_bombardment_stats(
+                        surface, small,
+                        unit.get("bombard_attack", stats.get("bombard_attack", 0)),
+                        unit.get("bombard_range", stats.get("bombard_range", 0)),
+                        end_x, stat_y, (200, 200, 200), base_text="", labeled=False)
+        return paint
+
+    def draw_elements(self, surface):
+        """Rows crop to their own pane, and their decoration crops with them.
+
+        Without this the screen leaned on GameState.draw_elements, which clips
+        to a single content rect -- there are four here, so nothing was clipped
+        at all and a long roster painted straight over the footer buttons.
+        """
+        self.draw_panes(surface, foregrounds={
+            PANE_LANES: self._paint_lanes,
+            PANE_FRONT: self._paint_units(PANE_FRONT),
+            PANE_ENEMY: self._paint_units(PANE_ENEMY),
+            PANE_RESERVE: self._paint_units(PANE_RESERVE),
+        })
 
     def _select(self, index):
         self.selected_lane = index
         self.refresh_ui()
+
+    def _composition(self, side):
+        """`Vichy France 5 · German Reich 1` -- a side's members and their width."""
+        return "  +  ".join(f"{m.nation} {len(m.front)}/{m.slots}" for m in side.members)
 
     def get_panel_title(self):
         owner = self.province.get("owner", "Unclaimed")
@@ -287,10 +420,18 @@ class Battle_Screen(ModalScreen):
                    f"{len(self.battle.lanes)} lane(s)   |   {lane.slots} slots per side")
         if not (self.is_mine(near) or self.is_mine(far)):
             summary += "   |   OBSERVING - you have no units in this duel"
-        self.label(surface, summary, (p.x + self.PAD, p.y + 44))
+        self.label(surface, summary, (p.x + self.PAD, p.y + 30))
+
+        # Who is on each side and what width they were given. A side is a
+        # coalition and the split between its members is the thing a player has
+        # no other way to find out -- it is why their nine units field five.
+        self.label(surface, f"{self._composition(near)}   v   {self._composition(far)}",
+                   (p.x + self.PAD, p.y + 48))
 
         near_label = "YOUR SIDE" if self.is_mine(near) else side_name(near).upper()
         far_label = "ENEMY SIDE" if self.is_mine(near) else side_name(far).upper()
+        if self.map_screen.tactical_mode and self.is_mine(near):
+            near_label = "YOUR SIDE (tactical: one division is yours)"
         if self.is_mine(near) or self.is_mine(far):
             reserve_label = f"YOUR RESERVE ({len(self.bench())})"
         else:

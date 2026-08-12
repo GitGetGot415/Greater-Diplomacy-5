@@ -4,10 +4,11 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
 from ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui import flag_icons
 from map_logic.turn_processing import combat_rules
 
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
-GARRISON_FLAG_SIZE = (18, 12)
+GARRISON_FLAG_SIZE = flag_icons.ROW_FLAG_SIZE
 
 # How fast the mouse wheel scrolls the Buildings/Garrison area
 SIDEBAR_SCROLL_STEP = c.SCROLL_STEP
@@ -173,16 +174,12 @@ def draw_sidebar_info(map_screen, surface):
                 side_color = map_screen.nation_colors.get(side_id, (200, 200, 200))
 
                 # Flag next to the side/category name -- individual unit rows below stay as-is
-                flag_w, flag_h = GARRISON_FLAG_SIZE
-                side_flag_data = side_data.get("flag_data", "DEFAULT")
-                flag_surf = queries.decode_b64_to_surf(side_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=side_id)
-                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (map_screen.small_font.get_height() - flag_h) // 2
-                surface.blit(flag_surf, (text_x, flag_y))
-                pygame.draw.rect(surface, (100, 100, 100), (text_x, flag_y, flag_w, flag_h), 1)
+                name_x = flag_icons.draw_flag_centered(
+                    surface, side_id, map_screen.nation_data, text_x, current_y,
+                    map_screen.small_font.get_height())
 
                 title = map_screen.small_font.render(f"{side_display}:", True, side_color)
-                surface.blit(title, (text_x + flag_w + 6, current_y))
+                surface.blit(title, (name_x, current_y))
 
                 # The split is the thing worth reading at a glance: a nation with
                 # forty units and six in the front rank is not fielding forty.
@@ -281,14 +278,9 @@ def draw_sidebar_info(map_screen, surface):
                 row_x += name_surf.get_width() + 4
 
                 # Owner flag instead of a country name string
-                flag_w, flag_h = GARRISON_FLAG_SIZE
-                owner_flag_data = map_screen.nation_data.get(u_owner_id, {}).get("flag_data", "DEFAULT")
-                flag_surf = queries.decode_b64_to_surf(owner_flag_data, c.FLAG_SIZE, is_portrait=False, country_name=u_owner_id)
-                flag_surf = pygame.transform.scale(flag_surf, (flag_w, flag_h))
-                flag_y = current_y + (name_surf.get_height() - flag_h) // 2
-                surface.blit(flag_surf, (row_x, flag_y))
-                pygame.draw.rect(surface, (100, 100, 100), (row_x, flag_y, flag_w, flag_h), 1)
-                row_x += flag_w + 6
+                row_x = flag_icons.draw_flag_centered(
+                    surface, u_owner_id, map_screen.nation_data, row_x, current_y,
+                    name_surf.get_height())
 
                 # Condensed, icon-based combat stats, matching the production tab's style
                 draw_combat_stats(
