@@ -58,9 +58,11 @@ screens
     /menu_screens
         - top-level navigation screens (main menu, settings, new game, etc)
     /map_related_screens
-        - screens opened from within an active game/map (orders, research, production,
-          messages, economy, faction, declare independence, and the diplomacy overlays:
-          war/claims/peace/trade/puppets screens)
+        - screens opened from within an active game/map (orders, battle, research,
+          production, messages, economy, faction, declare independence, and the diplomacy
+          overlays: war/claims/peace/trade/puppets screens)
+        - battle_screen.py is the lane manager, which replaces the Give Orders button
+          on a tile that is fighting -- see combat_rules.py for the model it edits
     /editor_screens
         - screens only used by the map editor tool (date/economy, research, brushes,
           diplomacy editor, scripted events editor, historical leaders editor, turn editor)

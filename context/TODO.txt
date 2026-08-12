@@ -1,9 +1,5 @@
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
-- combat zone shows both sides (or 3 sides? or 4? idk)
-- combat width might be wack if there's multiple countries involved... 10 for the side with 2 countries, 5 for the side with 1 country
-- seems a bit unbalanced
-
 - if no claims, add option to generate claims
 - edit cost for units editor?
 
@@ -66,9 +62,22 @@ Immediate concerns:
 
 - ability to port gd4 saves into gd5
 
-could you make it so that when damage is actually dealt to units, it's spread out only amongst units that are actually in combat instead of literally every enemy unit on that tile?
 maybe units deal less damage the less hp they have...
 this would mean that units basically swap out with other units when they have less hp...
+(the damage half of this is done -- lanes only spread damage across the enemy
+front rank in that lane. the hp half is now a one-liner: it is the sort key
+combat_rules._seat picks the front rank with. the AI already swaps its shot-up
+units out on a health threshold, AI_ROTATE_HEALTH_FRACTION.)
+
+- lane combat follow-ups:
+  - within-turn reallocation of lane slots a lane cannot use. across turns this
+    already works for free (rout somebody, their lane stops existing and the
+    rest widen); within one turn it needs a two-pass water-fill, since demand
+    depends on the slot count and the slot count depends on demand
+  - re-measure AI_LINE_SPEND_RATIO under the lane rules. the old 2.0 came from
+    fighting armies built at each ratio against eleven fixed compositions, and
+    that harness was run offline and is not in tests/. 1.0 is derived, not
+    measured
 
 - figure out how to make scenarios take up less space
 

@@ -77,12 +77,16 @@ map_logic/ai/
 THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
 ----------------------------------------------------------------
 
-An extra body is worth what it ABSORBS, not a flat bonus. apply_group_damage
-deals sum(max(0, volley/N - defense)), so at defense 0 that sum is exactly the
-volley whatever N is -- splitting a stack into more zero-defense bodies absorbs
-nothing at all. Crediting every body equally made the cheapest unit in the game
-the best buy for any nation with spare manpower, which is how a country ends up
-with eighty militia and no infantry.
+An extra body is worth what it ABSORBS, and past the front rank that is
+nothing. apply_group_damage deals sum(max(0, volley/N - defense)) across the
+enemy front IN ONE LANE, so N is the lane's slot count, not the size of the
+stack. A body in the front absorbs what its defense stops; a body behind it
+absorbs nothing whatsoever -- it is a replacement, not a shield, which is why
+AI_RESERVE_DEPTH caps how many of them are worth buying at one front rank plus
+one relief rank. Under the pot this replaced, N was every hostile unit on the
+tile, so bodies were the cheapest defensive move in the game and crediting them
+equally made the cheapest unit the best buy for anyone with spare manpower --
+which is how a country ends up with eighty militia and no infantry.
 
 A building tech is worth what it ADDS. Upgrading a factory deletes the level
 below it and costs a flat 30,000 at every tier, so Lvl 25 gains exactly what
@@ -106,8 +110,16 @@ data/constants.py, the AI blocks. The ones worth knowing:
 
   AI_WAR_DESIRE_THRESHOLD     how keen a nation must be to declare war
   AI_LINE_SPEND_RATIO         bodies versus firepower, as a share of spending
-  AI_W_SOAK                   what one more body is worth, scaled by the share
-                              of a hit its defense actually absorbs
+  AI_W_SOAK                   what one more body IN THE FRONT RANK is worth,
+                              scaled by the share of a hit its defense absorbs.
+                              A body past the front absorbs nothing at all
+  AI_RESERVE_DEPTH            how many waves deep a tile is worth filling: a
+                              front rank and one relief rank behind it. Raising
+                              it buys bodies that cannot reach a slot before
+                              the tile resolves
+  AI_ROTATE_HEALTH_FRACTION   how shot up a unit must be before the AI pulls it
+                              out of the front rank, when a fresher one is free
+                              to take the slot
   AI_TECH_ECONOMY_WEIGHT      industry versus army in research
   AI_BUILDING_PAYBACK_TURNS   how long a building gets to earn back its cost.
                               Separate from AI_TECH_ECONOMY_HORIZON, which
@@ -124,18 +136,29 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               too small or too large -- UPKEEP_MODIFIERS["fuel"]
                               is 0.50 against 0.05 for materials, so fuel is
                               what actually binds
-  MAX_COMBAT_ATTACKERS        combat width. Not an AI setting, but the AI reads
-                              it in nine places, so raising it buys roughly
-                              proportionally more assault units per frontline
-                              tile and lets fronts hold proportionally more.
-                              Source-only: no scenario field, no editor field
+  COMBAT_WIDTH                units that fire on one tile, across every lane on
+                              it. Not an AI setting, but the AI reads what
+                              follows from it everywhere, so raising it buys
+                              roughly proportionally more assault units per
+                              frontline tile and lets fronts hold proportionally
+                              more. Source-only: no scenario field, no editor
+                              field
+  MIN_LANE_SLOTS_PER_SIDE     floor on a lane's per-side allowance, so a small
+                              ally is never squeezed out of a fight by a large
+                              one. When lanes x 2 x this exceeds COMBAT_WIDTH
+                              the floor wins and the tile fields more than the
+                              width
+  LANE_SLOTS_TYPICAL          slots per side in a one-enemy fight, which is what
+                              most fights are. The number the AI reasons with,
+                              since it cannot know in advance how many ways a
+                              tile will split
   AI_REINFORCE_COMBAT_WEIGHT  how hard a battle pulls units in, at full
                               strength on an empty tile and fading to nothing
-                              as the firing line fills
+                              once the front and its relief are full
   AI_REAR_GUARD_PENALTY       how hard a quiet border pushes units away once one
                               is standing there. The guard stays at one whatever
                               the combat width is -- a quiet border is a
-                              garrison, not a firing line
+                              garrison, not a front
   ai_turn_budget_seconds      (a setting) wall-clock ceiling on model work for
                               a whole turn; whatever has not answered falls
                               back. 0, the default, means no ceiling and lets a
@@ -179,27 +202,55 @@ still at war, is additionally erased along with its cores -- which is what
 makes an integrated puppet the scenario shipped with keep its cores when
 annexed, while one you created and re-annexed does not.
 
-Bombardment is free, draws no return fire, ignores the combat-width cap, and
-a bombarding unit still fights on its own tile. The AI shells whenever it has
-a target in range, which is also what stops artillery charging into melee.
+Bombardment is free, draws no return fire, sits outside the lane system
+entirely, and a bombarding unit still fights on its own tile. Being outside the
+lanes is now its whole strategic identity: it is the ONLY thing in the game that
+reaches a unit waiting in reserve, and under the lane model most of a deep stack
+is in reserve. The AI shells whenever it has a target in range, which is also
+what stops artillery charging into melee.
 
 Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
 movement re-plan. They did not used to, which meant no AI unit was ever
 disbanded by anything.
 
-Combat width is read everywhere, including when moving. Only the top
-MAX_COMBAT_ATTACKERS units on a tile fire, so a tile already holding a full
-firing line sorts behind every tile with a slot left however much the weights
-want it (ai_movement._tile_pressure), and a battle's pull fades as the line
-fills -- full strength on an empty tile, nothing at all once it is full. Change
-the constant and both halves follow: at 5 a tile stops competing once five are
-there, at 10 it keeps asking until ten are. Movement used to reference the
-constant nowhere and balanced purely by "fewest units assigned", so stacks came
-out at total_units / targets regardless. Measured over 20 seeds at width 5,
-that change moved 4% of the army from bodies that could not fire to bodies that
-could. The headcount is deliberately a separate dict from the weighted one: the
-weights carry a battle pull and a rear-guard push, and a tile at -18 is not a
-tile holding minus eighteen men.
+COMBAT IS FOUGHT IN LANES, and the width is a budget for the whole tile.
+
+A contested tile splits into duels -- one per pair of hostile powers standing on
+it. Allies are merged into coalitions first and matched member to member, so two
+allies facing two allies fight two duels rather than four; where nobody is
+allied that collapses to one duel per hostile pair, which is the free-for-all
+case. COMBAT_WIDTH is divided among those duels, with MIN_LANE_SLOTS_PER_SIDE as
+a floor so a two-unit ally standing beside a fifty-unit one still gets a lane of
+its own. This is the whole point of the model: under the pot it replaced, the
+width was applied per nation column, so five countries on a tile fired five
+times the width, and damage divided across every hostile unit present, so bodies
+were a way to thin somebody else's volley.
+
+Damage never crosses a lane boundary. A unit holds at most one front slot in at
+most one lane, or a nation at war with two powers present would fire the same
+units twice. A nation seats one unit in EVERY lane it is in before any lane gets
+a second, so nobody dodges a fight by looking the other way -- only a nation
+with fewer units than lanes leaves one uncovered, and an uncovered lane
+dissolves, which is a real way to spend a turn dealing and taking nothing. The
+one lever against that is bombardment.
+
+Reserves take no damage and deal none, and recover morale while the front
+bleeds, so a shot-up unit is worth more waiting than standing. The AI rotates
+its own (ai_movement._rotate_damaged_units) and a player does it from the battle
+screen.
+
+The width is read when moving, too. A tile already holding a full front and a
+full relief rank sorts behind every tile with room however much the weights want
+it (ai_movement._tile_pressure), and a battle's pull fades as it fills -- full
+strength on an empty tile, nothing at all once it is full. How many slots a
+nation gets on a given tile depends on how many ways that fight splits, so it is
+asked of combat_rules.nation_front_capacity per tile rather than read off one
+constant. Movement used to reference the width nowhere and balanced purely by
+"fewest units assigned", so stacks came out at total_units / targets regardless.
+Measured over 20 seeds at width 5, that change moved 4% of the army from bodies
+that could not fire to bodies that could. The headcount is deliberately a
+separate dict from the weighted one: the weights carry a battle pull and a
+rear-guard push, and a tile at -18 is not a tile holding minus eighteen men.
 
 Disbanding is a last resort and never touches the front. A unit standing in a
 battle or with an enemy next door is never given up, and neither is a type the
