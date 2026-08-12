@@ -156,7 +156,7 @@ def process_pinning(map_screen):
         shots_at_defenders = []
         for lane in probe.lanes:
             for firing, receiving in ((lane.a, lane.b), (lane.b, lane.a)):
-                shot = combat_rules.volley(firing.front)
+                shot = combat_rules.volley(firing.front, probe.shares)
                 if receiving.side_index == CHARGE_SIDE:
                     share = shot / len(receiving.front)
                     for target in receiving.front:

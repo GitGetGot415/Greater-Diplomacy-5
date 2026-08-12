@@ -25,7 +25,8 @@ def combat_strengths(sides, nation_data, friendly_nations):
     enemy_atk = 0.0
     involved = False
 
-    for lane in combat_rules.build_battle(sides, nation_data).lanes:
+    battle = combat_rules.build_battle(sides, nation_data)
+    for lane in battle.lanes:
         mine = [side for side in (lane.a, lane.b) if side.nation in friendly_nations]
         # Two friends fighting each other is not a fight you are in either way.
         if len(mine) != 1:
@@ -34,8 +35,8 @@ def combat_strengths(sides, nation_data, friendly_nations):
         involved = True
         ours = mine[0]
         theirs = lane.b if ours is lane.a else lane.a
-        friendly_atk += combat_rules.volley(ours.front)
-        enemy_atk += combat_rules.volley(theirs.front)
+        friendly_atk += combat_rules.volley(ours.front, battle.shares)
+        enemy_atk += combat_rules.volley(theirs.front, battle.shares)
 
     return friendly_atk, enemy_atk, involved
 

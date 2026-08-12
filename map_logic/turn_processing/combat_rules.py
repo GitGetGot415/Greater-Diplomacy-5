@@ -34,17 +34,19 @@ deal damage nor take it -- bombardment is the only thing that reaches them.
 
 The invariants the rest of the game is entitled to assume:
 
-1. A unit holds **at most one** front slot, in **at most one** lane, per
-   resolution. Without this a nation at war with two powers here fires the same
-   units twice.
+1. A nation fires **once** per resolution. A unit holding two fronts -- which
+   is how a nation short of men covers more duels than it has units -- splits
+   its attack between them rather than firing twice. It takes fire from both,
+   which is what being outnumbered on two fronts costs.
 2. Every lane has exactly two nations, and damage never crosses between lanes.
 3. `len(side.front) <= lane.slots`, always.
 4. Total front units across every lane equals `c.COMBAT_WIDTH`, unless
    `c.MIN_LANE_SLOTS_PER_SIDE` forced it higher or there were not enough units
    present to fill the tile.
-5. A nation seats one unit in *every* lane it is in before any lane gets a
-   second. Nobody dodges a fight by looking the other way. Only a nation with
-   fewer units than lanes leaves one uncovered, and an uncovered lane dissolves.
+5. A nation is in *every* lane it is in. It seats one unit in each before any
+   lane gets a second, and if it runs out it doubles units up rather than
+   abandoning a front. Nobody dodges a fight by looking the other way, and
+   nobody is spared one by their enemy being short of men.
 6. Hostility is read both ways round (see below).
 
 Imports data.queries in-function only -- queries is a cycle participant, and
@@ -76,8 +78,10 @@ Lane = namedtuple("Lane", "index slots a b")
 #: bystanders -- nations present and in no lane, same order: here on military
 #:               access, at war with somebody who is not standing here, or short
 #:               enough of units that the lane they would have held dissolved
-#: width      -- front slots actually seated across the whole fight
-Battle = namedtuple("Battle", "lanes engaged bystanders width")
+#: width      -- distinct units holding a front slot anywhere in this fight
+#: shares     -- {id(unit): fronts it is holding}, so a unit spread over two
+#:               duels fires one volley split between them rather than two
+Battle = namedtuple("Battle", "lanes engaged bystanders width shares")
 
 
 def _hostile(nation_data):
@@ -265,6 +269,13 @@ def _seat(columns, duels, slots):
         pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK),
                       reverse=True)
         available = [u for u in pool if u.get("combat_stance") != "RESERVE"]
+        # Holding a unit back is a preference, not a veto. A nation that held
+        # everything back would otherwise vanish from a fight it is standing in
+        # the middle of -- which is what a stale flag on a wounded unit did:
+        # Nationalist China's only unit on a tile refused to fight Japan and the
+        # battle silently did not happen.
+        if not available:
+            available = pool
         pinned = set()
 
         for unit in available:
@@ -291,7 +302,36 @@ def _seat(columns, duels, slots):
             while rest and len(seats[(column_index, duel_index)]) < slots:
                 seats[(column_index, duel_index)].append(rest.pop(0))
 
+        # A nation with fewer units than fronts holds every one of them anyway,
+        # by fighting on more than one. Leaving a front empty used to dissolve
+        # the duel, so a lone defender facing two attackers was fought by
+        # whichever of them happened to be heavier and simply ignored the other.
+        # Firing once a turn is a rule about a nation's output; it was never a
+        # reason for an enemy standing in front of it to be unable to attack.
+        for duel_index in my_lanes:
+            if seats[(column_index, duel_index)]:
+                continue
+            for unit in available:
+                seats[(column_index, duel_index)].append(unit)
+                break
+
     return seats
+
+
+def _lane_shares(seats):
+    """How many fronts each unit is holding, by id.
+
+    A unit spread over two duels still fires one volley, so its attack is
+    divided between them. Without that this is the pair loop the multiparty
+    work removed, where a nation at war with three others dealt triple its own
+    attack. It takes fire from both, though, which is what being outnumbered on
+    two fronts is supposed to cost.
+    """
+    shares = {}
+    for units in seats.values():
+        for unit in units:
+            shares[id(unit)] = shares.get(id(unit), 0) + 1
+    return shares
 
 
 def build_battle(sides, nation_data, width=None):
@@ -303,11 +343,11 @@ def build_battle(sides, nation_data, width=None):
     nations at war with each other while marching the same way settle it where
     they land, not while they cross.
 
-    Lane count is fixed before any lane dissolves, so a nation too short of
-    units to cover all of its duels leaves the survivors in narrower lanes than
-    a recount would give them. That is deliberate: recomputing the width after
-    dissolving is a fixpoint, and the case only arises when somebody is already
-    losing badly enough to be spread across more fronts than it has men.
+    Every duel between two nations that both have units here becomes a lane. A
+    nation short of units holds its extra fronts by fighting on more than one at
+    once, splitting its volley between them rather than abandoning any -- see
+    _lane_shares. The dissolve below is therefore a guard rather than a rule:
+    it can only fire if a column turned up with no units at all.
     """
     hostile = _hostile(nation_data)
     columns = _columns(sides)
@@ -318,15 +358,15 @@ def build_battle(sides, nation_data, width=None):
     slots = lane_slots(len(duels), width)
     seats = _seat(columns, duels, slots)
 
-    # A lane needs both halves. One with an empty side is a duel somebody was
-    # too short of units to turn up for, and it dissolves.
+    # A lane needs both halves. With the coverage pass in _seat this can only
+    # happen if a column is empty, which _columns makes impossible -- kept as a
+    # guard so a future change cannot silently delete a fight instead of failing.
     live = [duel_index
             for duel_index, (left, right) in enumerate(duels)
             if seats.get((left, duel_index)) and seats.get((right, duel_index))]
 
     # Everything a nation did not seat in a *surviving* lane, attributed once,
-    # to the lane it would reinforce first. Units seated into a lane that then
-    # dissolved fall back here rather than disappearing from the fight.
+    # to the lane it would reinforce first.
     live_set = set(live)
     seated_ids = {id(u)
                   for (_column, duel_index), units in seats.items()
@@ -358,15 +398,27 @@ def build_battle(sides, nation_data, width=None):
     for _side, owner, _units in columns:
         present[owner] = None
 
+    shares = _lane_shares({key: units for key, units in seats.items()
+                           if key[1] in live_set})
+
     return Battle(lanes,
                   list(engaged),
                   [owner for owner in present if owner not in engaged],
-                  sum(len(side.front) for lane in lanes for side in (lane.a, lane.b)))
+                  # Distinct units, since one holding two fronts is one unit
+                  # fighting, not two.
+                  len({id(u) for lane in lanes for side in (lane.a, lane.b)
+                       for u in side.front}),
+                  shares)
 
 
-def volley(units):
-    """Total attack of a front rank. Uncapped -- build_battle already capped it."""
-    return sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in units)
+def volley(units, shares=None):
+    """Attack of a front rank, with any unit fighting on two fronts counted once.
+
+    `shares` is Battle.shares. Omitting it reads every unit as holding this
+    front alone, which is what a caller measuring a hypothetical rank wants.
+    """
+    return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
+               for u in units)
 
 
 def exchange(battle):
@@ -378,8 +430,8 @@ def exchange(battle):
     """
     shots = []
     for lane in battle.lanes:
-        shots.append((lane.b.front, volley(lane.a.front)))
-        shots.append((lane.a.front, volley(lane.b.front)))
+        shots.append((lane.b.front, volley(lane.a.front, battle.shares)))
+        shots.append((lane.a.front, volley(lane.b.front, battle.shares)))
     return shots
 
 

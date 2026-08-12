@@ -142,7 +142,7 @@ def lanes_of(screen, prov):
 
 
 class OneVolleyPerNationTests(unittest.TestCase):
-    def test_a_splits_one_volley_across_the_front_it_is_facing(self):
+    def test_a_splits_one_volley_between_the_fronts_it_is_holding(self):
         screen, prov, troops = five_nation_tile()
 
         # Silence everyone else so what lands is A's volley and nothing else.
@@ -150,19 +150,23 @@ class OneVolleyPerNationTests(unittest.TestCase):
             for u in troops[name]:
                 u["attack"] = 0
 
-        # A has one unit and two enemies here, so coverage seats it against the
-        # heavier of them and the duel with C never forms.
-        self.assertEqual(set(lanes_of(screen, prov)),
-                         {frozenset(("A", "B")), frozenset(("B", "C"))})
+        # A has one unit and two enemies here. It holds both fronts -- being
+        # short of men is not a reason an enemy standing in front of you cannot
+        # attack -- so its 100 is split fifty each way.
+        self.assertIn(frozenset(("A", "B")), lanes_of(screen, prov))
+        self.assertIn(frozenset(("A", "C")), lanes_of(screen, prov))
 
         combat_processor.process_combat(screen)
 
-        # A's whole volley lands on B's front rank -- one unit, so all 100 of
-        # it. The pot this replaced divided it across B's two units *and* C's
-        # three, for 20 apiece; the pair loop before that gave B 50 and C 33.3.
-        self.assertAlmostEqual(damage_taken(troops["C"]), 0.0, places=6,
-                               msg="A's fire reached a nation it shares no lane with")
-        self.assertAlmostEqual(damage_taken(troops["B"]), 100.0, places=6)
+        # Fifty onto B's front rank in the A-B lane (one unit), fifty onto C's
+        # in the A-C lane (also one). The pot this replaced divided A's volley
+        # across B's two units *and* C's three, for 20 apiece; the pair loop
+        # before that gave B a full 100 and C another full 100.
+        self.assertAlmostEqual(damage_taken(troops["B"]), 50.0, places=6)
+        self.assertAlmostEqual(damage_taken(troops["C"]), 50.0, places=6)
+        self.assertAlmostEqual(
+            damage_taken(troops["B"]) + damage_taken(troops["C"]), 100.0, places=6,
+            msg="A dealt more or less than its own attack")
 
     def test_a_nation_deals_its_front_rank_s_attack_once(self):
         screen, prov, troops = five_nation_tile()
@@ -170,10 +174,12 @@ class OneVolleyPerNationTests(unittest.TestCase):
         combat_processor.process_combat(screen)
 
         # Every point of damage came from one front rank firing once, so the
-        # total is the sum of those ranks and nothing more. Under the pair loop
-        # A alone fired 200 of its 100.
-        expected = sum(combat_rules.volley(side.front)
-                       for lane in lanes_of(screen, prov).values()
+        # total is the sum of those ranks and nothing more -- with a unit
+        # holding two fronts counted once across both. Under the pair loop A
+        # alone fired 200 of its 100.
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        expected = sum(combat_rules.volley(side.front, battle.shares)
+                       for lane in battle.lanes
                        for side in (lane.a, lane.b))
         dealt = damage_taken([u for side in troops.values() for u in side])
         self.assertAlmostEqual(dealt, expected, places=6)
@@ -183,18 +189,22 @@ class OneVolleyPerNationTests(unittest.TestCase):
 
         combat_processor.process_combat(screen)
 
-        # Two lanes form, each side seating one unit except C, which has three
-        # units and one lane to spend them on beyond its first:
-        #   A-B: A(1 x 100) v B(1 x 60)
-        #   B-C: B(1 x 60)  v C(2 x 30)
-        # A takes B's 60. B's front in A-B takes A's 100; B's front in B-C takes
-        # C's 60. C's two front units split B's 60, thirty each. D and E are in
-        # no lane at all, so neither is touched.
+        # Four lanes: A-B, A-C, B-C, B-D. A holds two of them with one unit and
+        # B holds three with two, so both split their attack across the fronts
+        # they are standing on. E is at war with nobody and is untouched.
+        #
+        # Nobody deals more or less than their own attack, and nobody's damage
+        # reaches a nation they share no lane with. That pair of properties is
+        # the whole rule; the individual totals below just pin the arithmetic.
         self.assertAlmostEqual(damage_taken(troops["A"]), 60.0, places=6)
-        self.assertAlmostEqual(damage_taken(troops["B"]), 160.0, places=6)
-        self.assertAlmostEqual(damage_taken(troops["C"]), 60.0, places=6)
-        self.assertAlmostEqual(damage_taken(troops["D"]), 0.0, places=6)
+        self.assertAlmostEqual(damage_taken(troops["B"]), 150.0, places=6)
+        self.assertAlmostEqual(damage_taken(troops["C"]), 110.0, places=6)
+        self.assertAlmostEqual(damage_taken(troops["D"]), 30.0, places=6)
         self.assertAlmostEqual(damage_taken(troops["E"]), 0.0, places=6)
+
+        dealt = damage_taken([u for side in troops.values() for u in side])
+        self.assertAlmostEqual(dealt, 100 + 120 + 90 + 40, places=6,
+                               msg="the tile dealt more or less than the attack standing on it")
 
     def test_a_nation_facing_more_enemies_does_not_deal_more_damage(self):
         alone = StubMapScreen()
@@ -298,8 +308,9 @@ class BystanderTests(unittest.TestCase):
         # E's unit has attack 999, far above anyone else on the tile.
         combat_processor.process_combat(screen)
 
-        expected = sum(combat_rules.volley(side.front)
-                       for lane in lanes_of(screen, prov).values()
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        expected = sum(combat_rules.volley(side.front, battle.shares)
+                       for lane in battle.lanes
                        for side in (lane.a, lane.b))
         dealt = damage_taken([u for side in troops.values() for u in side])
         self.assertAlmostEqual(dealt, expected, places=6)
@@ -315,34 +326,32 @@ class BystanderTests(unittest.TestCase):
 
         self.assertEqual(troops["E"][0]["order"]["path"], ["p2"],
                          "a bystander was frozen in place by other people's war")
-        for name in ("A", "B", "C"):
+        for name in ("A", "B", "C", "D"):
             for u in troops[name]:
                 self.assertEqual(u["order"]["path"], [])
 
-    def test_an_enemy_nobody_could_spare_a_unit_for_is_a_bystander_too(self):
-        """The other way onto the bystander list, and a deliberate one.
+    def test_an_enemy_short_of_men_still_has_to_fight_you(self):
+        """Being outnumbered is not a way to be left alone.
 
         D is at war with B and standing on the tile with it, but B has three
-        enemies here and two units. Coverage seats those two against B's heavier
-        fronts, the duel with D never forms, and D spends the turn dealing and
-        taking nothing.
+        enemies here and two units. An earlier version of the lane rule let B
+        seat those two against its heavier fronts and simply not turn up to the
+        duel with D, so D spent the turn dealing and taking nothing -- which is
+        the "Germany could not join in" report from the 'uh oh' save, where the
+        Soviet Union's single unit could only be fought by one of the two
+        countries standing on top of it.
 
-        This is the cost of capping how many units a nation can field at once,
-        and it is the reason lane_target is a decision worth making rather than
-        a cosmetic one. Bombardment is what reaches a front nobody turned up to.
+        B now holds all three fronts, splitting its attack between them.
         """
         screen, prov, troops = five_nation_tile()
-        for side in troops.values():
-            for u in side:
-                u["order"]["path"] = ["p2"]
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
-        self.assertIn("D", battle.bystanders)
+        self.assertNotIn("D", battle.bystanders)
+        self.assertIn(frozenset(("B", "D")), set(lanes_of(screen, prov)))
 
         combat_processor.process_combat(screen)
 
-        self.assertEqual(damage_taken(troops["D"]), 0)
-        self.assertEqual(troops["D"][0]["order"]["path"], ["p2"])
+        self.assertGreater(damage_taken(troops["D"]), 0)
 
     def test_a_neutral_does_not_lose_morale_for_a_battle_it_was_not_in(self):
         screen, _prov, troops = five_nation_tile()
@@ -431,10 +440,10 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
 
-        # E is at war with nobody; D is at war with B but B could not spare a
-        # unit for it. Both take no part, for different reasons.
-        self.assertEqual(battle.engaged, ["A", "B", "C"])
-        self.assertEqual(battle.bystanders, ["D", "E"])
+        # Only E, which is at war with nobody here. Everyone with an enemy on
+        # this tile is in a lane against them, however short of units they are.
+        self.assertEqual(battle.engaged, ["A", "B", "C", "D"])
+        self.assertEqual(battle.bystanders, ["E"])
 
     def test_a_column_marching_the_same_way_is_not_fought(self):
         # Two sides means a head-on clash, and a lane always crosses the divide.

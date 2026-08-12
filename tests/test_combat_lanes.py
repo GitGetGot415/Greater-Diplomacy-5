@@ -307,6 +307,128 @@ class DissolveTests(unittest.TestCase):
         self.assertGreater(after.lanes[0].slots, before.lanes[0].slots)
 
 
+class OutnumberedTests(unittest.TestCase):
+    """Being short of men is not a way to be left alone.
+
+    Both fixtures here come from the 'uh oh' save, where two tiles were quietly
+    not fighting: one country could not join a battle it was standing in, and
+    another battle was not happening at all.
+    """
+
+    def three_way_tile(self, defenders=1):
+        """One defender, two separate attackers -- the Soviet/Romania/Germany tile."""
+        screen = StubMapScreen()
+        screen.add_nation("SOV", at_war_with=["ROM", "GER"])
+        screen.add_nation("ROM", at_war_with=["SOV"])
+        screen.add_nation("GER", at_war_with=["SOV"])
+
+        troops = {"SOV": [unit("SOV", attack=100) for _ in range(defenders)],
+                  "ROM": [unit("ROM", attack=30) for _ in range(3)],
+                  "GER": [unit("GER", attack=10)]}
+        return screen, tile(screen, troops, owner="SOV"), troops
+
+    def test_a_lone_defender_is_fought_by_everyone_standing_on_it(self):
+        screen, prov, troops = self.three_way_tile()
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertEqual(set(pairs_of(battle)),
+                         {frozenset(("SOV", "ROM")), frozenset(("SOV", "GER"))})
+        self.assertEqual(battle.bystanders, [])
+        for lane in battle.lanes:
+            self.assertTrue(lane.a.front and lane.b.front)
+
+    def test_the_smaller_attacker_actually_lands_damage(self):
+        screen, _prov, troops = self.three_way_tile()
+
+        combat_processor.process_combat(screen)
+
+        # Germany is the light one and would have been the lane that dissolved.
+        self.assertGreater(damage_taken(troops["GER"]), 0)
+        self.assertAlmostEqual(damage_taken(troops["SOV"]),
+                               3 * 30 + 10, places=6)
+
+    def test_a_unit_on_two_fronts_still_fires_only_one_volley(self):
+        """The reason a unit could only hold one front to begin with."""
+        screen, _prov, troops = self.three_way_tile()
+
+        combat_processor.process_combat(screen)
+
+        dealt_by_sov = damage_taken(troops["ROM"]) + damage_taken(troops["GER"])
+        self.assertAlmostEqual(dealt_by_sov, 100.0, places=6)
+
+    def test_width_counts_a_two_front_unit_once(self):
+        screen, prov, _troops = self.three_way_tile()
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertEqual(battle.width,
+                         len({id(u) for lane in battle.lanes
+                              for side in (lane.a, lane.b) for u in side.front}))
+
+
+class HeldBackTests(unittest.TestCase):
+    def test_a_nation_that_held_everything_back_still_fights(self):
+        """A stale RESERVE flag once deleted a whole battle.
+
+        In the 'uh oh' save, Nationalist China's only unit on a tile carried a
+        RESERVE stance left over from an AI rotation on some earlier turn. It
+        was its only unit, so its side of the lane was empty, the lane
+        dissolved, and five Japanese divisions stood on top of it doing nothing.
+        Holding a unit back is a preference, honoured only while somebody else
+        can take the slot.
+        """
+        screen = StubMapScreen()
+        screen.add_nation("JAP", at_war_with=["CHI"])
+        screen.add_nation("CHI", at_war_with=["JAP"])
+
+        lone = unit("CHI", attack=20)
+        lone["combat_stance"] = "RESERVE"
+        prov = tile(screen, {"JAP": [unit("JAP", attack=50) for _ in range(5)],
+                             "CHI": [lone]})
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertEqual(len(battle.lanes), 1)
+        self.assertEqual([id(u) for u in side_for(battle, "CHI").front], [id(lone)])
+
+        combat_processor.process_combat(screen)
+        self.assertGreater(damage_taken([lone]), 0)
+
+    def test_holding_back_is_still_honoured_when_somebody_can_replace_them(self):
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        held = unit("A", attack=999)
+        held["combat_stance"] = "RESERVE"
+        prov = tile(screen, {"A": [held, unit("A", attack=10)],
+                             "B": [unit("B", attack=10)]})
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        self.assertNotIn(id(held), {id(u) for u in side_for(battle, "A").front})
+
+    def test_a_stale_stance_is_dropped_when_the_unit_marches_away(self):
+        from map_logic.turn_processing import movement_processor
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        mover = unit("A", attack=10, path=["p2"])
+        mover["combat_stance"] = "RESERVE"
+        home = screen.add_province("p1", "A", units=[mover])
+        away = screen.add_province("p2", "A")
+        home["neighbors"] = ["p2"]
+        away["neighbors"] = ["p1"]
+        mover["_current_province_id"] = "p1"
+
+        movement_processor.process_movement(screen)
+
+        self.assertNotIn("combat_stance", mover)
+
+
 class DeterminismTests(unittest.TestCase):
     """The same input must resolve the same way, every time and everywhere."""
 
