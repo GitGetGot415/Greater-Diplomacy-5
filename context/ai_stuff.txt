@@ -226,13 +226,27 @@ width was applied per nation column, so five countries on a tile fired five
 times the width, and damage divided across every hostile unit present, so bodies
 were a way to thin somebody else's volley.
 
-Damage never crosses a lane boundary. A unit holds at most one front slot in at
-most one lane, or a nation at war with two powers present would fire the same
-units twice. A nation seats one unit in EVERY lane it is in before any lane gets
-a second, so nobody dodges a fight by looking the other way -- only a nation
-with fewer units than lanes leaves one uncovered, and an uncovered lane
-dissolves, which is a real way to spend a turn dealing and taking nothing. The
-one lever against that is bombardment.
+Damage never crosses a lane boundary. A nation fires ONCE per turn, so a unit
+holding two fronts splits its attack between them rather than firing twice --
+that is what stops a nation at war with two powers present dealing double. It
+takes fire from both, which is what being outnumbered on two fronts costs.
+
+A nation is in EVERY lane it is in. It seats one unit in each before any lane
+gets a second, and if it runs out of units it doubles them up rather than
+abandoning a front. Nobody dodges a fight by looking the other way, and nobody
+is spared one by their enemy being short of men. The first version of this rule
+let a lone defender be fought only by whichever attacker was heavier: in the
+'uh oh' save the Soviet Union had one unit on a tile with both Romania and
+Germany, and Germany simply could not join in. Combat width was not the cause
+and is not the fix -- one unit a side against a width of twelve was nowhere near
+binding.
+
+Holding a unit back (combat_stance) is a preference, not a veto: it is honoured
+only while somebody else can take the slot. A nation that held everything back
+would otherwise vanish from a fight it is standing in the middle of, which is
+what a stale flag on a wounded unit did -- Nationalist China's only unit on a
+tile refused to fight and five Japanese divisions stood on top of it doing
+nothing. Both lane orders are cleared when a unit marches, for the same reason.
 
 Reserves take no damage and deal none, and recover morale while the front
 bleeds, so a shot-up unit is worth more waiting than standing. The AI rotates
