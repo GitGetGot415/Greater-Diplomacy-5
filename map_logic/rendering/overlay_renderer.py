@@ -9,32 +9,33 @@ from map_logic.turn_processing import combat_rules
 def combat_strengths(sides, nation_data, friendly_nations):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
-    Read off combat_rules.firing_lines, the same rule the turn resolver fights
+    Read off combat_rules.build_battle, the same rule the turn resolver fights
     by, so the bubble's colour cannot promise a result the turn will not
-    produce. The weighting is the whole point on a crowded tile: a nation
-    fighting you *and* two others sends you a third of its fire, not all of it,
-    and summing raw group attack per side painted those fights red when they
-    were comfortably winnable.
+    produce. Lanes make this arithmetic honest for free: only the lanes a
+    friendly nation actually stands in count, and only the front ranks in them,
+    because that is exactly who will trade fire. The version this replaced had
+    to weight each volley by the share of it aimed at a friendly unit, since
+    damage went everywhere at once.
 
-    `involved` is "a friendly nation is in the firing lines", not "a friendly
-    nation is standing here" -- an ally waiting out somebody else's battle on
-    military access draws the grey bubble of a fight that is not yours.
+    `involved` is "a friendly nation holds a front slot", not "a friendly nation
+    is standing here" -- an ally waiting out somebody else's battle on military
+    access draws the grey bubble of a fight that is not yours.
     """
     friendly_atk = 0.0
     enemy_atk = 0.0
     involved = False
 
-    for line in combat_rules.firing_lines(sides, nation_data):
-        volley = queries.get_group_attack_sum(line.units)
-        on_friendly = sum(1 for u in line.targets if u.get("owner") in friendly_nations)
-        share = on_friendly / len(line.targets)
+    for lane in combat_rules.build_battle(sides, nation_data).lanes:
+        mine = [side for side in (lane.a, lane.b) if side.nation in friendly_nations]
+        # Two friends fighting each other is not a fight you are in either way.
+        if len(mine) != 1:
+            continue
 
-        if line.owner in friendly_nations:
-            involved = True
-            friendly_atk += volley * (1.0 - share)
-        elif on_friendly:
-            involved = True
-            enemy_atk += volley * share
+        involved = True
+        ours = mine[0]
+        theirs = lane.b if ours is lane.a else lane.a
+        friendly_atk += combat_rules.volley(ours.front)
+        enemy_atk += combat_rules.volley(theirs.front)
 
     return friendly_atk, enemy_atk, involved
 

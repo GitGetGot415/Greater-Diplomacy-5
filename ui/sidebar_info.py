@@ -138,8 +138,7 @@ def draw_sidebar_info(map_screen, surface):
         # resolves by. A nation can stand in the middle of a battle on military
         # access without being in it, and listing it as a side -- with its top
         # units highlighted as the ones dealing damage -- was simply untrue.
-        engaged_sides = [line.owner for line in
-                         combat_rules.firing_lines([units], map_screen.nation_data)]
+        engaged_sides = combat_rules.build_battle([units], map_screen.nation_data).engaged
 
         # --- Active Garrison / Combat Zone ---
         # While a fight is active, the Combat Zone display (grouped by side) fully

@@ -11,6 +11,10 @@ from collections import namedtuple
 #: edge without a war of their own.
 MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
 
+#: Which side of the suicide-charge probe in process_pinning is the charge. The
+#: garrison is handed in first, so it is side 0 and the charge is side 1.
+CHARGE_SIDE = 1
+
 
 def apply_group_damage(total_atk, target_units):
     """Distributes total attack among target units, reduced by their individual defense."""
@@ -139,30 +143,45 @@ def process_pinning(map_screen):
         ]
         if not friendly_defenders: continue
 
-        # Only top attackers deal damage, and the volley is split across the
-        # whole charge -- the same pooled rule process_combat uses.
-        total_defender_atk = queries.get_group_attack_sum(friendly_defenders)
+        # A charge into a held tile is a head-on clash, so it is resolved by the
+        # same rule as one: the garrison and the charge are the two sides, and
+        # every lane crosses between them. Routing it through build_battle is
+        # what stops the probe and the fight it is predicting from drifting
+        # apart the moment either is tuned.
+        attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
+        probe = combat_rules.build_battle(
+            [friendly_defenders, attacker_units_only], map_screen.nation_data)
 
-        damage_per_attacker = total_defender_atk / len(hostile_attackers)
-        attackers_survive = False
-        
-        for a_unit, _ in hostile_attackers:
-            actual_dmg = max(0, damage_per_attacker - a_unit.get("defense", 0))
-            if actual_dmg < a_unit.get("health", 1):
-                attackers_survive = True
-                break
-                
+        incoming_on_charge = {}
+        shots_at_defenders = []
+        for lane in probe.lanes:
+            for firing, receiving in ((lane.a, lane.b), (lane.b, lane.a)):
+                shot = combat_rules.volley(firing.front)
+                if receiving.side_index == CHARGE_SIDE:
+                    share = shot / len(receiving.front)
+                    for target in receiving.front:
+                        incoming_on_charge[id(target)] = incoming_on_charge.get(id(target), 0.0) + share
+                else:
+                    shots_at_defenders.append((receiving.front, shot))
+
+        # A charge deeper than the lane can seat always has survivors, because
+        # the surplus sits in reserve where nothing can reach it. Fifty militia
+        # genuinely cannot all be shot down in one exchange, so the early
+        # resolution below simply stops applying to charges that big.
+        attackers_survive = any(
+            max(0, incoming_on_charge.get(id(a_unit), 0.0) - a_unit.get("defense", 0))
+            < a_unit.get("health", 1)
+            for a_unit in attacker_units_only)
+
         if not attackers_survive:
             # 1. Attackers are obliterated. Apply their pitiful damage to the defenders.
-            attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
-            total_attacker_atk = queries.get_group_attack_sum(attacker_units_only)
-            apply_group_damage(total_attacker_atk, friendly_defenders)
-            
-            for d_unit in friendly_defenders:
-                d_unit["_in_combat_this_turn"] = True
-            for a_unit in attacker_units_only:
-                a_unit["_in_combat_this_turn"] = True
-            
+            for targets, total_atk in shots_at_defenders:
+                apply_group_damage(total_atk, targets)
+
+            for lane in probe.lanes:
+                for u in lane.a.front + lane.b.front:
+                    u["_in_combat_this_turn"] = True
+
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
                 a_unit["health"] = 0
@@ -206,10 +225,11 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
 
     The two sides are gathered by direction of travel, not by flag, so either
     of them can hold several nations at once and not all of them are in the
-    fight. Who shoots at whom is combat_rules.firing_lines' answer, the same one
-    the tile fight uses: one pooled volley per column, split across every hostile
-    unit coming the other way, and a nation crossing alongside a belligerent
-    without a war of its own is neither shot at nor stopped.
+    fight. Who duels whom is combat_rules.build_battle's answer, the same one
+    the tile fight uses, with the clash's two directions of travel as its two
+    sides -- so a lane always crosses the divide, and a nation crossing
+    alongside a belligerent without a war of its own is neither shot at nor
+    stopped.
 
     Shared by the turn-start pass (combat_processor.process_meeting_engagements,
     using combat_rules.find_meeting_pairs) and the mid-movement pass
@@ -221,8 +241,15 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     it handed in to find the dead. `fought` is the id()s of the units that were
     actually in a firing line, which is what the callers gate "stop here" on.
     """
-    lines = combat_rules.firing_lines([units1, units2], nation_data)
-    fought = {id(u) for line in lines for u in line.units}
+    battle = combat_rules.build_battle([units1, units2], nation_data)
+
+    # Front *and* reserve. `fought` is what stops a unit here, and a reserve that
+    # walked on through the tile its own army is fighting over would be absurd --
+    # it is in the battle, it just is not in the front rank of it.
+    fought = {id(u)
+              for lane in battle.lanes
+              for side in (lane.a, lane.b)
+              for u in side.front + side.reserve}
 
     # Unpack Convoys Caught in Land Engagements -- only those in the fight.
     is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
@@ -232,10 +259,13 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
                 queries.revert_transport(u)
 
     # Measured before any of it lands, so the exchange is simultaneous.
-    volleys = [(line, queries.get_group_attack_sum(line.units)) for line in lines]
-    for line, volley in volleys:
-        apply_group_damage(volley, line.targets)
-        for u in line.units + line.targets:
+    for targets, total_atk in combat_rules.exchange(battle):
+        apply_group_damage(total_atk, targets)
+
+    # Only the front rank is in combat: a reserve rests and recovers morale
+    # while the units ahead of it bleed, which is the pressure to rotate.
+    for lane in battle.lanes:
+        for u in lane.a.front + lane.b.front:
             u["_in_combat_this_turn"] = True
 
     surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
@@ -269,14 +299,19 @@ def process_meeting_engagements(map_screen):
         resolve_meeting_engagement(prov1, prov2, units1, units2, map_screen.nation_data)
 
 def process_combat(map_screen):
-    """Fights everyone sharing a province, one pooled volley per nation.
+    """Fights everyone sharing a province, lane by lane.
 
-    A nation fires once a turn, however many enemies it is facing here: its
-    volley is split across every hostile unit on the tile, so three enemies
-    means a third of the damage each rather than three full volleys. The pair
-    loop this replaced fired a nation's whole attack separately at each enemy,
-    which meant a crowded tile did more total damage the more sides joined it --
-    a nation at war with three of the others present dealt triple its own attack.
+    The tile splits into duels -- one per pair of hostile powers standing on it
+    -- and c.COMBAT_WIDTH front slots are divided among them. Each side of a
+    lane fires the attack of its front rank, split across the *opposing front
+    rank in that lane* and nothing else. Damage never crosses a lane boundary,
+    so an ally fighting its own enemy beside you takes none of your fire and
+    none of your enemy's.
+
+    Units past a lane's allowance are in reserve: they deal no damage and take
+    none. Depth stopped being a way to thin somebody else's volley -- the
+    divisor is the front, not the stack -- and became a queue of replacements
+    for the units in front of them. Bombardment is what reaches them.
 
     A nation on the tile with nobody to fight -- passing through on military
     access, or at war with somebody who is not standing here -- takes no part.
@@ -290,8 +325,8 @@ def process_combat(map_screen):
 
         is_land = not queries.is_water_province(province)
 
-        lines = combat_rules.firing_lines([units], map_screen.nation_data)
-        fighters = {line.owner for line in lines}
+        battle = combat_rules.build_battle([units], map_screen.nation_data)
+        fighters = set(battle.engaged)
 
         # Unpack Convoys Caught on Land -- only the ones in the battle.
         if is_land:
@@ -302,11 +337,13 @@ def process_combat(map_screen):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        volleys = [(line, queries.get_group_attack_sum(line.units)) for line in lines]
+        for targets, total_atk in combat_rules.exchange(battle):
+            apply_group_damage(total_atk, targets)
 
-        for line, volley in volleys:
-            apply_group_damage(volley, line.targets)
-            for u in line.units + line.targets:
+        # Only the front rank is in combat: a reserve rests and recovers morale
+        # while the units ahead of it bleed, which is the pressure to rotate.
+        for lane in battle.lanes:
+            for u in lane.a.front + lane.b.front:
                 u["_in_combat_this_turn"] = True
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
@@ -314,7 +351,7 @@ def process_combat(map_screen):
         province["units"] = surviving_units
 
         # Wipe queues and destroy misplaced naval units ONLY if combat is still ongoing
-        if lines:
+        if battle.lanes:
             # Pinned by its OWN enemies, not by anyone else's. The tile-wide test
             # that used to sit here froze a bystander in place because two other
             # countries were shooting at each other around it. Read after the

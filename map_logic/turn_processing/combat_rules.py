@@ -79,72 +79,6 @@ Lane = namedtuple("Lane", "index slots a b")
 #: width      -- front slots actually seated across the whole fight
 Battle = namedtuple("Battle", "lanes engaged bystanders width")
 
-#: One nation's contribution to one fight: `units` fire a single pooled volley
-#: at `targets`, and at nothing else.
-#:
-#: Superseded by `build_battle`; kept only until the last caller moves over.
-FiringLine = namedtuple("FiringLine", "owner units targets")
-
-
-def firing_lines(sides, nation_data):
-    """Which units each nation's volley lands on, for one fight.
-
-    `sides` is a list of unit lists. One side is a tile: everyone standing here
-    can fight everyone else standing here. Two sides is a head-on clash between
-    tiles, where a unit fights only across the divide -- two nations at war with
-    each other while marching the same way settle it where they land, not while
-    they cross.
-
-    Returns a FiringLine for every nation that has somebody to shoot at, in
-    first-appearance order. A nation with no enemy among the units it can reach
-    is absent from the result entirely: it is here by military access, or at war
-    with somebody who is not, and takes no part in the fight at all -- no damage
-    dealt, none taken, and none of the things a battle does to the units caught
-    in it.
-
-    A volley belongs to a column, not to a flag: a nation with units marching
-    both ways down the same edge fields one firing line per direction, since
-    those are two bodies of troops meeting two different enemies.
-
-    Hostility is read both ways round. A scenario or an editor can leave one
-    nation's war list out of step with the other's, and the pairwise loop this
-    replaced resolved that case differently depending on the order the units
-    happened to sit in the province -- which is not a rule, it is an accident.
-    """
-    from data import queries
-
-    def hostile(a, b):
-        return (queries.are_at_war(a, b, nation_data)
-                or queries.are_at_war(b, a, nation_data))
-
-    # Group into columns -- (which side, whose) -- keeping first-appearance
-    # order so the same fight always resolves the same way.
-    columns = []
-    seen = {}
-    for side_index, side in enumerate(sides):
-        for unit in side:
-            owner = unit.get("owner")
-            if not owner:
-                continue
-            key = (side_index, owner)
-            if key not in seen:
-                seen[key] = len(columns)
-                columns.append((side_index, owner, []))
-            columns[seen[key]][2].append(unit)
-
-    across_only = len(sides) > 1
-
-    lines = []
-    for side_index, owner, units in columns:
-        targets = [unit
-                   for other_side, other_owner, other_units in columns
-                   if (other_side != side_index or not across_only)
-                   and hostile(owner, other_owner)
-                   for unit in other_units]
-        if targets:
-            lines.append(FiringLine(owner, units, targets))
-    return lines
-
 
 def _hostile(nation_data):
     """Two-way war test.
@@ -384,23 +318,33 @@ def build_battle(sides, nation_data, width=None):
     slots = lane_slots(len(duels), width)
     seats = _seat(columns, duels, slots)
 
-    # Everything a nation did not seat anywhere, attributed once, to the lane it
-    # would reinforce first.
-    seated_ids = {id(u) for units in seats.values() for u in units}
+    # A lane needs both halves. One with an empty side is a duel somebody was
+    # too short of units to turn up for, and it dissolves.
+    live = [duel_index
+            for duel_index, (left, right) in enumerate(duels)
+            if seats.get((left, duel_index)) and seats.get((right, duel_index))]
+
+    # Everything a nation did not seat in a *surviving* lane, attributed once,
+    # to the lane it would reinforce first. Units seated into a lane that then
+    # dissolved fall back here rather than disappearing from the fight.
+    live_set = set(live)
+    seated_ids = {id(u)
+                  for (_column, duel_index), units in seats.items()
+                  if duel_index in live_set
+                  for u in units}
+    # seats was filled in each column's own priority order, so the first
+    # surviving lane found here is the one that column would reinforce first.
     reserve_lane = {}
     for column_index, duel_index in seats:
-        if column_index not in reserve_lane:
-            reserve_lane[column_index] = duel_index
+        if duel_index in live_set:
+            reserve_lane.setdefault(column_index, duel_index)
 
     lanes = []
     engaged = {}
-    for duel_index, (left, right) in enumerate(duels):
-        front_left = seats.get((left, duel_index), [])
-        front_right = seats.get((right, duel_index), [])
-        if not front_left or not front_right:
-            continue
+    for duel_index in live:
+        left, right = duels[duel_index]
 
-        def side_for(column_index):
+        def side_for(column_index, duel_index=duel_index):
             reserve = ([u for u in columns[column_index][2] if id(u) not in seated_ids]
                        if reserve_lane.get(column_index) == duel_index else [])
             return LaneSide(columns[column_index][1], columns[column_index][0],
