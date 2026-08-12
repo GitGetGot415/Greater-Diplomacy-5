@@ -176,6 +176,52 @@ def process_pinning(map_screen):
                         # Pinned! Cannot attack outwards. Must defend.
                         order["path"] = []
 
+def resolve_meeting_engagement(prov1, prov2, units1, units2):
+    """Fights one meeting engagement: units1 (crossing into prov2) against
+    units2 (crossing into prov1). Removes the dead from their provinces and
+    combat-locks survivors only when both sides have survivors -- a one-sided
+    result leaves the winners free to keep advancing this turn.
+
+    Shared by the turn-start pass (combat_processor.process_meeting_engagements,
+    using combat_rules.find_meeting_pairs) and the mid-movement pass
+    (movement_processor.process_movement), since a swap is the same fight
+    whichever step of the turn it happens on.
+
+    Returns (surviving_units1, surviving_units2).
+    """
+    # Unpack Convoys Caught in Land Engagements
+    is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
+    if is_land_engagement:
+        for u in units1 + units2:
+            if u.get("type", "").startswith("Convoy"):
+                queries.revert_transport(u)
+
+    # Sort and cap attackers
+    atk1 = queries.get_group_attack_sum(units1)
+    atk2 = queries.get_group_attack_sum(units2)
+
+    apply_group_damage(atk2, units1)
+    apply_group_damage(atk1, units2)
+
+    for u in units1 + units2:
+        u["_in_combat_this_turn"] = True
+
+    # Only lock them in combat if the enemy survived!
+    surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
+    surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
+
+    if surviving_units2:
+        for u in surviving_units1:
+            u["_combat_locked"] = True
+    if surviving_units1:
+        for u in surviving_units2:
+            u["_combat_locked"] = True
+
+    prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
+    prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
+
+    return surviving_units1, surviving_units2
+
 def process_meeting_engagements(map_screen):
     """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
     # Which tiles swapped garrisons is decided by combat_rules, the same rule
@@ -184,37 +230,7 @@ def process_meeting_engagements(map_screen):
     # the next engagement its province takes part in.
     for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
-
-        # Unpack Convoys Caught in Land Engagements
-        is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
-        if is_land_engagement:
-            for u in units1 + units2:
-                if u.get("type", "").startswith("Convoy"):
-                    queries.revert_transport(u)
-
-        # Sort and cap attackers
-        atk1 = queries.get_group_attack_sum(units1)
-        atk2 = queries.get_group_attack_sum(units2)
-
-        apply_group_damage(atk2, units1)
-        apply_group_damage(atk1, units2)
-
-        for u in units1 + units2:
-            u["_in_combat_this_turn"] = True
-
-        # Only lock them in combat if the enemy survived!
-        surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
-        surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
-
-        if surviving_units2:
-            for u in surviving_units1:
-                u["_combat_locked"] = True
-        if surviving_units1:
-            for u in surviving_units2:
-                u["_combat_locked"] = True
-
-        prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
-        prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
+        resolve_meeting_engagement(prov1, prov2, units1, units2)
 
 def process_combat(map_screen):
     """Calculates turn-based damage for units sharing a province."""

@@ -2,7 +2,7 @@ from collections import deque
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import edit_province_ownership
+from map_logic.turn_processing import combat_processor, edit_province_ownership
 
 def process_dead_nations(map_screen):
     """Removes units belonging to nations that no longer control any territory and updates wars."""
@@ -139,6 +139,72 @@ def process_conversions(map_screen):
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
+def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
+    """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
+
+    That check only compares turn-start positions against a unit's very first
+    step, so two hostile units that only become adjacent partway through the
+    turn (e.g. a 2-speed unit catching up to one that moved last step) could
+    otherwise step straight through each other unfought -- moving units sit
+    outside every province["units"] list while their path is still being
+    walked, so the ordinary "defenders present" check never sees them either.
+
+    Re-runs the same swap check for the units about to take this step, and
+    resolves any hits with the shared combat_processor.resolve_meeting_engagement.
+    Returns moving_units with anyone killed in the process removed.
+    """
+    eligible = [
+        u for u in moving_units
+        if not u.get("_skip_remaining_steps", False)
+        and u.get("order", {}).get("path")
+        and step < get_eff_speed(u)
+    ]
+    by_origin = {}
+    for u in eligible:
+        by_origin.setdefault(u["_current_province_id"], []).append(u)
+
+    seen_edges = set()
+    dead_ids = set()
+    for u in eligible:
+        origin = u["_current_province_id"]
+        dest = u["order"]["path"][0]
+        edge = tuple(sorted([origin, dest]))
+        if edge in seen_edges:
+            continue
+
+        opposing = any(
+            o["order"]["path"][0] == origin
+            and queries.are_at_war(u["owner"], o["owner"], map_screen.nation_data)
+            for o in by_origin.get(dest, [])
+        )
+        if not opposing:
+            continue
+        seen_edges.add(edge)
+
+        prov1 = map_screen.id_to_province.get(origin)
+        prov2 = map_screen.id_to_province.get(dest)
+        if not prov1 or not prov2:
+            continue
+
+        units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
+        units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
+
+        survivors1, survivors2 = combat_processor.resolve_meeting_engagement(prov1, prov2, units1, units2)
+        survivor_ids = {id(m) for m in survivors1 + survivors2}
+        dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
+
+        # A mutual standoff digs both sides in for the rest of this turn; a
+        # one-sided win leaves the winners free to keep advancing.
+        for m in survivors1 + survivors2:
+            m.pop("_combat_locked", None)
+        if survivors1 and survivors2:
+            for m in survivors1 + survivors2:
+                m["_skip_remaining_steps"] = True
+
+    if not dead_ids:
+        return moving_units
+    return [u for u in moving_units if id(u) not in dead_ids]
+
 def process_movement(map_screen):
     moving_units = []
     for province in map_screen.map_data.values():
@@ -174,6 +240,8 @@ def process_movement(map_screen):
     max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
+        moving_units = _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed)
+
         for unit in moving_units:
             # Explicitly check if this individual unit has run out of moves or is skipping
             if unit.get("_skip_remaining_steps", False) or step >= get_eff_speed(unit):
@@ -283,10 +351,20 @@ def process_movement(map_screen):
                 prov["units"].append(unit)
                 
         if step < max_speed - 1:
-            # Create a set of memory IDs for ultra-fast lookup
-            moving_ids = {id(m) for m in moving_units} 
+            # Only pull out units with another step still coming. A unit that
+            # finished this turn (ran out of path, hit a defender, or used up
+            # its speed) stays in its province from here on, so it behaves as
+            # a normal obstacle to everyone else's later steps -- exactly like
+            # a unit that never moved at all, instead of being invisible to
+            # collision checks for the rest of the turn.
+            still_moving_ids = {
+                id(m) for m in moving_units
+                if not m.get("_skip_remaining_steps", False)
+                and m.get("order", {}).get("path")
+                and (step + 1) < get_eff_speed(m)
+            }
             for province in map_screen.map_data.values():
-                province["units"] = [u for u in province["units"] if id(u) not in moving_ids]
+                province["units"] = [u for u in province["units"] if id(u) not in still_moving_ids]
 
     # Clean up the temporary tracking flag so it doesn't pollute the save files!
     for unit in moving_units:
