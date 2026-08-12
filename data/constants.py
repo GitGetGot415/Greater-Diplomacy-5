@@ -1207,18 +1207,29 @@ AI_NAVAL_UNIT_PREFERENCE = [
 # to values normalised against the mean of whatever the nation can currently
 # build, so they stay meaningful after any rebalance of unit_data.json.
 
+# Waves deep a tile is worth reinforcing to: one front rank, and one relief rank
+# to replace it as it dies. Bodies past this cannot reach a front slot before the
+# tile resolves, and under the lane model they absorb nothing while they wait --
+# which is the single biggest difference from the model this replaced, where
+# every extra body thinned the volley for the whole stack.
+AI_RESERVE_DEPTH = 2.0
+
 # What a unit contributes, given how combat actually resolves:
-#  - only the top MAX_COMBAT_ATTACKERS by attack deal damage, so offence is raw attack
-#  - incoming damage is split across ALL defenders, then each subtracts its own
-#    defense flat, so a cheap high-defense body is worth far more than its stats
-#    suggest and every extra body thins the share for the whole stack
+#  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
+#    ordinary one-enemy fight -- so offence is raw attack
+#  - incoming damage is split across the enemy front IN THAT LANE, then each
+#    subtracts its own defense flat, so a cheap high-defense body is worth far
+#    more than its stats suggest
 AI_W_OFFENSE = 1.0
 AI_W_DURABILITY = 1.0
-# Flat, not scaled by health: damage is divided by the NUMBER of defenders, so
-# every body thins the volley for the stack by the same amount whatever it is
-# made of. Its real effect is to make cheap units better value per point of pain.
+# Flat, not scaled by health: damage is divided by the number of defenders in the
+# lane, so every body in the front rank thins the volley for that rank by the
+# same amount whatever it is made of. A body PAST the front thins nothing at all
+# -- that is what AI_RESERVE_DEPTH is for, and why this is no longer a reason to
+# buy bodies without limit. Its real effect is to make cheap units better value
+# per point of pain, up to the depth the tile can use.
 AI_W_SOAK = 0.35
-AI_W_BOMBARD = 0.6      # bombardment ignores the combat-width cap and takes no return fire
+AI_W_BOMBARD = 0.6      # bombardment sits outside every lane and takes no return fire
 
 # Floor on the damage a unit takes, as a fraction of its share of the volley.
 # Without it, defense >= share divides by zero and an unkillable unit scores

@@ -605,8 +605,9 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province, nation_dat
                 # Gather all friendly units on this tile
                 friendly_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
                 
-                # Cap by combat width (MAX_COMBAT_ATTACKERS) prioritizing best units
-                top_units = sorted(friendly_units, key=calculate_unit_strength, reverse=True)[:c.MAX_COMBAT_ATTACKERS]
+                # What this tile can actually bring to bear: a lane's front rank
+                # and the relief wave behind it, best units first.
+                top_units = get_front_and_relief(friendly_units)
                 
                 tile_strength = 0
                 for u in top_units:
@@ -1252,13 +1253,31 @@ def calculate_unit_strength(unit):
     return unit.get("attack", 0) + unit.get("defense", 0) + (unit.get("health", 0) / c.MILITARY_STRENGTH_HEALTH_DIVISOR)
 
 def get_top_attackers(units, count=None):
-    """Returns the highest attack units in a list, capped at the provided limit."""
-    if count is None: count = c.MAX_COMBAT_ATTACKERS
+    """The highest-attack units in a list, capped at a typical lane's front rank.
+
+    An ESTIMATE, for the AI and the UI. It is not what the resolver does and
+    must never be used to decide a fight: how many of these units actually fire
+    depends on how many ways the tile splits into lanes, which only
+    combat_rules.build_battle can answer. This used to be the one place combat
+    width was applied, which is why the drift is worth naming here.
+    """
+    if count is None: count = c.LANE_SLOTS_TYPICAL
     return sorted(units, key=lambda x: x.get("attack", c.DEFAULT_UNIT_ATK), reverse=True)[:count]
 
 def get_group_attack_sum(units, count=None):
-    """Returns the total combined attack of the top units."""
+    """Combined attack of a typical front rank. An estimate -- see get_top_attackers."""
     return sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in get_top_attackers(units, count))
+
+def get_front_and_relief(units, count=None):
+    """The front rank plus one relief wave: what a tile is worth reinforcing to.
+
+    Measuring a tile by its top LANE_SLOTS_TYPICAL alone undercounts it, since
+    the units behind the front are what replace it as it dies. Measuring by the
+    whole stack overcounts it, since everything past the relief wave will not
+    reach a slot before the tile resolves.
+    """
+    if count is None: count = int(c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH)
+    return sorted(units, key=calculate_unit_strength, reverse=True)[:count]
 
 def is_warship(unit_type):
     """Returns True if the unit is a combat naval vessel."""
