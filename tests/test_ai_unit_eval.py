@@ -227,11 +227,20 @@ class RoleTests(unittest.TestCase):
 
 
 class CompositionTests(unittest.TestCase):
-    def test_assault_target_is_the_combat_width(self):
-        """Only MAX_COMBAT_ATTACKERS units per tile can fire, so that is exactly
-        how many assault units a frontline tile is worth."""
+    def test_assault_target_is_a_lane_s_front_rank(self):
+        """Only a lane's front rank fires, so that is exactly how many assault
+        units a frontline tile is worth."""
         targets = ue.role_targets(context(frontline=4.0), naval_need=0)
-        self.assertEqual(targets[ue.ROLE_ASSAULT], c.MAX_COMBAT_ATTACKERS * 4.0)
+        self.assertEqual(targets[ue.ROLE_ASSAULT], c.LANE_SLOTS_TYPICAL * 4.0)
+
+    def test_depth_is_capped_at_the_relief_rank(self):
+        """New under lanes. A body past the relief rank cannot reach a front
+        slot before the tile resolves, and absorbs nothing at all while it
+        waits, so it is pure waste rather than merely diminishing value."""
+        targets = ue.role_targets(context(frontline=4.0), naval_need=0)
+        self.assertLessEqual(
+            targets[ue.ROLE_LINE],
+            c.LANE_SLOTS_TYPICAL * 4.0 * (c.AI_RESERVE_DEPTH - 1.0))
 
     def test_a_landlocked_nation_wants_no_navy(self):
         targets = ue.role_targets(context(), naval_need=0)

@@ -760,7 +760,7 @@ def process_ai_economy_decisions(map_screen):
         unit_prices = ai_unit_eval.resource_prices(econ, data)
         unit_ctx = ai_unit_eval.context(
             unit_prices,
-            volley=volley, stack=max(1.0, c.MAX_COMBAT_ATTACKERS),
+            volley=volley, stack=max(1.0, c.LANE_SLOTS_TYPICAL),
             enemy_def=enemy_def, enemy_stack=enemy_stack,
             frontline=max(1, frontline), coast=coast,
             budget=ai_unit_eval.spending_budget(econ, data, unit_prices))

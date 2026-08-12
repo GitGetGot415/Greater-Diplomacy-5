@@ -1153,7 +1153,7 @@ def _best_unit_for_role(player_research, unit_library, role, preference_list):
     candidates = ai_unit_eval.buildable_units(player_research, unit_library)
     if candidates:
         prices = {res: 1.0 for res in ai_unit_eval.RESOURCES}
-        ctx = ai_unit_eval.context(prices, volley=1000.0, stack=c.MAX_COMBAT_ATTACKERS)
+        ctx = ai_unit_eval.context(prices, volley=1000.0, stack=c.LANE_SLOTS_TYPICAL)
         best = ai_unit_eval.best_by_role(
             ai_unit_eval.evaluate(candidates, unit_library, ctx), role)
         if best:

@@ -1,15 +1,21 @@
 """How many units the AI puts on one tile, and whether that tracks combat width.
 
-Everything else the AI does already scaled with MAX_COMBAT_ATTACKERS -- what to
-buy (width x frontline), what a unit is worth (a full firing line of them), how
-strong a border is (the top width per tile). ai_movement referenced it nowhere.
+Everything else the AI does already scaled with the width -- what to buy (front
+rank x frontline), what a unit is worth (a full front rank of them), how strong
+a border is (the front and its relief). ai_movement referenced it nowhere.
 Destinations were chosen purely by "fewest units assigned", so stacks landed at
 total_units / targets: at width 2 it kept five on a tile where three could not
 fire, and at width 10 it kept trickling one at a time and never massed.
 
-Every test here patches the width rather than assuming 5, because "the number
-is read" is the actual property -- a suite that hardcoded 5 would pass just as
-well against a hardcoded 5 in the source.
+Under the lane model the answer is per tile, not global: how many front slots a
+nation gets there depends on how many ways that fight splits, so the tests pass
+a capacity dict rather than patching a constant. A tile is worth filling to a
+front rank AND the relief rank behind it -- bodies past that cannot reach a slot
+before the tile resolves, and under lanes they absorb nothing while they wait.
+
+Every test here supplies the number rather than assuming one, because "the
+number is read" is the actual property -- a suite that hardcoded 5 would pass
+just as well against a hardcoded 5 in the source.
 """
 
 import os
@@ -25,54 +31,69 @@ from map_logic.ai import ai_movement
 
 
 class WidthTestCase(unittest.TestCase):
-    def set_width(self, width):
-        original = c.MAX_COMBAT_ATTACKERS
-        c.MAX_COMBAT_ATTACKERS = width
-        self.addCleanup(lambda: setattr(c, "MAX_COMBAT_ATTACKERS", original))
+    """Fixtures state a tile's front slots; saturation follows at front x depth."""
+
+    def capacity_for(self, tiles, slots):
+        return {tile: slots for tile in tiles}
+
+    def saturates_at(self, slots):
+        """The stack size at which a tile stops wanting another body."""
+        return slots * c.AI_RESERVE_DEPTH
 
 
 class TilePressureTests(WidthTestCase):
     """The one function in ai_movement that reads the width."""
 
-    def pressure(self, stack, weight=0, tile=1):
-        return ai_movement._tile_pressure({tile: weight}, {tile: stack}, tile)
+    def pressure(self, stack, weight=0, tile=1, slots=5):
+        return ai_movement._tile_pressure({tile: weight}, {tile: stack}, tile,
+                                          {tile: slots})
 
     def test_a_tile_with_room_sorts_ahead_of_a_full_one(self):
-        self.set_width(5)
-        self.assertLess(self.pressure(stack=4), self.pressure(stack=5))
+        full = self.saturates_at(5)
+        self.assertLess(self.pressure(stack=full - 1), self.pressure(stack=full))
 
     def test_a_full_tile_loses_however_much_the_weights_want_it(self):
-        """A battle pulls at -AI_REINFORCE_COMBAT_WEIGHT. Once the tile is full
-        that pull is buying nothing, because the sixth body cannot fire."""
-        self.set_width(5)
-        full_battle = ai_movement._tile_pressure({1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: 5}, 1)
-        empty_border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2)
+        """A battle pulls at -AI_REINFORCE_COMBAT_WEIGHT. Once the tile holds a
+        front and its relief that pull is buying nothing: the next body cannot
+        reach a slot before the tile resolves, and absorbs nothing waiting."""
+        cap = {1: 5, 2: 5}
+        full_battle = ai_movement._tile_pressure(
+            {1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: self.saturates_at(5)}, 1, cap)
+        empty_border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(empty_border, full_battle)
 
     def test_below_the_cap_the_weights_still_decide(self):
         """The saturation tier is added in front of the old ordering, not
         instead of it, so a battle still outranks a quiet border."""
-        self.set_width(5)
-        battle = ai_movement._tile_pressure({1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: 3}, 1)
-        border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2)
+        cap = {1: 5, 2: 5}
+        battle = ai_movement._tile_pressure({1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: 3}, 1, cap)
+        border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(battle, border)
 
-    def test_the_cap_moves_with_the_constant(self):
-        for width in (2, 5, 10):
-            with self.subTest(width=width):
-                self.set_width(width)
-                self.assertEqual(self.pressure(stack=width - 1)[0], 0)
-                self.assertEqual(self.pressure(stack=width)[0], 1)
+    def test_the_cap_moves_with_the_tile_s_own_slots(self):
+        """A tile whose fight splits three ways seats fewer of ours than one
+        where we face a single enemy, and saturates that much sooner."""
+        for slots in (2, 5, 10):
+            with self.subTest(slots=slots):
+                full = self.saturates_at(slots)
+                self.assertEqual(self.pressure(stack=full - 1, slots=slots)[0], 0)
+                self.assertEqual(self.pressure(stack=full, slots=slots)[0], 1)
+
+    def test_an_unmeasured_tile_falls_back_to_a_typical_lane(self):
+        """A quiet border has no fight to measure, so it is worth the fight that
+        would open there if one started."""
+        typical = c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH
+        self.assertEqual(ai_movement._tile_pressure({}, {99: typical - 1}, 99)[0], 0)
+        self.assertEqual(ai_movement._tile_pressure({}, {99: typical}, 99)[0], 1)
 
     def test_a_tile_nobody_has_counted_is_empty_not_full(self):
-        self.set_width(5)
         self.assertEqual(ai_movement._tile_pressure({}, {}, 99)[0], 0)
 
 
 class BuilderTests(WidthTestCase):
     """The stack counts have to be a true headcount, apart from the weights."""
 
-    def build(self, units_info, active_battles=(), **borders):
+    def build(self, units_info, active_battles=(), capacity=None, **borders):
         empty = {"peace_borders": set(), "coastal_borders": set(), "war_borders": set(),
                  "unclaimed_targets": set(), "all_unclaimed_coasts": set(),
                  "enemy_targets": set(), "all_enemy_coasts": set(),
@@ -82,7 +103,7 @@ class BuilderTests(WidthTestCase):
             units_info, empty,
             {"active_battles": set(active_battles), "friendly_convoys": set(),
              "convoy_in_combat": set(), "convoy_near_ship": set(), "convoy_near_coast": set()},
-            at_war=True)
+            at_war=True, capacity=capacity)
 
     def test_the_headcount_is_free_of_the_weights(self):
         """A quiet border with one guard carries +AI_REAR_GUARD_PENALTY, which
@@ -92,28 +113,28 @@ class BuilderTests(WidthTestCase):
         self.assertEqual(built["target_stacks"][1], 1)
         self.assertGreaterEqual(built["target_assignments"][1], c.AI_REAR_GUARD_PENALTY)
 
-    def pull_on_battle(self, units_present, width):
+    def pull_on_battle(self, units_present, slots):
         """How badly a battle tile holding `units_present` wants one more."""
-        self.set_width(width)
         prov = {"id": 1}
-        built = self.build([({}, prov)] * units_present, active_battles={1})
+        built = self.build([({}, prov)] * units_present, active_battles={1},
+                           capacity={1: slots})
         return built["target_assignments"][1]
 
     def test_an_empty_front_pulls_as_hard_as_it_ever_did(self):
         """The scaling changes how the pull fades, not how strong it starts."""
         self.assertAlmostEqual(self.pull_on_battle(0, 5), -c.AI_REINFORCE_COMBAT_WEIGHT)
 
-    def test_the_pull_fades_as_the_firing_line_fills(self):
+    def test_the_pull_fades_as_the_front_fills(self):
         self.assertLess(self.pull_on_battle(1, 5), self.pull_on_battle(4, 5))
 
     def test_a_wider_front_keeps_asking_for_men_a_narrow_one_would_not(self):
         """The other half of the user's question. Same board, same four men
-        standing there: at width 5 the tile has nearly stopped competing, at
-        width 10 it is still calling for the rest of a firing line."""
+        standing there: with five slots the tile has nearly stopped competing,
+        with ten it is still calling for the rest of a front."""
         self.assertLess(self.pull_on_battle(4, 10), self.pull_on_battle(4, 5))
 
-    def test_a_full_line_stops_asking(self):
-        self.assertGreaterEqual(self.pull_on_battle(5, 5), 0)
+    def test_a_full_front_and_relief_stops_asking(self):
+        self.assertGreaterEqual(self.pull_on_battle(int(self.saturates_at(5)), 5), 0)
 
     def test_an_overfull_line_is_not_penalised_twice(self):
         """Past the cap the pull is clamped off rather than turning into a
@@ -121,9 +142,10 @@ class BuilderTests(WidthTestCase):
         letting the pull go negative as well would make an over-stacked battle
         repel harder the more men were on it, which is a retreat, not a rule
         about firing lines."""
-        five = self.pull_on_battle(5, 5)
-        seven = self.pull_on_battle(7, 5)
-        self.assertEqual(seven - five, 2, "only the two extra bodies should count")
+        full = int(self.saturates_at(5))
+        exact = self.pull_on_battle(full, 5)
+        over = self.pull_on_battle(full + 2, 5)
+        self.assertEqual(over - exact, 2, "only the two extra bodies should count")
 
     def test_a_battle_tile_counts_its_bodies_not_its_pull(self):
         """The battle bias is subtracted before the units are counted, so a
@@ -145,7 +167,7 @@ class RoutingTests(WidthTestCase):
     behaviour under test.
     """
 
-    def route(self, stack_on_2, weight_on_2, stack_on_3=0):
+    def route(self, stack_on_2, weight_on_2, stack_on_3=0, slots=5):
         provinces = {
             1: {"id": 1, "neighbors": [2, 3], "owner": "Avaria"},
             2: {"id": 2, "neighbors": [1], "owner": "Avaria"},
@@ -155,45 +177,47 @@ class RoutingTests(WidthTestCase):
             1, {2, 3}, {1, 2, 3}, provinces,
             target_assignments={2: weight_on_2, 3: 0},
             target_stacks={2: stack_on_2, 3: stack_on_3},
+            target_capacity={2: slots, 3: slots},
             water_ids=set(),
             neighbor_ids={1: [2, 3], 2: [1], 3: [1]})
 
     def test_a_wanted_tile_wins_while_it_has_room(self):
-        self.set_width(5)
-        self.assertEqual(self.route(stack_on_2=4, weight_on_2=-20), [2])
+        self.assertEqual(self.route(stack_on_2=self.saturates_at(5) - 1, weight_on_2=-20), [2])
 
     def test_the_same_tile_loses_once_it_is_full(self):
-        self.set_width(5)
-        self.assertEqual(self.route(stack_on_2=5, weight_on_2=-20), [3])
+        self.assertEqual(self.route(stack_on_2=self.saturates_at(5), weight_on_2=-20), [3])
 
-    def test_raising_the_width_keeps_feeding_the_same_tile(self):
+    def test_more_slots_keeps_feeding_the_same_tile(self):
         """The user's question in one assertion: a wider front means a bigger
         stack, from the identical board."""
-        self.set_width(10)
-        self.assertEqual(self.route(stack_on_2=5, weight_on_2=-20), [2])
+        self.assertEqual(
+            self.route(stack_on_2=self.saturates_at(5), weight_on_2=-20, slots=10), [2])
 
-    def test_lowering_the_width_spreads_them_out_sooner(self):
-        self.set_width(2)
-        self.assertEqual(self.route(stack_on_2=2, weight_on_2=-20), [3])
+    def test_fewer_slots_spreads_them_out_sooner(self):
+        self.assertEqual(
+            self.route(stack_on_2=self.saturates_at(2), weight_on_2=-20, slots=2), [3])
 
     def test_when_everything_is_full_the_old_ordering_still_applies(self):
         """Nobody stands still because every tile is crowded -- the tier ranks
         full against not-full, and among equals the weights decide as before."""
-        self.set_width(5)
-        self.assertEqual(self.route(stack_on_2=9, weight_on_2=-20, stack_on_3=6), [2])
+        full = self.saturates_at(5)
+        self.assertEqual(
+            self.route(stack_on_2=full + 4, weight_on_2=-20, stack_on_3=full + 1), [2])
 
     def test_a_full_tile_still_loses_to_a_tile_with_one_slot_left(self):
-        self.set_width(5)
-        self.assertEqual(self.route(stack_on_2=9, weight_on_2=-20, stack_on_3=4), [3])
+        full = self.saturates_at(5)
+        self.assertEqual(
+            self.route(stack_on_2=full + 4, weight_on_2=-20, stack_on_3=full - 1), [3])
 
 
 class NavalTests(WidthTestCase):
     def test_ships_saturate_on_the_same_rule(self):
-        """Naval stacks fight by the same combat width, and used to be balanced
-        by the same blind count."""
-        self.set_width(3)
-        full = ai_movement._tile_pressure({1: -c.AI_CONVOY_ESCORT_WEIGHT}, {1: 3}, 1)
-        empty = ai_movement._tile_pressure({2: 0}, {2: 0}, 2)
+        """Naval stacks fight in lanes too, and used to be balanced by the same
+        blind count."""
+        cap = {1: 3, 2: 3}
+        full = ai_movement._tile_pressure(
+            {1: -c.AI_CONVOY_ESCORT_WEIGHT}, {1: self.saturates_at(3)}, 1, cap)
+        empty = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(empty, full)
 
 

@@ -797,10 +797,6 @@ MIN_LANE_SLOTS_PER_SIDE = 2
 # advance how many ways a tile will split.
 LANE_SLOTS_TYPICAL = COMBAT_WIDTH // 2
 
-# TEMPORARY, deleted once the AI reads lane slots. The old per-nation cap, kept
-# only so the sites that have not moved to the lane model yet keep working.
-MAX_COMBAT_ATTACKERS = LANE_SLOTS_TYPICAL
-
 # ==========================================
 # BOMBARDMENT
 # ==========================================
@@ -1253,21 +1249,27 @@ AI_MIN_RESOURCE_SLACK = 0.05
 AI_ROLE_DIMINISH = 0.35
 
 # How much to spend on depth versus firepower, as a ratio of resources -- NOT of
-# unit counts. Only MAX_COMBAT_ATTACKERS units per tile can fire, so the assault
-# target is a count the combat rules hand us directly; bodies then get a
-# comparable share of the budget, which at 1.0 means "about as much again".
+# unit counts. Only a lane's front rank fires, so the assault target is a count
+# the combat rules hand us directly; bodies then get a comparable share of the
+# budget, which at 1.0 means "about as much again".
 #
 # It has to be expressed as spend rather than as a number of units, because a
 # heavy tank costs seventeen infantry. A count-based depth target quietly
 # committed 90% of the budget to armour and produced an army that lost to every
 # mixed composition in a round-robin under the real combat rules.
 #
-# 2.0 was picked by measurement, not taste: armies built at each ratio were
-# fought against eleven fixed compositions under the real combat rules, and
-# 1.5-3.0 all win comfortably while 4.0 collapses into pure infantry and loses
-# to everything. Sitting in the middle of that plateau rather than at its edge.
-AI_LINE_SPEND_RATIO = 2.0
-AI_BOMBARD_SPEND_RATIO = 0.15   # guns are support, not the main line
+# 2.0 was picked by measurement under the model the lane system replaced, where
+# an extra body always thinned somebody's volley and depth therefore had
+# unbounded if diminishing value. It does not any more: useful line bodies are
+# LANE_SLOTS_TYPICAL x frontline x (AI_RESERVE_DEPTH - 1), which at depth 2.0 is
+# the same count as the assault target, and a 1:1 spend split is what that
+# implies. That is a derivation, not a measurement -- the harness the old number
+# came from was run offline and does not exist in tests/, so re-measuring under
+# the lane rules is outstanding work, recorded in context/TODO.txt.
+AI_LINE_SPEND_RATIO = 1.0
+# Guns went from support to the only thing that reaches a reserve, and deep
+# reserve stacks are the formation the lane model encourages.
+AI_BOMBARD_SPEND_RATIO = 0.25
 AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
 
 # A unit is ASSAULT when this much of its combat value comes from attack rather
