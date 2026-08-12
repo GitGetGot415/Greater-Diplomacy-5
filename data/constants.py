@@ -1327,9 +1327,20 @@ UNILATERAL_ACTIONS = [
 # rather than broken.
 MESSAGE_CATEGORIES = {
     "WAR_DECLARATION": "WAR",
-    "CALL_TO_ARMS": "WAR",
-    "JOIN_WARS": "WAR",
     "JUSTIFY_WARGOAL": "WAR",
+
+    # Allies combining their war efforts, not a war being declared. Both of
+    # these read WAR at first, which is the one thing in the column a reader
+    # cannot afford to misread: "WAR" from an ally you are already fighting
+    # beside looks exactly like that ally turning on you. Neither of them
+    # starts a war -- CALL_TO_ARMS asks an ally into ours, JOIN_WARS asks to be
+    # let into theirs -- and which way round it is, is on the row already, in
+    # the sender, the receiver, and the message itself.
+    #
+    # One label for both, because "CALL TO ARMS" renders at exactly the Type
+    # column's 100px with nothing to spare.
+    "CALL_TO_ARMS": "JOIN WAR",
+    "JOIN_WARS": "JOIN WAR",
 
     "CEASEFIRE": "PEACE",
     "PEACE_TREATY": "PEACE",

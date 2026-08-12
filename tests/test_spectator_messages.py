@@ -51,6 +51,29 @@ class CategoryTests(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertIn(action, c.MESSAGE_CATEGORIES)
 
+    def test_joining_a_war_does_not_read_as_declaring_one(self):
+        """The one confusion in this column a reader cannot afford: "WAR" from
+        an ally you are already fighting beside looks exactly like that ally
+        turning on you. Neither of these starts a war."""
+        for action in ("CALL_TO_ARMS", "JOIN_WARS"):
+            with self.subTest(action=action):
+                category = dm.message_category({"action": action, "type": "DIPLOMACY"})
+                self.assertNotEqual(category, "WAR")
+                self.assertEqual(category, "JOIN WAR")
+
+    def test_declaring_war_still_reads_as_war(self):
+        self.assertEqual(
+            dm.message_category({"action": "WAR_DECLARATION", "type": "DIPLOMACY"}), "WAR")
+
+    def test_asking_and_offering_are_the_same_kind_of_act(self):
+        """CALL_TO_ARMS asks an ally into our wars and JOIN_WARS asks to be let
+        into theirs. Which way round it is, is already on the row -- sender,
+        receiver, and the message itself -- so the column says the one thing it
+        has room to say."""
+        self.assertEqual(dm.message_category({"action": "CALL_TO_ARMS"}),
+                         dm.message_category({"action": "JOIN_WARS"}))
+
+
 
 class SendTests(unittest.TestCase):
     def setUp(self):
@@ -343,6 +366,42 @@ class OverviewTests(unittest.TestCase):
     def send(self, sender, receiver, **kwargs):
         dm.send_treaty_message(self.map, sender, receiver, **kwargs)
         return receiver
+
+    def test_every_category_fits_the_column_it_is_drawn_in(self):
+        """A label wider than its column is caught by nothing else here --
+        message_category would go on returning it, correctly, and the table
+        would go on drawing it over its neighbour. "CALL TO ARMS" renders at
+        exactly the 100px available, which is why a call to arms and a request
+        to join share one label rather than having two.
+
+        The width is read off the table the game actually builds, so this
+        cannot quietly pass against a copy of it.
+        """
+        from map_logic.rendering.font_manager import fonts
+
+        table = self.build()
+        width = next(col.width for col in table.columns if col.key == "type")
+        font = fonts.get("small")
+        for label in set(c.MESSAGE_CATEGORIES.values()) | {"DIPLOMACY", "TEXT"}:
+            with self.subTest(label=label):
+                drawn = font.size(label)[0]
+                self.assertLess(drawn, width,
+                                f"{label!r} is {drawn}px in a {width}px column")
+
+    def test_a_join_war_row_says_so(self):
+        """End to end: an ally asking for help must not arrive in the table
+        looking like a declaration of war."""
+        living = sorted(n for n in self.map.nation_data
+                        if isinstance(self.map.nation_data[n], dict)
+                        and self.map.nation_data[n].get("is_playable"))
+        a, b = living[0], living[1]
+        self.send(a, b, action="CALL_TO_ARMS", custom_msg="Stand with us.")
+
+        table = self.build()
+        row = next(r for r in table.rows
+                   if r["sender"] == a and r["receiver"] == b
+                   and r["message"] == "Stand with us.")
+        self.assertEqual(row["type"], "JOIN WAR")
 
     def test_a_trade_row_carries_its_terms_and_kind(self):
         living = sorted(self.map.nation_data)

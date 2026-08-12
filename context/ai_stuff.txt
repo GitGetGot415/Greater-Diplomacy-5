@@ -258,9 +258,20 @@ carry no flag and show as ordinary; there is nothing to recover it from.
 A message also records the action that produced it, because that lived only on
 the sender's pending_diplomacy entry and was deleted on resolution -- so every
 treaty announcement read "DIPLOMACY" forever afterwards. constants.
-MESSAGE_CATEGORIES turns it into WAR / PEACE / TRADE / FACTION / ACCESS /
-PUPPET / ALLIANCE for display only: the `type` field stays TEXT or DIPLOMACY,
-because that literal is what raises the popup and draws the gold bubble.
+MESSAGE_CATEGORIES turns it into WAR / JOIN WAR / PEACE / TRADE / FACTION /
+ACCESS / PUPPET / ALLIANCE for display only: the `type` field stays TEXT or
+DIPLOMACY, because that literal is what raises the popup and draws the gold
+bubble.
+
+JOIN WAR is separate from WAR on purpose. CALL_TO_ARMS and JOIN_WARS combine
+two nations' existing war efforts and start nothing, but they read WAR at
+first -- and "WAR" arriving from an ally you are already fighting beside looks
+exactly like that ally turning on you. They share one label rather than getting
+one each because "CALL TO ARMS" renders at exactly the Type column's 100px;
+which direction it was is on the row already, in the sender and the message.
+test_spectator_messages measures every label against the column the game
+actually builds, since nothing else would notice a label drawn over its
+neighbour.
 
 
 WHAT A SPECTATOR CAN DO
