@@ -1,178 +1,174 @@
+"""Reading a treaty somebody has offered you.
+
+The screen that *built* peace terms lived here too, offering Surrender / Demand
+Claims / Ceasefire and nothing else. It is gone: terms are itemized now and
+assembled in deal_screen.py, which builds a trade the same way for the same
+reason. What is left is the other half -- looking at what has been proposed to
+you, on the map, before answering it.
+
+That view used to lie. It read the terms out of `parameters` falling back to
+`message`, and an AI's offer carried prose in both, so get_projected_owner found
+a string starting with none of the three magic prefixes, concluded from that
+that *you* were the winner, and painted every province you had ever claimed as
+about to become yours. Then the treaty executed as a white peace and nothing
+moved at all. It reads the deal's own transfer list now, which is the same list
+deal_effects will act on.
+"""
+
 import pygame
+
 import data.constants as c
-from data import queries
-from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
-from ui_elements import Button, make_back_button
+from map_logic.diplomacy import deal as deal_mod
+from map_logic.diplomacy import diplomacy_messages, ratification
+from map_logic.rendering import refresh_map
 from map_logic.rendering.font_manager import fonts
+from ui import text_utils
 from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
-from screens.map_related_screens.diplomacy_screen_widgets import build_choice_button, draw_projected_peace_map
-
-
-class Peace_Screen(MapOverlayScreen):
-    overlay_alpha = 0
-    # Docked above the bottom bar rather than centred, and translucent so the
-    # projected post-treaty map stays readable underneath it.
-    CENTER_PANEL = False
-    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM_OVER_MAP
-
-    def __init__(self, map_screen, target_nation):
-        # Restructured to be a wide, short banner docked cleanly above the bottom UI bar
-        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 350, c.SCREEN_HEIGHT - 250, 700, 190))
-        self.target_nation = target_nation
-
-        my_wargoal = map_screen.nation_data.get(map_screen.player_country, {}).get("wargoals", {}).get(target_nation, {}).get("type", "")
-        their_wargoal = map_screen.nation_data.get(target_nation, {}).get("wargoals", {}).get(map_screen.player_country, {}).get("type", "")
-
-        self.terms = [
-            c.PEACE_SURRENDER,
-            c.PEACE_DEMAND_CLAIMS,
-            c.PEACE_WHITE_PEACE
-        ]
-
-        self.terms_enabled = [
-            True, # Surrender is always an option if at war
-            my_wargoal in [c.WARGOAL_TAKE_CLAIMS, c.WARGOAL_NO_CB] or their_wargoal != "", # Allowed if we claimed, No CB, or if it's a defensive war!
-            True
-        ]
-
-        # Check for existing peace offer
-        pending = diplomacy_messages.get_pending(map_screen.nation_data, map_screen.player_country, target_nation)
-        self.is_editing = pending.get("action") in ["PEACE_TREATY", "CEASEFIRE"]
-
-        if self.is_editing:
-            pending_msg = pending.get("message", "")
-            self.selected_term_idx = 2 # Default to Ceasefire
-            for i, term in enumerate(self.terms):
-                if pending_msg.startswith(term) and self.terms_enabled[i]:
-                    self.selected_term_idx = i
-                    break
-
-            # Catch raw CEASEFIRE actions from legacy behavior
-            if pending.get("action") == "CEASEFIRE":
-                self.selected_term_idx = 2
-        else:
-            self.selected_term_idx = 2 # Default to Ceasefire
-
-        self.refresh_ui()
-
-    def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", lambda: self.exit_screen())]
-
-        term = self.terms[self.selected_term_idx]
-        is_human = self.target_nation in self.map_screen.active_players
-
-        if is_human:
-            self.acceptance_text = "This is another player, whether they accept this deal or not is up to them."
-            self.acceptance_color = (200, 200, 200)
-        else:
-            will_accept = queries.will_ai_accept_peace(self.target_nation, self.map_screen.player_country, term, self.map_screen.map_data, self.map_screen.nation_data)
-            if will_accept:
-                self.acceptance_text = "The AI will accept this peace deal."
-                self.acceptance_color = c.COLOR_SUCCESS_GREEN
-            else:
-                self.acceptance_text = "The AI will REJECT this peace deal."
-                self.acceptance_color = (255, 100, 100)
-
-        # Place the 3 main terms left-to-right
-        for i, term_str in enumerate(self.terms):
-            self.elements.append(
-                build_choice_button(self.panel_rect.centerx - 330 + (i * 220), self.panel_rect.y + 80,
-                                    "medium", term_str, self.terms_enabled[i],
-                                    self.selected_term_idx == i, lambda idx=i: self.select_term(idx))
-            )
-
-        confirm_text = "Update Offer" if self.is_editing else "Send Proposal"
-        self.elements.append(Button(self.panel_rect.centerx - 100, self.panel_rect.y + 140, "medium", "green", confirm_text, self.confirm))
-
-        if self.is_editing:
-            self.elements.append(Button(self.panel_rect.right - 140, self.panel_rect.y + 140, "small", "red", "Cancel Offer", self.revoke_offer))
-
-    def select_term(self, idx):
-        if self.terms_enabled[idx]:
-            self.selected_term_idx = idx
-            self.refresh_ui()
-
-    def revoke_offer(self):
-        diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country,
-                                         self.target_nation, only_actions=["PEACE_TREATY", "CEASEFIRE"])
-        self.map_screen.show_feedback("Peace Offer Cancelled.")
-        self.done = True
-
-    def confirm(self):
-        term = self.terms[self.selected_term_idx]
-        action_type = "CEASEFIRE" if term == c.PEACE_WHITE_PEACE else "PEACE_TREATY"
-
-        proposer = self.map_screen.player_country
-        target = self.target_nation
-
-        # Calculate and freeze territories into the message string
-        frozen_ids = []
-        if term == c.PEACE_DEMAND_CLAIMS:
-            claims = self.map_screen.nation_data.get(proposer, {}).get("claims", [])
-            for prov in self.map_screen.map_data.values():
-                if prov.get("owner") == target and (prov["id"] in claims or proposer in prov.get("cores", [])):
-                    frozen_ids.append(str(prov["id"]))
-            if frozen_ids:
-                term += f" (Territories demanded: {', '.join(frozen_ids)} + cores)"
-            else:
-                term += " (No territories demanded)"
-
-        elif term == c.PEACE_SURRENDER:
-            claims = self.map_screen.nation_data.get(target, {}).get("claims", [])
-            for prov in self.map_screen.map_data.values():
-                if prov.get("owner") == proposer and (prov["id"] in claims or target in prov.get("cores", [])):
-                    frozen_ids.append(str(prov["id"]))
-            if frozen_ids:
-                term += f" (Territories surrendered: {', '.join(frozen_ids)} + cores)"
-            else:
-                term += " (No territories surrendered)"
-
-        # Overwrites directly to bypass the toggle logic
-        diplomacy_messages.set_pending(self.map_screen.nation_data, self.map_screen.player_country,
-                                       self.target_nation, action_type, parameters=term, message=term)
-        self.map_screen.show_feedback("Peace Offer Updated!" if self.is_editing else "Peace Offer Queued!")
-        self.done = True
-
-    def get_panel_title(self):
-        return f"Peace Terms: {self.target_nation}"
-
-    def draw_content(self, surface):
-        draw_projected_peace_map(surface, self.map_screen, self.terms[self.selected_term_idx],
-                                 self.map_screen.player_country, self.target_nation)
-
-        # Draw the Banner
-        self.draw_panel(surface)
-
-        small_font = fonts.get("normal")
-        acc_surf = small_font.render(self.acceptance_text, True, self.acceptance_color)
-        surface.blit(acc_surf, (self.panel_rect.centerx - acc_surf.get_width()//2, self.panel_rect.y + 50))
+from ui_elements import make_back_button
 
 
 class View_Peace_Treaty_Screen(MapOverlayScreen):
     overlay_alpha = 0
+    #: The terms box places itself top-left, beside the map it is about.
+    CENTER_PANEL = False
 
     def __init__(self, map_screen, proposer):
         super().__init__(map_screen)
         self.proposer = proposer
         self.target = map_screen.player_country
 
-        # Read the parameters directly from the proposed diplomacy message
-        pending = diplomacy_messages.get_pending(map_screen.nation_data, self.proposer, self.target)
-        self.peace_type = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
+        # Two ways a treaty can be sitting in front of you: they proposed it, or
+        # your own faction leader signed it on your behalf and you are being
+        # asked to ratify. The second lives in its own channel -- see
+        # map_logic/diplomacy/ratification.py -- so both are looked for here.
+        asked = ratification.pending_for(map_screen.nation_data, self.target)
+        if asked.get("signatory") == proposer and deal_mod.is_deal(asked.get("deal")):
+            params = asked["deal"]
+        else:
+            pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
+            params = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
+
+        self.deal = deal_mod.coerce(params, proposer, self.target, kind=deal_mod.KIND_PEACE)
+        self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
+                                                 map_screen.nation_data)
+        self.terms = deal_mod.describe(self.deal, viewer=self.target,
+                                       nation_data=map_screen.nation_data)
+
+        # Wrapped once, here, rather than every frame -- and the panel is sized
+        # from the result so that panel_rect is the box the player can actually
+        # see. That matters for more than tidiness: MapOverlayScreen routes the
+        # mouse wheel to the list only over panel_rect and to the camera
+        # everywhere else, so a panel sized to the whole left of the screen
+        # would swallow camera panning under empty space, and no panel at all
+        # (which is what this screen had) means the wheel never reaches the list.
+        self.lines = self._wrapped()
+        self.panel_rect = pygame.Rect(
+            self.PANEL.x, self.PANEL.y, self.PANEL.width,
+            min(self.PANEL.height, self.PAD * 2 + len(self.lines) * self.LINE_H))
 
         self.elements = [make_back_button(self.exit_screen, style="map")]
 
+    #: The terms panel. Width and top are fixed; the height is whatever is left
+    #: of the screen, and the list scrolls inside it.
+    PANEL = pygame.Rect(40, 90, 460, c.SCREEN_HEIGHT - 90 - c.BOT_UI_HEIGHT - 20)
+    LINE_H = 24
+    PAD = 15
+
     def draw_content(self, surface):
-        draw_projected_peace_map(surface, self.map_screen, self.peace_type, self.proposer, self.target)
+        draw_projected_deal_map(surface, self.map_screen, self.transfers,
+                                deal_mod.parties(self.deal))
+        ui_bars.draw_centered_title(
+            surface, f"Projected Map: Treaty from {self.proposer}", 30)
+        self._draw_terms(surface)
 
-        # Utilize the helper to render the header string over the map preview safely
-        ui_bars.draw_centered_title(surface, f"Projected Map: Peace Treaty from {self.proposer}", 30)
+    def _wrapped(self):
+        """The terms, broken to the panel width.
+
+        They were blitted raw into a 460px box with the height derived from the
+        line count and no clip at either edge. A treaty between two blocs names
+        every nation bound by it on one line and emits a cede line per giver, so
+        the text ran off the right of the panel, off the right of the window, and
+        past the bottom of the screen at about twenty-six terms.
+        """
+        font = fonts.get("normal")
+        width = self.PANEL.width - self.PAD * 2
+        lines = []
+        for term in self.terms:
+            lines.extend(text_utils.wrap_text(term, font, width))
+        return lines
+
+    def _draw_terms(self, surface):
+        if not self.terms:
+            return
+
+        font = fonts.get("normal")
+        lines = self.lines
+        panel = self.panel_rect
+
+        ui_bars.draw_translucent_panel(surface, panel, (*c.HUD_PANEL_BG, 230),
+                                       border_color=c.MODAL_BORDER)
+
+        inner_h = panel.height - self.PAD * 2
+        clip = pygame.Rect(panel.x + 5, panel.y + self.PAD, panel.width - 10, inner_h)
+        self.scroll_content_rect = clip
+
+        with ui_bars.clip_scroll_region(surface, clip,
+                                        draw_top=self.scroll_y != 0,
+                                        draw_bottom=self.scroll_y > self.max_scroll):
+            for i, y in self.layout_list_rows(len(lines), self.LINE_H,
+                                              panel.y + self.PAD, view_h=inner_h,
+                                              cull_top=panel.y, cull_bottom=panel.bottom):
+                surface.blit(font.render(lines[i], True, c.UI_TEXT_LIGHT),
+                             (panel.x + self.PAD, y))
+
+        self.draw_list_scrollbar(surface, panel.right - 12, panel.y + self.PAD,
+                                 inner_h, width=8)
 
 
-def open_peace_menu(map_screen, target_nation):
-    _run_pygame_sub_screen(map_screen, Peace_Screen(map_screen, target_nation))
+def draw_projected_deal_map(surface, map_screen, transfers, parties=()):
+    """Paints the map as the deal would leave it, colouring only its signatories.
+
+    Falls back to the old per-province blobs when nobody says who the parties
+    are: a caller with a bare transfer list -- a mod, or the deprecated
+    draw_projected_peace_map forwarder -- still gets a picture.
+    """
+    if parties:
+        preview = refresh_map.build_deal_preview_map(map_screen, parties, transfers)
+        _draw_swapped_in(surface, map_screen, preview)
+        return
+
+    from map_logic.rendering import overlay_renderer
+
+    for prov_id, new_owner in transfers.items():
+        prov = map_screen.id_to_province.get(int(prov_id))
+        if prov is None or prov.get("owner") == new_owner:
+            continue
+        color = map_screen.nation_colors.get(new_owner, (255, 255, 255))
+        overlay_renderer.draw_map_highlight(surface, map_screen, int(prov_id), color,
+                                            base_radius=10)
+
+
+def _draw_swapped_in(surface, map_screen, preview):
+    """Draws one alternative map surface and puts the real one back.
+
+    The renderer reads exactly one attribute -- map_screen.active_map -- so a
+    screen shows a different map by swapping it around its own draw call. Same
+    move Faction_Territories_Screen makes; the restore is in a finally because
+    leaving the player's map pointed at a treaty preview would outlive the
+    screen that wanted it.
+    """
+    previous_layer = map_screen.base_layer
+    previous_map = map_screen.active_map
+    try:
+        map_screen.base_layer = "POLITICAL"
+        map_screen.active_map = preview
+        map_screen.draw_clean_map_background(surface)
+    finally:
+        map_screen.base_layer = previous_layer
+        map_screen.active_map = previous_map
+
 
 def open_view_peace_treaty_menu(map_screen, proposer):
     _run_pygame_sub_screen(map_screen, View_Peace_Treaty_Screen(map_screen, proposer))

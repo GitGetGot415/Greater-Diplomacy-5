@@ -1,6 +1,4 @@
-from data import queries
 from ui_elements import Button
-from map_logic.rendering import overlay_renderer
 
 
 def build_choice_button(x, y, size, label, enabled, selected, callback, font_preset="button"):
@@ -28,17 +26,17 @@ def build_choice_row(specs, current, on_select, size="medium", font_preset="butt
     ]
 
 def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
-    """Tints every province that would change hands if the treaty went through."""
-    p_color = map_screen.nation_colors.get(proposer, (0, 255, 0))
-    t_color = map_screen.nation_colors.get(target, (255, 0, 0))
+    """DEPRECATED. Tints every province a treaty would move.
 
-    for prov in map_screen.map_data.values():
-        curr = prov.get("owner")
-        if curr not in (proposer, target):
-            continue
-        proj = queries.get_projected_owner(prov, peace_type, proposer, target, map_screen.nation_data)
-        if proj == curr:
-            continue
-        color = p_color if proj == proposer else t_color if proj == target else None
-        if color:
-            overlay_renderer.draw_map_highlight(surface, map_screen, prov["id"], color, base_radius=10)
+    Took one of the three old peace sentences and re-derived the transfers from
+    it with rules that did not match the ones execution used -- this tested
+    `prov["id"] in claims` where execute_peace_treaty tested was_original_owner,
+    so the preview and the outcome could differ. A deal states its own transfers
+    now; see peace_screen.draw_projected_deal_map, which this forwards to.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from screens.map_related_screens.peace_screen import draw_projected_deal_map
+
+    agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)
+    transfers = deal_mod.tile_transfers(agreement, map_screen.map_data, map_screen.nation_data)
+    draw_projected_deal_map(surface, map_screen, transfers)

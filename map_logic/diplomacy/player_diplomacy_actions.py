@@ -1,5 +1,5 @@
 from data import queries
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
 import data.constants as c
 
 
@@ -27,12 +27,23 @@ def handle_declare_war(map_screen):
     
     t_master = t_data.get("master", "")
     t_type = t_data.get("puppet_type", "")
-    
+
+    # This is also the peace button -- map.py relabels it "Ceasefire / Peace"
+    # against a nation we are already fighting, without changing the callback.
+    # So the war gates below have to come *after* that hand-off, not before it:
+    # a puppet clicking Ceasefire used to be told it "can only declare war on
+    # their master", which is a true sentence about a thing it was not doing.
+    # Whether it may make peace, and the wording of that refusal, belongs to
+    # peace_scope via handle_ceasefire.
+    if queries.are_at_war(player, target, map_screen.nation_data):
+        handle_ceasefire(map_screen)
+        return
+
     # 1 & 2. Puppets (Integrated and Autonomous) can ONLY declare independence wars
     if my_master and target != my_master:
         map_screen.show_feedback("Puppets can only declare war on their master!")
         return
-        
+
     # 3. Cannot declare war ON an integrated puppet
     if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
         if t_master == player:
@@ -45,12 +56,6 @@ def handle_declare_war(map_screen):
         if t_type == c.PUPPET_TYPE_INTEGRATED:
             map_screen.show_feedback("Cannot declare war on your own integrated puppet!")
             return
-        
-    at_war = queries.are_at_war(player, target, map_screen.nation_data)
-    
-    if at_war:
-        handle_ceasefire(map_screen)
-        return
 
     # Prevent declaring war on your own faction
     if queries.are_in_same_faction(player, target, map_screen.nation_data):
@@ -76,14 +81,19 @@ def open_claims_menu(map_screen):
 def handle_ceasefire(map_screen):
     target = map_screen.selected_province.get("owner")
 
-    # A puppet's wars belong to its master -- the mirror of "puppets can only
-    # declare war on their master" above. Peace with the master itself is still
-    # allowed, since that is how an independence war ends.
-    if not queries.can_negotiate_peace(map_screen.player_country, target, map_screen.nation_data):
-        map_screen.show_feedback("Puppets can only make peace with their master!")
+    # Puppets, and now blocs: a nation inside a faction at war cannot pick off
+    # one member of the other side, and only a leader speaks for its own. See
+    # map_logic/diplomacy/peace_scope.py for the full set of rules -- the point
+    # of routing every refusal through one function is that the player is told
+    # which one caught them, and by name.
+    reason = peace_scope.refusal_reason(map_screen.player_country, target, map_screen.nation_data)
+    if reason:
+        map_screen.show_feedback(reason)
         return
-    if not queries.can_negotiate_peace(target, map_screen.player_country, map_screen.nation_data):
-        map_screen.show_feedback(f"{target} is a puppet -- negotiate with its master instead!")
+
+    role = peace_scope.negotiation_role(map_screen.player_country, target, map_screen.nation_data)
+    if role is None:
+        map_screen.show_feedback("You cannot negotiate this peace.")
         return
 
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)
@@ -93,7 +103,7 @@ def handle_ceasefire(map_screen):
         return
         
     # Direct import to bypass __init__.py namespace issues
-    from screens.map_related_screens.peace_screen import open_peace_menu
+    from screens.map_related_screens.deal_screen import open_peace_menu
     open_peace_menu(map_screen, target)
 
 def open_puppets_menu(map_screen):
@@ -209,11 +219,9 @@ def handle_accept_req(map_screen, target=None, custom_msg=None):
                 map_screen.show_feedback("You must be in the same faction to do this!")
                 return
         elif action in ["PEACE_TREATY", "CEASEFIRE"]:
-            if not queries.can_negotiate_peace(map_screen.player_country, target, map_screen.nation_data):
-                map_screen.show_feedback("Puppets can only make peace with their master!")
-                return
-            if not queries.can_negotiate_peace(target, map_screen.player_country, map_screen.nation_data):
-                map_screen.show_feedback(f"{target} cannot make peace without its master!")
+            reason = peace_scope.refusal_reason(map_screen.player_country, target, map_screen.nation_data)
+            if reason:
+                map_screen.show_feedback(reason)
                 return
 
     _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_ACCEPT, custom_msg)
@@ -225,6 +233,25 @@ def handle_reject_req(map_screen, target=None, custom_msg=None):
         target = map_screen.selected_province.get("owner")
 
     _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_REJECT, custom_msg)
+
+
+def has_treaty_to_ratify(map_screen):
+    """Whether the player's faction leader has signed something binding them."""
+    return bool(ratification.pending_for(map_screen.nation_data, map_screen.player_country))
+
+
+def handle_ratify_treaty(map_screen, accept):
+    """Answers a treaty the player's leader agreed to on their behalf.
+
+    Refusing is not free: it costs the player their faction and leaves them at
+    war with the whole other side on their own. That is what makes the veto a
+    decision rather than a formality.
+    """
+    verdict = ratification.RATIFY if accept else ratification.REFUSE
+    message = ratification.answer(map_screen.nation_data, map_screen.player_country, verdict)
+    if message:
+        map_screen.show_feedback(message)
+    return message
 
 def _handle_faction_assist(map_screen, action, at_war_msg, not_allied_msg, leaving_msg):
     """Queues one of the two "help a faction partner fight" requests.

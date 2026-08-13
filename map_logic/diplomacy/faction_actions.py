@@ -15,12 +15,21 @@ def settle_with_faction(nation_data, joiner, fac):
     A faction cannot contain two nations at war with each other, so joining one
     ends any such war. Written out twice: once for a nation joining directly,
     once for its puppets being pulled in behind it.
+
+    The truce finalize_neutral writes is then taken back off, which it is not
+    anywhere else. A truce is a promise not to fight for twelve turns, and
+    between two nations who are now in the same faction that promise is both
+    redundant -- they cannot declare war on each other at all -- and misleading:
+    it left allies listed as holding non-aggression pacts against each other,
+    and outlived the alliance if either of them later walked out.
     """
     for member in queries.get_faction_members(fac, nation_data):
         if member == joiner:
             continue
         if queries.are_at_war(joiner, member, nation_data) or queries.are_at_war(member, joiner, nation_data):
             finalize_neutral(nation_data, joiner, member)
+            for side, other in ((joiner, member), (member, joiner)):
+                nation_data.get(side, {}).get("truces", {}).pop(other, None)
         sever_military_access(nation_data, joiner, member)
 
 
@@ -34,12 +43,34 @@ def leave_faction(nation_data, leaver):
 
     fac = nation_data[leaver].get("faction", "")
     if fac:
+        _keep_own_pre_war_borders(nation_data, leaver, fac)
         queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
 
     nation_data[leaver]["faction"] = ""
     nation_data[leaver]["is_faction_leader"] = False
     pull_puppets_out_of_faction(leaver, nation_data)
     return fac
+
+
+def _keep_own_pre_war_borders(nation_data, leaver, fac):
+    """Carries a departing member's pre-war borders out of the faction with it.
+
+    A faction's snapshot is the only record of where its members' borders were
+    when the war started, and walking out used to delete this nation's share of
+    it outright. That was harmless while the snapshot only fed a map mode. It is
+    not now: peace hands unnamed occupied land back to its pre-war owner, and
+    with no record left the fallback is the first core on the tile -- so a nation
+    that bought its way out of a bloc war with a separate peace, which is exactly
+    the manoeuvre that ends with somebody leaving a faction, would have its
+    borders reconstructed from guesswork at the moment it mattered most.
+    """
+    snapshot = (nation_data.get("FACTION_WAR_MAPS") or {}).get(fac)
+    if not isinstance(snapshot, dict) or not queries.get_enemies(leaver, nation_data):
+        return
+
+    mine = {prov_id: owner for prov_id, owner in snapshot.items() if owner == leaver}
+    if mine:
+        nation_data.setdefault("WAR_PRE_MAPS", {})[leaver] = mine
 
 
 def resent_departure(nation_data, a, b):

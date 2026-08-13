@@ -6,6 +6,7 @@ from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bo
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud
 
 # ==========================================
@@ -649,6 +650,12 @@ class Production_Screen(GameState):
 
         owner = self.target_province.get("owner")
         p_data = self.map_screen.nation_data.get(owner, {})
+
+        if not restrictions.can_raise_units(owner, self.map_screen.nation_data):
+            turns = restrictions.turns_left(owner, self.map_screen.nation_data, "demilitarized")
+            self.map_screen.show_feedback(
+                f"Demilitarized by treaty -- no new units for {turns} more turns.")
+            return
 
         if queries.can_afford(p_data, stats):
             queries.deduct_resources(p_data, stats)

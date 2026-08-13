@@ -69,6 +69,20 @@ class LeftBarLayoutTests(unittest.TestCase):
         self.assertGreater(len(elements), 5, "no left-bar buttons were visible at all")
         self.assert_no_overlap(elements, "play")
 
+    def test_claims_is_on_a_players_left_bar(self):
+        """The Claims tab is a game screen, not only an authoring one.
+
+        It was taken off the play bar on the theory that a claim is only ever a
+        justification for one specific war, so the declare-war window is the
+        only place it needs to be reachable from. That is true of *making* a
+        claim and false of reading the map: who is building a case against whom
+        is information about the whole world, and the war screen only ever shows
+        one nation's worth of it. Both ways in exist now.
+        """
+        elements = self.visible_left_bar(is_editor=False)
+        self.assertIn(self.map.btn_gp_claims, elements,
+                      "the Claims button is not visible during a game")
+
     def test_ai_personality_is_actually_on_screen_in_the_editor(self):
         elements = self.visible_left_bar(is_editor=True)
         self.assertIn(self.map.btn_ed_personality, elements,

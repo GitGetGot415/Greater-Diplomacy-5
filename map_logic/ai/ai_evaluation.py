@@ -9,7 +9,7 @@ working.
 import collections
 
 import data.constants as c
-from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_unit_eval
+from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_world
 from data import queries
 from map_logic.ai import ai_prompts
 
@@ -203,23 +203,45 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
 Verdict = collections.namedtuple("Verdict", "accepted confidence reason")
 
 
-def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
-    """The peace type being offered.
+def _confidence(slack):
+    """How sure a verdict is, from how far past the line it landed.
 
-    will_ai_accept_peace takes this as `peace_type` but is handed `custom_msg`,
-    which works only because the terms *are* the message. Anything that attaches
-    prose to a peace proposal -- a script, or the model once it is allowed to
-    write one -- makes every startswith() check silently false and the offer is
-    accepted by the catch-all. The proposal's own parameters win where they
-    exist, and the message is the fallback.
+    Same figure the player's verdict bar is bucketed from, so the model, the
+    engine and the screen are all reading one number. Floored, because even a
+    verdict decided by a hair is a verdict.
     """
+    return max(0.15, min(1.0, abs(slack) * 2.5))
+
+
+def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
+    """The deal being offered, whatever shape it was stored in.
+
+    This used to return a *string* and hand it to will_ai_accept_peace, which
+    worked only while the terms and the message were the same text. Anything
+    that attached prose to a peace proposal -- a script, or the AI's own
+    proactive offers, which never set parameters at all -- made every
+    startswith() check silently false, and the offer was then accepted by
+    accepts_peace's catch-all. The proposal's own parameters win where they
+    exist; the message is the fallback, and coerce reads free prose as the white
+    peace such an offer always executed as anyway.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
     params = pending.get("parameters") if isinstance(pending, dict) else None
+
+    if deal_mod.is_deal(params):
+        return params
     if isinstance(params, dict):
         declared = params.get("peace_type") or params.get("terms")
         if declared:
-            return str(declared)
-    return custom_msg or ""
+            params = str(declared)
+        else:
+            params = custom_msg or ""
+    elif not params:
+        params = custom_msg or ""
+
+    return deal_mod.coerce(params, sender_nation, ai_nation, kind=deal_mod.KIND_PEACE)
 
 
 def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
@@ -307,68 +329,68 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                 and queries.can_negotiate_peace(sender_nation, ai_nation, nation_data)):
             return Verdict(False, 1.0, "a subject state cannot settle a war on its own authority")
 
+        # One brain, always. The no-world path used to fall through to
+        # queries.will_ai_accept_peace, which refused any demand for claims
+        # outright -- so what the peace screen predicted and what the engine
+        # actually decided could and did disagree in front of the player.
+        if world is None:
+            world = ai_world.AIWorld(map_data, nation_data,
+                                     {prov["id"]: prov for prov in map_data.values()})
+
         terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
-        if world is not None:
-            accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
-                                                scenario_settings)
-            appetite = ai_opinion.peace_appetite(world, ai_nation, sender_nation,
-                                                 scenario_settings)
-            # A marginal call is exactly where a leader's own judgement should
-            # be allowed to differ, which is what Phase 4 reads this for.
-            confidence = min(1.0, abs(appetite - c.AI_PEACE_CEASEFIRE_THRESHOLD) * 2.5)
-            reason = (f"we are {'losing ground and weary of' if appetite > 0.5 else 'holding our own in'} "
-                      f"this war with {sender_nation}")
-            return Verdict(accepted, max(0.15, confidence), reason)
-        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, terms, map_data, nation_data)
+        # One number decides and explains, so the sentence under the player's
+        # verdict bar and the answer the engine gives cannot drift apart. The
+        # confidence used to be derived from peace_appetite alone -- a quantity
+        # that is only one of four the decision rests on -- so a treaty refused
+        # on its terms could still be reported as a close call.
+        peace = ai_opinion.peace_verdict(world, ai_nation, sender_nation, terms,
+                                         scenario_settings)
+        return Verdict(peace.accepted, _confidence(peace.slack), peace.reason)
 
     # --- NEW AI TRADE LOGIC ---
     elif action_type == "TRADE":
+        from map_logic.diplomacy import deal as deal_mod
+
         pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
         params = pending.get("parameters", {})
 
-        puppet_state = params.get("puppet_state", "NONE")
-
-        # We are the AI (Receiving). Therefore we "Take" what they "Give", and we "Give" what they "Take".
-        ai_takes_mats = params.get("give_materials", 0)
-        ai_takes_fuel = params.get("give_fuel", 0)
-        ai_gives_mats = params.get("take_materials", 0)
-        ai_gives_fuel = params.get("take_fuel", 0)
+        # Read the terms as a deal, whatever shape they arrived in.
+        #
+        # This branch used to reach straight for params["give_materials"] and
+        # friends. A trade the player builds has been a deal -- {"clauses": [...]}
+        # -- since the deal screen replaced the four number boxes, so all four
+        # of those lookups returned 0, every player-built trade netted out to
+        # exactly nothing, and the AI refused it with "we give up more than we
+        # gain" whatever was in it. The AI's own offers still use the flat keys,
+        # which is why nobody noticed: half the traffic worked.
+        agreement = deal_mod.coerce(params, sender_nation, ai_nation,
+                                    kind=deal_mod.KIND_TRADE)
+        # We are the AI: we take what they give, and give what they take.
+        receive, give = deal_mod.resource_flows(agreement, ai_nation)
 
         # An integrated puppet used to be barred from trading with anyone but
         # its master; that restriction is gone and subjects trade like anyone
         # else. A clause that would hand a nation over is still not something
-        # the receiving side can be talked into.
-        if puppet_state != "NONE":
-            # A structural impossibility, not a judgement call -- nothing should
-            # be allowed to talk us out of it.
+        # the receiving side can be talked into -- a structural impossibility,
+        # not a judgement call, so nothing may overrule it.
+        if deal_mod.vassalizes(agreement, ai_nation):
             return Verdict(False, 1.0, "the terms are not ours to agree to")
 
         if world is not None:
             # Priced against our own scarcity and shaded by how much we like
             # them, replacing "accept only if we give literally nothing" -- which
             # is why no AI ever agreed to a deal a player would call fair.
-            econ = world.economies.get(ai_nation, {})
-            prices = ai_unit_eval.resource_prices(econ, ai_stats)
-            net = ai_opinion.trade_appetite(
-                world, ai_nation, sender_nation,
-                receive={"materials": ai_takes_mats, "fuel": ai_takes_fuel},
-                give={"materials": ai_gives_mats, "fuel": ai_gives_fuel},
-                prices=prices, scenario_settings=scenario_settings)
-            accepted = net > 0
-            scale = max(1.0, abs(net) + prices.get("materials", 1.0) * 100.0)
-            return Verdict(accepted, max(0.2, min(1.0, abs(net) / scale)),
-                           "the exchange favours us" if accepted else "we give up more than we gain")
+            trade = ai_opinion.trade_verdict(world, ai_nation, sender_nation,
+                                             agreement, scenario_settings)
+            return Verdict(trade.accepted, _confidence(trade.slack), trade.reason)
 
-        if ai_gives_mats == 0 and ai_gives_fuel == 0 and (ai_takes_mats > 0 or ai_takes_fuel > 0):
-            accepted = True
-        else:
-            accepted = False
+        accepted = not any(give.values()) and any(receive.values())
     # ------------------------------
 
     return Verdict(accepted, 1.0, "")
 
 
-def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None):
+def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None, note=""):
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
@@ -388,7 +410,10 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     # Check if this is an AI talking to an AI
     is_ai_to_ai = (ai_nation not in human_players) and (sender_nation not in human_players)
 
-    if _use_canned_reply(mode, immersion, is_ai_to_ai, bool(custom_msg.strip()),
+    # A note the other side actually wrote is a reason to answer in kind rather
+    # than reach for a canned line -- more so than the generated terms are.
+    if _use_canned_reply(mode, immersion, is_ai_to_ai,
+                         bool(custom_msg.strip()) or bool(note.strip()),
                          nation=ai_nation, world=world):
         key = LITE_RESPONSE_KEYS.get(action_type,
                                      "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
@@ -417,7 +442,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         user_prompt = f"{context}\n{action_context} Provide your reaction."
         allow_override = False
     else:
-        action_context = ai_prompts.get_bilateral_receive_context(action_type, sender_nation, custom_msg)
+        action_context = ai_prompts.get_bilateral_receive_context(
+            action_type, sender_nation, custom_msg, note)
         system_prompt = ai_prompts.get_bilateral_system_prompt(
             accepted, allow_override, verdict.reason, verdict.confidence)
         user_prompt = f"{context}\n{action_context} Provide your response."

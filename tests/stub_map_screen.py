@@ -53,10 +53,24 @@ class StubMapScreen:
         self.scenario_settings = {}
         self.script_variables = []
 
-        for idx, name in enumerate(nations, start=1):
-            self._add_nation(name, idx)
+        # conquer_province repaints the political map surface unless one of
+        # these says a repaint would be pointless. There is no surface here at
+        # all, so it always is -- which is what lets a deal that moves territory
+        # be tested without pygame.
+        self.is_editor = False
+        self.viewing_ai_moves = False
+        self.ai_is_thinking = True
+        self.centers_need_update = False
+        self.map_mode = "POLITICAL"
+        self.political_map = None
+        self.id_map = None
 
-    def _add_nation(self, name, prov_id):
+        self._next_prov_id = 1
+        for name in nations:
+            self._add_nation(name)
+
+    def _add_nation(self, name):
+        prov_id = self._next_prov_id
         self.nation_data[name] = {
             "name": name,
             "is_playable": True,
@@ -77,9 +91,22 @@ class StubMapScreen:
             "fuel": 1000,
         }
         # One province each, so get_living_nations sees everyone as alive
-        prov = {"id": prov_id, "owner": name, "cores": [name], "neighbors": []}
+        self.add_province(name, cores=[name])
+
+    def add_province(self, owner, cores=None, **fields):
+        """Another tile on the map. Returns it, so a test can dirty it further."""
+        prov_id = self._next_prov_id
+        self._next_prov_id += 1
+        prov = {"id": prov_id, "owner": owner, "cores": list(cores or []),
+                "neighbors": [], "units": [], "buildings": [],
+                "map_color": (prov_id, 0, 0)}
+        prov.update(fields)
         self.map_data[str(prov_id)] = prov
         self.id_to_province[prov_id] = prov
+        return prov
+
+    def owner_of(self, prov_id):
+        return self.id_to_province[prov_id]["owner"]
 
     def show_feedback(self, text):
         self.feedback.append(text)

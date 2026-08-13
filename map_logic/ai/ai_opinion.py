@@ -16,6 +16,7 @@ numbers rather than replacing them.
 Stdlib and `data` only.
 """
 
+import collections
 import math
 
 import data.constants as c
@@ -120,58 +121,205 @@ def wants_war(world, nation, target, scenario_settings=None):
     return war_desire(world, nation, target, scenario_settings) >= c.AI_WAR_DESIRE_THRESHOLD
 
 
-def war_weariness(world, nation, enemy):
-    """How tired of this particular war the nation is, 0..1."""
-    duration = world.nation_data.get(nation, {}).get("war_durations", {}).get(enemy, 0)
-    return _clamp01(duration / float(c.AI_WAR_WEARINESS_TURNS))
-
-
 def peace_appetite(world, nation, enemy, scenario_settings=None):
     """How much this nation wants out of its war with `enemy`, 0..1.
 
-    Losing, tired, and cautious all push toward the table. The old rule was a
-    straight inversion of "can I win", which meant a nation that was narrowly
-    ahead would never talk however long the war had run.
+    Losing and cautious push toward the table. There was a third term, war
+    weariness -- how many turns the war had run, over a fixed twenty-five -- and
+    it is gone. It was the second-heaviest weight here, which meant a nation
+    winning a long war would sue for peace because of the calendar rather than
+    because of anything happening on the map, and the same counter was reading
+    as "leverage" on the war-score bar besides. What a nation wants out of a war
+    is now decided by how the war is going.
     """
     person = traits(world, nation, scenario_settings)
     border_ratio, global_ratio = world.power_ratio(nation, enemy)
     losing = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
 
     return _clamp01(c.AI_W_PEACE_LOSING * losing
-                    + c.AI_W_PEACE_WEARINESS * war_weariness(world, nation, enemy)
                     + c.AI_W_PEACE_CAUTION * person.get("caution", 0.5))
 
 
-def accepts_peace(world, nation, proposer, peace_type, scenario_settings=None):
+#: What peace_verdict answers with. `slack` is how far past the line the offer
+#: landed -- positive accepted, negative refused, and the size of it is how
+#: comfortably. `reason` names whichever constraint actually decided it, in the
+#: second person, for the line under the leverage bar.
+Peace = collections.namedtuple("Peace", "accepted slack reason")
+
+
+def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
+    """What this nation makes of the offered terms, and by how much.
+
+    It reads the terms rather than the first two words of the sentence they were
+    written in -- the version before the rework tested `peace_type.startswith`
+    against three constants and fell through to `return True`, so every AI peace
+    was agreed unconditionally. That is long fixed. What this rewrite adds is a
+    price on *stopping*.
+
+    Four quantities, all as fractions of what this nation is worth to itself:
+
+      demand      what the deal takes from us
+      sweetener   what it hands us, with cash capped (see AI_PEACE_CASH_OFFSET_CAP)
+      willingness their leverage plus how badly we want out
+      war_prize   what we still expect to win by fighting on
+
+    accept  <=>  the war is old enough
+            and  demand fits inside what their occupation entitles them to ask
+            and  willingness + sweetener >= demand + war_prize + margin
+
+    The two gates in the middle are the ones that were missing, and each maps to
+    a save that went wrong. Without `war_prize`, peace was free: a nation being
+    handed anything at all -- one material, in `ITS THAT SIMPLE` -- came out
+    ahead by arithmetic and signed, one turn into a war it was winning, because
+    the old shortcut read `demand <= 0` and returned `gain > 0`. Without the
+    occupation ceiling, a demand was weighed only against a *share* of leverage,
+    which never approaches zero, so Germany could be handed the British Isles
+    without a soldier on them.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import war_score
+
+    if not deal_mod.is_deal(agreement):
+        agreement = deal_mod.coerce(agreement, proposer, nation, kind=deal_mod.KIND_PEACE)
+
+    nation_data = world.nation_data
+    map_data = getattr(world, "map_data", {}) or {}
+    duration = nation_data.get(nation, {}).get("war_durations", {}).get(proposer, 0)
+
+    # Stopping a war we have barely started is its own decision. This used to be
+    # waived for anyone offering us something, which is precisely how a war two
+    # turns old was settled for a single material.
+    if duration < c.MIN_TURNS_FOR_CEASEFIRE:
+        return Peace(False, _REFUSED_FLAT,
+                     f"we have been at war {duration} "
+                     f"{'turn' if duration == 1 else 'turns'}; there is nothing to settle yet")
+
+    book = deal_mod.ledger(agreement, nation, map_data, nation_data)
+    worth = deal_mod.side_worth(agreement, nation, map_data, nation_data)
+
+    # A bloc leader may put a member's territory on the table, so a treaty costs
+    # whichever is worse: what the coalition gives up as a share of the
+    # coalition, or what its hardest-hit member gives up as a share of itself.
+    # Only the first of those existed, and "a fraction of the Allies" is exactly
+    # how handing over the whole United Kingdom read as a modest request.
+    demand = max((book["given_land"] + book["given_other"]) / worth,
+                 _worst_hit_member(agreement, nation, map_data, nation_data))
+    sweetener = book["got_land"] / worth
+    cash = book["got_other"] / worth
+    # Goods may soften a territorial demand but never buy one outright.
+    sweetener += min(cash, demand * c.AI_PEACE_CASH_OFFSET_CAP) if demand > 0 else cash
+
+    scores = war_score.between(_host(world), nation, proposer, world)
+    # How much of OUR homeland THEY are standing on -- their parts, our land.
+    occupied = scores["their_parts"]["occupation"]
+    allowance = max(c.AI_PEACE_MIN_ALLOWANCE, min(1.0, occupied * c.AI_PEACE_LAND_ALLOWANCE))
+
+    net_demand = max(0.0, demand - sweetener)
+    if net_demand > allowance:
+        return Peace(False, _REFUSED_FLAT,
+                     f"you hold {_pct(occupied)} of our land and are asking for "
+                     f"{_pct(net_demand)} of our country")
+
+    appetite = peace_appetite(world, nation, proposer, scenario_settings)
+    willingness = (c.AI_PEACE_LEVERAGE_W * scores["theirs"]
+                   + c.AI_PEACE_APPETITE_W * appetite)
+    war_prize = c.AI_PEACE_PRIZE_W * scores["mine"]
+
+    caution = traits(world, nation, scenario_settings).get("caution", 0.5)
+    margin = c.AI_PEACE_MARGIN_BASE + c.AI_PEACE_MARGIN_CAUTION * caution
+
+    slack = (willingness + sweetener) - (demand + war_prize + margin)
+    return Peace(slack >= 0, slack,
+                 _peace_reason(slack, demand, war_prize, scores, occupied))
+
+
+#: Slack reported for a refusal that no amount of sweetening fixes -- the war is
+#: too young, or the demand is past what occupation entitles them to. Well below
+#: the worst verdict band so it always reads as flat refusal.
+_REFUSED_FLAT = -1.0
+
+
+def _pct(fraction):
+    return f"{int(round(max(0.0, min(1.0, fraction)) * 100))}%"
+
+
+def _worst_hit_member(deal, nation, map_data, nation_data):
+    """The heaviest loss any one nation on our side is being asked to take."""
+    from map_logic.diplomacy import deal as deal_mod
+
+    side = deal_mod.side_of(deal, nation)
+    if not side:
+        return 0.0
+    return max((deal_mod.demand_fraction(deal, member, map_data, nation_data,
+                                         whole_side=False)
+                for member in deal["sides"][side]), default=0.0)
+
+
+def _peace_reason(slack, demand, war_prize, scores, occupied):
+    """One sentence naming whichever term is actually driving the answer."""
+    if slack >= 0:
+        if demand <= 0:
+            return "the fighting has gone on long enough"
+        return f"{_pct(demand)} of our country is a price we can live with"
+    if war_prize > demand + 0.05:
+        return f"we are winning this war; {_pct(scores['mine'])} of the leverage is ours"
+    if demand > 0:
+        return (f"you hold {_pct(occupied)} of our land and are asking for "
+                f"{_pct(demand)} of our country")
+    return "we are not ready to stop"
+
+
+def accepts_peace(world, nation, proposer, agreement, scenario_settings=None):
     """Whether this nation takes the offered terms.
 
-    Replaces queries.will_ai_accept_peace's boolean flip, and in particular the
-    rule that a demand for claims was refused unconditionally -- which is why AI
-    wars never once ended with territory changing hands. A nation that is
-    clearly losing a long war will now give ground, so a war can actually
-    resolve into a settlement instead of grinding until somebody is annihilated.
+    The yes/no half of peace_verdict, kept because it is what the engine, the
+    screens and any mod already call.
     """
-    appetite = peace_appetite(world, nation, proposer, scenario_settings)
-    duration = world.nation_data.get(nation, {}).get("war_durations", {}).get(proposer, 0)
+    return peace_verdict(world, nation, proposer, agreement, scenario_settings).accepted
 
-    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
-        return appetite >= c.AI_PEACE_CEDE_LAND_THRESHOLD
 
-    if peace_type.startswith(c.PEACE_WHITE_PEACE):
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
-        return appetite >= c.AI_PEACE_CEASEFIRE_THRESHOLD
+def verdict_band(slack):
+    """(filled dots, out of, sentence) for a slack figure. See AI_VERDICT_BANDS."""
+    total = len(c.AI_VERDICT_BANDS)
+    for threshold, dots, text in c.AI_VERDICT_BANDS:
+        if slack >= threshold:
+            return dots, total, text
+    _threshold, dots, text = c.AI_VERDICT_BANDS[-1]
+    return dots, total, text
 
-    if peace_type.startswith(c.PEACE_SURRENDER):
-        # They are giving us something. Worth taking unless we are winning
-        # comfortably and have barely started.
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return appetite >= c.AI_PEACE_CEASEFIRE_THRESHOLD
+
+class _host:
+    """The two attributes war_score reads, borrowed off an AIWorld.
+
+    AIWorld carries map_data and nation_data already; this only spells out that
+    those two are all war_score wants, so it works equally off the map screen.
+    """
+
+    def __init__(self, world):
+        self.map_data = getattr(world, "map_data", {}) or {}
+        self.nation_data = world.nation_data
+
+
+def ratifies(world, member, deal, map_data, scenario_settings=None):
+    """Whether a bound faction member swallows terms its leader signed for it.
+
+    A leader negotiates for the whole bloc and may put a member's own territory
+    on the table. The member's only recourse is to refuse -- which leaves the
+    faction and leaves it at war alone -- so this weighs exactly what the deal
+    costs *it*, not what the bloc as a whole came out with.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+
+    loss = deal_mod.demand_fraction(deal, member, map_data, world.nation_data,
+                                    whole_side=False)
+    if loss <= 0:
         return True
 
-    return True
+    enemies = deal_mod.opponents_of(deal, member)
+    appetite = max((peace_appetite(world, member, enemy, scenario_settings)
+                    for enemy in enemies), default=0.0)
+
+    return appetite >= loss * c.AI_RATIFY_STRICTNESS
 
 
 def trade_appetite(world, nation, sender, receive, give, prices, scenario_settings=None):
@@ -189,6 +337,43 @@ def trade_appetite(world, nation, sender, receive, give, prices, scenario_settin
 
     goodwill = (world.relation(nation, sender) / 200.0) * person.get("trust", 0.5)
     return gained - lost * (1.0 - c.AI_TRADE_GOODWILL_DISCOUNT * goodwill)
+
+
+def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
+    """What this nation makes of a proposed trade, in the same shape as peace.
+
+    One function so the line under the player's offer and the answer the engine
+    gives come from the same arithmetic -- and so a trade gets a graded reading
+    at all. The screen showed nothing whatsoever for a trade, and the engine's
+    own answer was a bare `net > 0`, which is a coin-flip presented as a fact
+    when the net is one material either way.
+    """
+    from map_logic.ai import ai_unit_eval
+    from map_logic.diplomacy import deal as deal_mod
+
+    if not deal_mod.is_deal(agreement):
+        agreement = deal_mod.coerce(agreement, sender, nation, kind=deal_mod.KIND_TRADE)
+
+    if deal_mod.vassalizes(agreement, nation):
+        return Peace(False, _REFUSED_FLAT, "the terms are not ours to agree to")
+
+    receive, give = deal_mod.resource_flows(agreement, nation)
+    prices = ai_unit_eval.resource_prices(world.economies.get(nation, {}),
+                                          world.nation_data.get(nation, {}))
+    net = trade_appetite(world, nation, sender, receive, give, prices, scenario_settings)
+
+    # Scaled against the size of the exchange, so "a hundred materials to the
+    # good" reads as decisive on a small trade and marginal on a huge one.
+    scale = max(1.0, abs(net) + prices.get("materials", 1.0) * c.AI_TRADE_MIN_AMOUNT)
+    slack = max(-1.0, min(1.0, net / scale))
+
+    if not any(give.values()):
+        reason = "they are asking nothing of us"
+    elif net > 0:
+        reason = "the exchange favours us"
+    else:
+        reason = "we give up more than we gain"
+    return Peace(net > 0, slack, reason)
 
 
 def alliance_appetite(world, nation, other, scenario_settings=None):

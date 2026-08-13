@@ -2,6 +2,7 @@ import random
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_unit_eval, ai_world
+from map_logic.diplomacy import restrictions
 
 
 def _unit_costs(unit_library, unit_name):
@@ -338,6 +339,9 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                 militia_stats = unit_library.get(militia_name, {})
                 militia_time = militia_stats.get("production_time", 1)
 
+                if not restrictions.can_raise_units(ai_name, map_screen.nation_data):
+                    safe_to_panic = False  # demilitarized by treaty; not even in a panic
+
                 if safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", "")) != "Militia"):
                     # Cancel existing queue
                     while queue:
@@ -497,6 +501,12 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
     have = dict(state["role_counts"])
 
     if not values:
+        return
+
+    # A treaty can bar this nation from raising anything at all. Checked before
+    # the budget is worked out rather than at the queue, so a demilitarized
+    # nation banks its income instead of computing a shopping list it cannot use.
+    if not restrictions.can_raise_units(ai_name, map_screen.nation_data):
         return
 
     best_overall = max((v.score for v in values.values()), default=0.0)

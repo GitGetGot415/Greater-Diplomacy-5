@@ -26,25 +26,29 @@ def get_pending_action(nation_data, player_name, target_name):
         return info.get("action")
     return info
 
-def describe_trade(params, viewer_is_proposer=False, subject=None):
-    """A trade's terms in words, from one side's point of view.
+def describe_trade(params, viewer_is_proposer=False, subject=None, viewer=None,
+                   nation_data=None):
+    """An agreement's terms in words, from one side's point of view.
 
     `subject` names that side instead of calling it "You", which is what a
     spectator watching two other countries needs -- "You receive" is a lie when
     the reader is not either party.
 
-    The keys are stored from the PROPOSER's point of view -- `give_*` is what
-    they hand over, `take_*` what they ask for -- which is how
-    queries.execute_trade_transfer reads them too. The receiving side therefore
-    sees them inverted, and getting that backwards would mislead a player into
-    accepting the opposite of what they thought.
-
-    Two shapes have to render: the trade screen writes all four keys, while the
-    AI's resource_offer writes only the one it gives and the one it wants. A
-    missing key is simply nothing offered.
+    Itemized deals describe themselves (see map_logic/diplomacy/deal.py) and are
+    handed straight through. What follows is the old four-key trade dict, which
+    saves written before the rework still carry: the keys are stored from the
+    PROPOSER's point of view -- `give_*` is what they hand over, `take_*` what
+    they ask for -- so the receiving side sees them inverted, and getting that
+    backwards would mislead a player into accepting the opposite of what they
+    thought.
 
     Returns [] when there is nothing to say, so a caller can skip the bubble.
     """
+    from map_logic.diplomacy import deal as deal_mod
+
+    if deal_mod.is_deal(params):
+        return deal_mod.describe(params, viewer=viewer, nation_data=nation_data)
+
     if not isinstance(params, dict):
         return []
 
@@ -262,6 +266,7 @@ DEFAULT_ANNOUNCEMENTS = {
     "CEASEFIRE": "We offer terms for a ceasefire.",
     "CREATE_FACTION": "We propose establishing a new faction together.",
     "TRADE": "We propose a trade agreement.",
+    "PEACE_TREATY": "We propose terms to end this war.",
     "JOIN_WARS": ("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
     "BREAK_ALLIANCE": ("BREAK_ALLIANCE", "We have broken our alliance."),
     "DISBAND_FACTION": ("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
@@ -293,7 +298,7 @@ def announcement_for(action, custom_msg=""):
 
 
 def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None,
-                        llm=False):
+                        llm=False, note=""):
     """Announces an outgoing diplomatic action to its recipient.
 
     A trade's `parameters` ride along on the message so its terms survive the
@@ -301,12 +306,18 @@ def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", par
     for the same reason: it lives on the sender's pending_diplomacy entry,
     which is deleted on resolution, so afterwards nothing recorded whether a
     message had been a trade offer or a declaration of war.
+
+    `note` is whatever the sender wrote to go with the offer, as opposed to the
+    itemized terms. It is quoted under them so the thread reads as one letter.
     """
     extra = {"action": action}
     if parameters:
         extra["parameters"] = parameters
-    send_message(map_screen, sender, receiver, announcement_for(action, custom_msg),
-                 "DIPLOMACY", extra=extra, llm=llm)
+
+    body = announcement_for(action, custom_msg)
+    if note:
+        body = f"{body}\n\n\"{note}\""
+    send_message(map_screen, sender, receiver, body, "DIPLOMACY", extra=extra, llm=llm)
 
 
 def message_category(msg):

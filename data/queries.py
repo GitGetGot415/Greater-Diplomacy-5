@@ -3007,27 +3007,23 @@ def is_weaker_neighbor(ai_nation, target_nation, map_data, nation_data):
     return target_total_power < (my_total_power * c.AI_WEAK_NEIGHBOR_STRENGTH_RATIO)
 
 def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, nation_data):
-    """Evaluates if the AI will accept the proposed peace deal."""
-    # The AI declines peace deals where the other side demands claims.
-    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
-        return False
-        
-    if peace_type.startswith(c.PEACE_WHITE_PEACE):
-        # NEW: Refuse ceasefire for the first X turns
-        war_dur = nation_data.get(target_nation, {}).get("war_durations", {}).get(proposer_nation, 0)
-        if war_dur < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
+    """DEPRECATED. Forwards to ai_opinion.accepts_peace, which is the real rule.
 
-        # friendly reminder that ctw means chance to win (kinda dumb acronym but sure whatever)
-        if map_data:
-            # If CTW is True, the AI thinks it can win, so it refuses the ceasefire.
-            if ai_thinks_it_can_win(target_nation, proposer_nation, map_data, nation_data):
-                return False
-            # If CTW is False, the AI thinks it could lose, so it accepts the ceasefire.
-            else:
-                return True
-        else:
-            return True
+    This function's own logic refused any demand for claims unconditionally, so
+    no AI war ever ended with territory changing hands -- and because the peace
+    screen called this while the engine called accepts_peace, the screen could
+    tell a player "the AI will REJECT this" and then watch the AI accept it. The
+    body is gone rather than fixed: two implementations of one judgement is what
+    caused the disagreement, and a second one would only drift again.
+
+    Kept, with its signature untouched, because a mod may be calling it -- see
+    the note in map_logic/ai/ai_world.py about mods shadowing this whole file.
+    """
+    from map_logic.ai import ai_opinion, ai_world
+
+    world = ai_world.AIWorld(map_data or {}, nation_data,
+                             {prov["id"]: prov for prov in (map_data or {}).values()})
+    return ai_opinion.accepts_peace(world, target_nation, proposer_nation, peace_type)
 
     if peace_type.startswith(c.PEACE_SURRENDER):
         gains_territory = False
