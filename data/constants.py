@@ -439,6 +439,33 @@ PEACE_DEMAND_CLAIMS = "Demand Claims"
 TRUCE_TURNS = 12
 
 # ==========================================
+# DEAL VALUATION
+# ==========================================
+# What each clause of an itemized deal is worth, in one shared currency, so a
+# demand for six provinces and a demand for two thousand tons of fuel can be
+# compared against the same leverage number. The scale is arbitrary -- only the
+# ratios between these matter.
+
+DEAL_VALUE_TILE_BASE = 250.0        # a bare province with nothing on it
+DEAL_VALUE_BUILDING = 120.0         # per building standing on it
+DEAL_VALUE_RESOURCE_UNIT = 40.0     # per point of Iron/Coal/Oil/Wheat
+
+# A nation's own core land is worth far more to it than land it merely holds,
+# and land the receiver already has a claim on is cheaper to ask for -- which is
+# the whole remaining job of the claims system now that it no longer gates the
+# peace screen's buttons.
+DEAL_VALUE_CORE_MULT = 2.0
+DEAL_VALUE_CLAIM_MULT = 0.5
+DEAL_VALUE_OCCUPIED_MULT = 0.6      # already under the receiver's guns
+
+DEAL_VALUE_RESOURCE_PRICES = {"materials": 0.08, "fuel": 0.2, "manpower": 0.12}
+DEAL_VALUE_VASSAL_FRACTION = 0.75   # of everything the subject owns
+DEAL_VALUE_DEMILITARIZE_PER_TURN = 60.0
+DEAL_VALUE_MILITARY_ACCESS = 200.0
+DEAL_VALUE_FACTION_EXIT = 800.0
+DEAL_VALUE_WAR_EXIT = 500.0
+
+# ==========================================
 # PUPPET SETTINGS
 # ==========================================
 

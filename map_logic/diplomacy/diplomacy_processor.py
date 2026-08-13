@@ -4,7 +4,7 @@ from data import queries
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.diplomacy import treaty_effects
+from map_logic.diplomacy import restrictions, treaty_effects
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
     set_response, clear_response, RESPONSE_ACCEPT
@@ -28,10 +28,9 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
         if isinstance(info, dict) and info.get("turns", 0) > 0:
             return "Cannot undo! The diplomat has already crossed their borders."
 
-        # --- NEW: Refund trade escrow if the sender cancels a drafted trade ---
-        if current_action == "TRADE":
-            params = info.get("parameters", {})
-            queries.cancel_trade_escrow(nation_data[player_name], params)
+        # Nothing is escrowed until an offer is actually sent, so a cancelled
+        # draft normally has none -- but a save from before that change can.
+        _refund_offer_escrow(nation_data, player_name, info)
 
         del pending[target_name]
         return f"Undo {action_type.replace('_', ' ').title()}"
@@ -140,6 +139,9 @@ def _decay_modifiers_and_truces(map_screen):
                     entry["turns"] = turns
                 else:
                     mods[mod_name] = value
+
+        # --- AGE TREATY RESTRICTIONS (demilitarization) ---
+        restrictions.tick(data)
 
         # --- DECAY TRUCES ---
         truces = data.get("truces", {})
@@ -610,6 +612,45 @@ def _decline_cooldown(map_screen, sender, target, action):
         queries.set_ai_diplo_cooldown(sender, target, action, map_screen.nation_data)
 
 
+def _offer_kind(action):
+    from map_logic.diplomacy import deal as deal_mod
+    return deal_mod.KIND_PEACE if action in ("PEACE_TREATY", "CEASEFIRE") else deal_mod.KIND_TRADE
+
+
+def _hold_offer_escrow(map_screen, sender, target, info):
+    """Takes what an offer promises out of the sender's hands as it leaves.
+
+    Held on the entry itself as `escrow`, so the refund knows what was actually
+    taken rather than re-reading what was promised -- a nation that promised
+    more than it had escrowed less, and refunding the promise would have minted
+    the difference.
+
+    This used to happen in the trade screen, which meant only the player ever
+    paid: an AI's offer cost it nothing, an accepted AI trade created materials
+    from thin air, and cancel_trade_escrow then handed the AI a refund for an
+    offer it had never funded. Both sides go through here now.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import deal_effects
+
+    params = info.get("parameters")
+    if not params:
+        return
+    agreement = deal_mod.coerce(params, sender, target, kind=_offer_kind(info.get("action")))
+    held = deal_effects.hold_escrow(map_screen.nation_data, agreement, sender)
+    if any(held.values()):
+        info["escrow"] = held
+
+
+def _refund_offer_escrow(nation_data, sender, info):
+    """Gives back an offer's escrow. Safe to call on an offer that never held any."""
+    from map_logic.diplomacy import deal_effects
+
+    held = info.pop("escrow", None) if isinstance(info, dict) else None
+    if held:
+        deal_effects.release_escrow(nation_data, held, sender)
+
+
 def _process_queued_responses(map_screen):
     """PASS 0.5: settles every queued answer to an incoming proposal (turns == 0).
 
@@ -650,7 +691,8 @@ def _process_queued_responses(map_screen):
                 # `sender` proposed and `country_name` accepted. The AI-accepted
                 # pass below runs the same rules -- see treaty_effects.
                 outcome = treaty_effects.apply_treaty_effect(
-                    map_screen, orig_action, sender, country_name, params)
+                    map_screen, orig_action, sender, country_name, params,
+                    escrow=their_request.pop("escrow", None))
                 if outcome.blocked:
                     msg_text = outcome.blocked
                     wrote_it = False
@@ -667,9 +709,8 @@ def _process_queued_responses(map_screen):
                 fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
                 msg_text = custom_msg if custom_msg else fallback_msg
 
-                # --- REFUND REJECTED TRADE ESCROW (it is the proposer's) ---
-                if orig_action == "TRADE" and sender in map_screen.nation_data:
-                    queries.cancel_trade_escrow(map_screen.nation_data[sender], params if isinstance(params, dict) else {})
+                # Whatever the proposer put up for this offer goes home.
+                _refund_offer_escrow(map_screen.nation_data, sender, their_request)
 
                 send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
                              extra=answered, llm=wrote_it)
@@ -818,15 +859,16 @@ def _process_pass1_immediate_actions(map_screen):
                     # Nothing happens on the sender's side; the offer just travels.
                     # A trade's terms travel with it, so both sides can still
                     # read what was agreed after the offer itself is cleared.
+                    _hold_offer_escrow(map_screen, country_name, target, info)
                     send_treaty_message(map_screen, country_name, target, action, custom_msg,
                                         parameters=info.get("parameters"), llm=wrote_it)
 
                 elif action == "PEACE_TREATY":
-                    # The terms ARE the message, so this one formats rather than
-                    # falling back.
-                    send_message(map_screen, country_name, target,
-                                 f"We propose a peace treaty: {custom_msg}.", "DIPLOMACY",
-                                 extra={"action": action})
+                    # Reparations are promised the moment the offer leaves, the
+                    # same as a trade's goods.
+                    _hold_offer_escrow(map_screen, country_name, target, info)
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
+                                        parameters=info.get("parameters"), llm=wrote_it)
 
                 elif action == "DISBAND_FACTION":
                     fac = map_screen.nation_data[country_name].get("faction", "")
@@ -976,6 +1018,7 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                             info["turns"] += 1
                         else:
                             # Auto-decline since the human player did not respond immediately on their turn
+                            _refund_offer_escrow(map_screen.nation_data, country_name, info)
                             send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
                                      extra={"action": action})
                             _decline_cooldown(map_screen, country_name, target, action)
@@ -999,14 +1042,13 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                             # wrote its own reply, so only a blocked agreement
                             # replaces it.
                             outcome = treaty_effects.apply_treaty_effect(
-                                map_screen, action, country_name, target, info.get("parameters"))
+                                map_screen, action, country_name, target, info.get("parameters"),
+                                escrow=info.pop("escrow", None))
                             if outcome.blocked:
                                 message = outcome.blocked
                                 wrote_it = False
                         else:
-                            if action == "TRADE":
-                                params = info.get("parameters", {})
-                                queries.cancel_trade_escrow(map_screen.nation_data[country_name], params)
+                            _refund_offer_escrow(map_screen.nation_data, country_name, info)
                             _decline_cooldown(map_screen, country_name, target, action)
 
                         send_message(map_screen, target, country_name, message, "DIPLOMACY",
@@ -1016,11 +1058,7 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
             elif turns > 1:
                 # Auto-decline anything that outlived its response window
                 if action in c.BILATERAL_ACTIONS:
-
-                    # --- NEW: REFUND TIMED OUT TRADE ESCROW ---
-                    if action == "TRADE":
-                        params = info.get("parameters", {})
-                        queries.cancel_trade_escrow(map_screen.nation_data[country_name], params)
+                    _refund_offer_escrow(map_screen.nation_data, country_name, info)
 
                     send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
                                      extra={"action": action})

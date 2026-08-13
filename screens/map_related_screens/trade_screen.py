@@ -1,6 +1,5 @@
 import pygame
 import data.constants as c
-from data import queries
 from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
 from ui_elements import Button, draw_text_box
@@ -33,9 +32,10 @@ class Trade_Screen(MapOverlayScreen):
 
         self.puppet_state = "NONE" # "SENDER", "NONE", "RECEIVER"
 
-        # Escrow trackers (resources removed from the player while the offer is pending)
-        self.escrow_mats = 0
-        self.escrow_fuel = 0
+        # What the typed amounts come to once clamped to the stockpile. Nothing
+        # leaves the treasury until the offer is sent -- see evaluate_input.
+        self.offer_mats = 0
+        self.offer_fuel = 0
 
         self.active_input = None
         self.refresh_ui()
@@ -63,7 +63,13 @@ class Trade_Screen(MapOverlayScreen):
         ], self.puppet_state, self.set_puppet_state, "thin", font_preset="small"))
 
     def evaluate_input(self):
-        """Processes typed text, applies clamps, and secures/refunds the escrow safely."""
+        """Processes typed text and clamps what you offer to what you actually have.
+
+        This used to *deduct* the offer from the stockpile as you typed, holding
+        it until the deal resolved. Escrow now happens once, in the diplomacy
+        pass, when the offer is actually sent -- so the AI pays for its offers
+        too, which it never did. See diplomacy_processor._hold_offer_escrow.
+        """
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
 
         # Give Materials
@@ -73,11 +79,8 @@ class Trade_Screen(MapOverlayScreen):
         except ValueError:
             val_mats = 0
 
-        p_data["materials"] = p_data.get("materials", 0) + self.escrow_mats
-        taken_mats = min(val_mats, p_data["materials"])
-        p_data["materials"] -= taken_mats
-        self.escrow_mats = taken_mats
-        self.give_mats_str = str(taken_mats)
+        self.offer_mats = min(val_mats, p_data.get("materials", 0))
+        self.give_mats_str = str(self.offer_mats)
 
         # Give Fuel
         try:
@@ -86,11 +89,8 @@ class Trade_Screen(MapOverlayScreen):
         except ValueError:
             val_fuel = 0
 
-        p_data["fuel"] = p_data.get("fuel", 0) + self.escrow_fuel
-        taken_fuel = min(val_fuel, p_data["fuel"])
-        p_data["fuel"] -= taken_fuel
-        self.escrow_fuel = taken_fuel
-        self.give_fuel_str = str(taken_fuel)
+        self.offer_fuel = min(val_fuel, p_data.get("fuel", 0))
+        self.give_fuel_str = str(self.offer_fuel)
 
         # Take Inputs (No limits, they can ask for a billion if they want)
         try:
@@ -112,29 +112,27 @@ class Trade_Screen(MapOverlayScreen):
         self.evaluate_input()
 
         # Don't allow empty trades
-        if self.escrow_mats == 0 and self.escrow_fuel == 0 and self.take_mats_str == "0" and self.take_fuel_str == "0" and self.puppet_state == "NONE":
+        if self.offer_mats == 0 and self.offer_fuel == 0 and self.take_mats_str == "0" and self.take_fuel_str == "0" and self.puppet_state == "NONE":
             self.map_screen.show_feedback("Cannot send an empty trade offer!")
             return
 
         diplomacy_messages.set_pending(
             self.map_screen.nation_data, self.map_screen.player_country, self.target_nation, "TRADE",
             parameters={
-                "give_materials": self.escrow_mats,
-                "give_fuel": self.escrow_fuel,
+                "give_materials": self.offer_mats,
+                "give_fuel": self.offer_fuel,
                 "take_materials": int(self.take_mats_str),
                 "take_fuel": int(self.take_fuel_str),
                 "puppet_state": self.puppet_state
             },
-            message=f"TRADE PROPOSAL:\nGive: {self.escrow_mats} Mat, {self.escrow_fuel} Fuel\nTake: {self.take_mats_str} Mat, {self.take_fuel_str} Fuel\nPuppet Terms: {self.puppet_state}"
+            message=f"TRADE PROPOSAL:\nGive: {self.offer_mats} Mat, {self.offer_fuel} Fuel\nTake: {self.take_mats_str} Mat, {self.take_fuel_str} Fuel\nPuppet Terms: {self.puppet_state}"
         )
 
         self.map_screen.show_feedback("Trade Offer Sent!")
         self.done = True
 
     def cancel_trade(self):
-        # Refund any held resources cleanly
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        queries.cancel_trade_escrow(p_data, {"give_materials": self.escrow_mats, "give_fuel": self.escrow_fuel})
+        # Nothing to refund: backing out of the screen never took anything.
         self.done = True
 
     def handle_back_key(self):

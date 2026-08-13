@@ -22,7 +22,6 @@ reached from diplomacy_processor, which they in turn reach back into.
 
 from collections import namedtuple
 
-import data.constants as c
 from map_logic.ai import ai_prompts
 
 #: blocked  -- set when the agreement turned out not to be possible after all,
@@ -47,17 +46,31 @@ def _canned(key):
     return TreatyOutcome(None, _fallback(key))
 
 
-def apply_treaty_effect(host, action, proposer, accepter, params=None):
+def _escrow_pool(proposer, escrow):
+    """The {nation: {resource: amount}} shape deal_effects.execute wants.
+
+    Only the proposer ever escrows -- the accepter had not agreed to anything
+    when the offer went out, so their half of the bargain is charged live.
+    """
+    return {proposer: escrow} if escrow else None
+
+
+def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
     `proposer` offered the deal and `accepter` agreed to it, whichever side is
     human. Phrasing it this way rather than "player pass" / "AI pass" is what
     stops the two callers drifting apart again.
+
+    `escrow` is what was taken from the proposer when the offer was sent, so the
+    payment half of a trade or a reparations clause is delivered rather than
+    charged twice. See deal_effects for why that no longer lives in the UI.
     """
     from data import queries
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import deal_effects
     from map_logic.diplomacy.diplomacy_agreements import (
-        assign_puppet, execute_peace_treaty, finalize_create_faction,
-        finalize_faction_join, finalize_neutral, join_faction_wars)
+        finalize_create_faction, finalize_faction_join, join_faction_wars)
     from map_logic.diplomacy.diplomacy_events import log_global_event
 
     nation_data = host.nation_data
@@ -95,23 +108,20 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None):
             if not queries.can_negotiate_peace(side, other, nation_data):
                 return _blocked("PUPPET_CANNOT_MAKE_PEACE")
 
-        if action == "CEASEFIRE":
-            finalize_neutral(nation_data, proposer, accepter)
-        else:
-            execute_peace_treaty(map_data, nation_data, proposer, accepter,
-                                 params if params else c.PEACE_WHITE_PEACE, host)
-            return _canned("ACCEPT_PEACE")
+        # A bare CEASEFIRE carries no terms by definition; a PEACE_TREATY may
+        # carry an itemized deal, an old peace sentence from a save made before
+        # the rework, or -- the AI's habit until now -- nothing at all, which
+        # coerce reads as the white peace it always silently executed as.
+        agreement = (deal_mod.ceasefire_deal(proposer, accepter) if action == "CEASEFIRE"
+                     else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
+
+        dropped = deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
+        deal_effects.announce(host, agreement, dropped)
+        return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
 
     elif action == "TRADE":
-        trade_params = params if isinstance(params, dict) else {}
-        queries.execute_trade_transfer(nation_data[proposer], nation_data[accepter], trade_params)
-
-        puppet_state = trade_params.get("puppet_state", "NONE")
-        if puppet_state == "SENDER":
-            assign_puppet(map_data, nation_data, proposer, accepter)
-        elif puppet_state == "RECEIVER":
-            assign_puppet(map_data, nation_data, accepter, proposer)
-
+        agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)
+        deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
         return _canned("ACCEPT_TRADE")
 
     elif action == "CALL_TO_ARMS":

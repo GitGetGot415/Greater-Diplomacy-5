@@ -4,7 +4,6 @@ military-access helper the puppet/faction paths also reach for.
 See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
 puppet_actions.py and faction_actions.py.
 """
-from map_logic.turn_processing import edit_province_ownership
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import clear_pending
@@ -177,29 +176,18 @@ def finalize_neutral(nation_data, a, b):
     if fac_b: queries.clear_faction_pre_war_map_if_peace(fac_b, nation_data)
 
 def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
-    """Executes the specific terms of a peace deal based on its type."""
-    # Frozen-id parsing and the pre-war ownership rule live in queries, so the
-    # projected-peace map the player is shown is driven by the exact same logic
-    # that runs here when they accept.
-    frozen_ids = queries.parse_peace_frozen_ids(peace_type)
+    """Settles a war on one of the three old peace sentences.
 
-    # A white peace is pure status quo, so only the two territory-transferring
-    # treaty types actually touch the map.
-    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS) or peace_type.startswith(c.PEACE_SURRENDER):
-        winner, loser = queries.get_peace_winner_loser(peace_type, proposer, target)
-        for prov in map_data.values():
-            if prov.get("owner") != loser:
-                # The winner keeps anything they currently occupy, so no action needed.
-                continue
-            # The loser hands over the explicitly frozen claims, plus any of the
-            # winner's own pre-war territory they are sitting on.
-            if prov["id"] in frozen_ids or queries.was_original_owner(prov, winner, nation_data):
-                edit_province_ownership.conquer_province(map_screen, prov, winner)
+    Terms are itemized deals now -- see map_logic/diplomacy/deal.py -- and the
+    real work lives in deal_effects.execute. This remains as the entry point for
+    a `peace_type` string, which is what a save made before the rework can still
+    have travelling in pending_diplomacy, and what the spectator's forced-peace
+    cheat hands in. `map_data`/`nation_data` are read off `map_screen` by the
+    deal path; they stay in the signature because diplomacy_agreements re-exports
+    this function and a mod may be calling it.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import deal_effects
 
-    # Clear wargoals between the two
-    if proposer in nation_data.get(target, {}).get("wargoals", {}):
-        del nation_data[target]["wargoals"][proposer]
-    if target in nation_data.get(proposer, {}).get("wargoals", {}):
-        del nation_data[proposer]["wargoals"][target]
-
-    finalize_neutral(nation_data, proposer, target)
+    agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)
+    return deal_effects.execute(map_screen, agreement)
