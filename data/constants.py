@@ -1117,7 +1117,9 @@ AI_TRADE_ASK_NEED = 0.30        # a nation genuinely short of it pushes harder
 AI_TRADE_ASK_MIN_SHARE = 0.05
 AI_TRADE_MAX_SHARE = 0.60       # never ask for more of their surplus than this
 AI_TRADE_JITTER = 0.25          # +/- wobble, stable per pair per turn
-AI_TRADE_ROUNDING = 100         # offers are round numbers, not spreadsheet output
+# Offers are round numbers, not spreadsheet output. Largest step the amount can
+# carry wins, so a big offer lands on hundreds and a small one still survives.
+AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
 
 # How each action reads in a prompt or an event log.
 # ==========================================
@@ -1496,6 +1498,10 @@ MESSAGE_CATEGORIES = {
 
     "CEASEFIRE": "PEACE",
     "PEACE_TREATY": "PEACE",
+    # Terms your own faction leader signed on your behalf, which you may refuse
+    # at the cost of your membership. Its own label because it is the one kind
+    # of message where doing nothing still binds you.
+    "RATIFY_TREATY": "RATIFY",
 
     "TRADE": "TRADE",
 

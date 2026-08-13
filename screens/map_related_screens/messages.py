@@ -411,6 +411,14 @@ class Messages_Screen(GameState):
             else:
                 self.elements.append(Button(btn_x - 130, btn_y, "small", "green", "Trade", self.open_trade))
 
+            # --- Ratifying a treaty our faction leader signed for us ---
+            # Its own channel, not pending_diplomacy -- a leader asking four
+            # members at once would otherwise clobber four unrelated offers --
+            # so it needs its own pair of buttons rather than riding the
+            # Accept/Reject ones below.
+            if self._offer_ratification_buttons():
+                return
+
             # --- Bilateral Accept/Reject Buttons ---
             # An answer never competes with our own outgoing offer any more, so
             # there is no "busy" state to grey these out for.
@@ -444,6 +452,57 @@ class Messages_Screen(GameState):
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
                     if is_peace:
                         self.elements.append(_peace_btn(2))
+
+    def _offer_ratification_buttons(self):
+        """Ratify / refuse, when the selected contact is the leader who signed.
+
+        Returns True when it drew them, so the ordinary Accept/Reject pair for
+        that nation stays out of the way -- answering the treaty is the only
+        thing that matters while one is on the table.
+        """
+        from map_logic.diplomacy import ratification
+
+        asked = ratification.pending_for(self.map_screen.nation_data,
+                                         self.map_screen.player_country)
+        if not asked or asked.get("signatory") != self.selected_recipient:
+            return False
+
+        btn_y = c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y
+        verdict = asked.get("verdict")
+
+        if verdict == ratification.RATIFY:
+            label, color = "Ratified (undo)", "green"
+        elif verdict == ratification.REFUSE:
+            label, color = "Refused (undo)", "red"
+        else:
+            self.elements.append(Button(
+                MSG_DIPLO_BTN_START_X, btn_y, "medium", "green", "Ratify Treaty",
+                lambda: self.answer_ratification(True)))
+            self.elements.append(Button(
+                MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y, "medium", "red",
+                "Refuse & Leave Faction", lambda: self.answer_ratification(False)))
+            self.elements.append(Button(
+                MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y, "medium", "yellow",
+                "View Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+            return True
+
+        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y, "medium", color, label,
+                                    lambda: self.clear_ratification()))
+        return True
+
+    def answer_ratification(self, accept):
+        from map_logic.diplomacy import player_diplomacy_actions
+
+        player_diplomacy_actions.handle_ratify_treaty(self.map_screen, accept)
+        self.refresh_ui()
+
+    def clear_ratification(self):
+        """Takes back an answer, while the leader is still waiting on it."""
+        from map_logic.diplomacy import ratification
+
+        ratification.pending_for(self.map_screen.nation_data,
+                                 self.map_screen.player_country).pop("verdict", None)
+        self.refresh_ui()
 
     def open_trade(self):
         self.save_current_draft()

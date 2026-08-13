@@ -20,7 +20,7 @@ import pygame
 import data.constants as c
 from gameState import MapOverlayScreen
 from map_logic.diplomacy import deal as deal_mod
-from map_logic.diplomacy import diplomacy_messages
+from map_logic.diplomacy import diplomacy_messages, ratification
 from map_logic.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
@@ -35,8 +35,17 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         self.proposer = proposer
         self.target = map_screen.player_country
 
-        pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
-        params = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
+        # Two ways a treaty can be sitting in front of you: they proposed it, or
+        # your own faction leader signed it on your behalf and you are being
+        # asked to ratify. The second lives in its own channel -- see
+        # map_logic/diplomacy/ratification.py -- so both are looked for here.
+        asked = ratification.pending_for(map_screen.nation_data, self.target)
+        if asked.get("signatory") == proposer and deal_mod.is_deal(asked.get("deal")):
+            params = asked["deal"]
+        else:
+            pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
+            params = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
+
         self.deal = deal_mod.coerce(params, proposer, self.target, kind=deal_mod.KIND_PEACE)
         self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
                                                  map_screen.nation_data)

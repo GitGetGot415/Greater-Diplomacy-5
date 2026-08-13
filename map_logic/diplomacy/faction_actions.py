@@ -15,12 +15,21 @@ def settle_with_faction(nation_data, joiner, fac):
     A faction cannot contain two nations at war with each other, so joining one
     ends any such war. Written out twice: once for a nation joining directly,
     once for its puppets being pulled in behind it.
+
+    The truce finalize_neutral writes is then taken back off, which it is not
+    anywhere else. A truce is a promise not to fight for twelve turns, and
+    between two nations who are now in the same faction that promise is both
+    redundant -- they cannot declare war on each other at all -- and misleading:
+    it left allies listed as holding non-aggression pacts against each other,
+    and outlived the alliance if either of them later walked out.
     """
     for member in queries.get_faction_members(fac, nation_data):
         if member == joiner:
             continue
         if queries.are_at_war(joiner, member, nation_data) or queries.are_at_war(member, joiner, nation_data):
             finalize_neutral(nation_data, joiner, member)
+            for side, other in ((joiner, member), (member, joiner)):
+                nation_data.get(side, {}).get("truces", {}).pop(other, None)
         sever_military_access(nation_data, joiner, member)
 
 

@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import (deal, diplomacy_logic, diplomacy_processor,
-                                 peace_scope, ratification)
+                                 peace_scope, player_diplomacy_actions, ratification)
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -169,6 +169,56 @@ class RatificationTests(unittest.TestCase):
         self.assertFalse(at_war(self.game, "S", "G"))
 
 
+class RatificationRouteTests(unittest.TestCase):
+    """The player-facing half: a bound member has to be able to answer.
+
+    The engine can settle a bloc treaty perfectly and it is still broken if the
+    only way to refuse one is from a Python prompt.
+    """
+
+    def setUp(self):
+        self.game = two_blocs(human_players=("A", "S"))
+        at_stake = self.game.add_province("S", cores=["S"])
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        agreement = deal.new(deal.KIND_PEACE, mine, theirs, [
+            deal.white_peace(), deal.tiles_clause("S", "G", [at_stake["id"]])])
+
+        self.game.propose("A", "G", "PEACE_TREATY", parameters=agreement)
+        self.game.run_turn()
+        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.run_turn()
+        self.game.player_country = "S"
+
+    def test_the_member_is_told_there_is_something_to_answer(self):
+        self.assertTrue(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+
+    def test_the_ask_arrives_in_the_inbox(self):
+        received = self.game.inbound("S", "A")
+        self.assertTrue(any("bind you" in line for line in received))
+
+    def test_ratifying_through_the_player_handler_records_a_verdict(self):
+        player_diplomacy_actions.handle_ratify_treaty(self.game, True)
+        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["verdict"],
+                         ratification.RATIFY)
+
+    def test_refusing_through_the_player_handler_records_a_verdict(self):
+        player_diplomacy_actions.handle_ratify_treaty(self.game, False)
+        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["verdict"],
+                         ratification.REFUSE)
+
+    def test_the_answer_is_acted_on_next_turn(self):
+        player_diplomacy_actions.handle_ratify_treaty(self.game, False)
+        self.game.run_turn()
+
+        self.assertEqual(self.game.nation_data["S"]["faction"], "")
+        self.assertFalse(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+
+    def test_a_nation_with_nothing_pending_is_not_asked_to_answer(self):
+        self.game.player_country = "A"
+        self.assertFalse(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+        self.assertEqual(player_diplomacy_actions.handle_ratify_treaty(self.game, True), "")
+
+
 class SeparatePeaceTests(unittest.TestCase):
     """S is a human member who wants out of a war its leader will not end."""
 
@@ -207,6 +257,52 @@ class SeparatePeaceTests(unittest.TestCase):
         self.game.run_turn()
 
         self.assertEqual(self.game.nation_data["S"]["faction"], "")
+
+
+class AlliesAreNotTrucedTests(unittest.TestCase):
+    """No two nations in the same faction should hold a truce against each other.
+
+    Found by running the 1939 scenario for forty turns and asserting it. Joining
+    a faction you were at war with a member of goes through settle_with_faction,
+    which calls finalize_neutral -- and finalize_neutral writes a twelve-turn
+    non-aggression pact. So allies ended up listed as holding truces against
+    each other, and the pact outlived the alliance if either of them walked out.
+    """
+
+    def test_joining_a_faction_you_were_fighting_leaves_no_truce_behind(self):
+        game = StubMapScreen(["A", "S", "G"], human_players=("A",))
+        game.set_faction("Entente", "A")
+        game.set_war("S", "A")
+
+        from map_logic.diplomacy.faction_actions import finalize_faction_join
+        finalize_faction_join(game.map_data, game.nation_data, "A", "S")
+
+        self.assertEqual(game.nation_data["S"]["faction"], "Entente")
+        self.assertFalse(at_war(game, "S", "A"))
+        self.assertNotIn("A", game.nation_data["S"].get("truces", {}))
+        self.assertNotIn("S", game.nation_data["A"].get("truces", {}))
+
+    def test_an_ordinary_peace_still_writes_its_truce(self):
+        """Only faction-mates are exempt -- the truce is what stops a war being
+        restarted the turn after it ends."""
+        game = StubMapScreen(["A", "B"])
+        game.set_war("A", "B")
+
+        from map_logic.diplomacy.war_actions import finalize_neutral
+        finalize_neutral(game.nation_data, "A", "B")
+
+        self.assertEqual(game.nation_data["A"]["truces"]["B"], c.TRUCE_TURNS)
+
+    def test_no_faction_mates_are_truced_after_a_run_of_turns(self):
+        game = two_blocs(human_players=("A",))
+        for _ in range(6):
+            game.run_turn()
+
+        for nation, data in game.nation_data.items():
+            for other in data.get("truces", {}):
+                self.assertFalse(
+                    queries.are_in_same_faction(nation, other, game.nation_data),
+                    f"{nation} holds a truce against its own ally {other}")
 
 
 class FactionMateCeasefireTests(unittest.TestCase):

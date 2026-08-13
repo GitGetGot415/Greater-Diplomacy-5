@@ -113,13 +113,19 @@ def _haggle(nation, partner, turn, spread=c.AI_TRADE_JITTER):
 
 def _negotiators_number(amount):
     """Rounds to something a person would say. 1,175 is a spreadsheet; 1,200 is
-    an offer."""
+    an offer.
+
+    The step comes down for small amounts -- rounding a 40-ton offer to the
+    nearest hundred would either double it or wipe it out -- but off a fixed
+    ladder rather than by halving, which produced steps of 12 and 3 and put the
+    game back to quoting numbers no negotiator would ever say.
+    """
     if amount <= 0:
         return 0
-    step = c.AI_TRADE_ROUNDING
-    while step > 1 and amount < step * 4:
-        step //= 2
-    return max(step, int(round(amount / float(step)) * step))
+    for step in c.AI_TRADE_ROUNDING_LADDER:
+        if amount >= step * 4:
+            return int(round(amount / float(step)) * step)
+    return max(1, int(round(amount)))
 
 
 def resource_offer(world, nation, partner, scenario_settings=None):
