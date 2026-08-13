@@ -466,6 +466,26 @@ DEAL_VALUE_FACTION_EXIT = 800.0
 DEAL_VALUE_WAR_EXIT = 500.0
 
 # ==========================================
+# WAR SCORE (LEVERAGE)
+# ==========================================
+# How strong a hand each side is holding at the peace table, 0..1 and summing to
+# 1 across the two. Advisory: it is shown to the player and weighed heavily by
+# the AI, but nothing is forbidden by it -- an outrageous demand is refused
+# rather than disallowed.
+
+WAR_SCORE_W_OCCUPATION = 0.55   # how much of their homeland you are standing on
+WAR_SCORE_W_STRENGTH = 0.30     # armies and economies, both blocs summed
+WAR_SCORE_W_WEARINESS = 0.15    # how long they have been bleeding
+
+# What the AI weighs a demand against: its opponent's leverage, plus its own
+# appetite for getting out. A cautious nation wants a bigger cushion before it
+# signs, which is what the margin scales with.
+AI_PEACE_LEVERAGE_W = 0.6
+AI_PEACE_APPETITE_W = 0.4
+AI_PEACE_MARGIN_BASE = 0.08
+AI_PEACE_MARGIN_CAUTION = 0.12
+
+# ==========================================
 # PUPPET SETTINGS
 # ==========================================
 
