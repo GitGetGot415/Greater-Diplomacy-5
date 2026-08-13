@@ -57,10 +57,10 @@ class Trade_Screen(MapOverlayScreen):
         can_puppet = not (my_master or their_master)
 
         self.elements.extend(build_choice_row([
-            (self.panel_rect.x + 30, y_pos, "SENDER", "Make Them Puppet", can_puppet),
-            (self.panel_rect.centerx - 100, y_pos, "NONE", "No Puppeting", True),
-            (self.panel_rect.right - 230, y_pos, "RECEIVER", "Become Their Puppet", can_puppet),
-        ], self.puppet_state, self.set_puppet_state))
+            (self.panel_rect.centerx + 125, y_pos, "SENDER", "Make Them Puppet", can_puppet),
+            (self.panel_rect.centerx - 75, y_pos, "NONE", "No Puppeting", True),
+            (self.panel_rect.centerx - 275, y_pos, "RECEIVER", "Become Their Puppet", can_puppet),
+        ], self.puppet_state, self.set_puppet_state, "thin", font_preset="small"))
 
     def evaluate_input(self):
         """Processes typed text, applies clamps, and secures/refunds the escrow safely."""

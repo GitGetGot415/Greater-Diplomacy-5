@@ -3,7 +3,7 @@ from ui_elements import Button
 from map_logic.rendering import overlay_renderer
 
 
-def build_choice_button(x, y, size, label, enabled, selected, callback):
+def build_choice_button(x, y, size, label, enabled, selected, callback, font_preset="button"):
     """One button in a mutually exclusive option row.
 
     Green when picked, blue when available, greyed and unclickable when not,
@@ -11,18 +11,19 @@ def build_choice_button(x, y, size, label, enabled, selected, callback):
     peace terms, puppet direction, claim view mode) had its own copy of this.
     """
     color = ("green" if selected else "blue") if enabled else "grey"
-    btn = Button(x, y, size, color, label, callback)
+    btn = Button(x, y, size, color, label, callback, font_preset=font_preset)
     btn.is_selected = selected
     if not enabled:
         btn.apply_state(enabled=False)
     return btn
 
-def build_choice_row(specs, current, on_select, size="medium"):
+def build_choice_row(specs, current, on_select, size="medium", font_preset="button"):
     """Builds a whole option row from (x, y, value, label[, enabled]) specs."""
     return [
         build_choice_button(spec[0], spec[1], size, spec[3],
                             spec[4] if len(spec) > 4 else True,
-                            spec[2] == current, lambda v=spec[2]: on_select(v))
+                            spec[2] == current, lambda v=spec[2]: on_select(v),
+                            font_preset=font_preset)
         for spec in specs
     ]
 
