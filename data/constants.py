@@ -446,6 +446,13 @@ TRUCE_TURNS = 12
 # compared against the same leverage number. The scale is arbitrary -- only the
 # ratios between these matter.
 
+#: How long a covering note attached to an offer may be, and how many names a
+#: roster prints before it gives up and says "+N more". Both exist because a
+#: bloc-wide treaty has to fit on one screen: the panel title used to join both
+#: sides' full membership and ran off both edges of the window at once.
+DEAL_NOTE_MAX_LEN = 160
+DEAL_NAMES_SHOWN = 3
+
 DEAL_VALUE_TILE_BASE = 250.0        # a bare province with nothing on it
 DEAL_VALUE_BUILDING = 120.0         # per building standing on it
 DEAL_VALUE_RESOURCE_UNIT = 40.0     # per point of Iron/Coal/Oil/Wheat
@@ -474,9 +481,8 @@ DEAL_VALUE_WAR_EXIT = 500.0
 # the AI, but nothing is forbidden by it -- an outrageous demand is refused
 # rather than disallowed.
 
-WAR_SCORE_W_OCCUPATION = 0.55   # how much of their homeland you are standing on
-WAR_SCORE_W_STRENGTH = 0.30     # armies and economies, both blocs summed
-WAR_SCORE_W_WEARINESS = 0.15    # how long they have been bleeding
+WAR_SCORE_W_OCCUPATION = 0.65   # how much of their homeland you are standing on
+WAR_SCORE_W_STRENGTH = 0.35     # armies and economies, both blocs summed
 
 # What the AI weighs a demand against: its opponent's leverage, plus its own
 # appetite for getting out. A cautious nation wants a bigger cushion before it
@@ -485,6 +491,43 @@ AI_PEACE_LEVERAGE_W = 0.6
 AI_PEACE_APPETITE_W = 0.4
 AI_PEACE_MARGIN_BASE = 0.08
 AI_PEACE_MARGIN_CAUTION = 0.12
+
+#: What a nation still expects to win by fighting on, as a share of its own
+#: leverage. This is the price of *stopping*, and it did not exist: peace itself
+#: was free, so a nation overrunning its enemy would sign a white peace for one
+#: material and call it a gain. A winner now has to be offered more than the war
+#: is still worth to it.
+AI_PEACE_PRIZE_W = 0.5
+
+#: The hard ceiling on a demand: you may ask for at most this multiple of the
+#: share of their homeland you actually occupy. Slightly over 1 so that having
+#: overrun a country lets you annex a little more of it than you are literally
+#: standing on -- that margin is what surrendering costs.
+#:
+#: This is the rule that stops an army that has not landed in Britain being
+#: handed Britain, and it is read off raw occupation rather than off the
+#: leverage bar, because the bar is a *share* and two sides who have taken
+#: nothing from each other still read 0.5 each.
+AI_PEACE_LAND_ALLOWANCE = 1.25
+#: Floor, so a nation who is not winning can still ask for a token indemnity.
+AI_PEACE_MIN_ALLOWANCE = 0.03
+
+#: How much of a territorial demand a payment is allowed to buy off. Materials
+#: and provinces are both priced in the same currency below, which means that
+#: without a cap a large enough warchest simply purchases a country: at
+#: DEAL_VALUE_RESOURCE_PRICES a bare province costs about 3,100 materials.
+AI_PEACE_CASH_OFFSET_CAP = 0.25
+
+#: How the slack either side of the accept/refuse line is read back to the
+#: player. Each row is (slack at or above which this applies, filled dots, text).
+#: Ordered best first. Anything below the last row is the last row.
+AI_VERDICT_BANDS = (
+    (0.20, 5, "They will almost certainly accept"),
+    (0.05, 4, "They would probably accept"),
+    (-0.05, 3, "This could go either way"),
+    (-0.20, 2, "They would probably refuse"),
+    (-99.0, 1, "They will refuse outright"),
+)
 
 # How willing a bound faction member is to swallow terms its leader signed on
 # its behalf. Above 1.0 it wants to be keener on peace than the deal costs it;
@@ -496,7 +539,13 @@ RATIFICATION_TURNS = 1
 #: Leverage a nation needs before it asks for land rather than the status quo.
 #: Below this an army that has taken a few tiles offers a white peace instead of
 #: a demand it would only be refused for.
-AI_PEACE_DEMAND_LEVERAGE = 0.6
+#:
+#: Lower than it was. A white peace used to be free for the winner -- the map
+#: stood as the armies had left it -- so holding out for one cost nothing. Now
+#: that unnamed occupied land returns to its pre-war owner, an army that signs a
+#: white peace hands back everything it took, so anyone actually holding enemy
+#: ground should be asking to keep it.
+AI_PEACE_DEMAND_LEVERAGE = 0.55
 
 # ==========================================
 # PUPPET SETTINGS
@@ -1075,16 +1124,24 @@ AI_WAR_DESIRE_THRESHOLD = 0.55
 AI_CLAIM_DESIRE_THRESHOLD = 0.45
 AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committed
 
-# Peace. Losing, tired and cautious all push toward the table.
-AI_W_PEACE_LOSING = 0.5
-AI_W_PEACE_WEARINESS = 0.35
-AI_W_PEACE_CAUTION = 0.15
-AI_WAR_WEARINESS_TURNS = 25.0
-AI_PEACE_CEASEFIRE_THRESHOLD = 0.5
-# Giving up land takes more than agreeing to stop. Above zero and reachable,
-# where the old rule refused a claims demand unconditionally -- which is the
-# reason AI wars never once ended with territory changing hands.
-AI_PEACE_CEDE_LAND_THRESHOLD = 0.72
+# Peace. Losing and cautious push toward the table.
+#
+# There used to be a third term, war weariness: a counter of how many turns a
+# war had run, which by itself pushed any war older than twenty-five turns
+# toward a settlement whoever was winning it. Nobody asked for the mechanic and
+# it was doing real damage -- at 0.35 it was the second-heaviest weight here,
+# so a nation overrunning its enemy would sue for peace on the strength of the
+# calendar. Its weight is redistributed rather than replaced: a nation wants out
+# of a war because it is losing one, not because it is bored of it.
+AI_W_PEACE_LOSING = 0.8
+AI_W_PEACE_CAUTION = 0.2
+#
+# AI_PEACE_CEASEFIRE_THRESHOLD, the bar appetite had to clear before a bare
+# ceasefire was agreed, is gone with the shortcut that read it. A white peace is
+# weighed like any other terms now -- against what the war is still worth to the
+# side being asked -- so there is nothing left for a second threshold to decide.
+# Removed rather than left sitting here: AI_PEACE_CEDE_LAND_THRESHOLD spent a
+# release defined, commented, and wired to nothing at all.
 
 # Trade. How much a good relationship discounts what we hand over.
 AI_TRADE_GOODWILL_DISCOUNT = 0.5
@@ -1104,6 +1161,10 @@ AI_MAX_ACTIONS_PER_TURN = 3
 # this many turns, so a full warehouse is tradeable but not all at once.
 AI_TRADE_STOCK_TURNS = 20.0
 AI_TRADE_OFFER_FRACTION = 0.5
+#: Below this an offer is too small to be worth sending. A *value*, priced in
+#: the proposer's own materials, not a count of units: 250 fuel and 250 materials
+#: are nothing like the same offer, and reading it as a count quietly barred
+#: fuel-rich nations from proposing anything at all.
 AI_TRADE_MIN_AMOUNT = 250
 
 # How big an ask is, as a share of what the other side can spare -- and how much
@@ -1116,7 +1177,20 @@ AI_TRADE_ASK_GOODWILL = 0.30    # a nation that likes you asks for less
 AI_TRADE_ASK_NEED = 0.30        # a nation genuinely short of it pushes harder
 AI_TRADE_ASK_MIN_SHARE = 0.05
 AI_TRADE_MAX_SHARE = 0.60       # never ask for more of their surplus than this
-AI_TRADE_JITTER = 0.25          # +/- wobble, stable per pair per turn
+AI_TRADE_JITTER = 0.25
+#: What the AI is willing to pay, as a multiple of what it is getting, priced in
+#: its own scarcity terms. Base 1.0 is a straight swap of value for value; a
+#: nation genuinely short of something will pay over the odds for it, up to the
+#: ceiling.
+#:
+#: Nothing capped this before, and nothing even compared the two halves: the
+#: amount offered was sized from the proposer's own surplus and the amount asked
+#: for from the partner's, so a great power with materials in the tens of
+#: thousands would offer all of them for whatever trickle of fuel its neighbour
+#: could spare. 12,000 materials for 40 fuel is a real offer from a real save.
+AI_TRADE_EXCHANGE_BASE = 1.0
+AI_TRADE_EXCHANGE_NEED = 0.35
+AI_TRADE_MAX_GENEROSITY = 1.35          # +/- wobble, stable per pair per turn
 # Offers are round numbers, not spreadsheet output. Largest step the amount can
 # carry wins, so a big offer lands on hundreds and a small one still survives.
 AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
@@ -1192,7 +1266,7 @@ AI_NEGOTIATION_MAX_TERMS = 4
 # What makes a pair worth convening, roughly in the order a historian would
 # expect. These are added, then scaled by how well the other side keeps its word.
 AI_PRESSURE_COMMON_ENEMY = 0.55      # co-belligerents who have formalised nothing
-AI_PRESSURE_WEARY_WAR = 0.60         # two exhausted enemies; this is how wars end
+AI_PRESSURE_STALLED_WAR = 0.60       # a war neither side is winning; this is how wars end
 AI_PRESSURE_FRIENDLY = 0.40          # friends without a bloc
 AI_PRESSURE_CONTESTED = 0.25         # a grievance not yet worth a war
 AI_PRESSURE_NEIGHBOUR = 0.15

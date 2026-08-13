@@ -88,9 +88,20 @@ class ShapeTests(VerdictTestCase):
         """A marginal call is exactly where a leader's own judgement should be
         allowed to differ from the staff's, which is what the model reads this
         for. It was flat 1.0 while the decision was a string comparison."""
+        self.nation_data["Avaria"]["at_war_with"] = ["Borland"]
+        self.nation_data["Borland"]["at_war_with"] = ["Avaria"]
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 20}
         v = self.verdict("CEASEFIRE")
         self.assertLess(v.confidence, 1.0)
         self.assertTrue(v.reason)
+
+    def test_but_a_settlement_with_nothing_to_settle_is_certain(self):
+        """Two nations not at war have no close call to report. This was a
+        judgement call at 0.4-ish confidence, which invited the model to
+        second-guess a question that was never open."""
+        v = self.verdict("CEASEFIRE")
+        self.assertFalse(v.accepted)
+        self.assertEqual(v.confidence, 1.0)
 
     def test_an_unknown_action_is_refused(self):
         self.assertFalse(self.accepts("SOMETHING_UNHANDLED"))
@@ -215,12 +226,21 @@ class PeaceTests(VerdictTestCase):
             "action": "PEACE_TREATY", "turns": 1, "parameters": agreement}
         return agreement
 
+    def overrun(self, prov_key, taker="Borland"):
+        """The taker takes a province and stands on it, as a conquest looks."""
+        self.map_data[prov_key]["owner"] = taker
+        self.garrison(prov_key, taker)
+
     def test_a_demand_for_land_is_weighed_rather_than_refused_outright(self):
         """Was: refused unconditionally, which is why no AI war ever ended with
         territory changing hands. A nation being ground down for a hundred turns
-        by a stronger enemy now gives up a province to stop it."""
+        by a stronger enemy now gives up a province to stop it.
+
+        The province it gives up is the one already under enemy guns. That is not
+        incidental -- see the occupation ceiling below.
+        """
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
-        self.garrison("2", "Borland")
+        self.overrun("1")
         self.demand([1])
         self.assertTrue(self.accepts("PEACE_TREATY"))
 
@@ -228,6 +248,51 @@ class PeaceTests(VerdictTestCase):
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
         self.garrison("1", "Avaria")
         self.demand([1])
+        self.assertFalse(self.accepts("PEACE_TREATY"))
+
+    def test_land_cannot_be_demanded_by_an_army_that_has_not_taken_any(self):
+        """The British Isles rule.
+
+        Germany was handed the whole of Britain in a 1941 save without a soldier
+        on the island, because a demand was weighed only against leverage -- and
+        leverage is a *share*, so a side that has conquered nothing still scores
+        around a third of it once armies and factories are counted. A demand is
+        now capped by the one figure that cannot be earned by standing still:
+        how much of the other side's homeland you are actually holding.
+        """
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
+        self.garrison("2", "Borland", count=40)     # a huge army, all of it at home
+        self.demand([1])
+        self.assertFalse(self.accepts("PEACE_TREATY"))
+
+    def test_and_no_amount_of_money_buys_land_it_has_not_taken(self):
+        agreement = deal.new(deal.KIND_PEACE, ["Borland"], ["Avaria"],
+                             [deal.white_peace(),
+                              deal.tiles_clause("Avaria", "Borland", [1]),
+                              deal.resources_clause("Borland", "Avaria", "materials", 500000)])
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
+        self.garrison("2", "Borland", count=40)
+        self.nation_data["Borland"]["pending_diplomacy"]["Avaria"] = {
+            "action": "PEACE_TREATY", "turns": 1, "parameters": agreement}
+        self.assertFalse(self.accepts("PEACE_TREATY"))
+
+    def test_a_winning_nation_refuses_a_white_peace_bought_with_a_token(self):
+        """`ITS THAT SIMPLE`: the Guangxi Clique, one turn into a war with Japan,
+        offered Japan one material and got a white peace out of Japan, Manchukuo
+        and Mengjiang together.
+
+        Two holes, both here. `duration < MIN_TURNS_FOR_CEASEFIRE` was waived for
+        anyone offering anything, and `demand <= 0` then returned `gain > 0` --
+        so a positive number of any size ended a war on any turn. Peace has a
+        price now, and it is what the winner still expects to take.
+        """
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
+        self.overrun("2", "Avaria")     # Avaria is the one winning
+        agreement = deal.new(deal.KIND_PEACE, ["Borland"], ["Avaria"],
+                             [deal.white_peace(),
+                              deal.resources_clause("Borland", "Avaria", "materials", 1)])
+        self.nation_data["Borland"]["pending_diplomacy"]["Avaria"] = {
+            "action": "PEACE_TREATY", "turns": 1, "parameters": agreement}
         self.assertFalse(self.accepts("PEACE_TREATY"))
 
     def test_a_ceasefire_is_refused_while_the_war_is_young(self):
@@ -285,8 +350,49 @@ class TradeTests(VerdictTestCase):
         self.assertTrue(self.accepts("TRADE"))
 
     def test_a_puppet_clause_kills_the_deal(self):
+        self.offer(give_materials=500, puppet_state="SENDER")
+        self.assertFalse(self.accepts("TRADE"))
+
+    def test_even_a_puppet_clause_nobody_recognises(self):
+        """"VASSALIZE" is not one of the three values the trade screen ever
+        wrote. It stands in for whatever a mod or an older save might carry: a
+        term about handing a country over that this build cannot read is refused,
+        not ignored."""
         self.offer(give_materials=500, puppet_state="VASSALIZE")
         self.assertFalse(self.accepts("TRADE"))
+
+    def test_a_trade_built_as_a_deal_is_read_on_its_contents(self):
+        """The regression that made every player-built trade impossible.
+
+        The deal screen has sent {"clauses": [...]} since it replaced the four
+        number boxes, and this branch was still reading params["give_materials"].
+        Four zeroes net out to nothing, `net > 0` is false, and the AI refused
+        every trade a player could construct with "we give up more than we gain".
+        """
+        agreement = deal.new(deal.KIND_TRADE, ["Borland"], ["Avaria"],
+                             [deal.resources_clause("Borland", "Avaria", "materials", 4000)])
+        self.nation_data["Borland"]["pending_diplomacy"]["Avaria"] = {
+            "action": "TRADE", "turns": 1, "parameters": agreement}
+        self.assertTrue(self.accepts("TRADE"))
+
+    def test_and_refused_on_its_contents_when_it_is_a_bad_deal(self):
+        agreement = deal.new(deal.KIND_TRADE, ["Borland"], ["Avaria"],
+                             [deal.resources_clause("Borland", "Avaria", "materials", 1),
+                              deal.resources_clause("Avaria", "Borland", "fuel", 400)])
+        self.nation_data["Borland"]["pending_diplomacy"]["Avaria"] = {
+            "action": "TRADE", "turns": 1, "parameters": agreement}
+        self.assertFalse(self.accepts("TRADE"))
+
+    def test_a_deal_that_vassalises_us_is_structurally_refused(self):
+        agreement = deal.new(deal.KIND_TRADE, ["Borland"], ["Avaria"],
+                             [deal.resources_clause("Borland", "Avaria", "materials", 99999),
+                              {"type": deal.VASSALIZE, "master": "Borland",
+                               "subject": "Avaria", "puppet_type": c.PUPPET_TYPE_AUTONOMOUS}])
+        self.nation_data["Borland"]["pending_diplomacy"]["Avaria"] = {
+            "action": "TRADE", "turns": 1, "parameters": agreement}
+        v = self.verdict("TRADE")
+        self.assertFalse(v.accepted)
+        self.assertEqual(v.confidence, 1.0, "structural, so nothing may overrule it")
 
     def test_an_integrated_puppet_may_now_trade_on_its_own_account(self):
         """The restriction is lifted: subjects trade like anyone else."""

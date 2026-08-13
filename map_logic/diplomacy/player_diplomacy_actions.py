@@ -27,12 +27,23 @@ def handle_declare_war(map_screen):
     
     t_master = t_data.get("master", "")
     t_type = t_data.get("puppet_type", "")
-    
+
+    # This is also the peace button -- map.py relabels it "Ceasefire / Peace"
+    # against a nation we are already fighting, without changing the callback.
+    # So the war gates below have to come *after* that hand-off, not before it:
+    # a puppet clicking Ceasefire used to be told it "can only declare war on
+    # their master", which is a true sentence about a thing it was not doing.
+    # Whether it may make peace, and the wording of that refusal, belongs to
+    # peace_scope via handle_ceasefire.
+    if queries.are_at_war(player, target, map_screen.nation_data):
+        handle_ceasefire(map_screen)
+        return
+
     # 1 & 2. Puppets (Integrated and Autonomous) can ONLY declare independence wars
     if my_master and target != my_master:
         map_screen.show_feedback("Puppets can only declare war on their master!")
         return
-        
+
     # 3. Cannot declare war ON an integrated puppet
     if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
         if t_master == player:
@@ -45,12 +56,6 @@ def handle_declare_war(map_screen):
         if t_type == c.PUPPET_TYPE_INTEGRATED:
             map_screen.show_feedback("Cannot declare war on your own integrated puppet!")
             return
-        
-    at_war = queries.are_at_war(player, target, map_screen.nation_data)
-    
-    if at_war:
-        handle_ceasefire(map_screen)
-        return
 
     # Prevent declaring war on your own faction
     if queries.are_in_same_faction(player, target, map_screen.nation_data):

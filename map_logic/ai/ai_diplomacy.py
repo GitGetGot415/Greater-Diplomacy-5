@@ -532,14 +532,19 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     for (loser, winner), ids in sorted(holdings.items()):
         clauses.append(deal_mod.tiles_clause(loser, winner, ids))
 
-    agreement = deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
-
     # Asking for everything we hold when we barely hold the upper hand reads as
-    # a demand for surrender and gets refused. Below a commanding position, ask
-    # for the status quo instead and take the war off the board.
+    # a demand for surrender and gets refused. Below a decent position, ask for
+    # the status quo instead and take the war off the board.
+    #
+    # That bar used to sit high, because a white peace cost the winner nothing:
+    # peace left the map where the armies had left it, so signing one kept the
+    # conquests anyway. It does not any more -- unnamed occupied land goes home
+    # (deal_effects.restore_occupied) -- so a winner that does not ask for its
+    # gains gives them away, and the threshold has to be low enough that an army
+    # actually holding ground puts it on the table.
     if leverage < c.AI_PEACE_DEMAND_LEVERAGE:
         return _white_peace_terms(map_screen, ai_name, enemy)
-    return agreement
+    return deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
 
 
 def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):

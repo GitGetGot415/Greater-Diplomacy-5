@@ -296,8 +296,31 @@ class DescriptionTests(unittest.TestCase):
 
     def test_a_bloc_deal_names_who_else_is_bound(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B", "C"], [deal.white_peace()])
-        self.assertTrue(any("Bound by these terms" in line
+        self.assertTrue(any("Against: B, C" in line
                             for line in deal.describe(agreement, viewer="A")))
+
+    def test_it_names_our_own_side_separately_from_theirs(self):
+        agreement = deal.new(deal.KIND_PEACE, ["A", "Ally"], ["B", "C"],
+                             [deal.white_peace()])
+        lines = deal.describe(agreement, viewer="A")
+        self.assertFalse(any("Signed by" in line for line in lines),
+                         "one ally is not a coalition worth listing")
+
+        agreement = deal.new(deal.KIND_PEACE, ["A", "Ally", "Other"], ["B", "C"],
+                             [deal.white_peace()])
+        lines = deal.describe(agreement, viewer="A")
+        self.assertTrue(any("Signed by: Ally, Other" in line for line in lines), lines)
+
+    def test_a_long_roster_stops_naming_everybody(self):
+        """It used to join thirty nations into one line, which the treaty viewer
+        then blitted into a 460-pixel box with no wrapping and no clip."""
+        crowd = [f"N{i}" for i in range(20)]
+        agreement = deal.new(deal.KIND_PEACE, ["A"], crowd, [deal.white_peace()])
+        line = next(ln for ln in deal.describe(agreement, viewer="A")
+                    if ln.startswith("Against:"))
+
+        self.assertIn("and 17 others", line)
+        self.assertLess(len(line), 80)
 
     def test_describe_ignores_something_that_is_not_a_deal(self):
         self.assertEqual(deal.describe("Ceasefire"), [])

@@ -111,7 +111,7 @@ def _haggle(nation, partner, turn, spread=c.AI_TRADE_JITTER):
     return 1.0 + spread * (unit_interval * 2.0 - 1.0)
 
 
-def _negotiators_number(amount):
+def _negotiators_number(amount, ceiling=None):
     """Rounds to something a person would say. 1,175 is a spreadsheet; 1,200 is
     an offer.
 
@@ -119,13 +119,23 @@ def _negotiators_number(amount):
     nearest hundred would either double it or wipe it out -- but off a fixed
     ladder rather than by halving, which produced steps of 12 and 3 and put the
     game back to quoting numbers no negotiator would ever say.
+
+    `ceiling` rounds down instead of to nearest where the caller has a limit it
+    has to hold. Rounding 320 up to 350 is the nicer number and a broken promise:
+    it is how offers came out at 1.44x the generosity band that had just been
+    applied to them.
     """
     if amount <= 0:
         return 0
     for step in c.AI_TRADE_ROUNDING_LADDER:
         if amount >= step * 4:
-            return int(round(amount / float(step)) * step)
-    return max(1, int(round(amount)))
+            rounded = int(round(amount / float(step)) * step)
+            if ceiling is not None and rounded > ceiling:
+                rounded = int(amount // step) * step
+            return rounded if rounded > 0 else max(1, int(amount))
+
+    value = max(1, int(round(amount)))
+    return min(value, max(1, int(ceiling))) if ceiling is not None else value
 
 
 def resource_offer(world, nation, partner, scenario_settings=None):
@@ -142,9 +152,10 @@ def resource_offer(world, nation, partner, scenario_settings=None):
 
     What a nation asks for is now what it is short of, scaled by how pushy it is
     and how much it likes you, wobbled per pair and rounded to a number somebody
-    would actually say out loud.
+    would actually say out loud -- and what it offers in return is priced against
+    that ask rather than against its own bank balance.
     """
-    from map_logic.ai import ai_personality
+    from map_logic.ai import ai_personality, ai_unit_eval
 
     econ_a = world.economies.get(nation, {})
     econ_b = world.economies.get(partner, {})
@@ -184,21 +195,50 @@ def resource_offer(world, nation, partner, scenario_settings=None):
              + c.AI_TRADE_ASK_AMBITION * (person.get("ambition", 0.5) - 0.5)
              - c.AI_TRADE_ASK_GOODWILL * goodwill)
 
-    deficit = max(0.0, -mine[take])
-    if deficit > 0:
-        share += c.AI_TRADE_ASK_NEED * min(1.0, deficit / theirs[take])
+    need = min(1.0, max(0.0, -mine[take]) / theirs[take]) if theirs[take] else 0.0
+    share += c.AI_TRADE_ASK_NEED * need
 
     share = max(c.AI_TRADE_ASK_MIN_SHARE,
                 min(c.AI_TRADE_MAX_SHARE, share * _haggle(nation, partner, turn)))
 
-    # Sized to what each side can spare rather than matched one for one:
-    # materials and fuel are nothing like the same value, and an even swap by
-    # volume would be an absurd offer. Whether it is a fair deal is the
-    # recipient's judgement, and trade_appetite prices it properly.
-    give_amount = _negotiators_number(
-        mine[give] * c.AI_TRADE_OFFER_FRACTION * _haggle(partner, nation, turn))
     take_amount = _negotiators_number(theirs[take] * share)
-    if give_amount < c.AI_TRADE_MIN_AMOUNT or take_amount <= 0:
+    if take_amount <= 0:
+        return None
+
+    # What we are prepared to pay for that, priced in our own scarcity terms.
+    #
+    # The two halves of an offer used to be computed from entirely separate
+    # quantities -- what we could spare against what they could spare -- and were
+    # never compared. Since a great power's materials surplus runs to five
+    # figures while a small neighbour's spare fuel runs to two, the AI would
+    # cheerfully offer 12,000 materials for 40 fuel and mean it. The comment here
+    # used to say the recipient would price it properly, which was true and no
+    # help at all: trade_appetite only ever runs on the receiving side, so an
+    # absurdly generous offer was generated and then trivially accepted.
+    prices = ai_unit_eval.resource_prices(econ_a, stock_a)
+    exchange = min(c.AI_TRADE_MAX_GENEROSITY,
+                   (c.AI_TRADE_EXCHANGE_BASE + c.AI_TRADE_EXCHANGE_NEED * need)
+                   * _haggle(partner, nation, turn))
+
+    take_price = prices.get(take, 1.0)
+    give_price = max(prices.get(give, 1.0), 1e-6)
+    asked_for = take_price * take_amount
+    give_amount = _negotiators_number(asked_for * exchange / give_price,
+                                      ceiling=asked_for * c.AI_TRADE_MAX_GENEROSITY / give_price)
+
+    # And never more than we can actually spare. Scaling the ask to match keeps
+    # the exchange rate we just settled on rather than quietly overpaying.
+    spare = mine[give] * c.AI_TRADE_OFFER_FRACTION
+    if give_amount > spare > 0:
+        take_amount = _negotiators_number(take_amount * spare / give_amount,
+                                          ceiling=take_amount)
+        give_amount = _negotiators_number(spare, ceiling=spare)
+
+    # The floor is a value, not a count: 250 fuel and 250 materials are nothing
+    # like the same offer, and the old unit floor quietly barred fuel-rich
+    # nations from trading at all.
+    floor = c.AI_TRADE_MIN_AMOUNT * prices.get("materials", 1.0)
+    if give_amount * give_price < floor or take_amount <= 0:
         return None
 
     # Read from the sender's point of view, as the diplomacy screen's parameters

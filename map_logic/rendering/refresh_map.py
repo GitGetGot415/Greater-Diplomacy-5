@@ -300,6 +300,40 @@ def refresh_faction_territories_map(map_screen):
     _refresh_mode(map_screen, "Faction Territories", "faction_territories_map",
                   "FACTION_TERRITORIES", get_data)
 
+#: Everyone who is not party to the deal being previewed.
+BYSTANDER_COLOR = (100, 100, 100)
+
+
+def build_deal_preview_map(map_screen, parties, transfers):
+    """The map as a treaty would leave it, with only its signatories coloured in.
+
+    Returns a surface; unlike its neighbours it is not cached on the map screen,
+    because it belongs to one open screen and one particular set of terms.
+
+    The projected map used to be blobs -- an ellipse drawn over the ordinary
+    political map for each province that changed hands. On a world map that is a
+    scattering of dots among two hundred countries painted exactly as they always
+    are, which tells you where a treaty bites but nothing about who it is
+    between. This is the Faction Territories treatment instead: the parties in
+    their own colours, everyone else flattened to grey, and the provinces the
+    treaty moves already painted in the colour of whoever is about to own them.
+
+    `transfers` is deal.tile_transfers -- the same dict deal_effects acts on, so
+    the picture and the outcome cannot disagree.
+    """
+    parties = set(parties)
+
+    def get_data(data):
+        owner = transfers.get(int(data["id"])) or data.get("owner", "Unclaimed")
+        if owner in parties:
+            return owner, map_screen.nation_colors.get(owner, UNOWNED_COLOR)
+        if owner in c.UNOWNED_LAND_OWNERS:
+            return owner, UNOWNED_COLOR
+        return owner, BYSTANDER_COLOR
+
+    return _build_map_surface(map_screen, get_data)
+
+
 def refresh_fog_map(map_screen):
     """Builds a semi-transparent fog surface to darken unseen provinces."""
     timer = pygame.time.get_ticks()

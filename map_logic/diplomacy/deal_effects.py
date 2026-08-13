@@ -24,6 +24,19 @@ def _provinces_by_id(map_screen):
     return {prov["id"]: prov for prov in map_screen.map_data.values()}
 
 
+def _provinces(count):
+    return "province" if count == 1 else "provinces"
+
+
+def _side_containing(deal, nation):
+    """Everyone fighting alongside `nation` in this deal, including itself."""
+    sides = deal.get("sides", {})
+    for members in (sides.get("a") or [], sides.get("b") or []):
+        if nation in members:
+            return set(members)
+    return {nation}
+
+
 def prune(deal, map_screen):
     """The deal minus any term the world has since made impossible.
 
@@ -32,21 +45,56 @@ def prune(deal, map_screen):
     """
     by_id = _provinces_by_id(map_screen)
     nation_data = map_screen.nation_data
+    prewar = deal_mod.prewar_index(nation_data)
 
     kept, dropped = [], []
     for clause in deal_mod.clauses(deal):
         kind = clause.get("type")
 
         if kind == deal_mod.TILES:
+            # Who currently holds a promised province decides almost nothing.
+            # The old rule -- the named giver must still own it, or the term is
+            # struck -- was wrong in both directions:
+            #
+            #  * A demand is usually for ground the *demander* is already
+            #    standing on. That is what winning a war looks like, and the
+            #    treaty is what makes it permanent now that unnamed occupied land
+            #    goes home. Struck, it would have been handed straight back.
+            #  * Combat resolves in phase 2 and diplomacy in phase 1 of the turn
+            #    after, so a round of captures always sits between an offer being
+            #    written and it executing, and what usually happens in it is that
+            #    a co-belligerent takes the tile. Struck, that ally kept it.
+            #
+            # What matters is whether the giving side still has title to give:
+            # somebody on that side holds it, or it was theirs before the war.
             giver = clause.get("from")
-            still_theirs = [pid for pid in clause.get("ids", [])
-                            if by_id.get(int(pid), {}).get("owner") == giver]
-            lost = len(clause.get("ids", [])) - len(still_theirs)
-            if lost:
-                dropped.append(f"{lost} promised {'province' if lost == 1 else 'provinces'} "
-                               f"had already changed hands.")
-            if still_theirs or clause.get("plus_originals"):
-                kept.append(deal_mod.tiles_clause(giver, clause.get("to"), still_theirs,
+            giving_side = _side_containing(deal, giver)
+            receiving_side = _side_containing(deal, clause.get("to"))
+
+            honoured, moved, gone = [], 0, 0
+            for pid in clause.get("ids", []):
+                prov = by_id.get(int(pid))
+                owner = prov.get("owner") if prov else None
+
+                if owner == giver:
+                    honoured.append(pid)
+                elif owner in giving_side:
+                    honoured.append(pid)
+                    moved += 1
+                elif owner in receiving_side and deal_mod.original_owner(prov, prewar) in giving_side:
+                    # Already ours by force; the treaty makes it ours by right.
+                    honoured.append(pid)
+                else:
+                    gone += 1
+
+            if moved:
+                dropped.append(f"{moved} promised {_provinces(moved)} had passed to "
+                               f"{giver}'s co-belligerents, and were handed over by them.")
+            if gone:
+                dropped.append(f"{gone} promised {_provinces(gone)} had already "
+                               f"changed hands and could not be given.")
+            if honoured or clause.get("plus_originals"):
+                kept.append(deal_mod.tiles_clause(giver, clause.get("to"), honoured,
                                                   plus_originals=clause.get("plus_originals", False)))
             continue
 
@@ -150,12 +198,57 @@ def execute(map_screen, deal, escrowed=None):
 
     # --- 4. The war itself ---
     if deal_mod.ends_war(deal):
+        dropped.extend(restore_occupied(map_screen, deal, set(transfers)))
         for ours in deal["sides"]["a"]:
             for theirs in deal["sides"]["b"]:
                 _clear_wargoals(nation_data, ours, theirs)
                 finalize_neutral(nation_data, ours, theirs)
 
     return dropped
+
+
+def restore_occupied(map_screen, deal, ceded):
+    """Hands back every province one side holds of the other's and did not win
+    in the treaty. Returns notes for the settlement message.
+
+    Peace used to leave the map exactly as the armies had left it, so a white
+    peace -- literally "the fighting stops, the map stands" -- froze every
+    conquest permanently and made the tile clauses in a treaty decorative: you
+    kept what you held either way. It also made a treaty impossible to read.
+    A player who took twenty-two British provinces at the table could not tell
+    which of the changes on the map afterwards were the treaty's doing and which
+    were the previous turn's fighting, and reasonably assumed the treaty had done
+    something strange.
+
+    Only land taken *from the other side of this war* goes home, and only to
+    whoever held it when the war began. Conquests from a third party are not this
+    treaty's business, and land the treaty names has just been transferred on
+    purpose -- `ceded` is that set.
+    """
+    nation_data = map_screen.nation_data
+    prewar = deal_mod.prewar_index(nation_data)
+    a, b = set(deal["sides"]["a"]), set(deal["sides"]["b"])
+
+    returned = 0
+    for prov in map_screen.map_data.values():
+        if prov["id"] in ceded:
+            continue
+        holder = prov.get("owner")
+        side = a if holder in a else (b if holder in b else None)
+        if side is None:
+            continue
+
+        was = deal_mod.original_owner(prov, prewar)
+        if was == holder or was not in (b if side is a else a):
+            continue
+
+        edit_province_ownership.conquer_province(map_screen, prov, was)
+        returned += 1
+
+    if returned:
+        return [f"{returned} occupied {_provinces(returned)} not named in the treaty "
+                f"returned to their pre-war owners."]
+    return []
 
 
 def _clear_wargoals(nation_data, a, b):

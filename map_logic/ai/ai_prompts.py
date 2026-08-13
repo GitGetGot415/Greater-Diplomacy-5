@@ -346,8 +346,16 @@ def get_unilateral_receive_context(action_type, sender_nation, custom_msg=""):
         context += f" They included this official message: '{custom_msg}'"
     return context
 
-def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
-    # Returns the context for when an AI receives a bilateral proposal.
+def get_bilateral_receive_context(action_type, sender_nation, custom_msg="", note=""):
+    """What was proposed, and what its proposer said about it.
+
+    Two different things, and they used to share one field. `custom_msg` is the
+    terms -- for a trade it was literally rendered as "Terms: {custom_msg}", and
+    the "official message" line below was skipped for trades on the strength of
+    that. So a player could attach words to a treaty and have them read as terms,
+    or attach them to a trade and have the model never see the terms at all.
+    Terms are generated from the deal now; `note` is what the player wrote.
+    """
     if action_type == "JOIN_WARS":
         context = f"{sender_nation} is offering to join YOUR ongoing wars."
     elif action_type == "CALL_TO_ARMS":
@@ -358,14 +366,19 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg=""):
         context = f"{sender_nation} is requesting to join YOUR faction."
     elif action_type == "TRADE":
         context = f"{sender_nation} has proposed a Trade Agreement. Terms: {custom_msg}"
+    elif action_type in ("PEACE_TREATY", "CEASEFIRE"):
+        context = (f"{sender_nation} has proposed terms to end the war. "
+                   f"Terms: {custom_msg}")
     elif action_type == "REQ_MILITARY_ACCESS":
         context = f"{sender_nation} is requesting military access to move their troops through your territory."
     else:
         context = f"{sender_nation} has proposed a {action_type.replace('_', ' ').title()}."
 
-    if custom_msg and action_type != "TRADE":
+    if custom_msg and action_type not in ("TRADE", "PEACE_TREATY", "CEASEFIRE"):
         context += f" They included this official message: '{custom_msg}'"
-        
+    if note:
+        context += f" Their government adds: '{note}'"
+
     return context
 
 #: How the message is to be written, as opposed to what it has to contain.

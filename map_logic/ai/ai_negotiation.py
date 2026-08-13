@@ -33,8 +33,13 @@ def pressure(world, a, b, scenario_settings=None):
 
     Pairs with a reason to reach an understanding, roughly in the order a
     historian would expect: co-belligerents who have not formalised anything,
-    exhausted enemies, friends without a bloc, and neighbours with a grievance
-    that has not yet become a war.
+    a war neither side is winning, friends without a bloc, and neighbours with a
+    grievance that has not yet become a war.
+
+    The second of those used to be measured by war weariness -- a turn counter,
+    so a war became worth settling because it was old. It is measured now by
+    whether *both* sides want out, which is what a stalemate actually is: one
+    side steamrolling the other scores nothing here however long it takes.
     """
     from map_logic.ai import ai_opinion
 
@@ -48,9 +53,9 @@ def pressure(world, a, b, scenario_settings=None):
         score += c.AI_PRESSURE_COMMON_ENEMY
 
     if b in a_enemies:
-        weariness = min(ai_opinion.war_weariness(world, a, b),
-                        ai_opinion.war_weariness(world, b, a))
-        score += c.AI_PRESSURE_WEARY_WAR * weariness
+        stalled = min(ai_opinion.peace_appetite(world, a, b, scenario_settings),
+                      ai_opinion.peace_appetite(world, b, a, scenario_settings))
+        score += c.AI_PRESSURE_STALLED_WAR * stalled
     else:
         relation = world.relation(a, b)
         if relation > 0 and not nation_data.get(a, {}).get("faction"):

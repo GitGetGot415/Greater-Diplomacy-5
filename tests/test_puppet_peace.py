@@ -134,5 +134,49 @@ class AIVerdictTests(unittest.TestCase):
         self.assertNotIn("subject state", self.verdict().reason)
 
 
+class RefusalWordingTests(unittest.TestCase):
+    """Being refused for the right reason.
+
+    Declare War and Ceasefire are the same button -- map.py relabels it once you
+    are at war and leaves the callback alone -- and handle_declare_war ran its
+    "puppets may only declare war on their master" gate before it noticed the
+    click was about peace. So a puppet asking for a ceasefire was told, quite
+    truthfully and entirely unhelpfully, that it could not declare war.
+    """
+
+    class Screen:
+        def __init__(self, nation_data, player, target):
+            self.nation_data = nation_data
+            self.player_country = player
+            self.selected_province = {"owner": target}
+            self.said = []
+
+        def show_feedback(self, text):
+            self.said.append(text)
+
+    def screen(self, at_war):
+        nd = {"Subject": nation(master="Overlord", puppet_type=c.PUPPET_TYPE_AUTONOMOUS),
+              "Overlord": nation(puppets=["Subject"]),
+              "Free": nation()}
+        if at_war:
+            nd["Subject"]["at_war_with"] = ["Free"]
+            nd["Free"]["at_war_with"] = ["Subject"]
+        return self.Screen(nd, "Subject", "Free")
+
+    def test_a_puppet_asking_for_peace_is_told_about_peace(self):
+        from map_logic.diplomacy import player_diplomacy_actions
+
+        screen = self.screen(at_war=True)
+        player_diplomacy_actions.handle_declare_war(screen)
+        self.assertEqual(screen.said, ["Puppets can only make peace with their master!"])
+
+    def test_a_puppet_declaring_war_is_still_told_about_war(self):
+        from map_logic.diplomacy import player_diplomacy_actions
+
+        screen = self.screen(at_war=False)
+        player_diplomacy_actions.handle_declare_war(screen)
+        self.assertEqual(screen.said, ["Puppets can only declare war on their master!"])
+
+
 if __name__ == "__main__":
     unittest.main()

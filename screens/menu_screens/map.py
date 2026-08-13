@@ -526,18 +526,10 @@ def update_button_states(map_screen):
             map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
         map_screen.btn_declare_indep.visible = map_screen.tactical_mode and not is_sel and not is_thinking
 
-        # No Claims tab in an actual game. A claim is a justification for a
-        # specific war and nothing else, so it is made from the declare-war
-        # window against the nation it is aimed at, rather than on a screen of
-        # its own with no connection to the war it exists to start. The button
-        # itself stays for the scenario editor's global claims overview, which
-        # is authoring work -- see ed_btns above.
-        map_screen.btn_gp_claims.visible = False
-
         gp_btns = [
             map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
             map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
-            map_screen.btn_gp_music, map_screen.btn_gp_faction,
+            map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
             map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.slider_camera_tilt
         ]
 
@@ -558,6 +550,7 @@ def update_button_states(map_screen):
         # DISABLE BUTTONS FOR BATTLE ROYALE
         if c.BATTLE_ROYALE_MODE:
             map_screen.btn_gp_faction.disabled = True
+            map_screen.btn_gp_claims.disabled = True
 
         # --- TACTICAL MODE LOCKDOWNS ---
         if map_screen.tactical_mode:

@@ -129,15 +129,22 @@ class LeverageTests(unittest.TestCase):
         self.assertAlmostEqual(forward["a"], backward["b"])
         self.assertAlmostEqual(forward["b"], backward["a"])
 
-    def test_a_long_war_wears_the_tired_side_down(self):
-        self.game.nation_data["B"]["war_durations"] = {"A": 40}
-        scores = war_score.leverage(self.game, ["A"], ["B"])
-        self.assertGreater(scores["a"], 0.5,
-                           "their exhaustion is your leverage")
+    def test_a_long_war_alone_gives_nobody_the_upper_hand(self):
+        """The calendar is not a war aim.
 
-    def test_the_breakdown_names_all_three_components(self):
+        Weariness used to be a third of the hand: forty turns of stalemate handed
+        A the advantage over B without a shot being fired, purely because B's
+        counter had run up. The mechanic is gone, so a long war and a short one
+        with the same front line read the same.
+        """
+        before = war_score.leverage(self.game, ["A"], ["B"])["a"]
+        self.game.nation_data["B"]["war_durations"] = {"A": 40}
+        self.game.nation_data["A"]["war_durations"] = {"B": 40}
+        self.assertEqual(war_score.leverage(self.game, ["A"], ["B"])["a"], before)
+
+    def test_the_breakdown_names_both_components(self):
         parts = war_score.leverage(self.game, ["A"], ["B"])["parts"]["a"]
-        self.assertEqual(set(parts), {"occupation", "strength", "exhaustion"})
+        self.assertEqual(set(parts), {"occupation", "strength"})
 
     def test_the_summary_line_is_printable(self):
         parts = war_score.leverage(self.game, ["A"], ["B"])["parts"]["a"]

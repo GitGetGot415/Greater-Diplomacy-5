@@ -298,7 +298,7 @@ def announcement_for(action, custom_msg=""):
 
 
 def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None,
-                        llm=False):
+                        llm=False, note=""):
     """Announces an outgoing diplomatic action to its recipient.
 
     A trade's `parameters` ride along on the message so its terms survive the
@@ -306,12 +306,18 @@ def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", par
     for the same reason: it lives on the sender's pending_diplomacy entry,
     which is deleted on resolution, so afterwards nothing recorded whether a
     message had been a trade offer or a declaration of war.
+
+    `note` is whatever the sender wrote to go with the offer, as opposed to the
+    itemized terms. It is quoted under them so the thread reads as one letter.
     """
     extra = {"action": action}
     if parameters:
         extra["parameters"] = parameters
-    send_message(map_screen, sender, receiver, announcement_for(action, custom_msg),
-                 "DIPLOMACY", extra=extra, llm=llm)
+
+    body = announcement_for(action, custom_msg)
+    if note:
+        body = f"{body}\n\n\"{note}\""
+    send_message(map_screen, sender, receiver, body, "DIPLOMACY", extra=extra, llm=llm)
 
 
 def message_category(msg):

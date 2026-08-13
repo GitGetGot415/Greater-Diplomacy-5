@@ -43,12 +43,34 @@ def leave_faction(nation_data, leaver):
 
     fac = nation_data[leaver].get("faction", "")
     if fac:
+        _keep_own_pre_war_borders(nation_data, leaver, fac)
         queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
 
     nation_data[leaver]["faction"] = ""
     nation_data[leaver]["is_faction_leader"] = False
     pull_puppets_out_of_faction(leaver, nation_data)
     return fac
+
+
+def _keep_own_pre_war_borders(nation_data, leaver, fac):
+    """Carries a departing member's pre-war borders out of the faction with it.
+
+    A faction's snapshot is the only record of where its members' borders were
+    when the war started, and walking out used to delete this nation's share of
+    it outright. That was harmless while the snapshot only fed a map mode. It is
+    not now: peace hands unnamed occupied land back to its pre-war owner, and
+    with no record left the fallback is the first core on the tile -- so a nation
+    that bought its way out of a bloc war with a separate peace, which is exactly
+    the manoeuvre that ends with somebody leaving a faction, would have its
+    borders reconstructed from guesswork at the moment it mattered most.
+    """
+    snapshot = (nation_data.get("FACTION_WAR_MAPS") or {}).get(fac)
+    if not isinstance(snapshot, dict) or not queries.get_enemies(leaver, nation_data):
+        return
+
+    mine = {prov_id: owner for prov_id, owner in snapshot.items() if owner == leaver}
+    if mine:
+        nation_data.setdefault("WAR_PRE_MAPS", {})[leaver] = mine
 
 
 def resent_departure(nation_data, a, b):

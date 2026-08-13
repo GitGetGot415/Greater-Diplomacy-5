@@ -291,12 +291,33 @@ def tile_value(prov):
     return value
 
 
-def tile_value_between(prov, giver, receiver, nation_data):
-    """What losing this province costs `giver`, given who is taking it.
+#: Whose books a province is being valued on. A deal has two sides and they do
+#: not price the same tile the same way, which is the whole reason this argument
+#: exists -- see the occupation note in tile_value_between.
+GIVER = "giver"
+RECEIVER = "receiver"
+
+
+def tile_value_between(prov, giver, receiver, nation_data, perspective=RECEIVER):
+    """What this province is worth in a deal, on `perspective`'s books.
 
     Their own core land hurts to lose; land the receiver has long claimed is
-    cheaper to give up, which is now the whole job claims do at the peace table;
-    land the receiver's army is already standing on is half-lost already.
+    cheaper to give up, which is now the whole job claims do at the peace table.
+
+    The third modifier, "the receiver's army is already standing on it", applies
+    only to the *receiver*. It is a real discount on what taking the tile is
+    worth -- you already have it, the treaty only makes it official -- and it was
+    nonsense on the giver's side: having your province occupied does not make you
+    value it less, and pretending it does is double-counting, because occupation
+    is already what decides how much can be demanded of you at all.
+
+    Left in, the two discounts compounded: a core the receiver claimed and
+    occupied came out at 2.0 x 0.5 x 0.6 = 0.6, cheaper than a bare tile the
+    giver did not even core. Worse, nation_total_value -- the denominator every
+    demand is measured against -- has no receiver to apply them for, so the same
+    land was priced high as part of the country and low as part of the demand.
+    That gap is a large part of why the United Kingdom agreed to hand over the
+    British Isles.
     """
     value = tile_value(prov)
 
@@ -307,17 +328,54 @@ def tile_value_between(prov, giver, receiver, nation_data):
         claims = nation_data.get(receiver, {}).get("claims", []) if nation_data else []
         if prov["id"] in claims or receiver in prov.get("cores", []):
             value *= c.DEAL_VALUE_CLAIM_MULT
-        if any(unit.get("owner") == receiver for unit in prov.get("units", [])):
+        if perspective == RECEIVER and any(
+                unit.get("owner") == receiver for unit in prov.get("units", [])):
             value *= c.DEAL_VALUE_OCCUPIED_MULT
 
     return value
 
 
-def nation_total_value(nation, map_data, nation_data):
+def prewar_index(nation_data):
+    """{province id (as str): owner when the war began}, across every snapshot.
+
+    Two sources, neither overlapping the other: save_faction_pre_war_map records
+    a faction's own members' provinces when it goes to war, and WAR_PRE_MAPS does
+    the same one nation at a time for belligerents with no faction to snapshot
+    them -- see war_actions.finalize_war.
+
+    Lives here rather than in war_score because valuation needs it too and
+    war_score already imports this module; the other direction would be a cycle.
+    war_score re-exports both of these for its own callers.
+    """
+    merged = {}
+    for key in ("FACTION_WAR_MAPS", "WAR_PRE_MAPS"):
+        for snapshot in (nation_data.get(key) or {}).values():
+            if isinstance(snapshot, dict):
+                merged.update(snapshot)
+    return merged
+
+
+def original_owner(prov, prewar):
+    """Who this province belonged to before the shooting started.
+
+    The inverse of queries.was_original_owner, which answers the same question
+    one nation at a time; asking it per nation per province would be a sweep per
+    belligerent. Same two rules in the same order: the pre-war snapshot if there
+    is one, otherwise cores. A province with several cores resolves to the first,
+    which load_map treats as the primary one.
+    """
+    owner = prewar.get(str(prov["id"]))
+    if owner:
+        return owner
+    cores = prov.get("cores") or []
+    return cores[0] if cores else prov.get("owner")
+
+
+def nation_total_value(nation, map_data, nation_data, prewar=None):
     """What a nation amounts to, for measuring how much of itself a deal costs it.
 
     Land only, and priced the way *losing* it would be priced -- core multiplier
-    and all. Two deliberate exclusions:
+    and all. Three deliberate choices:
 
     Stockpiles are not counted. A nation is its territory; its treasury is
     recoverable and, at the prices above, a full warchest can outweigh a core
@@ -329,19 +387,35 @@ def nation_total_value(nation, map_data, nation_data):
     two core provinces comes out as a larger share of the nation than the nation
     is worth to itself, and every serious demand rounds to total.
 
-    Never zero: a nation reduced to one province still has to be able to say
-    that giving up that province would be everything.
+    A nation is worth its *homeland* -- what it holds now, plus what has been
+    taken from it in the war -- and not merely what it still holds. Counting only
+    current holdings made a country worth less the worse the war went for it, so
+    the same province read as a third of a nation that had lost nothing and as
+    all of one that was down to its last two, and every demand looked more
+    outrageous the more justified it had become. It also put this figure in a
+    different currency from war_score.occupation, which has always measured the
+    pre-war homeland -- and the AI compares the two directly.
+
+    Never zero: a nation reduced to one province still has to be able to say that
+    giving up that province would be everything.
     """
+    if prewar is None:
+        prewar = prewar_index(nation_data)
+
     total = 0.0
     for prov in map_data.values():
-        if prov.get("owner") == nation:
+        if prov.get("owner") == nation or original_owner(prov, prewar) == nation:
             total += tile_value_between(prov, nation, None, nation_data)
 
     return max(total, c.DEAL_VALUE_TILE_BASE)
 
 
-def clause_value(clause, map_data, nation_data):
-    """What this clause is worth to whoever receives it."""
+def clause_value(clause, map_data, nation_data, perspective=RECEIVER):
+    """What this clause is worth, on `perspective`'s books.
+
+    RECEIVER prices a gain, GIVER prices a loss. Only TILES actually differs
+    between the two; everything else is worth the same to both.
+    """
     kind = clause.get("type")
 
     if kind == TILES:
@@ -359,7 +433,8 @@ def clause_value(clause, map_data, nation_data):
             if prov["id"] in wanted or (
                     recover_homeland and prov.get("owner") == giver
                     and queries.was_original_owner(prov, receiver, nation_data)):
-                total += tile_value_between(prov, giver, receiver, nation_data)
+                total += tile_value_between(prov, giver, receiver, nation_data,
+                                            perspective)
         return total
 
     if kind == RESOURCES:
@@ -407,6 +482,73 @@ def _clause_giver(clause):
     return None
 
 
+#: Clause types that move territory rather than goods. A vassal is a country,
+#: not a payment, so vassalage is counted here -- the point of the distinction is
+#: that a stockpile can be rebuilt and a province cannot.
+_LAND_CLAUSES = (TILES, VASSALIZE)
+
+
+def ledger(deal, nation, map_data, nation_data, whole_side=True):
+    """Everything this deal moves for `nation`, kept in four separate columns.
+
+    {"given_land", "given_other", "got_land", "got_other"}, all non-negative.
+
+    net_value collapses these into one number, which is right for "did we come
+    out ahead" and wrong for everything else -- it let one material of positive
+    value stand in for the whole question of whether to stop fighting, and it let
+    a big enough payment stand in for a province. Kept apart, a caller can price
+    land as land and cash as cash.
+    """
+    side = side_of(deal, nation)
+    mine = set(deal["sides"][side]) if (whole_side and side) else {nation}
+
+    book = {"given_land": 0.0, "given_other": 0.0, "got_land": 0.0, "got_other": 0.0}
+    for clause in clauses(deal):
+        column = "land" if clause.get("type") in _LAND_CLAUSES else "other"
+        if _clause_receiver(clause) in mine:
+            book["got_" + column] += clause_value(clause, map_data, nation_data, RECEIVER)
+        if _clause_giver(clause) in mine:
+            book["given_" + column] += clause_value(clause, map_data, nation_data, GIVER)
+    return book
+
+
+def resource_flows(deal, nation):
+    """({resource: amount} coming to `nation`, {resource: amount} leaving it).
+
+    Both dicts always carry every tradeable resource, so a caller can price them
+    without worrying about which keys happen to be present.
+    """
+    receive = {resource: 0 for resource in c.TRADE_RESOURCE_KEYS}
+    give = dict(receive)
+
+    for clause in clauses(deal):
+        if clause.get("type") != RESOURCES:
+            continue
+        resource = clause.get("resource")
+        if resource not in receive:
+            continue
+        amount = float(clause.get("amount", 0) or 0)
+        if clause.get("to") == nation:
+            receive[resource] += amount
+        if clause.get("from") == nation:
+            give[resource] += amount
+    return receive, give
+
+
+def vassalizes(deal, nation):
+    """Whether any clause hands `nation` over to somebody as a subject."""
+    return any(clause.get("type") == VASSALIZE and clause.get("subject") == nation
+               for clause in clauses(deal))
+
+
+def side_worth(deal, nation, map_data, nation_data, whole_side=True):
+    """What the nation -- or its whole side -- amounts to. Never zero."""
+    side = side_of(deal, nation)
+    bloc = deal["sides"][side] if (whole_side and side) else [nation]
+    return max(1.0, sum(nation_total_value(member, map_data, nation_data)
+                        for member in bloc))
+
+
 def net_value(deal, nation, map_data, nation_data, whole_side=True):
     """What the deal is worth to `nation`. Positive means it comes out ahead.
 
@@ -414,17 +556,9 @@ def net_value(deal, nation, map_data, nation_data, whole_side=True):
     is what a faction leader weighing a bloc treaty cares about; a member being
     asked to ratify wants only its own column, so it passes False.
     """
-    side = side_of(deal, nation)
-    mine = set(deal["sides"][side]) if (whole_side and side) else {nation}
-
-    total = 0.0
-    for clause in clauses(deal):
-        value = clause_value(clause, map_data, nation_data)
-        if _clause_receiver(clause) in mine:
-            total += value
-        if _clause_giver(clause) in mine:
-            total -= value
-    return total
+    book = ledger(deal, nation, map_data, nation_data, whole_side)
+    return (book["got_land"] + book["got_other"]
+            - book["given_land"] - book["given_other"])
 
 
 def demand_fraction(deal, nation, map_data, nation_data, whole_side=True):
@@ -437,10 +571,8 @@ def demand_fraction(deal, nation, map_data, nation_data, whole_side=True):
     if net >= 0:
         return 0.0
 
-    side = side_of(deal, nation)
-    bloc = deal["sides"][side] if (whole_side and side) else [nation]
-    worth = sum(nation_total_value(member, map_data, nation_data) for member in bloc)
-    return max(0.0, min(1.0, -net / max(worth, 1.0)))
+    worth = side_worth(deal, nation, map_data, nation_data, whole_side)
+    return max(0.0, min(1.0, -net / worth))
 
 
 # ==========================================
@@ -495,11 +627,31 @@ def describe(deal, viewer=None, nation_data=None):
             lines.append(f"{name(clause['nation'])} withdraw from the war "
                          f"against {name(clause.get('against', ''))}.")
 
-    bound = [n for n in parties(deal) if n != viewer]
-    if len(bound) > 1:
-        lines.append(f"Bound by these terms: {', '.join(bound)}.")
+    # One line per side rather than one line naming everybody. A treaty between
+    # two coalitions can bind thirty nations, and this used to join all of them
+    # into a single string that the treaty viewer then blitted into a 460-pixel
+    # box with no wrapping and no clip.
+    for key, label in (("a", "Signed by"), ("b", "Against")):
+        members = [n for n in deal["sides"].get(key, []) if n != viewer]
+        if len(members) > 1:
+            lines.append(f"{label}: {roster(members, tail='and {n} others')}.")
 
     return lines
+
+
+def roster(members, limit=c.DEAL_NAMES_SHOWN, tail="+{n} more"):
+    """A list of nations as a phrase, with a count once it stops being readable.
+
+    Lives here rather than at either caller because a treaty between blocs is
+    read in two places -- the builder's status line and the treaty viewer's
+    prose -- and the two disagreeing about how many names is too many is how a
+    roster ends up fitting one screen and running off the other. `tail` is the
+    only thing that differs: a status line has no room for "and eleven others".
+    """
+    members = list(members)
+    if len(members) <= limit:
+        return ", ".join(members)
+    return f"{', '.join(members[:limit])} {tail.format(n=len(members) - limit)}"
 
 
 def headline(deal, viewer=None):
@@ -565,12 +717,18 @@ def coerce(params, proposer, target, kind=None):
             if taken > 0:
                 deal = add_clause(deal, resources_clause(target, proposer, resource, taken))
 
-        puppet_state = params.get("puppet_state", "NONE")
-        if puppet_state == "SENDER":
-            deal = add_clause(deal, {"type": VASSALIZE, "master": proposer, "subject": target,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        elif puppet_state == "RECEIVER":
+        # "SENDER", "NONE" and "RECEIVER" are the three the old trade screen
+        # wrote. Anything else is read as a vassalage term all the same, in the
+        # sender's favour: the check it replaced was `!= "NONE"`, so an
+        # unrecognised value was refused rather than waved through, and a value
+        # this does not understand is the last thing that should quietly become
+        # no clause at all.
+        puppet_state = params.get("puppet_state") or "NONE"
+        if puppet_state == "RECEIVER":
             deal = add_clause(deal, {"type": VASSALIZE, "master": target, "subject": proposer,
+                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
+        elif puppet_state != "NONE":
+            deal = add_clause(deal, {"type": VASSALIZE, "master": proposer, "subject": target,
                                      "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
         return deal
 

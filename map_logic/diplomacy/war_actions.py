@@ -94,6 +94,39 @@ def _break_for_independence(map_data, nation_data, rebel, master, headline):
     log_global_event(nation_data, headline)
 
 
+def save_own_pre_war_map(map_data, nation_data, nation):
+    """Snapshots one nation's borders as it enters a war, if it is not already
+    in one.
+
+    The faction version of this has existed all along, and until peace started
+    handing occupied land back it was enough: the snapshot only ever fed the
+    Faction Territories map and the faction-core capture rule, both of which are
+    about factions by definition. A nation with no faction had no record of where
+    its borders were before the shooting started, so deal_effects had nothing to
+    restore them to and war_score fell back to reading the first core on the
+    tile -- which is a decent guess and wrong for any land held long enough to
+    stop being anybody's core.
+
+    Written once, at the start of the first war, and left alone until the last
+    one ends: taking a fresh snapshot per war would quietly ratify every
+    conquest made in the previous one.
+    """
+    if queries.get_enemies(nation, nation_data):
+        return
+    maps = nation_data.setdefault("WAR_PRE_MAPS", {})
+    maps[nation] = {str(prov["id"]): nation for prov in map_data.values()
+                    if prov.get("owner") == nation}
+
+
+def clear_own_pre_war_map_if_peace(nation_data, nation):
+    """Drops the snapshot once this nation has no wars left to measure against."""
+    if queries.get_enemies(nation, nation_data):
+        return
+    maps = nation_data.get("WAR_PRE_MAPS")
+    if isinstance(maps, dict):
+        maps.pop(nation, None)
+
+
 def finalize_war(map_data, nation_data, a, b):
     from map_logic.diplomacy.faction_actions import finalize_faction_leave
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war, pull_master_into_war
@@ -124,6 +157,10 @@ def finalize_war(map_data, nation_data, a, b):
         queries.save_faction_pre_war_map(fac_a, map_data, nation_data)
     if fac_b and not queries.is_faction_at_war(fac_b, nation_data):
         queries.save_faction_pre_war_map(fac_b, map_data, nation_data)
+
+    for country in (a, b):
+        if not nation_data.get(country, {}).get("faction", ""):
+            save_own_pre_war_map(map_data, nation_data, country)
 
     # Going to war ends passage between the two, both the standing grant and any
     # request still in flight. This used to inline the grant half only, so a
@@ -174,6 +211,9 @@ def finalize_neutral(nation_data, a, b):
 
     if fac_a: queries.clear_faction_pre_war_map_if_peace(fac_a, nation_data)
     if fac_b: queries.clear_faction_pre_war_map_if_peace(fac_b, nation_data)
+
+    clear_own_pre_war_map_if_peace(nation_data, a)
+    clear_own_pre_war_map_if_peace(nation_data, b)
 
 def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
     """Settles a war on one of the three old peace sentences.

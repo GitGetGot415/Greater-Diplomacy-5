@@ -330,7 +330,12 @@ def _gather_ai_tasks(map_screen):
                 is_human_target = target in map_screen.active_players
                 if not is_human_target:
                     if action in c.UNILATERAL_ACTIONS or action in c.BILATERAL_ACTIONS:
-                        ai_tasks.append({"sender": country_name, "target": target, "action": action, "content": custom_msg})
+                        # `content` is what the offer *is*; `note` is what its
+                        # sender said about it. Kept apart so neither can be
+                        # read as the other -- see get_bilateral_receive_context.
+                        ai_tasks.append({"sender": country_name, "target": target,
+                                         "action": action, "content": custom_msg,
+                                         "note": info.get("note", "")})
                     elif action.startswith("MSG:"):
                         ai_tasks.append({"sender": country_name, "target": target, "action": "CUSTOM_MSG", "content": action[4:]})
 
@@ -410,7 +415,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
             map_screen.nation_data, map_screen.map_data, active_nations_list, task["target"],
             task["sender"], task["action"], task.get("content", ""),
             human_players, my_turn_id, world=verdict_world,
-            scenario_settings=scenario_settings)
+            scenario_settings=scenario_settings, note=task.get("note", ""))
 
     def key_of(task):
         return (task["sender"], task["target"], task["action"])
@@ -466,8 +471,10 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     def _needs_model(task):
         is_ai_to_ai = (task["sender"] not in human_players
                        and task["target"] not in human_players)
+        wrote_something = bool(task.get("content", "").strip()
+                               or task.get("note", "").strip())
         return not ai_evaluation._use_canned_reply(
-            mode, immersion, is_ai_to_ai, bool(task.get("content", "").strip()),
+            mode, immersion, is_ai_to_ai, wrote_something,
             task["target"], verdict_world)
 
     asking = [t for t in answerable if _needs_model(t)]
@@ -898,14 +905,16 @@ def _process_pass1_immediate_actions(map_screen):
                     # read what was agreed after the offer itself is cleared.
                     _hold_offer_escrow(map_screen, country_name, target, info)
                     send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"), llm=wrote_it)
+                                        parameters=info.get("parameters"), llm=wrote_it,
+                                        note=info.get("note", ""))
 
                 elif action == "PEACE_TREATY":
                     # Reparations are promised the moment the offer leaves, the
                     # same as a trade's goods.
                     _hold_offer_escrow(map_screen, country_name, target, info)
                     send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"), llm=wrote_it)
+                                        parameters=info.get("parameters"), llm=wrote_it,
+                                        note=info.get("note", ""))
 
                 elif action == "DISBAND_FACTION":
                     fac = map_screen.nation_data[country_name].get("faction", "")

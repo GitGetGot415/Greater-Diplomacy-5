@@ -338,13 +338,20 @@ class PeaceTests(unittest.TestCase):
             self.world, "Avaria", "Borland",
             "This war has cost us both too much. We propose terms."))
 
-    def test_weariness_grows_with_the_war(self):
+    def test_a_war_getting_old_does_not_make_a_nation_want_out_of_it(self):
+        """War weariness is gone, and this is what it did.
+
+        It was 0.35 of peace_appetite against 0.5 for actually losing, and it
+        counted turns, so a hundred-turn war a nation was comfortably winning
+        read as more reason to settle than a short one it was losing. Appetite
+        answers "how is this war going" now, and nothing else.
+        """
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 1}
         self.rebuild()
         early = ai_opinion.peace_appetite(self.world, "Avaria", "Borland")
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 100}
         self.rebuild()
-        self.assertGreater(ai_opinion.peace_appetite(self.world, "Avaria", "Borland"), early)
+        self.assertEqual(ai_opinion.peace_appetite(self.world, "Avaria", "Borland"), early)
 
 
 class TradeTests(unittest.TestCase):
