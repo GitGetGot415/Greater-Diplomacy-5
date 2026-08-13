@@ -9,6 +9,18 @@ from ui.screen_runner import _run_pygame_sub_screen
 
 
 class Claims_Screen(MapOverlayScreen):
+    """The map view of who claims what, and where a claim is made.
+
+    Two lives now. In the scenario editor it is still the browsable overview of
+    every claim on the map, which is authoring work and belongs there. In an
+    actual game there is no Claims tab any more: a claim is something you
+    fabricate as a justification for a specific war, so this opens from the
+    declare-war window pointed at one nation, and clicking their provinces is
+    how you build a case against them.
+
+    `target_nation` is what tells the two apart.
+    """
+
     # Docked to the left so the claimed provinces stay visible beside it.
     CENTER_PANEL = False
     overlay_alpha = 0
@@ -18,12 +30,17 @@ class Claims_Screen(MapOverlayScreen):
     SECTION_ROW_H = 25
     SECTION_GAP = 10
 
-    def __init__(self, map_screen):
+    def __init__(self, map_screen, target_nation=None):
         super().__init__(map_screen, pygame.Rect(80, 120, 380, c.SCREEN_HEIGHT - 240))
 
+        self.target_nation = target_nation
+        self.is_picker = target_nation is not None
+
         # Determine if we have global viewing privileges
-        self.is_global_viewer = map_screen.is_editor or self.player in ["Spectator", "None"]
-        self.view_mode = "GLOBAL" if self.is_global_viewer else "YOURS"
+        self.is_global_viewer = (map_screen.is_editor or self.player in ["Spectator", "None"]) \
+            and not self.is_picker
+        self.view_mode = "YOURS" if self.is_picker else (
+            "GLOBAL" if self.is_global_viewer else "YOURS")
 
         self.refresh_ui()
 
@@ -35,19 +52,22 @@ class Claims_Screen(MapOverlayScreen):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
 
-        row_y = self.panel_rect.y + 40
-        if self.is_global_viewer:
-            modes = [(self.panel_rect.x + 20, row_y, "GLOBAL", "Global Claims")]
-        else:
-            modes = [(self.panel_rect.x + 20, row_y, "YOURS", "Your Claims"),
-                     (self.panel_rect.x + 200, row_y, "THEIRS", "Claims On You")]
+        # Pointed at one nation there is nothing to switch between: the only
+        # question on screen is which of their provinces you want.
+        if not self.is_picker:
+            row_y = self.panel_rect.y + 40
+            if self.is_global_viewer:
+                modes = [(self.panel_rect.x + 20, row_y, "GLOBAL", "Global Claims")]
+            else:
+                modes = [(self.panel_rect.x + 20, row_y, "YOURS", "Your Claims"),
+                         (self.panel_rect.x + 200, row_y, "THEIRS", "Claims On You")]
 
-        # This row greys the inactive entries rather than showing them blue
-        for x, y, mode, label in modes:
-            btn = Button(x, y, "brick", "blue" if self.view_mode == mode else "grey", label,
-                         lambda m=mode: self.set_view_mode(m))
-            btn.is_selected = (self.view_mode == mode)
-            self.elements.append(btn)
+            # This row greys the inactive entries rather than showing them blue
+            for x, y, mode, label in modes:
+                btn = Button(x, y, "brick", "blue" if self.view_mode == mode else "grey", label,
+                             lambda m=mode: self.set_view_mode(m))
+                btn.is_selected = (self.view_mode == mode)
+                self.elements.append(btn)
 
         self._refresh_claims_data()
 
@@ -121,13 +141,22 @@ class Claims_Screen(MapOverlayScreen):
                 return
 
             dest = self.get_clicked_province(event.pos)
-            if dest and dest.get("owner") not in c.UNPLAYABLE_NATIONS:
-                if self.view_mode == "YOURS" and dest.get("owner") != self.player:
-                    self.toggle_claim(dest)
-                elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
-                    self.return_foreign_claim(dest)
-            else:
+            if not dest or dest.get("owner") in c.UNPLAYABLE_NATIONS:
                 self.map_screen.show_feedback("Can only edit claims on valid nations.")
+                return
+
+            if self.is_picker:
+                # A justification is built against one nation, so a claim on
+                # somebody else is not a case for this war.
+                if dest.get("owner") == self.target_nation:
+                    self.toggle_claim(dest)
+                else:
+                    self.map_screen.show_feedback(
+                        f"Pick territory held by {self.target_nation}.")
+            elif self.view_mode == "YOURS" and dest.get("owner") != self.player:
+                self.toggle_claim(dest)
+            elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
+                self.return_foreign_claim(dest)
 
     def toggle_claim(self, dest):
         pid = dest["id"]
@@ -367,8 +396,16 @@ class Claims_Screen(MapOverlayScreen):
                                        border_color=c.MODAL_BORDER)
 
         font = fonts.get("heading1")
-        title = font.render("Territory Claims", True, (255, 255, 255))
+        heading = f"Justify: {self.target_nation}" if self.is_picker else "Territory Claims"
+        title = font.render(heading, True, (255, 255, 255))
         surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
+
+        if self.is_picker:
+            hint = fonts.get("small").render(
+                f"Click {self.target_nation}'s provinces to build a case.",
+                True, c.COLOR_GOLD_HIGHLIGHT)
+            surface.blit(hint, (self.panel_rect.centerx - hint.get_width() // 2,
+                                self.panel_rect.y + 48))
 
         sections = self._panel_sections()
 
@@ -392,4 +429,10 @@ class Claims_Screen(MapOverlayScreen):
 
 
 def open_claims_menu(map_screen):
+    """The editor's overview of every claim on the map."""
     _run_pygame_sub_screen(map_screen, Claims_Screen(map_screen))
+
+
+def open_claim_picker(map_screen, target_nation):
+    """Build a justification against one nation, from the declare-war window."""
+    _run_pygame_sub_screen(map_screen, Claims_Screen(map_screen, target_nation))

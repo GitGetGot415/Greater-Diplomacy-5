@@ -3,6 +3,7 @@ import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_messages
 from gameState import MapOverlayScreen
+from map_logic.rendering.font_manager import fonts
 from ui_elements import Button
 from ui.screen_runner import _run_pygame_sub_screen
 from screens.map_related_screens.diplomacy_screen_widgets import build_choice_button
@@ -50,6 +51,7 @@ class Declare_War_Screen(MapOverlayScreen):
         ]
 
         self.selected_wargoal_idx = 3 # Default to Don't Declare War
+        self.justifying = []
 
         # Check if a war declaration is already queued
         pending = diplomacy_messages.get_pending(map_screen.nation_data, map_screen.player_country, target_nation)
@@ -86,6 +88,38 @@ class Declare_War_Screen(MapOverlayScreen):
                                     self.selected_wargoal_idx == i, lambda idx=i: self.select_wg(idx))
             )
 
+        # Making a claim used to be a whole tab of its own, reached from the
+        # left bar and unconnected to anything -- you claimed land in one place
+        # and declared war in another, and nothing on either screen said the two
+        # were related. Fabricating a case is a step of declaring war now, which
+        # is the only thing claims were ever for.
+        if not self.is_editing:
+            self.elements.append(
+                Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 125,
+                       "new_game", "blue", "Justify a Claim...", self.open_justification,
+                       font_preset="normal"))
+
+    def open_justification(self):
+        from screens.map_related_screens.claims_screen import open_claim_picker
+
+        open_claim_picker(self.map_screen, self.target_nation)
+        self._reread_wargoals()
+        self.refresh_ui()
+
+    def _reread_wargoals(self):
+        """A claim fabricated just now may have unlocked Take Claims -- a core
+        matures the same turn, ordinary land takes CLAIM_TURN_NON_CORE."""
+        has_wg = queries.has_wargoal(self.map_screen.player_country, self.target_nation,
+                                     self.map_screen.nation_data, self.map_screen.map_data)
+        if self.map_screen.player_country == "Spectator":
+            has_wg = True
+        self.wargoal_options[0]["enabled"] = has_wg
+
+        queued = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("claim_queue", [])
+        self.justifying = [q for q in queued
+                           if (self.map_screen.id_to_province.get(q.get("prov_id"), {}) or {})
+                           .get("owner") == self.target_nation]
+
     def select_wg(self, idx):
         if self.wargoal_options[idx]["enabled"]:
             self.selected_wargoal_idx = idx
@@ -120,6 +154,19 @@ class Declare_War_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         self.draw_panel(surface)
+
+        if not self.justifying:
+            return
+
+        # A claim takes turns to mature, so say so here rather than leaving the
+        # player wondering why Take Claims is still greyed out.
+        soonest = min(q.get("turns_left", 0) for q in self.justifying)
+        line = (f"Justifying {len(self.justifying)} "
+                f"{'claim' if len(self.justifying) == 1 else 'claims'} "
+                f"-- {soonest} turn{'s' if soonest != 1 else ''} until the first is ready.")
+        text = fonts.get("small").render(line, True, c.COLOR_GOLD_HIGHLIGHT)
+        surface.blit(text, (self.panel_rect.centerx - text.get_width() // 2,
+                            self.panel_rect.bottom - 148))
 
 
 def open_wargoal_selection_menu(map_screen, target_nation):
