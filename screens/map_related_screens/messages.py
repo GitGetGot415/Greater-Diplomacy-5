@@ -447,7 +447,7 @@ class Messages_Screen(GameState):
 
     def open_trade(self):
         self.save_current_draft()
-        from screens.map_related_screens.trade_screen import open_trade_menu
+        from screens.map_related_screens.deal_screen import open_trade_menu
         open_trade_menu(self.map_screen, self.selected_recipient)
         self.refresh_ui()
 

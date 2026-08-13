@@ -98,7 +98,7 @@ def handle_ceasefire(map_screen):
         return
         
     # Direct import to bypass __init__.py namespace issues
-    from screens.map_related_screens.peace_screen import open_peace_menu
+    from screens.map_related_screens.deal_screen import open_peace_menu
     open_peace_menu(map_screen, target)
 
 def open_puppets_menu(map_screen):

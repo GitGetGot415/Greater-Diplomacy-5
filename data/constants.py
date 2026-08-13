@@ -461,6 +461,7 @@ DEAL_VALUE_OCCUPIED_MULT = 0.6      # already under the receiver's guns
 DEAL_VALUE_RESOURCE_PRICES = {"materials": 0.08, "fuel": 0.2, "manpower": 0.12}
 DEAL_VALUE_VASSAL_FRACTION = 0.75   # of everything the subject owns
 DEAL_VALUE_DEMILITARIZE_PER_TURN = 60.0
+DEAL_DEMILITARIZE_TURNS = 10        # how long a demilitarization clause runs
 DEAL_VALUE_MILITARY_ACCESS = 200.0
 DEAL_VALUE_FACTION_EXIT = 800.0
 DEAL_VALUE_WAR_EXIT = 500.0
