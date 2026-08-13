@@ -23,6 +23,7 @@ reached from diplomacy_processor, which they in turn reach back into.
 from collections import namedtuple
 
 from map_logic.ai import ai_prompts
+from map_logic.diplomacy import deal as deal_mod
 
 #: blocked  -- set when the agreement turned out not to be possible after all,
 #:             so the reply has to say so whatever either side wanted to write.
@@ -46,6 +47,10 @@ def _canned(key):
     return TreatyOutcome(None, _fallback(key))
 
 
+_AWAITING_RATIFICATION = ("Terms agreed. They now go to our partners for "
+                          "ratification before they take effect.")
+
+
 def _escrow_pool(proposer, escrow):
     """The {nation: {resource: amount}} shape deal_effects.execute wants.
 
@@ -53,6 +58,37 @@ def _escrow_pool(proposer, escrow):
     when the offer went out, so their half of the bargain is charged live.
     """
     return {proposer: escrow} if escrow else None
+
+
+def _bloc_ceasefire(proposer, accepter, nation_data):
+    """A plain ceasefire, but between the blocs actually fighting.
+
+    "CEASEFIRE" was always a two-nation action and stayed one even when both
+    sides were factions, which is how a member could quietly stop fighting while
+    its bloc carried on.
+    """
+    from map_logic.diplomacy import peace_scope
+
+    sides = peace_scope.deal_sides(proposer, accepter, nation_data)
+    return deal_mod.new(deal_mod.KIND_PEACE, sides[0], sides[1], [deal_mod.white_peace()])
+
+
+def _enforce_separate_peace_cost(agreement, proposer, accepter, nation_data):
+    """A member that settles behind its bloc's back leaves the bloc.
+
+    The screens add this clause themselves, but it is the price of the whole
+    manoeuvre rather than a term either side chose, so it is guaranteed here
+    too -- the same reason the puppet check above is repeated at this level.
+    """
+    from map_logic.diplomacy import peace_scope
+
+    role = peace_scope.negotiation_role(proposer, accepter, nation_data)
+    if not peace_scope.costs_membership(role):
+        return agreement
+    if any(clause.get("type") == deal_mod.FACTION_EXIT and clause.get("nation") == proposer
+           for clause in deal_mod.clauses(agreement)):
+        return agreement
+    return deal_mod.add_clause(agreement, {"type": deal_mod.FACTION_EXIT, "nation": proposer})
 
 
 def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None):
@@ -67,8 +103,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     charged twice. See deal_effects for why that no longer lives in the UI.
     """
     from data import queries
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import deal_effects
+    from map_logic.diplomacy import deal_effects, ratification
     from map_logic.diplomacy.diplomacy_agreements import (
         finalize_create_faction, finalize_faction_join, join_faction_wars)
     from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -112,12 +147,17 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         # carry an itemized deal, an old peace sentence from a save made before
         # the rework, or -- the AI's habit until now -- nothing at all, which
         # coerce reads as the white peace it always silently executed as.
-        agreement = (deal_mod.ceasefire_deal(proposer, accepter) if action == "CEASEFIRE"
+        agreement = (_bloc_ceasefire(proposer, accepter, nation_data) if action == "CEASEFIRE"
                      else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
+        agreement = _enforce_separate_peace_cost(agreement, proposer, accepter, nation_data)
 
-        dropped = deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
-        deal_effects.announce(host, agreement, dropped)
-        return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
+        # Whoever the leader bound gets a say before it takes effect. In an
+        # ordinary game every bound member is an AI and answers on the spot, so
+        # this settles now and the extra turn only appears when a human is asked.
+        if ratification.open_round(host, proposer, accepter, agreement,
+                                   escrow=escrow):
+            return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
+        return TreatyOutcome(None, _AWAITING_RATIFICATION)
 
     elif action == "TRADE":
         agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)

@@ -485,6 +485,14 @@ AI_PEACE_APPETITE_W = 0.4
 AI_PEACE_MARGIN_BASE = 0.08
 AI_PEACE_MARGIN_CAUTION = 0.12
 
+# How willing a bound faction member is to swallow terms its leader signed on
+# its behalf. Above 1.0 it wants to be keener on peace than the deal costs it;
+# below, it gives its leader the benefit of the doubt. Refusing means leaving
+# the faction and fighting on alone, so the bar is not high.
+AI_RATIFY_STRICTNESS = 0.8
+#: Turns a human faction member has to answer before silence counts as consent.
+RATIFICATION_TURNS = 1
+
 # ==========================================
 # PUPPET SETTINGS
 # ==========================================

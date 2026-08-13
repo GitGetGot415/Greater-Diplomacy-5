@@ -4,7 +4,7 @@ from data import queries
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.diplomacy import restrictions, treaty_effects
+from map_logic.diplomacy import peace_scope, ratification, restrictions, treaty_effects
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
     set_response, clear_response, RESPONSE_ACCEPT
@@ -164,6 +164,26 @@ def _decay_modifiers_and_truces(map_screen):
                 del war_durs[enemy]
 
 
+def _follow_up_is_legal(map_screen, sender, target, action_type):
+    """Whether a queued follow-up still makes sense by the time it fires.
+
+    These come from a model's `follow_up_action` and were injected straight into
+    pending_diplomacy with no checks of any kind -- no war state, no faction, no
+    truce -- while the immediate action beside them went through a whole
+    guardrail block. A peace offer is the one that shows: a follow-up CEASEFIRE
+    could land on a nation the sender had never fought.
+    """
+    if action_type in ("CEASEFIRE", "PEACE_TREATY"):
+        return (queries.are_at_war(sender, target, map_screen.nation_data)
+                and bool(peace_scope.negotiation_role(sender, target, map_screen.nation_data)))
+    if action_type == "WAR_DECLARATION":
+        return not (queries.are_in_same_faction(sender, target, map_screen.nation_data)
+                    or queries.has_active_truce(sender, target, map_screen.nation_data))
+    if action_type in ("JOIN_WARS", "CALL_TO_ARMS"):
+        return queries.are_in_same_faction(sender, target, map_screen.nation_data)
+    return True
+
+
 def _flush_queued_ai_actions(map_screen):
     """Turns each nation's queued_ai_actions (from a follow-up action or a
     multi-turn AI plan) into a fresh pending_diplomacy entry for this turn."""
@@ -178,6 +198,10 @@ def _flush_queued_ai_actions(map_screen):
                 # FIX: Removed CREATE_FACTION so it properly targets the intended partner
                 if action_type in ["LEAVE_FACTION", "DISBAND_FACTION"]:
                     target = country_name
+
+                if not _follow_up_is_legal(map_screen, country_name, target, action_type):
+                    print(f"[AI GUARDRAIL] Dropping follow-up {action_type} from {country_name} to {target}.")
+                    continue
 
                 # Inject it as a fresh action for this turn, bypassing the LLM
                 if target not in pending or (isinstance(pending[target], dict) and pending[target].get("turns", 0) == 0):
@@ -585,7 +609,20 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         if not map_screen.nation_data[country_name].get("faction", ""):
             delayed_responses.append((country_name, act_target, "JOIN_FACTION_REQ", 0, worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction.")))
     elif ai_action == "CEASEFIRE":
-        delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
+        # You cannot stop a war you are not fighting. This branch had none of
+        # the checks its neighbours above have, and get_valid_target falls back
+        # to `default_target` -- the nation whose message is being answered --
+        # so a model reply of {"action": "CEASEFIRE", "target": "NONE"} to a
+        # faction-mate's call to arms queued a ceasefire offer at that
+        # faction-mate, in peacetime. Accepting it ran finalize_neutral, which
+        # wrote a 12-turn truce, and join_faction_wars skips a truced pair --
+        # so an ally silently opted out of the bloc's wars for twelve turns.
+        if not queries.are_at_war(country_name, act_target, map_screen.nation_data):
+            print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} is not at war with {act_target}.")
+        elif not peace_scope.negotiation_role(country_name, act_target, map_screen.nation_data):
+            print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} may not settle with {act_target}.")
+        else:
+            delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
     elif ai_action == "CALL_TO_ARMS":
         delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
     elif ai_action == "CREATE_FACTION":
@@ -1186,6 +1223,11 @@ def process_diplomacy_turn(map_screen):
 
     # --- 4. STANDARD RESOLUTION (APPLY AI RESULTS) ---
     delayed_responses = [] # Store AI actions here to queue them for the next turn
+
+    # A bloc treaty accepted last turn may still be waiting on a human member's
+    # answer. Settled before this turn's offers go out, for the same reason
+    # Pass 0.5 runs before Pass 1.
+    ratification.process_ratifications(map_screen)
 
     _process_queued_responses(map_screen)
     _process_pass1_immediate_actions(map_screen)

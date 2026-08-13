@@ -472,9 +472,15 @@ def _may_settle(nation_data, ai_name, enemy):
     """Both sides must be free to settle their own wars.
 
     A puppet's wars are its master's business, in both directions -- there is no
-    point offering terms to a subject that cannot agree to them either.
+    point offering terms to a subject that cannot agree to them either. The same
+    now goes for a faction: only its leader can be negotiated with, and only its
+    leader can negotiate, so an AI no longer opens talks with a member who has
+    no authority to answer. That used to be the only rule here, which is how the
+    proactive pass could aim a ceasefire at one nation of a bloc.
     """
-    return (queries.can_negotiate_peace(ai_name, enemy, nation_data)
+    from map_logic.diplomacy import peace_scope
+
+    return (peace_scope.negotiation_role(ai_name, enemy, nation_data) is not None
             and queries.can_negotiate_peace(enemy, ai_name, nation_data))
 
 

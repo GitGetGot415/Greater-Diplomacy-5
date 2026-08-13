@@ -174,6 +174,28 @@ def accepts_peace(world, nation, proposer, peace_type, scenario_settings=None):
     return True
 
 
+def ratifies(world, member, deal, map_data, scenario_settings=None):
+    """Whether a bound faction member swallows terms its leader signed for it.
+
+    A leader negotiates for the whole bloc and may put a member's own territory
+    on the table. The member's only recourse is to refuse -- which leaves the
+    faction and leaves it at war alone -- so this weighs exactly what the deal
+    costs *it*, not what the bloc as a whole came out with.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+
+    loss = deal_mod.demand_fraction(deal, member, map_data, world.nation_data,
+                                    whole_side=False)
+    if loss <= 0:
+        return True
+
+    enemies = deal_mod.opponents_of(deal, member)
+    appetite = max((peace_appetite(world, member, enemy, scenario_settings)
+                    for enemy in enemies), default=0.0)
+
+    return appetite >= loss * c.AI_RATIFY_STRICTNESS
+
+
 def trade_appetite(world, nation, sender, receive, give, prices, scenario_settings=None):
     """What this nation makes of a trade, as a net value in its own price terms.
 
