@@ -126,50 +126,51 @@ def draw_map_screen(map_screen, surface):
     # --- LAYER 3: OVERLAYS (Units & Movement Arrows) ---
     overlay_renderer.draw_overlay_content(map_screen, surface)
     
-    for province in map_screen.map_data.values():
-        for unit in province.get("units", []):
-            order = unit.get("order")
-            if not order:
-                continue
+    if map_screen.secondary_mode == "UNITS":
+        for province in map_screen.map_data.values():
+            for unit in province.get("units", []):
+                order = unit.get("order")
+                if not order:
+                    continue
 
-            owner = unit.get("owner")
+                owner = unit.get("owner")
 
-            # Only show the arrows for the CURRENT player taking their turn!
-            is_current_player_unit = (owner == map_screen.player_country)
-            is_spectator = map_screen.player_country == "Spectator"
+                # Only show the arrows for the CURRENT player taking their turn!
+                is_current_player_unit = (owner == map_screen.player_country)
+                is_spectator = map_screen.player_country == "Spectator"
 
-            # Hide the arrows if it's not the current player's unit, the player isn't spectating,
-            # and the game isn't actively resolving AI/global turns.
-            if not is_current_player_unit and not is_spectator and not map_screen.viewing_ai_moves:
-                continue
+                # Hide the arrows if it's not the current player's unit, the player isn't spectating,
+                # and the game isn't actively resolving AI/global turns.
+                if not is_current_player_unit and not is_spectator and not map_screen.viewing_ai_moves:
+                    continue
 
-            # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
-            # Fix for tactical mode: only force visible if it's the specific tactical unit
-            is_tactical = map_screen.tactical_mode and map_screen.player_unit
-            force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
+                # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
+                # Fix for tactical mode: only force visible if it's the specific tactical unit
+                is_tactical = map_screen.tactical_mode and map_screen.player_unit
+                force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
 
-            if order.get("type") == "BOMBARD":
-                target_id = order.get("target_id")
-                if target_id is not None:
-                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                    overlay_renderer.draw_bombardment_arrow(surface, map_screen, province, target_id, bomb_range, force_visible=force_vis)
+                if order.get("type") == "BOMBARD":
+                    target_id = order.get("target_id")
+                    if target_id is not None:
+                        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                        overlay_renderer.draw_bombardment_arrow(surface, map_screen, province, target_id, bomb_range, force_visible=force_vis)
 
-            elif order.get("type") == "MOVE":
-                path = order.get("path", [])
-                if path:
-                    speed = unit.get("speed", 1)
-                    
-                    # If we are resolving global turns (viewing_ai_moves), hide future queued moves 
-                    # by truncating the path to only what happens this turn to prevent hotseat leaks
-                    if map_screen.viewing_ai_moves:
-                        path = path[:speed]
-                        if not path:
-                            continue
+                elif order.get("type") == "MOVE":
+                    path = order.get("path", [])
+                    if path:
+                        speed = unit.get("speed", 1)
 
-                    # Dynamically pull the color of the unit's owner (fallback to yellow)
-                    owner_color = map_screen.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
+                        # If we are resolving global turns (viewing_ai_moves), hide future queued moves
+                        # by truncating the path to only what happens this turn to prevent hotseat leaks
+                        if map_screen.viewing_ai_moves:
+                            path = path[:speed]
+                            if not path:
+                                continue
 
-                    overlay_renderer.draw_split_movement_path(surface, map_screen, province, path, speed, owner_color, force_visible=force_vis)
+                        # Dynamically pull the color of the unit's owner (fallback to yellow)
+                        owner_color = map_screen.nation_colors.get(unit.get("owner", "Unclaimed"), (255, 255, 0))
+
+                        overlay_renderer.draw_split_movement_path(surface, map_screen, province, path, speed, owner_color, force_visible=force_vis)
                             
     # --- LAYER 3.5: COUNTRY NAMES ---
     country_names.draw_country_names(map_screen, surface)

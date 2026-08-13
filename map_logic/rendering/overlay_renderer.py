@@ -386,7 +386,7 @@ def draw_overlay_content(map_screen, surface):
         return
 
     # --- Render Combat Prediction Bubbles ---
-    if map_screen.secondary_mode == "UNITS" or map_screen.map_mode == "POLITICAL":
+    if map_screen.secondary_mode == "UNITS":
         draw_combat_bubbles(map_screen, surface)
     # ---------------------------------------------
 
