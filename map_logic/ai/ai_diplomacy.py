@@ -484,6 +484,64 @@ def _may_settle(nation_data, ai_name, enemy):
             and queries.can_negotiate_peace(enemy, ai_name, nation_data))
 
 
+def _white_peace_terms(map_screen, ai_name, enemy):
+    """The status-quo deal, between whichever blocs are actually fighting.
+
+    Every AI peace offer has to carry real terms now. They never did: the
+    proactive sections queued a proposal with no `parameters` at all, so the
+    recipient's accepts_peace was handed the sentence the leader had said, fell
+    through every test to a catch-all `return True`, and agreed -- and
+    treaty_effects, finding nothing in the parameters either, executed the
+    "peace treaty" as a white peace that transferred nothing.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import peace_scope
+
+    mine, theirs = peace_scope.deal_sides(ai_name, enemy, map_screen.nation_data)
+    return deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, [deal_mod.white_peace()])
+
+
+def _victors_terms(map_screen, ai_name, enemy, leverage):
+    """What a winning nation asks for: the enemy land it is standing on.
+
+    Sized to the hand it is holding rather than to appetite -- an army sitting
+    on four provinces asks for those four provinces, which is both the obvious
+    demand and the one most likely to be agreed to, since occupied land is
+    already discounted at the table.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import peace_scope, war_score
+
+    mine, theirs = peace_scope.deal_sides(ai_name, enemy, map_screen.nation_data)
+    prewar = war_score.prewar_index(map_screen.nation_data)
+    ours, foes = set(mine), set(theirs)
+
+    holdings = {}
+    for prov in map_screen.map_data.values():
+        holder = prov.get("owner")
+        if holder not in ours:
+            continue
+        was = war_score.original_owner(prov, prewar)
+        if was in foes:
+            holdings.setdefault((was, holder), []).append(prov["id"])
+
+    if not holdings:
+        return _white_peace_terms(map_screen, ai_name, enemy)
+
+    clauses = [deal_mod.white_peace()]
+    for (loser, winner), ids in sorted(holdings.items()):
+        clauses.append(deal_mod.tiles_clause(loser, winner, ids))
+
+    agreement = deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
+
+    # Asking for everything we hold when we barely hold the upper hand reads as
+    # a demand for surrender and gets refused. Below a commanding position, ask
+    # for the status quo instead and take the war off the board.
+    if leverage < c.AI_PEACE_DEMAND_LEVERAGE:
+        return _white_peace_terms(map_screen, ai_name, enemy)
+    return agreement
+
+
 def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):
     """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
     for enemy in my_enemies:
@@ -493,7 +551,8 @@ def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_
             if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
                 bag.add(ai_candidates.make(
                     "CEASEFIRE", enemy, c.AI_SCORE_CEASEFIRE_UNREACHABLE,
-                    "we cannot reach them to fight them, and the war costs us anyway"))
+                    "we cannot reach them to fight them, and the war costs us anyway",
+                    parameters=_white_peace_terms(map_screen, ai_name, enemy)))
 
 
 def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nations, world):
@@ -504,17 +563,30 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
     so a nation being slowly destroyed by a neighbour it shared a border with
     had no way to ask for terms and simply fought until it was gone.
     """
+    from map_logic.diplomacy import war_score
+
     for enemy in my_enemies:
         if enemy not in active_nations: continue
         if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
         if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "PEACE_TREATY"):
             continue
 
+        # The receiving side has refused to talk for the first couple of turns
+        # of a war since MIN_TURNS_FOR_CEASEFIRE was introduced; the offering
+        # side never knew, and spent those turns proposing into a wall.
+        duration = map_screen.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
+        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
+            continue
+
         appetite = ai_opinion.peace_appetite(world, ai_name, enemy, map_screen.scenario_settings)
-        if appetite >= c.AI_PEACE_OFFER_THRESHOLD:
-            bag.add(ai_candidates.make(
-                "PEACE_TREATY", enemy, appetite,
-                f"this war with {enemy} is going badly and has run long enough"))
+        if appetite < c.AI_PEACE_OFFER_THRESHOLD:
+            continue
+
+        leverage = war_score.between(map_screen, ai_name, enemy, world)["mine"]
+        bag.add(ai_candidates.make(
+            "PEACE_TREATY", enemy, appetite,
+            f"this war with {enemy} is going badly and has run long enough",
+            parameters=_victors_terms(map_screen, ai_name, enemy, leverage)))
 
 
 def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):
@@ -844,7 +916,8 @@ def _offer_trades(bag, map_screen, ai_name, active_nations, world):
         if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, other, "TRADE"):
             continue
 
-        offer = ai_candidates.resource_offer(world, ai_name, other)
+        offer = ai_candidates.resource_offer(world, ai_name, other,
+                                             map_screen.scenario_settings)
         if not offer:
             continue
 

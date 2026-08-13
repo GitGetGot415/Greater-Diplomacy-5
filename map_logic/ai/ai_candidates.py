@@ -18,6 +18,7 @@ Stdlib and `data` only.
 """
 
 import collections
+import hashlib
 
 import data.constants as c
 from data import queries
@@ -96,14 +97,49 @@ def describe(candidate):
     return f"{verb} {candidate.target} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 
-def resource_offer(world, nation, partner):
+def _haggle(nation, partner, turn, spread=c.AI_TRADE_JITTER):
+    """A stable per-pair, per-turn wobble in 1±spread.
+
+    Not `random`: the same save re-run has to make the same offers, and
+    ai_personality already establishes hashing the names as how this codebase
+    gets determinism it can reproduce. Without it every nation on the map sizes
+    its offer with the same arithmetic and arrives at the same round number,
+    which is what made the AI's proposals read as one copy-pasted message.
+    """
+    digest = hashlib.sha256(f"{nation}|{partner}|{turn}".encode("utf-8")).digest()
+    unit_interval = int.from_bytes(digest[:4], "big") / float(0xFFFFFFFF)
+    return 1.0 + spread * (unit_interval * 2.0 - 1.0)
+
+
+def _negotiators_number(amount):
+    """Rounds to something a person would say. 1,175 is a spreadsheet; 1,200 is
+    an offer."""
+    if amount <= 0:
+        return 0
+    step = c.AI_TRADE_ROUNDING
+    while step > 1 and amount < step * 4:
+        step //= 2
+    return max(step, int(round(amount / float(step)) * step))
+
+
+def resource_offer(world, nation, partner, scenario_settings=None):
     """A trade worth proposing, or None.
 
     Looks for a genuine complementarity: something we have spare that they are
-    short of, against something they have spare that we are short of. Nothing
-    like this existed -- the AI could not initiate a trade at all, and would
-    only accept one where it gave away nothing.
+    short of, against something they have spare that we are short of.
+
+    The asking price used to be `int(their_surplus * 0.5)` -- computed entirely
+    from the *recipient's* economy with a flat constant and no variation of any
+    kind. Every nation on the map therefore asked the same player for the
+    identical number, and it only moved when the player's own income did, so a
+    dozen different countries would open with a request for exactly 3,140 fuel.
+
+    What a nation asks for is now what it is short of, scaled by how pushy it is
+    and how much it likes you, wobbled per pair and rounded to a number somebody
+    would actually say out loud.
     """
+    from map_logic.ai import ai_personality
+
     econ_a = world.economies.get(nation, {})
     econ_b = world.economies.get(partner, {})
     if not econ_a or not econ_b:
@@ -130,12 +166,32 @@ def resource_offer(world, nation, partner):
     if give == take or mine[give] <= 0 or theirs[take] <= 0:
         return None
 
+    person = ai_personality.get(world.nation_data, nation, scenario_settings)
+    turn = getattr(world, "total_turns", 0)
+
+    # How hard this particular nation pushes this particular partner, this turn.
+    # An ambitious one asks for more, one that likes you asks for less, one that
+    # is genuinely short asks harder. None of that existed: a warm neighbour and
+    # a cold one made you the same offer, in the same words, every time.
+    goodwill = max(-1.0, min(1.0, world.relation(nation, partner) / 200.0))
+    share = (c.AI_TRADE_ASK_BASE_SHARE
+             + c.AI_TRADE_ASK_AMBITION * (person.get("ambition", 0.5) - 0.5)
+             - c.AI_TRADE_ASK_GOODWILL * goodwill)
+
+    deficit = max(0.0, -mine[take])
+    if deficit > 0:
+        share += c.AI_TRADE_ASK_NEED * min(1.0, deficit / theirs[take])
+
+    share = max(c.AI_TRADE_ASK_MIN_SHARE,
+                min(c.AI_TRADE_MAX_SHARE, share * _haggle(nation, partner, turn)))
+
     # Sized to what each side can spare rather than matched one for one:
     # materials and fuel are nothing like the same value, and an even swap by
     # volume would be an absurd offer. Whether it is a fair deal is the
     # recipient's judgement, and trade_appetite prices it properly.
-    give_amount = int(mine[give] * c.AI_TRADE_OFFER_FRACTION)
-    take_amount = int(theirs[take] * c.AI_TRADE_OFFER_FRACTION)
+    give_amount = _negotiators_number(
+        mine[give] * c.AI_TRADE_OFFER_FRACTION * _haggle(partner, nation, turn))
+    take_amount = _negotiators_number(theirs[take] * share)
     if give_amount < c.AI_TRADE_MIN_AMOUNT or take_amount <= 0:
         return None
 

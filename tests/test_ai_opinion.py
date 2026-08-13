@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_opinion, ai_personality, ai_world
+from map_logic.diplomacy import deal
 
 from tests.test_ai_world import build_world, unit
 
@@ -277,31 +278,65 @@ class PeaceTests(unittest.TestCase):
         self.assertLess(border, 1.0)
         self.assertLess(glob, 1.0)
 
+    def demand(self, giver, taker, ids):
+        """Terms taking specific provinces off `giver`. Avaria holds 1-3."""
+        return deal.new(deal.KIND_PEACE, [taker], [giver],
+                        [deal.white_peace(), deal.tiles_clause(giver, taker, ids)])
+
     def test_a_long_losing_war_can_end_with_land_changing_hands(self):
         """Previously impossible: will_ai_accept_peace refused a claims demand
         unconditionally, so no AI war ever resolved into a settlement."""
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 60}
         self.rebuild()
         self.assertTrue(ai_opinion.accepts_peace(
-            self.world, "Avaria", "Borland", c.PEACE_DEMAND_CLAIMS))
+            self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [3])))
 
     def test_but_not_while_it_is_winning(self):
         self.nation_data["Borland"]["war_durations"] = {"Avaria": 60}
         self.rebuild()
         self.assertFalse(ai_opinion.accepts_peace(
-            self.world, "Borland", "Avaria", c.PEACE_DEMAND_CLAIMS))
+            self.world, "Borland", "Avaria", self.demand("Borland", "Avaria", [4, 5])))
 
     def test_nor_before_the_war_has_even_started(self):
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 0}
         self.rebuild()
         self.assertFalse(ai_opinion.accepts_peace(
-            self.world, "Avaria", "Borland", c.PEACE_DEMAND_CLAIMS))
+            self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [3])))
+
+    def test_nor_a_demand_for_everything_it_has(self):
+        """Being asked to cease to exist is refused however badly the war goes:
+        there is no leverage that justifies a demand of 1.0."""
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 200}
+        self.rebuild()
+        self.assertFalse(ai_opinion.accepts_peace(
+            self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [1, 2, 3])))
 
     def test_a_ceasefire_is_easier_to_agree_to_than_giving_up_land(self):
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 5}
         self.rebuild()
         self.assertTrue(ai_opinion.accepts_peace(
-            self.world, "Avaria", "Borland", c.PEACE_WHITE_PEACE))
+            self.world, "Avaria", "Borland", deal.ceasefire_deal("Borland", "Avaria")))
+
+    def test_a_bigger_demand_is_harder_to_agree_to_than_a_smaller_one(self):
+        """The property the whole rework turns on: terms are weighed by size,
+        not matched against three magic prefixes."""
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 60}
+        self.rebuild()
+        self.assertTrue(ai_opinion.accepts_peace(
+            self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [3])))
+        self.assertFalse(ai_opinion.accepts_peace(
+            self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [1, 2, 3])))
+
+    def test_prose_where_the_terms_belong_is_read_as_a_white_peace(self):
+        """Every AI peace offer was exactly this -- a sentence and no
+        parameters. accepts_peace matched no prefix and fell through to a
+        catch-all `return True`, so every AI-to-AI peace was agreed on the spot,
+        on any turn of any war."""
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 0}
+        self.rebuild()
+        self.assertFalse(ai_opinion.accepts_peace(
+            self.world, "Avaria", "Borland",
+            "This war has cost us both too much. We propose terms."))
 
     def test_weariness_grows_with_the_war(self):
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 1}

@@ -142,36 +142,69 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
                     + c.AI_W_PEACE_CAUTION * person.get("caution", 0.5))
 
 
-def accepts_peace(world, nation, proposer, peace_type, scenario_settings=None):
+def accepts_peace(world, nation, proposer, agreement, scenario_settings=None):
     """Whether this nation takes the offered terms.
 
-    Replaces queries.will_ai_accept_peace's boolean flip, and in particular the
-    rule that a demand for claims was refused unconditionally -- which is why AI
-    wars never once ended with territory changing hands. A nation that is
-    clearly losing a long war will now give ground, so a war can actually
-    resolve into a settlement instead of grinding until somebody is annihilated.
+    It reads the terms now, rather than the first two words of the sentence they
+    were written in. The old version tested `peace_type.startswith(...)` against
+    the three constants and fell through to `return True` when none matched --
+    and an AI's peace offer carried prose rather than one of those three
+    prefixes, so *every* AI-to-AI peace was accepted unconditionally, on any
+    turn of any war, skipping MIN_TURNS_FOR_CEASEFIRE and both thresholds. The
+    catch-all is gone; there is nothing left for an unrecognised offer to fall
+    through to, because there is no longer such a thing as an unrecognised offer.
+
+    The judgement itself: what the deal takes from us, as a fraction of what we
+    are worth, against what the other side has earned the right to ask for --
+    their leverage plus how badly we want out. A cautious nation wants a wider
+    cushion before it signs.
     """
+    from map_logic.diplomacy import deal as deal_mod
+    from map_logic.diplomacy import war_score
+
+    if not deal_mod.is_deal(agreement):
+        agreement = deal_mod.coerce(agreement, proposer, nation, kind=deal_mod.KIND_PEACE)
+
+    nation_data = world.nation_data
+    map_data = getattr(world, "map_data", {}) or {}
+    duration = nation_data.get(nation, {}).get("war_durations", {}).get(proposer, 0)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
-    duration = world.nation_data.get(nation, {}).get("war_durations", {}).get(proposer, 0)
 
-    if peace_type.startswith(c.PEACE_DEMAND_CLAIMS):
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
-        return appetite >= c.AI_PEACE_CEDE_LAND_THRESHOLD
+    gain = deal_mod.net_value(agreement, nation, map_data, nation_data)
+    demand = deal_mod.demand_fraction(agreement, nation, map_data, nation_data)
 
-    if peace_type.startswith(c.PEACE_WHITE_PEACE):
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
-        return appetite >= c.AI_PEACE_CEASEFIRE_THRESHOLD
+    # Stopping a war we have barely started is its own decision, unless they are
+    # paying us to -- which is the old surrender rule, and the only reason a
+    # turn-one settlement was ever reasonable.
+    if duration < c.MIN_TURNS_FOR_CEASEFIRE and gain <= 0:
+        return False
 
-    if peace_type.startswith(c.PEACE_SURRENDER):
-        # They are giving us something. Worth taking unless we are winning
-        # comfortably and have barely started.
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-            return appetite >= c.AI_PEACE_CEASEFIRE_THRESHOLD
-        return True
+    if demand <= 0:
+        # A white peace, or terms in our favour. Nothing to weigh but whether we
+        # want the war to stop at all -- and if they are handing us something,
+        # having got this far is reason enough.
+        return gain > 0 or appetite >= c.AI_PEACE_CEASEFIRE_THRESHOLD
 
-    return True
+    their_leverage = war_score.between(_host(world), nation, proposer, world)["theirs"]
+    justified = (c.AI_PEACE_LEVERAGE_W * their_leverage
+                 + c.AI_PEACE_APPETITE_W * appetite)
+
+    caution = traits(world, nation, scenario_settings).get("caution", 0.5)
+    margin = c.AI_PEACE_MARGIN_BASE + c.AI_PEACE_MARGIN_CAUTION * caution
+
+    return justified >= demand + margin
+
+
+class _host:
+    """The two attributes war_score reads, borrowed off an AIWorld.
+
+    AIWorld carries map_data and nation_data already; this only spells out that
+    those two are all war_score wants, so it works equally off the map screen.
+    """
+
+    def __init__(self, world):
+        self.map_data = getattr(world, "map_data", {}) or {}
+        self.nation_data = world.nation_data
 
 
 def ratifies(world, member, deal, map_data, scenario_settings=None):

@@ -9,7 +9,7 @@ working.
 import collections
 
 import data.constants as c
-from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_unit_eval
+from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_unit_eval, ai_world
 from data import queries
 from map_logic.ai import ai_prompts
 
@@ -204,22 +204,34 @@ Verdict = collections.namedtuple("Verdict", "accepted confidence reason")
 
 
 def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
-    """The peace type being offered.
+    """The deal being offered, whatever shape it was stored in.
 
-    will_ai_accept_peace takes this as `peace_type` but is handed `custom_msg`,
-    which works only because the terms *are* the message. Anything that attaches
-    prose to a peace proposal -- a script, or the model once it is allowed to
-    write one -- makes every startswith() check silently false and the offer is
-    accepted by the catch-all. The proposal's own parameters win where they
-    exist, and the message is the fallback.
+    This used to return a *string* and hand it to will_ai_accept_peace, which
+    worked only while the terms and the message were the same text. Anything
+    that attached prose to a peace proposal -- a script, or the AI's own
+    proactive offers, which never set parameters at all -- made every
+    startswith() check silently false, and the offer was then accepted by
+    accepts_peace's catch-all. The proposal's own parameters win where they
+    exist; the message is the fallback, and coerce reads free prose as the white
+    peace such an offer always executed as anyway.
     """
+    from map_logic.diplomacy import deal as deal_mod
+
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
     params = pending.get("parameters") if isinstance(pending, dict) else None
+
+    if deal_mod.is_deal(params):
+        return params
     if isinstance(params, dict):
         declared = params.get("peace_type") or params.get("terms")
         if declared:
-            return str(declared)
-    return custom_msg or ""
+            params = str(declared)
+        else:
+            params = custom_msg or ""
+    elif not params:
+        params = custom_msg or ""
+
+    return deal_mod.coerce(params, sender_nation, ai_nation, kind=deal_mod.KIND_PEACE)
 
 
 def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
@@ -307,19 +319,25 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                 and queries.can_negotiate_peace(sender_nation, ai_nation, nation_data)):
             return Verdict(False, 1.0, "a subject state cannot settle a war on its own authority")
 
+        # One brain, always. The no-world path used to fall through to
+        # queries.will_ai_accept_peace, which refused any demand for claims
+        # outright -- so what the peace screen predicted and what the engine
+        # actually decided could and did disagree in front of the player.
+        if world is None:
+            world = ai_world.AIWorld(map_data, nation_data,
+                                     {prov["id"]: prov for prov in map_data.values()})
+
         terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
-        if world is not None:
-            accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
-                                                scenario_settings)
-            appetite = ai_opinion.peace_appetite(world, ai_nation, sender_nation,
-                                                 scenario_settings)
-            # A marginal call is exactly where a leader's own judgement should
-            # be allowed to differ, which is what Phase 4 reads this for.
-            confidence = min(1.0, abs(appetite - c.AI_PEACE_CEASEFIRE_THRESHOLD) * 2.5)
-            reason = (f"we are {'losing ground and weary of' if appetite > 0.5 else 'holding our own in'} "
-                      f"this war with {sender_nation}")
-            return Verdict(accepted, max(0.15, confidence), reason)
-        accepted = queries.will_ai_accept_peace(ai_nation, sender_nation, terms, map_data, nation_data)
+        accepted = ai_opinion.accepts_peace(world, ai_nation, sender_nation, terms,
+                                            scenario_settings)
+        appetite = ai_opinion.peace_appetite(world, ai_nation, sender_nation,
+                                             scenario_settings)
+        # A marginal call is exactly where a leader's own judgement should
+        # be allowed to differ, which is what Phase 4 reads this for.
+        confidence = min(1.0, abs(appetite - c.AI_PEACE_CEASEFIRE_THRESHOLD) * 2.5)
+        reason = (f"we are {'losing ground and weary of' if appetite > 0.5 else 'holding our own in'} "
+                  f"this war with {sender_nation}")
+        return Verdict(accepted, max(0.15, confidence), reason)
 
     # --- NEW AI TRADE LOGIC ---
     elif action_type == "TRADE":

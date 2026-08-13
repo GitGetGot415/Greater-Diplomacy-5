@@ -492,6 +492,10 @@ AI_PEACE_MARGIN_CAUTION = 0.12
 AI_RATIFY_STRICTNESS = 0.8
 #: Turns a human faction member has to answer before silence counts as consent.
 RATIFICATION_TURNS = 1
+#: Leverage a nation needs before it asks for land rather than the status quo.
+#: Below this an army that has taken a few tiles offers a white peace instead of
+#: a demand it would only be refused for.
+AI_PEACE_DEMAND_LEVERAGE = 0.6
 
 # ==========================================
 # PUPPET SETTINGS
@@ -1100,6 +1104,19 @@ AI_MAX_ACTIONS_PER_TURN = 3
 AI_TRADE_STOCK_TURNS = 20.0
 AI_TRADE_OFFER_FRACTION = 0.5
 AI_TRADE_MIN_AMOUNT = 250
+
+# How big an ask is, as a share of what the other side can spare -- and how much
+# that share varies. It used to be the flat AI_TRADE_OFFER_FRACTION with nothing
+# else in it, so every AI on the map requested the identical amount of the same
+# player and the offers read as one copy-pasted message.
+AI_TRADE_ASK_BASE_SHARE = 0.35  # a reasonable opening ask
+AI_TRADE_ASK_AMBITION = 0.30    # a pushy nation asks for more (centred on 0.5)
+AI_TRADE_ASK_GOODWILL = 0.30    # a nation that likes you asks for less
+AI_TRADE_ASK_NEED = 0.30        # a nation genuinely short of it pushes harder
+AI_TRADE_ASK_MIN_SHARE = 0.05
+AI_TRADE_MAX_SHARE = 0.60       # never ask for more of their surplus than this
+AI_TRADE_JITTER = 0.25          # +/- wobble, stable per pair per turn
+AI_TRADE_ROUNDING = 100         # offers are round numbers, not spreadsheet output
 
 # How each action reads in a prompt or an event log.
 # ==========================================

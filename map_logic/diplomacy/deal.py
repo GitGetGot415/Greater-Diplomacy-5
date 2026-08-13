@@ -314,19 +314,28 @@ def tile_value_between(prov, giver, receiver, nation_data):
 
 
 def nation_total_value(nation, map_data, nation_data):
-    """Everything a nation has, in the same currency, for normalising demands.
+    """What a nation amounts to, for measuring how much of itself a deal costs it.
+
+    Land only, and priced the way *losing* it would be priced -- core multiplier
+    and all. Two deliberate exclusions:
+
+    Stockpiles are not counted. A nation is its territory; its treasury is
+    recoverable and, at the prices above, a full warchest can outweigh a core
+    province, which made giving one up read as a quarter of the country rather
+    than a third of it.
+
+    The core multiplier is applied here as well as in tile_value_between so the
+    two sides of the fraction are measured the same way. Without it a demand for
+    two core provinces comes out as a larger share of the nation than the nation
+    is worth to itself, and every serious demand rounds to total.
 
     Never zero: a nation reduced to one province still has to be able to say
-    that giving up that province would be total.
+    that giving up that province would be everything.
     """
     total = 0.0
     for prov in map_data.values():
         if prov.get("owner") == nation:
-            total += tile_value(prov)
-
-    stock = nation_data.get(nation, {})
-    for resource, price in c.DEAL_VALUE_RESOURCE_PRICES.items():
-        total += float(stock.get(resource, 0) or 0) * price
+            total += tile_value_between(prov, nation, None, nation_data)
 
     return max(total, c.DEAL_VALUE_TILE_BASE)
 
@@ -336,11 +345,20 @@ def clause_value(clause, map_data, nation_data):
     kind = clause.get("type")
 
     if kind == TILES:
+        from data import queries
+
         giver, receiver = clause.get("from"), clause.get("to")
         wanted = {int(i) for i in clause.get("ids", [])}
+        recover_homeland = clause.get("plus_originals", False)
+
         total = 0.0
         for prov in map_data.values():
-            if prov["id"] in wanted:
+            # A legacy treaty also recovered the winner's own occupied land, so
+            # that half has to be priced too or an old-style demand reads as
+            # asking for nothing at all.
+            if prov["id"] in wanted or (
+                    recover_homeland and prov.get("owner") == giver
+                    and queries.was_original_owner(prov, receiver, nation_data)):
                 total += tile_value_between(prov, giver, receiver, nation_data)
         return total
 

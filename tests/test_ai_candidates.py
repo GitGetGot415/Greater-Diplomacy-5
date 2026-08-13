@@ -91,19 +91,26 @@ class ResourceOfferTests(unittest.TestCase):
     is longest on materials."""
 
     class FakeWorld:
-        def __init__(self, econ, stock):
+        def __init__(self, econ, stock, relations=None, total_turns=0):
             self.economies = econ
             self.nation_data = stock
+            self.total_turns = total_turns
+            self._relations = relations or {}
 
-    def world(self, a_mat, a_fuel, b_mat, b_fuel):
+        def relation(self, a, b):
+            return self._relations.get((a, b), 0)
+
+    def world(self, a_mat, a_fuel, b_mat, b_fuel, relations=None, total_turns=0,
+              names=("A", "B")):
+        first, second = names
         econ = {
-            "A": {"total_inc": {"materials": a_mat, "fuel": a_fuel, "manpower": 0},
-                  "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}},
-            "B": {"total_inc": {"materials": b_mat, "fuel": b_fuel, "manpower": 0},
-                  "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}},
+            first: {"total_inc": {"materials": a_mat, "fuel": a_fuel, "manpower": 0},
+                    "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}},
+            second: {"total_inc": {"materials": b_mat, "fuel": b_fuel, "manpower": 0},
+                     "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}},
         }
-        stock = {"A": {"materials": 0, "fuel": 0}, "B": {"materials": 0, "fuel": 0}}
-        return self.FakeWorld(econ, stock)
+        stock = {first: {"materials": 0, "fuel": 0}, second: {"materials": 0, "fuel": 0}}
+        return self.FakeWorld(econ, stock, relations, total_turns)
 
     def test_materials_for_fuel_when_that_is_the_shortage(self):
         offer = ac.resource_offer(self.world(10000, 10, 500, 4000), "A", "B")
@@ -140,6 +147,54 @@ class ResourceOfferTests(unittest.TestCase):
 
     def test_an_unknown_nation_is_handled(self):
         self.assertIsNone(ac.resource_offer(self.world(1, 1, 1, 1), "A", "Nowhere"))
+
+    # --- the offers stop reading as one copy-pasted message ------------------
+    # The ask used to be int(their_surplus * 0.5): computed entirely from the
+    # *recipient's* economy, with a flat constant and no variation of any kind.
+    # Every nation on the map therefore asked the same player for the identical
+    # number, and it only moved when the player's own income did.
+
+    def test_two_nations_do_not_ask_the_same_player_for_the_same_amount(self):
+        """The reported symptom, directly."""
+        asks = set()
+        for asker in ("Avaria", "Borland", "Carrow", "Dunmar", "Emberic"):
+            offer = ac.resource_offer(
+                self.world(10000, 10, 500, 4000, names=(asker, "Target")), asker, "Target")
+            self.assertIsNotNone(offer, asker)
+            asks.add(offer["take_fuel"])
+
+        self.assertGreater(len(asks), 1, "every nation opened with the identical figure")
+
+    def test_the_same_pair_asks_differently_as_the_war_goes_on(self):
+        early = ac.resource_offer(self.world(10000, 10, 500, 4000, total_turns=1), "A", "B")
+        later = ac.resource_offer(self.world(10000, 10, 500, 4000, total_turns=40), "A", "B")
+        self.assertNotEqual(early["take_fuel"], later["take_fuel"])
+
+    def test_the_same_pair_on_the_same_turn_is_reproducible(self):
+        """Determinism matters more than variety: the same save re-run has to
+        make the same offers, so this hashes rather than reaching for random."""
+        first = ac.resource_offer(self.world(10000, 10, 500, 4000, total_turns=7), "A", "B")
+        second = ac.resource_offer(self.world(10000, 10, 500, 4000, total_turns=7), "A", "B")
+        self.assertEqual(first, second)
+
+    def test_a_nation_that_likes_you_asks_for_less(self):
+        warm = ac.resource_offer(
+            self.world(10000, 10, 500, 4000, relations={("A", "B"): 180}), "A", "B")
+        cold = ac.resource_offer(
+            self.world(10000, 10, 500, 4000, relations={("A", "B"): 0}), "A", "B")
+        self.assertLess(warm["take_fuel"], cold["take_fuel"])
+
+    def test_an_offer_is_a_round_number(self):
+        offer = ac.resource_offer(self.world(10000, 10, 500, 4000), "A", "B")
+        self.assertEqual(offer["take_fuel"] % 10, 0)
+        self.assertEqual(offer["give_materials"] % 10, 0)
+
+    def test_it_never_asks_for_more_than_the_partner_can_spare(self):
+        for turns in range(12):
+            offer = ac.resource_offer(
+                self.world(10000, 10, 500, 4000, total_turns=turns), "A", "B")
+            if offer:
+                self.assertLessEqual(offer["take_fuel"], 4000)
 
 
 class LegalityTests(unittest.TestCase):
