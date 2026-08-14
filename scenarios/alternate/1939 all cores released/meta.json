@@ -1,6 +1,6 @@
 {
-    "version": "v25",
-    "generated_at": "2026-08-14T16:34:16.725322",
+    "version": "v26",
+    "generated_at": "2026-08-14T16:53:05.822659",
     "date": {
         "day": 15,
         "month": 2,
@@ -39223,7 +39223,9 @@
             "at_war_with": [],
             "allied_with": [],
             "pending_diplomacy": {},
-            "diplo_responses": {}
+            "diplo_responses": {},
+            "flag_data": "DEFAULT",
+            "portrait_data": "DEFAULT"
         }
     },
     "provinces": {

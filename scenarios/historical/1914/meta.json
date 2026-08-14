@@ -1,6 +1,6 @@
 {
-    "version": "v25",
-    "generated_at": "2026-08-14T16:34:04.864634",
+    "version": "v26",
+    "generated_at": "2026-08-14T16:52:53.719891",
     "date": {
         "day": 15,
         "month": 0,
@@ -49514,7 +49514,7 @@
                 {
                     "type": "Destroyer I",
                     "owner": "Ottoman Empire",
-                    "health": 1200,
+                    "health": 1200.0,
                     "max_health": 1200,
                     "morale": 100.0,
                     "speed": 1,
@@ -49525,7 +49525,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Destroyer (I)"
+                    "custom_name": "1st Destroyer (I)",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
