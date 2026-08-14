@@ -636,6 +636,37 @@ def resource_flows(deal, nation):
     return receive, give
 
 
+def resource_cap(nation, resource, economies):
+    """The most `nation` may move in one deal: DEAL_MAX_RESOURCE_TURNS of output.
+
+    A term is only real if the nation can actually deliver it, and one turn's
+    production is the honest measure of that. Without a ceiling the number in the
+    box was pure theatre: a player could promise 99,999,999 materials, have the
+    offer priced on the promise, and then pay whatever happened to be in the bank
+    -- because both halves of paying clamped to the stockpile. The cap and that
+    clamp are two sides of one rule, and the clamp is the half that is going.
+
+    Raw output, not output minus upkeep: a nation running a deficit can still
+    sell what it digs up this turn. `economies` is what
+    queries.calculate_all_economies returns, which every caller already has --
+    the screen and the AI both read world.economies, computed once per turn --
+    because recomputing it here would be a sweep of every province on the map.
+
+    No economies, no ceiling: a caller without one gets the amount unchanged
+    rather than a silent zero.
+    """
+    if not economies:
+        return None
+    income = (economies.get(nation) or {}).get("total_inc") or {}
+    return max(0, int(float(income.get(resource, 0) or 0) * c.DEAL_MAX_RESOURCE_TURNS))
+
+
+def capped(amount, nation, resource, economies):
+    """`amount`, trimmed to what resource_cap allows. See it for why."""
+    ceiling = resource_cap(nation, resource, economies)
+    return int(amount) if ceiling is None else max(0, min(int(amount), ceiling))
+
+
 def vassalizes(deal, nation):
     """Whether any clause hands `nation` over to somebody as a subject."""
     return any(clause.get("type") == VASSALIZE and clause.get("subject") == nation
@@ -660,6 +691,53 @@ def net_value(deal, nation, map_data, nation_data, whole_side=True):
     book = ledger(deal, nation, map_data, nation_data, whole_side)
     return (book["got_land"] + book["got_other"]
             - book["given_land"] - book["given_other"])
+
+
+def losses(deal, nation, map_data, nation_data, baseline=None):
+    """Every province this deal takes off `nation`, as province dicts.
+
+    The same book ledger keeps, without the prices -- who loses what is decided
+    by tile_moves against the deal's baseline, so a term is read for the change
+    it makes rather than for the nation its `from` field happens to name.
+    """
+    if baseline is None:
+        baseline = baseline_owners(deal, map_data, nation_data)
+
+    for clause in clauses(deal):
+        if clause.get("type") != TILES:
+            continue
+        for loser, _taker, prov in tile_moves(clause, map_data, nation_data, baseline):
+            if loser == nation:
+                yield prov
+
+
+def is_home_ground(nation, prov):
+    """Whether this province is `nation`'s own country rather than a holding.
+
+    Its core, or a province it is part-way through coring -- ground it has
+    already paid to make permanently its own. A conquest it has not started
+    coring is a holding, and a holding can be traded like one.
+
+    Reads the cores list directly rather than through queries.has_core, as the
+    rest of this module's valuation does: under the Disable Cores scenario rule
+    has_core answers True for every owned tile, which would make every nation's
+    entire territory unsellable in a game that has no cores in it at all.
+    """
+    if nation in prov.get("cores", []):
+        return True
+    return any(order.get("order_type") == "CORE"
+               for order in prov.get("building_queue", []) or [])
+
+
+def homeland_losses(deal, nation, map_data, nation_data, baseline=None):
+    """The provinces this deal takes off `nation` that are its own country.
+
+    What a nation will not sell in peacetime, however good the price. A peace
+    treaty is a different matter and does not ask this: losing core land is what
+    losing a war means.
+    """
+    return [prov for prov in losses(deal, nation, map_data, nation_data, baseline)
+            if is_home_ground(nation, prov)]
 
 
 def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):

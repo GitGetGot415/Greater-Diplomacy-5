@@ -85,6 +85,20 @@ def occupation(map_screen, side_a, side_b):
 # STRENGTH
 # ==========================================
 
+def nation_power(map_screen, nation, world=None):
+    """One nation's weight: its army plus a hundredth of its economy.
+
+    The game's answer to "how strong is this country", and the unit _bloc_power
+    sums. Public because a faction leadership challenge weighs one member
+    against another and must use the same scale the peace table does -- two
+    definitions of strength would be two different answers to the same question.
+    """
+    if world is not None:
+        return world.military(nation) + world.econ_power(nation) / 100.0
+    return (queries.get_military_strength(nation, map_screen.map_data)
+            + queries.get_economic_power(nation, map_screen.nation_data) / 100.0)
+
+
 def _bloc_power(map_screen, members, world=None):
     """Armies plus economy for a whole side.
 
@@ -92,14 +106,7 @@ def _bloc_power(map_screen, members, world=None):
     walks each nation's own friend list and would count a faction of four once
     per member.
     """
-    total = 0.0
-    for nation in members:
-        if world is not None:
-            total += world.military(nation) + world.econ_power(nation) / 100.0
-        else:
-            total += (queries.get_military_strength(nation, map_screen.map_data)
-                      + queries.get_economic_power(nation, map_screen.nation_data) / 100.0)
-    return total
+    return sum(nation_power(map_screen, nation, world) for nation in members)
 
 
 def strength_share(map_screen, side_a, side_b, world=None):

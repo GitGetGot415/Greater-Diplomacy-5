@@ -4,7 +4,8 @@ from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
                           ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
                           ai_personality, ai_prompts, ai_world)
-from map_logic.diplomacy import diplomacy_messages, diplomacy_events, war_calls
+from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
+                                 faction_leadership, war_calls)
 from data import queries
 import data.constants as c
 
@@ -941,6 +942,29 @@ def _offer_trades(bag, map_screen, ai_name, active_nations, world):
             parameters=offer))
 
 
+def _claim_faction_leadership(bag, map_screen, ai_name, world, scenario_settings=None):
+    """Section 8: takes the chair when it has outgrown the nation in it.
+
+    Aimed at itself, like leaving or disbanding -- there is nobody to ask. The
+    six turns of holding a 1.5x lead are already behind it by the time can_claim
+    is true; what is left is whether this particular nation wants the job. A
+    content one does not, however heavy it has become, which is what keeps the
+    strongest army in every bloc from mechanically ending up at its head.
+    """
+    if getattr(c, "DISABLE_FACTIONS", False):
+        return
+    if not faction_leadership.can_claim(map_screen, ai_name):
+        return
+
+    person = ai_personality.get(map_screen.nation_data, ai_name, scenario_settings)
+    if person.get("ambition", 0.5) < c.AI_CLAIM_LEADERSHIP_AMBITION:
+        return
+
+    bag.add(ai_candidates.make(
+        "CLAIM_FACTION_LEADERSHIP", ai_name, c.AI_SCORE_CLAIM_LEADERSHIP,
+        "we have outweighed the leader of this faction for six turns running"))
+
+
 def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations):
     """Section 4.5: while at war and with no claim queued, picks one enemy
     province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
@@ -1104,6 +1128,10 @@ def _run_basic_proactive_ai(map_screen):
             _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world)
 
         _offer_trades(bag, map_screen, ai_name, active_nations, world)
+
+        if my_faction:
+            _claim_faction_leadership(bag, map_screen, ai_name, world,
+                                      map_screen.scenario_settings)
 
         # Held rather than executed. The director pass runs next and gives each
         # nation's leader the chance to pick differently from its staff; without

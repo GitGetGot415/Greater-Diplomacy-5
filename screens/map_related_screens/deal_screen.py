@@ -54,6 +54,23 @@ _HIGHLIGHT_MOOT = (140, 140, 140)
 AUTO = "Auto (pre-war owner)"
 
 
+def _digits(text):
+    """An amount as it should be shown while it is being typed.
+
+    Only the leading zeros come off, one keystroke at a time, so this never
+    fights the typist: "0" then "9" gives "9", and an emptied box reads as zero
+    through _amount rather than snapping back to a "0" the next digit would sit
+    behind. The field accepted digits and tidied nothing, so a box starting at
+    "0" turned into "0999" the moment anybody typed a number into it.
+    """
+    trimmed = text.lstrip("0")
+    return trimmed if trimmed or not text else "0"
+
+
+def _thousands(number):
+    return f"{int(number):,}"
+
+
 def _bloc_name(nation_data, side):
     """What to call a side: its faction if it has one, otherwise its leader."""
     for member in side:
@@ -77,6 +94,16 @@ class Deal_Screen(MapOverlayScreen):
         "GIVE_MATS": "give_mats_str",
         "GIVE_FUEL": "give_fuel_str",
         "NOTE": "note",
+    }
+
+    #: The four of those that hold a quantity, and what quantity: (column,
+    #: resource). Which column a box is in decides who pays out of it, and
+    #: therefore whose output caps it.
+    AMOUNT_FIELDS = {
+        "TAKE_MATS": (TAKE, "materials"),
+        "TAKE_FUEL": (TAKE, "fuel"),
+        "GIVE_MATS": (GIVE, "materials"),
+        "GIVE_FUEL": (GIVE, "fuel"),
     }
 
     # --- Layout ---------------------------------------------------------
@@ -265,6 +292,41 @@ class Deal_Screen(MapOverlayScreen):
         except ValueError:
             return 0
 
+    def payer_of(self, side):
+        """Who actually hands over the goods in that column."""
+        return self.player if side == GIVE else self.target_nation
+
+    def cap_for(self, side, resource):
+        """The most that column may move: one turn of the payer's output.
+
+        world.economies is the same snapshot the AI prices against, computed
+        once and held for the session -- calculate_all_economies is a sweep of
+        every province on the map and this is read on every keystroke.
+        """
+        return deal_mod.resource_cap(self.payer_of(side), resource,
+                                     self.world.economies)
+
+    def over_cap(self):
+        """Every amount typed past what its payer could deliver.
+
+        [(side, resource, typed, ceiling)]. Shown rather than clamped as you
+        type: rewriting "5000" to "400" the moment the fourth digit lands is a
+        box that fights back. build_deal sends the ceiling, so what is priced
+        and what is sent already agree -- this is only the sentence that says so.
+        """
+        out = []
+        for side, resource, attr in self._amount_fields():
+            typed = self._amount(attr)
+            ceiling = self.cap_for(side, resource)
+            if ceiling is not None and typed > ceiling:
+                out.append((side, resource, typed, ceiling))
+        return out
+
+    def _amount_fields(self):
+        for side, prefix in ((TAKE, "take"), (GIVE, "give")):
+            for resource, short in (("materials", "mats"), ("fuel", "fuel")):
+                yield side, resource, f"{prefix}_{short}_str"
+
     def build_deal(self):
         """The deal as currently assembled.
 
@@ -284,11 +346,16 @@ class Deal_Screen(MapOverlayScreen):
                     continue  # the baseline already does this; it is not a term
                 clauses.append(deal_mod.tiles_clause(giver, receiver, group))
 
+        # Trimmed to what the payer produces in a turn, so the deal that is
+        # priced here is the deal that will be paid. A promise used to be worth
+        # whatever it said and collected at whatever was in the bank.
         for resource, take_attr, give_attr in (
                 ("materials", "take_mats_str", "give_mats_str"),
                 ("fuel", "take_fuel_str", "give_fuel_str")):
-            taken = self._amount(take_attr)
-            given = self._amount(give_attr)
+            taken = deal_mod.capped(self._amount(take_attr), self.target_nation,
+                                    resource, self.world.economies)
+            given = deal_mod.capped(self._amount(give_attr), self.player,
+                                    resource, self.world.economies)
             if taken:
                 clauses.append(deal_mod.resources_clause(
                     self.target_nation, self.player, resource, taken))
@@ -481,6 +548,8 @@ class Deal_Screen(MapOverlayScreen):
                     event, getattr(self, attr),
                     max_length=c.DEAL_NOTE_MAX_LEN if is_note else None,
                     validation_func=None if is_note else str.isdigit)
+                if not is_note:
+                    text = _digits(text)
                 setattr(self, attr, text)
                 if status == "CANCEL":
                     self.active_input = None
@@ -712,6 +781,9 @@ class Deal_Screen(MapOverlayScreen):
             self.leverage = war_score.leverage(self.map_screen, self.my_side,
                                                self.their_side, self.world)
 
+        self.balance_terms = ""
+        self.balance_reading = ""
+
         agreement = self.build_deal()
         self.problems = deal_mod.validate(agreement, self.map_screen.map_data,
                                           self.map_screen.nation_data)
@@ -729,6 +801,8 @@ class Deal_Screen(MapOverlayScreen):
         self.verdict_dots = None
         self.verdict_accepted = None
         self.verdict_slack = None
+        if not self.is_peace:
+            self.balance_terms = self._balance_terms(agreement)
         if self.target_nation in self.map_screen.active_players:
             self.verdict_text = "Another player decides this one for themselves."
             self.verdict_color = c.UI_TEXT_MUTED
@@ -741,6 +815,9 @@ class Deal_Screen(MapOverlayScreen):
         verdict = judge(self.world, self.target_nation, self.player, agreement,
                         self.map_screen.scenario_settings)
 
+        if not self.is_peace:
+            self.balance_reading = self._balance_reading(agreement)
+
         filled, total, headline = ai_opinion.verdict_band(verdict.slack)
         self.verdict_dots = (filled, total)
         self.verdict_accepted = verdict.accepted
@@ -752,6 +829,50 @@ class Deal_Screen(MapOverlayScreen):
         self.verdict_text = f"{headline} -- {ai_opinion.reason_about(verdict)}."
         self.verdict_color = (c.COLOR_SUCCESS_GREEN if verdict.accepted
                               else (255, 110, 110))
+
+    def _balance_terms(self, agreement):
+        """"You give: 3 provinces, 5,000 materials   You receive: 1,200 fuel".
+
+        Read off the assembled deal rather than off the boxes, so what it lists
+        is what would actually be sent -- an amount trimmed to its ceiling shows
+        trimmed, and a province that changes nothing does not show at all.
+        """
+        def side(receiver):
+            items = []
+            tiles = sum(len(cl.get("ids", [])) for cl in deal_mod.clauses(agreement)
+                        if cl.get("type") == deal_mod.TILES and cl.get("to") == receiver)
+            if tiles:
+                items.append(f"{tiles} province{'' if tiles == 1 else 's'}")
+            for clause in deal_mod.clauses(agreement):
+                if (clause.get("type") == deal_mod.RESOURCES
+                        and clause.get("to") == receiver):
+                    items.append(f"{_thousands(clause.get('amount', 0))} "
+                                 f"{clause.get('resource')}")
+            return ", ".join(items) or "nothing"
+
+        return (f"You give: {side(self.target_nation)}"
+                f"      You receive: {side(self.player)}")
+
+    def _balance_reading(self, agreement):
+        """What the other side makes of that exchange, as a ratio.
+
+        The same numbers trade_verdict decides on -- one arithmetic, two
+        readers, because a screen that prices a deal differently from the engine
+        is how the old peace screen came to predict the opposite of what
+        happened.
+        """
+        gained, lost = ai_opinion.trade_balance(
+            self.world, self.target_nation, self.player, agreement,
+            self.map_screen.scenario_settings)
+
+        if gained <= 0 and lost <= 0:
+            return "Nothing is on the table yet."
+        if lost <= 0:
+            return f"{self.target_nation} is being asked for nothing in return."
+        if gained <= 0:
+            return f"{self.target_nation} is being offered nothing for it."
+        return (f"{self.target_nation} rates what you offer at "
+                f"{ai_opinion.times_phrase(gained / lost)} what it would give up.")
 
     # ------------------------------------------------------------------ #
     #                            ACTIONS                                  #
@@ -843,6 +964,8 @@ class Deal_Screen(MapOverlayScreen):
 
         if self.leverage:
             self._draw_leverage(surface)
+        else:
+            self._draw_balance(surface)
         self._draw_columns(surface)
         self._draw_footer(surface)
         self._draw_recipient_list(surface)
@@ -937,6 +1060,64 @@ class Deal_Screen(MapOverlayScreen):
             draw_text_box(surface, rects[key], getattr(self, self.FIELD_ATTRS[key]),
                           active=self.active_input == key, font=label, pad_x=5)
 
+    def _notice(self):
+        """(sentence, colour) for the one-line status row, or None.
+
+        Ordered by how much it matters that the player reads it: a number that
+        will not be sent as typed first, then whatever they are in the middle of
+        doing, then the two standing facts about the map. Only one row exists, so
+        they take turns rather than share it.
+        """
+        over = self.over_cap()
+        if over:
+            _side, resource, typed, ceiling = over[0]
+            return (f"{_thousands(typed)} {resource} trimmed to "
+                    f"{_thousands(ceiling)} -- one turn's output is the most "
+                    f"anyone can hand over.", (255, 150, 90))
+
+        if self.picking:
+            return (f"Click provinces on the map to "
+                    f"{'demand' if self.picking == TAKE else 'offer'} them.",
+                    c.COLOR_GOLD_HIGHLIGHT)
+
+        if self.active_input in self.AMOUNT_FIELDS:
+            side, resource = self.AMOUNT_FIELDS[self.active_input]
+            ceiling = self.cap_for(side, resource)
+            if ceiling is not None:
+                return (f"{self.payer_of(side)} produces {_thousands(ceiling)} "
+                        f"{resource} a turn, and cannot hand over more than that.",
+                        c.UI_TEXT_MUTED)
+
+        if self.moot:
+            return (f"{len(self.moot)} picked "
+                    f"{'province goes' if len(self.moot) == 1 else 'provinces go'} "
+                    f"there anyway.", _HIGHLIGHT_MOOT)
+
+        if self.reverting:
+            return (f"{self.reverting} occupied "
+                    f"{'province reverts' if self.reverting == 1 else 'provinces revert'} "
+                    f"unless demanded.", (235, 180, 90))
+        return None
+
+    def _draw_balance(self, surface):
+        """What each side is putting up, and what they make of it.
+
+        A trade has no leverage bar, so these two rows were empty -- while the
+        only reading of the deal anywhere on the screen was a single sentence at
+        the bottom which, for a land-for-cash offer, used to say "they are asking
+        nothing of them". The figures are ai_opinion's own, in its own currency,
+        so this line and the verdict under it cannot come apart.
+        """
+        left = self.panel_rect.x + self.PAD
+        width = self.panel_rect.right - self.PAD - (left + self.LABEL_W)
+
+        self._line(surface, "BALANCE", left, self.panel_rect.y + self.Y_BAR,
+                   c.COLOR_GOLD_HIGHLIGHT)
+        self._line(surface, self.balance_terms, left + self.LABEL_W,
+                   self.panel_rect.y + self.Y_BAR, c.UI_TEXT_LIGHT, width=width)
+        self._line(surface, self.balance_reading, left + self.LABEL_W,
+                   self.panel_rect.y + self.Y_BREAKDOWN, c.UI_TEXT_MUTED, width=width)
+
     def _draw_footer(self, surface):
         left = self.panel_rect.x + self.PAD
         width = self._verdict_width()
@@ -945,20 +1126,10 @@ class Deal_Screen(MapOverlayScreen):
         notice_x = left + (220 if self.occupied_of_theirs() else 0)
         notice_y = self.panel_rect.y + self.Y_NOTICE + 7
         notice_w = self._terms_x() - 10 - notice_x
-        if self.picking:
-            self._line(surface, f"Click provinces on the map to "
-                                f"{'demand' if self.picking == TAKE else 'offer'} them.",
-                       notice_x, notice_y, c.COLOR_GOLD_HIGHLIGHT, width=notice_w)
-        elif self.moot:
-            self._line(surface, f"{len(self.moot)} picked "
-                                f"{'province goes' if len(self.moot) == 1 else 'provinces go'} "
-                                f"there anyway.",
-                       notice_x, notice_y, _HIGHLIGHT_MOOT, width=notice_w)
-        elif self.reverting:
-            self._line(surface, f"{self.reverting} occupied "
-                                f"{'province reverts' if self.reverting == 1 else 'provinces revert'} "
-                                f"unless demanded.",
-                       notice_x, notice_y, (235, 180, 90), width=notice_w)
+        notice = self._notice()
+        if notice:
+            text, color = notice
+            self._line(surface, text, notice_x, notice_y, color, width=notice_w)
 
         # --- the note that travels with the offer ---
         self._line(surface, "Note to them:", left, self.panel_rect.y + self.Y_NOTE + 4,

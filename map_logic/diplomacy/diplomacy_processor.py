@@ -4,7 +4,9 @@ from data import queries
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.diplomacy import peace_scope, ratification, restrictions, treaty_effects, war_calls
+from map_logic.diplomacy import (
+    faction_leadership, peace_scope, ratification, restrictions, treaty_effects, war_calls
+)
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
     set_response, clear_response, RESPONSE_ACCEPT
@@ -708,7 +710,8 @@ def _hold_offer_escrow(map_screen, sender, target, info):
     if not params:
         return
     agreement = deal_mod.coerce(params, sender, target, kind=_offer_kind(info.get("action")))
-    held = deal_effects.hold_escrow(map_screen.nation_data, agreement, sender)
+    held = deal_effects.hold_escrow(map_screen.nation_data, agreement, sender,
+                                    deal_effects.economies_for(map_screen))
     if any(held.values()):
         info["escrow"] = held
 
@@ -967,6 +970,28 @@ def _process_pass1_immediate_actions(map_screen):
                             send_treaty_message(map_screen, country_name, m, action, custom_msg, llm=wrote_it)
 
                     finalize_faction_leave(map_screen.nation_data, country_name)
+
+                elif action == "CLAIM_FACTION_LEADERSHIP":
+                    # Re-checked here rather than trusted from when the button
+                    # was pressed. A claim is queued a turn ahead, and a turn is
+                    # long enough to lose the army that justified it -- or the
+                    # faction, if the leader disbanded it in the meantime.
+                    fac = map_screen.nation_data[country_name].get("faction", "")
+                    old = queries.get_faction_leader(fac, map_screen.nation_data) if fac else ""
+                    if not faction_leadership.can_claim(map_screen, country_name):
+                        print(f"[GUARDRAIL] {country_name} no longer has a claim on "
+                              f"{fac or 'any faction'}'s leadership.")
+                        actions_to_clear.append(target)
+                    else:
+                        members = queries.get_faction_members(fac, map_screen.nation_data)
+                        log_global_event(map_screen.nation_data,
+                                         f"FACTION LEADERSHIP: {country_name} has taken "
+                                         f"command of {fac} from {old}.")
+                        faction_leadership.transfer(map_screen.nation_data, old, country_name)
+                        for m in members:
+                            if m != country_name:
+                                send_treaty_message(map_screen, country_name, m, action,
+                                                    custom_msg, llm=wrote_it)
 
                 elif action in c.BILATERAL_ACTIONS:
                     # Catch-all so a bilateral action added to constants.py without
@@ -1239,6 +1264,10 @@ def _process_claim_queues(map_screen):
 
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
+    # Ages every faction member's claim on the leadership. Before anything acts,
+    # so the button a player sees, the number an AI decides on and the state a
+    # claim executes against are one measurement rather than three.
+    faction_leadership.tick(map_screen, getattr(map_screen, "ai_world", None))
     # Settles promises that ran their course or were broken this turn. After the
     # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
     ai_commitments.tick(map_screen)

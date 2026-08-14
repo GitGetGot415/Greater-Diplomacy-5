@@ -78,16 +78,68 @@ class PaymentTests(unittest.TestCase):
         self.assertEqual(self.game.nation_data["A"]["materials"], 1400)
         self.assertEqual(self.game.nation_data["B"]["materials"], 600)
 
-    def test_a_payer_is_never_pushed_negative(self):
-        """A nation can promise more than it has, and may have spent the
-        difference by the time the answer arrives."""
+    def test_a_payer_short_of_the_bill_goes_into_debt_for_the_rest(self):
+        """The rule this reverses is the one the whole exploit ran on.
+
+        Payment used to be min(promised, stockpile). A term was therefore priced
+        at what it said and collected at whatever was in the bank, so any number
+        at all could be typed into the box, believed by the other side, and then
+        not paid -- which is how a player bought the whole of Bulgaria for one
+        material. What a nation cannot cover out of stock it now owes.
+        """
         self.game.nation_data["B"]["fuel"] = 50
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [deal.resources_clause("B", "A", "fuel", 999)])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["B"]["fuel"], 0)
-        self.assertEqual(self.game.nation_data["A"]["fuel"], 1050)
+        self.assertEqual(self.game.nation_data["B"]["fuel"], -949)
+        self.assertEqual(self.game.nation_data["A"]["fuel"], 1999,
+                         "and the receiver is paid the whole of it")
+
+    def test_the_debt_is_cleared_by_the_next_turn_of_income(self):
+        """Which is why writing one is safe. process_economy adds income before
+        it floors a stockpile at zero, and the ceiling on what may be promised is
+        that same income -- so a treaty can spend the year's production and can
+        never do worse than that."""
+        from map_logic.turn_processing import economy_processor
+
+        self.game.nation_data["B"]["fuel"] = 50
+        agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
+                             [deal.resources_clause("B", "A", "fuel", 999)])
+        deal_effects.execute(self.game, agreement)
+        self.assertLess(self.game.nation_data["B"]["fuel"], 0)
+
+        economy_processor.process_economy(self.game)
+        self.assertGreaterEqual(self.game.nation_data["B"]["fuel"], 0)
+
+    def test_a_term_above_the_payers_income_is_charged_at_the_ceiling(self):
+        """One turn's output is the most any deal can move, whichever direction
+        it moves in -- promising it and demanding it are the same clause."""
+        self.game.set_income("B", materials=250)
+        agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
+                             [deal.resources_clause("B", "A", "materials", 99999999)])
+        deal_effects.execute(self.game, agreement)
+
+        self.assertEqual(self.game.nation_data["B"]["materials"], 750)
+        self.assertEqual(self.game.nation_data["A"]["materials"], 1250)
+
+    def test_and_the_shortfall_is_reported_rather_than_swallowed(self):
+        """A promise is capped when it is made, and then travels for a turn --
+        long enough to lose the provinces that were producing it. Trimming it is
+        right; doing so silently is how a treaty comes to deliver less than it
+        says, which is the whole fault this replaced."""
+        self.game.set_income("B", materials=250)
+        agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
+                             [deal.resources_clause("B", "A", "materials", 4000)])
+
+        notes = deal_effects.execute(self.game, agreement)
+        self.assertTrue(any("could only deliver 250 of the 4000" in n for n in notes),
+                        notes)
+
+    def test_a_term_inside_the_ceiling_is_reported_as_nothing(self):
+        agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
+                             [deal.resources_clause("B", "A", "materials", 400)])
+        self.assertEqual(deal_effects.execute(self.game, agreement), [])
 
     def test_an_escrowed_payer_is_not_charged_twice(self):
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
@@ -114,22 +166,39 @@ class PaymentTests(unittest.TestCase):
 
         self.assertEqual(self.game.nation_data["A"]["materials"], 1000)
 
-    def test_escrow_clamps_to_what_is_actually_there(self):
+    def test_escrow_takes_the_whole_promise(self):
+        """Promising is spending. Escrow used to hold min(promised, stockpile),
+        which is the same forgiveness the payment loop used to grant and the same
+        hole: an offer of any size cost only what was lying around."""
         self.game.nation_data["A"]["fuel"] = 20
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "fuel", 999)])
 
         held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A")
 
-        self.assertEqual(held, {"fuel": 20})
-        self.assertEqual(self.game.nation_data["A"]["fuel"], 0)
+        self.assertEqual(held, {"fuel": 999})
+        self.assertEqual(self.game.nation_data["A"]["fuel"], -979)
+
+    def test_escrow_holds_no_more_than_the_ceiling_either(self):
+        agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
+                             [deal.resources_clause("A", "B", "fuel", 99999999)])
+
+        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A",
+                                        self.game.economies)
+
+        self.assertEqual(held, {"fuel": 5000})
 
     def test_releasing_escrow_returns_what_was_taken_not_what_was_promised(self):
+        """The two are the same figure now that escrow takes the promise whole,
+        but release still reads the held dict rather than the deal -- a term
+        trimmed to the ceiling would otherwise be refunded at its written size
+        and mint the difference."""
         self.game.nation_data["A"]["fuel"] = 20
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
-                             [deal.resources_clause("A", "B", "fuel", 999)])
+                             [deal.resources_clause("A", "B", "fuel", 99999999)])
 
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A")
+        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A",
+                                        self.game.economies)
         deal_effects.release_escrow(self.game.nation_data, held, "A")
 
         self.assertEqual(self.game.nation_data["A"]["fuel"], 20)

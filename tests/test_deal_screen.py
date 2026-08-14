@@ -14,6 +14,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_opinion
 from map_logic.diplomacy import deal as deal_mod
 from screens.map_related_screens import deal_screen
 from tests import app_harness
@@ -174,6 +175,128 @@ class RenderTests(DealScreenTestCase):
         self.assertIsNone(self.screen(deal_mod.KIND_TRADE).leverage)
 
 
+class AmountFieldTests(DealScreenTestCase):
+    """The four number boxes: what they accept, and what they will send.
+
+    They accepted digits and tidied nothing, so a box sitting at its default "0"
+    became "0999" the moment anybody typed into it -- and whatever number came
+    out was priced in full and then collected at whatever the payer happened to
+    hold, which is what made "offer 99999999 and take what you like" work.
+    """
+
+    def type_into(self, screen, field, text):
+        screen.active_input = field
+        for char in text:
+            screen.handle_events([pygame.event.Event(
+                pygame.KEYDOWN, key=ord(char), unicode=char, mod=0)])
+        return getattr(screen, screen.FIELD_ATTRS[field])
+
+    def test_typing_over_the_default_zero_does_not_leave_it_behind(self):
+        screen = self.screen()
+        self.assertEqual(screen.take_mats_str, "0")
+        self.assertEqual(self.type_into(screen, "TAKE_MATS", "999"), "999")
+
+    def test_a_zero_typed_first_still_stands_on_its_own(self):
+        screen = self.screen()
+        screen.take_mats_str = ""
+        self.assertEqual(self.type_into(screen, "TAKE_MATS", "0"), "0")
+
+    def test_backspacing_the_box_empty_reads_as_nothing(self):
+        screen = self.screen()
+        screen.take_mats_str = "40"
+        screen.active_input = "TAKE_MATS"
+        for _ in range(3):
+            screen.handle_events([pygame.event.Event(
+                pygame.KEYDOWN, key=pygame.K_BACKSPACE, unicode="", mod=0)])
+        self.assertEqual(screen._amount("take_mats_str"), 0)
+
+    def test_the_note_is_prose_and_keeps_its_zeros(self):
+        screen = self.screen()
+        self.assertEqual(self.type_into(screen, "NOTE", "007"), "007")
+
+    def test_an_amount_past_the_payers_income_is_sent_at_the_ceiling(self):
+        screen = self.screen()
+        screen.give_mats_str = "99999999"
+        ceiling = screen.cap_for(deal_screen.GIVE, "materials")
+        self.assertIsNotNone(ceiling)
+
+        amounts = [cl["amount"] for cl in deal_mod.clauses(screen.build_deal())
+                   if cl.get("type") == deal_mod.RESOURCES]
+        self.assertEqual(amounts, [ceiling])
+
+    def test_and_the_screen_says_it_trimmed_it(self):
+        screen = self.screen()
+        screen.give_mats_str = "99999999"
+        screen.refresh_ui()
+
+        over = screen.over_cap()
+        self.assertEqual([(side, res) for side, res, _t, _c in over],
+                         [(deal_screen.GIVE, "materials")])
+        self.assertIn("trimmed to", screen._notice()[0])
+
+    def test_the_ceiling_belongs_to_whoever_pays_out_of_that_column(self):
+        """Both directions. Demanding a nation's whole treasury for a token is
+        the same unpayable term as promising one, seen from the other side."""
+        screen = self.screen()
+        self.assertEqual(screen.payer_of(deal_screen.GIVE), self.player)
+        self.assertEqual(screen.payer_of(deal_screen.TAKE), self.enemy)
+        self.assertNotEqual(screen.cap_for(deal_screen.TAKE, "materials"),
+                            screen.cap_for(deal_screen.GIVE, "materials"))
+
+    def test_an_amount_inside_the_ceiling_raises_nothing(self):
+        screen = self.screen()
+        screen.give_mats_str = str(screen.cap_for(deal_screen.GIVE, "materials"))
+        screen.refresh_ui()
+        self.assertEqual(screen.over_cap(), [])
+
+
+class BalanceLineTests(DealScreenTestCase):
+    """What a trade is actually asking for, in the two rows a peace uses for its
+    leverage bar. Until this, the only reading of a trade anywhere on the screen
+    was one sentence at the bottom which -- for any offer involving land -- said
+    "they are asking nothing of them"."""
+
+    def trade(self):
+        screen = self.screen(deal_mod.KIND_TRADE)
+        screen.pick(deal_screen.GIVE, self.my_province()["id"])
+        screen.give_mats_str = "50"
+        screen.refresh_ui()
+        return screen
+
+    def test_a_trade_gets_one_and_a_peace_does_not(self):
+        self.assertTrue(self.trade().balance_terms)
+        self.assertFalse(self.screen().balance_terms)
+
+    def test_it_names_both_sides_of_the_exchange(self):
+        terms = self.trade().balance_terms
+        self.assertIn("You give:", terms)
+        self.assertIn("You receive:", terms)
+        self.assertIn("1 province", terms)
+        self.assertIn("50 materials", terms)
+
+    def test_an_empty_trade_says_there_is_nothing_on_the_table(self):
+        screen = self.screen(deal_mod.KIND_TRADE)
+        screen.refresh_ui()
+        self.assertIn("nothing", screen.balance_terms)
+        self.assertIn("Nothing", screen.balance_reading)
+
+    def test_the_reading_agrees_with_the_verdict(self):
+        """Both come off ai_opinion.trade_balance. A screen that prices a deal
+        differently from the engine is how the old peace screen came to predict
+        the opposite of what happened."""
+        screen = self.trade()
+        gained, lost = ai_opinion.trade_balance(
+            screen.world, self.enemy, self.player, screen.build_deal())
+        self.assertEqual(gained > lost, screen.verdict_accepted)
+
+    def test_it_lists_what_will_be_sent_rather_than_what_was_typed(self):
+        screen = self.screen(deal_mod.KIND_TRADE)
+        screen.give_mats_str = "99999999"
+        screen.refresh_ui()
+        ceiling = screen.cap_for(deal_screen.GIVE, "materials")
+        self.assertIn(f"{ceiling:,} materials", screen.balance_terms)
+
+
 class PickingTests(DealScreenTestCase):
     def test_picking_toggles_a_province_in_and_out(self):
         screen = self.screen()
@@ -273,14 +396,17 @@ class AssemblyTests(DealScreenTestCase):
     def test_reopening_an_offer_restores_its_terms(self):
         first = self.screen()
         wanted = self.their_province()["id"]
+        # An amount they can actually deliver, so the ceiling is not what this
+        # test ends up measuring. See CapTests for the ceiling itself.
+        amount = first.cap_for(deal_screen.TAKE, "materials") // 2
         first.pick(deal_screen.TAKE, wanted)
-        first.take_mats_str = "1500"
+        first.take_mats_str = str(amount)
         first.confirm()
 
         reopened = self.screen()
         self.assertTrue(reopened.is_editing)
         self.assertIn(wanted, reopened.take_ids)
-        self.assertEqual(reopened.take_mats_str, "1500")
+        self.assertEqual(reopened.take_mats_str, str(amount))
 
 
 class VerdictTests(DealScreenTestCase):
