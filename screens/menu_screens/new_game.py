@@ -81,7 +81,7 @@ class New_Game(GameState):
         scenario_dir = self.scenario_dir
         if not os.path.exists(scenario_dir):
             os.makedirs(scenario_dir)
-        scenarios = os.listdir(scenario_dir)
+        scenarios = [s for s in os.listdir(scenario_dir) if not s.startswith(".")]
 
         # Standard centered layout for all playable scenarios
         self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
