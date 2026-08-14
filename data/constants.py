@@ -465,7 +465,17 @@ DEAL_VALUE_CORE_MULT = 2.0
 DEAL_VALUE_CLAIM_MULT = 0.5
 DEAL_VALUE_OCCUPIED_MULT = 0.6      # already under the receiver's guns
 
-DEAL_VALUE_RESOURCE_PRICES = {"materials": 0.08, "fuel": 0.2, "manpower": 0.12}
+#: What a point of stockpile is worth beside a province, at the peace table only
+#: -- the AI's *trade* pricing is the separate scarcity-based
+#: ai_unit_eval.resource_prices and is not affected by this.
+#:
+#: Quartered from 0.08/0.2/0.12. A stockpile is a short-term gain and a province
+#: is a permanent one, and the old table did not say so: a demand summed land and
+#: goods into one figure, so on the save these were measured from, the German
+#: treasury of 33,000 materials read as 34% of the Netherlands -- about five of
+#: its core provinces -- and 14% of Hungary. A bare province now costs about
+#: 12,500 materials, which is more than most nations hold.
+DEAL_VALUE_RESOURCE_PRICES = {"materials": 0.02, "fuel": 0.05, "manpower": 0.03}
 DEAL_VALUE_VASSAL_FRACTION = 0.75   # of everything the subject owns
 DEAL_VALUE_DEMILITARIZE_PER_TURN = 60.0
 DEAL_DEMILITARIZE_TURNS = 10        # how long a demilitarization clause runs
@@ -513,10 +523,11 @@ AI_PEACE_LAND_ALLOWANCE = 1.25
 AI_PEACE_MIN_ALLOWANCE = 0.03
 
 #: How much of a territorial demand a payment is allowed to buy off. Materials
-#: and provinces are both priced in the same currency below, which means that
-#: without a cap a large enough warchest simply purchases a country: at
-#: DEAL_VALUE_RESOURCE_PRICES a bare province costs about 3,100 materials.
-AI_PEACE_CASH_OFFSET_CAP = 0.25
+#: and provinces are both priced in the same currency above, which means that
+#: without a cap a large enough warchest simply purchases a country. The prices
+#: themselves now say that land outlasts goods; this says that even at the right
+#: price, land is not straightforwardly for sale.
+AI_PEACE_CASH_OFFSET_CAP = 0.15
 
 #: How the slack either side of the accept/refuse line is read back to the
 #: player. Each row is (slack at or above which this applies, filled dots, text).
@@ -1562,12 +1573,17 @@ MESSAGE_CATEGORIES = {
     # cannot afford to misread: "WAR" from an ally you are already fighting
     # beside looks exactly like that ally turning on you. Neither of them
     # starts a war -- CALL_TO_ARMS asks an ally into ours, JOIN_WARS asks to be
-    # let into theirs -- and which way round it is, is on the row already, in
-    # the sender, the receiver, and the message itself.
+    # let into theirs.
     #
-    # One label for both, because "CALL TO ARMS" renders at exactly the Type
-    # column's 100px with nothing to spare.
-    "CALL_TO_ARMS": "JOIN WAR",
+    # They shared one label on the theory that which way round it is, is on the
+    # row already. It is not: the row is a sender, a receiver and a line of
+    # prose, and the prose is written by a model that gets the direction wrong.
+    # An autonomous puppet offering to join its master's war arrived saying "we
+    # request your aid" under a label reading JOIN WAR, and the only way to tell
+    # which of the two had actually been sent was to open it. "CALL TO ARMS"
+    # renders at exactly the Type column's 100px with nothing to spare, so the
+    # short form carries it.
+    "CALL_TO_ARMS": "AID CALL",
     "JOIN_WARS": "JOIN WAR",
 
     "CEASEFIRE": "PEACE",

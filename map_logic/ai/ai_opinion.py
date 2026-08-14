@@ -144,7 +144,43 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
 #: landed -- positive accepted, negative refused, and the size of it is how
 #: comfortably. `reason` names whichever constraint actually decided it, in the
 #: second person, for the line under the leverage bar.
-Peace = collections.namedtuple("Peace", "accepted slack reason")
+#: A verdict, and the sentence explaining it twice over.
+#:
+#: `reason` is what it has always been -- the nation's own words about its own
+#: position, which is right for ai_evaluation, where it goes into the model's
+#: system prompt as that leader's private reasoning.
+#:
+#: `detail` is the same sentence as a template, so the same facts can be said to
+#: somebody else about them. The builder screen printed `reason` verbatim under a
+#: leverage bar labelled "You 41% / Them 59%", so the player read "we are winning
+#: this war; 59% of the leverage is ours" and took the 59% for their own. The
+#: numbers agreed all along; only the pronouns did not.
+#: `detail` defaults to empty so anything that built a three-field Peace -- a
+#: test, a mod -- still can, and reason_about falls back to `reason` for it.
+Peace = collections.namedtuple("Peace", "accepted slack reason detail",
+                               defaults=("",))
+
+#: The two ways of saying a reason. Only pronouns vary: every figure is already
+#: formatted into the template, and nations take plural verbs in both voices, so
+#: "we hold" and "they hold" are both correct with no conjugation table.
+VOICE_SELF = {"we": "we", "us": "us", "our": "our", "ours": "ours"}
+VOICE_OTHER = {"we": "they", "us": "them", "our": "their", "ours": "theirs"}
+
+
+def _verdict(accepted, slack, detail):
+    """A verdict from one reason template, said both ways."""
+    return Peace(accepted, slack, detail.format(**VOICE_SELF), detail)
+
+
+def reason_about(verdict):
+    """The verdict's reason told to a third party about the nation that holds it.
+
+    What a screen wants: "you hold 7% of their land and are asking for 36% of
+    their country", rather than that same sentence in the first person, printed
+    to the one person in the conversation who is not its author.
+    """
+    detail = getattr(verdict, "detail", "")
+    return detail.format(**VOICE_OTHER) if detail else verdict.reason
 
 
 def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
@@ -175,6 +211,10 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     occupation ceiling, a demand was weighed only against a *share* of leverage,
     which never approaches zero, so Germany could be handed the British Isles
     without a soldier on them.
+
+    The ceiling is _land_cap_breach, and both sides of its comparison are shares
+    of the same nation priced the same way. They were not, which made it far too
+    strict in exactly the situation it was written for -- see the note there.
     """
     from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import war_score
@@ -190,9 +230,10 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     # waived for anyone offering us something, which is precisely how a war two
     # turns old was settled for a single material.
     if duration < c.MIN_TURNS_FOR_CEASEFIRE:
-        return Peace(False, _REFUSED_FLAT,
-                     f"we have been at war {duration} "
-                     f"{'turn' if duration == 1 else 'turns'}; there is nothing to settle yet")
+        return _verdict(False, _REFUSED_FLAT,
+                        f"{{we}} have been at war {duration} "
+                        f"{'turn' if duration == 1 else 'turns'}; "
+                        f"there is nothing to settle yet")
 
     book = deal_mod.ledger(agreement, nation, map_data, nation_data)
     worth = deal_mod.side_worth(agreement, nation, map_data, nation_data)
@@ -202,24 +243,30 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     # coalition, or what its hardest-hit member gives up as a share of itself.
     # Only the first of those existed, and "a fraction of the Allies" is exactly
     # how handing over the whole United Kingdom read as a modest request.
-    demand = max((book["given_land"] + book["given_other"]) / worth,
-                 _worst_hit_member(agreement, nation, map_data, nation_data))
+    bloc_demand = (book["given_land"] + book["given_other"]) / worth
+    demand = max(bloc_demand, _worst_hit_member(agreement, nation, map_data, nation_data))
     sweetener = book["got_land"] / worth
     cash = book["got_other"] / worth
     # Goods may soften a territorial demand but never buy one outright.
     sweetener += min(cash, demand * c.AI_PEACE_CASH_OFFSET_CAP) if demand > 0 else cash
 
+    # The coalition's own demand here, not `demand` -- that is the worse of two
+    # figures on two different scales, and pairing it with the coalition's
+    # occupation reintroduces exactly the mismatch _land_cap_breach exists to
+    # avoid: a member-sized loss weighed against a bloc-sized grip. Each level
+    # is checked against itself inside.
+    breach = _land_cap_breach(agreement, nation, map_data, nation_data,
+                              max(0.0, bloc_demand - sweetener))
+    if breach:
+        whose, asked, occupied = breach
+        land = "{our} land" if whose is None else f"{whose}'s land"
+        country = "{our} country" if whose is None else "it"
+        return _verdict(False, _REFUSED_FLAT,
+                        f"you hold {_pct(occupied)} of {land} and are asking "
+                        f"for {_pct(asked)} of {country}")
+
     scores = war_score.between(_host(world), nation, proposer, world)
-    # How much of OUR homeland THEY are standing on -- their parts, our land.
-    occupied = scores["their_parts"]["occupation"]
-    allowance = max(c.AI_PEACE_MIN_ALLOWANCE, min(1.0, occupied * c.AI_PEACE_LAND_ALLOWANCE))
-
-    net_demand = max(0.0, demand - sweetener)
-    if net_demand > allowance:
-        return Peace(False, _REFUSED_FLAT,
-                     f"you hold {_pct(occupied)} of our land and are asking for "
-                     f"{_pct(net_demand)} of our country")
-
+    occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
     willingness = (c.AI_PEACE_LEVERAGE_W * scores["theirs"]
                    + c.AI_PEACE_APPETITE_W * appetite)
@@ -229,8 +276,8 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     margin = c.AI_PEACE_MARGIN_BASE + c.AI_PEACE_MARGIN_CAUTION * caution
 
     slack = (willingness + sweetener) - (demand + war_prize + margin)
-    return Peace(slack >= 0, slack,
-                 _peace_reason(slack, demand, war_prize, scores, occupied))
+    return _verdict(slack >= 0, slack,
+                    _peace_reason(slack, demand, war_prize, scores, occupied))
 
 
 #: Slack reported for a refusal that no amount of sweetening fixes -- the war is
@@ -255,18 +302,68 @@ def _worst_hit_member(deal, nation, map_data, nation_data):
                 for member in deal["sides"][side]), default=0.0)
 
 
+def _land_cap_breach(deal, nation, map_data, nation_data, net_demand):
+    """The worst place this deal asks for more land than occupation entitles.
+
+    Returns (whose, asked, occupied) or None. `whose` is None for the coalition
+    as a whole and a member's name otherwise.
+
+    The rule -- you may demand at most AI_PEACE_LAND_ALLOWANCE times the share of
+    a country you are actually holding -- is the one that stops an army which has
+    not landed in Britain being handed Britain. Both halves have to be shares of
+    the *same* thing for that comparison to mean anything, and they were not:
+    the demand was measured against the hardest-hit member, and the occupation
+    against the whole coalition in a different price table. Twenty-two British
+    provinces read as 7% of the Allied homeland against a demand of 36% of the
+    United Kingdom, so asking for two of the twenty-two was refused outright.
+
+    Checked at both levels, each against itself: a coalition cannot be stripped
+    beyond what is held of it, and neither can any one member of it.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+
+    side = deal_mod.side_of(deal, nation)
+    if not side:
+        return None
+
+    def over(subject, asked, whole_side):
+        occupied = deal_mod.occupied_fraction(deal, subject, map_data, nation_data,
+                                              whole_side=whole_side)
+        allowance = max(c.AI_PEACE_MIN_ALLOWANCE,
+                        min(1.0, occupied * c.AI_PEACE_LAND_ALLOWANCE))
+        return (asked, occupied) if asked > allowance else None
+
+    worst = None
+    coalition = over(nation, net_demand, True)
+    if coalition:
+        worst = (None, *coalition)
+
+    for member in deal["sides"][side]:
+        asked = deal_mod.demand_fraction(deal, member, map_data, nation_data,
+                                         whole_side=False)
+        hit = over(member, asked, False)
+        if hit and (worst is None or hit[0] - hit[1] > worst[1] - worst[2]):
+            worst = (None if member == nation else member, *hit)
+    return worst
+
+
 def _peace_reason(slack, demand, war_prize, scores, occupied):
-    """One sentence naming whichever term is actually driving the answer."""
+    """One sentence naming whichever term is actually driving the answer.
+
+    A template over VOICE_SELF / VOICE_OTHER -- see the note on Peace. Every
+    figure is formatted in here; only the pronouns are left to the reader.
+    """
     if slack >= 0:
         if demand <= 0:
             return "the fighting has gone on long enough"
-        return f"{_pct(demand)} of our country is a price we can live with"
+        return f"{_pct(demand)} of {{our}} country is a price {{we}} can live with"
     if war_prize > demand + 0.05:
-        return f"we are winning this war; {_pct(scores['mine'])} of the leverage is ours"
+        return (f"{{we}} are winning this war; {_pct(scores['mine'])} "
+                f"of the leverage is {{ours}}")
     if demand > 0:
-        return (f"you hold {_pct(occupied)} of our land and are asking for "
-                f"{_pct(demand)} of our country")
-    return "we are not ready to stop"
+        return (f"you hold {_pct(occupied)} of {{our}} land and are asking for "
+                f"{_pct(demand)} of {{our}} country")
+    return "{we} are not ready to stop"
 
 
 def accepts_peace(world, nation, proposer, agreement, scenario_settings=None):
@@ -355,7 +452,7 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
         agreement = deal_mod.coerce(agreement, sender, nation, kind=deal_mod.KIND_TRADE)
 
     if deal_mod.vassalizes(agreement, nation):
-        return Peace(False, _REFUSED_FLAT, "the terms are not ours to agree to")
+        return _verdict(False, _REFUSED_FLAT, "the terms are not {ours} to agree to")
 
     receive, give = deal_mod.resource_flows(agreement, nation)
     prices = ai_unit_eval.resource_prices(world.economies.get(nation, {}),
@@ -368,12 +465,12 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
     slack = max(-1.0, min(1.0, net / scale))
 
     if not any(give.values()):
-        reason = "they are asking nothing of us"
+        reason = "they are asking nothing of {us}"
     elif net > 0:
-        reason = "the exchange favours us"
+        reason = "the exchange favours {us}"
     else:
-        reason = "we give up more than we gain"
-    return Peace(net > 0, slack, reason)
+        reason = "{we} give up more than {we} gain"
+    return _verdict(net > 0, slack, reason)
 
 
 def alliance_appetite(world, nation, other, scenario_settings=None):

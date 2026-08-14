@@ -193,8 +193,15 @@ class ProactiveWordingTests(unittest.TestCase):
                       ai_prompts.lines_for("PROACTIVE_CEASEFIRE"))
 
     def test_a_call_to_arms_carries_its_own_words_as_well(self):
-        self.nation_data["Switzerland"]["faction"] = "Pact"
-        self.nation_data["Austria"]["faction"] = "Pact"
+        # Switzerland and Austria are fighting *each other* in this fixture, and
+        # you cannot call your own enemy to arms -- war_calls drops that now. So
+        # the two of them are allied here and given a real war to be called
+        # into, which is the situation the wording is for.
+        self.nation_data["Switzerland"].update(faction="Pact", at_war_with=["Italy"])
+        self.nation_data["Austria"].update(faction="Pact", at_war_with=[])
+        self.nation_data["Italy"] = {"at_war_with": ["Switzerland"], "faction": "",
+                                     "puppets": [], "master": "", "diplo_cooldowns": {},
+                                     "truces": {}, "pending_diplomacy": {}, "name": "Italy"}
         self.assertEqual(self.retaliate("Our line is breaking. Come now.", "CALL_TO_ARMS"),
                          ["Our line is breaking. Come now."])
 

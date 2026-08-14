@@ -53,6 +53,11 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         self.deal = deal_mod.coerce(params, proposer, self.target, kind=deal_mod.KIND_PEACE)
         self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
                                                  map_screen.nation_data)
+        # What the map reverts to underneath the treaty's own transfers. Without
+        # it a peace with no land terms previewed as the current front line,
+        # when what it actually restores is the pre-war border.
+        self.baseline = deal_mod.baseline_owners(self.deal, map_screen.map_data,
+                                                 map_screen.nation_data)
         self.terms = deal_mod.describe(self.deal, viewer=self.target,
                                        nation_data=map_screen.nation_data)
 
@@ -78,7 +83,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
 
     def draw_content(self, surface):
         draw_projected_deal_map(surface, self.map_screen, self.transfers,
-                                deal_mod.parties(self.deal))
+                                deal_mod.parties(self.deal), self.baseline)
         ui_bars.draw_centered_title(
             surface, f"Projected Map: Treaty from {self.proposer}", 30)
         self._draw_terms(surface)
@@ -127,15 +132,19 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
                                  inner_h, width=8)
 
 
-def draw_projected_deal_map(surface, map_screen, transfers, parties=()):
+def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline=None):
     """Paints the map as the deal would leave it, colouring only its signatories.
+
+    `baseline` is deal.baseline_owners -- the map the treaty starts from, which
+    for a peace is the pre-war border rather than the front line.
 
     Falls back to the old per-province blobs when nobody says who the parties
     are: a caller with a bare transfer list -- a mod, or the deprecated
     draw_projected_peace_map forwarder -- still gets a picture.
     """
     if parties:
-        preview = refresh_map.build_deal_preview_map(map_screen, parties, transfers)
+        preview = refresh_map.build_deal_preview_map(map_screen, parties, transfers,
+                                                     baseline)
         _draw_swapped_in(surface, map_screen, preview)
         return
 

@@ -15,6 +15,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import deal as deal_mod
+from screens.map_related_screens import deal_screen
 from tests import app_harness
 
 
@@ -28,6 +29,10 @@ class DealScreenTestCase(unittest.TestCase):
         from map_logic.diplomacy.war_actions import link_war
 
         self.surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        # Drafts survive between openings now, and the shared harness map is one
+        # object for the whole run -- so a draft left by one test would restore
+        # itself into the next one's screen.
+        self.map.deal_drafts = {}
 
         # app_harness.boot_map() hands back one shared Map for the whole run, and
         # earlier modules move provinces around on it -- so who owns what is
@@ -87,8 +92,8 @@ class LayoutTests(DealScreenTestCase):
 
     def loaded(self):
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
-        screen.give_ids.add(self.my_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.pick(deal_screen.GIVE, self.my_province()["id"])
         screen.vassalize = True
         screen.refresh_ui()
         return screen
@@ -146,8 +151,8 @@ class RenderTests(DealScreenTestCase):
 
     def test_it_paints_with_terms_on_the_table(self):
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
-        screen.give_ids.add(self.my_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.pick(deal_screen.GIVE, self.my_province()["id"])
         screen.take_mats_str = "2400"
         screen.vassalize = True
         screen.demilitarize = True
@@ -184,13 +189,13 @@ class PickingTests(DealScreenTestCase):
         screen = self.screen()
         screen.set_picking("TAKE")
         screen.toggle_province(self.my_province())
-        self.assertEqual(screen.take_ids, set())
+        self.assertEqual(screen.take_ids, {})
 
     def test_you_cannot_offer_theirs(self):
         screen = self.screen()
         screen.set_picking("GIVE")
         screen.toggle_province(self.their_province())
-        self.assertEqual(screen.give_ids, set())
+        self.assertEqual(screen.give_ids, {})
 
     def test_picking_the_same_column_twice_turns_it_off(self):
         screen = self.screen()
@@ -208,8 +213,8 @@ class AssemblyTests(DealScreenTestCase):
 
     def test_every_control_turns_into_a_clause(self):
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
-        screen.give_ids.add(self.my_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.pick(deal_screen.GIVE, self.my_province()["id"])
         screen.take_mats_str = "2400"
         screen.give_fuel_str = "800"
         screen.vassalize = True
@@ -224,7 +229,7 @@ class AssemblyTests(DealScreenTestCase):
 
     def test_the_assembled_deal_is_always_valid(self):
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
         screen.take_fuel_str = "500"
         self.assertEqual(deal_mod.validate(screen.build_deal(), self.map.map_data,
                                            self.map.nation_data), [])
@@ -238,8 +243,8 @@ class AssemblyTests(DealScreenTestCase):
     def test_demanded_and_offered_land_move_in_opposite_directions(self):
         screen = self.screen()
         theirs, mine = self.their_province(), self.my_province()
-        screen.take_ids.add(theirs["id"])
-        screen.give_ids.add(mine["id"])
+        screen.pick(deal_screen.TAKE, theirs["id"])
+        screen.pick(deal_screen.GIVE, mine["id"])
 
         transfers = deal_mod.tile_transfers(screen.build_deal())
         self.assertEqual(transfers[theirs["id"]], self.player)
@@ -249,7 +254,7 @@ class AssemblyTests(DealScreenTestCase):
         from map_logic.diplomacy import diplomacy_messages
 
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
         screen.confirm()
 
         pending = diplomacy_messages.get_pending(self.map.nation_data, self.player, self.enemy)
@@ -268,7 +273,7 @@ class AssemblyTests(DealScreenTestCase):
     def test_reopening_an_offer_restores_its_terms(self):
         first = self.screen()
         wanted = self.their_province()["id"]
-        first.take_ids.add(wanted)
+        first.pick(deal_screen.TAKE, wanted)
         first.take_mats_str = "1500"
         first.confirm()
 
@@ -283,7 +288,7 @@ class VerdictTests(DealScreenTestCase):
         screen = self.screen()
         for prov in self.map.map_data.values():
             if prov.get("owner") == self.enemy:
-                screen.take_ids.add(prov["id"])
+                screen.pick(deal_screen.TAKE, prov["id"])
         screen.refresh_ui()
         return screen
 
@@ -303,7 +308,7 @@ class VerdictTests(DealScreenTestCase):
         from map_logic.ai import ai_opinion
 
         screen = self.screen()
-        screen.take_ids.add(self.their_province()["id"])
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
         screen.refresh_ui()
 
         engine = ai_opinion.accepts_peace(screen.world, self.enemy, self.player,
@@ -452,6 +457,260 @@ class ProjectedMapTests(DealScreenTestCase):
         self.assertEqual(painted[wanted][0], self.enemy)
         self.assertEqual(painted[wanted][1],
                          self.map.nation_colors.get(self.enemy))
+
+
+class OccupiedLandTests(DealScreenTestCase):
+    """Land you are standing on: pickable one at a time, and worth something.
+
+    The TAKE column accepted only provinces the other side currently owned,
+    which excluded every province actually conquered -- the ones a treaty most
+    needs to name, now that unnamed occupied land goes home. They could only be
+    added by the all-or-nothing "Demand all N I hold" button, so the choice was
+    forty provinces or none.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from map_logic.diplomacy import war_actions
+
+        for nation in (self.player, self.enemy):
+            war_actions.save_own_pre_war_map(self.map.map_data, self.map.nation_data, nation)
+        self.conquered = self.their_province()
+        self.conquered["owner"] = self.player
+
+    def test_a_province_you_conquered_can_be_demanded_on_its_own(self):
+        screen = self.screen()
+        screen.set_picking(deal_screen.TAKE)
+        screen.toggle_province(self.conquered)
+        self.assertIn(self.conquered["id"], screen.take_ids)
+
+    def test_and_taken_back_out_again(self):
+        screen = self.screen()
+        screen.set_picking(deal_screen.TAKE)
+        screen.toggle_province(self.conquered)
+        screen.toggle_province(self.conquered)
+        self.assertNotIn(self.conquered["id"], screen.take_ids)
+
+    def test_land_that_was_always_yours_is_still_not_demandable(self):
+        screen = self.screen()
+        screen.set_picking(deal_screen.TAKE)
+        screen.toggle_province(self.my_province())
+        self.assertEqual(screen.take_ids, {})
+
+    def test_the_bulk_button_and_one_at_a_time_agree(self):
+        one_by_one = self.screen()
+        one_by_one.set_picking(deal_screen.TAKE)
+        for prov_id in one_by_one.occupied_of_theirs():
+            one_by_one.toggle_province(self.map.id_to_province[prov_id])
+
+        # A fresh screen, or the draft the first one just saved would come back
+        # and the bulk button would read as "deselect all".
+        self.map.deal_drafts = {}
+        bulk = self.screen()
+        bulk.take_everything_occupied()
+        self.assertEqual(set(one_by_one.take_ids), set(bulk.take_ids))
+        self.assertTrue(bulk.take_ids, "nothing was occupied to demand")
+
+    def test_demanding_it_moves_the_verdict(self):
+        """`demanding provinces you already control doesn't seem to change the
+        outcome at all` -- it emitted {from: You, to: You}, a clause the other
+        side was not party to."""
+        nothing = self.screen()
+        demanded = self.screen()
+        demanded.take_everything_occupied()
+        self.assertLess(demanded.verdict_slack, nothing.verdict_slack)
+
+    def test_a_pick_that_changes_nothing_is_called_out(self):
+        """Giving a province back to the nation it already belongs to is what a
+        peace does anyway. Shown as moot rather than silently scoring zero."""
+        screen = self.screen()
+        screen.pick(deal_screen.GIVE, self.conquered["id"])
+        screen.refresh_ui()
+        self.assertIn(self.conquered["id"], screen.moot)
+
+    def test_and_is_not_written_into_the_deal_as_a_term(self):
+        screen = self.screen()
+        screen.pick(deal_screen.GIVE, self.conquered["id"])
+        screen.refresh_ui()
+        tiles = [cl for cl in deal_mod.clauses(screen.build_deal())
+                 if cl.get("type") == deal_mod.TILES]
+        self.assertEqual(tiles, [])
+
+    def test_the_notice_counts_what_would_revert(self):
+        screen = self.screen()
+        self.assertEqual(screen.reverting, len(screen.occupied_of_theirs()))
+        screen.take_everything_occupied()
+        self.assertEqual(screen.reverting, 0)
+
+
+class RecipientTests(DealScreenTestCase):
+    """Who gets a province, rather than whoever the router guesses."""
+
+    def setUp(self):
+        super().setUp()
+        self.ally = next(n for n in sorted(self.map.nation_data)
+                         if n not in (self.player, self.enemy)
+                         and isinstance(self.map.nation_data[n], dict)
+                         and self.map.nation_data[n].get("is_playable"))
+
+    def screen_with_ally(self):
+        screen = self.screen()
+        screen.my_side = [self.player, self.ally]
+        screen._baseline = None
+        return screen
+
+    def test_auto_is_the_default_and_the_first_option(self):
+        screen = self.screen()
+        self.assertIsNone(screen.recipients[deal_screen.TAKE])
+        self.assertIsNone(screen.recipient_options(deal_screen.TAKE)[0])
+
+    def test_the_list_offers_everyone_on_the_receiving_side(self):
+        screen = self.screen_with_ally()
+        self.assertIn(self.ally, screen.recipient_options(deal_screen.TAKE))
+
+    def test_the_give_list_offers_the_other_side_instead(self):
+        screen = self.screen()
+        self.assertIn(self.enemy, screen.recipient_options(deal_screen.GIVE))
+        self.assertNotIn(self.player, screen.recipient_options(deal_screen.GIVE))
+
+    def test_a_demand_can_be_directed_to_an_ally(self):
+        screen = self.screen_with_ally()
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.choose_recipient(deal_screen.TAKE, self.ally)
+
+        tiles = [cl for cl in deal_mod.clauses(screen.build_deal())
+                 if cl.get("type") == deal_mod.TILES]
+        self.assertEqual([cl["to"] for cl in tiles], [self.ally])
+
+    def test_choosing_a_recipient_retargets_what_is_already_picked(self):
+        """A player who picks fourteen provinces and then decides they belong to
+        an ally means those fourteen, not the fifteenth."""
+        screen = self.screen_with_ally()
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.choose_recipient(deal_screen.TAKE, self.ally)
+        self.assertEqual(set(screen.take_ids.values()), {self.ally})
+
+    def test_a_named_recipient_survives_a_reopen(self):
+        screen = self.screen_with_ally()
+        wanted = self.their_province()["id"]
+        screen.pick(deal_screen.TAKE, wanted, self.ally)
+        screen.confirm()
+
+        reopened = self.screen()
+        reopened.my_side = [self.player, self.ally]
+        reopened._load_existing_offer()
+        self.assertEqual(reopened.take_ids.get(wanted), self.ally)
+
+    def test_the_list_sits_clear_of_the_panel(self):
+        screen = self.screen()
+        screen.open_recipient_list(deal_screen.TAKE)
+        self.assertFalse(screen.list_rect().colliderect(screen.panel_rect))
+        self.assertGreaterEqual(screen.list_rect().y, c.TOP_UI_HEIGHT)
+
+    def test_a_click_on_the_list_does_not_fall_through_to_the_map(self):
+        screen = self.screen()
+        screen.open_recipient_list(deal_screen.TAKE)
+        self.assertTrue(screen.is_over_ui(screen.list_rect().center))
+
+    def test_a_long_roster_is_reachable_by_scrolling(self):
+        screen = self.screen()
+        screen.my_side = [self.player] + [f"Ally{i}" for i in range(20)]
+        screen.open_recipient_list(deal_screen.TAKE)
+        self.assertGreater(screen._max_list_scroll(), 0)
+
+        screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1))
+        self.assertEqual(screen.list_scroll, 1)
+
+    def test_the_scroll_hint_does_not_sit_on_the_last_row(self):
+        """LayoutTests only inspects controls that touch the panel, and this box
+        deliberately does not -- so its own contents need saying separately."""
+        screen = self.screen()
+        screen.my_side = [self.player] + [f"Ally{i}" for i in range(20)]
+        screen.open_recipient_list(deal_screen.TAKE)
+
+        box = screen.list_rect()
+        rows = [el.rect for el in screen.elements
+                if getattr(el, "rect", None) is not None and box.colliderect(el.rect)]
+        self.assertEqual(len(rows), screen.LIST_ROWS)
+        hint = pygame.Rect(box.x, box.bottom - screen.HINT_H, box.width, screen.HINT_H)
+        for row in rows:
+            self.assertFalse(row.colliderect(hint),
+                             f"a recipient row at {tuple(row)} is under the "
+                             f"'N more' line at {tuple(hint)}")
+
+    def test_every_row_stays_inside_its_box(self):
+        screen = self.screen()
+        screen.my_side = [self.player] + [f"Ally{i}" for i in range(20)]
+        screen.open_recipient_list(deal_screen.TAKE)
+
+        box = screen.list_rect()
+        for el in screen.elements:
+            if getattr(el, "rect", None) is not None and box.colliderect(el.rect):
+                self.assertTrue(box.contains(el.rect),
+                                f"{el.text!r} at {tuple(el.rect)} leaves {tuple(box)}")
+
+
+class DraftTests(DealScreenTestCase):
+    """Terms survive closing the screen, until the turn ends.
+
+    Assembling a bloc peace is not one sitting: you go and look at the front,
+    count what you are holding, come back. Closing the screen threw all of it
+    away, so checking the map cost you the terms.
+    """
+
+    def half_built(self):
+        screen = self.screen()
+        screen.pick(deal_screen.TAKE, self.their_province()["id"])
+        screen.take_mats_str = "500"
+        screen.note = "Sign, and we stop."
+        screen.demilitarize = True
+        screen.refresh_ui()
+        return screen
+
+    def test_a_draft_comes_back_on_the_same_turn(self):
+        wanted = set(self.half_built().take_ids)
+        reopened = self.screen()
+        self.assertEqual(set(reopened.take_ids), wanted)
+
+    def test_the_numbers_and_the_note_come_back_too(self):
+        self.half_built()
+        reopened = self.screen()
+        self.assertEqual(reopened.take_mats_str, "500")
+        self.assertEqual(reopened.note, "Sign, and we stop.")
+        self.assertTrue(reopened.demilitarize)
+
+    def test_a_draft_is_forgotten_once_the_turn_moves_on(self):
+        """The map has moved; the picked provinces are about somebody else's."""
+        self.half_built()
+        self.map.time_manager.total_turns += 1
+        try:
+            self.assertEqual(self.screen().take_ids, {})
+        finally:
+            self.map.time_manager.total_turns -= 1
+
+    def test_sending_the_offer_clears_the_draft(self):
+        screen = self.half_built()
+        screen.confirm()
+        self.assertEqual(self.map.deal_drafts, {})
+
+    def test_a_peace_draft_and_a_trade_draft_do_not_collide(self):
+        self.half_built()
+        trade = self.screen(deal_mod.KIND_TRADE)
+        self.assertEqual(trade.take_ids, {})
+
+    def test_clearing_the_terms_empties_everything(self):
+        screen = self.half_built()
+        screen.clear_terms()
+        self.assertEqual(screen.take_ids, {})
+        self.assertEqual(screen.take_mats_str, "0")
+        self.assertFalse(screen.demilitarize)
+
+    def test_but_leaves_the_note_alone(self):
+        """Clear Terms is about the terms. Retyping the covering letter because
+        you changed your mind about a province is not a thing anyone wants."""
+        screen = self.half_built()
+        screen.clear_terms()
+        self.assertEqual(screen.note, "Sign, and we stop.")
 
 
 if __name__ == "__main__":

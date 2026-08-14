@@ -212,7 +212,8 @@ def restore_occupied(map_screen, deal, ceded):
     in the treaty. Returns notes for the settlement message.
 
     Peace used to leave the map exactly as the armies had left it, so a white
-    peace -- literally "the fighting stops, the map stands" -- froze every
+    peace -- which described itself as "the fighting stops, the map stands", and
+    now says the pre-war borders are restored, because they are -- froze every
     conquest permanently and made the tile clauses in a treaty decorative: you
     kept what you held either way. It also made a treaty impossible to read.
     A player who took twenty-two British provinces at the table could not tell
@@ -224,22 +225,21 @@ def restore_occupied(map_screen, deal, ceded):
     whoever held it when the war began. Conquests from a third party are not this
     treaty's business, and land the treaty names has just been transferred on
     purpose -- `ceded` is that set.
+
+    That rule is deal.baseline_owners now rather than a second copy of itself
+    here. It was written in this function and known nowhere else, so valuation,
+    the builder screen and the preview map all went on measuring against the
+    live map while execution measured against the pre-war one -- the game
+    priced, drew and explained a different treaty from the one it carried out.
     """
-    nation_data = map_screen.nation_data
-    prewar = deal_mod.prewar_index(nation_data)
-    a, b = set(deal["sides"]["a"]), set(deal["sides"]["b"])
+    baseline = deal_mod.baseline_owners(deal, map_screen.map_data, map_screen.nation_data)
 
     returned = 0
     for prov in map_screen.map_data.values():
         if prov["id"] in ceded:
             continue
-        holder = prov.get("owner")
-        side = a if holder in a else (b if holder in b else None)
-        if side is None:
-            continue
-
-        was = deal_mod.original_owner(prov, prewar)
-        if was == holder or was not in (b if side is a else a):
+        was = baseline.get(int(prov["id"]))
+        if was is None or was == prov.get("owner"):
             continue
 
         edit_province_ownership.conquer_province(map_screen, prov, was)

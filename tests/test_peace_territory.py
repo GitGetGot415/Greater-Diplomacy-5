@@ -1,7 +1,7 @@
 """What a peace treaty does to the map, and only what it says it does.
 
 Peace used to leave the front line exactly where the armies had left it. A white
-peace -- whose own description reads "the fighting stops, the map stands" --
+peace -- whose own description used to read "the fighting stops, the map stands" --
 froze every conquest permanently, which made the territorial clauses of a treaty
 very nearly decorative: whether or not you demanded the ground you were standing
 on, you kept it.

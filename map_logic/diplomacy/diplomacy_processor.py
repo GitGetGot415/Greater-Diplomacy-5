@@ -4,7 +4,7 @@ from data import queries
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.diplomacy import peace_scope, ratification, restrictions, treaty_effects
+from map_logic.diplomacy import peace_scope, ratification, restrictions, treaty_effects, war_calls
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
     set_response, clear_response, RESPONSE_ACCEPT
@@ -593,6 +593,13 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
     elif ai_action == "JOIN_WARS":
         if queries.are_in_same_faction(country_name, act_target, map_screen.nation_data):
             delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
+        elif war_calls.are_pledged(country_name, act_target, map_screen.nation_data):
+            # A puppet is bound to its master without necessarily sharing its
+            # faction, and offering to join the wars it is already being dragged
+            # into is the one diplomatic move it has. It used to fall through to
+            # the branch below and file a war declaration on every enemy of its
+            # own overlord.
+            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
         elif not c.AI_LLM_DIRECT_RETALIATION:
             # Asking to join a non-faction-mate's war used to silently expand
             # into a declaration on every one of that nation's enemies at once.
@@ -631,7 +638,27 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         else:
             delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
     elif ai_action == "CALL_TO_ARMS":
-        delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
+        # The one branch in this chain that checked nothing at all. Its
+        # neighbours test faction, war state and negotiating rights; this queued
+        # whatever the model said, so a nation in no faction and at war with
+        # nobody could call the player to arms, and a puppet could call its own
+        # master into wars that were the master's to begin with.
+        #
+        # war_calls decides which of the pair the two nations' war lists
+        # actually support. A puppet asking for aid it cannot need is a puppet
+        # that meant "let us join you", so that is what it sends -- with the
+        # wording that goes with it, rather than "we request your aid" arriving
+        # from somebody offering theirs.
+        honest = war_calls.intended_action(country_name, act_target, map_screen.nation_data)
+        if honest == war_calls.CALL_TO_ARMS:
+            delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
+        elif honest == war_calls.JOIN_WARS:
+            print(f"[AI GUARDRAIL] Rewriting CALL_TO_ARMS from {country_name} as JOIN_WARS: "
+                  f"{act_target} is the one at war.")
+            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
+        else:
+            print(f"[AI GUARDRAIL] Aborting CALL_TO_ARMS: {country_name} has no war "
+                  f"{act_target} could be called into.")
     elif ai_action == "CREATE_FACTION":
         delayed_responses.append((country_name, act_target, "CREATE_FACTION", 0, worded("PROACTIVE_CREATE_FACTION", "We propose establishing a new faction.")))
     elif ai_action == "KICK_FACTION_MEMBER":

@@ -250,14 +250,31 @@ def validate(deal, map_data=None, nation_data=None):
             if not clause.get("ids") and not clause.get("plus_originals"):
                 problems.append("A territory term with no provinces in it.")
             if map_data:
+                # The giving side needs *title*, not possession. This demanded
+                # the named giver still hold the ground, which is exactly wrong
+                # for the commonest term there is -- a demand for land the
+                # demander's army is already standing on. deal_effects.prune was
+                # fixed to the three-way test below and this was left behind, so
+                # the two halves of the same question disagreed: prune honoured
+                # a term that validate would not let you send.
                 giver = clause.get("from")
+                giving_side = set(deal["sides"].get(side_of(deal, giver) or "a") or [])
+                receiving_side = set(deal["sides"].get(side_of(deal, clause.get("to")) or "b") or [])
                 by_id = {prov["id"]: prov for prov in map_data.values()}
+                prewar = prewar_index(nation_data) if nation_data else {}
+
                 for prov_id in clause.get("ids", []):
                     prov = by_id.get(int(prov_id))
                     if prov is None:
                         problems.append(f"Province {prov_id} no longer exists.")
-                    elif prov.get("owner") != giver:
-                        problems.append(f"{giver} no longer holds province {prov_id}.")
+                        continue
+                    owner = prov.get("owner")
+                    if owner in giving_side:
+                        continue
+                    if (owner in receiving_side
+                            and original_owner(prov, prewar) in giving_side):
+                        continue  # ours by force already; the treaty makes it ours by right
+                    problems.append(f"{giver} no longer holds province {prov_id}.")
         elif kind == RESOURCES:
             if clause.get("resource") not in c.ECON_RESOURCE_KEYS:
                 problems.append(f"Cannot trade '{clause.get('resource')}'.")
@@ -371,6 +388,50 @@ def original_owner(prov, prewar):
     return cores[0] if cores else prov.get("owner")
 
 
+def baseline_owners(deal, map_data, nation_data, prewar=None):
+    """{province id: who owns it if this deal is signed with none of its tile terms}.
+
+    The map a treaty is measured against. For a peace that is the pre-war map
+    between the two sides, because unnamed occupied land goes home when the
+    fighting stops -- see deal_effects.restore_occupied, which is where that rule
+    was written and, until this function existed, the only place it was known.
+
+    Everything else on the screen was still measuring against the *current* map,
+    and the gap between the two is not cosmetic. deal_screen named the current
+    holder as a term's giver, so demanding land you already occupy emitted
+    {from: You, to: You}: a clause the other side is not party to, worth nothing
+    in their ledger, leaving the verdict bit-identical to a white peace. The
+    mirror of it was worse -- handing back a province that was reverting anyway
+    scored as a gift, so a player could fill the give column with land they were
+    losing regardless and have it read as generosity.
+
+    Only land taken from the other side of *this* war moves. A conquest from a
+    third party is not this treaty's business and stands, and a trade ends no
+    war, so its baseline is simply the map as it is.
+
+    Keyed by int province id, to match tile_transfers and the clause id lists.
+    """
+    live = {int(prov["id"]): prov.get("owner") for prov in map_data.values()}
+    if not is_deal(deal) or not ends_war(deal):
+        return live
+
+    if prewar is None:
+        prewar = prewar_index(nation_data)
+
+    a = set(deal["sides"].get("a") or [])
+    b = set(deal["sides"].get("b") or [])
+
+    for prov in map_data.values():
+        holder = prov.get("owner")
+        other = b if holder in a else (a if holder in b else None)
+        if other is None:
+            continue
+        was = original_owner(prov, prewar)
+        if was != holder and was in other:
+            live[int(prov["id"])] = was
+    return live
+
+
 def nation_total_value(nation, map_data, nation_data, prewar=None):
     """What a nation amounts to, for measuring how much of itself a deal costs it.
 
@@ -410,32 +471,58 @@ def nation_total_value(nation, map_data, nation_data, prewar=None):
     return max(total, c.DEAL_VALUE_TILE_BASE)
 
 
-def clause_value(clause, map_data, nation_data, perspective=RECEIVER):
+def tile_moves(clause, map_data, nation_data, baseline=None):
+    """Every province a TILES term actually moves, as (loser, taker, prov).
+
+    Who loses a province is a fact about the map, not about what the clause
+    calls itself. It was read straight off clause["from"], which is only right
+    when the giver still holds the ground -- and a demand is usually for ground
+    the *demander* is standing on, which is what winning a war looks like. The
+    screen named the occupier, so the term read as a nation giving a province to
+    itself, and the side it was actually taken from never saw it in their books.
+
+    Provinces the baseline already hands to the receiver are not moves at all
+    and are left out.
+    """
+    from data import queries
+
+    giver, receiver = clause.get("from"), clause.get("to")
+    wanted = {int(i) for i in clause.get("ids", [])}
+    recover_homeland = clause.get("plus_originals", False)
+
+    for prov in map_data.values():
+        if not (prov["id"] in wanted or (
+                recover_homeland and prov.get("owner") == giver
+                and queries.was_original_owner(prov, receiver, nation_data))):
+            continue
+
+        loser = giver if baseline is None else baseline.get(int(prov["id"]),
+                                                            prov.get("owner"))
+        if loser == receiver:
+            continue
+        yield loser, receiver, prov
+
+
+def clause_value(clause, map_data, nation_data, perspective=RECEIVER, baseline=None):
     """What this clause is worth, on `perspective`'s books.
 
     RECEIVER prices a gain, GIVER prices a loss. Only TILES actually differs
     between the two; everything else is worth the same to both.
+
+    `baseline` is baseline_owners() -- who holds each province if this deal is
+    signed with none of its tile terms. Given one, a TILES term is priced as the
+    difference it makes to *that* map rather than to the live one: a province
+    already going to the receiver anyway is worth nothing, and one that is not
+    costs whoever it is being taken from, whether or not their army is still
+    standing on it. Optional, and absent it falls back to the live map, so a
+    caller from before this argument existed gets the old answer.
     """
     kind = clause.get("type")
 
     if kind == TILES:
-        from data import queries
-
-        giver, receiver = clause.get("from"), clause.get("to")
-        wanted = {int(i) for i in clause.get("ids", [])}
-        recover_homeland = clause.get("plus_originals", False)
-
-        total = 0.0
-        for prov in map_data.values():
-            # A legacy treaty also recovered the winner's own occupied land, so
-            # that half has to be priced too or an old-style demand reads as
-            # asking for nothing at all.
-            if prov["id"] in wanted or (
-                    recover_homeland and prov.get("owner") == giver
-                    and queries.was_original_owner(prov, receiver, nation_data)):
-                total += tile_value_between(prov, giver, receiver, nation_data,
-                                            perspective)
-        return total
+        return sum(tile_value_between(prov, loser, taker, nation_data, perspective)
+                   for loser, taker, prov
+                   in tile_moves(clause, map_data, nation_data, baseline))
 
     if kind == RESOURCES:
         price = c.DEAL_VALUE_RESOURCE_PRICES.get(clause.get("resource"), 1.0)
@@ -498,12 +585,26 @@ def ledger(deal, nation, map_data, nation_data, whole_side=True):
     value stand in for the whole question of whether to stop fighting, and it let
     a big enough payment stand in for a province. Kept apart, a caller can price
     land as land and cash as cash.
+
+    Territory is booked province by province against the deal's baseline, so a
+    term is worth what it changes rather than what it claims to be.
     """
     side = side_of(deal, nation)
     mine = set(deal["sides"][side]) if (whole_side and side) else {nation}
+    baseline = baseline_owners(deal, map_data, nation_data)
 
     book = {"given_land": 0.0, "given_other": 0.0, "got_land": 0.0, "got_other": 0.0}
     for clause in clauses(deal):
+        if clause.get("type") == TILES:
+            for loser, taker, prov in tile_moves(clause, map_data, nation_data, baseline):
+                if taker in mine:
+                    book["got_land"] += tile_value_between(prov, loser, taker,
+                                                           nation_data, RECEIVER)
+                if loser in mine:
+                    book["given_land"] += tile_value_between(prov, loser, taker,
+                                                             nation_data, GIVER)
+            continue
+
         column = "land" if clause.get("type") in _LAND_CLAUSES else "other"
         if _clause_receiver(clause) in mine:
             book["got_" + column] += clause_value(clause, map_data, nation_data, RECEIVER)
@@ -561,6 +662,39 @@ def net_value(deal, nation, map_data, nation_data, whole_side=True):
             - book["given_land"] - book["given_other"])
 
 
+def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):
+    """How much of `nation` -- or its whole side -- the other side is standing on.
+
+    Priced exactly the way demand_fraction prices a loss, because the two get
+    compared directly: what may be demanded of a nation is capped by how much of
+    it the demander actually holds.
+
+    That comparison used to be made against war_score.between's occupation
+    figure, which is a different measurement in a different currency with a
+    different denominator -- it resolves the whole coalition on each side and
+    prices tiles bare, without the core multiplier. On the save this was found
+    in, Germany's grip on twenty-two British provinces came out as 7% (of the
+    entire Allied homeland, bare) and was tested against a demand of 36% (of the
+    United Kingdom, cored). Demanding two provinces out of the twenty-two it was
+    already holding was refused outright.
+    """
+    side = side_of(deal, nation)
+    if side is None:
+        return 0.0
+    mine = set(deal["sides"][side]) if whole_side else {nation}
+    theirs = set(deal["sides"]["b" if side == "a" else "a"])
+    prewar = prewar_index(nation_data)
+
+    held = 0.0
+    for prov in map_data.values():
+        was = original_owner(prov, prewar)
+        if was in mine and prov.get("owner") in theirs:
+            held += tile_value_between(prov, was, None, nation_data)
+
+    worth = side_worth(deal, nation, map_data, nation_data, whole_side)
+    return max(0.0, min(1.0, held / worth))
+
+
 def demand_fraction(deal, nation, map_data, nation_data, whole_side=True):
     """How much of itself this deal asks `nation` to give up, 0..1.
 
@@ -603,7 +737,11 @@ def describe(deal, viewer=None, nation_data=None):
         kind = clause.get("type")
 
         if kind == WHITE_PEACE:
-            lines.append("White peace: the fighting stops, the map stands.")
+            # It said "the map stands", which stopped being true when unnamed
+            # occupied land started going home -- and it is the one line a player
+            # reads before signing away every conquest they made.
+            lines.append("White peace: the fighting stops and the pre-war "
+                         "borders are restored.")
         elif kind == TILES:
             count = len(clause.get("ids", []))
             what = f"{count} {_tile_word(count)}" if count else "territory"

@@ -59,19 +59,24 @@ class CategoryTests(unittest.TestCase):
             with self.subTest(action=action):
                 category = dm.message_category({"action": action, "type": "DIPLOMACY"})
                 self.assertNotEqual(category, "WAR")
-                self.assertEqual(category, "JOIN WAR")
 
     def test_declaring_war_still_reads_as_war(self):
         self.assertEqual(
             dm.message_category({"action": "WAR_DECLARATION", "type": "DIPLOMACY"}), "WAR")
 
-    def test_asking_and_offering_are_the_same_kind_of_act(self):
+    def test_asking_and_offering_are_told_apart(self):
         """CALL_TO_ARMS asks an ally into our wars and JOIN_WARS asks to be let
-        into theirs. Which way round it is, is already on the row -- sender,
-        receiver, and the message itself -- so the column says the one thing it
-        has room to say."""
-        self.assertEqual(dm.message_category({"action": "CALL_TO_ARMS"}),
-                         dm.message_category({"action": "JOIN_WARS"}))
+        into theirs.
+
+        These shared one label, on the theory that which way round it is was
+        already on the row -- sender, receiver, and the message itself. It is
+        not. The message is written by a model that gets the direction wrong,
+        and an autonomous puppet offering to join its master's war arrived
+        saying "we request your aid" under a label reading JOIN WAR. Opening it
+        was the only way to find out which had been sent.
+        """
+        self.assertNotEqual(dm.message_category({"action": "CALL_TO_ARMS"}),
+                            dm.message_category({"action": "JOIN_WARS"}))
 
 
 
@@ -390,18 +395,26 @@ class OverviewTests(unittest.TestCase):
 
     def test_a_join_war_row_says_so(self):
         """End to end: an ally asking for help must not arrive in the table
-        looking like a declaration of war."""
+        looking like a declaration of war, and the two directions must not
+        arrive looking like each other."""
         living = sorted(n for n in self.map.nation_data
                         if isinstance(self.map.nation_data[n], dict)
                         and self.map.nation_data[n].get("is_playable"))
-        a, b = living[0], living[1]
+        a, b, d = living[0], living[1], living[2]
         self.send(a, b, action="CALL_TO_ARMS", custom_msg="Stand with us.")
+        self.send(d, b, action="JOIN_WARS", custom_msg="Let us fight beside you.")
 
         table = self.build()
-        row = next(r for r in table.rows
-                   if r["sender"] == a and r["receiver"] == b
-                   and r["message"] == "Stand with us.")
-        self.assertEqual(row["type"], "JOIN WAR")
+
+        def row_for(sender, message):
+            return next(r for r in table.rows if r["sender"] == sender
+                        and r["receiver"] == b and r["message"] == message)
+
+        called = row_for(a, "Stand with us.")
+        joined = row_for(d, "Let us fight beside you.")
+        for row in (called, joined):
+            self.assertNotEqual(row["type"], "WAR")
+        self.assertNotEqual(called["type"], joined["type"])
 
     def test_a_trade_row_carries_its_terms_and_kind(self):
         living = sorted(self.map.nation_data)

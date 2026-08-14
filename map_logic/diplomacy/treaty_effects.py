@@ -24,6 +24,7 @@ from collections import namedtuple
 
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import deal as deal_mod
+from map_logic.diplomacy import war_calls
 
 #: blocked  -- set when the agreement turned out not to be possible after all,
 #:             so the reply has to say so whatever either side wanted to write.
@@ -165,11 +166,21 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return _canned("ACCEPT_TRADE")
 
     elif action == "CALL_TO_ARMS":
+        # The backstop for war_calls, at the point every path converges -- the
+        # same place the puppet-peace rule is enforced, and for the same reason:
+        # an offer sits in the inbox for turns, and the wars it was about can
+        # end while it waits. Answering a call to arms that has nothing left to
+        # answer used to run join_faction_wars over an empty list and announce
+        # an escalation that had not happened.
+        if not war_calls.is_honest(action, proposer, accepter, nation_data):
+            return _blocked("NO_WAR_TO_JOIN")
         join_faction_wars(map_data, nation_data, accepter, proposer)
         log_global_event(nation_data,
                          f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
 
     elif action == "JOIN_WARS":
+        if not war_calls.is_honest(action, proposer, accepter, nation_data):
+            return _blocked("NO_WAR_TO_JOIN")
         join_faction_wars(map_data, nation_data, proposer, accepter)
         log_global_event(nation_data,
                          f"ESCALATION: {proposer} has joined the wars of {accepter}!")

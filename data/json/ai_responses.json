@@ -145,5 +145,7 @@
   "CREATE_FACTION_CONFLICT": "The proposed faction could not be formed because one of us is already bound by other treaties.",
 
   "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord.",
-  "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord."
+  "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord.",
+
+  "NO_WAR_TO_JOIN": "There is no war between us to answer for. Whatever pact you think binds us here, it does not."
 }
