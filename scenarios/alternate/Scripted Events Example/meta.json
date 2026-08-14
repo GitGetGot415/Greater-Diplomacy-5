@@ -17,6 +17,7 @@
         "days_per_turn": "Default",
         "use_scripted_events": true,
         "ai_disabled": false,
+        "force_time_appropriate_research": true,
         "base_days_per_turn": 30
     },
     "script_variables": [],

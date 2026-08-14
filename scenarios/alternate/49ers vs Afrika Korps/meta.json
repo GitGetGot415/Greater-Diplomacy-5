@@ -16,7 +16,8 @@
         "casus_belli_required": true,
         "days_per_turn": "Default",
         "use_scripted_events": true,
-        "ai_disabled": false
+        "ai_disabled": false,
+        "force_time_appropriate_research": true
     },
     "script_variables": [],
     "default_research": {
