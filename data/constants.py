@@ -478,7 +478,7 @@ DEAL_VALUE_OCCUPIED_MULT = 0.6      # already under the receiver's guns
 DEAL_VALUE_RESOURCE_PRICES = {"materials": 0.02, "fuel": 0.05, "manpower": 0.03}
 DEAL_VALUE_VASSAL_FRACTION = 0.75   # of everything the subject owns
 DEAL_VALUE_DEMILITARIZE_PER_TURN = 60.0
-DEAL_DEMILITARIZE_TURNS = 10        # how long a demilitarization clause runs
+DEAL_DEMILITARIZE_TURNS = 6         # how long a demilitarization clause runs
 DEAL_VALUE_MILITARY_ACCESS = 200.0
 DEAL_VALUE_FACTION_EXIT = 800.0
 DEAL_VALUE_WAR_EXIT = 500.0
@@ -1332,7 +1332,7 @@ AI_SCORE_CLAIM_LEADERSHIP = 0.70        # six turns in the making; do not sit on
 AI_PEACE_OFFER_THRESHOLD = 0.62
 TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
-MIN_TURNS_FOR_CEASEFIRE = 2 # Turns that must occur before the ai allows ceasefires
+MIN_TURNS_FOR_CEASEFIRE = 6 # Turns that must occur before the ai allows ceasefires
 
 # ==========================================
 # FACTION LEADERSHIP
