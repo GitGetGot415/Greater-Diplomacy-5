@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-10T18:48:49.925274",
+    "generated_at": "2026-08-14T15:47:15.622447",
     "date": {
         "day": 15,
         "month": 0,
@@ -43124,7 +43124,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(76, 1, 0)": {
             "owner": "Russia",
@@ -45048,7 +45051,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(179, 1, 0)": {
             "owner": "Russia",
@@ -45760,7 +45766,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(211, 1, 0)": {
             "owner": "Austria-Hungary",
@@ -49245,7 +49254,8 @@
                     "order": {
                         "type": "MOVE",
                         "path": []
-                    }
+                    },
+                    "custom_name": "1st Destroyer (I)"
                 }
             ],
             "building_queue": [],

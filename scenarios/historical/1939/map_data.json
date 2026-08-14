@@ -11709,7 +11709,10 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "France"
@@ -15651,7 +15654,10 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "France"
@@ -16854,7 +16860,10 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "France"

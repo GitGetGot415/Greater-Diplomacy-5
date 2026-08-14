@@ -1,6 +1,6 @@
 {
     "version": "v25",
-    "generated_at": "2026-08-10T14:42:34.676376",
+    "generated_at": "2026-08-14T15:50:06.526933",
     "date": {
         "day": 15,
         "month": 2,
@@ -647,7 +647,7 @@
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
-            "faction": "Central Powers",
+            "faction": "",
             "is_faction_leader": false,
             "relations": {
                 "German Empire": 100,
@@ -860,7 +860,11 @@
             "pending_diplomacy": {},
             "relations": {},
             "adjective": "Canadian",
-            "diplo_responses": {}
+            "diplo_responses": {},
+            "faction": "Allies",
+            "is_faction_leader": false,
+            "master": "United Kingdom",
+            "puppet_type": "Autonomous"
         },
         "Soviet Union": {
             "name": "Soviet Union",
@@ -1426,7 +1430,7 @@
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "pending_diplomacy": {},
-            "faction": "Entente",
+            "faction": "",
             "is_faction_leader": false,
             "relations": {
                 "German Empire": -100,
@@ -1957,7 +1961,10 @@
             "faction": "Allies",
             "is_faction_leader": true,
             "adjective": "British",
-            "diplo_responses": {}
+            "diplo_responses": {},
+            "puppets": [
+                "Canada"
+            ]
         },
         "Japan": {
             "name": "Japan",
@@ -5500,6 +5507,8 @@
         "GLOBAL_EVENTS": {
             "is_playable": false,
             "log": [
+                "Russia is no longer counted among Entente: it holds no territory.",
+                "Austria-Hungary is no longer counted among Central Powers: it holds no territory.",
                 "WAR DECLARED: Guatemala has declared war on Colombia!",
                 "WAR DECLARED: Qing Dynasty has declared war on Rome!",
                 "WAR DECLARED: Israel has declared war on United Kingdom!",
@@ -5509,7 +5518,9 @@
                 "WAR DECLARED: Colombia has declared war on Rome!",
                 "WAR DECLARED: Israel has declared war on United Kingdom!",
                 "WAR DECLARED: Qing Dynasty has declared war on Rome!",
-                "WAR DECLARED: Guatemala has declared war on Colombia!"
+                "WAR DECLARED: Guatemala has declared war on Colombia!",
+                "Austria-Hungary is no longer counted among Central Powers: it holds no territory.",
+                "Russia is no longer counted among Entente: it holds no territory."
             ],
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
@@ -42853,7 +42864,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(76, 1, 0)": {
             "owner": "Poland",
@@ -44751,7 +44765,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(179, 1, 0)": {
             "owner": "Soviet Union",
@@ -45319,7 +45336,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(211, 1, 0)": {
             "owner": "German Reich",
