@@ -95,8 +95,8 @@ class Declare_War_Screen(MapOverlayScreen):
         # is the only thing claims were ever for.
         if not self.is_editing:
             self.elements.append(
-                Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 125,
-                       "new_game", "blue", "Justify a Claim...", self.open_justification,
+                Button(self.panel_rect.centerx - 75, self.panel_rect.bottom - 110,
+                       "thin", "blue", "Justify a Claim...", self.open_justification,
                        font_preset="normal"))
 
     def open_justification(self):
