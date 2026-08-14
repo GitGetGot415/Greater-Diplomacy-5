@@ -4,7 +4,7 @@ from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
                           ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
                           ai_personality, ai_prompts, ai_world)
-from map_logic.diplomacy import diplomacy_messages, diplomacy_events
+from map_logic.diplomacy import diplomacy_messages, diplomacy_events, war_calls
 from data import queries
 import data.constants as c
 
@@ -673,9 +673,15 @@ def _call_faction_to_arms(bag, map_screen, ai_name, my_faction, my_enemies, acti
     for member in faction_members:
         if member == ai_name or member not in active_nations: continue
 
-        member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-
-        unshared_wars = [e for e in my_enemies if e not in member_enemies and e in active_nations and not queries.has_active_truce(member, e, map_screen.nation_data)]
+        # war_calls owns this question, so the pass that *sends* the message,
+        # the guardrail that vets one from a model, and join_faction_wars, which
+        # actually carries it out, all agree about what counts. They did not: a
+        # truce recorded on only one of the two nations passed the test here and
+        # failed it in join_faction_wars, so the call was made, answered, and
+        # then quietly did nothing.
+        unshared_wars = [e for e in war_calls.unshared_wars(ai_name, member,
+                                                            map_screen.nation_data)
+                         if e in active_nations]
 
         if unshared_wars:
             if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, member, "CALL_TO_ARMS"):
@@ -721,9 +727,12 @@ def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enem
         if member == ai_name:
             continue
 
-        member_enemies = map_screen.nation_data[member].get("at_war_with", [])
-
-        unshared_wars = [e for e in member_enemies if e not in my_enemies and e in active_nations and not queries.has_active_truce(ai_name, e, map_screen.nation_data)]
+        # The mirror image, same shared definition -- see the note in
+        # _call_faction_to_arms. Here it is the member who is fighting and we who
+        # would be joining, so the arguments swap.
+        unshared_wars = [e for e in war_calls.unshared_wars(member, ai_name,
+                                                            map_screen.nation_data)
+                         if e in active_nations]
 
         if unshared_wars:
             target_enemy = unshared_wars[0]

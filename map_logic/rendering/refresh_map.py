@@ -304,7 +304,7 @@ def refresh_faction_territories_map(map_screen):
 BYSTANDER_COLOR = (100, 100, 100)
 
 
-def build_deal_preview_map(map_screen, parties, transfers):
+def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
     """The map as a treaty would leave it, with only its signatories coloured in.
 
     Returns a surface; unlike its neighbours it is not cached on the map screen,
@@ -318,13 +318,24 @@ def build_deal_preview_map(map_screen, parties, transfers):
     their own colours, everyone else flattened to grey, and the provinces the
     treaty moves already painted in the colour of whoever is about to own them.
 
-    `transfers` is deal.tile_transfers -- the same dict deal_effects acts on, so
-    the picture and the outcome cannot disagree.
+    `transfers` is deal.tile_transfers -- the same dict deal_effects acts on --
+    and `baseline` is deal.baseline_owners, the map underneath it if the treaty
+    named no land at all. Together they are exactly what execution does, so the
+    picture and the outcome cannot disagree. Drawn over the *live* map instead,
+    a peace with no demands looked like the front line rather than like the
+    pre-war borders it actually restores, which is the one thing a player needs
+    to see before deciding what to demand.
     """
     parties = set(parties)
 
     def get_data(data):
-        owner = transfers.get(int(data["id"])) or data.get("owner", "Unclaimed")
+        prov_id = int(data["id"])
+        owner = transfers.get(prov_id)
+        if owner is None and baseline is not None:
+            owner = baseline.get(prov_id)
+        if owner is None:
+            owner = data.get("owner", "Unclaimed")
+
         if owner in parties:
             return owner, map_screen.nation_colors.get(owner, UNOWNED_COLOR)
         if owner in c.UNOWNED_LAND_OWNERS:
