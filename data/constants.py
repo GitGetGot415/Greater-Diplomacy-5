@@ -67,7 +67,7 @@ BERGIUS_FUEL_BONUS = 100
 UPKEEP_MODIFIERS = {
     "manpower": 0.10,
     "materials": 0.05,
-    "fuel": 0.50
+    "fuel": 0.40
 }
 
 # reminder that base days per turn is the scenario default
