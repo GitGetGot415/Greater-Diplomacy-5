@@ -118,6 +118,8 @@
   "FACTION_DISBANDED": ["It is a shame to see our alliance broken.", "So the pact is dust. A waste."],
   "KICKED_FROM_FACTION": ["We will not forget being expelled from the alliance.",
                           "Thrown out like baggage. Noted."],
+  "FACTION_LEADERSHIP_TAKEN": ["The pact needs a stronger hand at its head. It will be ours.",
+                               "We carry the weight of this alliance. We will carry its name as well."],
   "ACCEPTED_HELP": ["We gratefully accept your assistance in our conflicts.",
                     "Your help is welcome and will be repaid."],
   "ANSWERED_CALL": ["We will answer your call to arms.", "We are coming. Hold."],

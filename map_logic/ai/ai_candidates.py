@@ -156,6 +156,7 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     that ask rather than against its own bank balance.
     """
     from map_logic.ai import ai_personality, ai_unit_eval
+    from map_logic.diplomacy import deal as deal_mod
 
     econ_a = world.economies.get(nation, {})
     econ_b = world.economies.get(partner, {})
@@ -233,6 +234,14 @@ def resource_offer(world, nation, partner, scenario_settings=None):
         take_amount = _negotiators_number(take_amount * spare / give_amount,
                                           ceiling=take_amount)
         give_amount = _negotiators_number(spare, ceiling=spare)
+
+    # Neither half may exceed one turn of the payer's output. `surplus` above
+    # counts a slice of the stockpile as well as the income, so a nation sitting
+    # on a hoard could ask for -- or promise -- more than either side is able to
+    # hand over in a turn, and the answer would be priced on a number that could
+    # never be paid. Same ceiling the player's offers get; see deal.resource_cap.
+    give_amount = deal_mod.capped(give_amount, nation, give, world.economies)
+    take_amount = deal_mod.capped(take_amount, partner, take, world.economies)
 
     # The floor is a value, not a count: 250 fuel and 250 materials are nothing
     # like the same offer, and the old unit floor quietly barred fuel-rich

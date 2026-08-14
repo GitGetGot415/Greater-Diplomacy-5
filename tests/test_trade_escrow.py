@@ -101,18 +101,31 @@ class PlayerTradeEscrowTests(unittest.TestCase):
         self.game.propose("A", "B", "TRADE")   # re-queueing the same action undoes it
         self.assertEqual(self.stock("A"), (1000, 1000))
 
-    def test_a_promise_larger_than_the_treasury_escrows_only_what_is_there(self):
+    def test_a_promise_larger_than_the_treasury_is_a_debt(self):
+        """It used to escrow only what was there, which made the number in the
+        box free: promise anything, be priced on it, pay what you happen to have.
+        What a nation may promise is capped at its income instead, and what it
+        promises it owes."""
         self.game.nation_data["A"]["materials"] = 120
         self.game.propose("A", "B", "TRADE")   # clear the draft from setUp
         self.game.propose("A", "B", "TRADE", parameters=dict(OFFER))
 
         self.game.run_turn()
-        self.assertEqual(self.game.nation_data["A"]["materials"], 0)
+        self.assertEqual(self.game.nation_data["A"]["materials"], -180)
 
         self.game.answer("B", "A", diplomacy_logic.RESPONSE_REJECT, "TRADE")
         self.game.run_turn()
         self.assertEqual(self.game.nation_data["A"]["materials"], 120,
                          "refunding the promise rather than the holding would mint")
+
+    def test_a_promise_past_the_income_ceiling_is_trimmed_to_it(self):
+        self.game.set_income("A", materials=200)
+        self.game.propose("A", "B", "TRADE")   # clear the draft from setUp
+        self.game.propose("A", "B", "TRADE",
+                          parameters={"give_materials": 99999999, "take_fuel": 10})
+
+        self.game.run_turn()
+        self.assertEqual(self.game.nation_data["A"]["materials"], 800)
 
 
 if __name__ == "__main__":

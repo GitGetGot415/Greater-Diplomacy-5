@@ -483,6 +483,20 @@ DEAL_VALUE_MILITARY_ACCESS = 200.0
 DEAL_VALUE_FACTION_EXIT = 800.0
 DEAL_VALUE_WAR_EXIT = 500.0
 
+#: How many turns of raw output one deal may move, per resource and per payer.
+#:
+#: The number in the box used to mean nothing. Both halves of paying clamped to
+#: the payer's stockpile -- escrow when the offer went out, delivery when it was
+#: signed -- so a promise of 99,999,999 materials was priced at 99,999,999 and
+#: collected at whatever was in the bank. Anything could be bought with money
+#: that did not exist.
+#:
+#: A term is now capped at what a nation actually produces, and collected in
+#: full: see deal.resource_cap and the payment loop in deal_effects.execute.
+#: One turn also bounds the debt that collection can leave behind, because the
+#: income arriving next turn is the same figure that set the ceiling.
+DEAL_MAX_RESOURCE_TURNS = 1
+
 # ==========================================
 # WAR SCORE (LEVERAGE)
 # ==========================================
@@ -1310,6 +1324,7 @@ AI_SCORE_CALL_TO_ARMS = 0.50
 AI_SCORE_JOIN_WARS = 0.45
 AI_SCORE_CEASEFIRE_UNREACHABLE = 0.80   # a war we physically cannot fight is pure cost
 AI_SCORE_TRADE = 0.40                   # useful, rarely urgent
+AI_SCORE_CLAIM_LEADERSHIP = 0.70        # six turns in the making; do not sit on it
 
 # How badly a war must be going before the AI sues for peace. Below the bar at
 # which it would accept a ceasefire offered to it: asking costs standing, so it
@@ -1318,6 +1333,26 @@ AI_PEACE_OFFER_THRESHOLD = 0.62
 TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
 AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
 MIN_TURNS_FOR_CEASEFIRE = 2 # Turns that must occur before the ai allows ceasefires
+
+# ==========================================
+# FACTION LEADERSHIP
+# ==========================================
+# Who runs a faction was decided once, by whoever founded it, and could never
+# change: a member that grew into the strongest power in its own bloc still had
+# to ask its founder's permission to negotiate, and the founder still spoke for
+# everyone at the peace table. Leadership is now something a member can take.
+#
+# The two numbers are what stop it being a revolving door. A challenger has to
+# outweigh the leader by half again -- not merely edge ahead, which two
+# comparable powers do to each other constantly as units are built and lost --
+# and it has to hold that lead for six consecutive turns, with the count reset
+# by the first turn it does not. See map_logic/diplomacy/faction_leadership.py.
+FACTION_CHALLENGE_MARGIN = 1.5
+FACTION_CHALLENGE_TURNS = 6
+
+#: How ambitious an AI has to be to take the chair when it could. A content
+#: nation stays a follower even at the head of the strongest army in the bloc.
+AI_CLAIM_LEADERSHIP_AMBITION = 0.45
 
 # Distraction Weight
 # How much the AI values the strength of their target's current enemies. 
@@ -1545,6 +1580,7 @@ UNILATERAL_ACTIONS = [
     "KICK_FACTION_MEMBER",
     "LEAVE_FACTION",
     "DISBAND_FACTION",
+    "CLAIM_FACTION_LEADERSHIP",
     "JUSTIFY_WARGOAL",
     "ANNEX_PUPPET",
     "RELEASE_PUPPET",
@@ -1601,6 +1637,10 @@ MESSAGE_CATEGORIES = {
     "LEAVE_FACTION": "FACTION",
     "DISBAND_FACTION": "FACTION",
     "KICK_FACTION_MEMBER": "FACTION",
+    # Its own label rather than FACTION: every other row in that group is
+    # somebody joining or leaving, and this one is the bloc changing hands over
+    # the head of the nation that founded it.
+    "CLAIM_FACTION_LEADERSHIP": "LEADERSHIP",
 
     "REQ_MILITARY_ACCESS": "ACCESS",
     "CANCEL_MILITARY_ACCESS": "ACCESS",
@@ -1645,6 +1685,11 @@ REL_MOD_COMMON_ENEMY = 20
 # master is fonder of the puppet it installed than the puppet is of the master.
 REL_MOD_MASTER_OF = 50   # our view of a nation we puppeted
 REL_MOD_PUPPET_OF = 20   # our view of the nation that puppeted us
+
+#: How a deposed faction leader regards the member that took the chair. One-way
+#: on purpose, unlike walking out of a faction: the rest of the bloc did not
+#: lose anything, and did not have a say either.
+REL_MOD_DEPOSED = -40
 
 REL_MOD_PER_CLAIM = -5
 REL_MOD_MAX_CLAIM_PENALTY = -50

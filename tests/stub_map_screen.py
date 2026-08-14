@@ -65,6 +65,14 @@ class StubMapScreen:
         self.political_map = None
         self.id_map = None
 
+        # What each nation produces a turn, which is what caps a treaty's
+        # payments (deal.resource_cap). A stub nation owns one province and
+        # would really earn about a hundred materials, which would put every
+        # round number a test wants to move over the ceiling; the default here
+        # is deliberately generous so that only a test which sets it low is
+        # testing the cap. deal_effects.economies_for reads this attribute.
+        self.economies = {}
+
         self._next_prov_id = 1
         for name in nations:
             self._add_nation(name)
@@ -90,8 +98,15 @@ class StubMapScreen:
             "materials": 1000,
             "fuel": 1000,
         }
+        self.set_income(name)
         # One province each, so get_living_nations sees everyone as alive
         self.add_province(name, cores=[name])
+
+    def set_income(self, nation, materials=5000, fuel=5000, manpower=5000):
+        """What `nation` produces a turn, before upkeep. See `economies`."""
+        self.economies[nation] = {
+            "total_inc": {"materials": materials, "fuel": fuel, "manpower": manpower}
+        }
 
     def add_province(self, owner, cores=None, **fields):
         """Another tile on the map. Returns it, so a test can dirty it further."""

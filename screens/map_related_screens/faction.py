@@ -4,6 +4,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
+from map_logic.diplomacy import faction_leadership
 from data import queries
 
 class Faction_Screen(GameState):
@@ -69,6 +70,50 @@ class Faction_Screen(GameState):
         if is_leader and not self.is_renaming:
             btn_rename = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium", "blue", "Rename Faction", self.start_rename)
             self.elements.append(btn_rename)
+
+        # 5. Claim Leadership Button
+        #
+        # Shown to every member rather than only to one already qualified, so a
+        # player can find out that the chair is takeable at all -- and read how
+        # far off they are. A disabled button carrying its own reason is the
+        # idiom the two above already use.
+        if not is_leader:
+            self.elements.append(self._claim_button(pending_action))
+
+    def _claim_button(self, pending_action):
+        """Take the chair, or the reason you cannot yet.
+
+        The wait is stated as a fact about the world -- "stronger for 3 of 6
+        turns" -- rather than counted down silently, because a mechanic whose
+        only visible symptom is a button that turns on one day is one nobody
+        finds.
+        """
+        player = self.map_screen.player_country
+        queued = pending_action == "CLAIM_FACTION_LEADERSHIP"
+        text = "Undo Claim" if queued else "Claim Leadership"
+        btn = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium",
+                     "red" if queued else "orange", text, self.claim_leadership)
+
+        if queued:
+            return btn
+
+        state = faction_leadership.standing(self.map_screen, player)
+        if state is None:
+            btn.apply_state(enabled=False, text="Puppets Cannot Claim")
+            return btn
+
+        held, needed, ahead = state
+        if held >= needed:
+            return btn
+        if not ahead:
+            btn.apply_state(enabled=False, text=f"Need {c.FACTION_CHALLENGE_MARGIN}x The Leader")
+        else:
+            btn.apply_state(enabled=False, text=f"Stronger For {held} Of {needed} Turns")
+        return btn
+
+    def claim_leadership(self):
+        self.queue_diplomacy_action(self.map_screen.player_country,
+                                    "CLAIM_FACTION_LEADERSHIP")
 
     def leave_faction(self):
         self.queue_diplomacy_action(self.map_screen.player_country, "LEAVE_FACTION")

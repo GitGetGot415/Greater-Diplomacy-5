@@ -48,6 +48,9 @@ def leave_faction(nation_data, leaver):
 
     nation_data[leaver]["faction"] = ""
     nation_data[leaver]["is_faction_leader"] = False
+    # Whatever claim it had built up on the leadership goes with it. Walking out
+    # is not a way to bank six turns of pressure against a bloc you might rejoin.
+    nation_data[leaver].pop("faction_pressure", None)
     pull_puppets_out_of_faction(leaver, nation_data)
     return fac
 
@@ -114,6 +117,7 @@ def finalize_disband_faction(nation_data, leader):
         if d.get("faction") == fac:
             d["faction"] = ""
             d["is_faction_leader"] = False
+            d.pop("faction_pressure", None)
 
     pull_puppets_out_of_faction(leader, nation_data)
 

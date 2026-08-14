@@ -272,6 +272,9 @@ DEFAULT_ANNOUNCEMENTS = {
     "DISBAND_FACTION": ("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
     "KICK_FACTION_MEMBER": ("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
     "LEAVE_FACTION": ("FACTION_ABANDONED", "We will not forget your abandonment."),
+    "CLAIM_FACTION_LEADERSHIP": ("FACTION_LEADERSHIP_TAKEN",
+                                 "The pact needs a stronger hand at its head. "
+                                 "It will be ours."),
 }
 
 

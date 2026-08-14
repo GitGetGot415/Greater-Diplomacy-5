@@ -419,6 +419,23 @@ def ratifies(world, member, deal, map_data, scenario_settings=None):
     return appetite >= loss * c.AI_RATIFY_STRICTNESS
 
 
+def _goods_flow(world, nation, sender, receive, give, prices, scenario_settings=None):
+    """(what the goods on the table are worth to us, what ours are worth), gross.
+
+    Kept as two figures rather than one net. Netting is right for the decision
+    and wrong for saying what is happening: a nation being offered 424 fuel for
+    25,770 materials comes out negative overall, and reporting that as "they are
+    being offered nothing for it" is exactly the class of sentence this round
+    exists to remove.
+    """
+    person = traits(world, nation, scenario_settings)
+    gained = sum(prices.get(res, 1.0) * float(amount) for res, amount in receive.items())
+    lost = sum(prices.get(res, 1.0) * float(amount) for res, amount in give.items())
+
+    goodwill = (world.relation(nation, sender) / 200.0) * person.get("trust", 0.5)
+    return gained, lost * (1.0 - c.AI_TRADE_GOODWILL_DISCOUNT * goodwill)
+
+
 def trade_appetite(world, nation, sender, receive, give, prices, scenario_settings=None):
     """What this nation makes of a trade, as a net value in its own price terms.
 
@@ -427,13 +444,113 @@ def trade_appetite(world, nation, sender, receive, give, prices, scenario_settin
     it likes the other side -- a friend gets a better rate, an enemy does not
     get one at all. The old rule accepted a trade only if the AI gave literally
     nothing, which is why no AI ever agreed to a deal a player would call fair.
-    """
-    person = traits(world, nation, scenario_settings)
-    gained = sum(prices.get(res, 1.0) * float(amount) for res, amount in receive.items())
-    lost = sum(prices.get(res, 1.0) * float(amount) for res, amount in give.items())
 
-    goodwill = (world.relation(nation, sender) / 200.0) * person.get("trust", 0.5)
-    return gained - lost * (1.0 - c.AI_TRADE_GOODWILL_DISCOUNT * goodwill)
+    Goods only. Territory goes through trade_balance, which is what actually
+    weighs a trade now; a friend gets a better rate on fuel and nobody gets a
+    discount on a province.
+    """
+    gained, lost = _goods_flow(world, nation, sender, receive, give, prices,
+                               scenario_settings)
+    return gained - lost
+
+
+def _trade_prices(world, nation):
+    """What this nation's own scarcity says its goods are worth."""
+    from map_logic.ai import ai_unit_eval
+
+    return ai_unit_eval.resource_prices(world.economies.get(nation, {}),
+                                        world.nation_data.get(nation, {}))
+
+
+def _as_goods(deal_value, prices):
+    """A deal-table value in one nation's own price terms.
+
+    DEAL_VALUE_RESOURCE_PRICES is the game's exchange rate between ground and
+    goods -- set so that a bare province costs about 12,500 materials. Dividing
+    by it turns a province back into the pile of materials it is priced as,
+    which this nation can then value by its own scarcity alongside everything
+    else on the table. Two pricing systems meet here and neither is discarded.
+    """
+    per_material = c.DEAL_VALUE_RESOURCE_PRICES.get("materials") or 0.02
+    return (deal_value / per_material) * prices.get("materials", 1.0)
+
+
+def trade_balance(world, nation, sender, agreement, scenario_settings=None,
+                  prices=None):
+    """(what this nation gains, what it gives up) for a trade, both >= 0.
+
+    In the nation's own currency, with land and goods in the same units, so the
+    two figures can be compared and shown. trade_verdict is written on top of
+    this and the builder screen reads it directly, which is the point: the
+    balance line the player is shown and the number the engine decides on are
+    one computation.
+
+    Land was simply absent before. resource_flows walks the clause list and
+    skips everything that is not RESOURCES, so a TILES term was worth nothing at
+    all to a trade -- which is how the whole of Bulgaria was bought for one
+    material, and why the AI's own explanation of it read "they are asking
+    nothing of us": it was telling the truth about what it could see.
+    """
+    from map_logic.diplomacy import deal as deal_mod
+
+    map_data = getattr(world, "map_data", {}) or {}
+    nation_data = world.nation_data
+    prices = _trade_prices(world, nation) if prices is None else prices
+
+    receive, give = deal_mod.resource_flows(agreement, nation)
+    gained, lost = _goods_flow(world, nation, sender, receive, give, prices,
+                               scenario_settings)
+
+    # Only the land columns of the ledger: the other two are the same resource
+    # clauses _goods_flow has already priced, and at the peace table's flat rate
+    # rather than this nation's own.
+    book = deal_mod.ledger(agreement, nation, map_data, nation_data)
+    gained += _as_goods(book["got_land"], prices)
+    lost += _as_goods(book["given_land"], prices)
+
+    return max(0.0, gained), max(0.0, lost)
+
+
+def _trade_reason(gained, lost, home_ground):
+    """One sentence saying what is actually on the table, as a voice template.
+
+    The line it replaces said "they are asking nothing of {us}" whenever the
+    other side's resource column was empty, which for a land-for-cash offer was
+    always -- so a player buying a country read "they are asking nothing of
+    them" under the accept button.
+    """
+    if home_ground:
+        count = len(home_ground)
+        part = ("that province is part of it" if count == 1
+                else f"{count} of those provinces are part of it")
+        return f"{{our}} own country is not for sale, and {part}"
+    if gained <= 0 and lost <= 0:
+        return "there is nothing here to agree to"
+    if lost <= 0:
+        return "this costs {us} nothing"
+    if gained <= 0:
+        return "{we} would be giving this away for nothing"
+    if gained >= lost:
+        return (f"what is offered is worth {times_phrase(gained / lost)} "
+                f"what {{we}} would give up")
+    return (f"{{we}} would be giving up {times_phrase(lost / gained)} "
+            f"what is offered for it")
+
+
+def times_phrase(ratio):
+    """A multiplier as somebody would say it out loud.
+
+    Both ends are named rather than printed, because a lopsided trade produces
+    lopsided numbers: 424 fuel against a province and 25,770 materials is 0.006,
+    and "about 0.0x what it would give up" reads as a broken screen rather than
+    as a terrible offer. Public so the builder's balance line says it the same
+    way the verdict under it does.
+    """
+    if ratio >= 10:
+        return "many times"
+    if ratio < 0.1:
+        return "a fraction of"
+    return "about " + f"{ratio:.1f}x".replace(".0x", "x")
 
 
 def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
@@ -444,8 +561,13 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
     at all. The screen showed nothing whatsoever for a trade, and the engine's
     own answer was a bare `net > 0`, which is a coin-flip presented as a fact
     when the net is one material either way.
+
+    Two things are refused outright rather than priced. Being handed over as a
+    subject is not this nation's to agree to; and its own core ground is not for
+    sale at any price, which is the one rule keeping a rich power from buying a
+    poor one province by province in peacetime. Neither applies to a peace
+    treaty, where losing the country is what losing means.
     """
-    from map_logic.ai import ai_unit_eval
     from map_logic.diplomacy import deal as deal_mod
 
     if not deal_mod.is_deal(agreement):
@@ -454,23 +576,23 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
     if deal_mod.vassalizes(agreement, nation):
         return _verdict(False, _REFUSED_FLAT, "the terms are not {ours} to agree to")
 
-    receive, give = deal_mod.resource_flows(agreement, nation)
-    prices = ai_unit_eval.resource_prices(world.economies.get(nation, {}),
-                                          world.nation_data.get(nation, {}))
-    net = trade_appetite(world, nation, sender, receive, give, prices, scenario_settings)
+    map_data = getattr(world, "map_data", {}) or {}
+    home_ground = deal_mod.homeland_losses(agreement, nation, map_data,
+                                           world.nation_data)
+    if home_ground:
+        return _verdict(False, _REFUSED_FLAT, _trade_reason(0.0, 0.0, home_ground))
+
+    prices = _trade_prices(world, nation)
+    gained, lost = trade_balance(world, nation, sender, agreement,
+                                 scenario_settings, prices)
+    net = gained - lost
 
     # Scaled against the size of the exchange, so "a hundred materials to the
     # good" reads as decisive on a small trade and marginal on a huge one.
     scale = max(1.0, abs(net) + prices.get("materials", 1.0) * c.AI_TRADE_MIN_AMOUNT)
     slack = max(-1.0, min(1.0, net / scale))
 
-    if not any(give.values()):
-        reason = "they are asking nothing of {us}"
-    elif net > 0:
-        reason = "the exchange favours {us}"
-    else:
-        reason = "{we} give up more than {we} gain"
-    return _verdict(net > 0, slack, reason)
+    return _verdict(net > 0, slack, _trade_reason(gained, lost, home_ground))
 
 
 def alliance_appetite(world, nation, other, scenario_settings=None):

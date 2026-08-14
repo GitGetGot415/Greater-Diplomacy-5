@@ -78,6 +78,15 @@ class CategoryTests(unittest.TestCase):
         self.assertNotEqual(dm.message_category({"action": "CALL_TO_ARMS"}),
                             dm.message_category({"action": "JOIN_WARS"}))
 
+    def test_a_faction_changing_hands_is_not_filed_as_ordinary_faction_news(self):
+        """Every other row in the FACTION group is somebody joining or leaving.
+        This one is the bloc itself changing hands over the head of the nation
+        that founded it, which is not the same news at all."""
+        self.assertNotEqual(
+            dm.message_category({"action": "CLAIM_FACTION_LEADERSHIP"}), "FACTION")
+        self.assertNotEqual(
+            dm.message_category({"action": "CLAIM_FACTION_LEADERSHIP"}), "DIPLOMACY")
+
 
 
 class SendTests(unittest.TestCase):
