@@ -1,3 +1,7 @@
+hanskolmer suggestions:
+- hoi4 esque ordering system so moving units is easier
+- hanskolmer art
+
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
 - if no claims, add option to generate claims
@@ -14,8 +18,6 @@
 - backrooms in gd5??????
 
 - edit construction turns also allows for the editing of how much said unit costs to produce?
-- diplomatic acceptance seems to be overwritten by another request (so if you send a faction join request to a country, but they send a request for millitary access, that completely overrides your request for some reason)
-- modloader thing but in game so you don't have to download the github
 
 for historical scenarios, ability to add in settings for every scenario in there, such as:
 - name of a country at what specific time
@@ -23,10 +25,6 @@ for historical scenarios, ability to add in settings for every scenario in there
 - set a map for every scenario and a resource map for such 
 
 - ability to swap between a turn based game to a real time one, like paradox games (WARNING: VERY AMBITIOUS)
-
-RESEARCH STUFF:
-- button to just set all scenarios to have default research for the specific era they're in
-- ability to add in a thing so that if research gets updated, then the map just readjusts to starting research
 
 - COMPLETE REWORK OF THE ORDERS SCREEN
 - instead of having to click a tile and then click the units, make it work like hoi4
@@ -85,7 +83,6 @@ units out on a health threshold, AI_ROTATE_HEALTH_FRACTION.)
 
 - figure out how to make scenarios take up less space
 
-- peace screen, claims screen, war screen, why aren't those in the screens folder?
 - release a country and then play as them
 - if has only puppets maybe don't form a faction?
 
@@ -99,9 +96,8 @@ CUSTOMIZATION!!!
 - temporarially rent out factories to other countries via trade?
 - ADD HER FLAGS
 
-- add territory trade offer mechanic?
-- you can offer territories to give / ask for
-- ai will always reject unless they're an integrated puppet
+- make it so that integrated puppets always accept any trade offer you make
+- maybe give trades with them a custom ui
 
 - production screen should always show oil and defense
 - and then organize it like a table???
@@ -149,8 +145,6 @@ idk:
 Vague content ideas NOT THAT IMPORTANT BUT COULD PROBABLY BE LOOKED AT:
 - if ai has integrated puppets automatically siphon as many resources off them as possible???
 
-- opinion modifier should maybe do more than just affect ai attitudes? (more likely to declare war, less likely to accept peace for example?)
-
 - focus trees????? (created with scripted events?)
 
 for random scenarios:
@@ -163,7 +157,6 @@ so there could be 1 slider for minimum and 1 slider for maximum
 
 - allow for ai prompts to be edited from settings
 
-- territory trade mechanics (offer x territory for y thing)
 - ai should be able to sign non-agression pacts that prevent wars
 
 - destroyers, dreadnoughts, battleships, and aircraft carriers should be able to give a bonus to invasions (perhaps a % increase to damage or something)
@@ -182,15 +175,7 @@ so there could be 1 slider for minimum and 1 slider for maximum
 - refreshing data for each country should edit their metadata so it only shows countries that exist
 - add in a way to put in custom unit_data.json
 
-- when in non-ai mode (ie using fallbacks) maybe make there multiple things that can be said in certain circumstances
-
 - add in a maximum amount of resources a country can store (say 100k manpower and materials and fuel)
-
-- peacedeals with factions should include all faction members claims and your faction members claims
-- however, only the leader of a faction should be able to make a deal with the leader of another faction
-- if you're not the leader of a faction and try to negotiate a peace it should say "nuh uh"
-
-- allow for countries to assume leadership of a faction
 
 - countries can choose to just give up the claims immediately to avoid a war (surrender)
 
