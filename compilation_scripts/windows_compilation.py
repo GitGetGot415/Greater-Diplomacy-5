@@ -20,8 +20,15 @@ def main():
 
     # 1. Run pyinstaller
     print("Running PyInstaller...")
-    cmd = 'pyinstaller --clean --onefile --add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py'
-    
+    # --collect-submodules screens.map_related_screens: screens/menu_screens/map.py's
+    # sub_screen_opener() loads screens (e.g. automation_screen, declare_independence)
+    # via importlib.import_module(module_path) with module_path as a runtime string, so
+    # PyInstaller's static analysis never sees the import and silently drops the module
+    # from the build -- it only breaks in the compiled exe (ModuleNotFoundError), never
+    # when running from source. This flag bundles the whole package so any future
+    # dynamically-opened screen in this family is covered without editing this script again.
+    cmd = 'pyinstaller --clean --onefile --collect-submodules screens.map_related_screens --add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py'
+
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:
         print("PyInstaller failed.")
