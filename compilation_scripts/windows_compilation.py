@@ -20,14 +20,23 @@ def main():
 
     # 1. Run pyinstaller
     print("Running PyInstaller...")
-    # --collect-submodules screens.map_related_screens: screens/menu_screens/map.py's
-    # sub_screen_opener() loads screens (e.g. automation_screen, declare_independence)
-    # via importlib.import_module(module_path) with module_path as a runtime string, so
-    # PyInstaller's static analysis never sees the import and silently drops the module
-    # from the build -- it only breaks in the compiled exe (ModuleNotFoundError), never
-    # when running from source. This flag bundles the whole package so any future
-    # dynamically-opened screen in this family is covered without editing this script again.
-    cmd = 'pyinstaller --clean --onefile --collect-submodules screens.map_related_screens --add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py'
+    # --hidden-import (one per module) below, not --collect-submodules: screens/menu_screens/map.py's
+    # sub_screen_opener() loads screens (automation_screen, declare_independence) via
+    # importlib.import_module(module_path) with module_path as a runtime string, so PyInstaller's
+    # static analysis never sees the import and silently drops the module from the build -- it only
+    # breaks in the compiled exe (ModuleNotFoundError), never when running from source.
+    # --collect-submodules screens.map_related_screens looks like the fix and does list both modules
+    # among the names it discovers, but verified empirically (PyInstaller 6.20, three separate clean
+    # builds) that they still get silently dropped before the final archive -- something in how
+    # collect-submodules-derived hidden imports get merged into the module graph loses exactly these
+    # two, while every statically-imported sibling in the same package survives. Passing each module
+    # as its own literal --hidden-import does not have that problem and was confirmed to land both
+    # modules in the built archive. If a new screen is ever added via sub_screen_opener(), it needs
+    # its own --hidden-import line here too.
+    cmd = ('pyinstaller --clean --onefile '
+           '--hidden-import screens.map_related_screens.automation_screen '
+           '--hidden-import screens.map_related_screens.declare_independence '
+           '--add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py')
 
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:
