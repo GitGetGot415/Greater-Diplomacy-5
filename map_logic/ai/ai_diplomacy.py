@@ -367,6 +367,15 @@ PROACTIVE_PROPOSALS = {
     "TRADE": ProactiveProposal(
         "PROACTIVE_TRADE", "We propose an exchange to the benefit of us both.",
         None, True),
+    # Self-targeted, like LEAVE_FACTION and DISBAND_FACTION -- there is no one
+    # to negotiate with, so this only exists so _queue_proactive_proposal has
+    # a spec to look up. Its fallback matches the ANNOUNCEMENTS entry in
+    # diplomacy_messages.py so a claim reads the same whether the AI or the
+    # player made it.
+    "CLAIM_FACTION_LEADERSHIP": ProactiveProposal(
+        "PROACTIVE_CLAIM_LEADERSHIP",
+        "The pact needs a stronger hand at its head. It will be ours.",
+        None, False),
 }
 
 
