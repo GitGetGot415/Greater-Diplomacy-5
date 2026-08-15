@@ -614,6 +614,56 @@ def _cache_box(key, build):
     return box
 
 
+#: The border + colourised symbol art for one (unit type, nation colour,
+#: inverted) combination, before the per-turn unit count is drawn on top.
+#: Unlike UNIT_BOXES this key excludes `count` and `size` -- a stack's count
+#: changes almost every turn on an active front, which used to invalidate the
+#: whole box (colorize the symbol, draw the border, fit it to width) even
+#: though none of that actually depends on how many units are in the stack.
+#: This stays a near-permanent cache instead of being rebuilt every turn.
+_BOX_TEMPLATES = {}
+_BOX_TEMPLATE_CACHE_LIMIT = 500
+
+
+def _get_box_template(symbol_name, border_color, inverted):
+    key = (symbol_name, tuple(border_color), inverted)
+    cached = _BOX_TEMPLATES.get(key)
+    if cached is not None:
+        return cached
+
+    internal_w = c.UNIT_BOX_WIDTH
+    internal_h = c.UNIT_BOX_HEIGHT
+    box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
+
+    if inverted:
+        box_surf.fill((255, 255, 255))
+        pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
+        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
+    else:
+        box_surf.fill(c.UNIT_BOX_BG_COLOR)
+        pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
+        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color)
+
+    text_x = 10
+    if symbol:
+        # Constrain the symbol itself if it's too wide
+        max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
+        if symbol.get_width() > max_sym_w:
+            ratio = max_sym_w / symbol.get_width()
+            new_h = max(1, int(symbol.get_height() * ratio))
+            symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
+
+        sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
+        box_surf.blit(symbol, sym_rect)
+        text_x = sym_rect.right + 8
+
+    if len(_BOX_TEMPLATES) >= _BOX_TEMPLATE_CACHE_LIMIT:
+        _BOX_TEMPLATES.clear()
+    result = (box_surf, text_x)
+    _BOX_TEMPLATES[key] = result
+    return result
+
+
 def unit_box(symbol_name, border_color, count, inverted, size):
     """One nation's box: its colour, the unit it leads with, and how many.
 
@@ -622,35 +672,17 @@ def unit_box(symbol_name, border_color, count, inverted, size):
     player's own division, drawn black on white so they can find themselves.
     """
     def build():
-        internal_w = c.UNIT_BOX_WIDTH
         internal_h = c.UNIT_BOX_HEIGHT
-        box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
+        internal_w = c.UNIT_BOX_WIDTH
+        template, text_x = _get_box_template(symbol_name, border_color, inverted)
+        box_surf = template.copy()
 
         if inverted:
-            box_surf.fill((255, 255, 255))
-            pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
-            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
             text_color = (0, 0, 0)
             shadow_color = (255, 255, 255)
         else:
-            box_surf.fill(c.UNIT_BOX_BG_COLOR)
-            pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
-            symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color)
             text_color = c.UNIT_BOX_TEXT_COLOR
             shadow_color = (0, 0, 0)
-
-        text_x = 10
-        if symbol:
-            # Constrain the symbol itself if it's too wide
-            max_sym_w = int(internal_w * 0.6) # Limit symbol to 60% of box width
-            if symbol.get_width() > max_sym_w:
-                ratio = max_sym_w / symbol.get_width()
-                new_h = max(1, int(symbol.get_height() * ratio))
-                symbol = pygame.transform.smoothscale(symbol, (max_sym_w, new_h))
-
-            sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
-            box_surf.blit(symbol, sym_rect)
-            text_x = sym_rect.right + 8
 
         # Draw Unit Count Text
         font = fonts.get("button")
