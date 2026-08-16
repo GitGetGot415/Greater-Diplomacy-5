@@ -7,7 +7,8 @@
         {"file": "ausrtian_infantry_1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
         {"file": "german_infantry_1914__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]},
         {"file": "british_infantry_1914__gd5.png", "countries": ["United Kingdom", "England"]},
-        {"file": "french_infantry_1914__gd5.png", "countries": ["France"]}
+        {"file": "french_infantry_1914__gd5.png", "countries": ["France"]},
+        {"file": "russian_infantry_1914__gd5.png", "countries": ["Russia"]}
     ],
     "Artillery": [
         {"file": "FH_M.14__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
