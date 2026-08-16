@@ -2,17 +2,24 @@
     "_comment": "Maps a unit name key to the art that draws it. A key can be: an exact tiered name ('Medium Tank III'), an era range ('Infantry 1900-1925'), or a bare family name used as the catch-all for every tier/year that has no more specific entry ('Infantry', 'Artillery'). Anything not covered here falls back to the classic art.",
     "_comment_variants": "A key's value is either one entry or a list of them. Each entry is either a plain filename (applies to whichever country asks) or an object {'file': ..., 'countries': [...]} restricted to those country ids -- the exact strings that key data/json/countries_data.json, e.g. 'Germany', 'German Reich', 'German Empire'. A country matching one of the restricted entries sees that picture; everyone else falls through to the first unrestricted entry for that key, and if there isn't one, to the next fallback rule (e.g. 'Infantry 1900-1925' missing a generic falls back to the bare 'Infantry' entry below) and eventually to classic. See map_logic/rendering/symbol_loader.py for the exact matching and fallback rules.",
 
-    "Infantry": "german_infantry_1_gd5.png",
-    "Infantry 1900-1920": [
+    "Infantry 1910-1925": [
         {"file": "Austrian_infantry_1914__gd5.png", "countries": ["Austria-Hungary", "Austria"]},
         {"file": "german_infantry_1914__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]},
         {"file": "british_infantry_1914__gd5.png", "countries": ["United Kingdom", "England"]},
         {"file": "french_infantry_1914__gd5.png", "countries": ["France"]},
         {"file": "russian_infantry_1914__gd5.png", "countries": ["Russia"]}
     ],
+    "Infantry 1926-1960": [
+        {"file": "german_infantry_1_gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]}
+    ],
+    "Infantry 1961-2010": [
+
+    ],
     "Artillery": [
         {"file": "FH_M.14__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
-        "german_artillery_1.1_gd5.png"
+        {"file": "german_artillery_1.1_gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
     ],
-    "Medium Tank III": "sherm1_gd5.png"
+    "Medium Tank III": [
+        {"file": "sherm1_gd5.png", "countries": ["United States of America"]}
+    ]
 }
