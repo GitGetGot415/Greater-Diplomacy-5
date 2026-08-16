@@ -141,7 +141,7 @@ UNIT_SECTIONS = [
         }),
         UnitFamily("Motorized Infantry Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
-            "speed": const(2), "cost_materials": linear(1000, 10), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(800, 8), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
         UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 101), {
@@ -156,7 +156,7 @@ UNIT_SECTIONS = [
         UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 101), {
             "health": linear(1000, 50), "attack": linear(150, 15),
             "defense": linear(0, 4),
-            "speed": const(2), "cost_materials": linear(4000, 40), "cost_manpower": const(1000),
+            "speed": const(2), "cost_materials": linear(3000, 30), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(3),
         }),
         UnitFamily("Cavalry", roman_suffixes(5), {
