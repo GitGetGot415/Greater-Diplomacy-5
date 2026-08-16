@@ -626,7 +626,7 @@ _BOX_TEMPLATE_CACHE_LIMIT = 500
 
 
 def _get_box_template(symbol_name, border_color, inverted):
-    key = (symbol_name, tuple(border_color), inverted)
+    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE)
     cached = _BOX_TEMPLATES.get(key)
     if cached is not None:
         return cached
@@ -709,7 +709,7 @@ def unit_box(symbol_name, border_color, count, inverted, size):
         # Supersampling/Anti-aliasing final stretch down
         return pygame.transform.smoothscale(box_surf, size)
 
-    return _cache_box((symbol_name, tuple(border_color), count, inverted, size), build)
+    return _cache_box((symbol_name, tuple(border_color), count, inverted, size, c.UNIT_ART_STYLE), build)
 
 
 def unknown_box(size):
