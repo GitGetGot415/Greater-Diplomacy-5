@@ -74,6 +74,14 @@ def build_gallery_rows(style, country=None):
     for the same family: a family collapses to as many rows as it has
     distinct pictures *for that country*, so a family with nation-specific
     eras only splits into extra rows for the nations that have them.
+
+    A non-classic style only lists what it actually draws differently: a run
+    that resolves all the way through to classic (nothing in `style` covers
+    it, for this country or any other) is dropped rather than shown as a
+    picture the style never contributes. Picking "Classic" itself still lists
+    everything, since there classic *is* the style being browsed. A family
+    with nothing surviving loses its header too, so switching to a country
+    with one specialised unit shows just that unit, not every empty section.
     """
     unit_library = queries.get_unit_library()
 
@@ -88,16 +96,23 @@ def build_gallery_rows(style, country=None):
     last_group = None
     for base, names in families.items():
         group = family_group[base]
+        resolved = [symbol_loader.resolve(n, style, country) for n in names]
+
+        family_rows = []
+        for res_key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
+            if style != "classic" and res_key is not None and res_key[0] == "classic":
+                continue  # this style contributes nothing here -- not worth a row
+            run_names = [n for n, _r in run]
+            first, last = run_names[0], run_names[-1]
+            family_rows.append({"kind": "unit", "group": group,
+                                "label": _merge_label(first, last), "resolve_name": first})
+
+        if not family_rows:
+            continue  # nothing of this family survived -- its header would be empty
         if group != last_group:
             rows.append({"kind": "header", "label": group})
             last_group = group
-
-        resolved = [symbol_loader.resolve(n, style, country) for n in names]
-        for _key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
-            run_names = [n for n, _r in run]
-            first, last = run_names[0], run_names[-1]
-            rows.append({"kind": "unit", "group": group,
-                        "label": _merge_label(first, last), "resolve_name": first})
+        rows.extend(family_rows)
     return rows
 
 
