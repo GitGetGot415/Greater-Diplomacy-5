@@ -146,6 +146,16 @@ CREDITS_DATA = [
         ]
     },
     {
+        "main_text": "Unit Art: ",
+        "people": [
+            {
+                "link_text": "hanskolmer",
+                "info": "added hanskolmer unit art",
+                "align": "left",
+            },
+        ]
+    },
+    {
         "main_text": "Tools: ",
         "people": [
             {

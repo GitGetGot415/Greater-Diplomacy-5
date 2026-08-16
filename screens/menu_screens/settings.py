@@ -13,12 +13,12 @@ SETTINGS_FULLSCREEN_Y = 40
 SETTINGS_CHECKERBOARD_WATER_Y = 100
 SETTINGS_FPS_TOGGLE_Y = 160
 SETTINGS_DRAG_KEY_Y = 220
-SETTINGS_UNIT_ART_Y = 280
 SETTINGS_PLAYER_SLIDER_Y = 340
 SETTINGS_FPS_SLIDER_Y = 400
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
 SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
+SETTINGS_UNIT_ART_GAP_X = 20
 SETTINGS_KEYBIND_ROWS_Y = (470, 530, 590)
 SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
 SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
@@ -60,7 +60,6 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
-        Button(keybind_x, SETTINGS_UNIT_ART_Y, "medium", "blue", "Unit Art", settings_screen.open_unit_art),
     ]
 
     # --- MASTER AI TOGGLE BUTTON ---
@@ -118,6 +117,8 @@ def render_settings_buttons(settings_screen):
         settings_screen.player_slider,
         settings_screen.fps_slider,
         Button(keybind_x, SETTINGS_RESET_Y, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),
+        Button(keybind_x - c.SIZES["medium"][0] - SETTINGS_UNIT_ART_GAP_X, SETTINGS_RESET_Y, "medium", "blue",
+               "Unit Art", settings_screen.open_unit_art),
     ])
 
     # Rebindable keys: label shows the bound key, or the capture prompt while listening
