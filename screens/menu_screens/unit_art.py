@@ -16,7 +16,6 @@ import data.constants as c
 STYLE_PANE_W = 260
 GALLERY_X = STYLE_PANE_W
 GALLERY_W = c.SCREEN_WIDTH - GALLERY_X
-GALLERY_TOP = 110
 GALLERY_BOTTOM = c.SCREEN_HEIGHT - 20
 
 ROW_H = 100
@@ -28,6 +27,16 @@ ICON_ZOOM = 6.0  # Feeds symbol_loader's zoom*0.5*custom_scale sizing; the icon
                  # 22px) don't come out blurry when scaled back down.
 
 STYLE_LABELS = {"classic": "Classic", "hanskolmer": "Hanskolmer"}
+
+# --- Country tab bar, across the top of the gallery pane ---
+GENERIC_TAB_LABEL = "Generic"
+TABS_TOP = 96
+TAB_H = 32
+TAB_ROW_GAP = 6
+TAB_GAP_X = 8
+TAB_PAD_X = 14
+TAB_FONT = "small"
+GALLERY_TOP_MARGIN = 16
 
 GROUP_ACCENT = {
     "Infantry": (90, 140, 200),
@@ -51,13 +60,20 @@ def _merge_label(first, last):
     return f"{prefix}{first[cut + 1:]}-{last[cut + 1:]}"
 
 
-def build_gallery_rows(style):
+def build_gallery_rows(style, country=None):
     """One row per distinct piece of unit art `style` would actually show
-    (falling back to classic per the same rule symbol_loader.get_symbol
-    uses), in family order, with a header wherever the Infantry/Tanks/Navy
-    group changes. Every unit in data/json/unit_data.json is covered -- a
-    family with a hundred yearly tiers collapses to as many rows as it has
-    distinct pictures, not a hundred near-identical ones.
+    `country` (falling back to classic per the same rule symbol_loader.get_symbol
+    uses -- and within a style, falling back further to whatever art applies
+    to every country when none of it is scoped to this one), in family order,
+    with a header wherever the Infantry/Tanks/Navy group changes.
+
+    `country` is a country id (a key of data/json/countries_data.json, e.g.
+    "Germany") or None for "nobody in particular", which only ever sees
+    unrestricted art -- the same view every country without its own
+    dedicated pictures gets. Two countries can produce different row counts
+    for the same family: a family collapses to as many rows as it has
+    distinct pictures *for that country*, so a family with nation-specific
+    eras only splits into extra rows for the nations that have them.
     """
     unit_library = queries.get_unit_library()
 
@@ -76,7 +92,7 @@ def build_gallery_rows(style):
             rows.append({"kind": "header", "label": group})
             last_group = group
 
-        resolved = [symbol_loader.resolve(n, style) for n in names]
+        resolved = [symbol_loader.resolve(n, style, country) for n in names]
         for _key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
             run_names = [n for n, _r in run]
             first, last = run_names[0], run_names[-1]
@@ -98,13 +114,16 @@ class Unit_Art(GameState):
         self.controller = controller
         self.bg_color = (25, 25, 30)
         self.style = getattr(controller, "unit_art_style", c.UNIT_ART_STYLE)
-        self.rows = build_gallery_rows(self.style)
+        self.country = None  # None = the leftmost "Generic" tab
+        self.available_countries = []
+        self.rows = []
         self._visible_rows = []
+        self.gallery_top = TABS_TOP
         self.scroll_content_rect = None
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
-    #                              STYLE                                 #
+    #                          STYLE / COUNTRY                           #
     # ------------------------------------------------------------------ #
 
     def set_style(self, style):
@@ -115,7 +134,18 @@ class Unit_Art(GameState):
         self.controller.unit_art_style = style
         queries.save_global_settings(self.controller)
 
-        self.rows = build_gallery_rows(style)
+        # A style's set of countries with dedicated art is its own -- the
+        # country picked under the old style may not mean anything (or may
+        # mean something different) under the new one, so fall back to the
+        # generic tab rather than carry a stale selection across.
+        self.country = None
+        self.scroll_y = 0
+        self.refresh_ui()
+
+    def set_country_filter(self, country):
+        if country == self.country:
+            return
+        self.country = country
         self.scroll_y = 0
         self.refresh_ui()
 
@@ -124,6 +154,9 @@ class Unit_Art(GameState):
     # ------------------------------------------------------------------ #
 
     def refresh_ui(self):
+        self.available_countries = symbol_loader.style_countries(self.style)
+        self.rows = build_gallery_rows(self.style, self.country)
+
         self.elements = [make_back_button(self.exit_screen)]
 
         y = 100
@@ -134,11 +167,43 @@ class Unit_Art(GameState):
             self.elements.append(btn)
             y += 60
 
-        self.scroll_content_rect = pygame.Rect(GALLERY_X, GALLERY_TOP, GALLERY_W,
-                                               GALLERY_BOTTOM - GALLERY_TOP)
+        self.elements.extend(self._build_country_tabs())
+
+        self.scroll_content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
+                                               GALLERY_BOTTOM - self.gallery_top)
         self._visible_rows = [(self.rows[i], row_y) for i, row_y in
-                              self.layout_list_rows(len(self.rows), ROW_H, GALLERY_TOP,
+                              self.layout_list_rows(len(self.rows), ROW_H, self.gallery_top,
                                                     cull_bottom=GALLERY_BOTTOM)]
+
+    def _build_country_tabs(self):
+        """The tab row: 'Generic' (country=None) first, then every country id
+        this style has dedicated art for. Always shown, even when a style has
+        no country-specific art of its own, so Generic is always reachable.
+        Wraps onto further rows if the tabs don't fit one line, and grows
+        self.gallery_top to match so the row list below never overlaps them.
+        """
+        font = fonts.get(TAB_FONT)
+        tabs = [(GENERIC_TAB_LABEL, None)] + [(country, country) for country in self.available_countries]
+
+        buttons = []
+        x = GALLERY_X + ROW_PAD_X
+        y = TABS_TOP
+        for label, value in tabs:
+            w = font.size(label)[0] + TAB_PAD_X * 2
+            if x + w > c.SCREEN_WIDTH - 30 and x > GALLERY_X + ROW_PAD_X:
+                x = GALLERY_X + ROW_PAD_X
+                y += TAB_H + TAB_ROW_GAP
+
+            btn = Button(x, y, "asset_folder", "green" if value == self.country else "grey",
+                        label, lambda v=value: self.set_country_filter(v), font_preset=TAB_FONT)
+            btn.rect.width = w
+            btn.rect.height = TAB_H
+            btn.is_selected = (value == self.country)
+            buttons.append(btn)
+            x += w + TAB_GAP_X
+
+        self.gallery_top = y + TAB_H + GALLERY_TOP_MARGIN
+        return buttons
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
@@ -154,8 +219,9 @@ class Unit_Art(GameState):
 
         surface.blit(fonts.get("heading2").render("UNIT ART", True, (255, 255, 255)), (20, 70))
         style_label = STYLE_LABELS.get(self.style, self.style.title())
-        surface.blit(fonts.get("heading2").render(f"{style_label} Preview", True, (255, 255, 255)),
-                    (GALLERY_X + ROW_PAD_X, 70))
+        subject = self.country or GENERIC_TAB_LABEL
+        surface.blit(fonts.get("heading2").render(f"{style_label} Preview - {subject}", True, (255, 255, 255)),
+                    (GALLERY_X + ROW_PAD_X, 55))
 
         clip = surface.get_clip()
         surface.set_clip(self.scroll_content_rect)
@@ -163,7 +229,7 @@ class Unit_Art(GameState):
             self._draw_row(surface, row, y)
         surface.set_clip(clip)
 
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 25, GALLERY_TOP, GALLERY_BOTTOM - GALLERY_TOP)
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 25, self.gallery_top, GALLERY_BOTTOM - self.gallery_top)
 
     def _draw_row(self, surface, row, y):
         x = GALLERY_X + ROW_PAD_X
@@ -180,7 +246,7 @@ class Unit_Art(GameState):
         pygame.draw.rect(surface, (45, 45, 55), icon_box, border_radius=6)
         pygame.draw.rect(surface, accent, icon_box, 2, border_radius=6)
 
-        icon = symbol_loader.get_symbol(row["resolve_name"], ICON_ZOOM, style=self.style)
+        icon = symbol_loader.get_symbol(row["resolve_name"], ICON_ZOOM, style=self.style, country=self.country)
         if icon:
             icon = self._fit_icon(icon, ICON_BOX - 12, ICON_BOX - 12)
             surface.blit(icon, icon.get_rect(center=icon_box.center))

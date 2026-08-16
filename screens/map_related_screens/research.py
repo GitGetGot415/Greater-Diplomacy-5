@@ -543,7 +543,7 @@ class Research_Screen(GameState):
             icon_scale = 4.0 if is_large else 2.0
 
             icon_name = TECH_ICON_OVERRIDES.get(tech_key, display_name)
-            icon = symbol_loader.get_symbol(icon_name, icon_scale)
+            icon = symbol_loader.get_symbol(icon_name, icon_scale, country=self.subject)
             
             node_info = {
                 "tech_key": tech_key,

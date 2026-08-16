@@ -229,7 +229,8 @@ class Orders_Screen(GameState):
                 unit_name = unit["type"]
                 
                 # Fetch the icon using the symbol_loader (zoom 1.5 is a standard starting scale)
-                unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM), "medium_square")
+                unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM,
+                                                                    country=unit.get("owner")), "medium_square")
 
                 # Create the button with the icon and set show_text=False
                 if read_only:

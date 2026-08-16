@@ -9,21 +9,32 @@ SYMBOLS = {}
 COLORED_SYMBOLS = {}
 
 #: Alternate unit-art sets, keyed by style name (e.g. "hanskolmer") -> {unit
-#: name key -> Surface}. Populated from <style folder>/unit_art.json, which
-#: maps the same kind of name keys assets/images files are named after (an
-#: exact tier like "Medium Tank III", an era range like "Infantry 1900-1935",
-#: or a bare family like "Artillery") to an image filename in that folder.
-#: "classic" is never a key here -- it just means "use SYMBOLS".
+#: name key -> [variant, ...]}. Populated from <style folder>/unit_art.json,
+#: which maps the same kind of name keys assets/images files are named after
+#: (an exact tier like "Medium Tank III", an era range like "Infantry
+#: 1900-1935", or a bare family like "Artillery") to one or more variants of
+#: that art. Each variant is {"countries": frozenset|None, "surface": Surface}
+#: -- `countries` is None for art that applies to whoever asks (the manifest's
+#: plain "key": "file.png" form), or the set of country ids (the same strings
+#: keying data/json/countries_data.json, e.g. "Germany") it's restricted to
+#: (the "key": {"file":..., "countries":[...]} form). "classic" is never a key
+#: here -- it just means "use SYMBOLS", which stays a flat name -> Surface map
+#: since it has no country variants.
 STYLE_SYMBOLS = {}
 
-#: What each (style, requested name) resolved to: (source_style, base_name) in
-#: whichever of SYMBOLS/STYLE_SYMBOLS[source_style] actually holds the image,
-#: or None for "no such icon anywhere". The resolution in _resolve_against
-#: tries five fallbacks in turn and two of them walk every loaded symbol
-#: building a regex per key. The map asks for one symbol per unit box per
-#: frame, so at 178 loaded symbols that was 200,000 re.escape calls a second
-#: and 40% of a zoomed-out frame -- the whole of the lag when a player zoomed
-#: out with units showing.
+#: What each (style, country, requested name) resolved to: (source_style,
+#: base_name) in whichever of SYMBOLS/STYLE_SYMBOLS[source_style] actually
+#: holds the image, or None for "no such icon anywhere". `country` is part of
+#: the key because it can change the *outcome*, not just which picture a fixed
+#: outcome points to: a name key with only a Germany-scoped variant is simply
+#: not present in the style for France, and resolution has to fall through to
+#: classic exactly as if the key were missing.
+#:
+#: The resolution in _resolve_against tries five fallbacks in turn and two of
+#: them walk every loaded symbol building a regex per key. The map asks for
+#: one symbol per unit box per frame, so at 178 loaded symbols that was
+#: 200,000 re.escape calls a second and 40% of a zoomed-out frame -- the whole
+#: of the lag when a player zoomed out with units showing.
 RESOLVED_NAMES = {}
 
 #: (base_name, color, alpha, size) -> the scaled surface. Shared with every
@@ -68,14 +79,44 @@ def load_symbols():
     clear_caches()
 
 
+def _load_variant(style, style_dir, name_key, entry):
+    """One art variant for `name_key`. `entry` is either a plain filename
+    string (applies to every country) or {"file": ..., "countries": [...]}
+    (restricted to those country ids -- the same strings that key
+    data/json/countries_data.json, e.g. "Germany", "German Reich"). Returns
+    None on anything unusable so the caller can skip it rather than fail the
+    whole style."""
+    if isinstance(entry, str):
+        filename, countries = entry, None
+    elif isinstance(entry, dict):
+        filename, countries = entry.get("file"), entry.get("countries")
+    else:
+        print(f"Warning: {style} unit art '{name_key}' has an entry that is "
+              f"neither a filename nor an object: {entry!r}")
+        return None
+
+    if not filename:
+        print(f"Warning: {style} unit art '{name_key}' has an entry with no 'file'")
+        return None
+
+    img_path = os.path.join(style_dir, filename)
+    if not os.path.exists(img_path):
+        print(f"Warning: {style} unit art '{name_key}' -> '{filename}' not found in {style_dir}")
+        return None
+
+    surface = pygame.image.load(img_path).convert_alpha()
+    return {"countries": frozenset(countries) if countries else None, "surface": surface}
+
+
 def load_style_symbols(style):
     """(Re)loads one alternate unit-art style from <style>/unit_art.json.
 
     The manifest maps a name key -- the same convention assets/images files
-    are named after (an exact tier, an era range, or a bare family) -- to an
-    image filename in the same folder. Missing folder/manifest/image entries
-    are skipped rather than raised: an incomplete style is meant to fall back
-    to classic per-unit, not refuse to load at all.
+    are named after (an exact tier, an era range, or a bare family) -- to one
+    or more art variants (see _load_variant). A key with several variants
+    picks between them by country at draw time; missing folder/manifest/image
+    entries are skipped rather than raised, since an incomplete style is meant
+    to fall back to classic per-unit, not refuse to load at all.
     """
     style_dir = os.path.join(c.UNIT_ART_STYLES_DIR, style)
     manifest_path = os.path.join(style_dir, "unit_art.json")
@@ -89,17 +130,63 @@ def load_style_symbols(style):
             print(f"Warning: could not read {manifest_path}: {e}")
             manifest = {}
 
-        for name_key, filename in manifest.items():
+        for name_key, value in manifest.items():
             if name_key.startswith("_"):
                 continue  # reserved for comments/metadata, not a unit name
-            img_path = os.path.join(style_dir, filename)
-            if not os.path.exists(img_path):
-                print(f"Warning: {style} unit art '{name_key}' -> '{filename}' not found in {style_dir}")
-                continue
-            symbols[name_key] = pygame.image.load(img_path).convert_alpha()
+            entries = value if isinstance(value, list) else [value]
+            variants = [v for v in (_load_variant(style, style_dir, name_key, e) for e in entries)
+                       if v is not None]
+            if variants:
+                symbols[name_key] = variants
 
     STYLE_SYMBOLS[style] = symbols
     clear_caches()
+
+
+def style_countries(style):
+    """Every country id with at least one dedicated art variant in `style`,
+    sorted. Drives the per-country tabs on the Unit Art settings screen."""
+    countries = set()
+    for variants in STYLE_SYMBOLS.get(style, {}).values():
+        for variant in variants:
+            if variant["countries"]:
+                countries.update(variant["countries"])
+    return sorted(countries)
+
+
+def _pick_variant(variants, country):
+    """The Surface `country` should see among a name key's variants: an exact
+    country match wins, otherwise the first unrestricted (generic) variant.
+
+    Callers that reach this already know (via _table_has) that one of those
+    two cases applies, so the final `variants[0]` is only a safety net."""
+    generic = None
+    for variant in variants:
+        countries = variant["countries"]
+        if countries is None:
+            if generic is None:
+                generic = variant
+        elif country and country in countries:
+            return variant["surface"]
+    return (generic or variants[0])["surface"]
+
+
+def _table_has(table, key, country):
+    """Whether `table[key]` has a picture `country` would actually be shown.
+
+    Classic's SYMBOLS is a flat name -> Surface map with no country variants,
+    so presence there always counts. A style's entry is a variant list, and a
+    key that exists only for other countries must read as absent -- exactly
+    like a key that was never in the manifest -- so resolution falls through
+    to the next fallback (and eventually to classic) instead of showing the
+    wrong nation's art.
+    """
+    if key not in table:
+        return False
+    entry = table[key]
+    if isinstance(entry, list):
+        return any(v["countries"] is None or (country and country in v["countries"]) for v in entry)
+    return True
 
 # --- NEW: NumPy Colorizer ---
 def colorize_red_image(img, new_color):
@@ -140,11 +227,12 @@ def colorize_red_image(img, new_color):
 
     return new_img
 
-def _resolve_against(name, table):
-    """Which key of `table` (a SYMBOLS-shaped dict) `name` should draw, or
-    None if nothing in it matches. Pure name arithmetic against whatever set
-    of loaded symbols it's handed -- classic's SYMBOLS or one style's entry
-    in STYLE_SYMBOLS."""
+def _resolve_against(name, table, country):
+    """Which key of `table` (a SYMBOLS-shaped dict, or one style's entry in
+    STYLE_SYMBOLS) `name` should draw for `country`, or None if nothing in it
+    applies. Pure name arithmetic, except every candidate key is also checked
+    with _table_has so a key that exists only for a different country is
+    treated exactly like a key that isn't there at all."""
     # 1. Resolve base name
     base_name = name
 
@@ -156,7 +244,7 @@ def _resolve_against(name, table):
         base_name = carrier_match.group(1)
 
     # --- NEW: RANGE-BASED IMAGE LOOKUP (Lvl X-Y) ---
-    if base_name not in table:
+    if not _table_has(table, base_name, country):
         lvl_match = re.search(r'^(.*?)\s+Lvl\s+(\d+)$', name, re.IGNORECASE)
         if lvl_match:
             base_type = lvl_match.group(1)
@@ -167,11 +255,11 @@ def _resolve_against(name, table):
                 range_match = re.match(rf'^{re.escape(base_type)}\s+Lvl\s+(\d+)-(\d+)$', sym_key, re.IGNORECASE)
                 if range_match:
                     start_lvl, end_lvl = int(range_match.group(1)), int(range_match.group(2))
-                    if start_lvl <= target_lvl <= end_lvl:
+                    if start_lvl <= target_lvl <= end_lvl and _table_has(table, sym_key, country):
                         base_name = sym_key
                         break
 
-    if base_name not in table:
+    if not _table_has(table, base_name, country):
         # Check if there is a 4-digit year in the name (e.g., "Infantry Type 1860")
         year_match = re.search(r'\b(\d{4})\b', name)
         if year_match:
@@ -189,40 +277,42 @@ def _resolve_against(name, table):
                 if range_match:
                     start_year, end_year = int(range_match.group(1)), int(range_match.group(2))
                     # Check if our requested year falls within the bounds of this image file
-                    if start_year <= year <= end_year:
+                    if start_year <= year <= end_year and _table_has(table, sym_key, country):
                         base_name = sym_key
                         range_found = True
                         break
 
             # If no specific era image matched, fallback to generic base type (e.g., "Infantry")
-            if not range_found and base_type in table:
+            if not range_found and _table_has(table, base_type, country):
                 base_name = base_type
 
     # Original fallback for Roman Numerals (Tanks & Navy)
-    if base_name not in table:
+    if not _table_has(table, base_name, country):
         base_name = re.sub(r'\s+[IVXLCDM]+$', '', name, flags=re.IGNORECASE).strip()
 
     # Fallback for Lvl # (Research, Buildings, etc.)
-    if base_name not in table:
+    if not _table_has(table, base_name, country):
         base_name = re.sub(r'\s+Lvl\s+\d+$', '', name, flags=re.IGNORECASE).strip()
 
-    if base_name not in table:
+    if not _table_has(table, base_name, country):
         return None
 
     return base_name
 
 
-def resolve(name, style=None):
+def resolve(name, style=None, country=None):
     """Public form of _resolve_name, for callers outside this module that need
     to know what a name resolves to (and where from) without drawing it --
     the Unit Art settings screen groups units by shared art this way."""
-    return _resolve_name(name, style)
+    return _resolve_name(name, style, country)
 
 
-def _resolve_name(name, style=None):
-    """Which (source_style, key) pair `name` should draw, or None if nothing
-    matches in `style` or in classic. `style` defaults to the globally active
-    c.UNIT_ART_STYLE.
+def _resolve_name(name, style=None, country=None):
+    """Which (source_style, key) pair `name` should draw for `country`, or
+    None if nothing matches in `style` or in classic. `style` defaults to the
+    globally active c.UNIT_ART_STYLE; `country` (a country id, the same
+    strings that key data/json/countries_data.json) defaults to "nobody in
+    particular", which only ever sees unrestricted art.
 
     The same answer every time for a given set of loaded symbols, which is
     the only reason it is safe to memoise -- see RESOLVED_NAMES for why it is
@@ -230,55 +320,67 @@ def _resolve_name(name, style=None):
     """
     if style is None:
         style = c.UNIT_ART_STYLE
-    key = (style, name)
+    key = (style, country, name)
     if key in RESOLVED_NAMES:
         return RESOLVED_NAMES[key]
-    resolved = _resolve_name_uncached(name, style)
+    resolved = _resolve_name_uncached(name, style, country)
     RESOLVED_NAMES[key] = resolved
     return resolved
 
 
-def _resolve_name_uncached(name, style=None):
+def _resolve_name_uncached(name, style=None, country=None):
     if style is None:
         style = c.UNIT_ART_STYLE
 
     if style != "classic":
         style_table = STYLE_SYMBOLS.get(style)
         if style_table:
-            resolved = _resolve_against(name, style_table)
+            resolved = _resolve_against(name, style_table, country)
             if resolved is not None:
                 return (style, resolved)
 
-    # No style requested, or the style has nothing for this name -- classic
-    # is both the default and the universal fallback.
-    resolved = _resolve_against(name, SYMBOLS)
+    # No style requested, the style has nothing for this name, or nothing in
+    # it applies to this country -- classic is both the default and the
+    # universal fallback (and has no country variants of its own).
+    resolved = _resolve_against(name, SYMBOLS, country)
     if resolved is None:
         return None
     return ("classic", resolved)
 
 
-def get_symbol(name, zoom, color=None, alpha=255, style=None):
+def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     """Returns the scaled icon, or None if no loaded symbol matches the name.
 
     `style` defaults to the globally active c.UNIT_ART_STYLE; anything that
-    style's manifest doesn't cover for this name falls back to classic.
+    style's manifest doesn't cover for this name (or doesn't cover for
+    `country`, a country id) falls back to classic.
 
     The surface is shared with every other caller asking for the same picture at
     the same size, so treat what comes back as read-only. That is what `alpha` is
     for: setting it afterwards would leave the next caller of that name and size
     holding a see-through icon.
     """
-    resolved = _resolve_name(name, style)
+    resolved = _resolve_name(name, style, country)
     if resolved is None:
         return None
     source_style, base_name = resolved
 
-    table = SYMBOLS if source_style == "classic" else STYLE_SYMBOLS[source_style]
-    base_img = table[base_name]
+    if source_style == "classic":
+        base_img = SYMBOLS[base_name]
+    else:
+        base_img = _pick_variant(STYLE_SYMBOLS[source_style][base_name], country)
+
     # Custom per-symbol scale overrides, on top of the global 0.5.
     size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
 
-    key = (source_style, base_name, color, alpha, size)
+    # Keyed on the picture itself (identity-hashed, since Surfaces never
+    # define __eq__) rather than (style, base_name, country): most countries
+    # share the same generic variant of a given key, and keying on the
+    # resolved image lets them share one cache entry instead of minting a
+    # duplicate per country that happens to see identical art.
+    img_key = id(base_img)
+
+    key = (img_key, color, alpha, size)
     scaled = SCALED_SYMBOLS.get(key)
     if scaled is not None:
         return scaled
@@ -286,7 +388,7 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None):
     # Colorize and cache if a color is requested. Kept separate from the scaled
     # cache: colorizing is the expensive half and is worth keeping across zooms.
     if color:
-        colour_key = (source_style, base_name, color)
+        colour_key = (img_key, color)
         if colour_key not in COLORED_SYMBOLS:
             COLORED_SYMBOLS[colour_key] = colorize_red_image(base_img, color)
         target_img = COLORED_SYMBOLS[colour_key]

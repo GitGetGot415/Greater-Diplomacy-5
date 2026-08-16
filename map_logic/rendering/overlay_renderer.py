@@ -625,8 +625,8 @@ _BOX_TEMPLATES = {}
 _BOX_TEMPLATE_CACHE_LIMIT = 500
 
 
-def _get_box_template(symbol_name, border_color, inverted):
-    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE)
+def _get_box_template(symbol_name, border_color, inverted, owner=None):
+    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE, owner)
     cached = _BOX_TEMPLATES.get(key)
     if cached is not None:
         return cached
@@ -638,11 +638,11 @@ def _get_box_template(symbol_name, border_color, inverted):
     if inverted:
         box_surf.fill((255, 255, 255))
         pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
-        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0))
+        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0), country=owner)
     else:
         box_surf.fill(c.UNIT_BOX_BG_COLOR)
         pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
-        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color)
+        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color, country=owner)
 
     text_x = 10
     if symbol:
@@ -664,17 +664,19 @@ def _get_box_template(symbol_name, border_color, inverted):
     return result
 
 
-def unit_box(symbol_name, border_color, count, inverted, size):
+def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
     """One nation's box: its colour, the unit it leads with, and how many.
 
     Drawn at UNIT_BOX_WIDTH x UNIT_BOX_HEIGHT and supersampled down to `size`,
     which is what keeps it crisp at any zoom. `inverted` is the tactical-mode
     player's own division, drawn black on white so they can find themselves.
+    `owner` is the stack's nation id, so a style with nation-specific art
+    (see symbol_loader.py) draws the right one.
     """
     def build():
         internal_h = c.UNIT_BOX_HEIGHT
         internal_w = c.UNIT_BOX_WIDTH
-        template, text_x = _get_box_template(symbol_name, border_color, inverted)
+        template, text_x = _get_box_template(symbol_name, border_color, inverted, owner)
         box_surf = template.copy()
 
         if inverted:
@@ -709,7 +711,7 @@ def unit_box(symbol_name, border_color, count, inverted, size):
         # Supersampling/Anti-aliasing final stretch down
         return pygame.transform.smoothscale(box_surf, size)
 
-    return _cache_box((symbol_name, tuple(border_color), count, inverted, size, c.UNIT_ART_STYLE), build)
+    return _cache_box((symbol_name, tuple(border_color), count, inverted, size, c.UNIT_ART_STYLE, owner), build)
 
 
 def unknown_box(size):
@@ -799,7 +801,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
         is_player_tactical = map_screen.tactical_mode and map_screen.player_unit is best_unit
 
         final_surf = unit_box(symbol_name, owner_color, unit_count,
-                              is_player_tactical, (scaled_w, scaled_h))
+                              is_player_tactical, (scaled_w, scaled_h), owner=owner)
 
         # Blit using the stacked Y coordinate
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
