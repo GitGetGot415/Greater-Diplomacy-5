@@ -1,0 +1,8 @@
+{
+    "_comment": "Maps a unit name key to an image filename in this same folder. A key can be: an exact tiered name ('Medium Tank III'), an era range ('Infantry 1900-1925'), or a bare family name used as the catch-all for every tier/year that has no more specific entry ('Infantry', 'Artillery'). Anything not covered here falls back to the classic art. See map_logic/rendering/symbol_loader.py for the exact matching rules.",
+
+    "Infantry": "german_infantry_1_gd5.png",
+    "Infantry 1900-1925": "ausrtian_infantry_1_gd5.png",
+    "Artillery": "german_artillery_1_gd5.png",
+    "Medium Tank III": "sherm1_gd5.png"
+}

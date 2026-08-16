@@ -13,6 +13,7 @@ SETTINGS_FULLSCREEN_Y = 40
 SETTINGS_CHECKERBOARD_WATER_Y = 100
 SETTINGS_FPS_TOGGLE_Y = 160
 SETTINGS_DRAG_KEY_Y = 220
+SETTINGS_UNIT_ART_Y = 280
 SETTINGS_PLAYER_SLIDER_Y = 340
 SETTINGS_FPS_SLIDER_Y = 400
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -59,6 +60,7 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
+        Button(keybind_x, SETTINGS_UNIT_ART_Y, "medium", "blue", "Unit Art", settings_screen.open_unit_art),
     ]
 
     # --- MASTER AI TOGGLE BUTTON ---
@@ -249,6 +251,9 @@ class Settings(GameState):
         c.apply_runtime_settings({"checkerboard_water": self.checkerboard_water})
         queries.save_global_settings(self.controller)
         self.refresh_ui()
+
+    def open_unit_art(self):
+        self.go_to("UNIT_ART")
 
     def toggle_drag_button(self):
         """Cycles the dynamic mouse button configuration toggle value string."""

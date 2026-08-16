@@ -32,7 +32,7 @@ GOLDEN_ORDER = (
     "custom_scenarios_dir", "ocean_light_color", "ocean_dark_color",
     "tournament_saves_dir", "checkerboard_water",
     "deepseek_api_key", "kimi_api_key", "deepseek_model", "kimi_model",
-    "ai_turn_budget_seconds",
+    "ai_turn_budget_seconds", "unit_art_style",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)

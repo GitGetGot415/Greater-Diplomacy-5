@@ -76,6 +76,7 @@ SETTINGS_FIELDS = (
     _field("kimi_model", "kimi_model", lambda: c.DEFAULT_KIMI_MODEL),
     _field("ai_turn_budget_seconds", "ai_turn_budget_seconds",
            lambda: c.DEFAULT_AI_TURN_BUDGET_SECONDS),
+    _field("unit_art_style", "unit_art_style", lambda: c.DEFAULT_UNIT_ART_STYLE),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

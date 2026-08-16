@@ -14,7 +14,7 @@ from tests import app_harness
 # The state-machine keys main.py's flip_state() dispatches on. Hardcoded here
 # rather than read back from Controller so that deleting one fails the test.
 EXPECTED_STATES = {
-    "MENU", "NEW_GAME", "RANDOM_SETUP", "LOAD_GAME", "SETTINGS", "CREDITS",
+    "MENU", "NEW_GAME", "RANDOM_SETUP", "LOAD_GAME", "SETTINGS", "UNIT_ART", "CREDITS",
     "MUSIC_PLAYER", "VIEW_ASSETS", "MODS", "SELECT_BASE_MAP", "MAP",
     "PRODUCTION", "ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY", "MESSAGES",
     "FACTION", "FACTION_TERRITORIES", "SCENARIO_SETTINGS", "MULTIPLAYER_HUB",

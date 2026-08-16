@@ -172,6 +172,15 @@ SHOW_FPS = False
 # expect it.
 CHECKERBOARD_WATER = False
 
+# Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
+# "classic" is the flat assets/images set every icon has always shipped with;
+# any other style (e.g. "hanskolmer") looks up a per-unit manifest under its
+# own assets/<style> folder first and falls back to "classic" for anything the
+# manifest doesn't cover. See screens/menu_screens/unit_art.py for the picker.
+DEFAULT_UNIT_ART_STYLE = "classic"
+UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
+UNIT_ART_STYLES = ("classic", "hanskolmer")
+
 GAME_VERSION = "v26"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
@@ -1746,6 +1755,9 @@ REBELLION_TERMS = [
 # Directories
 ASSETS_ROOT_DIR = "assets"
 ASSETS_DIR = "assets/images"
+# Alternate unit-art sets live in their own folder under here, named after the
+# style (e.g. assets/hanskolmer), each with its own unit_art.json manifest.
+UNIT_ART_STYLES_DIR = "assets"
 TERRAINS_DIR = "assets/terrains"
 BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
@@ -1845,6 +1857,7 @@ RUNTIME_SETTINGS = {
     "ocean_dark_color": "OCEAN_DARK_BLUE",
     "tournament_saves_dir": "TOURNAMENT_SAVES_DIR",
     "checkerboard_water": "CHECKERBOARD_WATER",
+    "unit_art_style": "UNIT_ART_STYLE",
 }
 
 

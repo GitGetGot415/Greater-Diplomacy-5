@@ -47,7 +47,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
-    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
@@ -97,6 +97,7 @@ def _import_project_modules():
     from screens.menu_screens.music_player import Music_Player
     from screens.menu_screens.view_assets import View_Assets
     from screens.menu_screens.mods import Mods
+    from screens.menu_screens.unit_art import Unit_Art
     from screens.map_related_screens.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
     from map_logic.rendering import symbol_loader
@@ -298,8 +299,9 @@ class Controller:
             "NEW_GAME": New_Game(),
             "RANDOM_SETUP": Random_Setup(),
             "LOAD_GAME": Load_Game(),
-            "SETTINGS": Settings(self), 
-            "CREDITS": Credits(), 
+            "SETTINGS": Settings(self),
+            "UNIT_ART": Unit_Art(self),
+            "CREDITS": Credits(),
             "MUSIC_PLAYER": Music_Player(self),
             "VIEW_ASSETS": View_Assets(),
             "MODS": Mods(),
