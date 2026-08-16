@@ -17,7 +17,9 @@ not looked at, and map_logic/odtl.py only reaches for it when it finds itself
 running under emscripten.
 
 The version is read from requirements.txt rather than written here, so the
-library the browser loads and the one desktop installs cannot drift apart.
+library the browser loads and the one desktop installs cannot drift apart --
+including the choice of whether to pin at all. An exact `==` fetches that
+release; a looser specifier fetches the newest one.
 """
 
 import hashlib
@@ -26,36 +28,51 @@ import re
 import sys
 import urllib.request
 
-RELEASE_URL = ("https://github.com/Pr1nted/dragoman/releases/download/"
-               "v{version}/libdragoman.so")
+VERSIONED_URL = ("https://github.com/Pr1nted/dragoman/releases/download/"
+                 "v{version}/libdragoman.so")
+# GitHub serves this redirect for whatever the newest release is, so tracking
+# needs no API call and no token.
+LATEST_URL = "https://github.com/Pr1nted/dragoman/releases/latest/download/libdragoman.so"
 DESTINATION = "libdragoman.so"
 REQUIREMENTS = "requirements.txt"
 
 
-def pinned_version():
-    """The open-dragoman version requirements.txt asks for."""
+def wanted_release():
+    """Which release to fetch, taken from requirements.txt.
+
+    Returns (url, description). An exact pin fetches that exact release, so
+    the browser build and the desktop build are the same library. Any looser
+    specifier -- ~=, >=, or no version at all -- fetches the newest release
+    instead, which is what tracking means.
+
+    The point is that this file never has to be edited to change the policy:
+    the answer lives in requirements.txt, next to the desktop dependency, and
+    the two cannot disagree about which library the game uses.
+    """
     try:
         with open(REQUIREMENTS, encoding="utf-8") as handle:
             text = handle.read()
     except OSError as exc:
         raise SystemExit(f"cannot read {REQUIREMENTS}: {exc}")
 
-    match = re.search(r"^open-dragoman==([0-9]+\.[0-9]+\.[0-9]+)\s*$", text, re.MULTILINE)
-    if not match:
-        raise SystemExit(
-            f"{REQUIREMENTS} has no pinned open-dragoman==X.Y.Z line to take a version from")
-    return match.group(1)
+    exact = re.search(r"^open-dragoman==([0-9]+\.[0-9]+\.[0-9]+)\s*$", text, re.MULTILINE)
+    if exact:
+        return VERSIONED_URL.format(version=exact.group(1)), exact.group(1)
+
+    if re.search(r"^open-dragoman\b", text, re.MULTILINE):
+        return LATEST_URL, "the latest release"
+
+    raise SystemExit(f"{REQUIREMENTS} does not mention open-dragoman at all")
 
 
 def main():
-    version = pinned_version()
-    url = RELEASE_URL.format(version=version)
+    url, description = wanted_release()
 
     if os.path.exists(DESTINATION):
         print(f"{DESTINATION} is already here; delete it to fetch again")
         return 0
 
-    print(f"fetching open-dragoman {version} for WebAssembly")
+    print(f"fetching open-dragoman {description} for WebAssembly")
     print(f"  {url}")
     try:
         with urllib.request.urlopen(url) as response:
