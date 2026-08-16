@@ -130,6 +130,14 @@ CREDITS_DATA = [
                 ),
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
+            },
+            {
+                "link_text": "Pr1nted",
+                "info": (
+                    "Added conversion between OpenDoctrines and GD5"
+                ),
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/Pr1nted"}]
             }
         ]
     },
