@@ -34,13 +34,26 @@
         {"file": "Fh_16__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         "Canon_de_155_C_modele_1917__gd5.png"
     ],
+    "Heavy Tank I": [
+
+    ],
     "Heavy Tank II": [
         {"file": "Char_B1_bis__gd5.png", "countries": ["France"]}
+    ],
+    "Heavy Tank III": [
+        {"file": "Panzer_IV_ausf_b__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
+    ],
+    "Heavy Tank IV": [
+        {"file": "Tiger_I_early__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
+    ],
+    "Medium Tank I": [
+
     ],
     "Medium Tank II": [
         {"file": "Char_D1_gd5.png", "countries": ["France"]}
     ],
     "Medium Tank III": [
+        {"file": "Panzer_III_ausf_F__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         {"file": "sherm1_gd5.png", "countries": ["United States of America"]},
         {"file": "Char_D2_gd5.png", "countries": ["France"]}
     ],
@@ -53,6 +66,12 @@
     "Light Tank I": [
         "FT_17__gd5.png"
     ],
+    "Light Tank II": [
+
+    ],
+    "Light Tank III": [
+
+    ],
     "Light Tank IV": [
         {"file": "Hotchkis_H35__gd5.png", "countries": ["France"]}
     ],
@@ -61,6 +80,19 @@
         {"file": "Renault_R35__gd5.png", "countries": ["France"]}
     ],
     "Light Tank VI": [
+        {"file": "Panzer_II_ausf_C__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         {"file": "Hotchkis_H39__gd5.png", "countries": ["France"]}
+    ],
+    "Light Tank VII": [
+
+    ],
+    "Light Tank VIII": [
+
+    ],
+    "Light Tank IX": [
+
+    ],
+    "Light Tank X": [
+
     ]
 }
