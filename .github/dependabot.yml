@@ -1,0 +1,34 @@
+# Watch open-dragoman for new releases, and nothing else.
+#
+# requirements.txt pins every dependency to an exact version, which is the
+# right default for a game that ships PyInstaller and py2app builds: what a
+# player runs is what was tested. The cost is that a fix upstream only arrives
+# when somebody remembers to raise a number.
+#
+# This closes that gap without giving up the pin. Dependabot opens a pull
+# request when a new open-dragoman is released; CI runs on it like any other
+# PR, converting every shipped base map on macOS, Windows and the web; and it
+# is merged or not by a person.
+#
+# SCOPED DELIBERATELY. `allow` names one dependency, so this does not start
+# opening pull requests for numpy, pygame-ce, cryptography or anything else
+# that was pinned on purpose. Widening it later is one line, but that is a
+# decision about this project's dependencies rather than about this one.
+#
+# It also covers the browser build for free: map_tools/fetch_dragoman_wasm.py
+# reads its version out of requirements.txt, so the same bumped line moves the
+# WebAssembly module the web build fetches. One number, one review, both
+# platforms.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-name: "open-dragoman"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 1
