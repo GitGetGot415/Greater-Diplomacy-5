@@ -352,7 +352,12 @@ class Controller:
         if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
             if previous_state == self.states["MAP"]:
                 self.states[next_state_name].back_state = "MAP"
-            else:
+            # Returning from a Settings sub-screen (e.g. Unit Art) isn't a
+            # fresh entry into Settings -- it must not overwrite the MAP/MENU
+            # back_state Settings already picked up when it was first opened,
+            # or Back from the sub-screen would dump the player at the menu
+            # even when they opened Settings from a live game.
+            elif previous_state is not self.states.get("UNIT_ART"):
                 self.states[next_state_name].back_state = "MENU"
 
         # 2. Map Persistence
