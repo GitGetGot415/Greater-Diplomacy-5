@@ -4,7 +4,7 @@
 
     "Infantry": "german_infantry_1_gd5.png",
     "Infantry 1900-1920": [
-        {"file": "ausrtian_infantry_1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
+        {"file": "Austrian_infantry_1914__gd5.png", "countries": ["Austria-Hungary", "Austria"]},
         {"file": "german_infantry_1914__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]},
         {"file": "british_infantry_1914__gd5.png", "countries": ["United Kingdom", "England"]},
         {"file": "french_infantry_1914__gd5.png", "countries": ["France"]},
