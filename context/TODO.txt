@@ -1,6 +1,14 @@
 hanskolmer suggestions:
 - hoi4 esque ordering system so moving units is easier
+- light and heavy artillery
 - hanskolmer art
+
+- KAISERIN SUGGESTIONS:
+- gurella units? (kaiserin's suggestion)
+- give control of factories to other countries temporarially or permenantly
+- ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
+- temporarially rent out factories to other countries via trade?
+- ADD HER FLAGS
 
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
@@ -88,13 +96,6 @@ units out on a health threshold, AI_ROTATE_HEALTH_FRACTION.)
 
 CUSTOMIZATION!!!
 - allow for more customization of the edit construction turns box, also the ability to save and load presets for unit costs
-
-- KAISERIN SUGGESTIONS:
-- gurella units? (kaiserin's suggestion)
-- give control of factories to other countries temporarially or permenantly
-- ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
-- temporarially rent out factories to other countries via trade?
-- ADD HER FLAGS
 
 - make it so that integrated puppets always accept any trade offer you make
 - maybe give trades with them a custom ui
