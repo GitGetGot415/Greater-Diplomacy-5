@@ -22,12 +22,15 @@
     "Artillery I": [
         {"file": "FK_M.5__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
         {"file": "QF_18_pounder__gd5.png", "countries": ["United Kingdom", "England"]},
-        {"file": "120_mm_De_Bange_model_1878__gd5.png", "countries": ["France"]}
+        "120_mm_De_Bange_model_1878__gd5.png"
     ],
     "Artillery II": [
         {"file": "FH_M.14__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
         {"file": "german_artillery_1.1_gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "75_mm_modele_1897__gd5.png", "countries": ["France"]}
+        "75_mm_modele_1897__gd5.png"
+    ],
+    "Artillery III": [
+        "Canon_de_155_C_modele_1917__gd5.png"
     ],
     "Medium Tank III": [
         {"file": "sherm1_gd5.png", "countries": ["United States of America"]}
