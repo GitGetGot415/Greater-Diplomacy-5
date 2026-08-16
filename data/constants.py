@@ -146,7 +146,7 @@ CREDITS_DATA = [
         ]
     },
     {
-        "main_text": "Unit Art: ",
+        "main_text": "Hanskolmer Unit Art: ",
         "people": [
             {
                 "link_text": "hanskolmer",
