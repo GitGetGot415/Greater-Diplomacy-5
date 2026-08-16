@@ -26,7 +26,8 @@
     ],
     "Artillery II": [
         {"file": "FH_M.14__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
-        {"file": "german_artillery_1.1_gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
+        {"file": "german_artillery_1.1_gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
+        {"file": "75_mm_modele_1897__gd5.png", "countries": ["France"]}
     ],
     "Medium Tank III": [
         {"file": "sherm1_gd5.png", "countries": ["United States of America"]}
