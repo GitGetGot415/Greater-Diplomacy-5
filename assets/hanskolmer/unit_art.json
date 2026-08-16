@@ -31,9 +31,35 @@
         "75_mm_modele_1897__gd5.png"
     ],
     "Artillery III": [
+        {"file": "Fh_16__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         "Canon_de_155_C_modele_1917__gd5.png"
     ],
+    "Heavy Tank II": [
+        {"file": "Char_B1_bis__gd5.png", "countries": ["France"]}
+    ],
+    "Medium Tank II": [
+        {"file": "Char_D1_gd5.png", "countries": ["France"]}
+    ],
     "Medium Tank III": [
-        {"file": "sherm1_gd5.png", "countries": ["United States of America"]}
+        {"file": "sherm1_gd5.png", "countries": ["United States of America"]},
+        {"file": "Char_D2_gd5.png", "countries": ["France"]}
+    ],
+    "Medium Tank IV": [
+        {"file": "Somua_S35__gd5.png", "countries": ["France"]}
+    ],
+    "WW1 Tank": [
+        {"file": "Mark_V__gd5.png", "countries": ["United Kingdom", "England"]}
+    ],
+    "Light Tank I": [
+        "FT_17__gd5.png"
+    ],
+    "Light Tank IV": [
+        {"file": "Hotchkis_H35__gd5.png", "countries": ["France"]}
+    ],
+    "Light Tank V": [
+        {"file": "Renault_R35__gd5.png", "countries": ["France"]}
+    ],
+    "Light Tank VI": [
+        {"file": "Hotchkis_H39__gd5.png", "countries": ["France"]}
     ]
 }
