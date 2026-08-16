@@ -21,6 +21,7 @@
     ],
     "Artillery I": [
         {"file": "FK_M.5__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
+        {"file": "FK_96_n.A.__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         {"file": "QF_18_pounder__gd5.png", "countries": ["United Kingdom", "England"]},
         "120_mm_De_Bange_model_1878__gd5.png"
     ],

@@ -186,7 +186,7 @@ UNIT_SECTIONS = [
             # two can be tuned independently. Currently mirrors attack 1:1.
             "bombard_attack": linear(50, 25),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(500),
+            "speed": const(1), "cost_materials": linear(1000, 50), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
         }),
     ],
