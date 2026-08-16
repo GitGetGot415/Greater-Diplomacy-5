@@ -6,4 +6,4 @@ Requests==2.34.2
 setuptools==82.0.1
 cryptography==44.0.0
 google-genai
-
+open-dragoman==0.3.1

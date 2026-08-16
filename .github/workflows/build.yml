@@ -41,6 +41,58 @@ jobs:
           path: dist/*.zip
           if-no-files-found: error
 
+  # The browser target, which nothing here built before.
+  #
+  # It is the one build where a dependency cannot simply be installed: pygbag
+  # serves pure-Python wheels and its own prebuilt WASM ones, so the
+  # translation layer arrives as a WebAssembly side module fetched beside the
+  # game. Building here proves that file is packed into the archive the
+  # browser downloads -- a web build that quietly shipped without it would
+  # look fine until somebody opened the Translate screen.
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install pygbag
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygbag
+
+      - name: Fetch the translation layer for WebAssembly
+        run: python map_tools/fetch_dragoman_wasm.py
+
+      - name: Build with pygbag
+        run: python -m pygbag --build main.py
+
+      - name: The archive carries the translation layer
+        run: |
+          set -e
+          archive=$(ls build/web/*.apk | head -1)
+          test -n "$archive" || { echo "pygbag produced no archive"; exit 1; }
+          echo "checking $archive"
+          # pygbag's .apk is a zip; the side module has to be inside it or the
+          # browser has nothing to load and the screen is dead on arrival.
+          # -c rather than a heredoc: the body of one inside a YAML block is
+          # indented, and Python will not take that.
+          python -c "import sys,zipfile; n=zipfile.ZipFile(sys.argv[1]).namelist(); h=[x for x in n if x.endswith('libdragoman.so')]; print('ok, packed as', h[0]) if h else (print('libdragoman.so is not in the web archive:'), print(chr(10).join(sorted(n)[:40])), sys.exit(1))" "$archive"
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: gd5-web
+          path: build/web
+          if-no-files-found: error
+
   build-macos:
     name: Build macOS
     runs-on: macos-latest

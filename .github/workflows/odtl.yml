@@ -1,0 +1,145 @@
+name: GD5 Translation Layer
+
+# The Open Doctrines translation layer, on the three platforms GD5 ships to.
+#
+# WHY ALL THREE. The layer is a C library reached through ctypes, so it is a
+# different binary on macOS, Windows and in the browser -- and the first bug it
+# hit was one that failed on every platform at once while the developer's own
+# command line converted every map correctly, because the C library asks the
+# caller's locale what a letter is and Python sets one. A check that runs
+# where the code was written would have missed it exactly as the library's own
+# suite did.
+#
+# Linux is covered by pr-checks.yml's syntax and lint pass; these three are
+# about the library actually loading and converting a map.
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Translate (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macos, os: macos-latest }
+          - { name: windows, os: windows-latest }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # open-dragoman only. The rest of requirements.txt is pygame and friends,
+      # which this test does not touch -- it opens no window and imports no
+      # screen, so installing them would only make the job slower and give it
+      # more ways to fail for reasons that are not about translation.
+      - name: Install the translation layer
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install "$(grep -E '^open-dragoman==' requirements.txt)"
+
+      # Not a smoke test. It converts every base map the game ships, because
+      # the locale bug failed ten of twelve and left the two with no accented
+      # nation names passing -- so stopping at the first map would have called
+      # a library that could convert a sixth of the game's maps healthy.
+      - name: Translate every shipped base map, and back
+        shell: bash
+        run: python tests/test_odtl.py
+
+  web:
+    name: Translate (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The browser cannot pip install a ctypes library: pygbag serves
+      # pure-Python wheels and its own prebuilt WASM ones, and this is neither.
+      # It loads a WebAssembly side module sitting beside the game instead, and
+      # this is the script the web build runs to fetch it -- so running it here
+      # tests the delivery as well as the library.
+      - name: Fetch the WebAssembly build
+        run: python map_tools/fetch_dragoman_wasm.py
+
+      # Pyodide is CPython on WebAssembly, the same as what pygbag serves, and
+      # it reports sys.platform == "emscripten" -- so map_logic/odtl.py takes
+      # its web branch here, loading the side module with ctypes exactly as it
+      # does in a browser. That branch has no other way to be tested by CI.
+      - name: Convert a map inside WebAssembly
+        run: |
+          set -e
+          npm install --silent pyodide
+          cat > web_check.mjs <<'JS'
+          import { loadPyodide } from "pyodide";
+          import fs from "fs";
+          import path from "path";
+
+          const py = await loadPyodide();
+
+          // The game's own files, as the browser build would see them.
+          const copy = (from, to) => {
+            for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+              const src = path.join(from, entry.name);
+              const dst = to + "/" + entry.name;
+              if (entry.isDirectory()) { py.FS.mkdirTree(dst); copy(src, dst); }
+              else py.FS.writeFile(dst, new Uint8Array(fs.readFileSync(src)));
+            }
+          };
+          py.FS.mkdirTree("/game/map_logic");
+          py.FS.mkdirTree("/game/data");
+          copy("map_logic", "/game/map_logic");
+          copy("data", "/game/data");
+          py.FS.mkdirTree("/game/base_maps");
+          copy("base_maps", "/game/base_maps");
+          py.FS.writeFile("/game/libdragoman.so",
+                          new Uint8Array(fs.readFileSync("libdragoman.so")));
+
+          py.runPython(`
+          import os, sys
+          os.chdir("/game")
+          sys.path.insert(0, "/game")
+          from map_logic import odtl
+
+          assert sys.platform == "emscripten", sys.platform
+          assert odtl.available(), odtl.unavailable_reason()
+
+          maps = [os.path.join("base_maps", n) for n in sorted(os.listdir("base_maps"))
+                  if os.path.isfile(os.path.join("base_maps", n, "map_data.json"))]
+          assert maps, "no base maps to convert"
+
+          failed = []
+          for source in maps:
+              ok, notes = odtl.to_odmap(source, "/tmp/" + os.path.basename(source) + ".odmap")
+              if not ok:
+                  failed.append((source, notes[0] if notes else "?"))
+          assert not failed, failed
+
+          result = f"{odtl.version()} converted {len(maps)} base map(s) in the browser runtime"
+          `);
+          console.log("  ok   " + py.globals.get("result"));
+          JS
+          node web_check.mjs
