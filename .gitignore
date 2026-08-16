@@ -39,3 +39,8 @@ main.spec
 !historical_leaders_DEFAULT.json
 !ai_responses.json
 !building_data.json
+# Fetched by map_tools/fetch_dragoman_wasm.py for the browser build.
+libdragoman.so
+
+# Maps written by the Translate screen -- generated, not source.
+translated/

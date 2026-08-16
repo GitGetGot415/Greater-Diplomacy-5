@@ -1,0 +1,82 @@
+"""Fetch the WebAssembly build of open-dragoman, for the browser version.
+
+    python map_tools/fetch_dragoman_wasm.py
+
+Desktop installs open-dragoman from requirements.txt like any other
+dependency. The browser cannot: pygbag serves pure-Python wheels and its own
+prebuilt WASM ones, and open-dragoman is a ctypes library, which is neither.
+
+What a browser CAN do is load a WebAssembly side module sitting beside the
+game -- pygbag's CPython opens it with ctypes and calls straight into it. So
+the web build needs one file, `libdragoman.so`, next to main.py, and this
+fetches it from the same release the pinned version in requirements.txt comes
+from.
+
+Run it before `pygbag main.py`. Nothing else needs it: on desktop the file is
+not looked at, and map_logic/odtl.py only reaches for it when it finds itself
+running under emscripten.
+
+The version is read from requirements.txt rather than written here, so the
+library the browser loads and the one desktop installs cannot drift apart.
+"""
+
+import hashlib
+import os
+import re
+import sys
+import urllib.request
+
+RELEASE_URL = ("https://github.com/Pr1nted/dragoman/releases/download/"
+               "v{version}/libdragoman.so")
+DESTINATION = "libdragoman.so"
+REQUIREMENTS = "requirements.txt"
+
+
+def pinned_version():
+    """The open-dragoman version requirements.txt asks for."""
+    try:
+        with open(REQUIREMENTS, encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as exc:
+        raise SystemExit(f"cannot read {REQUIREMENTS}: {exc}")
+
+    match = re.search(r"^open-dragoman==([0-9]+\.[0-9]+\.[0-9]+)\s*$", text, re.MULTILINE)
+    if not match:
+        raise SystemExit(
+            f"{REQUIREMENTS} has no pinned open-dragoman==X.Y.Z line to take a version from")
+    return match.group(1)
+
+
+def main():
+    version = pinned_version()
+    url = RELEASE_URL.format(version=version)
+
+    if os.path.exists(DESTINATION):
+        print(f"{DESTINATION} is already here; delete it to fetch again")
+        return 0
+
+    print(f"fetching open-dragoman {version} for WebAssembly")
+    print(f"  {url}")
+    try:
+        with urllib.request.urlopen(url) as response:
+            data = response.read()
+    except Exception as exc:
+        raise SystemExit(f"could not fetch it: {exc}")
+
+    # A repository that has moved, a release that was never published, or a
+    # proxy serving an error page all arrive as bytes. A WebAssembly module
+    # starts with \0asm, so anything else is not one and is not written out
+    # under a name the game will later try to dlopen.
+    if data[:4] != b"\0asm":
+        raise SystemExit(f"that is not a WebAssembly module ({len(data)} bytes, "
+                         f"starts {data[:16]!r})")
+
+    with open(DESTINATION, "wb") as handle:
+        handle.write(data)
+    digest = hashlib.sha256(data).hexdigest()
+    print(f"wrote {DESTINATION} ({len(data)} bytes, sha256 {digest[:16]}...)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
