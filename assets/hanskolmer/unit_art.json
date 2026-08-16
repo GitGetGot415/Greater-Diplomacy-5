@@ -57,6 +57,7 @@
         {"file": "Hotchkis_H35__gd5.png", "countries": ["France"]}
     ],
     "Light Tank V": [
+        {"file": "Panzer_I_ausf_b__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         {"file": "Renault_R35__gd5.png", "countries": ["France"]}
     ],
     "Light Tank VI": [
