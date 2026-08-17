@@ -51,10 +51,15 @@
         {"file": "Char_B1_bis__gd5.png", "countries": "french"}
     ],
     "Heavy Tank III": [
-        {"file": "Panzer_IV_ausf_b__gd5.png", "countries": "germanic"}
+        {"file": "Panzer_IV_ausf_b__gd5.png", "countries": "germanic"},
+        {"file": "T-35__gd5.png", "countries": "russian"}
     ],
     "Heavy Tank IV": [
-        {"file": "Tiger_I_early__gd5.png", "countries": "germanic"}
+        {"file": "Tiger_I_early__gd5.png", "countries": "germanic"},
+        {"file": "KV-1B__gd5.png", "countries": "russian"}
+    ],
+    "Super Heavy Tank I": [
+        {"file": "IS-3__gd5.png", "countries": "russian"}
     ],
     "Medium Tank I": [
 
