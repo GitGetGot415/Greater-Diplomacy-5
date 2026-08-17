@@ -1,3 +1,5 @@
+make submarines completely invisible to other countries unless you're allies (ie can see what the other person sees, wether you're in a faction or a master/puppet relation) OR in combat
+
 hanskolmer suggestions:
 - hoi4 esque ordering system so moving units is easier
 - light and heavy artillery

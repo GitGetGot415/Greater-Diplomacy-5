@@ -181,10 +181,10 @@ UNIT_SECTIONS = [
         # since 20 levels now cover the same span as 100 old year-steps at 5x the
         # per-level jump).
         UnitFamily("Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(60, 30),
+            "health": linear(100, 50), "attack": linear(80, 40),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(60, 30),
+            "bombard_attack": linear(80, 40),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(1000, 50), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(2),
@@ -194,10 +194,10 @@ UNIT_SECTIONS = [
         # double cost_materials and much heavier damage, mirrored 1:1 between
         # melee and bombardment like Artillery itself.
         UnitFamily("Heavy Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(100, 50),
-            "bombard_attack": linear(100, 50),
+            "health": linear(100, 50), "attack": linear(140, 70),
+            "bombard_attack": linear(140, 70),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(1000),
+            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(3),
         }),
     ],
@@ -288,24 +288,25 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Dreadnought", single(), {
-            "health": 2000, "attack": 1200, "defense": 200, "speed": 1,
-            "bombard_attack": 150,
+            "health": 4000, "attack": 2400, "defense": 400, "speed": 1,
+            "bombard_attack": 300,
             "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Battleship", single(), {
-            "health": 3000, "attack": 2000, "defense": 300, "speed": 1,
-            "bombard_attack": 250,
+            "health": 6000, "attack": 4000, "defense": 600, "speed": 1,
+            "bombard_attack": 500,
             "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10,
         }, naval_unit=True),
         UnitFamily("Destroyer", roman_suffixes(26), {
-            "health": linear(1200, 200), "attack": linear(600, 200), "defense": linear(100, 10),
+            "health": linear(2400, 400), "attack": linear(1200, 300), "defense": linear(200, 20),
             "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
             "cost_fuel": linear(250, 5), "production_time": const(8),
         }, naval_unit=True),
         UnitFamily("Submarine", roman_suffixes(26), {
-            "health": linear(600, 100),
+            "health": linear(1200, 200),
             # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
-            "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
+            # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
+            "attack": linear(600, 100),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000),
             "cost_fuel": linear(150, 5), "production_time": const(6),
@@ -313,8 +314,8 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
-            "health": linear(400, 200), "attack": linear(400, 100), "defense": linear(100, 10),
-            "bombard_attack": linear(300, 40),
+            "health": linear(800, 200), "attack": linear(800, 100), "defense": linear(200, 20),
+            "bombard_attack": linear(600, 120),
             "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
             "cost_fuel": linear(500, 25), "production_time": const(10),
         }, naval_unit=True),
