@@ -89,6 +89,17 @@ def draw_unit_info(map_screen, surface):
                     surface.blit(map_screen.small_font.render(f" - {w_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
+            # Truces don't show up anywhere else, but they're the reason a
+            # recent enemy can't be attacked again yet.
+            truces = queries.get_active_truces(owner, map_screen.nation_data)
+            if truces:
+                surface.blit(map_screen.small_font.render("Truce With:", True, (200, 200, 100)), (dip_rect.x + 10, y_offset))
+                y_offset += 20
+                for t, turns_left in truces.items():
+                    t_disp = map_screen.nation_data.get(t, {}).get("name", t)
+                    surface.blit(map_screen.small_font.render(f" - {t_disp} ({turns_left} turns)", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
+                    y_offset += 20
+
             # --- MILITARY ACCESS, BOTH WAYS ---
             # Access is one-way and stored only on the granting side, so the two
             # directions are genuinely different facts and both are worth having:

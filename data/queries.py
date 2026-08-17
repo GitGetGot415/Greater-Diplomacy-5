@@ -2082,6 +2082,11 @@ def has_active_truce(nation_a, nation_b, nation_data):
     if nation_a not in nation_data: return False
     return nation_data[nation_a].get("truces", {}).get(nation_b, 0) > 0
 
+def get_active_truces(nation, nation_data):
+    """Nations this one currently holds a truce with, mapped to turns remaining."""
+    truces = nation_data.get(nation, {}).get("truces", {})
+    return {other: turns for other, turns in truces.items() if turns > 0}
+
 def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     """Calculates dynamic relations based on flat state modifiers and temporary modifiers."""
     if nation_a == nation_b:
