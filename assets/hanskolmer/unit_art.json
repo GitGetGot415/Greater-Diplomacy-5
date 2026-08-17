@@ -24,6 +24,7 @@
         {"file": "italian_infantry_1914__gd5.png", "countries": "italian"}
     ],
     "Infantry 1926-1960": [
+        {"file": "russian_infantry_1936__gd5.png", "countries": "russian"},
         {"file": "german_infantry_1_gd5.png", "countries": "germanic"}
     ],
     "Infantry 1961-2010": [
