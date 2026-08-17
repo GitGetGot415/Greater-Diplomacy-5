@@ -1,69 +1,79 @@
 {
     "_comment": "Maps a unit name key to the art that draws it. A key can be: an exact tiered name ('Medium Tank III'), an era range ('Infantry 1900-1925'), or a bare family name used as the catch-all for every tier/year that has no more specific entry ('Infantry', 'Artillery'). Anything not covered here falls back to the classic art.",
     "_comment_variants": "A key's value is either one entry or a list of them. Each entry is either a plain filename (applies to whichever country asks) or an object {'file': ..., 'countries': [...]} restricted to those country ids -- the exact strings that key data/json/countries_data.json, e.g. 'Germany', 'German Reich', 'German Empire'. A country matching one of the restricted entries sees that picture; everyone else falls through to the first unrestricted entry for that key, and if there isn't one, to the next fallback rule (e.g. 'Infantry 1900-1925' missing a generic falls back to the bare 'Infantry' entry below) and eventually to classic. See map_logic/rendering/symbol_loader.py for the exact matching and fallback rules.",
+    "_comment_cultures": "Culture groups allow reusing common country sets. In a 'countries' field, use either a culture group name (string) or a list of country ids (array). Example: 'countries': 'germanic' or 'countries': ['Germany', 'France'].",
+    "_cultures": {
+        "germanic": ["Germany", "German Reich", "German Empire", "Weimar Republic"],
+        "austrian": ["Austria-Hungary", "Austria"],
+        "russian": ["Russia", "Soviet Union"],
+        "british": ["United Kingdom", "England"],
+        "french": ["France"],
+        "italian": ["Italy"],
+        "american": ["United States of America"]
+    },
 
     "Infantry 1910-1913": [
-        {"file": "german_infantry_1910__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]}
+        {"file": "german_infantry_1910__gd5.png", "countries": "germanic"}
     ],
     "Infantry 1914-1925": [
-        {"file": "Austrian_infantry_1914__gd5.png", "countries": ["Austria-Hungary", "Austria"]},
-        {"file": "german_infantry_1914__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]},
-        {"file": "british_infantry_1914__gd5.png", "countries": ["United Kingdom", "England"]},
-        {"file": "french_infantry_1914__gd5.png", "countries": ["France"]},
-        {"file": "russian_infantry_1914__gd5.png", "countries": ["Russia", "Soviet Union"]},
-        {"file": "italian_infantry_1914__gd5.png", "countries": ["Italy"]}
+        {"file": "Austrian_infantry_1914__gd5.png", "countries": "austrian"},
+        {"file": "german_infantry_1914__gd5.png", "countries": "germanic"},
+        {"file": "british_infantry_1914__gd5.png", "countries": "british"},
+        {"file": "french_infantry_1914__gd5.png", "countries": "french"},
+        {"file": "russian_infantry_1914__gd5.png", "countries": "russian"},
+        {"file": "italian_infantry_1914__gd5.png", "countries": "italian"}
     ],
     "Infantry 1926-1960": [
-        {"file": "german_infantry_1_gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]}
+        {"file": "german_infantry_1_gd5.png", "countries": "germanic"}
     ],
     "Infantry 1961-2010": [
 
     ],
     "Artillery I": [
-        {"file": "FK_M.5__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
-        {"file": "FK_96_n.A.__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "QF_18_pounder__gd5.png", "countries": ["United Kingdom", "England"]},
+        {"file": "FK_M.5__1_gd5.png", "countries": "austrian"},
+        {"file": "FK_96_n.A.__gd5.png", "countries": "germanic"},
+        {"file": "QF_18_pounder__gd5.png", "countries": "british"},
         "120_mm_De_Bange_model_1878__gd5.png"
     ],
     "Artillery II": [
-        {"file": "FH_M.14__1_gd5.png", "countries": ["Austria-Hungary", "Austria"]},
-        {"file": "21_cm_Morser_10__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
+        {"file": "FH_M.14__1_gd5.png", "countries": "austrian"},
+        {"file": "21_cm_Morser_10__gd5.png", "countries": "germanic"},
         "75_mm_modele_1897__gd5.png"
     ],
     "Artillery III": [
-        {"file": "Fh_16__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
+        {"file": "Fh_16__gd5.png", "countries": "germanic"},
         "Canon_de_155_C_modele_1917__gd5.png"
     ],
     "Heavy Tank I": [
 
     ],
     "Heavy Tank II": [
-        {"file": "Char_B1_bis__gd5.png", "countries": ["France"]}
+        {"file": "Char_B1_bis__gd5.png", "countries": "french"}
     ],
     "Heavy Tank III": [
-        {"file": "Panzer_IV_ausf_b__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
+        {"file": "Panzer_IV_ausf_b__gd5.png", "countries": "germanic"}
     ],
     "Heavy Tank IV": [
-        {"file": "Tiger_I_early__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]}
+        {"file": "Tiger_I_early__gd5.png", "countries": "germanic"}
     ],
     "Medium Tank I": [
 
     ],
     "Medium Tank II": [
-        {"file": "Char_D1_gd5.png", "countries": ["France"]}
+        {"file": "Char_D1_gd5.png", "countries": "french"}
     ],
     "Medium Tank III": [
-        {"file": "Panzer_III_ausf_F__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "sherm1_gd5.png", "countries": ["United States of America"]},
-        {"file": "T-28A__gd5.png", "countries": ["Russia", "Soviet Union"]},
-        {"file": "Char_D2_gd5.png", "countries": ["France"]}
+        {"file": "Panzer_III_ausf_F__gd5.png", "countries": "germanic"},
+        {"file": "sherm1_gd5.png", "countries": "american"},
+        {"file": "T-28A__gd5.png", "countries": "russian"},
+        {"file": "Char_D2_gd5.png", "countries": "french"}
     ],
     "Medium Tank IV": [
-        {"file": "Somua_S35__gd5.png", "countries": ["France"]},
-        {"file": "T-34__gd5.png", "countries": ["Russia", "Soviet Union"]}
+        {"file": "Somua_S35__gd5.png", "countries": "french"},
+        {"file": "T-34__gd5.png", "countries": "russian"}
     ],
     "WW1 Tank": [
-        {"file": "Mark_V__gd5.png", "countries": ["United Kingdom", "England"]}
+        {"file": "Mark_V__gd5.png", "countries": "british"}
     ],
     "Light Tank I": [
         "FT_17__gd5.png"
@@ -75,16 +85,16 @@
 
     ],
     "Light Tank IV": [
-        {"file": "Hotchkis_H35__gd5.png", "countries": ["France"]}
+        {"file": "Hotchkis_H35__gd5.png", "countries": "french"}
     ],
     "Light Tank V": [
-        {"file": "Panzer_I_ausf_b__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "Renault_R35__gd5.png", "countries": ["France"]},
-        {"file": "T-26__gd5.png", "countries": ["Russia", "Soviet Union"]}
+        {"file": "Panzer_I_ausf_b__gd5.png", "countries": "germanic"},
+        {"file": "Renault_R35__gd5.png", "countries": "french"},
+        {"file": "T-26__gd5.png", "countries": "russian"}
     ],
     "Light Tank VI": [
-        {"file": "Panzer_II_ausf_C__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "Hotchkis_H39__gd5.png", "countries": ["France"]}
+        {"file": "Panzer_II_ausf_C__gd5.png", "countries": "germanic"},
+        {"file": "Hotchkis_H39__gd5.png", "countries": "french"}
     ],
     "Light Tank VII": [
 

@@ -79,13 +79,14 @@ def load_symbols():
     clear_caches()
 
 
-def _load_variant(style, style_dir, name_key, entry):
+def _load_variant(style, style_dir, name_key, entry, cultures=None):
     """One art variant for `name_key`. `entry` is either a plain filename
     string (applies to every country) or {"file": ..., "countries": [...]}
     (restricted to those country ids -- the same strings that key
-    data/json/countries_data.json, e.g. "Germany", "German Reich"). Returns
-    None on anything unusable so the caller can skip it rather than fail the
-    whole style."""
+    data/json/countries_data.json, e.g. "Germany", "German Reich"). The
+    "countries" value can also be a string referencing a culture group from
+    the manifest's _cultures section. Returns None on anything unusable so
+    the caller can skip it rather than fail the whole style."""
     if isinstance(entry, str):
         filename, countries = entry, None
     elif isinstance(entry, dict):
@@ -98,6 +99,15 @@ def _load_variant(style, style_dir, name_key, entry):
     if not filename:
         print(f"Warning: {style} unit art '{name_key}' has an entry with no 'file'")
         return None
+
+    # Resolve culture group references to actual country lists
+    if isinstance(countries, str):
+        if cultures and countries in cultures:
+            countries = cultures[countries]
+        else:
+            print(f"Warning: {style} unit art '{name_key}' references unknown "
+                  f"culture group '{countries}'")
+            return None
 
     img_path = os.path.join(style_dir, filename)
     if not os.path.exists(img_path):
@@ -130,11 +140,13 @@ def load_style_symbols(style):
             print(f"Warning: could not read {manifest_path}: {e}")
             manifest = {}
 
+        cultures = manifest.get("_cultures", {})
+
         for name_key, value in manifest.items():
             if name_key.startswith("_"):
                 continue  # reserved for comments/metadata, not a unit name
             entries = value if isinstance(value, list) else [value]
-            variants = [v for v in (_load_variant(style, style_dir, name_key, e) for e in entries)
+            variants = [v for v in (_load_variant(style, style_dir, name_key, e, cultures) for e in entries)
                        if v is not None]
             if variants:
                 symbols[name_key] = variants
