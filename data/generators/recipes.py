@@ -181,12 +181,23 @@ UNIT_SECTIONS = [
         # since 20 levels now cover the same span as 100 old year-steps at 5x the
         # per-level jump).
         UnitFamily("Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(50, 25),
+            "health": linear(100, 50), "attack": linear(60, 30),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(50, 25),
+            "bombard_attack": linear(60, 30),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(1000, 50), "cost_manpower": const(500),
+            "cost_fuel": const(0), "production_time": const(2),
+        }),
+        # Same tech track as Artillery (see c.UNIT_TECH_KEY_OVERRIDES -- no
+        # separate research of its own) and identical in every stat except
+        # double cost_materials and much heavier damage, mirrored 1:1 between
+        # melee and bombardment like Artillery itself.
+        UnitFamily("Heavy Artillery", roman_suffixes(20), {
+            "health": linear(100, 50), "attack": linear(100, 50),
+            "bombard_attack": linear(100, 50),
+            "defense": const(0),
+            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(3),
         }),
     ],

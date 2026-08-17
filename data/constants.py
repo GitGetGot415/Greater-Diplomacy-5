@@ -968,6 +968,7 @@ LANE_SLOTS_TYPICAL = COMBAT_WIDTH // 2
 # Matched against queries.get_base_unit_name, so every level of the family counts.
 BOMBARDMENT_UNITS = {
     "Artillery": 1,
+    "Heavy Artillery": 1,
     "WW1 Railroad Gun": 2,
     "WW2 Railroad Gun": 2,
     "Landkreuzer P.1000 Ratte": 2,
@@ -1060,10 +1061,13 @@ TANK_GROUP_EXTRAS = [
 
 # Unit classes whose research key isn't just their lowercased name (see
 # queries.get_unit_tech_key). The "Type" suffix is part of the unit name only.
+# "heavy_artillery" rides the plain "artillery" tech instead of a track of its
+# own, so researching Artillery unlocks both variants at the same levels.
 UNIT_TECH_KEY_OVERRIDES = {
     "motorized_infantry_type": "motorized_infantry",
     "mechanized_infantry_type": "mechanized_infantry",
     "infantry_fighting_vehicle_type": "infantry_fighting_vehicle",
+    "heavy_artillery": "artillery",
 }
 
 # motorized_infantry/mechanized_infantry/infantry_fighting_vehicle (see
