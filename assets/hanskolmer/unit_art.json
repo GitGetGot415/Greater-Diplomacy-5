@@ -10,7 +10,7 @@
         {"file": "german_infantry_1914__gd5.png", "countries": ["Germany", "German Reich", "German Empire", "Weimar Republic"]},
         {"file": "british_infantry_1914__gd5.png", "countries": ["United Kingdom", "England"]},
         {"file": "french_infantry_1914__gd5.png", "countries": ["France"]},
-        {"file": "russian_infantry_1914__gd5.png", "countries": ["Russia"]},
+        {"file": "russian_infantry_1914__gd5.png", "countries": ["Russia", "Soviet Union"]},
         {"file": "italian_infantry_1914__gd5.png", "countries": ["Italy"]}
     ],
     "Infantry 1926-1960": [
@@ -55,10 +55,12 @@
     "Medium Tank III": [
         {"file": "Panzer_III_ausf_F__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
         {"file": "sherm1_gd5.png", "countries": ["United States of America"]},
+        {"file": "T-28A__gd5.png", "countries": ["Russia", "Soviet Union"]},
         {"file": "Char_D2_gd5.png", "countries": ["France"]}
     ],
     "Medium Tank IV": [
-        {"file": "Somua_S35__gd5.png", "countries": ["France"]}
+        {"file": "Somua_S35__gd5.png", "countries": ["France"]},
+        {"file": "T-34__gd5.png", "countries": ["Russia", "Soviet Union"]}
     ],
     "WW1 Tank": [
         {"file": "Mark_V__gd5.png", "countries": ["United Kingdom", "England"]}
@@ -77,7 +79,8 @@
     ],
     "Light Tank V": [
         {"file": "Panzer_I_ausf_b__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
-        {"file": "Renault_R35__gd5.png", "countries": ["France"]}
+        {"file": "Renault_R35__gd5.png", "countries": ["France"]},
+        {"file": "T-26__gd5.png", "countries": ["Russia", "Soviet Union"]}
     ],
     "Light Tank VI": [
         {"file": "Panzer_II_ausf_C__gd5.png", "countries": ["Germany", "German Empire", "German Reich"]},
