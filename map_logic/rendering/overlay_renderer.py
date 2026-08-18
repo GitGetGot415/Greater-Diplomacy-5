@@ -431,9 +431,18 @@ def draw_overlay_content(map_screen, surface):
                     # .get, like every other read of this key below it. A
                     # province dict is not guaranteed to carry one -- the editor
                     # and the map tools both build provinces without it.
-                    if province.get("units"):
+                    #
+                    # Filtered once per province: a hidden submarine must not
+                    # trip any per-unit indicator (disband, conversion, the "?"
+                    # blip) even in an otherwise fully-visible province -- full
+                    # province visibility and per-submarine visibility are
+                    # separate layers.
+                    visible_units = queries.filter_visible_units(
+                        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+
+                    if visible_units:
                         draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
-                        
+
                     if not is_partial and queries.is_training_troops(province):
                         training_sym = status_icon(map_screen, c.ICON_TRAINING)
                         if training_sym:
@@ -441,7 +450,7 @@ def draw_overlay_content(map_screen, surface):
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in province.get("units", [])):
+                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in visible_units):
                         disband_sym = status_icon(map_screen, c.ICON_DISBANDING)
                         if disband_sym:
                             rect = disband_sym.get_rect(center=(sx, sy))
@@ -449,7 +458,7 @@ def draw_overlay_content(map_screen, surface):
 
                     # --- Conversion Indicator (Convoy/Truck transformations) ---
                     if not is_partial:
-                        convert_order = next((u.get("order", {}) for u in province.get("units", [])
+                        convert_order = next((u.get("order", {}) for u in visible_units
                                                if u.get("order", {}).get("type") == "CONVERT"), None)
                         convert_icon = None
                         if convert_order:
@@ -733,7 +742,11 @@ def unknown_box(size):
 
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
-    units = province.get("units", [])
+    # Filtered up front: a lone hidden submarine must not even trip the "?"
+    # partial-fog blip, or its position leaks through despite being otherwise
+    # invisible to anyone who isn't allied or already fighting it.
+    units = queries.filter_visible_units(
+        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
     if not units:
         return
 

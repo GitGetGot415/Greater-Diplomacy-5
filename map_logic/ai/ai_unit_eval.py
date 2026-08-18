@@ -492,7 +492,8 @@ def threat_profile(world, nation, unit_library, candidates):
                 prov = world.id_to_province.get(prov_id)
                 if not prov:
                     continue
-                hostile = [u for u in prov.get("units", []) if u.get("owner") == enemy]
+                visible_units = queries.filter_visible_units(prov.get("units", []), nation, prov, world.nation_data)
+                hostile = [u for u in visible_units if u.get("owner") == enemy]
                 if not hostile:
                     continue
                 volleys.append(queries.get_group_attack_sum(hostile))

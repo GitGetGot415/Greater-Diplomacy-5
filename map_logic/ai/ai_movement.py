@@ -260,7 +260,11 @@ def _compute_unsafe_waters(map_screen, ai_name):
     unsafe_waters = {}
     for p in map_screen.map_data.values():
         if queries.is_water_province(p):
-            enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in p.get("units", [])
+            # Hidden enemy submarines don't make a water tile read as patrolled --
+            # an AI that routed convoys around them would be reacting to a fleet
+            # it has no way of knowing is there.
+            visible_units = queries.filter_visible_units(p.get("units", []), ai_name, p, map_screen.nation_data)
+            enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in visible_units
                             if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)
                             and queries.is_naval_unit(u.get("type", "")))
             if enemy_str > 0:
@@ -565,7 +569,8 @@ def _bombardment_target(map_screen, ai_name, prov, bomb_range):
         target = map_screen.id_to_province.get(target_id)
         if not target:
             continue
-        value = sum(queries.calculate_unit_strength(u) for u in target.get("units", ())
+        visible_units = queries.filter_visible_units(target.get("units", ()), ai_name, target, map_screen.nation_data)
+        value = sum(queries.calculate_unit_strength(u) for u in visible_units
                     if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data))
         if value > best_value:
             best_id, best_value = target_id, value

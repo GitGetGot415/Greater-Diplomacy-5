@@ -204,7 +204,8 @@ def _is_frontline(map_screen, ai_name, prov):
         n_prov = map_screen.id_to_province.get(n_id)
         if not n_prov:
             continue
-        for u in n_prov.get("units", []):
+        visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, map_screen.nation_data)
+        for u in visible_units:
             if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data):
                 return True
     return False
@@ -315,8 +316,10 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
             for n_id in prov.get("neighbors", []):
                 n_prov = map_screen.id_to_province.get(n_id)
                 if not n_prov: continue
-                # Are there enemy units here?
-                for u in n_prov.get("units", []):
+                # Are there enemy units here? A hidden submarine sitting quietly
+                # offshore doesn't get to trigger a panic build.
+                visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, map_screen.nation_data)
+                for u in visible_units:
                     if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data):
                         enemy_adjacent = True
                         break

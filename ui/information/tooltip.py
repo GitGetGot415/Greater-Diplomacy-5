@@ -43,13 +43,18 @@ def draw_tooltip(map_screen, surface):
         pass
         
     elif map_screen.secondary_mode == "UNITS":
+        # Filtered up front: a lone hidden submarine must not even trip the
+        # "something is here" partial-fog hint, or its position leaks through
+        # the "?" blip despite being otherwise invisible.
+        visible_units = queries.filter_visible_units(
+            prov.get("units", []), map_screen.player_country, prov, map_screen.nation_data)
         if not is_visible:
-            if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and prov.get("units"):
+            if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and visible_units:
                 lines.append("- ? (Unknown Units)")
             else:
                 lines.append("(Units hidden by Fog of War)")
         else:
-            units = prov.get("units", [])
+            units = visible_units
             if not units:
                 lines.append("No Units Present")
             else:

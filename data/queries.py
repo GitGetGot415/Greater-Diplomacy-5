@@ -652,6 +652,33 @@ def is_nation_in_combat_here(nation, province, nation_data):
     enemies = get_enemies(nation, nation_data)
     return any(u.get("owner") in enemies for u in units)
 
+def is_submarine_unit(unit_type):
+    """Checks if a unit belongs to the Submarine family, at any research level."""
+    return unit_type.startswith("Submarine")
+
+def is_unit_visible_to(unit, viewer_nation, province, nation_data):
+    """Whether `viewer_nation` is allowed to see this unit, on top of ordinary fog of war.
+
+    Submarines stay hidden from everyone outside the owner's imperial family,
+    faction, and allies -- unless mutually hostile nations are already trading
+    fire in the province, at which point there is no more hiding among them.
+    Every other unit type is unaffected.
+    """
+    if not is_submarine_unit(unit.get("type", "")):
+        return True
+    if viewer_nation not in nation_data:
+        # Spectator/Editor/no-country views ignore fog of war entirely, same as
+        # get_visible_provinces -- there's no nation here to keep a secret from.
+        return True
+    owner = unit.get("owner")
+    if owner == viewer_nation or owner in get_all_friendly_nations(viewer_nation, nation_data):
+        return True
+    return is_province_in_active_combat(province, nation_data)
+
+def filter_visible_units(units, viewer_nation, province, nation_data):
+    """Returns `units` with any submarines `viewer_nation` may not see stripped out."""
+    return [u for u in units if is_unit_visible_to(u, viewer_nation, province, nation_data)]
+
 def is_hostile_territory(moving_nation, target_owner, nation_data):
     """Checks if a nation is actively at war with the target territory."""
     if target_owner in c.UNPLAYABLE_NATIONS:
@@ -1025,6 +1052,9 @@ def get_tech_unlocks(tech_key, level):
 
     if tech_key == "infantry_fighting_vehicle" and level == 1:
         unlocks.append("Infantry Fighting Vehicle (buildable up to your current Infantry tech)")
+
+    if tech_key == "submarine" and level == 1:
+        unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
     return unlocks
 
@@ -2678,14 +2708,21 @@ def get_combat_predictions(map_screen):
     from map_logic.turn_processing import combat_rules
     visible_to = None if is_spectator else friendly_nations
 
+    # Layers hidden submarines out of the bubble the same way the map/sidebar
+    # do. Spectators and the editor keep the full, unfiltered truth.
+    def sub_visible(units, prov):
+        if is_spectator:
+            return units
+        return filter_visible_units(units, player_country, prov, nation_data)
+
     for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
-        _p1, _p2, side1, side2 = combat_rules.meeting_sides(
+        prov_a, prov_b, side1, side2 = combat_rules.meeting_sides(
             map_screen.id_to_province, pair, visible_to)
         predictions.append({
             "type": "meeting",
             "loc": pair,
-            "side1": side1,
-            "side2": side2
+            "side1": sub_visible(side1, prov_a),
+            "side2": sub_visible(side2, prov_b)
         })
 
     # 2. Incoming movements, for the province clashes below.
@@ -2696,12 +2733,14 @@ def get_combat_predictions(map_screen):
             if order and order.get("type") == "MOVE" and order.get("path"):
                 if visible_to is not None and u.get("owner") not in visible_to:
                     continue
+                if not is_spectator and not is_unit_visible_to(u, player_country, prov, nation_data):
+                    continue
                 incoming.setdefault(order["path"][0], []).append((u, prov["id"]))
 
     # 3. Find Province Clashes (Static Defenders vs Incoming Attackers)
     for prov in map_data.values():
         prov_id = prov["id"]
-        defenders = prov.get("units", [])
+        defenders = sub_visible(prov.get("units", []), prov)
         attackers = [u for u, o in incoming.get(prov_id, [])]
         
         forces_by_owner = {}
