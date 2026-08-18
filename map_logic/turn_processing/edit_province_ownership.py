@@ -48,10 +48,6 @@ def conquer_province(map_screen, province, new_owner):
         # Flag this for an update later rather than doing the heavy math instantly
         map_screen.centers_need_update = True
 
-        if not map_screen.is_editor:
-            if not province.get("cores"):
-                province["cores"] = [new_owner]
-
         # --- A nation that just lost its last province leaves the world stage ---
         if old_owner != new_owner and old_owner in map_screen.nation_data:
             landless = not any(p.get("owner") == old_owner

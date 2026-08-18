@@ -932,9 +932,9 @@ def can_ships_enter(moving_nation, target_province, nation_data):
     if is_water_province(target_province): return True
     if not target_province.get("is_coastal", False): return False
 
+    # Ships can dock in a friendly port, but cannot land on unclaimed shores
+    # to claim them -- taking territory is a job for land units.
     target_owner = target_province.get("owner", "Unclaimed")
-    if target_owner == "Unclaimed": return True
-
     return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
 def can_land_units_enter(moving_nation, target_province, nation_data):
