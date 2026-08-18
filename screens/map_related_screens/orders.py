@@ -160,6 +160,23 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.refresh_ui()
 
+    def _command_blocked_silent(self, unit):
+        """True if tactical mode forbids acting on this unit.
+
+        A tactical player pilots one specific unit, not their whole nation, so
+        other units they own in the same stack must be rejected the same way
+        foreign units are -- every order-issuing method needs this check, not
+        just the buttons that call it.
+        """
+        return self.map_screen.tactical_mode and unit is not self.map_screen.player_unit
+
+    def _command_blocked(self, unit):
+        """Like _command_blocked_silent, but also surfaces feedback to the player."""
+        if self._command_blocked_silent(unit):
+            self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
+            return True
+        return False
+
     def fit_icon(self, icon, size_preset, padding=6):
         """Shrinks an oversized unit sprite so it stays inside its button.
 
@@ -208,10 +225,12 @@ class Orders_Screen(GameState):
                 self.elements.append(btn_all)
 
                 btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X + TOP_BTN_STEP_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
+                if is_tactical: btn_clear.disabled = True
                 self.elements.append(btn_clear)
             else:
                 # If there's only 1 unit, just put the clear orders button where select all would have been
                 btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
+                if is_tactical: btn_clear.disabled = True
                 self.elements.append(btn_clear)
 
         display_index = 0
@@ -382,7 +401,7 @@ class Orders_Screen(GameState):
                 self.elements.append(btn_bombard)
 
                 if is_tactical_other:
-                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard]:
+                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_upgrade, btn_bombard]:
                         b.apply_state(enabled=False)
 
                 # While this unit is being renamed, hide the other action buttons so the
@@ -391,22 +410,26 @@ class Orders_Screen(GameState):
                     for b in (btn_conv, btn_disband, btn_repair, btn_upgrade, btn_bombard):
                         b.apply_state(visible=False)
 
-                for b in (btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_bombard):
+                for b in (btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_upgrade, btn_bombard):
                     b.is_scrollable = True
                     b.click_guard = row_guard
 
             display_index += 1
 
     def start_renaming(self, index):
-        self.renaming_unit_index = index
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
+            if self._command_blocked(units[index]):
+                return
             self.rename_text = units[index].get("custom_name", "")
+        self.renaming_unit_index = index
         self.refresh_ui()
 
     def save_unit_name(self, index):
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
+            if self._command_blocked(units[index]):
+                return
             if self.rename_text.strip():
                 units[index]["custom_name"] = self.rename_text.strip()
             else:
@@ -424,6 +447,8 @@ class Orders_Screen(GameState):
         if not (0 <= index < len(units)): return
 
         unit = units[index]
+        if self._command_blocked(unit):
+            return
         u_type = unit.get("original_type", unit.get("type", ""))
         stats = self.unit_library.get(u_type, {})
 
@@ -466,6 +491,8 @@ class Orders_Screen(GameState):
         if not (0 <= index < len(units)): return
 
         unit = units[index]
+        if self._command_blocked(unit):
+            return
         unit["order"] = {
             "type": "UPGRADE",
             "turns_left": 1,
@@ -480,8 +507,7 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         if not (0 <= index < len(units)): return
 
-        if self.map_screen.tactical_mode and units[index] is not self.map_screen.player_unit:
-            self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
+        if self._command_blocked(units[index]):
             return
 
         self.bombarding_unit_index = index
@@ -516,6 +542,8 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
             unit = units[index]
+            if self._command_blocked(unit):
+                return
             unit["order"] = {"type": "DISBAND", "turns_left": 1}
             self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
             self.refresh_ui()
@@ -532,8 +560,10 @@ class Orders_Screen(GameState):
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
             unit = units[index]
+            if self._command_blocked(unit):
+                return
             u_type = unit.get("type", "")
-            
+
             if u_type.startswith("Convoy"):
                 target_type = "Land Unit"
                 turns = 1
@@ -559,6 +589,8 @@ class Orders_Screen(GameState):
     def cancel_unit_order(self, index):
         units = self.target_province.get("units", [])
         if 0 <= index < len(units):
+            if self._command_blocked(units[index]):
+                return
             order = units[index].get("order", {})
             if "order" in units[index]:
                 if isinstance(order, dict) and "refund" in order:
@@ -579,7 +611,7 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
 
         for unit in units:
-            if unit.get("owner") == self.map_screen.player_country:
+            if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
                 if "order" in unit:
                     order = unit["order"]
                     if isinstance(order, dict) and "refund" in order:
