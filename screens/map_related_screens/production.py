@@ -25,14 +25,22 @@ BAR_WIDTH = 570
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
 
-# Infantry row: "Mot"/"Mec"/"IFV" mode toggles sit where the button normally
-# starts, pushing the button (and its stat bar, which shrinks to keep its right
-# edge fixed) right by this much. Only that one row is affected - every other
-# row keeps its normal x position.
+# Infantry/Artillery rows: variant mode toggles ("Mot"/"Mec"/"IFV", or
+# Artillery's single "Hvy") sit where the button normally starts, pushing the
+# button (and its stat bar, which shrinks to keep its right edge fixed) right
+# by this much. Only those rows are affected - every other row keeps its
+# normal x position.
 INFANTRY_MODE_BTN_GAP = 4
 INFANTRY_MODE_TO_MAIN_GAP = 8
 INFANTRY_MODE_COUNT = 3
-INFANTRY_MODE_BLOCK_WIDTH = 30 * INFANTRY_MODE_COUNT + INFANTRY_MODE_BTN_GAP * (INFANTRY_MODE_COUNT - 1) + INFANTRY_MODE_TO_MAIN_GAP
+
+
+def variant_block_width(count):
+    """Width of `count` variant-toggle squares plus the gap to the main button."""
+    return 30 * count + INFANTRY_MODE_BTN_GAP * (count - 1) + INFANTRY_MODE_TO_MAIN_GAP
+
+
+INFANTRY_MODE_BLOCK_WIDTH = variant_block_width(INFANTRY_MODE_COUNT)
 
 # Coloured section panels drawn behind each group of rows
 PANEL_X = 30
@@ -108,6 +116,11 @@ class Production_Screen(GameState):
         # custom_production_units.
         self.custom_infantry_modes = {}
 
+        # Mirrors infantry_mode/custom_infantry_modes above, but for the single
+        # Artillery/Heavy Artillery toggle - "normal" or "heavy".
+        self.artillery_mode = "normal"
+        self.custom_artillery_modes = {}
+
     def handle_events(self, events):
         # Override to block all interaction
         if self.map_screen.tactical_mode:
@@ -128,6 +141,8 @@ class Production_Screen(GameState):
         self.target_scroll_y = 0
         self.infantry_mode = "normal"
         self.custom_infantry_modes = {}
+        self.artillery_mode = "normal"
+        self.custom_artillery_modes = {}
         self.refresh_ui()
 
     def enforce_scroll_bounds(self):
@@ -386,14 +401,22 @@ class Production_Screen(GameState):
             ("ifv", "Infantry Fighting Vehicle Type", "IFV", ifv_unlocked),
         )
 
-        def render_mode_toggles(mode, set_mode):
-            """Draws the Mot/Mec/IFV toggle squares at the row's left edge (see
-            INFANTRY_MODE_BLOCK_WIDTH). Always drawn, disabled/greyed when the
+        # Heavy Artillery rides Artillery's own research (see
+        # c.UNIT_TECH_KEY_OVERRIDES) rather than a separate gate tech, so unlike
+        # the Infantry variants above it's always available once the row itself
+        # is being drawn at all - there's nothing separate to grey it out for.
+        ARTILLERY_VARIANTS = (
+            ("heavy", "Heavy Artillery", "Hvy", True),
+        )
+
+        def render_mode_toggles(mode, set_mode, variants):
+            """Draws the variant toggle squares at the row's left edge (see
+            variant_block_width). Always drawn, disabled/greyed when the
             corresponding tech isn't researched. `set_mode(key)` should flip to
             that mode, or back to 'normal' if it's already active."""
             toggle_x = x_pos
             spectator_locked = is_spectator and not can_spectator_edit
-            for key, _prefix, label, available in INFANTRY_VARIANTS:
+            for key, _prefix, label, available in variants:
                 toggle_color = "orange" if (available and mode == key) else "blue"
                 toggle_cb = (lambda k=key: set_mode(k)) if (available and not spectator_locked) else (lambda: None)
                 toggle_btn = self._add_scroll_button(toggle_x, y_offset, toggle_color, label, toggle_cb,
@@ -401,10 +424,10 @@ class Production_Screen(GameState):
                 toggle_btn.disabled = not available or spectator_locked
                 toggle_x += 30 + INFANTRY_MODE_BTN_GAP
 
-        def resolve_infantry_variant(mode):
+        def resolve_variant(mode, variants):
             """Validates a stored mode against current research, returning the
             (possibly corrected) mode and its unit-name prefix swap target."""
-            for key, prefix, _label, available in INFANTRY_VARIANTS:
+            for key, prefix, _label, available in variants:
                 if mode == key:
                     return (key, prefix) if available else ("normal", None)
             return "normal", None
@@ -418,7 +441,7 @@ class Production_Screen(GameState):
             if base_year is None:
                 return
 
-            mode, prefix = resolve_infantry_variant(self.infantry_mode)
+            mode, prefix = resolve_variant(self.infantry_mode, INFANTRY_VARIANTS)
             self.infantry_mode = mode
             unit_name = f"{prefix} {base_year}" if prefix else f"Infantry Type {base_year}"
 
@@ -427,14 +450,14 @@ class Production_Screen(GameState):
                 self.infantry_mode = new_mode if self.infantry_mode != new_mode else "normal"
                 self.refresh_ui()
 
-            render_mode_toggles(mode, set_mode)
+            render_mode_toggles(mode, set_mode, INFANTRY_VARIANTS)
             render_unit_button(unit_name, "green", x_offset=INFANTRY_MODE_BLOCK_WIDTH)
 
         def render_custom_infantry_row(base_name, btn_color):
             """Same Mot/Mec/IFV toggle as render_infantry_row, but for one specific
             "Infantry Type <year>" entry in the Custom section - each such entry
             gets its own independent toggle (see self.custom_infantry_modes)."""
-            mode, prefix = resolve_infantry_variant(self.custom_infantry_modes.get(base_name, "normal"))
+            mode, prefix = resolve_variant(self.custom_infantry_modes.get(base_name, "normal"), INFANTRY_VARIANTS)
             self.custom_infantry_modes[base_name] = mode
             unit_name = base_name.replace("Infantry Type", prefix) if prefix else base_name
 
@@ -443,8 +466,59 @@ class Production_Screen(GameState):
                 self.custom_infantry_modes[base] = new_mode if current != new_mode else "normal"
                 self.refresh_ui()
 
-            render_mode_toggles(mode, set_mode)
+            render_mode_toggles(mode, set_mode, INFANTRY_VARIANTS)
             render_unit_button(unit_name, btn_color, x_offset=INFANTRY_MODE_BLOCK_WIDTH)
+
+        def highest_unlocked_roman_tier(group_name):
+            """Highest tier of a roman-numeral-leveled family (Artillery, Cavalry,
+            Militia, Tanks, Navies, ...) the player's research covers, or None."""
+            tech_key = queries.get_unit_tech_key(group_name)
+            researched_lvl = player_research.get(tech_key, 0)
+            highest_lvl, highest_unlocked = -1, None
+            for name in self.unit_library:
+                if queries.get_base_unit_name(name) == group_name:
+                    lvl = queries.roman_to_int(name.replace(group_name, "").strip())
+                    if researched_lvl >= max(1, lvl) and lvl > highest_lvl:
+                        highest_lvl, highest_unlocked = lvl, name
+            return highest_unlocked
+
+        ARTILLERY_MODE_BLOCK_WIDTH = variant_block_width(len(ARTILLERY_VARIANTS))
+
+        def render_artillery_row():
+            """Single combined Artillery row: a Hvy toggle to the left of the
+            production button switches to Heavy Artillery, which shares
+            Artillery's own research level exactly (see
+            c.UNIT_TECH_KEY_OVERRIDES) instead of getting a row of its own."""
+            highest_unlocked = highest_unlocked_roman_tier("Artillery")
+            if highest_unlocked is None:
+                return
+
+            mode, prefix = resolve_variant(self.artillery_mode, ARTILLERY_VARIANTS)
+            self.artillery_mode = mode
+            unit_name = highest_unlocked.replace("Artillery", prefix) if prefix else highest_unlocked
+
+            def set_mode(new_mode):
+                self.artillery_mode = new_mode if self.artillery_mode != new_mode else "normal"
+                self.refresh_ui()
+
+            render_mode_toggles(mode, set_mode, ARTILLERY_VARIANTS)
+            render_unit_button(unit_name, "green", x_offset=ARTILLERY_MODE_BLOCK_WIDTH)
+
+        def render_custom_artillery_row(base_name, btn_color):
+            """Same Hvy toggle as render_artillery_row, but for one specific
+            "Artillery <numeral>" entry in the Custom section - each gets its own
+            independent toggle (see self.custom_artillery_modes)."""
+            mode, prefix = resolve_variant(self.custom_artillery_modes.get(base_name, "normal"), ARTILLERY_VARIANTS)
+            self.custom_artillery_modes[base_name] = mode
+            unit_name = base_name.replace("Artillery", prefix) if prefix else base_name
+
+            def set_mode(new_mode, base=base_name):
+                current = self.custom_artillery_modes.get(base, "normal")
+                self.custom_artillery_modes[base] = new_mode if current != new_mode else "normal"
+                self.refresh_ui()
+
+            render_mode_toggles(mode, set_mode, ARTILLERY_VARIANTS)
+            render_unit_button(unit_name, btn_color, x_offset=ARTILLERY_MODE_BLOCK_WIDTH)
 
         def unit_speed_sort_key(unit_name):
             # Fastest-to-build units float to the top of their category;
@@ -467,18 +541,8 @@ class Production_Screen(GameState):
                     if year is not None:
                         highest_unlocked = f"{group_name} {year}"
                 else:
-                    # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, Militia, and Artillery
-                    researched_lvl = player_research.get(tech_key, 0)
-                    group_units = [(n, s) for n, s in self.unit_library.items() if queries.get_base_unit_name(n) == group_name]
-                    highest_lvl = -1
-                    for name, stats in group_units:
-                        lvl_str = name.replace(group_name, "").strip()
-                        lvl = queries.roman_to_int(lvl_str)
-                        required_research = max(1, lvl)
-                        if researched_lvl >= required_research:
-                            if lvl > highest_lvl:
-                                highest_lvl = lvl
-                                highest_unlocked = name
+                    # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
+                    highest_unlocked = highest_unlocked_roman_tier(group_name)
 
                 if highest_unlocked:
                     unlocked_units.append(highest_unlocked)
@@ -488,11 +552,14 @@ class Production_Screen(GameState):
 
         self.infantry_start_y = y_offset
         render_infantry_row()
+        render_artillery_row()
         # Motorized/Mechanized/IFV are folded into the combined Infantry row above,
-        # not listed as their own group here.
+        # and Heavy Artillery into the combined Artillery row above - none of the
+        # four are listed as their own group here.
         other_infantry_groups = [g for g in self.infantry_groups
                                   if g not in ("Infantry Type", "Motorized Infantry Type",
-                                               "Mechanized Infantry Type", "Infantry Fighting Vehicle Type")]
+                                               "Mechanized Infantry Type", "Infantry Fighting Vehicle Type",
+                                               "Artillery", "Heavy Artillery")]
         process_unit_groups(other_infantry_groups, "green")
         self.infantry_end_y = y_offset
 
@@ -533,12 +600,16 @@ class Production_Screen(GameState):
         y_offset += ROW_STEP_Y
 
         # Stale entries (removed from the custom list since the last toggle) don't
-        # need to stick around in the per-row Mot/Mec state.
+        # need to stick around in the per-row Mot/Mec/Hvy state.
         self.custom_infantry_modes = {k: v for k, v in self.custom_infantry_modes.items() if k in custom_units}
+        self.custom_artillery_modes = {k: v for k, v in self.custom_artillery_modes.items() if k in custom_units}
 
         for unit_name in sorted(custom_units, key=unit_speed_sort_key):
-            if queries.get_base_unit_name(unit_name) == "Infantry Type":
+            base_name = queries.get_base_unit_name(unit_name)
+            if base_name == "Infantry Type":
                 render_custom_infantry_row(unit_name, "yellow")
+            elif base_name == "Artillery":
+                render_custom_artillery_row(unit_name, "yellow")
             else:
                 render_unit_button(unit_name, "yellow")
 
@@ -687,9 +758,10 @@ class Production_Screen(GameState):
         # Group every unit the player currently has the research level for, regardless
         # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
         # Same Infantry/Tanks/Navy rule the production columns use. Motorized/Mechanized/
-        # IFV Infantry aren't listed separately - add the plain "Infantry Type <year>"
-        # here and use the Mot/Mec/IFV toggle next to it on the production screen's
-        # Custom row to build that variant instead.
+        # IFV Infantry and Heavy Artillery aren't listed separately - add the plain
+        # "Infantry Type <year>"/"Artillery <numeral>" entry here and use the
+        # Mot/Mec/IFV/Hvy toggle next to it on the production screen's Custom row
+        # to build that variant instead.
         categorized = queries.get_grouped_units(
             self.unit_library, by_family=False,
             unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research))
@@ -697,7 +769,8 @@ class Production_Screen(GameState):
         for names in categorized.values():
             names[:] = [n for n in names
                         if queries.get_base_unit_name(n) not in (
-                            "Motorized Infantry Type", "Mechanized Infantry Type", "Infantry Fighting Vehicle Type")]
+                            "Motorized Infantry Type", "Mechanized Infantry Type",
+                            "Infantry Fighting Vehicle Type", "Heavy Artillery")]
             names.sort()
 
         from ui.checkbox_list_screen import CheckboxItem, SectionHeader

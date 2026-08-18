@@ -181,24 +181,24 @@ UNIT_SECTIONS = [
         # since 20 levels now cover the same span as 100 old year-steps at 5x the
         # per-level jump).
         UnitFamily("Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(80, 40),
+            "health": linear(100, 50), "attack": linear(120, 60),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(80, 40),
+            "bombard_attack": linear(120, 60),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(1000, 50), "cost_manpower": const(500),
-            "cost_fuel": const(0), "production_time": const(2),
+            "cost_fuel": const(0), "production_time": const(3),
         }),
         # Same tech track as Artillery (see c.UNIT_TECH_KEY_OVERRIDES -- no
         # separate research of its own) and identical in every stat except
         # double cost_materials and much heavier damage, mirrored 1:1 between
         # melee and bombardment like Artillery itself.
         UnitFamily("Heavy Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(140, 70),
-            "bombard_attack": linear(140, 70),
+            "health": linear(100, 50), "attack": linear(200, 100),
+            "bombard_attack": linear(200, 100),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(500),
-            "cost_fuel": const(0), "production_time": const(3),
+            "cost_fuel": const(0), "production_time": const(5),
         }),
     ],
     [
@@ -243,21 +243,21 @@ UNIT_SECTIONS = [
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Landkreuzer P.1000 Ratte", single(), {
             "health": 10000, "attack": 6000, "defense": 400,
-            "bombard_attack": 400,
+            "bombard_attack": 600,
             "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 8,
         }),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 500,
-            "bombard_attack": 500,
+            "bombard_attack": 800,
             "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
         UnitFamily("Railgun", single(), {
-            "health": 10000, "attack": 1000, "defense": 500,
-            "bombard_attack": 1000,
+            "health": 10000, "attack": 3000, "defense": 500,
+            "bombard_attack": 3000,
             "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
@@ -270,16 +270,16 @@ UNIT_SECTIONS = [
         # Two standalone guns (not a leveled family) - stats equal the old 5-level
         # Railroad Gun's level 1 and level 5 respectively.
         UnitFamily("WW1 Railroad Gun", single(), {
-            "health": 1200, "attack": 150,
+            "health": 1200, "attack": 300,
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": 150,
+            "bombard_attack": 300,
             "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
             "cost_fuel": 0, "production_time": 8,
         }),
         UnitFamily("WW2 Railroad Gun", single(), {
-            "health": 2000, "attack": 250,
-            "bombard_attack": 250,
+            "health": 2000, "attack": 500,
+            "bombard_attack": 500,
             "defense": 0, "speed": 1, "cost_materials": 16000, "cost_manpower": 1000,
             "cost_fuel": 0, "production_time": 8,
         }),

@@ -12,10 +12,11 @@ hanskolmer suggestions:
 - temporarially rent out factories to other countries via trade?
 - ADD HER FLAGS
 
-- possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
+- see if the tank production buttons can be compressed like infantry or artillery
+- perhaps railroad guns could be a type of artillery
+- seperate artillery research section?
 
-- if no claims, add option to generate claims
-- edit cost for units editor?
+- possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
 - color or colour???
 
@@ -24,7 +25,6 @@ hanskolmer suggestions:
 - puppets should take territory that has their cores...
 - prevent puppet bordergore
 - diplomacy rules option (the board game)
-- expand upon the tests?
 - backrooms in gd5??????
 
 - edit construction turns also allows for the editing of how much said unit costs to produce?
