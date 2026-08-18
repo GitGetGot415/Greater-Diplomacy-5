@@ -321,20 +321,27 @@ def _availability(columns):
     return available
 
 
-def _caps(coalition_groups, duels, lanes_of, available, slots):
+def _caps(coalition_groups, duels, lanes_of, available, slots, eager=()):
     """{(column, duel): slots} -- each side's allowance split among its members.
 
     The split is max-min fair (see share_slots), so allies pool their width
     instead of quartering it. A member's demand is simply how many units it
     brought: asking for more than that would take width off an ally that has
     bodies for it.
+
+    `eager` names columns to weigh as if they had brought a full rank instead.
+    Nothing in a real fight passes it -- a nation cannot seat men who are not
+    there -- but the AI's "how much room is there for me here?" is a question
+    about the fight it would be in after marching, not the one it is standing in
+    now, and answering that with today's headcount is what made a battle tile
+    look full to the very reserves it needed. See nation_front_capacity.
     """
     caps = {}
     for duel_index, groups in enumerate(duels):
         for group_index in groups:
             members = [i for i in coalition_groups[group_index]
                        if duel_index in lanes_of.get(i, ())]
-            demands = [len(available[i]) for i in members]
+            demands = [slots if i in eager else len(available[i]) for i in members]
             for i, allowance in zip(members, share_slots(demands, slots)):
                 caps[(i, duel_index)] = allowance
     return caps
@@ -427,7 +434,7 @@ def _lane_shares(seats):
     return shares
 
 
-def build_battle(sides, nation_data, width=None):
+def build_battle(sides, nation_data, width=None, full_rank_for=None):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -442,6 +449,10 @@ def build_battle(sides, nation_data, width=None):
     them rather than abandoning either -- see _lane_shares. The dissolve below is
     therefore a guard rather than a rule: it can only fire if a column turned up
     with no units at all.
+
+    `full_rank_for` is a nation whose *allowance* is worked out as though it had
+    brought a full rank -- see _caps. It changes no unit's seat, only the width
+    that nation is credited with, and exists for nation_front_capacity.
     """
     hostile = _hostile(nation_data)
     columns = _columns(sides)
@@ -456,7 +467,9 @@ def build_battle(sides, nation_data, width=None):
     slots = lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
     available = _availability(columns)
-    caps = _caps(groups, duels, lanes_of, available, slots)
+    eager = ({i for i, col in enumerate(columns) if col[1] == full_rank_for}
+             if full_rank_for else ())
+    caps = _caps(groups, duels, lanes_of, available, slots, eager)
     seats = _seat(columns, duels, lanes_of, foes, caps, available)
 
     def front(group_index, duel_index):
@@ -587,8 +600,19 @@ def nation_front_capacity(nation, province, nation_data, width=None):
     What the AI needs to answer "is this tile full for me?". A tile with no
     fight on it answers with a typical lane, since that is what would open if
     one started.
+
+    Could fill, not does fill. This used to hand back slots_held, which _caps
+    bounds by the units already standing here -- so a lone defender was told its
+    tile seats one, ai_movement doubled that for the relief rank, and a province
+    with five empty slots in front of it sorted as full against a quiet border
+    worth twelve. One man held the line while seven reserves next door marched
+    somewhere else, every turn: saves/THEYRE NOT PUTTING IN THEIR RESERVES.
+    Asking instead for the allowance a full rank would be given still splits the
+    width fairly against allies who are actually here; it only stops our own
+    absence from being the thing that makes the tile look full.
     """
-    battle = build_battle([list(province.get("units", ()))], nation_data, width)
+    battle = build_battle([list(province.get("units", ()))], nation_data, width,
+                          full_rank_for=nation)
     return slots_held(battle, nation) or c.LANE_SLOTS_TYPICAL
 
 

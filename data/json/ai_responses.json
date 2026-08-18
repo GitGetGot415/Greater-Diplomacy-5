@@ -112,6 +112,9 @@
                                     "We share an enemy. Let us share a road to reach them."],
   "PROACTIVE_FACTION_INVITE": ["Our cause would be stronger with you in it. Join us.",
                                "There is a seat at our table, if you want it."],
+  "PROACTIVE_CLAIM_LEADERSHIP": ["The pact needs a stronger hand at its head. It will be ours.",
+                                 "We carry the weight of this alliance. We will carry its name as well.",
+                                 "We have outgrown the hand that leads this pact. The chair is ours."],
 
   "ALLIANCE_BROKEN": ["We won't forget this.", "So much for our word to one another."],
   "FACTION_ABANDONED": ["We will not forget your abandonment.", "You walked out. That will be remembered."],

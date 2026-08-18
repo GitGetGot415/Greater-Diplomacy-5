@@ -104,8 +104,13 @@ def negotiation_role(nation, opponent, nation_data):
     my_faction = _faction_of(nation, nation_data)
     their_faction = _faction_of(opponent, nation_data)
 
-    # Talking to a bloc means talking to whoever runs it.
-    if their_faction and not queries.is_faction_leader(opponent, nation_data):
+    # Talking to a bloc means talking to whoever runs it -- unless it has nobody
+    # running it, in which case there is nobody to be sent to and refusing would
+    # make the war unendable. faction_leadership.promote fills that seat the
+    # moment a leader is conquered, so this only catches the gap before the next
+    # tick and saves written before the succession rule existed.
+    if (their_faction and not queries.is_faction_leader(opponent, nation_data)
+            and queries.get_faction_leader(their_faction, nation_data)):
         return None
 
     if not my_faction:
@@ -135,7 +140,9 @@ def refusal_reason(nation, opponent, nation_data):
         leader = queries.get_faction_leader(their_faction, nation_data)
         if leader:
             return f"{opponent} cannot settle alone -- negotiate with {leader}, who leads {their_faction}."
-        return f"{opponent} is bound to {their_faction} and cannot settle alone."
+        # A leaderless bloc has nobody to redirect to, so there is no reason to
+        # refuse; negotiation_role lets this through as an ordinary bilateral.
+        return ""
     return ""
 
 

@@ -210,6 +210,139 @@ class RoutingTests(WidthTestCase):
             self.route(stack_on_2=full + 4, weight_on_2=-20, stack_on_3=full - 1), [3])
 
 
+class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
+    """Where the capacity dict every test above supplies actually comes from.
+
+    Those fixtures hand the number in deliberately -- the property under test is
+    "the width is read", not what it happens to be. Nothing therefore exercised
+    combat_rules.nation_front_capacity as the *producer*, and it was answering a
+    different question from the one _tile_depth asks: how many slots we were
+    given, which _caps bounds by the units already standing there. A lone
+    defender's tile reported one slot, saturated at two, and sorted behind a
+    quiet border worth twelve -- saves/THEYRE NOT PUTTING IN THEIR RESERVES.
+    """
+
+    def tile(self, mine, theirs):
+        from tests.test_multiparty_combat import StubMapScreen, unit
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        units = [unit("A", attack=10) for _ in range(mine)]
+        units += [unit("B", attack=10) for _ in range(theirs)]
+        return screen, screen.add_province("p1", "A", units=units)
+
+    def capacity(self, mine, theirs):
+        from map_logic.turn_processing import combat_rules
+        screen, prov = self.tile(mine, theirs)
+        return combat_rules.nation_front_capacity("A", prov, screen.nation_data)
+
+    def test_a_lone_defender_is_told_the_whole_lane_is_open_to_it(self):
+        self.assertEqual(self.capacity(1, 8), c.LANE_SLOTS_TYPICAL)
+
+    def test_the_answer_does_not_depend_on_how_many_we_brought(self):
+        """The bug in one assertion: capacity used to track the garrison."""
+        self.assertEqual({self.capacity(n, 8) for n in (1, 2, 3, 6, 7)},
+                         {c.LANE_SLOTS_TYPICAL})
+
+    def test_a_battle_tile_is_not_saturated_by_its_own_garrison(self):
+        """_tile_depth is capacity x AI_RESERVE_DEPTH, and a one-man tile used
+        to saturate at two -- so one reserve joined and the rest walked away."""
+        depth = ai_movement._tile_depth({1: self.capacity(1, 8)}, 1)
+        self.assertGreater(depth, 2)
+        self.assertEqual(depth, c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH)
+
+    def test_allies_already_holding_the_line_still_take_their_share(self):
+        """Raising our demand must not take width off an ally who has bodies
+        for it -- share_slots is still the thing dividing the lane."""
+        from tests.test_multiparty_combat import StubMapScreen, unit
+        from map_logic.turn_processing import combat_rules
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("ALLY", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A", "ALLY"])
+        screen.nation_data["A"]["allied_with"] = ["ALLY"]
+        screen.nation_data["ALLY"]["allied_with"] = ["A"]
+
+        units = [unit("A", attack=10)]
+        units += [unit("ALLY", attack=10) for _ in range(5)]
+        units += [unit("B", attack=10) for _ in range(6)]
+        prov = screen.add_province("p1", "A", units=units)
+
+        self.assertLess(
+            combat_rules.nation_front_capacity("A", prov, screen.nation_data),
+            c.LANE_SLOTS_TYPICAL)
+
+
+class ReserveFlowTests(unittest.TestCase):
+    """The whole pipeline, on the board from the save that reported it.
+
+    Province 1 is a contested frontier, province 2 is the rear holding eight
+    reserves, province 6 is an enemy tile the rear also borders. Every test
+    above works on one function; this one asks what the AI actually does, which
+    is the thing that was wrong: with capacity tracking the garrison, exactly as
+    many reserves marched to the fight as were already in it, and the remainder
+    walked off to province 6 while the line held at one man.
+    """
+
+    def unit(self, owner):
+        return {"owner": owner, "type": "Infantry", "attack": 10, "health": 100,
+                "max_health": 100, "defense": 5, "speed": 1,
+                "order": {"type": "MOVE", "path": []}}
+
+    def board(self, defenders, reserves=8, attackers=8):
+        from tests.test_multiparty_combat import StubMapScreen
+
+        screen = StubMapScreen()
+        for name, foe in (("A", "E"), ("E", "A")):
+            screen.add_nation(name, at_war_with=[foe])
+            screen.nation_data[name]["is_playable"] = True
+        screen.player_country = "HUMAN"
+        screen.active_players = ["HUMAN"]
+        screen.scenario_settings = {}
+
+        front = screen.add_province(1, "A",
+                                    units=[self.unit("A") for _ in range(defenders)]
+                                    + [self.unit("E") for _ in range(attackers)])
+        rear = screen.add_province(2, "A",
+                                   units=[self.unit("A") for _ in range(reserves)])
+        enemy = screen.add_province(6, "E")
+        front["neighbors"], rear["neighbors"], enemy["neighbors"] = [2], [1, 6], [2]
+        return screen, rear
+
+    def marching_to(self, rear, tile):
+        return sum(1 for u in rear["units"]
+                   if ((u.get("order") or {}).get("path") or [None])[0] == tile)
+
+    def orders_for(self, defenders):
+        screen, rear = self.board(defenders)
+        ai_movement._generate_unit_orders(screen)
+        return rear
+
+    def test_a_thin_line_pulls_the_whole_reserve_in(self):
+        """One man holding a tile against eight used to draw exactly one."""
+        for defenders in (1, 2, 3):
+            with self.subTest(defenders=defenders):
+                rear = self.orders_for(defenders)
+                self.assertEqual(self.marching_to(rear, 1), 8)
+                self.assertEqual(self.marching_to(rear, 6), 0)
+
+    def test_the_pull_fades_as_the_tile_fills(self):
+        """Not a cliff -- the weight scales with the share of the tile still
+        empty, so the reserve is split against the other things wanting it."""
+        thin = self.marching_to(self.orders_for(1), 1)
+        half = self.marching_to(self.orders_for(c.LANE_SLOTS_TYPICAL), 1)
+        self.assertGreater(thin, half)
+        self.assertGreater(half, 0)
+
+    def test_a_full_front_and_relief_pulls_nobody(self):
+        """The cap is the point of the whole mechanism -- bodies past the relief
+        rank absorb nothing at all while they wait, so they go somewhere useful."""
+        rear = self.orders_for(int(c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH))
+        self.assertEqual(self.marching_to(rear, 1), 0)
+        self.assertEqual(self.marching_to(rear, 6), 8)
+
+
 class NavalTests(WidthTestCase):
     def test_ships_saturate_on_the_same_rule(self):
         """Naval stacks fight in lanes too, and used to be balanced by the same

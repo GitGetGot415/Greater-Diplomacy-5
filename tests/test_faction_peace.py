@@ -43,6 +43,23 @@ def at_war(game, a, b):
     return queries.are_at_war(a, b, game.nation_data)
 
 
+def old_enough_to_settle(game):
+    """Ages every running war past MIN_TURNS_FOR_CEASEFIRE.
+
+    Nobody will discuss terms in the opening turns of a war, and a test that
+    drives peace through the real turn pass has to get past that gate before it
+    can test anything else. Written as the constant rather than a number,
+    because these fixtures already went stale once when it moved from 2 to 6 --
+    at which point three of them were asserting that a treaty which never
+    happened had no effects, and passing.
+    """
+    for data in game.nation_data.values():
+        if not isinstance(data, dict):
+            continue
+        data["war_durations"] = {enemy: c.MIN_TURNS_FOR_CEASEFIRE
+                                 for enemy in data.get("at_war_with", [])}
+
+
 class BlocPeaceTests(unittest.TestCase):
     """A is human and leads the Entente; G leads the Alliance and is an AI."""
 
@@ -224,6 +241,7 @@ class SeparatePeaceTests(unittest.TestCase):
 
     def setUp(self):
         self.game = two_blocs(human_players=("S",))
+        old_enough_to_settle(self.game)
 
     def test_a_member_settling_alone_leaves_its_faction(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)

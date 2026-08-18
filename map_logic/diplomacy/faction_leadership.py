@@ -92,6 +92,67 @@ def standing(map_screen, nation, world=None):
             outweighs(map_screen, nation, world))
 
 
+def contenders(nation_data, faction):
+    """Who is closing on this faction's leadership, strongest claim first.
+
+    [(nation, turns held, turns needed), ...] for every member with a live
+    claim. Reads the counter `tick` already wrote rather than re-weighing
+    anybody, because the faction screen and the notification badge both ask this
+    every frame and nation_power walks the whole map.
+    """
+    out = []
+    for nation in queries.get_faction_members(faction, nation_data):
+        held = turns_held(nation, nation_data)
+        if held > 0:
+            out.append((nation, held, c.FACTION_CHALLENGE_TURNS))
+    out.sort(key=lambda entry: (-entry[1], entry[0]))
+    return out
+
+
+def _holds_land(map_screen, nation):
+    """Whether this nation is still on the map at all."""
+    return any(prov.get("owner") == nation
+               for prov in getattr(map_screen, "map_data", {}).values())
+
+
+def promote(map_screen, faction, world=None):
+    """Puts the strongest surviving member at the head of a leaderless faction.
+
+    A faction whose leader was annexed used to keep its roster and lose its
+    head, and nothing ever gave it another one: peace is negotiated with a
+    bloc's leader (peace_scope.negotiation_role), and a bloc with no leader is
+    one nobody can make peace with, ever. saves/PORTUGAL IS GONE WHY UK CANT
+    PEACE is the United Kingdom stuck alone in The Portugal Pact for exactly
+    that reason.
+
+    Strength is war_score.nation_power, the same scale a challenge is judged on,
+    so the nation that inherits the chair is the one that would have taken it.
+    Returns the new leader, or None if the faction had nobody left to lead it --
+    in which case the empty faction is cleared away rather than left as a name
+    on a dead nation's roster.
+    """
+    nation_data = map_screen.nation_data
+    if not faction or queries.get_faction_leader(faction, nation_data):
+        return None
+
+    roster = [n for n in queries.get_faction_members(faction, nation_data)
+              if queries.can_choose_own_faction(n, nation_data) and _holds_land(map_screen, n)]
+
+    if not roster:
+        # Nothing left to lead. Puppets in here follow their masters, who are
+        # not in this faction either, so let go of the whole thing.
+        for member in queries.get_faction_members(faction, nation_data):
+            nation_data[member]["faction"] = ""
+            nation_data[member]["is_faction_leader"] = False
+            nation_data[member].pop("faction_pressure", None)
+        (nation_data.get("FACTION_WAR_MAPS") or {}).pop(faction, None)
+        return None
+
+    heir = max(roster, key=lambda n: (power_of(map_screen, n, world), n))
+    transfer(nation_data, None, heir)
+    return heir
+
+
 def tick(map_screen, world=None):
     """Ages every member's claim on its faction's leadership by one turn.
 
@@ -119,9 +180,14 @@ def tick(map_screen, world=None):
         leader = leaders.get(faction)
         if not leader:
             # A faction with nobody at the head of it -- the leader was annexed,
-            # or a save predates this. Nothing to measure against; leave the
-            # counters where they are rather than crediting everyone a turn.
-            continue
+            # or a save predates the succession rule. Give it one before
+            # measuring, because the alternative is a bloc that can never make
+            # peace with anybody. promote clears every counter on its way past,
+            # so the new leader is a new bar and nobody is credited a turn they
+            # spent outweighing somebody who is no longer there.
+            leader = promote(map_screen, faction, world)
+            if not leader:
+                continue
 
         bar = power_of(map_screen, leader, world) * c.FACTION_CHALLENGE_MARGIN
         for nation in roster:

@@ -83,9 +83,19 @@ def retire_landless_nation(map_screen, nation):
         # Nobody is still allied with, at war with, or in a bloc with a nation
         # that no longer holds any ground.
         from map_logic.diplomacy.faction_actions import leave_faction
+        from map_logic.diplomacy import faction_leadership
         fac = data.get("faction", "")
+        was_leader = bool(data.get("is_faction_leader", False))
         if fac:
             leave_faction(map_screen.nation_data, nation)
+            # A bloc is negotiated with through whoever runs it, so a faction
+            # that loses its leader to a conquest and is given no replacement is
+            # a faction nobody can ever make peace with -- see
+            # faction_leadership.promote. The chair moves the moment the last
+            # province falls rather than waiting for the next tick, because the
+            # player may well be trying to settle with that bloc this turn.
+            if was_leader:
+                faction_leadership.promote(map_screen, fac)
 
         # Its own proposals die with it. Territory changes hands in phase 2 and
         # diplomacy resolves in phase 1, so an offer queued before the last

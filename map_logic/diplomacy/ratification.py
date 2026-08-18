@@ -27,11 +27,43 @@ RATIFY = "RATIFY"
 REFUSE = "REFUSE"
 
 
-def _members_with_something_to_lose(deal, signatory):
-    """Everyone on the signatory's side the deal takes something from."""
+def _members_with_something_to_lose(map_screen, deal, signatory):
+    """Everyone on the signatory's side the deal takes something from.
+
+    Two ways to lose something, and only the first is written into a clause.
+
+    The second is silence. Peace hands every occupied province the treaty does
+    not name back to its pre-war owner (deal_effects.restore_occupied), so a
+    member standing on enemy ground the deal says nothing about loses all of it
+    -- and a bare white peace, which names nobody at all, used to make that
+    unanimous and unaskable. France was never put the question about the four
+    Swiss provinces its leader gave back on its behalf. What a treaty does not
+    say is exactly what a member most needs a vote on.
+    """
+    from map_logic.diplomacy import war_score
+
     ours = set(deal["sides"][deal_mod.side_of(deal, signatory) or "a"])
-    return [n for n in deal_mod.affected_nations(deal)
-            if n in ours and n != signatory]
+    bound = [n for n in deal_mod.affected_nations(deal)
+             if n in ours and n != signatory]
+
+    if not deal_mod.ends_war(deal):
+        return bound
+
+    nation_data = map_screen.nation_data
+    theirs = set(deal_mod.opponents_of(deal, signatory))
+    prewar = war_score.prewar_index(nation_data)
+    kept = deal_mod.tile_transfers(deal, map_screen.map_data, nation_data)
+
+    for prov in map_screen.map_data.values():
+        holder = prov.get("owner")
+        if holder not in ours or holder == signatory or holder in bound:
+            continue
+        if kept.get(str(prov["id"])) == holder or kept.get(prov["id"]) == holder:
+            continue
+        if war_score.original_owner(prov, prewar) in theirs:
+            bound.append(holder)
+
+    return bound
 
 
 def _ai_ratifies(map_screen, member, deal):
@@ -51,7 +83,7 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     process_ratifications finishes it.
     """
     nation_data = map_screen.nation_data
-    bound = _members_with_something_to_lose(deal, signatory)
+    bound = _members_with_something_to_lose(map_screen, deal, signatory)
 
     refused, awaiting = [], []
     for member in bound:

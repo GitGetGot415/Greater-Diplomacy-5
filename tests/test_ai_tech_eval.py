@@ -296,6 +296,65 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(self.rank([]), [])
 
 
+class CatchUpTests(unittest.TestCase):
+    """Being behind schedule has to pull, not just being ahead push.
+
+    get_research_multiplier is the rate research_processor actually charges, and
+    it only ever punishes being early: everything historical comes back a flat
+    1.0, whether the world has had it for one year or fifty. Nothing anywhere
+    then pulled a lagging nation back towards the rest of the world, which is
+    saves/AI IS FAR BEHIND ON RESEARCH -- France in 1920 on infantry_type 12 and
+    resource_refining 11 with whole families still at zero.
+    """
+
+    def setUp(self):
+        self.library = queries.get_unit_library()
+        self.blib = queries.get_building_library()
+        self.research = {"infantry_type": 30, "medium_tank": 3, "artillery": 6,
+                         "factory": 7, "resource_refining": 29}
+        self.current = set(ue.buildable_units(self.research, self.library))
+        self.income = {"materials": 25000, "manpower": 11000, "fuel": 1500}
+
+    def rank(self, available, year=1939):
+        return te.rank_available(list(available), self.research, self.library,
+                                 self.blib, ctx(), self.current, year, self.income)
+
+    def test_on_schedule_is_the_neutral_point(self):
+        self.assertEqual(te.schedule_pressure(1939, 1939), 1.0)
+
+    def test_early_still_costs_what_the_research_rate_charges(self):
+        self.assertEqual(te.schedule_pressure(1939, 1941),
+                         queries.get_research_multiplier(1939, 1941))
+
+    def test_overdue_pulls_harder_the_longer_it_has_been_overdue(self):
+        self.assertGreater(te.schedule_pressure(1939, 1930),
+                           te.schedule_pressure(1939, 1935))
+        self.assertGreater(te.schedule_pressure(1939, 1935), 1.0)
+
+    def test_the_pull_is_capped_so_one_ancient_tech_cannot_drown_the_board(self):
+        self.assertEqual(te.schedule_pressure(2010, 1900),
+                         te.schedule_pressure(2010, 2010 - c.AI_TECH_OVERDUE_CAP))
+
+    def test_a_tie_goes_to_whatever_we_are_furthest_behind_on(self):
+        """Whole families score exactly zero -- level 1 unlocks nothing better
+        than we already field -- and the marginal read cannot separate them.
+        Level 1 is also the gate on every level above it, so the tie has to be
+        broken by something, and 'longest overdue' is the one that adds breadth.
+        """
+        available = [("cavalry", 1935, 900, False), ("armored_car", 1920, 900, False)]
+        self.assertEqual([entry[0] for entry in self.rank(available)],
+                         ["armored_car", "cavalry"])
+
+    def test_a_tech_nobody_could_finish_sorts_behind_a_worthless_on_time_one(self):
+        """Progress halves per year early, so past the horizon the thing costs
+        hundreds of times its sticker price and is not a real option."""
+        available = [("medium_tank", 1939, 2400, False), ("artillery", 1990, 900, False)]
+        self.assertEqual(self.rank(available)[0][0], "medium_tank")
+
+    def test_but_it_is_still_offered_when_it_is_all_there_is(self):
+        self.assertEqual(len(self.rank([("artillery", 1990, 900, False)])), 1)
+
+
 class QueueFillTests(unittest.TestCase):
     """The slot reservation that stops economy taking the whole tree forever."""
 

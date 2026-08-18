@@ -257,6 +257,127 @@ class AiClaimTests(Bloc):
         self.assertEqual(self.offered(0.9), [])
 
 
+class ContenderTests(Bloc):
+    """What the faction screen prints under the leader's name, and what puts
+    the (!) on the Faction button for everyone in the bloc.
+
+    Before this, a claim was legible from exactly one place -- the button on the
+    faction screen, which only ever spoke about the player. A leader had no way
+    to know it was being challenged, and the first anybody heard of a handover
+    was the handover.
+    """
+
+    def contenders(self):
+        return faction_leadership.contenders(self.game.nation_data, "The Pact")
+
+    def test_a_quiet_faction_has_nobody_to_report(self):
+        self.tick(20)
+        self.assertEqual(self.contenders(), [])
+
+    def test_a_member_building_a_claim_is_named_with_its_progress(self):
+        self.weigh("Rival", 2000)
+        self.tick(2)
+        self.assertEqual(self.contenders(),
+                         [("Rival", 2, c.FACTION_CHALLENGE_TURNS)])
+
+    def test_several_members_can_be_closing_at_once(self):
+        """The screen has to be a list, not a line."""
+        self.weigh("Rival", 2000)
+        self.tick(3)
+        self.weigh("Loyal", 2000)
+        self.tick(1)
+
+        self.assertEqual([n for n, _held, _needed in self.contenders()],
+                         ["Rival", "Loyal"])
+
+    def test_the_nearest_claim_is_listed_first(self):
+        self.weigh("Rival", 2000)
+        self.tick(3)
+        self.weigh("Loyal", 2000)
+        self.tick(1)
+
+        held = [h for _n, h, _needed in self.contenders()]
+        self.assertEqual(held, sorted(held, reverse=True))
+
+    def test_a_claim_that_slips_stops_being_reported(self):
+        self.weigh("Rival", 2000)
+        self.tick(3)
+        self.weigh("Rival", 1000)
+        self.tick(1)
+        self.assertEqual(self.contenders(), [])
+
+    def test_a_nation_in_no_faction_asks_about_nothing(self):
+        self.assertEqual(faction_leadership.contenders(self.game.nation_data, ""), [])
+
+
+class SuccessionTests(Bloc):
+    """A faction whose leader is conquered gets another one.
+
+    Peace is negotiated with whoever runs a bloc (peace_scope.negotiation_role),
+    so a bloc with nobody running it is one nobody can ever make peace with.
+    saves/PORTUGAL IS GONE WHY UK CANT PEACE is the United Kingdom alone in The
+    Portugal Pact, at war, with no leader and no way to get one: tick saw the
+    state and deliberately left it alone, and `eligible` needs a living leader
+    to measure a challenger against.
+    """
+
+    def orphan(self):
+        """Take the leader off the map the way a conquest does."""
+        from map_logic.turn_processing import edit_province_ownership
+
+        for prov in list(self.game.map_data.values()):
+            if prov.get("owner") == "Leader":
+                edit_province_ownership.conquer_province(self.game, prov, "Outsider")
+
+    def test_the_chair_moves_the_moment_the_last_province_falls(self):
+        self.weigh("Rival", 5000)
+        self.orphan()
+        self.assertEqual(self.leader(), "Rival")
+
+    def test_it_goes_to_the_strongest_survivor(self):
+        self.weigh("Loyal", 5000)
+        self.orphan()
+        self.assertEqual(self.leader(), "Loyal")
+
+    def test_the_conquered_leader_is_no_longer_in_the_faction(self):
+        self.orphan()
+        self.assertEqual(self.game.nation_data["Leader"]["faction"], "")
+        self.assertFalse(self.game.nation_data["Leader"]["is_faction_leader"])
+
+    def test_exactly_one_nation_leads_afterwards(self):
+        self.orphan()
+        leaders = [n for n in ("Rival", "Loyal")
+                   if self.game.nation_data[n].get("is_faction_leader")]
+        self.assertEqual(len(leaders), 1)
+
+    def test_the_new_leader_is_a_new_bar_for_everyone_else(self):
+        self.weigh("Rival", 5000)
+        self.tick(3)
+        self.orphan()
+        self.assertEqual(self.held("Loyal"), 0)
+        self.assertEqual(self.held("Rival"), 0)
+
+    def test_a_save_already_left_leaderless_heals_on_the_next_turn(self):
+        """tick used to name this state in a comment and step over it."""
+        for member in ("Leader", "Rival", "Loyal"):
+            self.game.nation_data[member]["is_faction_leader"] = False
+        self.weigh("Loyal", 5000)
+
+        self.tick(1)
+
+        self.assertEqual(self.leader(), "Loyal")
+
+    def test_a_faction_with_nobody_left_to_lead_it_is_let_go_of(self):
+        from map_logic.turn_processing import edit_province_ownership
+
+        for prov in list(self.game.map_data.values()):
+            if prov.get("owner") in ("Leader", "Rival", "Loyal"):
+                edit_province_ownership.conquer_province(self.game, prov, "Outsider")
+
+        for member in ("Leader", "Rival", "Loyal"):
+            self.assertEqual(self.game.nation_data[member]["faction"], "")
+
+
 class StrengthTests(unittest.TestCase):
     def test_the_scale_is_the_one_the_peace_table_uses(self):
         """A second definition of "stronger" would be a second answer to the

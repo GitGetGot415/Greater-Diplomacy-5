@@ -359,6 +359,52 @@ def _discover_borders_and_targets(map_screen, ai_name, my_provs, enemies, friend
     }
 
 
+def _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
+    """Whether holding this tile means losing everything standing on it.
+
+    Asked of the lane model rather than of the whole stack. The old sum divided
+    *every* hostile unit's attack among our defenders, but under lanes only the
+    seated front fires and only the seated front is shot at -- so an enemy who
+    turned up with eight men and six slots was counted at eight, the tile was
+    written off as lost, and it then dropped out of active_battles and out of
+    the reinforcement pull entirely. The reserves that would have held it were
+    told there was no battle to go to.
+
+    A tile is lost when the rank we have in it is wiped and there is nobody
+    behind them to step in. A relief rank is the difference between a bad turn
+    and a rout, which is the distinction the retreat is supposed to be making.
+    """
+    units = list(prov.get("units", ()))
+    battle = combat_rules.build_battle([units], map_screen.nation_data)
+
+    ours, incoming = [], {}
+    for lane in battle.lanes:
+        for side in (lane.a, lane.b):
+            for member in side.members:
+                if member.nation in friendly_nations:
+                    ours.extend(member.front)
+                elif member.targets and queries.are_at_war(ai_name, member.nation,
+                                                           map_screen.nation_data):
+                    # apply_group_damage splits a volley among the units it may
+                    # legally hit, so this is the figure each of them eats.
+                    share = combat_rules.volley(member.front, battle.shares) / len(member.targets)
+                    for target in member.targets:
+                        incoming[id(target)] = incoming.get(id(target), 0.0) + share
+
+    if not ours or not incoming:
+        return False
+
+    for unit in ours:
+        taken = max(0.0, incoming.get(id(unit), 0.0) - unit.get("defense", c.DEFAULT_UNIT_DEF))
+        if taken < unit.get("health", 1):
+            return False
+
+    # The front dies. Only a rout if there is no second rank to take its place.
+    seated = {id(u) for u in ours}
+    return not any(id(u) not in seated and u.get("owner") in friendly_nations
+                   for u in units)
+
+
 def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations, unsafe_waters, all_enemy_coasts, enemy_coastal_waters):
     """Finds active battles (and whether this nation is about to lose them, in
     which case it picks a retreat tile), plus which convoys are in combat or
@@ -377,22 +423,7 @@ def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations
             if p_id not in active_battles and p_id not in lost_battles:
 
                 # Evaluate if the AI will lose this battle on the next turn
-                my_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
-                enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)]
-
-                total_enemy_atk = sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in enemy_units)
-
-                all_will_die = True
-                if my_units and enemy_units:
-                    dmg_per_unit = total_enemy_atk / len(my_units)
-                    for u in my_units:
-                        if max(0, dmg_per_unit - u.get("defense", c.DEFAULT_UNIT_DEF)) < u.get("health", 1):
-                            all_will_die = False
-                            break
-                else:
-                    all_will_die = False
-
-                if all_will_die:
+                if _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
                     # Find a safe retreat target for the group
                     safe_retreats = []
                     for n_id in prov.get("neighbors", []):
@@ -947,10 +978,19 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
             unit["combat_stance"] = "RESERVE"
 
 
-def _cancel_opposing_transitions(ai_nations, nation_units):
+def _cancel_opposing_transitions(ai_nations, nation_units, contested=None):
     """Anti-swap cleanup: if a unit is ordered A->B and another (identical
     type and health) is ordered B->A, cancel both -- otherwise they'd cross
-    paths and swap tiles instead of actually contesting either one."""
+    paths and swap tiles instead of actually contesting either one.
+
+    A tile with a fight on it is exempt in both directions. Two units passing
+    each other between quiet tiles have achieved nothing and may as well stay
+    put; a garrison pulling out of a battle while a reserve marches in is the
+    relief working exactly as intended, and cancelling it left the wounded unit
+    standing in the fight AND the fresh one standing behind it -- the same pair,
+    every turn, forever.
+    """
+    contested = contested or set()
     for ai_name in ai_nations:
         units_info = nation_units[ai_name]
 
@@ -961,6 +1001,8 @@ def _cancel_opposing_transitions(ai_nations, nation_units):
             if path:
                 src_id = prov["id"]
                 dest_id = path[0]
+                if src_id in contested or dest_id in contested:
+                    continue
                 transitions.setdefault((src_id, dest_id), []).append(unit)
 
         # Check for opposing traffic
@@ -1003,6 +1045,10 @@ def _generate_unit_orders(map_screen):
     allowed_prov_ids_cache, water_ids, neighbor_ids = _build_shared_pathing_caches(map_screen)
 
     nation_units, nation_provs = _reset_orders_and_collect_units(map_screen, ai_nations)
+
+    # Every tile somebody is fighting over this turn, pooled across nations so
+    # the anti-swap pass at the end can leave relief traffic alone.
+    contested = set()
 
     for ai_name in ai_nations:
         units_info = nation_units[ai_name]
@@ -1062,5 +1108,8 @@ def _generate_unit_orders(map_screen):
         _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
         _rotate_damaged_units(map_screen, ai_name, battles["active_battles"])
 
+        contested |= set(battles["active_battles"])
+        contested |= set(battles["lost_battles"])
+
     # --- Anti-Swap Cleanup ---
-    _cancel_opposing_transitions(ai_nations, nation_units)
+    _cancel_opposing_transitions(ai_nations, nation_units, contested)
