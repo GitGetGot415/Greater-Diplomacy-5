@@ -243,21 +243,21 @@ UNIT_SECTIONS = [
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Landkreuzer P.1000 Ratte", single(), {
             "health": 10000, "attack": 6000, "defense": 400,
-            "bombard_attack": 600,
+            "bombard_attack": 1000,
             "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 8,
         }),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 500,
-            "bombard_attack": 800,
+            "bombard_attack": 1200,
             "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
         UnitFamily("Railgun", single(), {
-            "health": 10000, "attack": 3000, "defense": 500,
-            "bombard_attack": 3000,
+            "health": 10000, "attack": 5000, "defense": 500,
+            "bombard_attack": 5000,
             "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
@@ -270,18 +270,18 @@ UNIT_SECTIONS = [
         # Two standalone guns (not a leveled family) - stats equal the old 5-level
         # Railroad Gun's level 1 and level 5 respectively.
         UnitFamily("WW1 Railroad Gun", single(), {
-            "health": 1200, "attack": 300,
+            "health": 1200, "attack": 500,
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": 300,
-            "defense": 0, "speed": 1, "cost_materials": 12000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 8,
+            "bombard_attack": 500,
+            "defense": 0, "speed": 1, "cost_materials": 5000, "cost_manpower": 1000,
+            "cost_fuel": 0, "production_time": 6,
         }),
         UnitFamily("WW2 Railroad Gun", single(), {
-            "health": 2000, "attack": 500,
-            "bombard_attack": 500,
-            "defense": 0, "speed": 1, "cost_materials": 16000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 8,
+            "health": 2000, "attack": 800,
+            "bombard_attack": 800,
+            "defense": 0, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000,
+            "cost_fuel": 0, "production_time": 6,
         }),
     ],
     [
