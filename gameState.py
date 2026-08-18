@@ -125,6 +125,20 @@ class GameState:
         should use this instead of reading `content_drag_state` directly."""
         return getattr(self, self.content_drag_attr_name(attr), None) is not None
 
+    def cancel_active_drags(self):
+        """Clears any content-drag armed via handle_content_drag mid-gesture.
+
+        Call this on a screen right before it gets covered by a pushed modal
+        (see ui/modal_stack.push) -- the covering screen steals every event
+        from then on, including the MOUSEBUTTONUP that would normally clear
+        the drag, so without this it's left stuck armed. Once the covering
+        modal closes and this screen starts receiving events again, the very
+        next MOUSEMOTION would otherwise be misread as an active drag with no
+        button held, making the content appear to scroll on its own.
+        """
+        for drag_attr in getattr(self, "_armed_drag_attrs", ()):
+            setattr(self, drag_attr, None)
+
     def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None):
         """Applies a wheel event to a negative-range scroll offset and clamps it."""
         step = event.y * (self.scroll_speed if speed is None else speed)
@@ -257,6 +271,10 @@ class GameState:
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and rect.collidepoint(event.pos):
             setattr(self, drag_attr, [event.pos[idx], False])
+            # Remembered so cancel_active_drags() can find this attr by name --
+            # drag_attr varies per caller/pane, so there's nothing else to scan.
+            self._armed_drag_attrs = getattr(self, "_armed_drag_attrs", set())
+            self._armed_drag_attrs.add(drag_attr)
             return False
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and state is not None:
             setattr(self, drag_attr, None)

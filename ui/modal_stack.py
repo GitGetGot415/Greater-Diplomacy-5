@@ -21,6 +21,17 @@ _stack = []
 
 
 def push(modal):
+    # The modal being covered is about to stop receiving events -- including
+    # the MOUSEBUTTONUP matching whatever MOUSEBUTTONDOWN opened this new one
+    # (e.g. clicking a table row to open its detail view). Cancel any content-
+    # drag it had mid-gesture now, or it's left stuck armed and the next
+    # MOUSEMOTION it sees once this modal closes gets misread as a live drag.
+    # See GameState.cancel_active_drags.
+    if _stack:
+        screen = getattr(_stack[-1], "screen", _stack[-1])
+        cancel = getattr(screen, "cancel_active_drags", None)
+        if cancel:
+            cancel()
     _stack.append(modal)
 
 
