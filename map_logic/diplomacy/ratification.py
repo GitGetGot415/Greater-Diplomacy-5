@@ -6,6 +6,14 @@ faction peace, so every member with something to lose in the deal gets one
 chance to refuse -- and refusing means leaving the faction and fighting on
 alone, which is a real price rather than a free veto.
 
+Both blocs, not just the one that spoke first. A treaty has two negotiators and
+either of them can be binding a bloc behind it, but the round used to be run
+from the *proposer* alone -- so a bloc whose leader *accepted* somebody else's
+terms had no veto at all. That is saves/oh my god germany italy wtf: the Soviet
+Union proposed, Germany accepted for the Axis, four Finnish provinces changed
+hands, and Finland was never asked. Which side happened to draft the paper is
+not a fact about who it binds.
+
 AI members answer on the spot. Only a human being asked needs a round trip, so
 in an ordinary single-player game a bloc treaty still settles the turn it is
 accepted, and the extra turn appears exactly when somebody has to read
@@ -28,7 +36,13 @@ REFUSE = "REFUSE"
 
 
 def _members_with_something_to_lose(map_screen, deal, signatory):
-    """Everyone on the signatory's side the deal takes something from.
+    """Everyone on `signatory`'s side the deal takes something from.
+
+    Puppets are left out. A subject state does not choose its own alignment --
+    finalize_faction_leave refuses to move one -- so a puppet that refused would
+    be struck out of the treaty, keep its faction anyway, and be left at war
+    alone while its master was at peace. Its wars are its master's business, in
+    this direction as in every other.
 
     Two ways to lose something, and only the first is written into a clause.
 
@@ -40,23 +54,28 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
     Swiss provinces its leader gave back on its behalf. What a treaty does not
     say is exactly what a member most needs a vote on.
     """
+    from data import queries
     from map_logic.diplomacy import war_score
 
+    nation_data = map_screen.nation_data
     ours = set(deal["sides"][deal_mod.side_of(deal, signatory) or "a"])
-    bound = [n for n in deal_mod.affected_nations(deal)
-             if n in ours and n != signatory]
+
+    def may_refuse(nation):
+        return (nation in ours and nation != signatory
+                and queries.can_choose_own_faction(nation, nation_data))
+
+    bound = [n for n in deal_mod.affected_nations(deal) if may_refuse(n)]
 
     if not deal_mod.ends_war(deal):
         return bound
 
-    nation_data = map_screen.nation_data
     theirs = set(deal_mod.opponents_of(deal, signatory))
     prewar = war_score.prewar_index(nation_data)
     kept = deal_mod.tile_transfers(deal, map_screen.map_data, nation_data)
 
     for prov in map_screen.map_data.values():
         holder = prov.get("owner")
-        if holder not in ours or holder == signatory or holder in bound:
+        if holder in bound or not may_refuse(holder):
             continue
         if kept.get(str(prov["id"])) == holder or kept.get(prov["id"]) == holder:
             continue
@@ -83,15 +102,25 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     process_ratifications finishes it.
     """
     nation_data = map_screen.nation_data
-    bound = _members_with_something_to_lose(map_screen, deal, signatory)
+
+    # Both negotiators, because either of them can be speaking for a bloc. The
+    # message a member gets has to name the one that bound *it*, which is not
+    # always the one that drafted the terms.
+    bound, asked = [], set()
+    for binder, other in ((signatory, opponent), (opponent, signatory)):
+        for member in _members_with_something_to_lose(map_screen, deal, binder):
+            if member in asked or member in (signatory, opponent):
+                continue
+            asked.add(member)
+            bound.append((member, binder, other))
 
     refused, awaiting = [], []
-    for member in bound:
+    for member, binder, other in bound:
         if member in map_screen.active_players:
             nation_data.setdefault(member, {})["pending_ratification"] = {
-                "signatory": signatory, "opponent": opponent, "deal": deal, "turns": 0}
-            send_message(map_screen, signatory, member,
-                         _ask_text(signatory, opponent), "DIPLOMACY",
+                "signatory": binder, "opponent": other, "deal": deal, "turns": 0}
+            send_message(map_screen, binder, member,
+                         _ask_text(binder, other), "DIPLOMACY",
                          extra={"action": "RATIFY_TREATY", "parameters": deal})
             awaiting.append(member)
         elif not _ai_ratifies(map_screen, member, deal):
@@ -107,8 +136,8 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     return True
 
 
-def _ask_text(signatory, opponent):
-    return (f"{signatory} has agreed terms with {opponent} on our bloc's behalf. "
+def _ask_text(binder, other):
+    return (f"{binder} has agreed terms with {other} on our bloc's behalf. "
             f"These terms bind you. Refusing them means leaving the faction and "
             f"fighting on alone.")
 

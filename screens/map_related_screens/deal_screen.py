@@ -30,7 +30,7 @@ from data import queries
 from gameState import MapOverlayScreen
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod
-from map_logic.diplomacy import diplomacy_messages, peace_scope, war_score
+from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_score
 from map_logic.rendering import overlay_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
 from screens.map_related_screens.diplomacy_screen_widgets import build_choice_button
@@ -160,6 +160,9 @@ class Deal_Screen(MapOverlayScreen):
         # screen is open, and building one per keystroke to re-price the deal
         # would mean a full sweep of every province on every click.
         self.world = ai_world.for_screen(map_screen)
+        # Same reasoning, and the same lifetime: who can get where is a fact
+        # about the map, and the map does not move while this screen is up.
+        self.reach = reach.index(map_screen.map_data)
         self._baseline = None
 
         # {province id: the nation the player chose for it, or None for Auto}.
@@ -382,6 +385,21 @@ class Deal_Screen(MapOverlayScreen):
 
         return deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
 
+    def would_receive(self, prov, side):
+        """Who this province would actually go to if it were picked for `side`.
+
+        The same routing _group_transfers does, for one province, so the reach
+        check below asks about the nation that would really end up with it --
+        which with the recipient set to Auto is often not the player at all.
+        """
+        receiver_side = self.my_side if side == TAKE else self.their_side
+        anchor = self.player if side == TAKE else self.target_nation
+        chosen = self.recipients[side]
+        if chosen in receiver_side:
+            return chosen
+        was = self.baseline_owners().get(int(prov["id"]), prov.get("owner"))
+        return was if was in receiver_side else anchor
+
     def _group_transfers(self, picks, receiver_side):
         """{(giver, receiver): [province id, ...]} for the provinces picked.
 
@@ -492,7 +510,13 @@ class Deal_Screen(MapOverlayScreen):
             for prov_id in occupied:
                 self.take_ids.pop(prov_id, None)
         else:
+            # Whatever a co-belligerent took and we cannot get to is left out
+            # rather than added and then refused at the verdict -- the point of
+            # this button is that it produces a deal you can actually send.
             for prov_id in occupied:
+                prov = self.map_screen.id_to_province.get(int(prov_id))
+                if prov and not self.reach.reachable(self.would_receive(prov, TAKE), prov):
+                    continue
                 self.take_ids.setdefault(prov_id, self.recipients[TAKE])
         self.refresh_ui()
 
@@ -587,6 +611,19 @@ class Deal_Screen(MapOverlayScreen):
             allowed = self.their_side if self.picking == TAKE else self.my_side
             self.map_screen.show_feedback(
                 f"Pick territory belonging to {' or '.join(allowed)}.")
+            return
+
+        # Land nobody on the receiving end can get to is not land that can
+        # change hands. Refused at the click rather than at the verdict, so the
+        # answer arrives while the player is still looking at the province --
+        # and named on the nation that would actually receive it, which with
+        # Auto is frequently an ally rather than the player.
+        receiver = self.would_receive(prov, self.picking)
+        if (prov["id"] not in self.picks_for(self.picking)
+                and not self.reach.reachable(receiver, prov)):
+            whose = "your" if receiver == self.player else f"{receiver}'s"
+            self.map_screen.show_feedback(
+                f"Out of reach: it borders none of {whose} land and no water {whose} coast is on.")
             return
 
         bucket = self.take_ids if self.picking == TAKE else self.give_ids
@@ -786,7 +823,8 @@ class Deal_Screen(MapOverlayScreen):
 
         agreement = self.build_deal()
         self.problems = deal_mod.validate(agreement, self.map_screen.map_data,
-                                          self.map_screen.nation_data)
+                                          self.map_screen.nation_data,
+                                          reach_index=self.reach)
         self.bound = peace_scope.bound_members(self.my_side, self.player)
         self.moot = self.moot_picks()
         self.reverting = len(self.occupied_of_theirs() - set(self.take_ids))
@@ -881,7 +919,8 @@ class Deal_Screen(MapOverlayScreen):
     def confirm(self):
         agreement = self.build_deal()
         problems = deal_mod.validate(agreement, self.map_screen.map_data,
-                                     self.map_screen.nation_data)
+                                     self.map_screen.nation_data,
+                                     reach_index=self.reach)
         if problems:
             self.map_screen.show_feedback(problems[0])
             return

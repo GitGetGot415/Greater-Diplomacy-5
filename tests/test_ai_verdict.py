@@ -212,7 +212,9 @@ class PuppetTests(VerdictTestCase):
         self.assertFalse(self.accepts("FACTION_INVITE"))
 
 
-class PeaceTests(VerdictTestCase):
+class PeaceTestCase(VerdictTestCase):
+    """Avaria and Borland at war, with the helpers for writing terms."""
+
     def setUp(self):
         super().setUp()
         self.nation_data["Avaria"]["at_war_with"] = ["Borland"]
@@ -231,6 +233,8 @@ class PeaceTests(VerdictTestCase):
         self.map_data[prov_key]["owner"] = taker
         self.garrison(prov_key, taker)
 
+
+class PeaceTests(PeaceTestCase):
     def test_a_demand_for_land_is_weighed_rather_than_refused_outright(self):
         """Was: refused unconditionally, which is why no AI war ever ended with
         territory changing hands. A nation being ground down for a hundred turns
@@ -432,6 +436,87 @@ class ProposalWiringTests(VerdictTestCase):
                     f"{action}: the reply and the verdict must never disagree")
         finally:
             ai_settings.get_ai_mode = original
+
+
+class GivingUpOnTheModelTests(PeaceTestCase):
+    """A turn that runs out of model time must not sign anything.
+
+    Two paths give up on an LLM call -- Force Skip / the turn moving on
+    (ai_handler._aborted) and a batch abandoning its jobs
+    (diplomacy_processor._get_fallback_ai_result) -- and both used to answer
+    every proposal with a flat `accepted=True`. saves/oh my god germany italy
+    wtf is one turn of that: six treaties signed, every one of which the rules
+    below had already refused. Germany gave away Finnish provinces while
+    standing on a quarter of the Soviet Union, and five Axis members bought
+    separate peaces that emptied the faction.
+
+    The decision needs no model. Only the sentence does.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": 99}
+
+    def aborted_reply(self, action="PEACE_TREATY"):
+        from map_logic.ai import ai_handler
+
+        original = ai_handler.FORCE_SKIP
+        ai_handler.FORCE_SKIP = True
+        try:
+            return ai_evaluation.evaluate_diplomatic_proposal(
+                self.nation_data, self.map_data, ["Avaria", "Borland"],
+                "Avaria", "Borland", action, "", human_players=["Borland"])
+        finally:
+            ai_handler.FORCE_SKIP = original
+
+    def abandoned_reply(self, action="PEACE_TREATY"):
+        from map_logic.diplomacy import diplomacy_processor
+
+        task = {"sender": "Borland", "target": "Avaria", "action": action,
+                "content": ""}
+        return diplomacy_processor._get_fallback_ai_result(
+            task, self.nation_data, None, self.map_data)
+
+    def test_a_skipped_turn_refuses_what_the_rules_refuse(self):
+        self.garrison("1", "Avaria")        # Avaria holds its own ground
+        self.demand([1])
+        self.assertFalse(self.verdict("PEACE_TREATY").accepted, "fixture check")
+        self.assertFalse(self.aborted_reply()["accepted"])
+
+    def test_and_an_abandoned_batch_refuses_it_too(self):
+        self.garrison("1", "Avaria")
+        self.demand([1])
+        self.assertFalse(self.abandoned_reply()["accepted"])
+
+    def test_neither_of_them_refuses_what_the_rules_accept(self):
+        """The fix is "answer by the rules", not "say no to everything"."""
+        self.overrun("1")
+        self.demand([1])
+        self.assertTrue(self.verdict("PEACE_TREATY").accepted, "fixture check")
+        self.assertTrue(self.aborted_reply()["accepted"])
+        self.assertTrue(self.abandoned_reply()["accepted"])
+
+    def test_a_plain_message_still_needs_no_verdict(self):
+        """Nobody is being asked anything, so there is nothing to decide."""
+        reply = self.abandoned_reply(action="CUSTOM_MSG")
+        self.assertTrue(reply["accepted"])
+
+    def test_giving_up_never_calls_the_model(self):
+        """The whole point of the give-up path. Kept explicit because the fix
+        works by *adding* a computation to it, and it must be the cheap one."""
+        from map_logic.ai import ai_handler, ai_settings
+
+        calls = []
+        original_mode, original_run = ai_settings.get_ai_mode, ai_handler._run_provider
+        ai_settings.get_ai_mode = lambda: "OLLAMA"
+        ai_handler._run_provider = lambda *a, **kw: calls.append(a) or None
+        try:
+            self.aborted_reply()
+            self.abandoned_reply()
+        finally:
+            ai_settings.get_ai_mode = original_mode
+            ai_handler._run_provider = original_run
+        self.assertEqual(calls, [])
 
 
 if __name__ == "__main__":

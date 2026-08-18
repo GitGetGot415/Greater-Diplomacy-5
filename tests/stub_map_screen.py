@@ -120,6 +120,25 @@ class StubMapScreen:
         self.id_to_province[prov_id] = prov
         return prov
 
+    def border(self, *prov_ids):
+        """Makes these provinces neighbours, each of every other.
+
+        A stub province is an island by default, which was fine while nothing in
+        diplomacy asked where anything was. Territory terms do now -- land has
+        to be within reach of whoever receives it, see
+        map_logic/diplomacy/reach.py -- so a fixture that moves a province has
+        to say who is next door to it.
+        """
+        for prov_id in prov_ids:
+            mine = self.id_to_province[int(prov_id)].setdefault("neighbors", [])
+            for other in prov_ids:
+                if other != prov_id and int(other) not in mine:
+                    mine.append(int(other))
+
+    def home_of(self, nation):
+        """The first province this nation was given. See _add_nation."""
+        return next(p for p in self.map_data.values() if p["owner"] == nation)
+
     def owner_of(self, prov_id):
         return self.id_to_province[prov_id]["owner"]
 

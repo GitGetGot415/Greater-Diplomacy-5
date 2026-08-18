@@ -214,12 +214,16 @@ def tile_transfers(deal, map_data=None, nation_data=None):
 # VALIDATION
 # ==========================================
 
-def validate(deal, map_data=None, nation_data=None):
+def validate(deal, map_data=None, nation_data=None, reach_index=None):
     """Everything wrong with this deal, as sentences. Empty list means good.
 
     Called when a deal is built and again when it is about to execute -- the
     world moves between the two, and a province promised three turns ago may
     have changed hands since.
+
+    `reach_index` is a reach.Reachability; one is built from `map_data` if the
+    caller has not got one already. A caller that validates repeatedly -- the
+    deal screen does, on every click -- should hold one and pass it in.
     """
     problems = []
     if not is_deal(deal):
@@ -275,6 +279,8 @@ def validate(deal, map_data=None, nation_data=None):
                             and original_owner(prov, prewar) in giving_side):
                         continue  # ours by force already; the treaty makes it ours by right
                     problems.append(f"{giver} no longer holds province {prov_id}.")
+
+                problems.extend(_out_of_reach(clause, map_data, reach_index))
         elif kind == RESOURCES:
             if clause.get("resource") not in c.ECON_RESOURCE_KEYS:
                 problems.append(f"Cannot trade '{clause.get('resource')}'.")
@@ -286,6 +292,31 @@ def validate(deal, map_data=None, nation_data=None):
                 problems.append(f"{subject} is already a puppet.")
 
     return problems
+
+
+def _out_of_reach(clause, map_data, reach_index=None):
+    """Complaints about provinces the receiver has no way of getting to.
+
+    Land you cannot reach is not land you can be given. A demand used to be
+    bounded only by who was at war with whom, so a treaty with the United
+    Kingdom could name Australia, and a trade could move a province between two
+    countries on opposite sides of the world.
+
+    Judged on the *receiver* of each term rather than on whoever drafted the
+    deal, which is what closes the obvious way round it: handing unreachable
+    land to a puppet or an ally is that nation's reach to satisfy, not yours.
+    """
+    from map_logic.diplomacy import reach as reach_mod
+
+    receiver = clause.get("to")
+    ids = clause.get("ids") or ()
+    if not receiver or not ids:
+        return []
+
+    index = reach_index or reach_mod.index(map_data)
+    return [f"{receiver} cannot reach province {prov_id} -- it borders none of "
+            f"their land and no water they sit on."
+            for prov_id in index.unreachable_ids(receiver, ids)]
 
 
 # ==========================================

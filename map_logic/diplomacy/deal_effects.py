@@ -102,10 +102,19 @@ def prune(deal, map_screen):
     Returns (deal, dropped) where `dropped` is a list of sentences describing
     what fell away, for the message that reports the settlement.
     """
+    from map_logic.diplomacy import reach as reach_mod
+
     by_id = _provinces_by_id(map_screen)
     nation_data = map_screen.nation_data
     prewar = deal_mod.prewar_index(nation_data)
     economies = economies_for(map_screen)
+    # Every treaty in the game funnels through here on its way to executing, so
+    # this is where the reach rule actually binds -- on the AI's offers and on
+    # scripted ones as much as on anything a player built in the deal screen.
+    # It is also the only place that can be right about it: a province within
+    # reach when the offer was written can be a province on the far side of a
+    # collapsed front by the time it lands, a turn later.
+    reachable = reach_mod.index(map_screen.map_data)
 
     kept, dropped = [], []
     for clause in deal_mod.clauses(deal):
@@ -148,10 +157,15 @@ def prune(deal, map_screen):
             giving_side = _side_containing(deal, giver)
             receiving_side = _side_containing(deal, clause.get("to"))
 
-            honoured, moved, gone = [], 0, 0
+            receiver = clause.get("to")
+            honoured, moved, gone, adrift = [], 0, 0, 0
             for pid in clause.get("ids", []):
                 prov = by_id.get(int(pid))
                 owner = prov.get("owner") if prov else None
+
+                if prov is not None and not reachable.reachable(receiver, prov):
+                    adrift += 1
+                    continue
 
                 if owner == giver:
                     honoured.append(pid)
@@ -170,6 +184,10 @@ def prune(deal, map_screen):
             if gone:
                 dropped.append(f"{gone} promised {_provinces(gone)} had already "
                                f"changed hands and could not be given.")
+            if adrift:
+                dropped.append(f"{adrift} promised {_provinces(adrift)} lay beyond "
+                               f"anything {receiver} could reach, and stayed where "
+                               f"they were.")
             if honoured or clause.get("plus_originals"):
                 kept.append(deal_mod.tiles_clause(giver, clause.get("to"), honoured,
                                                   plus_originals=clause.get("plus_originals", False)))

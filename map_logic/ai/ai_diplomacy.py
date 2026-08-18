@@ -508,7 +508,29 @@ def _white_peace_terms(map_screen, ai_name, enemy):
     from map_logic.diplomacy import peace_scope
 
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, map_screen.nation_data)
-    return deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, [deal_mod.white_peace()])
+    return _with_the_price_of_walking_out(
+        map_screen, ai_name, enemy,
+        deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, [deal_mod.white_peace()]))
+
+
+def _with_the_price_of_walking_out(map_screen, ai_name, enemy, deal):
+    """The offer, plus the faction membership it costs us if we are a member.
+
+    A non-leader can only settle by leaving its bloc (peace_scope.SEPARATE_PEACE)
+    and treaty_effects writes that into the treaty -- but it did so at execution,
+    after both sides had already made up their minds, so the clause was in
+    nobody's ledger while anybody was still deciding. The nation walking out
+    never weighed the thing it was giving up, and the side accepting never saw
+    what it was being handed.
+
+    saves/oh my god germany italy wtf is five of those in one turn: Italy,
+    Hungary, Romania, Bulgaria and Finland each bought their way out of the war
+    with the Allies, and the Axis was empty by the morning.
+    """
+    from map_logic.diplomacy import treaty_effects
+
+    return treaty_effects.with_separate_peace_cost(deal, ai_name, enemy,
+                                                  map_screen.nation_data)
 
 
 def _victors_terms(map_screen, ai_name, enemy, leverage):
@@ -540,6 +562,11 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     prewar = war_score.prewar_index(map_screen.nation_data)
     ours, foes = set(mine), set(theirs)
 
+    # Every province considered here is one we are standing on, so the reach
+    # rule (deal_effects.prune, map_logic/diplomacy/reach.py) can never strike
+    # one of these out -- you can always reach the ground your army is on. The
+    # AI is held to that rule at execution like everybody else; it simply has no
+    # way of proposing something that breaks it.
     holdings = {}
     for prov in map_screen.map_data.values():
         holder = prov.get("owner")
@@ -570,7 +597,9 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
 
     if len(clauses) == 1:
         return _white_peace_terms(map_screen, ai_name, enemy)
-    return deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
+    return _with_the_price_of_walking_out(
+        map_screen, ai_name, enemy,
+        deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses))
 
 
 def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):
@@ -584,14 +613,26 @@ def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_
     Russia signed away the four Swiss provinces France was standing on.
 
     Being unable to reach an enemy is a reason to stop fighting them. It is not
-    a reason to give back ground the bloc has already taken.
+    a reason to give back ground the bloc has already taken, and -- see the
+    membership check below -- it is not a reason to walk out of the bloc either.
     """
-    from map_logic.diplomacy import war_score
+    from map_logic.diplomacy import peace_scope, war_score
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
         if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
         if not world.reachable(ai_name, enemy):
+            # A member cannot settle without leaving its faction, and cannot
+            # settle with one enemy without settling with that enemy's whole
+            # bloc. So "we cannot reach the United Kingdom" was a standing
+            # reason for any Axis minor to resign from the Axis -- which is
+            # half of why saves/oh my god germany italy wtf ends with Germany
+            # leading nobody. Unreachability is the bloc leader's argument to
+            # make; a member has to actually want out, which is the section
+            # below.
+            role = peace_scope.negotiation_role(ai_name, enemy, map_screen.nation_data)
+            if peace_scope.costs_membership(role):
+                continue
             if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
                 leverage = war_score.between(map_screen, ai_name, enemy, world)["mine"]
                 bag.add(ai_candidates.make(
@@ -608,6 +649,7 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
     so a nation being slowly destroyed by a neighbour it shared a border with
     had no way to ask for terms and simply fought until it was gone.
     """
+    from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import war_score
 
     for enemy in my_enemies:
@@ -628,10 +670,24 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
             continue
 
         leverage = war_score.between(map_screen, ai_name, enemy, world)["mine"]
+        terms = _victors_terms(map_screen, ai_name, enemy, leverage)
+
+        # What the offer costs *us*, on our own books -- which for a faction
+        # member suing separately is the bloc it is walking out of, and which
+        # was worth nothing here until that clause started being written at the
+        # time the offer is made rather than at the time it executes. No new
+        # threshold: the price is added to the one that already exists, in the
+        # same currency, so a small nation feels the loss of its allies more
+        # than a large one does and neither of them pays for it out of nowhere.
+        price = deal_mod.demand_fraction(terms, ai_name, map_screen.map_data,
+                                         map_screen.nation_data, whole_side=False)
+        if appetite < c.AI_PEACE_OFFER_THRESHOLD + price:
+            continue
+
         bag.add(ai_candidates.make(
             "PEACE_TREATY", enemy, appetite,
             f"this war with {enemy} is going badly and has run long enough",
-            parameters=_victors_terms(map_screen, ai_name, enemy, leverage)))
+            parameters=terms))
 
 
 def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):

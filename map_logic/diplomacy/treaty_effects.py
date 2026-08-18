@@ -74,12 +74,20 @@ def _bloc_ceasefire(proposer, accepter, nation_data):
     return deal_mod.new(deal_mod.KIND_PEACE, sides[0], sides[1], [deal_mod.white_peace()])
 
 
-def _enforce_separate_peace_cost(agreement, proposer, accepter, nation_data):
+def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
     """A member that settles behind its bloc's back leaves the bloc.
 
     The screens add this clause themselves, but it is the price of the whole
     manoeuvre rather than a term either side chose, so it is guaranteed here
     too -- the same reason the puppet check above is repeated at this level.
+
+    Public, and idempotent, because the price has to be on the paper *before*
+    anybody weighs it. Adding it here alone meant it went on after both sides
+    had already decided: a nation suing for a separate peace never saw that the
+    offer cost it its faction (DEAL_VALUE_FACTION_EXIT, the single most
+    expensive clause in the game), and the side answering never saw what it was
+    being handed. ai_diplomacy builds its offers through this for that reason,
+    and this call stays as the backstop it always was.
     """
     from map_logic.diplomacy import peace_scope
 
@@ -150,7 +158,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         # coerce reads as the white peace it always silently executed as.
         agreement = (_bloc_ceasefire(proposer, accepter, nation_data) if action == "CEASEFIRE"
                      else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
-        agreement = _enforce_separate_peace_cost(agreement, proposer, accepter, nation_data)
+        agreement = with_separate_peace_cost(agreement, proposer, accepter, nation_data)
 
         # Whoever the leader bound gets a say before it takes effect. In an
         # ordinary game every bound member is an AI and answers on the spot, so

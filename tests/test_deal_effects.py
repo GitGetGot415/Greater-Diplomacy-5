@@ -24,6 +24,7 @@ class TerritoryTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["A", "B"])
         self.contested = self.game.add_province("B")
+        self.game.border(self.game.home_of("A")["id"], self.contested["id"])
 
     def test_a_tiles_clause_moves_the_province(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
@@ -48,6 +49,7 @@ class TerritoryTests(unittest.TestCase):
 
     def test_the_rest_of_a_treaty_survives_one_stale_province(self):
         still_theirs = self.game.add_province("B")
+        self.game.border(self.game.home_of("A")["id"], still_theirs["id"])
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [deal.tiles_clause("B", "A", [self.contested["id"],
                                                            still_theirs["id"]])])
