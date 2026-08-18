@@ -13,146 +13,6 @@ from ui.bars import resource_hud, top_bar_text, ui_bars
 from screens.map_related_screens import recruit_ui
 from ui import sidebar_info
 
-#: How much extra world-space margin to render around the true viewport, as a
-#: fraction of the viewport's own size (on EACH side). A drag can move freely
-#: within this margin without paying for another pygame.transform.scale pass;
-#: we only rebuild once the true viewport pokes outside the cached region.
-_MAP_BG_PAD_FRAC = 0.5
-
-
-def _blit_scaled_map_slice(dest, base_map, fog_map, sx, sy, sw, sh, dx, dy, zoom, tilt):
-    """Scales one (sx, sy, sw, sh) source rect of the base+fog maps and blits it to (dx, dy) on dest."""
-    if sw <= 0 or sh <= 0:
-        return
-    scaled_w = max(1, int(sw * zoom))
-    scaled_h = max(1, int(sh * zoom * tilt))
-
-    view = base_map.subsurface((sx, sy, sw, sh))
-    dest.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (dx, dy))
-
-    if fog_map:
-        f_view = fog_map.subsurface((sx, sy, sw, sh))
-        dest.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (dx, dy))
-
-
-def _rebuild_map_bg_cache(map_screen, x1_world, y1_world, vw, vh, zoom, tilt, current_base):
-    """Renders a padded region around the viewport into a fresh cache surface.
-
-    Returns (cache_surface, cache_x0, cache_y0, cache_w_world, cache_h_world),
-    all in world-space coordinates (cache_x0/y0 may be negative -- e.g. y < 0
-    is "above the map", rendered as skybox; for looping maps cache_x0 may also
-    sit outside [0, map_w), resolved with a modulo when sampling the source).
-    """
-    map_w, map_h = map_screen.map_w, map_screen.map_h
-
-    pad_x = vw * _MAP_BG_PAD_FRAC
-    if map_screen.loop_map:
-        # Cap so the padded width never exceeds the map's own width -- the
-        # sampling below only unwraps a single seam crossing, same as the
-        # original unpadded code did.
-        pad_x = min(pad_x, max(0.0, (map_w - vw) / 2.0 - 1.0))
-    pad_y = vh * _MAP_BG_PAD_FRAC
-
-    cache_x0 = x1_world - pad_x
-    cache_y0 = y1_world - pad_y
-    cache_w_world = vw + 2 * pad_x
-    cache_h_world = vh + 2 * pad_y
-
-    cache_w_px = max(1, int(round(cache_w_world * zoom)))
-    cache_h_px = max(1, int(round(cache_h_world * zoom * tilt)))
-    cache = pygame.Surface((cache_w_px, cache_h_px))
-    cache.fill(map_screen.bg_color)
-
-    # --- Sky rows: whatever part of the cache sits above world-y == 0 ---
-    if cache_y0 < 0:
-        sky_h_px = int(round(min(-cache_y0, cache_h_world) * zoom * tilt)) + 2 # +2 overlap to prevent seam tearing
-        pygame.draw.rect(cache, c.COLOR_SKYBOX, pygame.Rect(0, 0, cache_w_px, sky_h_px))
-
-    # --- Map rows: world-y in [map_y0, map_y0 + map_h_world) ---
-    map_y0 = max(cache_y0, 0.0)
-    map_h_world = cache_h_world - (map_y0 - cache_y0)
-    if map_h_world > 0 and map_y0 < map_h:
-        py_px = int(round((map_y0 - cache_y0) * zoom * tilt))
-        y1 = int(map_y0)
-        h1 = int(min(map_h_world, map_h - y1))
-
-        if h1 > 0:
-            if map_screen.loop_map:
-                x1 = int(cache_x0 % map_w)
-                w1 = int(min(cache_w_world, map_w - x1))
-                _blit_scaled_map_slice(cache, current_base, map_screen.fog_map,
-                                        x1, y1, w1, h1, 0, py_px, zoom, tilt)
-
-                remaining_px = cache_w_px - int(round(w1 * zoom))
-                if remaining_px > 0:
-                    wrap_w = min(int(round(cache_w_world)) - w1, map_w)
-                    px_px = int(round(w1 * zoom))
-                    _blit_scaled_map_slice(cache, current_base, map_screen.fog_map,
-                                            0, y1, wrap_w, h1, px_px, py_px, zoom, tilt)
-            else:
-                x1 = int(cache_x0)
-                src_rect = pygame.Rect(x1, y1, int(cache_w_world), h1)
-                clipped = src_rect.clip(current_base.get_rect())
-                if clipped.width > 0 and clipped.height > 0:
-                    px_px = int(round((clipped.x - cache_x0) * zoom))
-                    _blit_scaled_map_slice(cache, current_base, map_screen.fog_map,
-                                            clipped.x, clipped.y, clipped.width, clipped.height,
-                                            px_px, py_px, zoom, tilt)
-
-    return cache, cache_x0, cache_y0, cache_w_world, cache_h_world
-
-
-def _composite_map_background(map_screen, surface):
-    """Draws the base map + fog-of-war layer for the current camera viewport.
-
-    pygame.transform.scale on the full-resolution map source is by far the
-    most expensive thing this screen does, and a naive implementation runs it
-    (twice, once for fog) every single frame -- even while the camera sits
-    perfectly still, or is only panning by a few pixels. Instead we keep a
-    cache that covers a MARGIN around the true viewport (see
-    _MAP_BG_PAD_FRAC) and only re-render (_rebuild_map_bg_cache) when the true
-    viewport is no longer fully covered by that margin, or when something the
-    margin can't account for changes (zoom, tilt, map/fog identity, window
-    size). Camera-still and small-pan frames become a single cheap blit.
-    """
-    current_base = map_screen.active_map
-    camera = map_screen.camera
-    zoom, tilt = camera.zoom, camera.tilt_factor
-
-    vw = surface.get_width() / zoom
-    vh = (surface.get_height() - map_screen.total_ui_h) / (zoom * tilt)
-
-    x1_world = camera.pos.x
-    y1_world = camera.pos.y # may be negative -- that's "sky above the map"
-
-    build_params = (
-        zoom, tilt, id(current_base), id(map_screen.fog_map), map_screen.loop_map,
-        surface.get_width(), surface.get_height(), map_screen.top_ui_height, map_screen.bg_color,
-    )
-
-    meta = map_screen._map_bg_cache_meta
-    needs_rebuild = True
-    if meta is not None and meta[0] == build_params:
-        _, cache_x0, cache_y0, cache_w_world, cache_h_world = meta
-        if (cache_x0 <= x1_world and x1_world + vw <= cache_x0 + cache_w_world and
-                cache_y0 <= y1_world and y1_world + vh <= cache_y0 + cache_h_world):
-            needs_rebuild = False
-
-    if needs_rebuild:
-        cache, cache_x0, cache_y0, cache_w_world, cache_h_world = _rebuild_map_bg_cache(
-            map_screen, x1_world, y1_world, vw, vh, zoom, tilt, current_base)
-        map_screen._map_bg_cache = cache
-        map_screen._map_bg_cache_meta = (build_params, cache_x0, cache_y0, cache_w_world, cache_h_world)
-
-    px = int(round((x1_world - cache_x0) * zoom))
-    py = int(round((y1_world - cache_y0) * zoom * tilt))
-    screen_map_w = surface.get_width()
-    screen_map_h = max(surface.get_height() - map_screen.top_ui_height, 1)
-
-    surface.blit(map_screen._map_bg_cache, (0, map_screen.top_ui_height),
-                 area=pygame.Rect(px, py, screen_map_w, screen_map_h))
-
-
 def draw_map_screen(map_screen, surface):
     # --- HOTSEAT MULTIPLAYER OVERRIDE ---
     if map_screen.show_player_ready_screen:
@@ -177,7 +37,72 @@ def draw_map_screen(map_screen, surface):
         return
         
     # --- LAYER 1: THE BASE MAP ---
-    _composite_map_background(map_screen, surface)
+    current_base = map_screen.active_map
+
+    vw = surface.get_width() / map_screen.camera.zoom
+    vh = (surface.get_height() - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor)
+    
+    x1_world = map_screen.camera.pos.x
+    y1_world = map_screen.camera.pos.y
+    
+    # --- NEW: Extract negative Y for screen offset and skybox ---
+    render_y_offset = 0
+    if y1_world < 0:
+        render_y_offset = -y1_world * map_screen.camera.zoom * map_screen.camera.tilt_factor
+        vh += y1_world # Shrink the required source height since the top is sky
+        y1_world = 0
+
+    x1, y1 = int(x1_world), int(y1_world)
+    
+    # Draw Skybox
+    if render_y_offset > 0:
+        sky_rect = pygame.Rect(0, map_screen.top_ui_height, c.SCREEN_WIDTH, int(render_y_offset) + 2) # +2 overlap to prevent seam tearing
+        pygame.draw.rect(surface, c.COLOR_SKYBOX, sky_rect)
+
+    if map_screen.loop_map:
+        w1 = int(min(vw, map_screen.map_w - x1))
+        h1 = int(min(vh, map_screen.map_h - y1))
+        if w1 > 0 and h1 > 0:
+            # Base Map
+            v1 = current_base.subsurface((x1, y1, w1, h1))
+            scaled_w1 = int(w1*map_screen.camera.zoom)
+            scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
+            surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
+            
+            # Fog Map
+            if map_screen.fog_map:
+                f1 = map_screen.fog_map.subsurface((x1, y1, w1, h1))
+                surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
+                
+        if w1 < vw and h1 > 0:
+            wrap_w = int(vw - w1)
+            if wrap_w > 0:
+                scaled_wrap_w = int(wrap_w*map_screen.camera.zoom)
+                scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
+                
+                # Base Map
+                v2 = current_base.subsurface((0, y1, wrap_w, h1))
+                surface.blit(pygame.transform.scale(v2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
+                
+                # Fog Map
+                if map_screen.fog_map:
+                    f2 = map_screen.fog_map.subsurface((0, y1, wrap_w, h1))
+                    surface.blit(pygame.transform.scale(f2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
+    else:
+        src_rect = pygame.Rect(x1, y1, int(vw), int(vh))
+        clipped = src_rect.clip(current_base.get_rect())
+        if clipped.width > 0 and clipped.height > 0:
+            scaled_w = int(clipped.width*map_screen.camera.zoom)
+            scaled_h = int(clipped.height*map_screen.camera.zoom*map_screen.camera.tilt_factor)
+            
+            # Base Map
+            view = current_base.subsurface(clipped)
+            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
+            
+            # Fog Map
+            if map_screen.fog_map:
+                f_view = map_screen.fog_map.subsurface(clipped)
+                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
 
     # --- CPU BOTTLENECK OPTIMIZATION ---
     # Pygame's transform functions (scale, rotate, tilt) are extremely heavy.
