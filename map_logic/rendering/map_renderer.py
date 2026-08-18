@@ -3,6 +3,7 @@ from map_logic.rendering import hover_renderer, province_select, overlay_rendere
 from map_logic.turn_processing import loading_screen
 from ui import minimap
 from data import queries
+from map_logic.diplomacy import faction_leadership
 import data.constants as c
 import ui_elements
 from map_logic.rendering.font_manager import fonts
@@ -316,6 +317,14 @@ def draw_badges(map_screen, surface):
         unread_msgs = queries.get_unread_message_count(map_screen.player_country, map_screen.nation_data)
         free_research = queries.has_free_research_slots(map_screen.player_country, map_screen.nation_data)
         incoming_claims = queries.get_incoming_justifications_count(map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
+        # Everyone in the faction sees this, not only the leader and not only
+        # the challenger: a handover changes who negotiates for the bloc and who
+        # can put your provinces on the table, which is everybody's business.
+        # contenders reads the counter faction_leadership.tick already wrote, so
+        # this costs a dict lookup per member rather than a sweep of the map.
+        my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+        leadership_contested = bool(
+            faction_leadership.contenders(map_screen.nation_data, my_faction))
 
         def draw_badge(btn, text):
             if not btn.visible: return
@@ -327,6 +336,9 @@ def draw_badges(map_screen, surface):
 
         if free_research:
             draw_badge(map_screen.btn_gp_rd, "!")
+
+        if leadership_contested:
+            draw_badge(map_screen.btn_gp_faction, "!")
 
         if incoming_claims > 0:
             draw_badge(map_screen.btn_gp_claims, incoming_claims)

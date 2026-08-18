@@ -195,13 +195,49 @@ class Faction_Screen(GameState):
         leader_txt = font_heading.render(f"Leader: {nation_data.get(leader, {}).get('name', leader)}", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(leader_txt, (c.SCREEN_WIDTH // 2 - leader_txt.get_width() // 2, 120))
 
-        list_start_y = 200
+        list_start_y = self._draw_challengers(surface, nation_data, my_faction, 160)
         surface.blit(font_heading.render("Members:", True, c.UI_TEXT_LIGHT), (c.SCREEN_WIDTH // 2 - 300, list_start_y))
 
         for i, member in enumerate(members):
             m_name = nation_data.get(member, {}).get("name", member)
             txt = font_normal.render(f"- {m_name}", True, (255, 255, 255))
             surface.blit(txt, (c.SCREEN_WIDTH // 2 - 280, list_start_y + 40 + (i * 30)))
+
+    def _draw_challengers(self, surface, nation_data, faction, top_y):
+        """Who is closing on the chair, under the name of whoever is in it.
+
+        The claim used to be legible from exactly one place: the button on this
+        screen, which only ever spoke about *you*. A leader had no way of
+        knowing it was being challenged and a member had no way of knowing
+        somebody else was ahead of it, so the first anyone heard of a handover
+        was the handover. Several members can be building a claim at once, so
+        this is a list rather than a line.
+
+        Returns the y the members list should start at, so a long list of
+        challengers pushes it down instead of drawing over it.
+        """
+        font_small = fonts.get("normal")
+        standings = faction_leadership.contenders(nation_data, faction)
+        if not standings:
+            return 200
+
+        heading = font_small.render("Building a claim on the leadership:", True,
+                                    c.MSG_NOTIFICATION_COLOR)
+        surface.blit(heading, (c.SCREEN_WIDTH // 2 - heading.get_width() // 2, top_y))
+
+        y = top_y + 26
+        for nation, held, needed in standings:
+            name = nation_data.get(nation, {}).get("name", nation)
+            if held >= needed:
+                when = "can claim it now"
+            else:
+                left = needed - held
+                when = f"{left} more turn{'' if left == 1 else 's'} of holding it"
+            line = font_small.render(f"{name} -- {when}", True, c.UI_TEXT_LIGHT)
+            surface.blit(line, (c.SCREEN_WIDTH // 2 - line.get_width() // 2, y))
+            y += 24
+
+        return max(200, y + 20)
 
     def handle_back_key(self):
         # Escape cancels an in-progress rename before it leaves the screen.

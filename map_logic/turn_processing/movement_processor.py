@@ -411,6 +411,35 @@ def _find_nearest_owned_province(start_prov, owner, id_to_province):
 
     return None
 
+def send_unit_home(map_screen, province, unit):
+    """Teleports one unit off `province` to the nearest tile its owner holds.
+
+    The EU4-style exiled army, lifted out of process_stranded_units so a deal
+    can use it the moment the land changes hands rather than waiting for the
+    end of the turn -- see deal_effects. Returns False, leaving the unit where
+    it is, if its owner has no ground left to stand on.
+    """
+    home_prov = _find_nearest_owned_province(province, unit["owner"], map_screen.id_to_province)
+    if home_prov is None:
+        return False  # nation holds no territory to return the unit to
+
+    province["units"].remove(unit)
+    unit["_current_province_id"] = home_prov["id"]
+    unit["_previous_province_id"] = home_prov["id"]
+    order = unit.get("order")
+    if isinstance(order, dict):
+        order["path"] = []
+    home_prov.setdefault("units", []).append(unit)
+    return True
+
+
+def is_land_unit(unit, unit_library=None):
+    """Whether this unit walks. Naval units follow separate coastal rules."""
+    library = unit_library if unit_library is not None else queries.get_unit_library()
+    stats = library.get(unit.get("type", ""), {})
+    return not (unit.get("naval_unit") or stats.get("naval_unit", False))
+
+
 def process_stranded_units(map_screen):
     """Exiles armies that end up occupying foreign soil without a legal right to be there.
 
@@ -438,8 +467,7 @@ def process_stranded_units(map_screen):
                 continue
 
             # Naval units follow separate coastal-access rules; only land armies exile here.
-            stats = unit_library.get(unit.get("type", ""), {})
-            if unit.get("naval_unit") or stats.get("naval_unit", False):
+            if not is_land_unit(unit, unit_library):
                 continue
 
             if queries.can_land_units_enter(unit_owner, province, map_screen.nation_data):
@@ -451,14 +479,4 @@ def process_stranded_units(map_screen):
             continue
 
         for unit in stranded:
-            home_prov = _find_nearest_owned_province(province, unit["owner"], map_screen.id_to_province)
-            if home_prov is None:
-                continue  # nation holds no territory to return the unit to
-
-            units.remove(unit)
-            unit["_current_province_id"] = home_prov["id"]
-            unit["_previous_province_id"] = home_prov["id"]
-            order = unit.get("order")
-            if isinstance(order, dict):
-                order["path"] = []
-            home_prov.setdefault("units", []).append(unit)
+            send_unit_home(map_screen, province, unit)

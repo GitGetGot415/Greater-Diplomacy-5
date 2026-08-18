@@ -13,9 +13,38 @@ any province whose owner had changed, silently; now the deal is re-validated and
 the dropped terms are reported back so the players can be told.
 """
 
+import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.turn_processing import edit_province_ownership
+
+
+def _hand_over_the_land_only(map_screen, prov, receiver):
+    """Marches everyone else's army off a province that has just changed hands.
+
+    A treaty moves ground. It does not move the men standing on it, and it never
+    did -- conquer_province has never so much as read province["units"] -- but
+    what happened instead was that they stayed put, owned by whoever they had
+    always been owned by, until process_stranded_units swept the map at the end
+    of the turn. Between those two moments a province could be bought and come
+    with somebody else's garrison sitting on it, which is what a trade looks
+    like from the outside whether or not any owner field changed.
+
+    So the sweep happens here, for that tile, at the instant the land moves: the
+    seller's armies go home the way an exiled army does, and nothing about who
+    owns which unit is touched by a deal at all. Ships are left alone, as they
+    are by the end-of-turn pass -- they answer to coastal access, not to who
+    owns the shore.
+    """
+    from map_logic.turn_processing import movement_processor
+
+    for unit in list(prov.get("units", ())):
+        owner = unit.get("owner")
+        if not owner or owner == receiver or owner in c.UNPLAYABLE_NATIONS:
+            continue
+        if not movement_processor.is_land_unit(unit):
+            continue
+        movement_processor.send_unit_home(map_screen, prov, unit)
 
 
 def _provinces_by_id(map_screen):
@@ -187,6 +216,8 @@ def execute(map_screen, deal, escrowed=None):
         prov = by_id.get(int(prov_id))
         if prov is not None and prov.get("owner") != receiver:
             edit_province_ownership.conquer_province(map_screen, prov, receiver)
+            # The land, and only the land. See _hand_over_the_land_only.
+            _hand_over_the_land_only(map_screen, prov, prov.get("owner"))
 
     # --- 2. Payments ---
     # A payer who escrowed when the offer went out has already been charged, so

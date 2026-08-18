@@ -312,7 +312,11 @@ class PeaceTests(unittest.TestCase):
             self.world, "Avaria", "Borland", self.demand("Avaria", "Borland", [1, 2, 3])))
 
     def test_a_ceasefire_is_easier_to_agree_to_than_giving_up_land(self):
-        self.nation_data["Avaria"]["war_durations"] = {"Borland": 5}
+        # Read off the constant rather than written out: this fixture said 5 and
+        # went stale the day MIN_TURNS_FOR_CEASEFIRE went from 2 to 6, at which
+        # point it was testing the flat refusal in front of the arithmetic
+        # instead of the arithmetic.
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": c.MIN_TURNS_FOR_CEASEFIRE}
         self.rebuild()
         self.assertTrue(ai_opinion.accepts_peace(
             self.world, "Avaria", "Borland", deal.ceasefire_deal("Borland", "Avaria")))

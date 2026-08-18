@@ -512,12 +512,26 @@ def _white_peace_terms(map_screen, ai_name, enemy):
 
 
 def _victors_terms(map_screen, ai_name, enemy, leverage):
-    """What a winning nation asks for: the enemy land it is standing on.
+    """What a nation holding enemy ground asks for, sized to the hand it holds.
 
-    Sized to the hand it is holding rather than to appetite -- an army sitting
-    on four provinces asks for those four provinces, which is both the obvious
-    demand and the one most likely to be agreed to, since occupied land is
-    already discounted at the table.
+    Every province on the table is one this side is standing on, which is both
+    the obvious demand and the one most likely to be agreed to, since occupied
+    land is already discounted at the table.
+
+    How much of it depends on leverage, and asking for *nothing* is no longer
+    one of the answers while we hold anything. It used to be: below
+    AI_PEACE_DEMAND_LEVERAGE this returned a bare white peace, and a white peace
+    hands every unnamed occupied province back to its pre-war owner
+    (deal_effects.restore_occupied). So a bloc leader signing on behalf of a
+    member gave away that member's conquests without either of them asking for
+    a thing -- France took Switzerland down to its last province and Russia
+    handed all four back, which is saves/FRANCE JUST LET SWITZERLAND GO.
+
+    At AI_PEACE_DEMAND_LEVERAGE and above it asks for everything it holds.
+    Below, it asks for that share of it, most valuable tiles first, so a narrow
+    winner comes away with something rather than gambling the lot on terms it
+    would only be refused for. A side that is genuinely losing scales to nothing
+    and offers the status quo, which is what suing for peace is supposed to be.
     """
     from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import peace_scope, war_score
@@ -533,41 +547,57 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
             continue
         was = war_score.original_owner(prov, prewar)
         if was in foes:
-            holdings.setdefault((was, holder), []).append(prov["id"])
+            holdings.setdefault((was, holder), []).append(prov)
 
     if not holdings:
         return _white_peace_terms(map_screen, ai_name, enemy)
 
-    clauses = [deal_mod.white_peace()]
-    for (loser, winner), ids in sorted(holdings.items()):
-        clauses.append(deal_mod.tiles_clause(loser, winner, ids))
+    share = min(1.0, max(0.0, leverage) / c.AI_PEACE_DEMAND_LEVERAGE)
+    # Ahead on the war and standing on their soil: whatever the arithmetic says,
+    # at least one province is asked for. Handing the lot back is not a position.
+    floor = 1 if leverage > 0.5 else 0
 
-    # Asking for everything we hold when we barely hold the upper hand reads as
-    # a demand for surrender and gets refused. Below a decent position, ask for
-    # the status quo instead and take the war off the board.
-    #
-    # That bar used to sit high, because a white peace cost the winner nothing:
-    # peace left the map where the armies had left it, so signing one kept the
-    # conquests anyway. It does not any more -- unnamed occupied land goes home
-    # (deal_effects.restore_occupied) -- so a winner that does not ask for its
-    # gains gives them away, and the threshold has to be low enough that an army
-    # actually holding ground puts it on the table.
-    if leverage < c.AI_PEACE_DEMAND_LEVERAGE:
+    clauses = [deal_mod.white_peace()]
+    for (loser, winner), provs in sorted(holdings.items()):
+        # Most valuable first, so a partial demand keeps the ground worth
+        # keeping rather than whichever tiles happened to come out of map_data
+        # in order. Sorted by id underneath so the ask is reproducible.
+        ranked = sorted(provs, key=lambda p: (-deal_mod.tile_value(p), str(p["id"])))
+        wanted = max(floor, int(share * len(ranked)))
+        if wanted:
+            clauses.append(deal_mod.tiles_clause(
+                loser, winner, [p["id"] for p in ranked[:wanted]]))
+
+    if len(clauses) == 1:
         return _white_peace_terms(map_screen, ai_name, enemy)
     return deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
 
 
 def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world):
-    """Section 1: offers a ceasefire to any enemy we can no longer physically reach."""
+    """Section 1: offers a ceasefire to any enemy we can no longer physically reach.
+
+    On the terms the hand justifies, not on a blank white peace. This is the
+    only peace a winning nation could ever propose -- _offer_peace_when_losing
+    below is gated on an appetite a winner cannot reach -- and it used to hand
+    back every occupied province by saying nothing about them. Worse, a bloc
+    leader proposes for the whole bloc: Russia could not reach Switzerland, so
+    Russia signed away the four Swiss provinces France was standing on.
+
+    Being unable to reach an enemy is a reason to stop fighting them. It is not
+    a reason to give back ground the bloc has already taken.
+    """
+    from map_logic.diplomacy import war_score
+
     for enemy in my_enemies:
         if enemy not in active_nations: continue
         if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
         if not world.reachable(ai_name, enemy):
             if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
+                leverage = war_score.between(map_screen, ai_name, enemy, world)["mine"]
                 bag.add(ai_candidates.make(
                     "CEASEFIRE", enemy, c.AI_SCORE_CEASEFIRE_UNREACHABLE,
                     "we cannot reach them to fight them, and the war costs us anyway",
-                    parameters=_white_peace_terms(map_screen, ai_name, enemy)))
+                    parameters=_victors_terms(map_screen, ai_name, enemy, leverage)))
 
 
 def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nations, world):

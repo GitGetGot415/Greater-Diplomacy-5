@@ -1583,6 +1583,32 @@ AI_RESEARCH_MILITARY_SLOTS = 1
 # more willingness to invest in industry before army.
 AI_TECH_ECONOMY_HORIZON = 30.0
 
+# How hard a tech the world has already had pulls at an AI that has not got it.
+#
+# get_research_multiplier only ever punished being EARLY -- it returns a flat 1.0
+# for anything historical, so a family a nation is a decade behind on scored
+# exactly like one it was on schedule for, and nothing anywhere pulled it back
+# towards the rest of the world. Combined with repeatable economic and infantry
+# lines winning on raw value forever, that is how saves/AI IS FAR BEHIND ON
+# RESEARCH ends 1920 with France on infantry_type 12 and resource_refining 11
+# while its factory and tank lines sit at zero.
+#
+# One multiplier per year overdue, so a family at level 0 -- which takes its
+# distance from level 1's year and is therefore the most overdue thing on the
+# board -- gets the biggest pull, and breadth follows without a separate rule
+# for it. The cap stops a 1900 tech in 2010 drowning out everything else.
+AI_TECH_OVERDUE_WEIGHT = 0.15
+AI_TECH_OVERDUE_CAP = 20
+
+# How many years early a tech may be and still be treated as a real option.
+# Progress halves per year early, so at eight the thing already costs 256 times
+# its sticker price and a nation would not finish it inside the scenario. Past
+# this it sorts behind everything reachable rather than being removed, because a
+# nation with nothing else available should still pick it -- but it must never
+# beat an on-schedule tech, which it could when the on-schedule one happened to
+# be worth exactly zero and this one was worth an epsilon.
+AI_TECH_EARLY_HORIZON = 8
+
 # How long a BUILDING gets to earn back what it cost to put up. A separate
 # number from the one above, which they used to share: that one scales an
 # income stream against an army, while this one is a payback period, and a

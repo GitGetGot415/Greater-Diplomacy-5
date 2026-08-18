@@ -273,16 +273,45 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None):
     return max(0.0, best)
 
 
+def schedule_pressure(current_year, target_year):
+    """How much this nation's own calendar wants this tech, 1.0 on schedule.
+
+    Two halves, and only the first existed. Ahead of its time a tech is
+    genuinely several times its sticker price, because research_processor halves
+    progress for every year early -- that is get_research_multiplier, and it is
+    read straight through so preference and the actual rate agree.
+
+    Behind, it charged nothing and rewarded nothing: every historical tech
+    returned a flat 1.0, whether the world had had it for one year or fifty. So
+    an AI that had fallen behind had no reason to notice, and its research went
+    wherever raw value pointed -- which for repeatable lines is the same place
+    forever. A tech the world has had for a decade should be pulling harder than
+    one that is only just due, which is what the overdue term says.
+
+    Note what this does NOT change: the rate research_processor charges. This is
+    what the AI wants, not what it gets.
+    """
+    if target_year > current_year:
+        return queries.get_research_multiplier(current_year, target_year)
+    overdue = min(current_year - target_year, c.AI_TECH_OVERDUE_CAP)
+    return 1.0 + c.AI_TECH_OVERDUE_WEIGHT * overdue
+
+
 def rank_available(available, research, unit_library, building_library, ctx,
                    current_names, current_year, income, built=None):
     """Orders candidate techs best-first.
 
     `available` is (tech_key, target_year, cost, is_new). Value per point of
-    research, discounted by how far ahead of its historical year the tech is --
-    research_processor halves progress for every year early, so an off-schedule
-    tech genuinely costs several times its sticker price. That term used to be
-    the primary sort key, which is why the AI's research order was essentially
-    "whatever is cheapest and historical".
+    research, weighted by schedule_pressure: discounted for a tech ahead of its
+    historical year, and pulled up for one the world has already had. That term
+    used to be the primary sort key, which is why the AI's research order was
+    essentially "whatever is cheapest and historical".
+
+    Ties break on schedule. Two techs of equal value are not equally sensible
+    picks, and a valuation of exactly zero -- a tech level that unlocks nothing
+    better than what we already field -- used to hand the slot to whichever
+    worthless tech had the larger epsilon, which in practice meant one fifty
+    years early.
     """
     if not available:
         return available
@@ -309,8 +338,21 @@ def rank_available(available, research, unit_library, building_library, ctx,
         economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built)
                     * buy_rate * horizon * c.AI_TECH_ECONOMY_WEIGHT)
 
-        pace = queries.get_research_multiplier(current_year, target_year)
-        return ((military + economic) * pace) / max(1.0, float(cost))
+        pace = schedule_pressure(current_year, target_year)
+        worth = (military + economic) * pace / max(1.0, float(cost))
+        # Anything further ahead than the early horizon sorts behind everything
+        # that is actually reachable, however the arithmetic came out. It is
+        # still ranked rather than dropped, so a nation with nothing else on
+        # offer picks it -- see AI_TECH_EARLY_HORIZON.
+        reachable = 0 if target_year - current_year > c.AI_TECH_EARLY_HORIZON else 1
+        # Whole families evaluate at exactly zero at any given moment, because
+        # level 1 of a line unlocks a unit no better than what we already field
+        # -- the marginal read is right about today and blind to the fact that
+        # it is also the gate on every level above it. Among techs the valuation
+        # cannot separate, take the one the world has had longest: that is the
+        # one furthest behind, and opening its gate is how the tree gets broad
+        # instead of two columns and thirty zeroes.
+        return (reachable, worth, max(0, current_year - target_year), pace)
 
     # Sorted by name first so equal-value techs resolve the same way every run
     # rather than by dict order.
