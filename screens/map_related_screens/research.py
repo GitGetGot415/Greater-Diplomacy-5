@@ -508,7 +508,18 @@ class Research_Screen(GameState):
             
             # 2. Use our new helper to get the size
             btn_size = self.get_button_size(tech_key, display_name)
-            btn_w, btn_h = c.SIZES.get(btn_size, (80, 80))
+            raw_btn_w, raw_btn_h = c.SIZES.get(btn_size, (80, 80))
+            icon_name = TECH_ICON_OVERRIDES.get(tech_key, display_name)
+
+            # A style's research_scale.json can ask for bigger/smaller node
+            # buttons overall ("button_scale") and/or stretch a specific
+            # tech's button wider/taller on top of that ("button_scale_
+            # overrides", e.g. Artillery's long guns) -- 1.0/no override, and
+            # this is a no-op, for classic and any style that doesn't set one.
+            button_scale = symbol_loader.get_research_button_scale()
+            width_scale, height_scale = symbol_loader.get_research_button_scale_overrides(icon_name, country=self.subject)
+            btn_w = int(raw_btn_w * button_scale * width_scale)
+            btn_h = int(raw_btn_h * button_scale * height_scale)
             x_offset = btn_w // 2
 
             base_x = self.year_to_x(year, include_scroll=False) - x_offset
@@ -542,7 +553,12 @@ class Research_Screen(GameState):
             
             icon_scale = 4.0 if is_large else 2.0
 
-            icon_name = TECH_ICON_OVERRIDES.get(tech_key, display_name)
+            # A style's manifest can shrink/grow individual icons for the
+            # research screen (unit_art.json's per-variant "research_scale")
+            # to suit their own native resolution -- 1.0, and this is a
+            # no-op, for classic and any variant that doesn't set one.
+            icon_scale *= symbol_loader.get_research_scale(icon_name, country=self.subject)
+
             icon = symbol_loader.get_symbol(icon_name, icon_scale, country=self.subject)
             
             node_info = {
@@ -557,7 +573,13 @@ class Research_Screen(GameState):
             
             btn = Button(base_x + self.scroll_x, node_y, btn_size, btn_color, display_name,
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
-            
+
+            if (raw_btn_w, raw_btn_h) != (btn_w, btn_h):
+                # Button() sizes itself from c.SIZES[btn_size] directly, so a
+                # style-driven size has to be applied after the fact.
+                btn.width, btn.height = btn_w, btn_h
+                btn.rect = pygame.Rect(base_x + self.scroll_x, node_y, btn_w, btn_h)
+
             btn.base_x = base_x
             btn.is_tech_node = True
             

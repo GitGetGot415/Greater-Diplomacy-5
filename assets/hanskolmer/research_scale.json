@@ -1,0 +1,59 @@
+{
+    "_comment": "Sizing hints for the research screen (screens/map_related_screens/research.py) only -- unit_art.json's mapping of unit names to art files is untouched by this file, and neither the map nor any other screen reads it.",
+    "_comment_button_scale": "'button_scale' (default 1.0) multiplies the size of the research screen's tech node buttons themselves while this style is active. Useful if a style's art still looks cramped/oversized after per-icon scaling below. Example: 1.2 for 20% bigger buttons.",
+    "_comment_icon_scales": "'icon_scales' maps a filename from unit_art.json to a multiplier (default 1.0) the research screen applies on top of its own zoom for that specific image. Exists because this style's source art is a much higher native resolution than classic's hand-sized icons and would otherwise blow well past the button that contains it. Filenames not listed here (e.g. the infantry sprites, already close to classic's scale) are left at 1.0.",
+    "_comment_button_scale_overrides": "'button_scale_overrides' maps a unit_art.json name key to {'width': ..., 'height': ...} (either omittable, default 1.0 each), multiplied on top of 'button_scale' for that tech's node button specifically. Matched first against the exact key (e.g. 'Artillery I'), then against the bare family name with any trailing Roman numeral stripped ('Artillery') -- so one 'Artillery' entry below widens the button for all three artillery tiers at once instead of needing an entry per tier.",
+
+    "button_scale": 1.0,
+
+    "button_scale_overrides": {
+        "Artillery": {"width": 3, "height": 1.2}
+    },
+
+    "icon_scales": {
+        "FK_M.5__1_gd5.png": 0.8,
+        "FK_96_n.A.__gd5.png": 0.8,
+        "QF_18_pounder__gd5.png": 0.8,
+        "120_mm_De_Bange_model_1878__gd5.png": 0.8,
+
+        "FH_M.14__1_gd5.png": 0.8,
+        "21_cm_Morser_10__gd5.png": 0.8,
+        "75_mm_modele_1897__gd5.png": 0.8,
+
+        "Fh_16__gd5.png": 0.8,
+        "Canon_de_155_C_modele_1917__gd5.png": 0.8,
+
+        "Char_B1_bis__gd5.png": 0.8,
+
+        "Panzer_IV_ausf_b__gd5.png": 0.4,
+        "T-35__gd5.png": 0.3,
+
+        "Tiger_I_early__gd5.png": 0.3,
+        "KV-1B__gd5.png": 0.3,
+
+        "IS-3__gd5.png": 0.3,
+
+        "Char_D1_gd5.png": 0.4,
+
+        "Panzer_III_ausf_F__gd5.png": 0.4,
+        "sherm1_gd5.png": 0.4,
+        "T-28A__gd5.png": 0.3,
+        "Char_D2_gd5.png": 0.4,
+
+        "Somua_S35__gd5.png": 0.4,
+        "T-34__gd5.png": 0.4,
+
+        "Mark_V__gd5.png": 0.3,
+
+        "FT_17__gd5.png": 0.5,
+
+        "Hotchkis_H35__gd5.png": 0.5,
+
+        "Panzer_I_ausf_b__gd5.png": 0.5,
+        "Renault_R35__gd5.png": 0.6,
+        "T-26__gd5.png": 0.5,
+
+        "Panzer_II_ausf_C__gd5.png": 0.5,
+        "Hotchkis_H39__gd5.png": 0.5
+    }
+}

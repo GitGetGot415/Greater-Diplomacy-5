@@ -13,14 +13,26 @@ COLORED_SYMBOLS = {}
 #: which maps the same kind of name keys assets/images files are named after
 #: (an exact tier like "Medium Tank III", an era range like "Infantry
 #: 1900-1935", or a bare family like "Artillery") to one or more variants of
-#: that art. Each variant is {"countries": frozenset|None, "surface": Surface}
-#: -- `countries` is None for art that applies to whoever asks (the manifest's
-#: plain "key": "file.png" form), or the set of country ids (the same strings
-#: keying data/json/countries_data.json, e.g. "Germany") it's restricted to
-#: (the "key": {"file":..., "countries":[...]} form). "classic" is never a key
-#: here -- it just means "use SYMBOLS", which stays a flat name -> Surface map
-#: since it has no country variants.
+#: that art. Each variant is {"countries": frozenset|None, "surface": Surface,
+#: "filename": str} -- `countries` is None for art that applies to whoever
+#: asks (the manifest's plain "key": "file.png" form), or the set of country
+#: ids (the same strings keying data/json/countries_data.json, e.g.
+#: "Germany") it's restricted to (the "key": {"file":..., "countries":[...]}
+#: form). `filename` is that entry's raw "file" value, kept around so
+#: get_research_scale can key a *separate* per-style sizing file off it
+#: without re-deriving it from the Surface. "classic" is never a key here --
+#: it just means "use SYMBOLS", which stays a flat name -> Surface map since
+#: it has no country variants or per-style sizing.
 STYLE_SYMBOLS = {}
+
+#: Per-style research-screen sizing, keyed by style name -> {"icon_scales":
+#: {filename: float}, "button_scale": float, "button_scale_overrides":
+#: {name_key: {"width": float, "height": float}}}. Populated from <style
+#: folder>/research_scale.json -- kept in its own file rather than folded
+#: into unit_art.json so a style's art mapping and its research-screen sizing
+#: can be edited/shared independently. See get_research_scale,
+#: get_research_button_scale and get_research_button_scale_overrides.
+STYLE_RESEARCH_DISPLAY = {}
 
 #: What each (style, country, requested name) resolved to: (source_style,
 #: base_name) in whichever of SYMBOLS/STYLE_SYMBOLS[source_style] actually
@@ -115,7 +127,9 @@ def _load_variant(style, style_dir, name_key, entry, cultures=None):
         return None
 
     surface = pygame.image.load(img_path).convert_alpha()
-    return {"countries": frozenset(countries) if countries else None, "surface": surface}
+    return {"countries": frozenset(countries) if countries else None,
+            "surface": surface,
+            "filename": filename}
 
 
 def load_style_symbols(style):
@@ -152,7 +166,34 @@ def load_style_symbols(style):
                 symbols[name_key] = variants
 
     STYLE_SYMBOLS[style] = symbols
+    _load_research_display(style, style_dir)
     clear_caches()
+
+
+def _load_research_display(style, style_dir):
+    """Loads <style>/research_scale.json -- a separate, optional file so a
+    style's art mapping (unit_art.json) and its research-screen sizing hints
+    can be edited/shared independently of each other. Missing file or bad
+    JSON just leaves this style at the neutral 1.0 defaults everywhere."""
+    path = os.path.join(style_dir, "research_scale.json")
+    icon_scales, button_scale, button_scale_overrides = {}, 1.0, {}
+
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Warning: could not read {path}: {e}")
+            config = {}
+        icon_scales = config.get("icon_scales", {})
+        button_scale = config.get("button_scale", 1.0)
+        button_scale_overrides = config.get("button_scale_overrides", {})
+
+    STYLE_RESEARCH_DISPLAY[style] = {
+        "icon_scales": icon_scales,
+        "button_scale": button_scale,
+        "button_scale_overrides": button_scale_overrides,
+    }
 
 
 def style_countries(style):
@@ -166,9 +207,10 @@ def style_countries(style):
     return sorted(countries)
 
 
-def _pick_variant(variants, country):
-    """The Surface `country` should see among a name key's variants: an exact
-    country match wins, otherwise the first unrestricted (generic) variant.
+def _pick_variant_entry(variants, country):
+    """The variant dict `country` should see among a name key's variants: an
+    exact country match wins, otherwise the first unrestricted (generic)
+    variant.
 
     Callers that reach this already know (via _table_has) that one of those
     two cases applies, so the final `variants[0]` is only a safety net."""
@@ -179,8 +221,82 @@ def _pick_variant(variants, country):
             if generic is None:
                 generic = variant
         elif country and country in countries:
-            return variant["surface"]
-    return (generic or variants[0])["surface"]
+            return variant
+    return generic or variants[0]
+
+
+def _pick_variant(variants, country):
+    """The Surface `country` should see among a name key's variants -- see
+    _pick_variant_entry."""
+    return _pick_variant_entry(variants, country)["surface"]
+
+
+def get_research_scale(name, style=None, country=None):
+    """Per-icon multiplier authored in a style's <style>/research_scale.json
+    (its "icon_scales" map, keyed by the same filename unit_art.json points
+    at) for how large this unit's art should render on the research screen,
+    layered on top of whatever zoom the caller already asked for.
+
+    Exists because a style's source art can be a completely different native
+    resolution than classic's hand-sized icons (hanskolmer's raw unit
+    photos/paintings vs. classic's small pre-scaled sprites), so the same
+    zoom that looks right for one blows the other well past the button that
+    contains it. 1.0 (no change) for classic, or any file research_scale.json
+    doesn't mention.
+    """
+    resolved = _resolve_name(name, style, country)
+    if resolved is None:
+        return 1.0
+    source_style, base_name = resolved
+    if source_style == "classic":
+        return 1.0
+    variant = _pick_variant_entry(STYLE_SYMBOLS[source_style][base_name], country)
+    icon_scales = STYLE_RESEARCH_DISPLAY.get(source_style, {}).get("icon_scales", {})
+    return icon_scales.get(variant["filename"], 1.0)
+
+
+def get_research_button_scale(style=None):
+    """Per-style multiplier (<style>/research_scale.json's "button_scale"
+    field) for how big the research screen's tech node buttons should be
+    while this style is active. 1.0 (no change) for classic or a style with
+    no research_scale.json.
+
+    `style` defaults to the globally active c.UNIT_ART_STYLE, matching every
+    other lookup in this module.
+    """
+    if style is None:
+        style = c.UNIT_ART_STYLE
+    return STYLE_RESEARCH_DISPLAY.get(style, {}).get("button_scale", 1.0)
+
+
+def get_research_button_scale_overrides(name, style=None, country=None):
+    """(width_scale, height_scale) for this specific tech's research-screen
+    button, from <style>/research_scale.json's "button_scale_overrides" map
+    -- layered on top of the style's overall get_research_button_scale, for
+    a unit whose button needs to be wider/taller than the rest (e.g.
+    hanskolmer's long artillery pieces).
+
+    Matched first against the exact resolved name key (e.g. "Artillery I"),
+    then -- same Roman-numeral stripping _resolve_against falls back to --
+    against the bare family name ("Artillery"), so one override can widen
+    every tier without listing each one. (1.0, 1.0) if nothing resolves, the
+    style is classic, or no override matches either name.
+    """
+    resolved = _resolve_name(name, style, country)
+    if resolved is None:
+        return 1.0, 1.0
+    source_style, base_name = resolved
+    if source_style == "classic":
+        return 1.0, 1.0
+
+    overrides = STYLE_RESEARCH_DISPLAY.get(source_style, {}).get("button_scale_overrides", {})
+    entry = overrides.get(base_name)
+    if entry is None:
+        family_name = re.sub(r'\s+[IVXLCDM]+$', '', base_name, flags=re.IGNORECASE).strip()
+        entry = overrides.get(family_name)
+    if entry is None:
+        return 1.0, 1.0
+    return entry.get("width", 1.0), entry.get("height", 1.0)
 
 
 def _table_has(table, key, country):
@@ -360,6 +476,31 @@ def _resolve_name_uncached(name, style=None, country=None):
     return ("classic", resolved)
 
 
+def _resolved_base_img(name, style, country):
+    """The unscaled Surface `get_symbol`/`get_native_size` would draw for this
+    request, plus (source_style, base_name), or (None, None, None) if nothing
+    resolves."""
+    resolved = _resolve_name(name, style, country)
+    if resolved is None:
+        return None, None, None
+    source_style, base_name = resolved
+
+    if source_style == "classic":
+        base_img = SYMBOLS[base_name]
+    else:
+        base_img = _pick_variant(STYLE_SYMBOLS[source_style][base_name], country)
+    return base_img, source_style, base_name
+
+
+def get_native_size(name, style=None, country=None):
+    """The unscaled pixel size of whatever `get_symbol` would draw for this
+    name/style/country, or None if nothing resolves. Lets a caller work out a
+    zoom that fits a fixed on-screen box without scaling the image first just
+    to measure it."""
+    base_img, _, _ = _resolved_base_img(name, style, country)
+    return base_img.get_size() if base_img else None
+
+
 def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     """Returns the scaled icon, or None if no loaded symbol matches the name.
 
@@ -372,15 +513,9 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     for: setting it afterwards would leave the next caller of that name and size
     holding a see-through icon.
     """
-    resolved = _resolve_name(name, style, country)
-    if resolved is None:
+    base_img, source_style, base_name = _resolved_base_img(name, style, country)
+    if base_img is None:
         return None
-    source_style, base_name = resolved
-
-    if source_style == "classic":
-        base_img = SYMBOLS[base_name]
-    else:
-        base_img = _pick_variant(STYLE_SYMBOLS[source_style][base_name], country)
 
     # Custom per-symbol scale overrides, on top of the global 0.5.
     size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
