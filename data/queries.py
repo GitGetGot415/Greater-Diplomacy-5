@@ -2082,12 +2082,30 @@ def get_unread_message_count(nation, nation_data):
     """Returns the total number of unread messages and unanswered requests for a nation."""
     # If the user is the spectator, count unread messages across ALL playable nations
     if nation == "Spectator":
+        # Calling get_pending_request_senders() once per playable nation -- as this
+        # used to -- reruns its full nation_data scan every time, which makes the
+        # whole thing O(nations^2). Every pending request lives as one entry in its
+        # sender's own pending_diplomacy dict, so a single pass building a
+        # recipient -> count map does the exact same accounting in O(nations +
+        # pending requests) instead, with identical results.
+        pending_counts = {}
+        for sender, sender_data in nation_data.items():
+            for recipient, req in sender_data.get("pending_diplomacy", {}).items():
+                if not isinstance(req, dict):
+                    continue
+                if req.get("turns", 0) <= 0 or req.get("action", "") not in c.BILATERAL_ACTIONS:
+                    continue
+                my_response = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
+                if isinstance(my_response, dict) and my_response.get("verdict"):
+                    continue
+                pending_counts[recipient] = pending_counts.get(recipient, 0) + 1
+
         total_unread = 0
-        for n_name, n_data in list(nation_data.items()):
+        for n_name, n_data in nation_data.items():
             if n_data.get("is_playable", False):
                 inbox = n_data.get("inbox", [])
                 total_unread += sum(1 for msg in inbox if not msg.get("spectator_read", False))
-                total_unread += len(get_pending_request_senders(n_name, nation_data))
+                total_unread += pending_counts.get(n_name, 0)
         return total_unread
 
     # Standard logic for normal players

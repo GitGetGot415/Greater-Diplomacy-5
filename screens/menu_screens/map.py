@@ -836,6 +836,15 @@ class Map(GameState):
         # Initialize variables previously hidden by getattr
         self.fog_map = None
         self.visible_provinces = None
+
+        # Cache for the composited base+fog map layer (see
+        # map_renderer._composite_map_background). Rescaling the full base map
+        # with pygame.transform.scale every frame is the single biggest render
+        # cost on large maps; this cache renders a padded margin around the
+        # viewport once and reuses it across frames where the camera is still
+        # or only panning within that margin.
+        self._map_bg_cache = None
+        self._map_bg_cache_meta = None
         self.mail_draft_text = ""
         self.mail_input_active = False
 
