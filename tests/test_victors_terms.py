@@ -106,6 +106,74 @@ class VictorsTermsTests(unittest.TestCase):
         self.assertTrue(deal.is_white_peace(self.terms(0.95)))
 
 
+class SeparatePeacePriceTests(unittest.TestCase):
+    """What walking out of a bloc costs, written down while it is still a choice.
+
+    A member can only settle by leaving its faction (peace_scope.SEPARATE_PEACE)
+    and treaty_effects wrote that clause into the treaty at execution -- after
+    both sides had already made their minds up. So the most expensive clause in
+    the game (DEAL_VALUE_FACTION_EXIT) was in nobody's ledger while anybody was
+    still deciding: the nation resigning from its alliance never weighed the
+    alliance, and the side accepting never saw what it was being handed.
+
+    Five Axis members did exactly that in one turn of
+    saves/oh my god germany italy wtf.
+    """
+
+    def setUp(self):
+        self.game = StubMapScreen(["LEADER", "MEMBER", "FOE"], human_players=())
+        self.game.set_faction("Pact", "LEADER", "MEMBER")
+        for ours in ("LEADER", "MEMBER"):
+            self.game.set_war(ours, "FOE")
+
+    def terms(self, proposer):
+        return ai_diplomacy._white_peace_terms(self.game, proposer, "FOE")
+
+    def exits(self, agreement):
+        return [clause["nation"] for clause in deal.clauses(agreement)
+                if clause.get("type") == deal.FACTION_EXIT]
+
+    def test_a_members_offer_says_it_is_leaving_the_bloc(self):
+        self.assertEqual(self.exits(self.terms("MEMBER")), ["MEMBER"])
+
+    def test_a_leaders_offer_does_not(self):
+        """A leader negotiates for the bloc; it is not resigning from it."""
+        self.assertEqual(self.exits(self.terms("LEADER")), [])
+
+    def test_the_price_lands_on_the_member_and_nobody_else(self):
+        agreement = self.terms("MEMBER")
+        cost = deal.demand_fraction(agreement, "MEMBER", self.game.map_data,
+                                    self.game.nation_data, whole_side=False)
+        self.assertGreater(cost, 0.0, "leaving the bloc has to cost something")
+        self.assertEqual(
+            deal.demand_fraction(agreement, "FOE", self.game.map_data,
+                                 self.game.nation_data, whole_side=False),
+            0.0)
+
+    def offers_of(self, proposer):
+        """What section 1 puts forward for a nation that cannot reach FOE."""
+        from map_logic.ai import ai_candidates, ai_world
+
+        world = ai_world.for_screen(self.game)
+        world.reachable = lambda *_: False
+
+        bag = ai_candidates.Collector(proposer, {})
+        ai_diplomacy._seek_ceasefire_if_unreachable(
+            bag, self.game, proposer, ["FOE"], ["FOE"], world)
+        return [candidate.action for candidate in bag.ranked()]
+
+    def test_a_member_will_not_resign_merely_because_it_cannot_reach_them(self):
+        """Section 1 offers a ceasefire to an enemy it physically cannot get at.
+        For a member that means leaving the bloc -- and being unable to reach
+        one enemy is not a reason to walk out on every ally you have.
+        """
+        self.assertEqual(self.offers_of("MEMBER"), [])
+
+    def test_but_a_leader_still_will(self):
+        """It settles for the whole bloc and resigns from nothing."""
+        self.assertEqual(self.offers_of("LEADER"), ["CEASEFIRE"])
+
+
 class SilentLossRatificationTests(unittest.TestCase):
     """The member whose conquests a treaty says nothing about gets a vote."""
 

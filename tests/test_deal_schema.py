@@ -20,10 +20,11 @@ import data.constants as c
 from map_logic.diplomacy import deal
 
 
-def province(prov_id, owner, cores=(), units=(), buildings=(), resources=None):
+def province(prov_id, owner, cores=(), units=(), buildings=(), resources=None,
+             neighbors=()):
     return {"id": prov_id, "owner": owner, "cores": list(cores),
             "units": [{"owner": u} for u in units], "buildings": list(buildings),
-            "resources": resources or {}}
+            "resources": resources or {}, "neighbors": list(neighbors)}
 
 
 def world(*provinces):
@@ -90,7 +91,13 @@ class AffectedNationTests(unittest.TestCase):
 
 class ValidationTests(unittest.TestCase):
     def setUp(self):
-        self.map_data = world(province(3, "B"), province(4, "B"), province(9, "C"))
+        # A holds province 1 and borders everything it is about to be given:
+        # validate refuses land the receiver has no way of reaching, so a map
+        # with no geography on it would refuse every term here.
+        self.map_data = world(province(1, "A", neighbors=[3, 4, 9]),
+                              province(3, "B", neighbors=[1]),
+                              province(4, "B", neighbors=[1]),
+                              province(9, "C", neighbors=[1]))
         self.nation_data = {"A": {}, "B": {}, "C": {}}
 
     def good(self):

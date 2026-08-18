@@ -326,6 +326,43 @@ class PickingTests(DealScreenTestCase):
         screen.set_picking("TAKE")
         self.assertIsNone(screen.picking)
 
+    def test_you_cannot_demand_land_you_could_never_get_to(self):
+        """Demands used to be bounded only by who was at war with whom, so a
+        treaty with a neighbour could name a province on another continent.
+
+        Borrowed rather than invented: a province the enemy does not own is
+        handed to them for the duration, so this asks about somewhere the player
+        genuinely cannot reach on the real map.
+        """
+        screen = self.screen()
+        remote = next((p for p in self.map.map_data.values()
+                       if p.get("owner") not in (self.player, self.enemy)
+                       and p.get("owner") not in c.UNPLAYABLE_NATIONS
+                       and not screen.reach.reachable(self.player, p)), None)
+        if remote is None:
+            self.skipTest("this scenario has nowhere the player cannot reach")
+
+        was = remote["owner"]
+        remote["owner"] = self.enemy
+        try:
+            screen = self.screen()
+            screen.set_picking("TAKE")
+            screen.toggle_province(remote)
+            self.assertEqual(screen.take_ids, {})
+            self.assertIn("Out of reach", self.map.feedback_text)
+        finally:
+            remote["owner"] = was
+
+    def test_but_you_can_demand_what_you_are_standing_on(self):
+        """The commonest term in a peace treaty, and the one this must not
+        catch: unnamed occupied land goes home, so a conquest has to be
+        nameable however far it is from your own border."""
+        screen = self.screen()
+        overrun = next((p for p in self.map.map_data.values()
+                        if p.get("owner") == self.player), None)
+        self.assertIsNotNone(overrun)
+        self.assertTrue(screen.reach.reachable(self.player, overrun))
+
 
 class AssemblyTests(DealScreenTestCase):
     def test_an_untouched_peace_screen_offers_a_white_peace(self):

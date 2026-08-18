@@ -35,8 +35,14 @@ class TradedLandTests(unittest.TestCase):
         self.sold = self.game.add_province("B", cores=["B"])
         self.home = next(p for p in self.game.map_data.values()
                          if p["owner"] == "B" and p is not self.sold)
-        self.sold["neighbors"] = [self.home["id"]]
+        # A borders the province it is buying. Land has to be within reach of
+        # whoever receives it (map_logic/diplomacy/reach.py), so a buyer on the
+        # far side of the world is not a buyer at all.
+        self.buyer_home = next(p for p in self.game.map_data.values()
+                               if p["owner"] == "A")
+        self.sold["neighbors"] = [self.home["id"], self.buyer_home["id"]]
         self.home["neighbors"] = [self.sold["id"]]
+        self.buyer_home["neighbors"] = [self.sold["id"]]
         self.garrison = [unit("B") for _ in range(3)]
         self.sold["units"] = list(self.garrison)
 
@@ -90,8 +96,11 @@ class CededLandTests(unittest.TestCase):
         self.ceded = self.game.add_province("B", cores=["B"])
         self.home = next(p for p in self.game.map_data.values()
                          if p["owner"] == "B" and p is not self.ceded)
-        self.ceded["neighbors"] = [self.home["id"]]
+        winner_home = next(p for p in self.game.map_data.values()
+                           if p["owner"] == "A")
+        self.ceded["neighbors"] = [self.home["id"], winner_home["id"]]
         self.home["neighbors"] = [self.ceded["id"]]
+        winner_home["neighbors"] = [self.ceded["id"]]
         self.garrison = [unit("B")]
         self.ceded["units"] = list(self.garrison)
 

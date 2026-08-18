@@ -39,6 +39,11 @@ class RestoreOccupiedTests(unittest.TestCase):
         self.also_mine = self.game.add_province("A")
         self.theirs = self.game.add_province("B")
         self.also_theirs = self.game.add_province("B")
+        # One shared frontier, so every province here is within reach of both of
+        # them -- otherwise no term could move anything. See stub.border.
+        self.game.border(self.game.home_of("A")["id"], self.game.home_of("B")["id"],
+                         self.mine["id"], self.also_mine["id"],
+                         self.theirs["id"], self.also_theirs["id"])
 
         for nation in ("A", "B"):
             war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
@@ -103,6 +108,9 @@ class StaleTermTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["A", "B", "Ally", "Outsider"])
         self.promised = self.game.add_province("B")
+        # A borders what it is being promised; these tests are about title
+        # moving out from under a term, not about reach.
+        self.game.border(self.game.home_of("A")["id"], self.promised["id"])
         self.game.set_war("A", "B")
 
     def deal_for(self, sides_b=("B",)):

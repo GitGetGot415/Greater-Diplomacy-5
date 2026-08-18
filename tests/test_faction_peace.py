@@ -36,6 +36,10 @@ def two_blocs(human_players=("A",)):
     for ours in ("A", "S"):
         for theirs in ("G", "T"):
             game.set_war(ours, theirs)
+    # One shared frontier between all four. Land only moves to a nation that
+    # can reach it (map_logic/diplomacy/reach.py), and a bloc of islands could
+    # not cede anything to anybody.
+    game.border(*[p["id"] for p in game.map_data.values()])
     return game
 
 
@@ -96,6 +100,7 @@ class BlocPeaceTests(unittest.TestCase):
 
     def test_a_leader_can_cede_a_members_territory(self):
         theirs_prov = self.game.add_province("T", cores=["T"])
+        self.game.border(self.game.home_of("S")["id"], theirs_prov["id"])
         mine, theirs = self.sides()
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(),
@@ -116,6 +121,7 @@ class RatificationTests(unittest.TestCase):
     def setUp(self):
         self.game = two_blocs(human_players=("A", "S"))
         self.at_stake = self.game.add_province("S", cores=["S"])
+        self.game.border(self.game.home_of("G")["id"], self.at_stake["id"])
         mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
         self.deal = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(),
@@ -186,6 +192,69 @@ class RatificationTests(unittest.TestCase):
         self.assertFalse(at_war(self.game, "S", "G"))
 
 
+class AcceptingBlocRatificationTests(unittest.TestCase):
+    """The bloc that *accepts* terms gets a veto too.
+
+    open_round was run from the proposer alone, so the roster of members a
+    treaty binds was read off whichever side happened to draft it. A bloc whose
+    leader accepted somebody else's terms had no say at all -- which is
+    saves/oh my god germany italy wtf: the Soviet Union proposed, Germany
+    accepted for the Axis, four Finnish provinces changed hands, and Finland was
+    never asked. Which side wrote the paper is not a fact about who it binds.
+    """
+
+    def setUp(self):
+        self.game = two_blocs(human_players=("A", "T"))
+        old_enough_to_settle(self.game)
+        self.at_stake = self.game.add_province("T", cores=["T"])
+        self.game.border(self.game.home_of("A")["id"], self.at_stake["id"])
+
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        self.deal = deal.new(deal.KIND_PEACE, mine, theirs, [
+            deal.white_peace(),
+            deal.tiles_clause("T", "A", [self.at_stake["id"]]),
+        ])
+
+    def reach_acceptance(self):
+        self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
+        self.game.run_turn()
+        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.run_turn()
+
+    def test_the_member_being_signed_away_is_asked(self):
+        self.reach_acceptance()
+
+        asked = ratification.pending_for(self.game.nation_data, "T")
+        self.assertTrue(asked, "T lost a province in a deal it never saw")
+        self.assertEqual(asked["signatory"], "G",
+                         "asked in the name of the leader that bound it")
+        self.assertEqual(self.game.owner_of(self.at_stake["id"]), "T",
+                         "nothing moves until the member answers")
+
+    def test_and_can_refuse_it(self):
+        self.reach_acceptance()
+        ratification.answer(self.game.nation_data, "T", ratification.REFUSE)
+        self.game.run_turn()
+
+        self.assertEqual(self.game.owner_of(self.at_stake["id"]), "T", "kept its land")
+        self.assertEqual(self.game.nation_data["T"]["faction"], "", "lost its faction")
+        self.assertTrue(at_war(self.game, "T", "A"), "fights on alone")
+
+    def test_a_puppet_is_not_asked_and_does_not_walk_out(self):
+        """Its wars are its master's business, in this direction as in the rest.
+
+        finalize_faction_leave refuses to move a puppet, so a puppet that
+        refused would be struck out of the treaty, keep its faction anyway, and
+        be left fighting alone while its overlord was at peace.
+        """
+        self.game.nation_data["T"]["master"] = "G"
+        self.game.nation_data["G"]["puppets"] = ["T"]
+        self.reach_acceptance()
+
+        self.assertFalse(ratification.pending_for(self.game.nation_data, "T"))
+        self.assertEqual(self.game.owner_of(self.at_stake["id"]), "A")
+
+
 class RatificationRouteTests(unittest.TestCase):
     """The player-facing half: a bound member has to be able to answer.
 
@@ -196,6 +265,7 @@ class RatificationRouteTests(unittest.TestCase):
     def setUp(self):
         self.game = two_blocs(human_players=("A", "S"))
         at_stake = self.game.add_province("S", cores=["S"])
+        self.game.border(self.game.home_of("G")["id"], at_stake["id"])
         mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(), deal.tiles_clause("S", "G", [at_stake["id"]])])

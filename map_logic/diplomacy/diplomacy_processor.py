@@ -353,8 +353,24 @@ def _gather_ai_tasks(map_screen):
     return ai_tasks
 
 
-def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None):
-    """Unified helper to gracefully fail into standard canned responses if the LLM skips or is offline."""
+def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None,
+                            scenario_settings=None):
+    """The answer for a job the model never got to -- skipped, timed out, or offline.
+
+    A proposal is answered by the rules, not agreed to. This used to return a
+    flat `"accepted": True` for every bilateral action, so a batch that ran out
+    of the turn's LLM budget signed every treaty on the table on its way out --
+    including ones the very same rules had already refused. See
+    ai_evaluation.canned_verdict_reply, which is the whole argument and the
+    shared implementation; this wrapper exists because the batch runner hands
+    back a task dict rather than the eight arguments that function takes.
+
+    A unilateral action and a plain message are not proposals -- nobody is being
+    asked anything, so `accepted` is meaningless for them and they keep the flat
+    answer they always had.
+    """
+    from map_logic.ai import ai_evaluation
+
     action = task["action"]
     if action == "CUSTOM_MSG":
         key, default = "AI_OFF_MESSAGE", "Message received."
@@ -366,7 +382,10 @@ def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None):
         }
         key, default = fallback_map.get(action, "GENERIC_MESSAGE"), "Message received."
     else:
-        key, default = "AI_OFF_ACCEPT", "We accept your proposal."
+        return ai_evaluation.canned_verdict_reply(
+            nation_data or {}, map_data or {}, task.get("target"), task.get("sender"),
+            action, task.get("content", ""), world=world,
+            scenario_settings=scenario_settings)
 
     # The task names both parties, so a declaration of war can read as the
     # weaker or the stronger side declaring it rather than one flat sentence.
@@ -427,7 +446,8 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
 
     def record_fallback(task):
         ai_results[key_of(task)] = _get_fallback_ai_result(
-            task, map_screen.nation_data, verdict_world, map_screen.map_data)
+            task, map_screen.nation_data, verdict_world, map_screen.map_data,
+            scenario_settings)
 
     # One tick per task the model was actually asked about.
     #

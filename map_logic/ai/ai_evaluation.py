@@ -118,6 +118,51 @@ LITE_RESPONSE_KEYS = {
 }
 
 
+def canned_verdict_reply(nation_data, map_data, ai_nation, sender_nation, action_type,
+                         custom_msg="", world=None, scenario_settings=None,
+                         verdict=None):
+    """The rules' own answer, in canned words. Never touches the model.
+
+    Two callers, and until now they disagreed about something they had no
+    business disagreeing about. This one -- the ordinary "the LLM is not
+    consulted for this exchange" path -- has always answered with
+    evaluate_verdict. The give-up paths did not: an aborted turn and an
+    abandoned batch each returned a flat `accepted=True`, so a proposal that
+    reached the model queue and did not come back was *agreed to* rather than
+    judged.
+
+    That is not a fallback, it is a different game. saves/oh my god germany
+    italy wtf is one turn of it: six treaties every one of which the rules had
+    refused -- Germany signing away Finnish provinces while holding a quarter of
+    the Soviet Union, and five Axis members buying separate peaces that emptied
+    the faction -- all executed because the turn ran out of model budget.
+
+    Giving up on the prose was never a reason to give up on the decision. The
+    decision is pure arithmetic and costs microseconds; only the sentence needs
+    a provider. The proactive passes already knew this -- ai_diplomacy's
+    director fallback is a bare `pass  # already holds the heuristic's own pick`
+    -- and this is the same principle, for the half of the AI that answers.
+
+    Pass `verdict` when the caller has already worked it out, so the ordinary
+    path does not price every clause twice.
+    """
+    if verdict is None:
+        verdict = evaluate_verdict(nation_data, map_data, ai_nation, sender_nation,
+                                   action_type, custom_msg, world=world,
+                                   scenario_settings=scenario_settings)
+
+    key = LITE_RESPONSE_KEYS.get(action_type,
+                                 "AI_OFF_ACCEPT" if verdict.accepted else "AI_OFF_REJECT")
+    # Both parties are in hand here, so the line can suit the two of them --
+    # a betrayal reads differently from the weaker side than the stronger.
+    # This is the reply the player sees most: at anything below ABSOLUTE it
+    # answers most of the world's diplomacy.
+    return _reply(ai_prompts.resolve(key, sender=ai_nation, target=sender_nation,
+                                     nation_data=nation_data, world=world,
+                                     map_data=map_data),
+                  accepted=verdict.accepted)
+
+
 def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
     ai_stats = nation_data.get(ai_nation, {})
     manpower = ai_stats.get("manpower", 0)
@@ -394,7 +439,11 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
-        return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=True)
+        # Force Skip, or the turn moved on while this was queued. Either way the
+        # model is out of reach and the rules are not -- see canned_verdict_reply.
+        return canned_verdict_reply(nation_data, map_data, ai_nation, sender_nation,
+                                    action_type, custom_msg, world=world,
+                                    scenario_settings=scenario_settings)
 
     if human_players is None:
         human_players = []
@@ -415,16 +464,10 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     if _use_canned_reply(mode, immersion, is_ai_to_ai,
                          bool(custom_msg.strip()) or bool(note.strip()),
                          nation=ai_nation, world=world):
-        key = LITE_RESPONSE_KEYS.get(action_type,
-                                     "AI_OFF_ACCEPT" if accepted else "AI_OFF_REJECT")
-        # Both parties are in hand here, so the line can suit the two of them --
-        # a betrayal reads differently from the weaker side than the stronger.
-        # This is the reply the player sees most: at anything below ABSOLUTE it
-        # answers most of the world's diplomacy.
-        return _reply(ai_prompts.resolve(key, sender=ai_nation, target=sender_nation,
-                                         nation_data=nation_data, world=world,
-                                         map_data=map_data),
-                      accepted=accepted)
+        return canned_verdict_reply(nation_data, map_data, ai_nation, sender_nation,
+                                    action_type, custom_msg, world=world,
+                                    scenario_settings=scenario_settings,
+                                    verdict=verdict)
 
     print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
