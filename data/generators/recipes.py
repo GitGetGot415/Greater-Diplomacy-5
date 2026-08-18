@@ -186,18 +186,18 @@ UNIT_SECTIONS = [
             # two can be tuned independently. Currently mirrors attack 1:1.
             "bombard_attack": linear(120, 60),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(1000, 50), "cost_manpower": const(500),
-            "cost_fuel": const(0), "production_time": const(3),
+            "speed": const(1), "cost_materials": linear(1500, 100), "cost_manpower": const(500),
+            "cost_fuel": const(0), "production_time": const(2),
         }),
         # Same tech track as Artillery (see c.UNIT_TECH_KEY_OVERRIDES -- no
         # separate research of its own) and identical in every stat except
         # double cost_materials and much heavier damage, mirrored 1:1 between
         # melee and bombardment like Artillery itself.
         UnitFamily("Heavy Artillery", roman_suffixes(20), {
-            "health": linear(100, 50), "attack": linear(200, 100),
-            "bombard_attack": linear(200, 100),
+            "health": linear(100, 50), "attack": linear(240, 120),
+            "bombard_attack": linear(240, 120),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(2000, 100), "cost_manpower": const(500),
+            "speed": const(1), "cost_materials": linear(2500, 150), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(5),
         }),
     ],
