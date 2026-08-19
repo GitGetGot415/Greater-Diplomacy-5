@@ -1,6 +1,6 @@
 {
     "version": "v26",
-    "generated_at": "2026-08-17T23:47:56.012720",
+    "generated_at": "2026-08-19T08:18:59.645002",
     "date": {
         "day": 15,
         "month": 0,
@@ -913,7 +913,11 @@
             "pending_diplomacy": {},
             "relations": {},
             "adjective": "Canadian",
-            "diplo_responses": {}
+            "diplo_responses": {},
+            "faction": "",
+            "is_faction_leader": false,
+            "master": "United Kingdom",
+            "puppet_type": "Autonomous"
         },
         "Soviet Union": {
             "name": "Soviet Union",
@@ -2129,7 +2133,10 @@
             "faction": "",
             "is_faction_leader": false,
             "adjective": "British",
-            "diplo_responses": {}
+            "diplo_responses": {},
+            "puppets": [
+                "Canada"
+            ]
         },
         "Japan": {
             "name": "Japan",
