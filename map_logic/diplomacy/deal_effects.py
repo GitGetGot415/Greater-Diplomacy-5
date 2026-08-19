@@ -115,6 +115,7 @@ def prune(deal, map_screen):
     # reach when the offer was written can be a province on the far side of a
     # collapsed front by the time it lands, a turn later.
     reachable = reach_mod.index(map_screen.map_data)
+    receiver_ids = deal_mod.receiver_ids_by_recipient(deal)
 
     kept, dropped = [], []
     for clause in deal_mod.clauses(deal):
@@ -158,12 +159,13 @@ def prune(deal, map_screen):
             receiving_side = _side_containing(deal, clause.get("to"))
 
             receiver = clause.get("to")
+            pending = receiver_ids.get(receiver, ())
             honoured, moved, gone, adrift = [], 0, 0, 0
             for pid in clause.get("ids", []):
                 prov = by_id.get(int(pid))
                 owner = prov.get("owner") if prov else None
 
-                if prov is not None and not reachable.reachable(receiver, prov):
+                if prov is not None and not reachable.reachable(receiver, prov, pending=pending):
                     adrift += 1
                     continue
 

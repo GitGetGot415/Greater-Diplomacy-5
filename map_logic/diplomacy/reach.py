@@ -24,6 +24,19 @@ twenty-six separate lakes, so a nation on one shore of a lake reaches the far
 shore of that lake and nothing else -- which is exactly what it should get, and
 is not something a flag can express.
 
+A treaty can ask for more than one province at once, and the rule above judged
+each of them against the nation's *current* territory only -- so a demand for
+the Rhineland was refused for not bordering France even when the same deal
+also asked for Alsace-Lorraine, which does border France and would have made
+the Rhineland reachable the moment the treaty landed. `reachable` and
+`unreachable_ids` take an optional `pending`: the rest of what this same deal
+would also hand the nation, which counts as ground it already stands on for
+the purpose of judging everything else in that same set. It only ever helps a
+province clear the bar -- a `pending` list is never consulted for anything not
+named in it, and every caller rebuilds it fresh from the deal actually being
+sent, so dropping Alsace-Lorraine from the deal before sending drops it from
+`pending` too and the Rhineland fails again.
+
 Stdlib and `data` only.
 """
 
@@ -108,8 +121,14 @@ class Reachability:
 
     # -- the question -------------------------------------------------- #
 
-    def reachable(self, nation, prov):
-        """Whether `nation` could get to this province without anyone's help."""
+    def reachable(self, nation, prov, pending=()):
+        """Whether `nation` could get to this province without anyone's help.
+
+        `pending` is the other province ids the same deal would also hand this
+        nation -- see the module note. Ground reachable already never needs it;
+        it only ever widens what a chain through `pending` can additionally
+        reach.
+        """
         if not nation or nation in c.UNPLAYABLE_NATIONS:
             return False
 
@@ -120,14 +139,52 @@ class Reachability:
         held, bodies, border = self._seeds_for(nation)
         if pid in held or pid in border:
             return True
-        return bool(bodies & self._touches.get(pid, frozenset()))
+        if bodies & self._touches.get(pid, frozenset()):
+            return True
+        if not pending:
+            return False
 
-    def unreachable_ids(self, nation, prov_ids):
-        """The subset of `prov_ids` this nation could not get to, in order."""
+        _, border, bodies = self._closure(held, bodies, border, pending)
+        return pid in border or bool(bodies & self._touches.get(pid, frozenset()))
+
+    def _closure(self, held, bodies, border, pending):
+        """held/bodies/border, widened by whichever `pending` ids connect back
+        to them -- directly, or through each other. A fixed point: granting one
+        pending province can be exactly what puts the next one in reach."""
+        confirmed = set(held)
+        bodies = set(bodies)
+        border = set(border)
+        remaining = {int(pid) for pid in pending if int(pid) not in self._body_of}
+
+        progress = True
+        while progress and remaining:
+            progress = False
+            newly = {pid for pid in remaining
+                     if pid in border or bodies & self._touches.get(pid, frozenset())}
+            if newly:
+                for pid in newly:
+                    confirmed.add(pid)
+                    bodies |= self._touches.get(pid, frozenset())
+                    border |= set(self._neighbours.get(pid, ()))
+                remaining -= newly
+                progress = True
+        return confirmed, border, bodies
+
+    def unreachable_ids(self, nation, prov_ids, pending=None):
+        """The subset of `prov_ids` this nation could not get to, in order.
+
+        `pending` defaults to `prov_ids` itself, so a batch of ids handed in
+        together can lean on each other -- the common case, one clause naming
+        everything a treaty asks a given nation for. Pass it explicitly to
+        widen the chain across other clauses of the same deal.
+        """
+        prov_ids = list(prov_ids)
+        if pending is None:
+            pending = prov_ids
         out = []
         for pid in prov_ids:
             prov = self._by_id.get(int(pid))
-            if prov is not None and not self.reachable(nation, prov):
+            if prov is not None and not self.reachable(nation, prov, pending=pending):
                 out.append(int(pid))
         return out
 

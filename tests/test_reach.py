@@ -69,6 +69,47 @@ class OverLandTests(unittest.TestCase):
         self.assertFalse(self.reach.reachable("Ocean", self.at(2)))
 
 
+class PendingChainTests(unittest.TestCase):
+    """A ---- B ---- C ---- D, in a line, with A holding only the first tile.
+
+    A demand naming both B and C at once can lean on B to reach C -- the
+    Alsace-Lorraine-then-Rhineland case reported against the deal screen --
+    but `pending` only ever helps ids actually named in it, and only where
+    they actually connect back to something real.
+    """
+
+    def setUp(self):
+        self.map_data = world(land(1, "A", [2]), land(2, "Owner2", [1, 3]),
+                              land(3, "Owner3", [2, 4]), land(4, "Owner4", [3]))
+        self.reach = reach.index(self.map_data)
+
+    def at(self, prov_id):
+        return self.map_data[str(prov_id)]
+
+    def test_unreachable_alone(self):
+        self.assertFalse(self.reach.reachable("A", self.at(3)))
+
+    def test_reachable_once_the_connector_is_named_alongside_it(self):
+        self.assertTrue(self.reach.reachable("A", self.at(3), pending=[2, 3]))
+
+    def test_the_chain_can_run_two_deep(self):
+        self.assertTrue(self.reach.reachable("A", self.at(4), pending=[2, 3, 4]))
+
+    def test_a_pending_id_that_does_not_connect_grants_nothing(self):
+        self.assertFalse(self.reach.reachable("A", self.at(3), pending=[3]))
+
+    def test_unreachable_ids_defaults_pending_to_the_whole_batch(self):
+        self.assertEqual(self.reach.unreachable_ids("A", [2, 3]), [])
+
+    def test_unreachable_ids_without_the_connector_in_the_batch_stays_out_of_reach(self):
+        self.assertEqual(self.reach.unreachable_ids("A", [3]), [3])
+
+    def test_an_explicit_pending_can_widen_the_batch(self):
+        """The connector can live in a different clause of the same deal --
+        named through `pending` rather than being part of this batch itself."""
+        self.assertEqual(self.reach.unreachable_ids("A", [3], pending=[2, 3]), [])
+
+
 class ThroughOtherPeopleTests(unittest.TestCase):
     """The point of the rule: only your own territory counts as a starting line.
 
@@ -176,6 +217,27 @@ class TreatyTests(unittest.TestCase):
                          "and the Buyer still does not")
 
     def test_the_rest_of_a_treaty_survives_one_unreachable_province(self):
+        """A province with nothing else in the deal to connect it stays out of
+        reach even though the rest of the treaty goes through -- this is about
+        one clause failing without taking the others down with it, not about
+        the two provinces having anything to do with each other."""
+        stray = self.game.add_province("Loner", cores=["Loner"])
+        agreement = deal.new(deal.KIND_TRADE, ["Seller", "Loner"], ["Buyer"], [
+            deal.tiles_clause("Seller", "Buyer", [self.near["id"]]),
+            deal.tiles_clause("Loner", "Buyer", [stray["id"]]),
+        ])
+        deal_effects.execute(self.game, agreement)
+
+        self.assertEqual(self.game.owner_of(self.near["id"]), "Buyer")
+        self.assertEqual(self.game.owner_of(stray["id"]), "Loner")
+
+    def test_a_second_clause_can_lean_on_the_connection_the_first_makes(self):
+        """Alsace-Lorraine, then the Rhineland: the Rhineland does not border
+        Buyer, but Buyer's own demand for the province in between does, and the
+        treaty would land them both at once. Judged on the deal as a whole
+        rather than clause by clause, which is the whole point -- 'near' and
+        'far' are written as two separate TILES clauses exactly like the case
+        above, so this is what tells the two apart from it."""
         agreement = deal.new(deal.KIND_TRADE, ["Seller", "Distant"], ["Buyer"], [
             deal.tiles_clause("Seller", "Buyer", [self.near["id"]]),
             deal.tiles_clause("Distant", "Buyer", [self.far["id"]]),
@@ -183,7 +245,31 @@ class TreatyTests(unittest.TestCase):
         deal_effects.execute(self.game, agreement)
 
         self.assertEqual(self.game.owner_of(self.near["id"]), "Buyer")
+        self.assertEqual(self.game.owner_of(self.far["id"]), "Buyer")
+
+    def test_validate_agrees_the_chain_is_fine(self):
+        agreement = deal.new(deal.KIND_TRADE, ["Seller", "Distant"], ["Buyer"], [
+            deal.tiles_clause("Seller", "Buyer", [self.near["id"]]),
+            deal.tiles_clause("Distant", "Buyer", [self.far["id"]]),
+        ])
+        problems = deal.validate(agreement, self.game.map_data, self.game.nation_data)
+        self.assertEqual(problems, [])
+
+    def test_dropping_the_connector_is_not_a_way_round_the_rule(self):
+        """The obvious exploit: ask for the connecting province, ask for what it
+        would connect, then withdraw the connector before sending. There is
+        nothing to withdraw *from* here -- each check reads the deal actually
+        being sent, so a deal naming only the far province is judged exactly as
+        if the near one had never been asked for."""
+        agreement = deal.new(deal.KIND_TRADE, ["Distant"], ["Buyer"],
+                             [deal.tiles_clause("Distant", "Buyer", [self.far["id"]])])
+        problems = deal.validate(agreement, self.game.map_data, self.game.nation_data)
+        self.assertTrue(any("cannot reach" in p for p in problems), problems)
+
+        notes = deal_effects.execute(self.game, agreement)
         self.assertEqual(self.game.owner_of(self.far["id"]), "Distant")
+        self.assertTrue(any("beyond anything Buyer could reach" in note
+                            for note in notes), notes)
 
 
 class OccupiedGroundTests(unittest.TestCase):

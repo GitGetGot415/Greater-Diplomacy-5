@@ -513,9 +513,21 @@ class Deal_Screen(MapOverlayScreen):
             # Whatever a co-belligerent took and we cannot get to is left out
             # rather than added and then refused at the verdict -- the point of
             # this button is that it produces a deal you can actually send.
+            # Grouped by receiver first, so a chain of occupied provinces that
+            # only reach friendly soil through each other still counts: one
+            # click names the whole clump, and reach is judged on the clump.
+            by_receiver = {}
             for prov_id in occupied:
                 prov = self.map_screen.id_to_province.get(int(prov_id))
-                if prov and not self.reach.reachable(self.would_receive(prov, TAKE), prov):
+                if prov:
+                    by_receiver.setdefault(self.would_receive(prov, TAKE), set()).add(int(prov_id))
+
+            for prov_id in occupied:
+                prov = self.map_screen.id_to_province.get(int(prov_id))
+                if not prov:
+                    continue
+                receiver = self.would_receive(prov, TAKE)
+                if not self.reach.reachable(receiver, prov, pending=by_receiver.get(receiver, ())):
                     continue
                 self.take_ids.setdefault(prov_id, self.recipients[TAKE])
         self.refresh_ui()
@@ -592,6 +604,21 @@ class Deal_Screen(MapOverlayScreen):
     def picks_for(self, side):
         return self.take_ids if side == TAKE else self.give_ids
 
+    def _pending_ids(self, side, receiver):
+        """Ids already picked for `side` that would also land on `receiver`.
+
+        What the rest of this same demand can already lean on: a click that
+        adds the Rhineland is judged reachable if Alsace-Lorraine, which does
+        border France, is already sitting in the same column and routed to the
+        same receiver -- the treaty would connect them the moment it landed.
+        """
+        ids = set()
+        for prov_id in self.picks_for(side):
+            prov = self.map_screen.id_to_province.get(int(prov_id))
+            if prov and self.would_receive(prov, side) == receiver:
+                ids.add(int(prov_id))
+        return ids
+
     def pick(self, side, prov_id, recipient=None):
         """Puts one province in a column, optionally naming who gets it.
 
@@ -619,8 +646,9 @@ class Deal_Screen(MapOverlayScreen):
         # and named on the nation that would actually receive it, which with
         # Auto is frequently an ally rather than the player.
         receiver = self.would_receive(prov, self.picking)
+        pending = self._pending_ids(self.picking, receiver)
         if (prov["id"] not in self.picks_for(self.picking)
-                and not self.reach.reachable(receiver, prov)):
+                and not self.reach.reachable(receiver, prov, pending=pending)):
             whose = "your" if receiver == self.player else f"{receiver}'s"
             self.map_screen.show_feedback(
                 f"Out of reach: it borders none of {whose} land and no water {whose} coast is on.")

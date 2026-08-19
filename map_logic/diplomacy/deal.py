@@ -230,6 +230,7 @@ def validate(deal, map_data=None, nation_data=None, reach_index=None):
         return ["Not a deal."]
 
     everyone = parties(deal)
+    receiver_ids = receiver_ids_by_recipient(deal)
     if not deal["sides"].get("a") or not deal["sides"].get("b"):
         problems.append("A deal needs a nation on both sides.")
     if set(deal["sides"]["a"]) & set(deal["sides"]["b"]):
@@ -280,7 +281,8 @@ def validate(deal, map_data=None, nation_data=None, reach_index=None):
                         continue  # ours by force already; the treaty makes it ours by right
                     problems.append(f"{giver} no longer holds province {prov_id}.")
 
-                problems.extend(_out_of_reach(clause, map_data, reach_index))
+                pending = receiver_ids.get(clause.get("to"), ())
+                problems.extend(_out_of_reach(clause, map_data, reach_index, pending))
         elif kind == RESOURCES:
             if clause.get("resource") not in c.ECON_RESOURCE_KEYS:
                 problems.append(f"Cannot trade '{clause.get('resource')}'.")
@@ -294,7 +296,29 @@ def validate(deal, map_data=None, nation_data=None, reach_index=None):
     return problems
 
 
-def _out_of_reach(clause, map_data, reach_index=None):
+def receiver_ids_by_recipient(deal):
+    """{receiver: {every province id a TILES clause of this deal hands them}}.
+
+    Spans every clause naming that receiver, not just the one being judged --
+    a demand for the Rhineland from Germany is judged reachable if the same
+    deal also demands Alsace-Lorraine from Germany, and just as much if it is
+    Austria-Hungary handing over the province that closes the chain. Whoever
+    drafted it, and however the ids ended up split across clauses, the receiver
+    ends up with all of it at once or none of it.
+    """
+    receivers = {}
+    for clause in clauses(deal):
+        if clause.get("type") != TILES:
+            continue
+        receiver = clause.get("to")
+        if not receiver:
+            continue
+        receivers.setdefault(receiver, set()).update(
+            int(prov_id) for prov_id in clause.get("ids") or ())
+    return receivers
+
+
+def _out_of_reach(clause, map_data, reach_index=None, pending=()):
     """Complaints about provinces the receiver has no way of getting to.
 
     Land you cannot reach is not land you can be given. A demand used to be
@@ -305,6 +329,10 @@ def _out_of_reach(clause, map_data, reach_index=None):
     Judged on the *receiver* of each term rather than on whoever drafted the
     deal, which is what closes the obvious way round it: handing unreachable
     land to a puppet or an ally is that nation's reach to satisfy, not yours.
+
+    `pending` is every id the rest of the deal also hands this receiver (see
+    reach.py) -- so a demand does not fail just because the province that
+    would connect it to friendly soil was written into a separate clause.
     """
     from map_logic.diplomacy import reach as reach_mod
 
@@ -316,7 +344,7 @@ def _out_of_reach(clause, map_data, reach_index=None):
     index = reach_index or reach_mod.index(map_data)
     return [f"{receiver} cannot reach province {prov_id} -- it borders none of "
             f"their land and no water they sit on."
-            for prov_id in index.unreachable_ids(receiver, ids)]
+            for prov_id in index.unreachable_ids(receiver, ids, pending=pending or ids)]
 
 
 # ==========================================
