@@ -197,7 +197,7 @@ UNIT_SECTIONS = [
             "health": linear(100, 50), "attack": linear(240, 120),
             "bombard_attack": linear(240, 120),
             "defense": const(0),
-            "speed": const(1), "cost_materials": linear(2500, 150), "cost_manpower": const(500),
+            "speed": const(1), "cost_materials": linear(3000, 200), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(5),
         }),
     ],
