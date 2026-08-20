@@ -93,12 +93,12 @@ class Load_Game(FolderListState):
             turn_by_label[label] = t
 
         def on_select(label):
-            self.selected_history_turn = turn_by_label[label]
-            self.load_specific_save(folder_name)
+            self.load_specific_save(folder_name, history_turn=turn_by_label[label])
 
         queries.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
                                       items, on_select)
 
-    def load_specific_save(self, folder_name):
+    def load_specific_save(self, folder_name, history_turn=None):
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
+        self.selected_history_turn = history_turn
         self.go_to("MAP")
