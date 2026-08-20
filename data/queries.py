@@ -1053,7 +1053,7 @@ def get_tech_unlocks(tech_key, level):
     if tech_key == "infantry_fighting_vehicle" and level == 1:
         unlocks.append("Infantry Fighting Vehicle (buildable up to your current Infantry tech)")
 
-    if tech_key == "submarine" and level == 1:
+    if tech_key == "submarine":
         unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
     return unlocks

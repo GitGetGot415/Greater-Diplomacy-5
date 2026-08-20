@@ -235,7 +235,7 @@ UNIT_SECTIONS = [
             "cost_fuel": linear(200, 10), "production_time": const(6),
         }),
         UnitFamily("Super Heavy Tank", roman_suffixes(5), {
-                    "health":  const(5000), "attack":  const(5000), "defense": linear(600, 100),
+                    "health":  const(5000), "attack":  const(5000), "defense": linear(550, 50),
                     "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000),
                     "cost_fuel": linear(240, 20), "production_time": const(6),
         }),
@@ -245,13 +245,13 @@ UNIT_SECTIONS = [
             "health": 10000, "attack": 6000, "defense": 400,
             "bombard_attack": 1000,
             "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
-            "cost_fuel": 3000, "production_time": 8,
+            "cost_fuel": 1000, "production_time": 10,
         }),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 500,
             "bombard_attack": 1200,
             "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
-            "cost_fuel": 3000, "production_time": 10,
+            "cost_fuel": 1200, "production_time": 12,
         }),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
@@ -314,7 +314,7 @@ UNIT_SECTIONS = [
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Aircraft Carrier", roman_suffixes(17), {
-            "health": linear(800, 200), "attack": linear(800, 100), "defense": linear(200, 20),
+            "health": linear(800, 200), "attack": linear(600, 120), "defense": linear(200, 20),
             "bombard_attack": linear(600, 120),
             "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
             "cost_fuel": linear(500, 25), "production_time": const(10),
