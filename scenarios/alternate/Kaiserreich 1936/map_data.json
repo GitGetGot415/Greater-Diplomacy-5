@@ -1636,7 +1636,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4985,7 +4985,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17273,7 +17273,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18191,7 +18191,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18818,7 +18818,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19475,7 +19475,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19851,7 +19851,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20194,7 +20194,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20833,7 +20833,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21870,7 +21870,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23915,7 +23915,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26038,7 +26038,7 @@
                 "max_health": 800,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 800,
+                "attack": 600,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -45501,7 +45501,7 @@
                 "max_health": 800,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 800,
+                "attack": 600,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -54605,7 +54605,7 @@
                 "max_health": 800,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 800,
+                "attack": 600,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -72260,7 +72260,7 @@
                 "max_health": 800,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 800,
+                "attack": 600,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -81525,7 +81525,7 @@
                 "max_health": 800,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 800,
+                "attack": 600,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -87125,7 +87125,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89259,7 +89259,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 280,
+                "attack": 420,
                 "defense": 0,
                 "level": 0,
                 "order": {
