@@ -710,6 +710,60 @@ async def _bootstrap():
     game = Controller()
     await game.run()
 
+def _write_crash_log():
+    """Writes a crash report to ~/GD5_crash.log and pops up a dialog telling
+    the player where it is, so they can find and send it without needing a
+    console window -- a windowed/frozen build doesn't show one, so without
+    this a crash would otherwise just silently vanish from their view.
+
+    Deliberately self-contained (own imports, no reliance on project
+    modules) since this runs from the top-level except block, which can be
+    reached before _import_project_modules() has set anything up -- e.g. if
+    mod_loader.install() itself raised.
+    """
+    import datetime
+    import platform as _platform
+    import traceback
+
+    crash_log_path = os.path.expanduser("~/GD5_crash.log")
+
+    header_lines = [
+        "Greater Diplomacy 5 crash report",
+        f"Time: {datetime.datetime.now().isoformat(timespec='seconds')}",
+        f"OS: {_platform.platform()}",
+        f"Python: {sys.version}",
+    ]
+    try:
+        header_lines.append(f"Version: {sys.modules['data.constants'].GAME_VERSION}")
+    except Exception:
+        pass
+    try:
+        header_lines.append(f"Pygame: {sys.modules['pygame'].version.ver}")
+    except Exception:
+        pass
+
+    with open(crash_log_path, "w") as f:
+        f.write("\n".join(header_lines) + "\n\n")
+        traceback.print_exc(file=f)
+
+    # Best-effort: an environment without a display (or without tkinter)
+    # just misses the popup, not the crash log itself.
+    try:
+        import tkinter
+        from tkinter import messagebox
+        root = tkinter.Tk()
+        root.withdraw()
+        messagebox.showerror(
+            "Greater Diplomacy 5 crashed",
+            "Sorry, the game ran into an error and had to close.\n\n"
+            f"A crash report was saved to:\n{crash_log_path}\n\n"
+            "Please send this file to the developer so they can figure out what went wrong."
+        )
+        root.destroy()
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     try:
         asyncio.run(_bootstrap())
@@ -724,6 +778,5 @@ if __name__ == "__main__":
             # browser devtools console is where a web player can see this.
             traceback.print_exc()
         else:
-            with open(os.path.expanduser("~/GD5_crash.log"), "w") as f:
-                traceback.print_exc(file=f)
+            _write_crash_log()
             raise
