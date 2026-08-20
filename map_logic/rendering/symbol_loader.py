@@ -378,14 +378,15 @@ def _resolve_against(name, table, country):
             base_type = lvl_match.group(1)
             target_lvl = int(lvl_match.group(2))
 
-            # Check for range keys (e.g., "Factory Lvl 1-3")
+            # Check for range keys (e.g., "Factory Lvl 1-3"). Keep scanning
+            # rather than stopping at the first hit so a later-listed
+            # matching key overrides an earlier, overlapping one.
             for sym_key in table.keys():
                 range_match = re.match(rf'^{re.escape(base_type)}\s+Lvl\s+(\d+)-(\d+)$', sym_key, re.IGNORECASE)
                 if range_match:
                     start_lvl, end_lvl = int(range_match.group(1)), int(range_match.group(2))
                     if start_lvl <= target_lvl <= end_lvl and _table_has(table, sym_key, country):
                         base_name = sym_key
-                        break
 
     if not _table_has(table, base_name, country):
         # Check if there is a 4-digit year in the name (e.g., "Infantry Type 1860")
@@ -397,7 +398,11 @@ def _resolve_against(name, table, country):
             base_type = re.sub(r'\s*(?:Type)?\s*\d{4}.*', '', name, flags=re.IGNORECASE).strip()
 
             range_found = False
-            # Look for an image formatted as "BaseType YYYY-YYYY" (e.g. "Infantry 1850-1900")
+            # Look for an image formatted as "BaseType YYYY-YYYY" (e.g. "Infantry 1850-1900").
+            # Ranges can overlap (e.g. a country-specific range nested inside a
+            # broader generic one); keep scanning rather than stopping at the
+            # first hit so a later-listed matching key overrides an earlier one,
+            # same as everywhere else in this manifest.
             for sym_key in table.keys():
                 pattern = rf'^{re.escape(base_type)}\s+(\d{{4}})-(\d{{4}})$'
                 range_match = re.match(pattern, sym_key, re.IGNORECASE)
@@ -408,7 +413,6 @@ def _resolve_against(name, table, country):
                     if start_year <= year <= end_year and _table_has(table, sym_key, country):
                         base_name = sym_key
                         range_found = True
-                        break
 
             # If no specific era image matched, fallback to generic base type (e.g., "Infantry")
             if not range_found and _table_has(table, base_type, country):

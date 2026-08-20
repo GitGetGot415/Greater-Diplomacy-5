@@ -6,8 +6,8 @@
         "germanic": ["Germany", "German Reich", "German Empire", "Weimar Republic"],
         "austrian": ["Austria-Hungary", "Austria"],
         "russian": ["Russia", "Soviet Union"],
-        "british": ["United Kingdom", "England"],
-        "french": ["France"],
+        "british": ["United Kingdom", "England", "Union of Britain"],
+        "french": ["France", "Commune of France", "National France"],
         "italian": ["Italy"],
         "american": ["United States of America"]
     },
@@ -23,9 +23,22 @@
         {"file": "russian_infantry_1914__gd5.png", "countries": "russian"},
         {"file": "italian_infantry_1914__gd5.png", "countries": "italian"}
     ],
-    "Infantry 1926-1960": [
+    "Infantry 1916-1918": [
+        {"file": "german_infantry_1916__gd5.webp", "countries": "germanic"},
+        {"file": "Austrian_infantry_1916__gd5.webp", "countries": "austrian"}
+    ],
+    "Infantry 1917-1934": [
+        {"file": "Austrian_infantry_1917__gd5.webp", "countries": "austrian"}
+    ],
+    "Infantry 1919-1934": [
+        {"file": "german_infantry_1918__gd5.webp", "countries": "germanic"}
+    ],
+    "Infantry 1935-1960": [
         {"file": "russian_infantry_1936__gd5.png", "countries": "russian"},
-        {"file": "german_infantry_1_gd5.png", "countries": "germanic"}
+        {"file": "german_infantry_1935__gd5.webp", "countries": "germanic"}
+    ],
+    "Infantry 1940-1960": [
+        {"file": "russian_infantry_1940__gd5.webp", "countries": "russian"}
     ],
     "Infantry 1961-2010": [
 
