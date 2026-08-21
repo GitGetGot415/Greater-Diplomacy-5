@@ -34,6 +34,31 @@ jobs:
       - name: Run Windows compilation script
         run: python compilation_scripts/windows_compilation.py
 
+
+      # WHAT IS ABOUT TO BE UPLOADED, not the source tree it was built from.
+      #
+      # The Translate jobs in odtl.yml run from source with open-dragoman
+      # pip-installed, so they pass whether or not the frozen build contains
+      # the library at all. open-dragoman is a ctypes package: the .dll/.dylib
+      # is package data, which neither PyInstaller nor py2app collects unless
+      # told, so the shipped game could have a dead Translate screen while
+      # every test was green. This reads the artifact itself.
+      - name: The build carries the translation layer
+        shell: bash
+        run: |
+          set -e
+          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
+          if [ -z "$found" ]; then
+            echo "::error title=No translation layer in the build::dist/ contains \
+            no libdragoman library, so Translate would fail for everyone who \
+            downloads this. Check --collect-all dragoman (PyInstaller) or the \
+            'dragoman' entry in compilation_scripts/setup.py (py2app)."
+            find dist -maxdepth 3 -type d | head -20
+            exit 1
+          fi
+          echo "translation layer found in:"
+          echo "$found"
+
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
@@ -169,6 +194,31 @@ jobs:
 
       - name: Run macOS compilation script
         run: python3 compilation_scripts/macos_compilation.py
+
+
+      # WHAT IS ABOUT TO BE UPLOADED, not the source tree it was built from.
+      #
+      # The Translate jobs in odtl.yml run from source with open-dragoman
+      # pip-installed, so they pass whether or not the frozen build contains
+      # the library at all. open-dragoman is a ctypes package: the .dll/.dylib
+      # is package data, which neither PyInstaller nor py2app collects unless
+      # told, so the shipped game could have a dead Translate screen while
+      # every test was green. This reads the artifact itself.
+      - name: The build carries the translation layer
+        shell: bash
+        run: |
+          set -e
+          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
+          if [ -z "$found" ]; then
+            echo "::error title=No translation layer in the build::dist/ contains \
+            no libdragoman library, so Translate would fail for everyone who \
+            downloads this. Check --collect-all dragoman (PyInstaller) or the \
+            'dragoman' entry in compilation_scripts/setup.py (py2app)."
+            find dist -maxdepth 3 -type d | head -20
+            exit 1
+          fi
+          echo "translation layer found in:"
+          echo "$found"
 
       - name: Upload macOS build
         uses: actions/upload-artifact@v4

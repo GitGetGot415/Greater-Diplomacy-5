@@ -70,6 +70,11 @@ OPTIONS = {
         'map_logic.random_map', 'map_logic.rendering', 'map_logic.setup', 'map_logic.turn_processing',
         'ui', 'ui.bars', 'ui.information', 'ui.confirm_dialog',
         'data', 'data.editors', 'data.io', 'data.map',
+        # open-dragoman, named here rather than left to the module graph. It is
+        # a ctypes library, so what matters is the .dylib beside its Python
+        # files; py2app copies a named package's directory whole, data and all,
+        # where a graph-discovered dependency brings only the modules.
+        'dragoman',
     ],
     # Standalone modules that aren't packages but are imported by the app.
     'includes': ['gameState', 'ui_elements', 'soloud', 'pygame', 'tkinter'],
