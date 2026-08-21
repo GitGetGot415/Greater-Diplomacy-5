@@ -33,7 +33,14 @@ def main():
     # as its own literal --hidden-import does not have that problem and was confirmed to land both
     # modules in the built archive. If a new screen is ever added via sub_screen_opener(), it needs
     # its own --hidden-import line here too.
+    # open-dragoman is a ctypes library: its .dll is package DATA sitting beside
+    # the Python files, and PyInstaller collects package data for nobody unless
+    # asked. Analysis would find `import dragoman` and bundle the module, then
+    # the frozen game would fail at ctypes.CDLL with the library missing --
+    # green CI, dead Translate screen, and nothing in between to notice.
+    # --collect-all takes the module, its submodules and its binaries together.
     cmd = ('pyinstaller --clean --onefile '
+           '--collect-all dragoman '
            '--hidden-import screens.map_related_screens.automation_screen '
            '--hidden-import screens.map_related_screens.declare_independence '
            '--add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py')

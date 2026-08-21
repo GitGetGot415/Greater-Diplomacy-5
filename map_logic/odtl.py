@@ -139,12 +139,13 @@ def _load():
         _lib = lib
         return
 
-    # Every path, not just the last error. The likeliest cause is that
-    # map_tools/fetch_dragoman_wasm.py was never run before pygbag, so the file
-    # is not in the build at all -- and a message naming where it was expected
-    # is the difference between fixing that in a minute and guessing.
+    # Every path, not just the last error. The library is committed to this
+    # repository, so a missing one means a partial checkout or a deleted file
+    # rather than a forgotten build step -- and a message naming where it was
+    # expected is the difference between fixing that in a minute and guessing.
     _load_error = (WASM_LIBRARY + " was not found. Looked in: " + ", ".join(tried)
-                   + ". Run map_tools/fetch_dragoman_wasm.py before building for web.")
+                   + ". It ships in the repository; restore it with "
+                   + "map_tools/fetch_dragoman_wasm.py.")
 
 
 def available():

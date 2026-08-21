@@ -34,6 +34,31 @@ jobs:
       - name: Run Windows compilation script
         run: python compilation_scripts/windows_compilation.py
 
+
+      # WHAT IS ABOUT TO BE UPLOADED, not the source tree it was built from.
+      #
+      # The Translate jobs in odtl.yml run from source with open-dragoman
+      # pip-installed, so they pass whether or not the frozen build contains
+      # the library at all. open-dragoman is a ctypes package: the .dll/.dylib
+      # is package data, which neither PyInstaller nor py2app collects unless
+      # told, so the shipped game could have a dead Translate screen while
+      # every test was green. This reads the artifact itself.
+      - name: The build carries the translation layer
+        shell: bash
+        run: |
+          set -e
+          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
+          if [ -z "$found" ]; then
+            echo "::error title=No translation layer in the build::dist/ contains \
+            no libdragoman library, so Translate would fail for everyone who \
+            downloads this. Check --collect-all dragoman (PyInstaller) or the \
+            'dragoman' entry in compilation_scripts/setup.py (py2app)."
+            find dist -maxdepth 3 -type d | head -20
+            exit 1
+          fi
+          echo "translation layer found in:"
+          echo "$found"
+
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
@@ -68,8 +93,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install pygbag
 
-      - name: Fetch the translation layer for WebAssembly
-        run: python map_tools/fetch_dragoman_wasm.py
+      # The committed module must be the one requirements.txt asks for.
+      #
+      # It is checked in rather than fetched, so that `pygbag main.py` on a
+      # fresh clone produces a working Translate screen -- but a checked-in
+      # binary can go stale in a way a pinned dependency cannot, and Dependabot
+      # raises that pin on its own. This is what stops the two drifting apart
+      # silently: a bumped pin with an unchanged binary fails here rather than
+      # shipping a browser build running a different library from the desktop.
+      - name: The committed WebAssembly module matches the pin
+        run: |
+          set -e
+          ver=$(sed -n 's/^open-dragoman==\([0-9.]*\).*/\1/p' requirements.txt)
+          if [ -z "$ver" ]; then
+            echo "requirements.txt has no exact pin, so there is nothing to match against"
+            exit 0
+          fi
+          curl -sL --fail -o /tmp/pinned.so \
+            "https://github.com/Pr1nted/dragoman/releases/download/v$ver/libdragoman.so"
+          if ! cmp -s libdragoman.so /tmp/pinned.so; then
+            echo "libdragoman.so is not open-dragoman $ver."
+            echo "Run: rm libdragoman.so && python map_tools/fetch_dragoman_wasm.py"
+            exit 1
+          fi
+          echo "libdragoman.so matches open-dragoman $ver"
 
       - name: Build with pygbag
         run: python -m pygbag --build main.py
@@ -147,6 +194,31 @@ jobs:
 
       - name: Run macOS compilation script
         run: python3 compilation_scripts/macos_compilation.py
+
+
+      # WHAT IS ABOUT TO BE UPLOADED, not the source tree it was built from.
+      #
+      # The Translate jobs in odtl.yml run from source with open-dragoman
+      # pip-installed, so they pass whether or not the frozen build contains
+      # the library at all. open-dragoman is a ctypes package: the .dll/.dylib
+      # is package data, which neither PyInstaller nor py2app collects unless
+      # told, so the shipped game could have a dead Translate screen while
+      # every test was green. This reads the artifact itself.
+      - name: The build carries the translation layer
+        shell: bash
+        run: |
+          set -e
+          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
+          if [ -z "$found" ]; then
+            echo "::error title=No translation layer in the build::dist/ contains \
+            no libdragoman library, so Translate would fail for everyone who \
+            downloads this. Check --collect-all dragoman (PyInstaller) or the \
+            'dragoman' entry in compilation_scripts/setup.py (py2app)."
+            find dist -maxdepth 3 -type d | head -20
+            exit 1
+          fi
+          echo "translation layer found in:"
+          echo "$found"
 
       - name: Upload macOS build
         uses: actions/upload-artifact@v4

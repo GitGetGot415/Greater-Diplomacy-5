@@ -12,9 +12,19 @@ the web build needs one file, `libdragoman.so`, next to main.py, and this
 fetches it from the same release the pinned version in requirements.txt comes
 from.
 
-Run it before `pygbag main.py`. Nothing else needs it: on desktop the file is
-not looked at, and map_logic/odtl.py only reaches for it when it finds itself
-running under emscripten.
+YOU DO NOT NORMALLY NEED TO RUN THIS. `libdragoman.so` is committed to the
+repository, so a fresh clone can build for the web with plain `pygbag main.py`
+and get a working Translate screen. It was not always so: the file used to be
+fetched and gitignored, which meant anybody who cloned the repository and built
+by hand got a browser build whose translation silently could not work.
+
+Run it when the pinned version in requirements.txt changes -- Dependabot raises
+that pin on its own -- to bring the committed binary back in step:
+
+    rm libdragoman.so && python map_tools/fetch_dragoman_wasm.py
+
+CI fails if the two disagree, so this is not something that can be forgotten
+quietly.
 
 The version is read from requirements.txt rather than written here, so the
 library the browser loads and the one desktop installs cannot drift apart --
