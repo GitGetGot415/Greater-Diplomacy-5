@@ -26,6 +26,7 @@ context/combined_scripts.txt
 
 build
 dist
+saves
 web_stage
 tournament_saves
 scenarios/map_editor

@@ -198,6 +198,15 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # Exile any units left standing on foreign soil without a legal right to be there
     movement_processor.process_stranded_units(map_screen)
 
+    # Re-sync the turn-start snapshot to the now-settled owner. It must stay stale
+    # (pre-capture) through combat/stranding above so order-of-execution doesn't
+    # give an advantage, but leaving it stale afterward makes can_land_units_enter
+    # evaluate entry against a province's owner from before it was captured for the
+    # entire following order phase -- e.g. blocking a legal war-time move into a
+    # newly-conquered province because the pre-conquest owner isn't an enemy.
+    for prov in map_screen.map_data.values():
+        prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
+
     # Kill orphaned units and ghost wars
     movement_processor.process_dead_nations(map_screen)
     await asyncio.sleep(0)
