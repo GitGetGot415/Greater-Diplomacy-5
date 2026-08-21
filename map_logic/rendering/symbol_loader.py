@@ -34,6 +34,15 @@ STYLE_SYMBOLS = {}
 #: get_research_button_scale and get_research_button_scale_overrides.
 STYLE_RESEARCH_DISPLAY = {}
 
+#: Per-style culture groups, keyed by style name -> {culture name: [country
+#: id, ...]}, straight from that style's unit_art.json "_cultures" section.
+#: A restricted art entry always names a whole culture (never an individual
+#: country), so every member of a group shares identical art -- this lets the
+#: Unit Art settings screen offer one tab per culture (e.g. "Germanic")
+#: instead of one per country (Germany, German Reich, German Empire, ...).
+#: See style_cultures and culture_representative.
+STYLE_CULTURES = {}
+
 #: What each (style, country, requested name) resolved to: (source_style,
 #: base_name) in whichever of SYMBOLS/STYLE_SYMBOLS[source_style] actually
 #: holds the image, or None for "no such icon anywhere". `country` is part of
@@ -155,6 +164,7 @@ def load_style_symbols(style):
             manifest = {}
 
         cultures = manifest.get("_cultures", {})
+        STYLE_CULTURES[style] = cultures
 
         for name_key, value in manifest.items():
             if name_key.startswith("_"):
@@ -205,6 +215,28 @@ def style_countries(style):
             if variant["countries"]:
                 countries.update(variant["countries"])
     return sorted(countries)
+
+
+def style_cultures(style):
+    """Culture group names (from unit_art.json's "_cultures") that have at
+    least one member country with dedicated art in this style, sorted.
+    Drives the culture tabs on the Unit Art settings screen -- countries in
+    the same culture always share art (a restricted entry names the whole
+    culture, never an individual country), so browsing by culture collapses
+    e.g. Germany/German Reich/German Empire into one "Germanic" tab instead
+    of one per country."""
+    countries_with_art = set(style_countries(style))
+    return sorted(name for name, members in STYLE_CULTURES.get(style, {}).items()
+                  if countries_with_art.intersection(members))
+
+
+def culture_representative(style, name):
+    """The country id to resolve/draw art against for culture `name` in
+    `style` -- the group's first listed member, since every country in a
+    culture is defined to share identical art. None if `name` isn't a known
+    culture for this style."""
+    members = STYLE_CULTURES.get(style, {}).get(name)
+    return members[0] if members else None
 
 
 def _pick_variant_entry(variants, country):

@@ -129,8 +129,11 @@ class Unit_Art(GameState):
         self.controller = controller
         self.bg_color = (25, 25, 30)
         self.style = getattr(controller, "unit_art_style", c.UNIT_ART_STYLE)
-        self.country = None  # None = the leftmost "Generic" tab
-        self.available_countries = []
+        self.country = None  # None = the leftmost "Generic" tab; otherwise a
+                              # culture's representative country id (see
+                              # symbol_loader.culture_representative)
+        self.available_cultures = []
+        self.tab_labels = {None: GENERIC_TAB_LABEL}  # self.country value -> the tab label it was picked under
         self.rows = []
         self._visible_rows = []
         self.gallery_top = TABS_TOP
@@ -169,7 +172,7 @@ class Unit_Art(GameState):
     # ------------------------------------------------------------------ #
 
     def refresh_ui(self):
-        self.available_countries = symbol_loader.style_countries(self.style)
+        self.available_cultures = symbol_loader.style_cultures(self.style)
         self.rows = build_gallery_rows(self.style, self.country)
 
         self.elements = [make_back_button(self.exit_screen)]
@@ -191,14 +194,27 @@ class Unit_Art(GameState):
                                                     cull_bottom=GALLERY_BOTTOM)]
 
     def _build_country_tabs(self):
-        """The tab row: 'Generic' (country=None) first, then every country id
-        this style has dedicated art for. Always shown, even when a style has
-        no country-specific art of its own, so Generic is always reachable.
-        Wraps onto further rows if the tabs don't fit one line, and grows
-        self.gallery_top to match so the row list below never overlaps them.
+        """The tab row: 'Generic' (country=None) first, then one tab per
+        culture group this style has dedicated art for -- countries in the
+        same culture always share identical art (a restricted entry names
+        the whole culture, never an individual country), so e.g. Germany,
+        German Reich and German Empire collapse into one "Germanic" tab
+        instead of three identical ones. Selecting a culture tab resolves
+        and draws art using that culture's representative country id (see
+        symbol_loader.culture_representative). Always shown, even when a
+        style has no culture-specific art of its own, so Generic is always
+        reachable. Wraps onto further rows if the tabs don't fit one line,
+        and grows self.gallery_top to match so the row list below never
+        overlaps them.
         """
         font = fonts.get(TAB_FONT)
-        tabs = [(GENERIC_TAB_LABEL, None)] + [(country, country) for country in self.available_countries]
+        self.tab_labels = {None: GENERIC_TAB_LABEL}
+        tabs = [(GENERIC_TAB_LABEL, None)]
+        for culture in self.available_cultures:
+            representative = symbol_loader.culture_representative(self.style, culture)
+            label = culture.title()
+            tabs.append((label, representative))
+            self.tab_labels[representative] = label
 
         buttons = []
         x = GALLERY_X + ROW_PAD_X
@@ -234,7 +250,7 @@ class Unit_Art(GameState):
 
         surface.blit(fonts.get("heading2").render("UNIT ART", True, (255, 255, 255)), (20, 70))
         style_label = STYLE_LABELS.get(self.style, self.style.title())
-        subject = self.country or GENERIC_TAB_LABEL
+        subject = self.tab_labels.get(self.country, GENERIC_TAB_LABEL)
         surface.blit(fonts.get("heading2").render(f"{style_label} Preview - {subject}", True, (255, 255, 255)),
                     (GALLERY_X + ROW_PAD_X, 55))
 
