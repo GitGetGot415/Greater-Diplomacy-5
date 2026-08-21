@@ -109,15 +109,42 @@ def _load():
         return
 
     # Web. The .so sits beside the game inside pygbag's archive.
-    try:
-        lib = _declare(ctypes.CDLL(WASM_LIBRARY))
+    #
+    # BY ABSOLUTE PATH, and that is the whole of this bug. A bare soname is
+    # resolved by emscripten's own loader, which looks next to the CPython
+    # runtime -- on pygame-web's CDN -- and not in the game's directory at all.
+    # The player saw:
+    #
+    #   Could not load dynamic lib: libdragoman.so
+    #   .../cdn/0.9.3/cpython312/libdragoman.so: file not found
+    #
+    # which names a path nobody could put a file into. It worked when tried by
+    # hand only because that test app's working directory happened to be the
+    # one holding the library.
+    tried = []
+    for candidate in (os.path.join(game_root(), WASM_LIBRARY),
+                      os.path.abspath(WASM_LIBRARY),
+                      WASM_LIBRARY):
+        if candidate in tried:
+            continue
+        tried.append(candidate)
+        try:
+            lib = _declare(ctypes.CDLL(candidate))
+        except Exception:
+            continue
         if lib.dg_abi_version() != REQUIRED_ABI:
-            _load_error = (f"{WASM_LIBRARY} speaks ABI {lib.dg_abi_version()}, "
+            _load_error = (f"{candidate} speaks ABI {lib.dg_abi_version()}, "
                            f"this needs {REQUIRED_ABI}")
             return
         _lib = lib
-    except Exception as exc:
-        _load_error = f"{WASM_LIBRARY} could not be loaded ({exc})"
+        return
+
+    # Every path, not just the last error. The likeliest cause is that
+    # map_tools/fetch_dragoman_wasm.py was never run before pygbag, so the file
+    # is not in the build at all -- and a message naming where it was expected
+    # is the difference between fixing that in a minute and guessing.
+    _load_error = (WASM_LIBRARY + " was not found. Looked in: " + ", ".join(tried)
+                   + ". Run map_tools/fetch_dragoman_wasm.py before building for web.")
 
 
 def available():
