@@ -26,6 +26,14 @@ ICON_ZOOM = 6.0  # Feeds symbol_loader's zoom*0.5*custom_scale sizing; the icon
                  # to be big enough that even the smallest icons (Infantry at
                  # 22px) don't come out blurry when scaled back down.
 
+# --- Per-family row: one label on the left, then every distinct picture the
+# family has (a tier, an era range, ...) as its own icon cell running to the
+# right of it, wrapping onto further ROW_H-tall lines within the same row
+# when they don't all fit one line (same idea as the tab-wrapping below). ---
+CELL_GAP_X = 16
+CELL_LABEL_FONT = "small"
+CELL_LABEL_H = ROW_H - ICON_BOX  # band reserved above the icon for its tier/era label
+
 STYLE_LABELS = {"classic": "Classic", "hanskolmer": "Hanskolmer"}
 
 # --- Country tab bar, across the top of the gallery pane ---
@@ -60,20 +68,38 @@ def _merge_label(first, last):
     return f"{prefix}{first[cut + 1:]}-{last[cut + 1:]}"
 
 
+def _family_display_name(base):
+    """The label shown once per family row. 'Type' is a connector word before
+    the era suffix, already dropped everywhere else a unit name is condensed
+    for space (see queries.CONDENSED_UNIT_NAME_WORDS) -- so 'Infantry Type'
+    (get_base_unit_name's result for 'Infantry Type 1940') reads as plain
+    'Infantry' here too."""
+    suffix = " Type"
+    return base[:-len(suffix)] if base.endswith(suffix) else base
+
+
 def build_gallery_rows(style, country=None):
-    """One row per distinct piece of unit art `style` would actually show
-    `country` (falling back to classic per the same rule symbol_loader.get_symbol
-    uses -- and within a style, falling back further to whatever art applies
-    to every country when none of it is scoped to this one), in family order,
-    with a header wherever the Infantry/Tanks/Navy group changes.
+    """One row per unit family, each holding every distinct piece of art
+    `style` would actually show `country` for that family (falling back to
+    classic per the same rule symbol_loader.get_symbol uses -- and within a
+    style, falling back further to whatever art applies to every country when
+    none of it is scoped to this one), in family order, with a header
+    wherever the Infantry/Tanks/Navy group changes.
+
+    A family with several distinct pictures -- different tiers (Light Tank
+    IV/V/VI) or different eras (Infantry 1910-1913/1914-1925/...) -- gets one
+    cell per picture instead of one row per picture, so the whole family
+    reads left-to-right as one line (the gallery wraps a family onto further
+    lines itself if its cells don't all fit the width -- see
+    Unit_Art._wrap_cells).
 
     `country` is a country id (a key of data/json/countries_data.json, e.g.
     "Germany") or None for "nobody in particular", which only ever sees
     unrestricted art -- the same view every country without its own
-    dedicated pictures gets. Two countries can produce different row counts
-    for the same family: a family collapses to as many rows as it has
+    dedicated pictures gets. Two countries can produce different cell counts
+    for the same family: a family collapses to as many cells as it has
     distinct pictures *for that country*, so a family with nation-specific
-    eras only splits into extra rows for the nations that have them.
+    eras only gains extra cells for the nations that have them.
 
     A non-classic style only lists what it actually draws differently: a run
     that resolves all the way through to classic (nothing in `style` covers
@@ -98,21 +124,26 @@ def build_gallery_rows(style, country=None):
         group = family_group[base]
         resolved = [symbol_loader.resolve(n, style, country) for n in names]
 
-        family_rows = []
+        cells = []
+        prefix = base + " "
         for res_key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
             if style != "classic" and res_key is not None and res_key[0] == "classic":
-                continue  # this style contributes nothing here -- not worth a row
+                continue  # this style contributes nothing here -- not worth a cell
             run_names = [n for n, _r in run]
             first, last = run_names[0], run_names[-1]
-            family_rows.append({"kind": "unit", "group": group,
-                                "label": _merge_label(first, last), "resolve_name": first})
+            full_label = _merge_label(first, last)
+            # The family name is already shown once on the row, on the left --
+            # a cell only needs the part that actually varies (a tier, an era).
+            sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
+            cells.append({"label": sublabel, "resolve_name": first})
 
-        if not family_rows:
+        if not cells:
             continue  # nothing of this family survived -- its header would be empty
         if group != last_group:
             rows.append({"kind": "header", "label": group})
             last_group = group
-        rows.extend(family_rows)
+        rows.append({"kind": "family", "group": group,
+                     "label": _family_display_name(base), "cells": cells})
     return rows
 
 
@@ -122,7 +153,6 @@ class Unit_Art(GameState):
     (same as every other toggle on the Settings screen) and persists it."""
 
     back_state = "SETTINGS"
-    ROW_HEIGHT = ROW_H
 
     def __init__(self, controller):
         super().__init__()
@@ -175,6 +205,15 @@ class Unit_Art(GameState):
         self.available_cultures = symbol_loader.style_cultures(self.style)
         self.rows = build_gallery_rows(self.style, self.country)
 
+        # Width of the left-hand family-name column, sized to whatever's
+        # actually on screen right now rather than a guessed constant -- a
+        # style/country with only short family names (e.g. "Infantry") gets
+        # more room for cells than one that also lists "Motorized Infantry".
+        label_font = fonts.get("normal")
+        self.family_label_w = max((label_font.size(row["label"])[0]
+                                   for row in self.rows if row["kind"] == "family"),
+                                  default=0) + ROW_PAD_X
+
         self.elements = [make_back_button(self.exit_screen)]
 
         y = 100
@@ -189,9 +228,69 @@ class Unit_Art(GameState):
 
         self.scroll_content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
                                                GALLERY_BOTTOM - self.gallery_top)
-        self._visible_rows = [(self.rows[i], row_y) for i, row_y in
-                              self.layout_list_rows(len(self.rows), ROW_H, self.gallery_top,
-                                                    cull_bottom=GALLERY_BOTTOM)]
+        self._visible_rows = self._layout_gallery_rows()
+
+    def _layout_gallery_rows(self):
+        """Positions every row top-to-bottom and returns the ones currently in
+        view as (row, lines, y) -- lines is the _wrap_cells() output for a
+        "family" row, or None for a "header" row.
+
+        Stands in for the generic layout_list_rows (used by every other
+        scrollable list in the menus) because that helper assumes one fixed
+        row_h for everything it lays out: here a family's row is ROW_H tall
+        per wrapped line of cells, so two rows can have completely different
+        heights depending on how many distinct pictures each family has and
+        how many fit per line. This still sets self.max_scroll the same way
+        (min(0, view_h - total_content_height)) so handle_list_scroll,
+        draw_list_scrollbar and friends work unmodified.
+        """
+        label_font = fonts.get(CELL_LABEL_FONT)
+        cells_x0 = GALLERY_X + ROW_PAD_X + self.family_label_w
+        cells_right = c.SCREEN_WIDTH - 30
+
+        laid_out = []  # (row, lines_or_None, height)
+        for row in self.rows:
+            if row["kind"] == "header":
+                laid_out.append((row, None, ROW_H))
+            else:
+                lines = self._wrap_cells(row["cells"], cells_x0, cells_right, label_font)
+                laid_out.append((row, lines, len(lines) * ROW_H))
+
+        view_h = GALLERY_BOTTOM - self.gallery_top
+        total_h = sum(height for _row, _lines, height in laid_out)
+        self.max_scroll = min(0, view_h - total_h)
+
+        visible = []
+        y = self.gallery_top + self.scroll_y
+        for row, lines, height in laid_out:
+            if y + height > self.gallery_top and y < GALLERY_BOTTOM:
+                visible.append((row, lines, y))
+            y += height
+        return visible
+
+    @staticmethod
+    def _wrap_cells(cells, x0, right, font):
+        """Packs a family's cells left-to-right starting at x0, wrapping onto
+        a new ROW_H-tall line (like _build_country_tabs wraps tabs) whenever
+        the next one would cross `right`. A cell is at least ICON_BOX wide,
+        or as wide as its own label if that label doesn't fit under a bare
+        icon (e.g. 'Infantry Type 1910-1913's era range).
+
+        Returns a list of lines, each a list of (cell, x, width) ready to
+        draw -- computed once per refresh_ui rather than re-measured on
+        every frame.
+        """
+        lines, current, x = [], [], x0
+        for cell in cells:
+            w = max(ICON_BOX, font.size(cell["label"])[0]) if cell["label"] else ICON_BOX
+            if x + w > right and current:
+                lines.append(current)
+                current, x = [], x0
+            current.append((cell, x, w))
+            x += w + CELL_GAP_X
+        if current:
+            lines.append(current)
+        return lines
 
     def _build_country_tabs(self):
         """The tab row: 'Generic' (country=None) first, then one tab per
@@ -256,13 +355,13 @@ class Unit_Art(GameState):
 
         clip = surface.get_clip()
         surface.set_clip(self.scroll_content_rect)
-        for row, y in self._visible_rows:
-            self._draw_row(surface, row, y)
+        for row, lines, y in self._visible_rows:
+            self._draw_row(surface, row, lines, y)
         surface.set_clip(clip)
 
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 25, self.gallery_top, GALLERY_BOTTOM - self.gallery_top)
 
-    def _draw_row(self, surface, row, y):
+    def _draw_row(self, surface, row, lines, y):
         x = GALLERY_X + ROW_PAD_X
 
         if row["kind"] == "header":
@@ -272,22 +371,35 @@ class Unit_Art(GameState):
             surface.blit(text, (x, y + (ROW_H - 28) // 2 - text.get_height() // 2))
             return
 
+        height = len(lines) * ROW_H
         accent = GROUP_ACCENT.get(row["group"], (120, 120, 120))
-        icon_box = pygame.Rect(x, y + (ROW_H - ICON_BOX) // 2, ICON_BOX, ICON_BOX)
-        pygame.draw.rect(surface, (45, 45, 55), icon_box, border_radius=6)
-        pygame.draw.rect(surface, accent, icon_box, 2, border_radius=6)
 
-        icon = symbol_loader.get_symbol(row["resolve_name"], ICON_ZOOM, style=self.style, country=self.country)
-        if icon:
-            icon = self._fit_icon(icon, ICON_BOX - 12, ICON_BOX - 12)
-            surface.blit(icon, icon.get_rect(center=icon_box.center))
-        else:
-            miss = fonts.get("small").render("No Art", True, (150, 150, 150))
-            surface.blit(miss, miss.get_rect(center=icon_box.center))
-
-        label_x = x + ICON_BOX + 24
         label = fonts.get("normal").render(row["label"], True, c.UI_TEXT_BRIGHT)
-        surface.blit(label, (label_x, y + ROW_H // 2 - label.get_height() // 2))
+        surface.blit(label, (x, y + height // 2 - label.get_height() // 2))
+
+        cell_font = fonts.get(CELL_LABEL_FONT)
+        for li, cell_line in enumerate(lines):
+            line_top = y + li * ROW_H
+            icon_top = line_top + CELL_LABEL_H
+            for cell, cell_x, cell_w in cell_line:
+                icon_box = pygame.Rect(cell_x + (cell_w - ICON_BOX) // 2, icon_top, ICON_BOX, ICON_BOX)
+                pygame.draw.rect(surface, (45, 45, 55), icon_box, border_radius=6)
+                pygame.draw.rect(surface, accent, icon_box, 2, border_radius=6)
+
+                icon = symbol_loader.get_symbol(cell["resolve_name"], ICON_ZOOM,
+                                                style=self.style, country=self.country)
+                if icon:
+                    icon = self._fit_icon(icon, ICON_BOX - 12, ICON_BOX - 12)
+                    surface.blit(icon, icon.get_rect(center=icon_box.center))
+                else:
+                    miss = fonts.get("small").render("No Art", True, (150, 150, 150))
+                    surface.blit(miss, miss.get_rect(center=icon_box.center))
+
+                if cell["label"]:
+                    cell_label = cell_font.render(cell["label"], True, c.UI_TEXT_BRIGHT)
+                    lx = cell_x + (cell_w - cell_label.get_width()) // 2
+                    ly = line_top + (CELL_LABEL_H - cell_label.get_height()) // 2
+                    surface.blit(cell_label, (lx, ly))
 
     @staticmethod
     def _fit_icon(surf, max_w, max_h):
