@@ -82,8 +82,30 @@ jobs:
       # It loads a WebAssembly side module sitting beside the game instead, and
       # this is the script the web build runs to fetch it -- so running it here
       # tests the delivery as well as the library.
-      - name: Fetch the WebAssembly build
-        run: python map_tools/fetch_dragoman_wasm.py
+      # The committed module must be the one requirements.txt asks for.
+      #
+      # It is checked in rather than fetched, so that `pygbag main.py` on a
+      # fresh clone produces a working Translate screen -- but a checked-in
+      # binary can go stale in a way a pinned dependency cannot, and Dependabot
+      # raises that pin on its own. This is what stops the two drifting apart
+      # silently: a bumped pin with an unchanged binary fails here rather than
+      # shipping a browser build running a different library from the desktop.
+      - name: The committed WebAssembly module matches the pin
+        run: |
+          set -e
+          ver=$(sed -n 's/^open-dragoman==\([0-9.]*\).*/\1/p' requirements.txt)
+          if [ -z "$ver" ]; then
+            echo "requirements.txt has no exact pin, so there is nothing to match against"
+            exit 0
+          fi
+          curl -sL --fail -o /tmp/pinned.so \
+            "https://github.com/Pr1nted/dragoman/releases/download/v$ver/libdragoman.so"
+          if ! cmp -s libdragoman.so /tmp/pinned.so; then
+            echo "libdragoman.so is not open-dragoman $ver."
+            echo "Run: rm libdragoman.so && python map_tools/fetch_dragoman_wasm.py"
+            exit 1
+          fi
+          echo "libdragoman.so matches open-dragoman $ver"
 
       # Pyodide is CPython on WebAssembly, the same as what pygbag serves, and
       # it reports sys.platform == "emscripten" -- so map_logic/odtl.py takes
