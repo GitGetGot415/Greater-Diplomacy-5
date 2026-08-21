@@ -45,7 +45,7 @@ def _wrap_text(text, font, max_width):
 
 
 # Folders that hold non-image, non-text assets and shouldn't show up as browsable albums.
-EXCLUDED_ASSET_FOLDERS = {"music", "sounds", "fonts"}
+EXCLUDED_ASSET_FOLDERS = {"sounds", "fonts"}
 
 
 class TopBarOverlay:
@@ -146,14 +146,19 @@ class View_Assets(ScrollPanes, GameState):
         return names
 
     def _list_viewable_files(self, folder):
+        """Walks subfolders too, so a file like "music/Greater Diplomacy 5/icon.png"
+        is returned (and later displayed/looked-up) as "Greater Diplomacy 5/icon.png"."""
         folder_path = os.path.join(c.ASSETS_ROOT_DIR, folder)
         if not os.path.isdir(folder_path):
             return []
-        return sorted(
-            (name for name in os.listdir(folder_path)
-             if os.path.splitext(name)[1].lower() in VIEWABLE_EXTENSIONS),
-            key=str.lower,
-        )
+        names = []
+        for root, _dirs, files in os.walk(folder_path):
+            for name in files:
+                if os.path.splitext(name)[1].lower() not in VIEWABLE_EXTENSIONS:
+                    continue
+                rel = os.path.relpath(os.path.join(root, name), folder_path)
+                names.append(rel.replace(os.sep, "/"))
+        return sorted(names, key=str.lower)
 
     def _scale_to_fit(self, img):
         avail_w = max(1, PREVIEW_W - 40)
@@ -249,7 +254,7 @@ class View_Assets(ScrollPanes, GameState):
                 # copy() (not copy2()) so the download gets today's mtime instead of
                 # inheriting the source asset's, which can be months old and would
                 # otherwise bury it in a Downloads folder sorted by date modified.
-                shutil.copy(src, os.path.join(dest_dir, self.current_file))
+                shutil.copy(src, os.path.join(dest_dir, os.path.basename(self.current_file)))
                 self.download_status = "Saved to Downloads"
             self.download_status_color = c.COLOR_SUCCESS_GREEN
         except Exception as e:
