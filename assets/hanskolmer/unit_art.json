@@ -27,6 +27,10 @@
         {"file": "german_infantry_1916__gd5.png", "countries": "germanic"},
         {"file": "Austrian_infantry_1916__gd5.png", "countries": "austrian"}
     ],
+    "Infantry 1916-1960": [
+        {"file": "french_infantry_1916__gd5.png", "countries": "french"},
+        {"file": "british_infantry_1916__gd5.png", "countries": "british"}
+    ],
     "Infantry 1917-1934": [
         {"file": "Austrian_infantry_1917__gd5.png", "countries": "austrian"}
     ],
