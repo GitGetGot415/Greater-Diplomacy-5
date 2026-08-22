@@ -27,6 +27,7 @@ SCRIPTS = os.path.join(ROOT, "compilation_scripts")
 # Top-level .py files that are deliberately not shipped by any pipeline.
 INTENTIONALLY_UNSTAGED_FILES = {
     "run_tests.py",           # developer entry point
+    "simulate_crash.py",      # developer entry point, blocks on a dialog like run_tests.py
     "temp_multiplayer_io.py",  # empty placeholder, not in the runtime graph
 }
 

@@ -348,8 +348,14 @@ class CoalitionTests(unittest.TestCase):
         screen.nation_data["FOE"]["allied_with"] = ["SMALLFOE"]
         screen.nation_data["SMALLFOE"]["allied_with"] = ["FOE"]
 
-        troops = {n: [unit(n, attack=10) for _ in range(3)]
-                  for n in ("BIG", "ALLY", "FOE", "SMALLFOE")}
+        # Sized so BIG+ALLY's combined muster exactly fills their side's lane
+        # cap -- test_slots_held_is_the_answer_the_ai_asks_for depends on
+        # nobody having spare capacity left, which only holds if this tracks
+        # COMBAT_WIDTH rather than a number picked for whatever it was at the
+        # time.
+        n = c.LANE_SLOTS_TYPICAL // 2
+        troops = {name: [unit(name, attack=10) for _ in range(n)]
+                  for name in ("BIG", "ALLY", "FOE", "SMALLFOE")}
         return screen, tile(screen, troops, owner="BIG"), troops
 
     def test_a_member_never_shoots_somebody_it_is_at_peace_with(self):
@@ -548,11 +554,14 @@ class HeldBackTests(unittest.TestCase):
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
-        squad = [unit("A", attack=10) for _ in range(6)]
+        # Sized to exactly fill a single duel's per-side cap (like the sibling
+        # test above), so "the width isn't shrunk" is actually being tested
+        # regardless of how COMBAT_WIDTH is tuned.
+        squad = [unit("A", attack=10) for _ in range(c.LANE_SLOTS_TYPICAL)]
         for u in squad[1:]:
             u["combat_stance"] = "RESERVE"
         prov = tile(screen, {"A": squad,
-                             "B": [unit("B", attack=10) for _ in range(6)]})
+                             "B": [unit("B", attack=10) for _ in range(c.LANE_SLOTS_TYPICAL)]})
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
         side = side_for(battle, "A")

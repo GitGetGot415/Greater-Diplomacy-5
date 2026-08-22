@@ -55,8 +55,12 @@ class BattleScreenTestCase(unittest.TestCase):
         self.province = next(p for p in game_map.map_data.values()
                              if not queries.is_water_province(p))
         library = queries.get_unit_library()
+        # More than a side's lane cap can seat, so there is always a genuine
+        # reserve left over to list -- at COMBAT_WIDTH's current tuning a
+        # smaller muster gets almost entirely fielded, leaving nothing behind
+        # for the reserve-column tests to find.
         self.province["units"] = [queries.create_unit_dict("Infantry", name, library)
-                                  for name in names for _ in range(5)]
+                                  for name in names for _ in range(8)]
 
         game_map.selected_province = self.province
         game_map.visible_provinces = None
