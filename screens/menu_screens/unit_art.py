@@ -62,6 +62,13 @@ LEVEL_TOGGLE_GAP_X = 8
 LEVEL_TOGGLE_PAD_X = 12
 LEVEL_TOGGLE_FONT = "small"
 
+# --- "Show All Art" toggle, directly above the level-display row. ---
+SHOW_ALL_ART_LABEL = "Show All Art"
+SHOW_ALL_ART_Y = 12
+SHOW_ALL_ART_H = 30
+SHOW_ALL_ART_PAD_X = 12
+SHOW_ALL_ART_FONT = "small"
+
 
 def _merge_label(first, last):
     """first and last are the endpoints of a run of unit names that all
@@ -149,7 +156,7 @@ def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default
     return f"{start_year}-{end_year}" if end_year is not None else f"{start_year}+"
 
 
-def build_gallery_rows(style, country=None, level_display="default"):
+def build_gallery_rows(style, country=None, level_display="default", show_all_art=False):
     """One row per unit family, each holding every distinct piece of art
     `style` would actually show `country` for that family (falling back to
     classic per the same rule symbol_loader.get_symbol uses -- and within a
@@ -175,10 +182,13 @@ def build_gallery_rows(style, country=None, level_display="default"):
     A non-classic style only lists what it actually draws differently: a run
     that resolves all the way through to classic (nothing in `style` covers
     it, for this country or any other) is dropped rather than shown as a
-    picture the style never contributes. Picking "Classic" itself still lists
-    everything, since there classic *is* the style being browsed. A family
-    with nothing surviving loses its header too, so switching to a country
-    with one specialised unit shows just that unit, not every empty section.
+    picture the style never contributes -- unless `show_all_art` is True, in
+    which case it's kept and shows the classic fallback it would actually
+    draw in-game instead of being hidden. Picking "Classic" itself still
+    lists everything either way, since there classic *is* the style being
+    browsed. A family with nothing surviving loses its header too, so
+    switching to a country with one specialised unit and show_all_art off
+    shows just that unit, not every empty section.
 
     `level_display` ("default"/"years"/"numbers") picks what each cell's
     label reads as -- see _level_label for exactly what each mode shows.
@@ -208,7 +218,7 @@ def build_gallery_rows(style, country=None, level_display="default"):
         cells = []
         prefix = base + " "
         for res_key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
-            if style != "classic" and res_key is not None and res_key[0] == "classic":
+            if not show_all_art and style != "classic" and res_key is not None and res_key[0] == "classic":
                 continue  # this style contributes nothing here -- not worth a cell
             run_names = [n for n, _r in run]
             first, last = run_names[0], run_names[-1]
@@ -252,6 +262,7 @@ class Unit_Art(GameState):
         self.available_cultures = []
         self.tab_labels = {None: GENERIC_TAB_LABEL}  # self.country value -> the tab label it was picked under
         self.level_display = "default"  # see LEVEL_DISPLAY_MODES / _level_label
+        self.show_all_art = False  # see toggle_show_all_art
         self.rows = []
         self._visible_rows = []
         self.gallery_top = TABS_TOP
@@ -297,13 +308,23 @@ class Unit_Art(GameState):
         # shrank the content past where the old scroll position pointed.
         self.refresh_ui()
 
+    def toggle_show_all_art(self):
+        self.show_all_art = not self.show_all_art
+        # This adds/removes cells (units the active style falls back to
+        # classic for) rather than just changing label text, but the rows
+        # above the toggled content don't move -- keep the player's scroll
+        # position instead of jumping back to the top. refresh_ui's own
+        # scroll clamp (in _layout_gallery_rows) handles it if turning this
+        # off shrank the content past where the old position pointed.
+        self.refresh_ui()
+
     # ------------------------------------------------------------------ #
     #                                UI                                  #
     # ------------------------------------------------------------------ #
 
     def refresh_ui(self):
         self.available_cultures = symbol_loader.style_cultures(self.style)
-        self.rows = build_gallery_rows(self.style, self.country, self.level_display)
+        self.rows = build_gallery_rows(self.style, self.country, self.level_display, self.show_all_art)
 
         # Width of the left-hand family-name column, sized to whatever's
         # actually on screen right now rather than a guessed constant -- a
@@ -329,6 +350,7 @@ class Unit_Art(GameState):
             y += 60
 
         self.elements.extend(self._build_country_tabs())
+        self.elements.append(self._build_show_all_art_toggle())
         self.elements.extend(self._build_level_display_toggle())
 
         self.scroll_content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
@@ -449,6 +471,25 @@ class Unit_Art(GameState):
 
         self.gallery_top = y + TAB_H + GALLERY_TOP_MARGIN
         return buttons
+
+    def _build_show_all_art_toggle(self):
+        """The 'Show All Art' switch, directly above the level-display row in
+        the gallery pane's top-right corner. Off (the default) is today's
+        behaviour: a non-classic style only lists units it actually draws
+        differently. On, a unit the active style falls back to classic for
+        is shown anyway, with that classic fallback picture, instead of
+        being left out entirely (see build_gallery_rows's show_all_art
+        param)."""
+        font = fonts.get(SHOW_ALL_ART_FONT)
+        w = font.size(SHOW_ALL_ART_LABEL)[0] + SHOW_ALL_ART_PAD_X * 2
+        x = c.SCREEN_WIDTH - 30 - w
+
+        btn = Button(x, SHOW_ALL_ART_Y, "asset_folder", "green" if self.show_all_art else "grey",
+                    SHOW_ALL_ART_LABEL, self.toggle_show_all_art, font_preset=SHOW_ALL_ART_FONT)
+        btn.rect.width = w
+        btn.rect.height = SHOW_ALL_ART_H
+        btn.is_selected = self.show_all_art
+        return btn
 
     def _build_level_display_toggle(self):
         """The Default/Years/Numbers toggle in the gallery pane's top-right
