@@ -48,7 +48,7 @@ LANE_COL_W = 250
 #: Two lines: the unit and its flag, then its stats. The sidebar shows the same
 #: stats on the same icons, and a lane manager that showed less than the panel
 #: it opens from would be the wrong way round.
-ROW_H = 46
+ROW_H = 42
 HEADER_H = 26
 #: Flags a lane row shows per side before it gives up and counts the rest.
 LANE_FLAGS_SHOWN = 3
