@@ -723,7 +723,25 @@ def _write_crash_log():
     """
     import datetime
     import platform as _platform
+    import re
     import traceback
+
+    # Frozen builds compile to bytecode on the dev's own machine, and Python
+    # bakes that absolute source path into each code object (co_filename) --
+    # it travels with the exe and shows up in every player's traceback
+    # regardless of where they installed the game. Collapse it to a generic
+    # stand-in so a report a player sends back doesn't expose the dev's local
+    # folder layout.
+    build_path_re = re.compile(
+        r'(?P<prefix>[A-Za-z]:\\Users\\|/Users/|/home/)[^\\/]+'
+        r'(?:[\\/][^\\/\r\n]+)*?(?P<sep>[\\/])Greater-Diplomacy-5(?P<sep2>[\\/])'
+    )
+
+    def _scrub_build_paths(text):
+        return build_path_re.sub(
+            lambda m: f"{m.group('prefix')}...{m.group('sep')}Greater-Diplomacy-5{m.group('sep2')}",
+            text,
+        )
 
     crash_log_path = os.path.expanduser("~/GD5_crash.log")
 
@@ -742,9 +760,10 @@ def _write_crash_log():
     except Exception:
         pass
 
+    tb_text = _scrub_build_paths(traceback.format_exc())
     with open(crash_log_path, "w") as f:
         f.write("\n".join(header_lines) + "\n\n")
-        traceback.print_exc(file=f)
+        f.write(tb_text)
 
     # Best-effort: an environment without a display (or without tkinter)
     # just misses the popup, not the crash log itself.

@@ -75,7 +75,14 @@ def draw_map_screen(map_screen, surface):
                 surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
                 
         if w1 < vw and h1 > 0:
-            wrap_w = int(vw - w1)
+            # Clamp to map_w: on a very wide/ultrawide viewport (e.g. the
+            # borderless-fullscreen fallback in main.toggle_fullscreen uses
+            # the monitor's native resolution, which can be much wider than
+            # the design resolution min_zoom was calibrated against), vw can
+            # exceed 2x the map width. This code only draws one wrap-around
+            # copy, so anything beyond a full extra map-width would ask
+            # subsurface() for pixels past current_base's actual edge.
+            wrap_w = min(int(vw - w1), map_screen.map_w)
             if wrap_w > 0:
                 scaled_wrap_w = int(wrap_w*map_screen.camera.zoom)
                 scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
