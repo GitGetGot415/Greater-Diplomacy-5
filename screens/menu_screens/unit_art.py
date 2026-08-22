@@ -142,8 +142,12 @@ def build_gallery_rows(style, country=None):
         if group != last_group:
             rows.append({"kind": "header", "label": group})
             last_group = group
-        rows.append({"kind": "family", "group": group,
-                     "label": _family_display_name(base), "cells": cells})
+        # One word per line (see Unit_Art._draw_row) so a long name like
+        # "Landkreuzer P.1000 Ratte" stacks tall instead of wide, leaving more
+        # of the row's width for cells.
+        display_name = _family_display_name(base)
+        rows.append({"kind": "family", "group": group, "label": display_name,
+                     "label_words": display_name.split(" "), "cells": cells})
     return rows
 
 
@@ -209,9 +213,13 @@ class Unit_Art(GameState):
         # actually on screen right now rather than a guessed constant -- a
         # style/country with only short family names (e.g. "Infantry") gets
         # more room for cells than one that also lists "Motorized Infantry".
+        # Sized by the single widest WORD, not the widest whole name, since a
+        # multi-word name wraps one word per line (see _draw_row) rather than
+        # running wide across the row.
         label_font = fonts.get("normal")
-        self.family_label_w = max((label_font.size(row["label"])[0]
-                                   for row in self.rows if row["kind"] == "family"),
+        self.family_label_w = max((label_font.size(word)[0]
+                                   for row in self.rows if row["kind"] == "family"
+                                   for word in row["label_words"]),
                                   default=0) + ROW_PAD_X
 
         self.elements = [make_back_button(self.exit_screen)]
@@ -232,19 +240,22 @@ class Unit_Art(GameState):
 
     def _layout_gallery_rows(self):
         """Positions every row top-to-bottom and returns the ones currently in
-        view as (row, lines, y) -- lines is the _wrap_cells() output for a
-        "family" row, or None for a "header" row.
+        view as (row, lines, y, height) -- lines is the _wrap_cells() output
+        for a "family" row, or None for a "header" row.
 
         Stands in for the generic layout_list_rows (used by every other
         scrollable list in the menus) because that helper assumes one fixed
         row_h for everything it lays out: here a family's row is ROW_H tall
-        per wrapped line of cells, so two rows can have completely different
-        heights depending on how many distinct pictures each family has and
-        how many fit per line. This still sets self.max_scroll the same way
-        (min(0, view_h - total_content_height)) so handle_list_scroll,
-        draw_list_scrollbar and friends work unmodified.
+        per wrapped line of cells (or taller still if its label needs more
+        vertical space than that -- a one-cell family with a three-word name
+        stacks three lines of text next to a single line of icons), so two
+        rows can have completely different heights. This still sets
+        self.max_scroll the same way (min(0, view_h - total_content_height))
+        so handle_list_scroll, draw_list_scrollbar and friends work
+        unmodified.
         """
-        label_font = fonts.get(CELL_LABEL_FONT)
+        cell_font = fonts.get(CELL_LABEL_FONT)
+        label_line_h = fonts.get("normal").get_linesize()
         cells_x0 = GALLERY_X + ROW_PAD_X + self.family_label_w
         cells_right = c.SCREEN_WIDTH - 30
 
@@ -253,8 +264,10 @@ class Unit_Art(GameState):
             if row["kind"] == "header":
                 laid_out.append((row, None, ROW_H))
             else:
-                lines = self._wrap_cells(row["cells"], cells_x0, cells_right, label_font)
-                laid_out.append((row, lines, len(lines) * ROW_H))
+                lines = self._wrap_cells(row["cells"], cells_x0, cells_right, cell_font)
+                cells_h = len(lines) * ROW_H
+                label_h = len(row["label_words"]) * label_line_h
+                laid_out.append((row, lines, max(cells_h, label_h)))
 
         view_h = GALLERY_BOTTOM - self.gallery_top
         total_h = sum(height for _row, _lines, height in laid_out)
@@ -264,7 +277,7 @@ class Unit_Art(GameState):
         y = self.gallery_top + self.scroll_y
         for row, lines, height in laid_out:
             if y + height > self.gallery_top and y < GALLERY_BOTTOM:
-                visible.append((row, lines, y))
+                visible.append((row, lines, y, height))
             y += height
         return visible
 
@@ -355,13 +368,13 @@ class Unit_Art(GameState):
 
         clip = surface.get_clip()
         surface.set_clip(self.scroll_content_rect)
-        for row, lines, y in self._visible_rows:
-            self._draw_row(surface, row, lines, y)
+        for row, lines, y, height in self._visible_rows:
+            self._draw_row(surface, row, lines, y, height)
         surface.set_clip(clip)
 
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 25, self.gallery_top, GALLERY_BOTTOM - self.gallery_top)
 
-    def _draw_row(self, surface, row, lines, y):
+    def _draw_row(self, surface, row, lines, y, height):
         x = GALLERY_X + ROW_PAD_X
 
         if row["kind"] == "header":
@@ -371,15 +384,27 @@ class Unit_Art(GameState):
             surface.blit(text, (x, y + (ROW_H - 28) // 2 - text.get_height() // 2))
             return
 
-        height = len(lines) * ROW_H
         accent = GROUP_ACCENT.get(row["group"], (120, 120, 120))
 
-        label = fonts.get("normal").render(row["label"], True, c.UI_TEXT_BRIGHT)
-        surface.blit(label, (x, y + height // 2 - label.get_height() // 2))
+        # One word per line -- see build_gallery_rows -- stacked and centred
+        # as a block against the row's full height (which already grew to
+        # fit this if a multi-word name needs more room than its cells do).
+        family_font = fonts.get("normal")
+        label_line_h = family_font.get_linesize()
+        words = row["label_words"]
+        label_y = y + (height - len(words) * label_line_h) // 2
+        for word in words:
+            text = family_font.render(word, True, c.UI_TEXT_BRIGHT)
+            surface.blit(text, (x, label_y))
+            label_y += label_line_h
+
+        # The cell block is only as tall as its own wrapped lines need --
+        # centre it too, in case the label above made the row taller still.
+        cell_block_top = y + (height - len(lines) * ROW_H) // 2
 
         cell_font = fonts.get(CELL_LABEL_FONT)
         for li, cell_line in enumerate(lines):
-            line_top = y + li * ROW_H
+            line_top = cell_block_top + li * ROW_H
             icon_top = line_top + CELL_LABEL_H
             for cell, cell_x, cell_w in cell_line:
                 icon_box = pygame.Rect(cell_x + (cell_w - ICON_BOX) // 2, icon_top, ICON_BOX, ICON_BOX)
