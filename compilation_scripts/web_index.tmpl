@@ -288,7 +288,11 @@ function show_infobox() {
 */
     </script>
 
-    <script src="{{cookiecutter.cdn}}/browserfs.min.js"></script>
+<!-- pygbag 0.9.3's stock default.tmpl still loads browserfs.min.js here, but that file
+     was deleted from the CDN: every URL under https://pygame-web.github.io/cdn/ 404s, and
+     pythons.js itself carries the comment "was browserfs , removed". The tag only produced
+     a console 404 (nothing references BrowserFS -- our save persistence is data/platform.py's
+     own IndexedDB mirroring), so it is dropped rather than repointed at /archives/0.9/. -->
 
 </head>
 
