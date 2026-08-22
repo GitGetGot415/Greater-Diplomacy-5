@@ -456,6 +456,20 @@ def draw_overlay_content(map_screen, surface):
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
+                    # --- Repair Indicator ---
+                    if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in visible_units):
+                        repair_sym = status_icon(map_screen, c.ICON_REPAIRING)
+                        if repair_sym:
+                            rect = repair_sym.get_rect(center=(sx, sy))
+                            surface.blit(repair_sym, rect)
+
+                    # --- Upgrade Indicator ---
+                    if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in visible_units):
+                        upgrade_sym = status_icon(map_screen, c.ICON_UPGRADING)
+                        if upgrade_sym:
+                            rect = upgrade_sym.get_rect(center=(sx, sy))
+                            surface.blit(upgrade_sym, rect)
+
                     # --- Conversion Indicator (Convoy/Truck transformations) ---
                     if not is_partial:
                         convert_order = next((u.get("order", {}) for u in visible_units
