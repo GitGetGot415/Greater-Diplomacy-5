@@ -89,9 +89,23 @@ class HavenTests(unittest.TestCase):
         prov = province(1, [unit(owner="Borland")], industry=True)
         self.assertEqual(self.havens([prov]), set())
 
-    def test_a_factory_on_the_war_border_is_not(self):
-        """Arriving somewhere it is immediately in combat is where it came from."""
-        self.assertEqual(self.havens([province(1, industry=True)], war_borders={1}), set())
+    def test_a_factory_on_the_war_border_still_is(self):
+        """saves/NOT REPAIRING, province 295.
+
+        A Soviet Heavy Tank III sat at 4% health on top of its own factory and
+        marched off to take empty ground instead of repairing, because that
+        tile borders four German provinces and the war-border test was being
+        applied here. A unit already standing on a factory is not choosing
+        where to be: it holds the tile either way, and at 4% health it is
+        barely holding it. Where the tile sits does not enter into it.
+        """
+        self.assertEqual(self.havens([province(1, industry=True)], war_borders={1}), {1})
+
+    def test_a_war_border_is_still_not_somewhere_to_march_to(self):
+        """The other half of the split -- see _march_havens."""
+        havens = {1, 2}
+        self.assertEqual(
+            ai_movement._march_havens(havens, {"war_borders": {1}}), {2})
 
 
 class RepairOnTheSpotTests(unittest.TestCase):
@@ -106,6 +120,10 @@ class RepairOnTheSpotTests(unittest.TestCase):
 
     def test_a_hurt_unit_on_a_factory_repairs(self):
         self.assertEqual(self.repair(100)["order"]["type"], "REPAIR")
+
+    def test_it_repairs_on_a_front_line_factory_too(self):
+        """The province 295 case, end to end rather than at the haven set."""
+        self.assertEqual(self.repair(100, war_borders={1})["order"]["type"], "REPAIR")
 
     def test_the_on_site_bar_is_looser_than_the_one_for_marching(self):
         """Sitting on the factory already, the turn is the whole cost."""
@@ -203,6 +221,11 @@ class NotAtTheCostOfTheFrontTests(unittest.TestCase):
 
     def test_it_will_not_leave_a_war_border(self):
         self.assertIsNone(self.try_trip(war_borders={1}))
+
+    def test_it_will_not_march_to_a_war_border(self):
+        """Arriving somewhere about to be attacked is what it was sent away
+        from -- but only for a unit that is choosing where to be."""
+        self.assertIsNone(self.try_trip(war_borders={3}))
 
     def test_it_will_not_leave_a_battle(self):
         self.assertIsNone(self.try_trip(active_battles={1}))

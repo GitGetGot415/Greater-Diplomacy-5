@@ -937,25 +937,43 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
 
 def _repair_havens(map_screen, ai_name, my_provs, ctx):
-    """Tiles this nation can actually be repaired on, as BFS targets.
+    """Tiles where this nation could repair a unit: industry, and no enemy on it.
 
-    Repairing needs industry on the tile (queries.has_industry, the same gate
-    the player's orders panel shows as "Needs Factory") and no enemy standing on
-    it. A war border is excluded even when it qualifies: a unit sent to repair
-    there arrives somewhere it will immediately be in combat, which is where it
-    came from.
+    Exactly the two conditions the player's own orders panel applies -- "Needs
+    Factory" (queries.has_industry) and "In Combat" -- and deliberately nothing
+    else. Whether a tile is somewhere you would *march* a wounded unit to is a
+    different question, asked separately in _march_havens; conflating the two is
+    what stopped a Soviet Heavy Tank III sitting at 4% health on top of its own
+    factory in province 295 from repairing (saves/NOT REPAIRING). That tile
+    borders four German provinces, so it is a war border, so it was not a haven,
+    so the tank marched off to take empty ground instead.
+
+    A unit already standing on a factory is not choosing where to be. It is not
+    in combat, it is holding the tile either way -- REPAIR blocks movement, not
+    fighting -- and at 4% health it is contributing almost nothing to holding
+    it. Repairing is simply the best thing it can do with the turn, and where
+    the tile sits on the map has no bearing on that.
     """
-    war_borders = ctx["war_borders"]
     havens = set()
     for prov in my_provs:
-        if prov["id"] in war_borders:
-            continue
         if not queries.has_industry(prov):
             continue
         if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
             continue
         havens.add(prov["id"])
     return havens
+
+
+def _march_havens(havens, ctx):
+    """The subset of `havens` worth walking a wounded unit to.
+
+    Marching is a choice about where to be, so here the war border does matter:
+    arriving somewhere that is about to be attacked is the situation the unit
+    was sent away from. Deciding this at the destination rather than in
+    _repair_havens is what keeps a unit already standing on a front-line factory
+    free to repair where it is.
+    """
+    return havens - ctx["war_borders"]
 
 
 def _may_leave_the_line(map_screen, ai_name, unit, prov, ctx):
@@ -1022,6 +1040,7 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
     active_battles = ctx["active_battles"]
     target_assignments = ctx["target_assignments"]
     havens = ctx["repair_havens"]
+    march_targets = _march_havens(havens, ctx)
 
     def health_fraction(unit):
         return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
@@ -1114,11 +1133,11 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
                 if start_repair(unit):
                     continue
         elif (marches
-                and havens
+                and march_targets
                 and trips < c.AI_MAX_REPAIR_TRIPS
                 and health_fraction(unit) < c.AI_REPAIR_HEALTH_FRACTION
                 and _may_leave_the_line(map_screen, ai_name, unit, prov, ctx)):
-            path = route(unit, curr_id, havens)
+            path = route(unit, curr_id, march_targets)
             if path:
                 unit["repair_trip"] = path[-1]
                 unit["order"]["path"] = path[:speed]
