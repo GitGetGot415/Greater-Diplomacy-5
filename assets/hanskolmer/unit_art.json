@@ -48,6 +48,9 @@
     "Infantry 1961-2010": [
 
     ],
+    "Artillery": [
+        "french/120_mm_De_Bange_model_1878.png"
+    ],
     "Artillery I": [
         {"file": "austrian/FK_M.5__1.png", "countries": "austrian"},
         {"file": "germanic/FK_96_n.A.png", "countries": "germanic"},
@@ -61,6 +64,9 @@
     ],
     "Artillery III": [
         {"file": "germanic/Fh_16.png", "countries": "germanic"},
+        "french/Canon_de_155_C_modele_1917.png"
+    ],
+    "Heavy Artillery": [
         "french/Canon_de_155_C_modele_1917.png"
     ],
     "Heavy Tank I": [
