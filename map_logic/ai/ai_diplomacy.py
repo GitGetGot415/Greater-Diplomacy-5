@@ -710,11 +710,21 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
         for mutual_combatant in enemy_wars:
             if mutual_combatant == ai_name or mutual_combatant not in active_nations:
                 continue
+            # Somebody we are ALSO at war with is not a co-belligerent, whatever
+            # else they are fighting. The sibling pass below has had this line
+            # since it was written (see _request_access_from_co_belligerents);
+            # without it here, a nation would ask to join the faction of a
+            # country it was currently fighting, and settle_with_faction would
+            # white-peace the war on the way in.
+            if mutual_combatant in my_enemies:
+                continue
             # If they have a faction, we want to talk to the leader
             fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
             if fac:
                 fac_leader = queries.get_faction_leader(fac, map_screen.nation_data)
-                if fac_leader and fac_leader not in potential_leaders and fac_leader in active_nations:
+                if (fac_leader and fac_leader not in potential_leaders
+                        and fac_leader in active_nations
+                        and fac_leader not in my_enemies):
                     potential_leaders.append(fac_leader)
 
     if potential_leaders:
@@ -745,6 +755,8 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
         enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
         for mutual_combatant in enemy_wars:
             if mutual_combatant == ai_name or mutual_combatant not in active_nations:
+                continue
+            if mutual_combatant in my_enemies:
                 continue
             fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
             if not fac and mutual_combatant not in potential_partners:

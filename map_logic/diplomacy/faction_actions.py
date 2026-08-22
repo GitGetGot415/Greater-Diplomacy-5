@@ -51,6 +51,9 @@ def leave_faction(nation_data, leaver):
     # Whatever claim it had built up on the leadership goes with it. Walking out
     # is not a way to bank six turns of pressure against a bloc you might rejoin.
     nation_data[leaver].pop("faction_pressure", None)
+    # Membership starts again from nothing on the way back in, so a nation
+    # cannot bank tenure in one bloc and spend it defecting out of the next.
+    nation_data[leaver].pop("faction_tenure", None)
     pull_puppets_out_of_faction(leaver, nation_data)
     return fac
 
@@ -118,6 +121,7 @@ def finalize_disband_faction(nation_data, leader):
             d["faction"] = ""
             d["is_faction_leader"] = False
             d.pop("faction_pressure", None)
+            d.pop("faction_tenure", None)
 
     pull_puppets_out_of_faction(leader, nation_data)
 
@@ -177,6 +181,54 @@ def finalize_faction_leave(nation_data, leaver):
 
     if fac:
         queries.clear_faction_pre_war_map_if_peace(fac, nation_data)
+
+def why_an_ai_may_not_leave(nation, nation_data):
+    """Why this nation's AI must not walk out of its faction, or None if it may.
+
+    The one branch of _process_ai_retaliation's action chain that checked
+    nothing at all. Its neighbours test war state, faction and negotiating
+    rights; LEAVE_FACTION was a single unguarded append, and an LLM answering
+    any message with it defected on the spot -- taking its puppets, which follow
+    it automatically, and leaving its former allies fighting the war it had been
+    fighting beside them. Both halves of the Allies split in saves/"what
+    happened to the allies" are that line.
+
+    Deliberately a rule about the AI and not about the game: a player may leave
+    a faction whenever they like, and finalize_faction_leave is unchanged.
+
+    The shared-war test is the one that matters. Everything else here is
+    bookkeeping; walking out of a bloc in the middle of a war you are fighting
+    *together* is the move that made the save unreadable.
+    """
+    data = nation_data.get(nation, {})
+    fac = data.get("faction", "")
+    if not fac:
+        return "it is in no faction"
+
+    if not queries.can_choose_own_faction(nation, nation_data):
+        return "a puppet follows its master in and out"
+
+    if data.get("is_faction_leader"):
+        # There is a button for this and it is not this one: a leader that wants
+        # out disbands the faction or kicks the members it is done with, both of
+        # which leave a defined state behind. Walking out leaves the bloc
+        # headless until faction_leadership.promote notices.
+        return "a faction leader cannot walk out of its own faction"
+
+    tenure = int(data.get("faction_tenure", 0) or 0)
+    if tenure < c.AI_FACTION_MIN_TENURE:
+        return f"it has only been a member {tenure} turns"
+
+    my_enemies = set(queries.get_enemies(nation, nation_data))
+    if my_enemies:
+        for member in queries.get_faction_members(fac, nation_data):
+            if member == nation:
+                continue
+            if my_enemies & set(queries.get_enemies(member, nation_data)):
+                return f"it is fighting {member}'s war alongside it"
+
+    return None
+
 
 def join_faction_wars(map_data, nation_data, joiner, faction_member):
     """Pulls the joining nation into all active wars of the target faction member.

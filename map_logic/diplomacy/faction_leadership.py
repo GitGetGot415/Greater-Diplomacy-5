@@ -171,7 +171,15 @@ def tick(map_screen, world=None):
         faction = data.get("faction", "")
         if not faction:
             data.pop("faction_pressure", None)
+            data.pop("faction_tenure", None)
             continue
+        # How long this nation has been in the faction it is in now. Ages here
+        # rather than being stamped at the join because every path into a
+        # faction would otherwise have to remember to stamp it -- and there are
+        # nine of them, including puppets dragged in behind a master and a
+        # crossed invitation that bypasses the treaty layer entirely. Unlike
+        # faction_pressure it counts for the leader too.
+        data["faction_tenure"] = int(data.get("faction_tenure", 0) or 0) + 1
         if data.get("is_faction_leader"):
             leaders[faction] = nation
         members.setdefault(faction, []).append(nation)

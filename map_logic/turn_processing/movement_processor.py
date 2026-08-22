@@ -95,6 +95,11 @@ def process_repairs(map_screen):
                 
                 if order["turns_left"] <= 0:
                     unit["health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
+                    # The AI walks wounded units home to a factory and remembers
+                    # where it sent them (ai_movement._assign_maintenance_orders).
+                    # The trip ends here whether the AI issued it or the player
+                    # did, so the key never outlives the repair it belongs to.
+                    unit.pop("repair_trip", None)
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 

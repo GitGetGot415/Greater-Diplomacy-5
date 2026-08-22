@@ -133,12 +133,18 @@ class NeverAtTheFrontTests(unittest.TestCase):
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
-    def test_a_unit_sharing_a_tile_with_an_enemy_is_never_chosen(self):
+    def test_an_enemy_on_home_soil_stops_the_cull_everywhere(self):
+        """The rear is not safe while the invader is inside the country.
+
+        Stronger than the per-province rule below, and deliberately so: a nation
+        being overrun fails the upkeep ratio *because* it is being overrun, the
+        enemy having taken the income the ratio is measured against. France in
+        saves/"france disbanding their tanks despite losing" scrapped a unit
+        every turn of the invasion, 61 down to 28, holding 20,526 materials.
+        """
         contested = province(1, [unit("Scout Car"), unit("Scout Car", owner="Borland")])
         safe = province(2, [unit("Scout Car")])
-        scrapped = self.run_disband([contested, safe])
-        self.assertEqual(len(scrapped), 1)
-        self.assertIn(scrapped[0], safe["units"])
+        self.assertEqual(self.run_disband([contested, safe]), [])
 
     def test_a_unit_with_an_enemy_next_door_is_never_chosen(self):
         border = province(1, [unit("Scout Car")], neighbors=[3])
@@ -380,6 +386,82 @@ class DeficitAccountingTests(unittest.TestCase):
             {"manpower": 80, "materials": 60, "fuel": 70},
             {"manpower": 100, "materials": 100, "fuel": 100}, self.TARGETS)
         self.assertEqual(over, [])
+
+
+class RunwayTests(unittest.TestCase):
+    """Overspending is not the same question as running out.
+
+    _deficit_list answers the first; a nation losing a war fails it by
+    definition, because the income it is measured against is what the enemy is
+    taking. _short_of_runway answers the second, and only the second is worth
+    giving up a division for.
+    """
+
+    DEFICITS = ["cost_materials", "cost_fuel"]
+
+    def short(self, stock, upkeep=200, income=100):
+        return ai_construction._short_of_runway(
+            self.DEFICITS,
+            {"materials": upkeep, "fuel": upkeep},
+            {"materials": income, "fuel": income},
+            {"materials": stock, "fuel": stock})
+
+    def test_a_full_warehouse_is_not_a_reason_to_disband(self):
+        """France's real numbers: 20,526 materials against a drain of 836.5,
+        about 25 turns of reserve, and it scrapped a unit every turn."""
+        self.assertEqual(
+            ai_construction._short_of_runway(
+                ["cost_materials"], {"materials": 4581.5}, {"materials": 3745.0},
+                {"materials": 20526.0}),
+            [])
+
+    def test_an_empty_warehouse_still_is(self):
+        drain = 100
+        stock = drain * (c.AI_DISBAND_RUNWAY_TURNS - 1)
+        self.assertEqual(sorted(self.short(stock)), sorted(self.DEFICITS))
+
+    def test_a_resource_that_is_not_draining_has_all_the_runway_there_is(self):
+        """Income covers upkeep, so the stockpile never falls -- including the
+        zero-income, zero-upkeep case _deficit_list has to report as short."""
+        self.assertEqual(self.short(0, upkeep=0, income=0), [])
+        self.assertEqual(self.short(0, upkeep=100, income=100), [])
+
+    def test_no_income_at_all_is_judged_by_the_stockpile_like_anything_else(self):
+        self.assertEqual(
+            ai_construction._short_of_runway(
+                ["cost_fuel"], {"fuel": 10}, {"fuel": 0}, {"fuel": 10000}),
+            [], "1000 turns of fuel in the tanks is not a fuel shortage")
+        self.assertEqual(
+            ai_construction._short_of_runway(
+                ["cost_fuel"], {"fuel": 10}, {"fuel": 0}, {"fuel": 10}),
+            ["cost_fuel"])
+
+    def test_it_only_ever_narrows_what_it_was_given(self):
+        self.assertEqual(
+            ai_construction._short_of_runway(
+                [], {"fuel": 999}, {"fuel": 0}, {"fuel": 0}),
+            [])
+
+
+class ObsolescenceKeyTests(unittest.TestCase):
+    """The disband sorter and the evaluator must ask the same question.
+
+    OBSOLESCENCE_RULES is keyed by base name. The sorter passed the full type,
+    so "Heavy Tank I" never matched the "Heavy Tank" rule and the primary sort
+    key was inert for every level-suffixed unit in the game.
+    """
+
+    def test_a_level_suffixed_unit_matches_its_rule(self):
+        import data.queries as queries
+        tech = c.OBSOLESCENCE_RULES["Heavy Tank"][0]
+        self.assertTrue(queries.is_unit_obsolete(
+            queries.get_base_unit_name("Heavy Tank I"), {tech: 1}))
+
+    def test_the_full_type_is_what_used_to_miss(self):
+        """Guards the test above against passing for the wrong reason."""
+        import data.queries as queries
+        tech = c.OBSOLESCENCE_RULES["Heavy Tank"][0]
+        self.assertFalse(queries.is_unit_obsolete("Heavy Tank I", {tech: 1}))
 
 
 if __name__ == "__main__":

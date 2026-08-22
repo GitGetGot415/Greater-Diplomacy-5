@@ -361,8 +361,15 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
         share_enemies = bool(ai_enemies.intersection(sender_enemies))
 
-        # Accept if relations are good OR they are helping us fight common threats
-        if relation_score >= c.AI_RELATION_FACTION_THRESHOLD or share_enemies:
+        # Accept if relations are good OR they are helping us fight common
+        # threats -- but never from somebody we are fighting ourselves. Two
+        # nations at war can easily share a third enemy, and share_enemies alone
+        # let that auto-accept an applicant whose war with us settle_with_faction
+        # would then white-peace on the way in. The FACTION_INVITE branch above
+        # has asked this since it was written.
+        if queries.are_at_war(ai_nation, sender_nation, nation_data):
+            accepted = False
+        elif relation_score >= c.AI_RELATION_FACTION_THRESHOLD or share_enemies:
             accepted = True
 
     # 3. Evaluate peace deals dynamically using the centralized query

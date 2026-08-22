@@ -44,7 +44,10 @@ The invariants the rest of the game is entitled to assume:
 2. Every lane has exactly two sides, and damage never crosses between lanes.
 3. A side's slot allowance is shared between its members by max-min fair split
    (see `share_slots`), so a big ally cannot squeeze a small one out and a
-   small one cannot hoard width it has no units for.
+   small one cannot hoard width it has no units for. An allowance is a floor
+   on what a member gets, not a cap on what the side fields: if the split
+   leaves a slot that nobody's allowance covers and somebody present has a
+   unit spare, `_topup` seats it. An empty slot helps nobody.
 4. Total front units across every lane equals `c.COMBAT_WIDTH`, unless a floor
    forced it higher -- `c.MIN_LANE_SLOTS_PER_SIDE` per side, or the one unit
    every member nation present is guaranteed -- or there were not enough units
@@ -306,18 +309,29 @@ def _availability(columns):
     a sort, and build_battle runs every frame for the sidebar and the map's
     combat bubbles.
 
-    Holding a unit back is a preference, not a veto. A nation that held
-    everything back would otherwise vanish from a fight it is standing in the
-    middle of -- which is what a stale flag on a wounded unit did: Nationalist
-    China's only unit on a tile refused to fight Japan and the battle silently
-    did not happen.
+    Holding a unit back is a preference, not a veto: RESERVE reorders this list,
+    it does not shorten it. A held unit goes to the back and is seated only once
+    every unheld one already has a slot -- which is the rotation the flag is for
+    -- but it is still seated rather than leaving the width short.
+
+    Filtering held units out instead is what left front slots empty with bodies
+    standing on the tile. _caps reads its demand off this list, so a nation that
+    held four of ten units back was not merely fielding its healthy six: it was
+    *granted* six slots out of the six it was entitled to, and the four it gave
+    up went to nobody. Province 1724 of the "province 907" save is the extreme
+    of it -- Japan seating one unit of six slots with five more standing there.
+
+    The `or pool` fallback this replaced was the same idea applied only to the
+    all-held case, after a stale flag on a wounded unit made Nationalist China's
+    only unit on a tile refuse to fight Japan and the battle silently not happen.
     """
     available = {}
     for i, (_side, _owner, units) in enumerate(columns):
         # sorted() is stable, so equal-attack units keep their province order.
         pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK),
                       reverse=True)
-        available[i] = [u for u in pool if u.get("combat_stance") != "RESERVE"] or pool
+        held = [u for u in pool if u.get("combat_stance") == "RESERVE"]
+        available[i] = [u for u in pool if u.get("combat_stance") != "RESERVE"] + held
     return available
 
 
@@ -418,6 +432,54 @@ def _seat(columns, duels, lanes_of, foes, caps, available):
     return seats
 
 
+def _topup(coalition_groups, duels, lanes_of, available, slots, seats):
+    """Seats spare men into slots a side left empty. Modifies `seats` in place.
+
+    _caps hands each member an allowance and _seat fills it, which is the whole
+    story when a side is one nation. It is not when a side is a coalition and
+    its members are in different numbers of lanes: a nation fighting two duels
+    is credited the same demand in each, spends its men on the heavier one
+    first, and arrives at the lighter one empty-handed -- while the ally beside
+    it, whose allowance was already met, still has units standing there. The
+    allowance says that ally may not take more; the width says the slot exists;
+    nobody fills it.
+
+    So this is the invariant, enforced after the allowances have had their say:
+    **no side leaves a front slot empty while one of its members has a unit
+    standing here that is not already fighting.** Fewest seats first, so the
+    spare width lands the way share_slots would have handed it out.
+
+    Only units seated in *no* lane are eligible. Doubling a unit up buys
+    nothing -- a nation fires once and _lane_shares divides that one volley, so
+    a unit added to a second lane weakens the first by exactly what it adds
+    here, and takes fire in both. The empty-lane guard in _seat already doubles
+    up in the one case where it is worth it: a front that would otherwise
+    dissolve entirely.
+    """
+    seated_anywhere = {id(u) for units in seats.values() for u in units}
+
+    for duel_index, pair in enumerate(duels):
+        for group_index in pair:
+            members = [i for i in coalition_groups[group_index]
+                       if duel_index in lanes_of.get(i, ())]
+            if not members:
+                continue
+
+            seated = sum(len(seats.get((i, duel_index), ())) for i in members)
+            spare = {i: [u for u in available[i] if id(u) not in seated_anywhere]
+                     for i in members}
+
+            while seated < slots and any(spare[i] for i in members):
+                i = min((m for m in members if spare[m]),
+                        key=lambda m: (len(seats.get((m, duel_index), ())), m))
+                unit = spare[i].pop(0)
+                seats.setdefault((i, duel_index), []).append(unit)
+                seated_anywhere.add(id(unit))
+                seated += 1
+
+    return seats
+
+
 def _lane_shares(seats):
     """How many fronts each unit is holding, by id.
 
@@ -471,6 +533,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None):
              if full_rank_for else ())
     caps = _caps(groups, duels, lanes_of, available, slots, eager)
     seats = _seat(columns, duels, lanes_of, foes, caps, available)
+    _topup(groups, duels, lanes_of, available, slots, seats)
 
     def front(group_index, duel_index):
         return [u for i in groups[group_index]
@@ -519,8 +582,15 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None):
                 # not enlisted in wars it never joined by standing next to you.
                 targets = [u for j in foes[(i, duel_index)]
                            for u in seats.get((j, duel_index), ())]
-                members.append(LaneMember(columns[i][1], caps[(i, duel_index)],
-                                          seats[(i, duel_index)], reserve, targets))
+                # _topup can seat a member past the allowance _caps granted it,
+                # when the side would otherwise have left width standing empty.
+                # What it holds is then what it seated: slots_held reads this,
+                # and a member reading 3/2 in the battle screen is nonsense.
+                # (not named `front` -- that is the helper defined above)
+                seated = seats[(i, duel_index)]
+                members.append(LaneMember(columns[i][1],
+                                          max(caps[(i, duel_index)], len(seated)),
+                                          seated, reserve, targets))
                 engaged[columns[i][1]] = None
             # Every column in a coalition came from the same side of the fight;
             # _coalition_groups never merges across one.

@@ -9,9 +9,12 @@ live:
     is the heaviest front first, which is usually right and occasionally very
     wrong -- a nation that would rather finish off a weak neighbour than trade
     with the strong one has no other way to say so.
-  - whether a unit is in the front rank at all. Holding a damaged unit back lets
-    a fresh one take its slot, and a reserve takes no damage and recovers morale
-    while the front bleeds.
+  - where a unit stands in the queue for the front rank. Holding a damaged unit
+    back lets a fresh one take its slot, and a reserve takes no damage and
+    recovers morale while the front bleeds. It is a preference, not a veto: a
+    held unit still fills a slot nobody else can, because an empty slot is worse
+    for the side than a hurt unit standing in it. Hold four of six men and the
+    other two do not inherit four idle slots -- all four are still fielded.
 
 Both are written straight onto the unit dict, where combat_rules.build_battle is
 the only thing that reads them back. That is deliberate: a second store for
@@ -200,6 +203,13 @@ class Battle_Screen(ModalScreen):
         self.refresh_ui()
 
     def toggle_stance(self, unit):
+        """Moves a unit to the back of its nation's queue for the front rank.
+
+        Not out of the fight: combat_rules._availability reorders on this flag
+        rather than filtering on it, so a held unit is seated once every unheld
+        one has a slot. Which is why a held unit can still show up in the front
+        pane -- it says [Release] there rather than [Hold].
+        """
         if unit.get("combat_stance") == "RESERVE":
             unit.pop("combat_stance", None)
         else:
@@ -322,7 +332,11 @@ class Battle_Screen(ModalScreen):
             else:
                 btn = self.button(rect.x, y, rect.width, "blue", "",
                                   lambda u=unit: self.toggle_stance(u))
-                note = "[Hold]"
+                # A held unit reaches the front rank whenever nobody else can
+                # take the slot, so this pane has to be able to say so -- an
+                # honest [Hold] on a unit that is already held reads as if the
+                # flag had not stuck.
+                note = "[Release]" if held else "[Hold]"
             self.add_pane_row(pane, btn)
             self.row_paint[pane].append((btn.rect, (unit, note)))
 

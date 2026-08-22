@@ -45,6 +45,35 @@ def _deficit_list(upkeep, income, targets):
     return over
 
 
+def _short_of_runway(deficits, upkeep, income, stockpiles):
+    """Narrows a deficit list to the resources actually about to run out.
+
+    A ratio of upkeep to income says a nation is overspending. It does not say
+    it cannot pay, and those are different questions the moment a war starts:
+    income is the thing an invader takes, so a nation being overrun fails the
+    ratio test by definition, exactly when it needs the army the test would have
+    it scrap. Runway asks the other question -- at this rate of drain, how many
+    turns until the warehouse is empty -- and only a short answer is a reason to
+    give up a division.
+
+    A resource with no drain at all has infinite runway, which is also the
+    honest answer for the zero-income case _deficit_list has to flag as 1.0.
+    """
+    stat_for = {"cost_manpower": "manpower", "cost_materials": "materials",
+                "cost_fuel": "fuel"}
+    short = []
+    for stat in deficits:
+        res = stat_for.get(stat)
+        if res is None:
+            continue
+        drain = upkeep.get(res, 0) - income.get(res, 0)
+        if drain <= 0:
+            continue
+        if stockpiles.get(res, 0) / drain < c.AI_DISBAND_RUNWAY_TURNS:
+            short.append(stat)
+    return short
+
+
 def tactical_player_unit(map_screen):
     """The division a tactical-mode player *is*, or None.
 
@@ -114,8 +143,13 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
     # The disband decision keys off this and only this: counting the queue there
     # made a nation delete real units to fund units that had not arrived yet,
     # and then delete those too once they did.
-    standing_deficits = _deficit_list(
-        {"manpower": upk_man, "materials": upk_mat, "fuel": upk_fuel}, income, targets)
+    standing_upkeep = {"manpower": upk_man, "materials": upk_mat, "fuel": upk_fuel}
+    standing_deficits = _deficit_list(standing_upkeep, income, targets)
+
+    # ...and of those, the ones the warehouse cannot cover for much longer. Only
+    # these are worth disbanding over; see _short_of_runway.
+    stockpiles = {res: data.get(res, 0) for res in ("manpower", "materials", "fuel")}
+    disband_deficits = _short_of_runway(standing_deficits, standing_upkeep, income, stockpiles)
 
     # --- THE FIX: Include Pending Queue in Upkeep Projections ---
     # Prevents the AI from bankupting itself on units that haven't spawned yet
@@ -144,6 +178,7 @@ def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_libr
         "ratio_man": ratio_man, "ratio_mat": ratio_mat, "ratio_fuel": ratio_fuel,
         "deficits": deficits,
         "standing_deficits": standing_deficits,
+        "disband_deficits": disband_deficits,
     }
 
 
@@ -234,6 +269,21 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
         say, paying for a unit and scrapping its twin in one turn is incoherent.
       - delete the unit a tactical-mode player is playing as. See
         tactical_player_unit.
+
+    And a third, which is the same principle read one scale up. The clause above
+    protects the unit standing at the front; this protects the whole army while
+    there is an enemy standing on home soil. A nation being overrun fails the
+    upkeep ratio *because* it is being overrun -- the invader is sitting on the
+    income -- so the worse the war goes the more units it decides it cannot
+    afford, which is the one moment that answer is certainly wrong. France in
+    saves/"france disbanding their tanks despite losing" went from 61 units to
+    28 that way, one per turn, while holding 20,526 materials.
+
+    Occupation rather than mere contact, so this is a shield for the invaded and
+    not for everyone at war: a nation whose war is entirely on somebody else's
+    ground can still shed the obsolete units it is genuinely running out of
+    money for. `deficits` is already narrowed to what is actually running out
+    (see _short_of_runway); this narrows the other axis.
     """
     if not deficits:
         return
@@ -242,6 +292,13 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     protected = tactical_player_unit(map_screen)
     on_order = {q.get("unit_type") for prov in my_provs
                 for q in prov.get("unit_queue", []) if q.get("unit_type")}
+
+    # Cheap on purpose: this is the first half of _is_frontline and needs no
+    # neighbour walk, because the question is whether an enemy is *on* my
+    # ground, not merely next to it.
+    if any(queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+           for prov in my_provs):
+        return
 
     candidates = []
     for prov in my_provs:
@@ -265,7 +322,11 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     res_levels = data.get("research", {})
     def sort_key(item):
         u, u_type, stats = item
-        is_obs = queries.is_unit_obsolete(u_type, res_levels)
+        # Base name, not the full type: OBSOLESCENCE_RULES is keyed "Heavy Tank"
+        # and this passed "Heavy Tank I", so the primary sort key never matched
+        # a level-suffixed unit and ranking fell entirely to value.score.
+        # ai_unit_eval asks the same question the same way.
+        is_obs = queries.is_unit_obsolete(queries.get_base_unit_name(u_type), res_levels)
         value = values.get(u_type)
         # Outdated units (is_obs=True) have priority (0). Then the one the
         # nation's own valuation rates lowest. An unscored type sorts first
@@ -816,7 +877,7 @@ def process_ai_economy_decisions(map_screen):
         _update_fuel_conversion_slider(data, state)
 
         _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name,
-                                       state["standing_deficits"], unit_library, all_values)
+                                       state["disband_deficits"], unit_library, all_values)
 
         # --- NEW: Panic Militia & Combat Queue Clearing ---
         force_tally = _panic_militia_and_tally_forces(

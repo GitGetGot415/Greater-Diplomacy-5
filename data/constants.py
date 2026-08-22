@@ -1019,7 +1019,7 @@ TRUCK_CONVERT_TURNS = 3
 # not a plan to be re-derived. The AI wipes its units' orders every turn so it
 # can rethink its movement; these are the ones it must NOT wipe, or the order
 # is destroyed before the turn processor ever sees it.
-MULTI_TURN_ORDER_TYPES = ("CONVERT", "DISBAND", "REPAIR")
+MULTI_TURN_ORDER_TYPES = ("CONVERT", "DISBAND", "REPAIR", "UPGRADE")
 # The above plus bombardment, which occupies the unit's turn even though it
 # resolves within it. A unit doing any of these cannot also move.
 ORDERS_BLOCKING_MOVEMENT = MULTI_TURN_ORDER_TYPES + ("BOMBARD",)
@@ -1159,7 +1159,17 @@ AI_TRAIT_NOTABLE_LOW = 0.32
 AI_RELATION_FACTION_THRESHOLD = 50
 AI_WAR_STRENGTH_THRESHOLD = 1.2 # AI must be 20% stronger on the shared border to declare war
 AI_GLOBAL_STRENGTH_THRESHOLD = 0.8 # AI must have at least 80% of the target's total alliance + economic power to consider war
-AI_DIPLO_COOLDOWN = 12 # How many turns before AI can retry a rejected/ignored proactive diplomatic action. -1 means infinite.
+AI_DIPLO_COOLDOWN = 12
+
+# How long an AI must have been in a faction before it will consider walking
+# out. Nothing in the game measured membership at all: the LLM could answer a
+# message with {"action": "LEAVE_FACTION"} and that was the entire process, no
+# war state, no relations, no delay. In saves/"what happened to the allies" the
+# United Kingdom and then the United States each left the Allies that way, ~14
+# turns apart, and each dragged its puppets with it -- which is the whole of how
+# a faction of thirteen became a faction of six with the rest sitting in a rival
+# bloc. Applies to the AI only; a player may still leave whenever they like.
+AI_FACTION_MIN_TENURE = 15 # How many turns before AI can retry a rejected/ignored proactive diplomatic action. -1 means infinite.
 AI_WAR_COOLDOWN = 12
 AI_CLAIM_COOLDOWN = 12 # How many turns the AI waits before trying to fabricate another claim
 AI_WEAK_NEIGHBOR_STRENGTH_RATIO = 0.60 # Target must be this much weaker (e.g. 60% of AI's power) to be bullied with claims
@@ -1472,6 +1482,19 @@ AI_ROTATE_HEALTH_FRACTION = 0.4
 # two can be tuned apart.
 AI_REPAIR_HEALTH_FRACTION = 0.4
 
+# The same judgement made for a unit that is already standing somewhere it can
+# be repaired. Walking a division home costs it several turns of marching, so
+# that needs a badly hurt unit to be worth it; sitting on the factory already,
+# the turn costs nothing but the turn. Anything short of full health was
+# arguably right here, but a unit at 95% is not worth a turn out of the line.
+AI_REPAIR_ON_SITE_FRACTION = 0.8
+
+# How many units one nation will have walking home to a factory at once. The
+# repair trip is the only order in the AI that deliberately moves a unit AWAY
+# from the war, so it is capped rather than trusted: without this a bad turn at
+# the front would rout an entire army into the rear as a maintenance decision.
+AI_MAX_REPAIR_TRIPS = 2
+
 # What a unit contributes, given how combat actually resolves:
 #  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
 #    ordinary one-enemy fight -- so offence is raw attack
@@ -1560,6 +1583,16 @@ AI_UPKEEP_TARGETS = {
     "materials": 0.60,
     "fuel": 0.70
 }
+
+# How few turns of stockpile a resource must be down to before the AI will give
+# up a unit over it. AI_UPKEEP_TARGETS is a ratio of upkeep to income, which
+# says nothing about whether a nation can actually pay -- and a nation losing a
+# war fails it by definition, because the income is what the enemy is taking.
+# France in saves/"france disbanding their tanks despite losing" was 36% over
+# its materials target with 20,526 materials banked, about 25 turns of reserve,
+# and scrapped a unit every turn of the invasion. Ratio says overspending;
+# runway says running out. Only the second one is worth an army for.
+AI_DISBAND_RUNWAY_TURNS = 8
 
 AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long deployment time so spamming them is pretty good tbh
 
@@ -1745,6 +1778,13 @@ MESSAGE_CATEGORIES = {
 MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
 
 # Proposals that require the target to explicitly Accept or Reject
+# Moves a nation makes about itself rather than at somebody. The distinction
+# matters for rate limiting: a diplomatic cooldown is keyed (sender, target,
+# action), and these have no real target, so keying them on whoever the AI
+# happened to be talking to made their cooldown per-interlocutor -- i.e. no
+# cooldown at all. See _process_ai_retaliation.
+SELF_TARGETED_ACTIONS = ("LEAVE_FACTION", "DISBAND_FACTION")
+
 BILATERAL_ACTIONS = [
     "JOIN_WARS",
     "FACTION_INVITE",

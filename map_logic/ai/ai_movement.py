@@ -936,27 +936,80 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 stacks[path[-1]] = stacks.get(path[-1], 0) + 1
 
 
-def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx):
+def _repair_havens(map_screen, ai_name, my_provs, ctx):
+    """Tiles this nation can actually be repaired on, as BFS targets.
+
+    Repairing needs industry on the tile (queries.has_industry, the same gate
+    the player's orders panel shows as "Needs Factory") and no enemy standing on
+    it. A war border is excluded even when it qualifies: a unit sent to repair
+    there arrives somewhere it will immediately be in combat, which is where it
+    came from.
+    """
+    war_borders = ctx["war_borders"]
+    havens = set()
+    for prov in my_provs:
+        if prov["id"] in war_borders:
+            continue
+        if not queries.has_industry(prov):
+            continue
+        if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
+            continue
+        havens.add(prov["id"])
+    return havens
+
+
+def _may_leave_the_line(map_screen, ai_name, unit, prov, ctx):
+    """Whether this unit can be spared for the march home.
+
+    The repair trip is the one order that deliberately walks a unit away from
+    the war, so what it must never do is open a hole. A tile on the war border,
+    in a battle, or next to one, or held by this unit alone, is a tile this unit
+    is the defence of; everywhere else it is one of several and can be missed.
+    """
+    curr_id = prov["id"]
+    if curr_id in ctx["war_borders"] or curr_id in ctx["active_battles"]:
+        return False
+    if any(n in ctx["active_battles"] for n in prov.get("neighbors", ())):
+        return False
+
+    friendly_nations = ctx["friendly_nations"]
+    return any(u.get("owner") in friendly_nations and u is not unit
+               for u in prov.get("units", ()))
+
+
+def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
+                               allowed_prov_ids, water_ids, neighbor_ids):
     """Sends wounded or idle units to repair or upgrade instead of a move order.
 
-    Mirrors what a human player would click in the orders panel. Two triggers:
+    Mirrors what a human player would click in the orders panel. Three triggers:
 
-    - Wounded: below c.AI_REPAIR_HEALTH_FRACTION health and out of combat. A
+    - Wounded, and already standing somewhere it can be fixed: below
+      c.AI_REPAIR_ON_SITE_FRACTION health, on a haven (see _repair_havens). A
       unit this hurt deals reduced damage now (see
       combat_rules.health_damage_multiplier), so it is worth less in the next
       fight than the same unit at full health -- fixing it is worth the turn.
-    - Idle: sitting alone on a quiet defensive border with no battle nearby --
-      the exact condition _assign_unit_orders itself uses to decide a unit has
-      nothing to do and should stay put (see its `is_defensive_hold` check
-      below). A unit that was going to do nothing this turn anyway loses
-      nothing by upgrading instead, if research has unlocked a better version
-      of its type.
+    - Wounded, and not: below the harder c.AI_REPAIR_HEALTH_FRACTION line it is
+      worth the march as well, so it is sent home. See below.
+    - Idle: on a quiet tile with no battle nearby and nothing else routed
+      through it, with research holding a better version of its type. A unit
+      that was going to do nothing this turn anyway loses nothing by upgrading.
 
     Chosen units are dropped from `units_info` in place, so _assign_unit_orders
-    never reassigns them a move order this turn. Repairing/upgrading only
-    blocks movement (c.ORDERS_BLOCKING_MOVEMENT) -- the unit is still standing
-    on its tile and still fights if it is attacked -- so this never actually
-    leaves a front unmanned, only unmoving for a turn.
+    never reassigns them a move order this turn. Repairing and upgrading only
+    block movement (c.ORDERS_BLOCKING_MOVEMENT) -- the unit is still standing on
+    its tile and still fights if it is attacked -- so this never actually leaves
+    a front unmanned, only unmoving for a turn.
+
+    **The trip.** Repair has always required industry on the tile a unit was
+    *already* standing on, and nothing in the AI ever sent one there, while
+    _assign_unit_orders actively pushes units toward the enemy. So the mechanic
+    was unreachable in practice: it could only fire on a unit that happened to
+    be shot up on top of its own factory. A unit that commits to the march
+    carries `unit["repair_trip"]`, which is a plain key rather than an order
+    because _reset_orders_and_collect_units wipes orders every turn and the walk
+    home takes several -- the unit would be re-tasked back to the front at the
+    first junction. It is handled before anything else here, and dropped the
+    moment it stops making sense.
     """
     unit_library = queries.get_unit_library()
     tech_tree = queries.get_tech_tree()
@@ -965,51 +1018,133 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx):
     free_repairs = queries.get_scenario_flag(
         "free_repairs", c.DEFAULT_FREE_REPAIRS, map_screen.scenario_settings)
 
-    peace_borders = ctx["peace_borders"]
-    coastal_borders = ctx["coastal_borders"]
     war_borders = ctx["war_borders"]
     active_battles = ctx["active_battles"]
     target_assignments = ctx["target_assignments"]
+    havens = ctx["repair_havens"]
+
+    def health_fraction(unit):
+        return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
+
+    def repair_costs(unit):
+        """What the orders panel would charge for this repair, or all zeroes."""
+        if free_repairs:
+            return {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+        m_hp = unit.get("max_health", 1)
+        missing_pct = (m_hp - unit.get("health", 0)) / max(1, m_hp)
+        stats = unit_library.get(unit.get("original_type", unit.get("type", "")), {})
+        return {res: int(stats.get(res, 0) * missing_pct)
+                for res in ("cost_materials", "cost_manpower", "cost_fuel")}
+
+    def start_repair(unit):
+        """Issues REPAIR if the nation can pay for it. True if it did."""
+        costs = repair_costs(unit)
+        if not queries.can_afford(nation, costs):
+            return False
+        queries.deduct_resources(nation, costs)
+        unit.pop("repair_trip", None)
+        unit["order"] = {"type": "REPAIR", "turns_left": 1, "refund": costs}
+        return True
+
+    def route(unit, curr_id, targets):
+        """An all-land march to the nearest of `targets`, or None.
+
+        Land units only, and overland only. The trip is a unit walking home
+        through its own country, and neither half of that is negotiable: a ship
+        cannot reach a factory, a convoy is a land unit mid-crossing that should
+        finish the crossing first, and a land unit routed over water needs the
+        CONVERT-to-Convoy dance _assign_unit_orders does for an invasion. None
+        of that is worth it to fix one division, so a repair that would need an
+        amphibious operation simply does not happen.
+        """
+        path = _bfs_nearest_target(
+            curr_id, set(targets), allowed_prov_ids, map_screen.id_to_province,
+            target_assignments,
+            moving_nation=ai_name, nation_data=map_screen.nation_data,
+            unit_speed=unit.get("speed", 1),
+            water_ids=water_ids, neighbor_ids=neighbor_ids)
+        if not path or any(step in water_ids for step in path):
+            return None
+        return path
+
+    # Units already walking home count against the cap, so a nation cannot send
+    # its whole army back one turn at a time.
+    trips = sum(1 for unit, _prov in units_info if unit.get("repair_trip") is not None)
 
     remaining = []
     for unit, prov in units_info:
         curr_id = prov["id"]
+        in_combat = queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+        speed = unit.get("speed", 1)
+        u_type = unit.get("type", "")
+        is_convoy = u_type.startswith("Convoy")
+        is_naval_combatant = queries.is_naval_unit(u_type) and not is_convoy
+        marches = not is_convoy and not is_naval_combatant
 
-        if (queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
-                or not queries.has_industry(prov)):
+        # --- a trip already under way ---------------------------------------
+        trip = unit.get("repair_trip")
+        if trip is not None:
+            if health_fraction(unit) >= c.AI_REPAIR_ON_SITE_FRACTION or trip not in havens:
+                # Healed on the way, or the destination was taken, overrun, or
+                # lost its industry while the unit was still walking to it.
+                unit.pop("repair_trip", None)
+                trips -= 1
+            elif curr_id == trip:
+                if not in_combat and start_repair(unit):
+                    trips -= 1
+                    continue
+            else:
+                path = route(unit, curr_id, {trip})
+                if path:
+                    unit["order"]["path"] = path[:speed]
+                    continue
+                # The way home is cut. Fight where it stands.
+                unit.pop("repair_trip", None)
+                trips -= 1
+
+        if in_combat:
             remaining.append((unit, prov))
             continue
 
-        hp = unit.get("health", 0)
-        m_hp = unit.get("max_health", 1)
-        if hp < m_hp and hp / max(1.0, m_hp) < c.AI_REPAIR_HEALTH_FRACTION:
-            u_type = unit.get("original_type", unit.get("type", ""))
-            stats = unit_library.get(u_type, {})
-            if free_repairs:
-                costs = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-            else:
-                missing_pct = (m_hp - hp) / max(1, m_hp)
-                costs = {
-                    "cost_materials": int(stats.get("cost_materials", 0) * missing_pct),
-                    "cost_manpower": int(stats.get("cost_manpower", 0) * missing_pct),
-                    "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
-                }
-            if queries.can_afford(nation, costs):
-                queries.deduct_resources(nation, costs)
-                unit["order"] = {"type": "REPAIR", "turns_left": 1, "refund": costs}
+        # --- repair, here or at home -----------------------------------------
+        wants_repair = False
+        if curr_id in havens:
+            if health_fraction(unit) < c.AI_REPAIR_ON_SITE_FRACTION:
+                wants_repair = True
+                if start_repair(unit):
+                    continue
+        elif (marches
+                and havens
+                and trips < c.AI_MAX_REPAIR_TRIPS
+                and health_fraction(unit) < c.AI_REPAIR_HEALTH_FRACTION
+                and _may_leave_the_line(map_screen, ai_name, unit, prov, ctx)):
+            path = route(unit, curr_id, havens)
+            if path:
+                unit["repair_trip"] = path[-1]
+                unit["order"]["path"] = path[:speed]
+                trips += 1
                 continue
 
-        u_type = unit.get("type", "")
-        is_naval_combatant = queries.is_naval_unit(u_type) and not u_type.startswith("Convoy")
-        is_defensive_hold = (curr_id in peace_borders or curr_id in coastal_borders) and curr_id not in war_borders
+        # --- upgrade, if it has nothing better to do -------------------------
+        # Quiet rear tiles as well as quiet borders. Reading this as "on a peace
+        # or coastal border" excluded every interior province -- which is
+        # exactly where a nation's factories and their garrisons are, so the one
+        # unit in the country with nothing to do all game could never upgrade.
+        is_quiet = curr_id not in war_borders and curr_id not in active_battles
         is_near_battle = any(n in active_battles for n in prov.get("neighbors", ()))
-        is_idle = (not is_naval_combatant and is_defensive_hold and not is_near_battle
+        # A unit that wanted repairing and could not afford it must not be sent
+        # to upgrade instead: process_upgrades carries health across as a
+        # *percentage*, so it would spend the turn and still be wounded, only
+        # now wounded as a more expensive type.
+        is_idle = (not is_naval_combatant and is_quiet and not is_near_battle
+                  and not wants_repair
                   and target_assignments.get(curr_id, 0) <= 1)
 
         if is_idle:
             target = queries.get_upgrade_target(u_type, research, unit_library, tech_tree)
             if target:
-                unit["order"] = {"type": "UPGRADE", "turns_left": 1, "target_type": target, "refund": {}}
+                unit["order"] = {"type": "UPGRADE", "turns_left": 1,
+                                 "target_type": target, "refund": {}}
                 continue
 
         remaining.append((unit, prov))
@@ -1038,6 +1173,15 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
         if len(mine) < 2:
             continue
 
+        # Last turn's stances go before the measurement, not after it. Read the
+        # other way round this ratcheted: build_battle saw the units already
+        # held back, slots_held answered with the allowance that left, spare was
+        # recomputed from that smaller number, and the reserve could only ever
+        # grow. A nation pushed down once never climbed back -- three of the
+        # four short fronts in saves/province 907 are stuck there.
+        for unit in mine:
+            unit.pop("combat_stance", None)
+
         battle = combat_rules.build_battle([province.get("units", ())], map_screen.nation_data)
         slots = combat_rules.slots_held(battle, ai_name)
         if not slots:
@@ -1053,8 +1197,6 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
         wounded = sorted((u for u in mine if health_fraction(u) < c.AI_ROTATE_HEALTH_FRACTION),
                          key=health_fraction)
 
-        for unit in mine:
-            unit.pop("combat_stance", None)
         for unit in wounded[:spare]:
             unit["combat_stance"] = "RESERVE"
 
@@ -1173,10 +1315,6 @@ def _generate_unit_orders(map_screen):
 
         assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity)
 
-        # If no targets at all (e.g. island with no neighbors), skip this nation entirely.
-        if not assignments["target_destinations"]:
-            continue
-
         ctx = {
             "unsafe_waters": unsafe_waters,
             "friendly_nations": friendly_nations,
@@ -1185,8 +1323,19 @@ def _generate_unit_orders(map_screen):
             **battles,
             **assignments,
         }
+        ctx["repair_havens"] = _repair_havens(map_screen, ai_name, my_provs, ctx)
 
-        _assign_maintenance_orders(map_screen, ai_name, units_info, ctx)
+        _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
+                                   allowed_prov_ids, water_ids, neighbor_ids)
+
+        # If no targets at all (e.g. an island with no neighbours), there is
+        # nothing to march toward. Maintenance runs before this rather than
+        # after it: a garrison sitting on its own factory with no front to walk
+        # to is the unit with the most to gain from a repair or an upgrade, and
+        # skipping the nation here is what stopped it ever getting one.
+        if not assignments["target_destinations"]:
+            continue
+
         _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
         _rotate_damaged_units(map_screen, ai_name, battles["active_battles"])
 

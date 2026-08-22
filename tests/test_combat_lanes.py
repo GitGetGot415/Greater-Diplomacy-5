@@ -280,20 +280,28 @@ class ReserveTests(unittest.TestCase):
 
         self.assertAlmostEqual(damage_to_front(0), damage_to_front(40), places=6)
 
-    def test_a_unit_held_back_by_its_commander_stays_out_of_the_front(self):
+    def test_a_unit_held_back_by_its_commander_is_fielded_last(self):
+        """RESERVE orders the queue; it does not shorten it.
+
+        With a full rank of unheld men there is somebody to take the slot, so
+        the held one waits -- even though its attack would otherwise put it
+        first. See test_holding_back_does_not_shrink_the_width for the other
+        half of the rule.
+        """
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
         held = unit("A", attack=999)
         held["combat_stance"] = "RESERVE"
-        squad = [held, unit("A", attack=10)]
-        prov = tile(screen, {"A": squad, "B": [unit("B", attack=10)]})
+        rank = [unit("A", attack=10) for _ in range(c.LANE_SLOTS_TYPICAL)]
+        prov = tile(screen, {"A": [held] + rank,
+                             "B": [unit("B", attack=10)]})
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
         side = side_for(battle, "A")
 
-        self.assertEqual([id(u) for u in side.front], [id(squad[1])])
+        self.assertEqual({id(u) for u in side.front}, {id(u) for u in rank})
         self.assertEqual([id(u) for u in side.reserve], [id(held)])
 
 
@@ -520,12 +528,71 @@ class HeldBackTests(unittest.TestCase):
 
         held = unit("A", attack=999)
         held["combat_stance"] = "RESERVE"
-        prov = tile(screen, {"A": [held, unit("A", attack=10)],
+        prov = tile(screen, {"A": [held] + [unit("A", attack=10)
+                                            for _ in range(c.LANE_SLOTS_TYPICAL)],
                              "B": [unit("B", attack=10)]})
 
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
 
         self.assertNotIn(id(held), {id(u) for u in side_for(battle, "A").front})
+
+    def test_holding_back_does_not_shrink_the_width(self):
+        """Held men fill slots nobody else can. saves/province 907, province 1724.
+
+        Japan stood six units on that tile, five of them carrying a RESERVE
+        stance from an earlier rotation, and fielded exactly one of six slots.
+        The flag was read as a veto and _caps took its demand from what was
+        left, so the five slots Japan gave up went to nobody at all.
+        """
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        squad = [unit("A", attack=10) for _ in range(6)]
+        for u in squad[1:]:
+            u["combat_stance"] = "RESERVE"
+        prov = tile(screen, {"A": squad,
+                             "B": [unit("B", attack=10) for _ in range(6)]})
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        side = side_for(battle, "A")
+
+        self.assertEqual(len(side.front), battle.lanes[0].slots)
+        self.assertEqual(member_for(battle, "A").slots, battle.lanes[0].slots)
+
+    def test_an_ally_fills_the_width_a_two_front_member_cannot(self):
+        """A side's spare width goes to whoever still has men for it.
+
+        A fights X in one lane and Y in another; its allowance in each is
+        computed from everything it brought, so the two together promise more
+        than it owns and it arrives at the lighter lane short. B is standing
+        beside it in that lane with units to spare and an allowance already
+        met -- so the slot exists, B has the body, and nothing seated it.
+        """
+        screen = StubMapScreen()
+        for name, allies, enemies in (("A", ["B"], ["X", "Y"]),
+                                      ("B", ["A"], ["X", "Y"]),
+                                      ("X", [], ["A", "B"]),
+                                      ("Y", [], ["A", "B"])):
+            screen.add_nation(name, at_war_with=enemies)
+            screen.nation_data[name]["allied_with"] = allies
+
+        prov = tile(screen, {"A": [unit("A", attack=10) for _ in range(2)],
+                             "B": [unit("B", attack=10) for _ in range(8)],
+                             "X": [unit("X", attack=90) for _ in range(4)],
+                             "Y": [unit("Y", attack=10) for _ in range(4)]})
+
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+
+        for lane in battle.lanes:
+            for side in (lane.a, lane.b):
+                spare = any(u for m in side.members
+                            for u in m.reserve)
+                if len(side.front) < lane.slots:
+                    self.assertFalse(
+                        spare,
+                        f"{side.nations} left {lane.slots - len(side.front)} "
+                        f"slot(s) empty with men still standing")
 
     def test_a_stale_stance_is_dropped_when_the_unit_marches_away(self):
         from map_logic.turn_processing import movement_processor

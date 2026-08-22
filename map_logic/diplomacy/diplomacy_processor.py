@@ -13,7 +13,8 @@ from map_logic.diplomacy.diplomacy_messages import (
 )
 from map_logic.diplomacy.diplomacy_agreements import (
     finalize_war, finalize_neutral, finalize_disband_faction, finalize_faction_join, finalize_faction_leave,
-    join_faction_wars, finalize_faction_kick, finalize_annexation, finalize_release, finalize_take_puppets
+    join_faction_wars, finalize_faction_kick, finalize_annexation, finalize_release, finalize_take_puppets,
+    why_an_ai_may_not_leave
 )
 
 def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
@@ -183,6 +184,14 @@ def _follow_up_is_legal(map_screen, sender, target, action_type):
                     or queries.has_active_truce(sender, target, map_screen.nation_data))
     if action_type in ("JOIN_WARS", "CALL_TO_ARMS"):
         return queries.are_in_same_faction(sender, target, map_screen.nation_data)
+    if action_type == "LEAVE_FACTION":
+        # The prompt teaches the two-step defection ("leaving your faction this
+        # turn to declare war next turn"), so the follow-up channel is the
+        # likelier half of it -- and it was the unchecked one.
+        return not why_an_ai_may_not_leave(sender, map_screen.nation_data)
+    if action_type == "JOIN_FACTION_REQ":
+        return (not map_screen.nation_data.get(sender, {}).get("faction", "")
+                and not queries.are_at_war(sender, target, map_screen.nation_data))
     return True
 
 
@@ -571,6 +580,14 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         follow_up = "NONE"
         reply_dict["follow_up_action"] = "NONE"
 
+    # A move a nation makes about itself is rate-limited against itself.
+    # get_valid_target falls back to whoever the AI was answering, so keying the
+    # cooldown on `act_target` made LEAVE_FACTION's limit per-interlocutor: a
+    # nation blocked from leaving after talking to one neighbour could leave the
+    # next turn by answering a different one, which is no limit at all.
+    if ai_action in c.SELF_TARGETED_ACTIONS:
+        act_target = country_name
+
     # Check cooldown and truces
     if ai_action != "NONE":
         if queries.is_ai_diplo_on_cooldown(country_name, act_target, ai_action, map_screen.nation_data):
@@ -640,7 +657,14 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
                     if queries.has_active_truce(country_name, enemy, map_screen.nation_data): continue
                     delayed_responses.append((country_name, enemy, "WAR_DECLARATION", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "We have declared WAR upon you!")))
     elif ai_action == "LEAVE_FACTION":
-        delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))
+        # Vetted like every other move in this chain, which this one alone was
+        # not. See why_an_ai_may_not_leave for the rules and for
+        # what an unvetted LEAVE_FACTION did to the Allies.
+        blocked = why_an_ai_may_not_leave(country_name, map_screen.nation_data)
+        if blocked:
+            print(f"[AI GUARDRAIL] Aborting LEAVE_FACTION: {country_name} may not leave -- {blocked}.")
+        else:
+            delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))
     elif ai_action == "JOIN_FACTION_REQ":
         if not map_screen.nation_data[country_name].get("faction", ""):
             delayed_responses.append((country_name, act_target, "JOIN_FACTION_REQ", 0, worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction.")))

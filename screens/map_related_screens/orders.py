@@ -780,7 +780,7 @@ class Orders_Screen(GameState):
             if not target_units: return
 
             if any(isinstance(u.get("order"), dict) and u["order"].get("type") in c.ORDERS_BLOCKING_MOVEMENT for u in target_units):
-                self.map_screen.show_feedback("Cannot move while converting, disbanding, repairing, or bombarding!")
+                self.map_screen.show_feedback("Cannot move while converting, disbanding, repairing, upgrading, or bombarding!")
                 return
             
             for unit in target_units:
