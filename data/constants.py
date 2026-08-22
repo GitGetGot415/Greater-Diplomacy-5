@@ -246,6 +246,12 @@ DEFAULT_DISABLE_FACTIONS = False
 DISABLE_CORES = False
 DEFAULT_DISABLE_CORES = False
 
+# --- REPAIRS ---
+# Whether repairing a damaged unit costs nothing at all. Off makes repair cost
+# materials/manpower/fuel proportional to missing health -- see
+# screens.map_related_screens.orders.Orders_Screen.repair_unit.
+DEFAULT_FREE_REPAIRS = True
+
 # ==========================================
 # DEFAULTS & ASSETS
 # ==========================================

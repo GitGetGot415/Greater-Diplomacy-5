@@ -452,16 +452,19 @@ class Orders_Screen(GameState):
         u_type = unit.get("original_type", unit.get("type", ""))
         stats = self.unit_library.get(u_type, {})
 
-        hp = unit.get("health", 0)
-        m_hp = unit.get("max_health", 1)
+        if queries.get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS, self.map_screen.scenario_settings):
+            costs = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+        else:
+            hp = unit.get("health", 0)
+            m_hp = unit.get("max_health", 1)
 
-        missing_pct = (m_hp - hp) / max(1, m_hp)
+            missing_pct = (m_hp - hp) / max(1, m_hp)
 
-        cost_mat = int(stats.get("cost_materials", 0) * missing_pct)
-        cost_man = int(stats.get("cost_manpower", 0) * missing_pct)
-        cost_fuel = int(stats.get("cost_fuel", 0) * missing_pct)
+            cost_mat = int(stats.get("cost_materials", 0) * missing_pct)
+            cost_man = int(stats.get("cost_manpower", 0) * missing_pct)
+            cost_fuel = int(stats.get("cost_fuel", 0) * missing_pct)
 
-        costs = {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
+            costs = {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
         
         is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
         if is_tactical:

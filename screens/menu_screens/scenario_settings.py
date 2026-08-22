@@ -45,10 +45,10 @@ SLIDER_WIDTH = 180
 SLIDER_Y_OFFSET = 8
 
 # --- Footer actions, centred under both columns ---
-DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 7 * ROW_H
-DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
-RESET_ROW_Y = 562
-TURN_EDITOR_ROW_Y = 622
+DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
+DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
+RESET_ROW_Y = 608
+TURN_EDITOR_ROW_Y = 668
 
 # ==========================================
 # TOGGLES
@@ -63,6 +63,9 @@ TOGGLE_ROWS = [
      "beside it to set how strong the effect is: Lite, Normal, or Extreme."),
     ("casus_belli_required", c.DEFAULT_CASUS_BELLI, "Casus Belli Required",
      "Requires a valid justification (casus belli) before a country can declare war on another."),
+    ("free_repairs", c.DEFAULT_FREE_REPAIRS, "Free Repairs",
+     "Repairing a damaged unit costs nothing. Turn this off to make repair cost "
+     "materials, manpower, and fuel proportional to how much health is missing."),
     ("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack",
      "Lets armies attack on the same turn as a war declaration instead of making them wait until the other size receives it, catching the enemy by surprise."),
     ("disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions",
