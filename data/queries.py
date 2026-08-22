@@ -249,6 +249,7 @@ GLOBAL_SCENARIO_FLAGS = {
 # Same idea for numeric scenario settings: {setting key: (constant, default, cast)}.
 GLOBAL_SCENARIO_VALUES = {
     "damage_at_zero_health": ("DAMAGE_AT_ZERO_HEALTH", c.DAMAGE_AT_ZERO_HEALTH, float),
+    "defense_at_zero_health": ("DEFENSE_AT_ZERO_HEALTH", c.DEFENSE_AT_ZERO_HEALTH, float),
 }
 
 

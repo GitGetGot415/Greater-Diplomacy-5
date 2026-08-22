@@ -23,7 +23,7 @@ def apply_group_damage(total_atk, target_units):
     damage_per_unit = total_atk / len(target_units)
     
     for u in target_units:
-        defense = u.get("defense", 0)
+        defense = u.get("defense", 0) * combat_rules.health_defense_multiplier(u)
         actual_dmg = max(0, damage_per_unit - defense)
         
         if actual_dmg > 0:
@@ -176,7 +176,8 @@ def process_pinning(map_screen):
         # genuinely cannot all be shot down in one exchange, so the early
         # resolution below simply stops applying to charges that big.
         attackers_survive = any(
-            max(0, incoming_on_charge.get(id(a_unit), 0.0) - a_unit.get("defense", 0))
+            max(0, incoming_on_charge.get(id(a_unit), 0.0)
+                - a_unit.get("defense", 0) * combat_rules.health_defense_multiplier(a_unit))
             < a_unit.get("health", 1)
             for a_unit in attacker_units_only)
 

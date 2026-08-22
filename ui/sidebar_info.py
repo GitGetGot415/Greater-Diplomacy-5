@@ -225,9 +225,10 @@ def draw_sidebar_info(map_screen, surface):
 
                     # Condensed, icon-based combat stats, matching the garrison list
                     dmg_mult = combat_rules.health_damage_multiplier(u)
+                    def_mult = combat_rules.health_defense_multiplier(u)
                     draw_combat_stats(
                         surface, map_screen.small_font, "",
-                        u.get("attack", 0) * dmg_mult, u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                        u.get("attack", 0) * dmg_mult, u.get("defense", 0) * def_mult, int(u.get("health", 0)), u.get("speed", 0),
                         row_x, current_y, (200, 200, 200), labeled=False
                     )
 

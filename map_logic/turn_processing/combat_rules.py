@@ -635,6 +635,21 @@ def health_damage_multiplier(unit):
     return floor + (1.0 - floor) * frac
 
 
+def health_defense_multiplier(unit):
+    """How much of a unit's defense still blocks incoming damage, scaled by how hurt it is.
+
+    Mirrors health_damage_multiplier: 1.0 at full health, c.DEFENSE_AT_ZERO_HEALTH
+    at 0 health, linear between. c.DEFENSE_AT_ZERO_HEALTH = 1 disables this
+    entirely (defense always holds at full value). The constant is a live
+    mirror of the scenario's "defense_at_zero_health" setting -- see
+    queries.apply_global_scenario_flags.
+    """
+    max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
+    frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
+    floor = c.DEFENSE_AT_ZERO_HEALTH
+    return floor + (1.0 - floor) * frac
+
+
 def volley(units, shares=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 

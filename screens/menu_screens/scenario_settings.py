@@ -47,8 +47,9 @@ SLIDER_Y_OFFSET = 8
 # --- Footer actions, centred under both columns ---
 DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
 DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
-RESET_ROW_Y = 608
-TURN_EDITOR_ROW_Y = 668
+DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 10 * ROW_H
+RESET_ROW_Y = 615
+TURN_EDITOR_ROW_Y = 675
 
 # ==========================================
 # TOGGLES
@@ -86,9 +87,16 @@ DAYS_PER_TURN_TOOLTIP = "Sets how many in-game days pass with each turn you take
 
 DAMAGE_FLOOR_TOOLTIP = (
     "How much damage a unit still deals at 0% health, as a share of its full "
-    "attack. A wounded unit's damage scales down linearly between this floor "
-    "and 100% as its health drops. 0% means a dying unit deals no damage at "
-    "all; 100% means health has no effect on damage.")
+    "attack, in melee combat and bombardment alike. A wounded unit's damage "
+    "scales down linearly between this floor and 100% as its health drops. "
+    "0% means a dying unit deals no damage at all; 100% means health has no "
+    "effect on damage.")
+
+DEFENSE_FLOOR_TOOLTIP = (
+    "How much defense a unit still offers at 0% health, as a share of its "
+    "full defense. A wounded unit's defense scales down linearly between "
+    "this floor and 100% as its health drops. 0% means a dying unit blocks "
+    "no damage at all; 100% means health has no effect on defense.")
 
 # Slider stops for fog_of_war_strength, as (saved value, slider position).
 FOG_STRENGTH_STEPS = [("lite", 0.0), ("normal", 1.0), ("extreme", 2.0)]
@@ -127,6 +135,7 @@ class Scenario_Settings(GameState):
         defaults["turns_to_wait_before_war"] = c.TURNS_TO_WAIT_BEFORE_WAR
         defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
         defaults["damage_at_zero_health"] = c.DAMAGE_AT_ZERO_HEALTH
+        defaults["defense_at_zero_health"] = c.DEFENSE_AT_ZERO_HEALTH
         return defaults
 
     def info_button(self, x, y, tooltip_title, tooltip_text):
@@ -157,6 +166,9 @@ class Scenario_Settings(GameState):
 
         self.elements.append(self.info_button(LEFT_INFO_X, DAMAGE_FLOOR_ROW_Y, "Wounded Damage Floor", DAMAGE_FLOOR_TOOLTIP))
         self.elements.append(self.build_damage_floor_slider())
+
+        self.elements.append(self.info_button(LEFT_INFO_X, DEFENSE_FLOOR_ROW_Y, "Wounded Defense Floor", DEFENSE_FLOOR_TOOLTIP))
+        self.elements.append(self.build_defense_floor_slider())
 
         self.elements.extend(self.build_ai_section())
 
@@ -238,6 +250,12 @@ class Scenario_Settings(GameState):
             LEFT_BTN_X, DAMAGE_FLOOR_ROW_Y, "damage_floor_slider", "damage_at_zero_health",
             c.DAMAGE_AT_ZERO_HEALTH, 1.0,
             lambda v: f"Damage at 0% HP: {v * 100:.0f}%", float)
+
+    def build_defense_floor_slider(self):
+        return self.build_value_slider(
+            LEFT_BTN_X, DEFENSE_FLOOR_ROW_Y, "defense_floor_slider", "defense_at_zero_health",
+            c.DEFENSE_AT_ZERO_HEALTH, 1.0,
+            lambda v: f"Defense at 0% HP: {v * 100:.0f}%", float)
 
     def toggle(self, key, default):
         queries.toggle_scenario_flag(self.settings, key, default)

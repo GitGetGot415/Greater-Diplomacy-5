@@ -20,6 +20,8 @@ hanskolmer suggestions:
 - if multiple units are on a tile, controlled by multiple countries, fighting on the same side, then whatever
 country has the highest combat width level researched, that's the increase that will be implemented
 
+- combat width depends on number of connecting tiles (hey wait a minute)
+
 - ADD REAL FLAGS SUGGESTED BY KAISERIN
 
 - puppets should take territory that has their cores...

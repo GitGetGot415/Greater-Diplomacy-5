@@ -971,6 +971,15 @@ COMBAT_WIDTH = 24
 # queries.apply_global_scenario_flags.
 DAMAGE_AT_ZERO_HEALTH = 0.0
 
+# Same idea as DAMAGE_AT_ZERO_HEALTH, but for the defense a wounded unit still
+# offers -- see combat_rules.health_defense_multiplier. 0 means a unit at 0%
+# health blocks nothing; 1 means health has no effect on defense.
+#
+# Player-editable in scenario settings as "defense_at_zero_health"; this is
+# only the value a reset scenario falls back to, mirrored onto this constant
+# by queries.apply_global_scenario_flags.
+DEFENSE_AT_ZERO_HEALTH = 0.0
+
 # Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
 # of the fight by a fifty-unit one. When lanes * 2 * this exceeds COMBAT_WIDTH
 # the floor wins and the tile fields more than COMBAT_WIDTH -- at 12/2 that
