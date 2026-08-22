@@ -389,14 +389,17 @@ class Battle_Screen(ModalScreen):
                 name_surf = small.render(name, True,
                                          c.UI_TEXT_MUTED if dim else c.UI_TEXT_LIGHT)
                 surface.blit(name_surf, (x, rect.y + 2))
+                hp_surf = small.render(queries.format_health_percent(unit), True, c.UI_TEXT_MUTED)
+                surface.blit(hp_surf, (x + name_surf.get_width() + 4, rect.y + 2))
 
                 if note:
                     note_surf = small.render(note, True, c.UI_TEXT_LIGHT)
                     surface.blit(note_surf, (rect.right - 8 - note_surf.get_width(), rect.y + 2))
 
                 stat_y = rect.y + 2 + small.get_height() + 2
+                dmg_mult = combat_rules.health_damage_multiplier(unit)
                 end_x = draw_combat_stats(
-                    surface, small, "", unit.get("attack", 0), unit.get("defense", 0),
+                    surface, small, "", unit.get("attack", 0) * dmg_mult, unit.get("defense", 0),
                     int(unit.get("health", 0)), unit.get("speed", 0),
                     rect.x + 10, stat_y, (200, 200, 200), labeled=False)
 
@@ -404,7 +407,7 @@ class Battle_Screen(ModalScreen):
                 if "bombard_attack" in stats:
                     draw_bombardment_stats(
                         surface, small,
-                        unit.get("bombard_attack", stats.get("bombard_attack", 0)),
+                        unit.get("bombard_attack", stats.get("bombard_attack", 0)) * dmg_mult,
                         unit.get("bombard_range", stats.get("bombard_range", 0)),
                         end_x, stat_y, (200, 200, 200), base_text="", labeled=False)
         return paint

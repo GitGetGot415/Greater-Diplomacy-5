@@ -80,7 +80,8 @@ def process_bombardments(map_screen):
             # isn't capped by combat width, since each shot was ordered by hand.
             # "bombard_attack" is a separate stat from melee "attack" (falls
             # back to attack for any family that doesn't define it).
-            total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK)) for u in guns)
+            total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK))
+                            * combat_rules.health_damage_multiplier(u) for u in guns)
             apply_group_damage(total_atk, targets)
 
             for u in targets:

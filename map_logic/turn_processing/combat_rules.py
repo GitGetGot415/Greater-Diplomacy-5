@@ -549,6 +549,19 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None):
                   shares)
 
 
+def health_damage_multiplier(unit):
+    """How much of a unit's attack lands, scaled by how hurt it is.
+
+    1.0 at full health, c.DAMAGE_AT_ZERO_HEALTH at 0 health, linear between --
+    a wounded unit still fights, just weaker. c.DAMAGE_AT_ZERO_HEALTH = 1
+    disables this entirely (every unit always deals full damage).
+    """
+    max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
+    frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
+    floor = c.DAMAGE_AT_ZERO_HEALTH
+    return floor + (1.0 - floor) * frac
+
+
 def volley(units, shares=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 
@@ -556,6 +569,7 @@ def volley(units, shares=None):
     front alone, which is what a caller measuring a hypothetical rank wants.
     """
     return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
+               * health_damage_multiplier(u)
                for u in units)
 
 

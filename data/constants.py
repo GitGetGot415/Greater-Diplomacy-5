@@ -948,6 +948,13 @@ MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 # tile fired five times twelve.
 COMBAT_WIDTH = 12
 
+# What a unit at 0% health still deals, as a fraction of its full attack. Damage
+# scales linearly between this floor (at 0% health) and 1.0 (at 100% health) --
+# see combat_rules.health_damage_multiplier. 0 means a dying unit deals no
+# damage at all; 1 means health has no effect on damage, as if this mechanic
+# did not exist.
+DAMAGE_AT_ZERO_HEALTH = 0.5
+
 # Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
 # of the fight by a fifty-unit one. When lanes * 2 * this exceeds COMBAT_WIDTH
 # the floor wins and the tile fields more than COMBAT_WIDTH -- at 12/2 that

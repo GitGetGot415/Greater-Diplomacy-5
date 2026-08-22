@@ -216,12 +216,18 @@ def draw_sidebar_info(map_screen, surface):
                     name_color = c.UI_TEXT_LIGHT if in_front else c.UI_TEXT_MUTED
                     name_surf = map_screen.small_font.render(f"- {u_name}", True, name_color)
                     surface.blit(name_surf, (row_x, current_y))
-                    row_x += name_surf.get_width() + 6
+                    row_x += name_surf.get_width() + 4
+
+                    hp_surf = map_screen.small_font.render(
+                        queries.format_health_percent(u), True, c.UI_TEXT_MUTED)
+                    surface.blit(hp_surf, (row_x, current_y))
+                    row_x += hp_surf.get_width() + 6
 
                     # Condensed, icon-based combat stats, matching the garrison list
+                    dmg_mult = combat_rules.health_damage_multiplier(u)
                     draw_combat_stats(
                         surface, map_screen.small_font, "",
-                        u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                        u.get("attack", 0) * dmg_mult, u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
                         row_x, current_y, (200, 200, 200), labeled=False
                     )
 
@@ -231,7 +237,7 @@ def draw_sidebar_info(map_screen, surface):
                     if has_bombard:
                         draw_bombardment_stats(
                             surface, map_screen.small_font,
-                            u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
+                            u.get("bombard_attack", unit_stats.get('bombard_attack', 0)) * dmg_mult,
                             u.get("bombard_range", unit_stats.get('bombard_range', 0)),
                             text_x + 20, current_y, (200, 200, 200), base_text="", labeled=False
                         )
@@ -280,15 +286,21 @@ def draw_sidebar_info(map_screen, surface):
                 surface.blit(name_surf, (row_x, current_y))
                 row_x += name_surf.get_width() + 4
 
+                hp_surf = map_screen.small_font.render(
+                    queries.format_health_percent(u), True, c.UI_TEXT_MUTED)
+                surface.blit(hp_surf, (row_x, current_y))
+                row_x += hp_surf.get_width() + 4
+
                 # Owner flag instead of a country name string
                 row_x = flag_icons.draw_flag_centered(
                     surface, u_owner_id, map_screen.nation_data, row_x, current_y,
                     name_surf.get_height())
 
                 # Condensed, icon-based combat stats, matching the production tab's style
+                dmg_mult = combat_rules.health_damage_multiplier(u)
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
-                    u.get("attack", 0), u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                    u.get("attack", 0) * dmg_mult, u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
                     row_x, current_y, (200, 200, 200), labeled=False
                 )
 
@@ -299,7 +311,7 @@ def draw_sidebar_info(map_screen, surface):
                 if 'bombard_attack' in unit_stats:
                     draw_bombardment_stats(
                         surface, map_screen.small_font,
-                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)),
+                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)) * dmg_mult,
                         u.get("bombard_range", unit_stats.get('bombard_range', 0)),
                         text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
                     )

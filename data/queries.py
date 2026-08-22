@@ -1282,6 +1282,14 @@ def calculate_unit_strength(unit):
     """Unified heuristic for a unit's military power."""
     return unit.get("attack", 0) + unit.get("defense", 0) + (unit.get("health", 0) / c.MILITARY_STRENGTH_HEALTH_DIVISOR)
 
+def format_health_percent(unit):
+    """Current health as a rounded percent of max, e.g. '(50%)' -- shown beside
+    a unit's name so its reduced damage output (see combat_rules.
+    health_damage_multiplier) has a visible cause."""
+    max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
+    pct = max(0, round(unit.get("health", 0) / max_hp * 100))
+    return f"({pct}%)"
+
 def get_top_attackers(units, count=None):
     """The highest-attack units in a list, capped at a typical lane's front rank.
 
