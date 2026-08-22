@@ -135,7 +135,21 @@ def _load_variant(style, style_dir, name_key, entry, cultures=None):
         print(f"Warning: {style} unit art '{name_key}' -> '{filename}' not found in {style_dir}")
         return None
 
-    surface = pygame.image.load(img_path).convert_alpha()
+    try:
+        surface = pygame.image.load(img_path).convert_alpha()
+    except pygame.error as e:
+        # Same posture as the missing-file branch above: one art file the
+        # running platform can't decode shouldn't take the entire game down.
+        # Which formats load is platform-dependent, so this is not a
+        # theoretical guard -- desktop SDL_image reads WebP while the
+        # pygbag/WASM build does not, so a file that opens fine on the dev's
+        # machine can still be fatal in the browser build (that exact case,
+        # WebP saved as .png under assets/hanskolmer/, crashed the web build
+        # on startup). Mods can also ship arbitrary art.
+        print(f"Warning: {style} unit art '{name_key}' -> '{filename}' "
+              f"could not be loaded ({e}); skipping")
+        return None
+
     return {"countries": frozenset(countries) if countries else None,
             "surface": surface,
             "filename": filename}

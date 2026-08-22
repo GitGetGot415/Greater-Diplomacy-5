@@ -793,9 +793,28 @@ if __name__ == "__main__":
         # and referencing it here would mask the real exception with a
         # NameError.
         if sys.platform == "emscripten":
-            # ~/GD5_crash.log isn't reachable from a browser sandbox; the
-            # browser devtools console is where a web player can see this.
+            # ~/GD5_crash.log isn't reachable from a browser sandbox, so the
+            # traceback has to find the player some other way -- and
+            # print_exc() alone does NOT do it. Under pygbag stderr only
+            # reaches its own in-page xterm overlay, which web_index.tmpl
+            # hides on every non-#debug load (custom_onload's
+            # `pyconsole.hidden = debug_hidden`), so a startup crash renders
+            # as a black canvas with an empty devtools console and no other
+            # clue. Confirmed the hard way by a WebP-mislabelled-as-.png file
+            # in assets/hanskolmer/ that killed symbol_loader on web only:
+            # nothing surfaced anywhere until that hidden terminal was
+            # scraped by hand. Mirror it to window.console.error -- the same
+            # route, for the same reason, as mod_loader._log().
             traceback.print_exc()
+            try:
+                import platform  # stdlib `platform`, patched by pygbag with `.window`
+                platform.window.console.error(
+                    "[gd5] fatal error during startup:\n" + traceback.format_exc()
+                )
+            except Exception:
+                # A logging failure must never be what replaces the real
+                # traceback, same guard mod_loader puts around its own.
+                pass
         else:
             _write_crash_log()
             raise
