@@ -52,6 +52,16 @@ GROUP_ACCENT = {
     "Navy": (60, 170, 160),
 }
 
+# --- Level-display toggle: top-right corner of the gallery pane, picking how
+# a cell's tier/era label reads (see _level_label). ---
+LEVEL_DISPLAY_MODES = ("default", "years", "numbers")
+LEVEL_DISPLAY_LABELS = {"default": "Default", "years": "Years", "numbers": "Numbers"}
+LEVEL_TOGGLE_Y = 50
+LEVEL_TOGGLE_H = 30
+LEVEL_TOGGLE_GAP_X = 8
+LEVEL_TOGGLE_PAD_X = 12
+LEVEL_TOGGLE_FONT = "small"
+
 
 def _merge_label(first, last):
     """first and last are the endpoints of a run of unit names that all
@@ -78,7 +88,68 @@ def _family_display_name(base):
     return base[:-len(suffix)] if base.endswith(suffix) else base
 
 
-def build_gallery_rows(style, country=None):
+def _family_kind(base, first_name):
+    """Whether a family's tiers are suffixed with a roman numeral ('Light
+    Tank I'), a calendar year ('Infantry Type 1910'), or nothing at all (a
+    single-tier family like 'Railgun') -- drives how "years"/"numbers"
+    display mode reads a tier's level in _level_label. `first_name` is any
+    member of the family (its own suffix shape is the same for all of
+    them)."""
+    suffix = first_name[len(base):].strip()
+    if not suffix:
+        return "single"
+    if suffix.isdigit() and len(suffix) == 4:
+        return "year"
+    if all(ch in "IVXLCDM" for ch in suffix.upper()):
+        return "roman"
+    return "other"
+
+
+def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default_label):
+    """The text shown above a cell's icon, per the level-display mode the
+    player picked on the Unit Art screen (Unit_Art.set_level_display):
+
+    - "default": whatever the art boundaries already produced (default_label
+      -- unchanged).
+    - "numbers": the cell's 1-based position among the family's own tiers,
+      e.g. Light Tank's 10th tier ('Light Tank X') reads '10' and Infantry's
+      1st ('Infantry Type 1910') reads '1' -- the same rule whether the tier
+      happens to be roman-numeral- or year-suffixed, since both are already
+      in tier order in `idx_by_name`.
+    - "years": the calendar years this tier is the current one -- from its
+      own research year (data/json/research_template.json) up to just
+      before the next tier's research year, open-ended ('1918+') for a
+      family's final tier. A "year"-kind family already shows this under
+      "default" (its own name suffix IS the year), so this mode leaves those
+      untouched. Falls back to default_label wherever there's no usable data
+      -- an unrecognised suffix shape, or a family with no matching entry in
+      the tech tree (e.g. Heavy Artillery, which has no research years of
+      its own).
+    """
+    if mode == "default" or kind == "other":
+        return default_label
+
+    if mode == "numbers":
+        i1, i2 = idx_by_name[first], idx_by_name[last]
+        return str(i1) if i1 == i2 else f"{i1}-{i2}"
+
+    # mode == "years"
+    if kind == "year":
+        return default_label  # the name's own suffix already is the year
+    if not years_list:
+        return default_label  # no research_template.json entry for this family
+
+    lvl1 = 1 if kind == "single" else queries.roman_to_int(first[len(base):].strip())
+    lvl2 = 1 if kind == "single" else queries.roman_to_int(last[len(base):].strip())
+    if lvl1 < 1 or lvl1 > len(years_list):
+        return default_label
+
+    start_year = years_list[lvl1 - 1]
+    end_year = years_list[lvl2] - 1 if lvl2 < len(years_list) else None
+    return f"{start_year}-{end_year}" if end_year is not None else f"{start_year}+"
+
+
+def build_gallery_rows(style, country=None, level_display="default"):
     """One row per unit family, each holding every distinct piece of art
     `style` would actually show `country` for that family (falling back to
     classic per the same rule symbol_loader.get_symbol uses -- and within a
@@ -108,6 +179,9 @@ def build_gallery_rows(style, country=None):
     everything, since there classic *is* the style being browsed. A family
     with nothing surviving loses its header too, so switching to a country
     with one specialised unit shows just that unit, not every empty section.
+
+    `level_display` ("default"/"years"/"numbers") picks what each cell's
+    label reads as -- see _level_label for exactly what each mode shows.
     """
     unit_library = queries.get_unit_library()
 
@@ -124,6 +198,13 @@ def build_gallery_rows(style, country=None):
         group = family_group[base]
         resolved = [symbol_loader.resolve(n, style, country) for n in names]
 
+        kind = _family_kind(base, names[0])
+        years_list = None
+        if level_display == "years" and kind in ("single", "roman"):
+            tech_key = queries.get_unit_tech_key(base)
+            years_list = queries.get_tech_tree().get(tech_key, {}).get("years")
+        idx_by_name = {name: i + 1 for i, name in enumerate(names)} if level_display == "numbers" else None
+
         cells = []
         prefix = base + " "
         for res_key, run in itertools.groupby(zip(names, resolved), key=lambda t: t[1]):
@@ -134,7 +215,9 @@ def build_gallery_rows(style, country=None):
             full_label = _merge_label(first, last)
             # The family name is already shown once on the row, on the left --
             # a cell only needs the part that actually varies (a tier, an era).
-            sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
+            default_sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
+            sublabel = _level_label(level_display, base, kind, years_list, idx_by_name,
+                                    first, last, default_sublabel)
             cells.append({"label": sublabel, "resolve_name": first})
 
         if not cells:
@@ -168,6 +251,7 @@ class Unit_Art(GameState):
                               # symbol_loader.culture_representative)
         self.available_cultures = []
         self.tab_labels = {None: GENERIC_TAB_LABEL}  # self.country value -> the tab label it was picked under
+        self.level_display = "default"  # see LEVEL_DISPLAY_MODES / _level_label
         self.rows = []
         self._visible_rows = []
         self.gallery_top = TABS_TOP
@@ -201,13 +285,25 @@ class Unit_Art(GameState):
         self.scroll_y = 0
         self.refresh_ui()
 
+    def set_level_display(self, mode):
+        if mode == self.level_display:
+            return
+        self.level_display = mode
+        # Unlike switching style/country (which can change which families and
+        # cells even exist), this only changes label text -- same rows, same
+        # cells, just possibly wrapped differently -- so keep the player's
+        # scroll position instead of jumping back to the top. refresh_ui's
+        # own scroll clamp handles the rare case where the new labels' wrap
+        # shrank the content past where the old scroll position pointed.
+        self.refresh_ui()
+
     # ------------------------------------------------------------------ #
     #                                UI                                  #
     # ------------------------------------------------------------------ #
 
     def refresh_ui(self):
         self.available_cultures = symbol_loader.style_cultures(self.style)
-        self.rows = build_gallery_rows(self.style, self.country)
+        self.rows = build_gallery_rows(self.style, self.country, self.level_display)
 
         # Width of the left-hand family-name column, sized to whatever's
         # actually on screen right now rather than a guessed constant -- a
@@ -233,6 +329,7 @@ class Unit_Art(GameState):
             y += 60
 
         self.elements.extend(self._build_country_tabs())
+        self.elements.extend(self._build_level_display_toggle())
 
         self.scroll_content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
                                                GALLERY_BOTTOM - self.gallery_top)
@@ -272,6 +369,11 @@ class Unit_Art(GameState):
         view_h = GALLERY_BOTTOM - self.gallery_top
         total_h = sum(height for _row, _lines, height in laid_out)
         self.max_scroll = min(0, view_h - total_h)
+        # A mode switch keeps whatever scroll position the player was at (see
+        # set_level_display), but its wrapping can shrink the content below
+        # that point -- clamp back within range instead of leaving a gap of
+        # blank space or an out-of-bounds scrollbar handle.
+        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
 
         visible = []
         y = self.gallery_top + self.scroll_y
@@ -346,6 +448,31 @@ class Unit_Art(GameState):
             x += w + TAB_GAP_X
 
         self.gallery_top = y + TAB_H + GALLERY_TOP_MARGIN
+        return buttons
+
+    def _build_level_display_toggle(self):
+        """The Default/Years/Numbers toggle in the gallery pane's top-right
+        corner, controlling how every cell's tier/era label reads (see
+        _level_label) independently of the style/country filters above.
+        Laid out right-to-left from the pane's right edge so it always sits
+        flush in the corner regardless of how wide "Numbers" vs "Default"
+        render.
+        """
+        font = fonts.get(LEVEL_TOGGLE_FONT)
+        buttons = []
+        x = c.SCREEN_WIDTH - 30
+        for mode in reversed(LEVEL_DISPLAY_MODES):
+            label = LEVEL_DISPLAY_LABELS[mode]
+            w = font.size(label)[0] + LEVEL_TOGGLE_PAD_X * 2
+            x -= w
+
+            btn = Button(x, LEVEL_TOGGLE_Y, "asset_folder", "green" if mode == self.level_display else "grey",
+                        label, lambda m=mode: self.set_level_display(m), font_preset=LEVEL_TOGGLE_FONT)
+            btn.rect.width = w
+            btn.rect.height = LEVEL_TOGGLE_H
+            btn.is_selected = (mode == self.level_display)
+            buttons.append(btn)
+            x -= LEVEL_TOGGLE_GAP_X
         return buttons
 
     def additional_events(self, event):
