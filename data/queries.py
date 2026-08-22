@@ -246,15 +246,28 @@ GLOBAL_SCENARIO_FLAGS = {
     "disable_cores": ("DISABLE_CORES", c.DEFAULT_DISABLE_CORES),
 }
 
+# Same idea for numeric scenario settings: {setting key: (constant, default, cast)}.
+GLOBAL_SCENARIO_VALUES = {
+    "damage_at_zero_health": ("DAMAGE_AT_ZERO_HEALTH", c.DAMAGE_AT_ZERO_HEALTH, float),
+}
+
 
 def apply_global_scenario_flags(scenario_settings):
-    """Pushes the scenario's on/off rules onto their live constants.
+    """Pushes the scenario's rules onto their live constants.
 
     Called on map load and again whenever a save overrides the session settings;
-    keeping the flag list in one table is what stops the two paths drifting apart.
+    keeping the flag/value lists in one table each is what stops the two paths
+    drifting apart.
     """
     for flag_name, (const_name, default) in GLOBAL_SCENARIO_FLAGS.items():
         setattr(c, const_name, get_scenario_flag(flag_name, default, scenario_settings))
+
+    for key, (const_name, default, cast) in GLOBAL_SCENARIO_VALUES.items():
+        raw = (scenario_settings or {}).get(key, default)
+        try:
+            setattr(c, const_name, cast(raw))
+        except (TypeError, ValueError):
+            setattr(c, const_name, default)
 
 
 def toggle_scenario_flag(scenario_settings, flag_name, default=False):

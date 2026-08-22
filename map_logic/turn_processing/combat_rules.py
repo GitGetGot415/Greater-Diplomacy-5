@@ -554,7 +554,10 @@ def health_damage_multiplier(unit):
 
     1.0 at full health, c.DAMAGE_AT_ZERO_HEALTH at 0 health, linear between --
     a wounded unit still fights, just weaker. c.DAMAGE_AT_ZERO_HEALTH = 1
-    disables this entirely (every unit always deals full damage).
+    disables this entirely (every unit always deals full damage). The constant
+    is a live mirror of the scenario's "damage_at_zero_health" setting -- see
+    queries.apply_global_scenario_flags -- so a slider change takes effect
+    without threading a settings dict through every combat call.
     """
     max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))

@@ -42,12 +42,13 @@ AI_PANEL_RECT = pygame.Rect(AI_INFO_X - 20, AI_PANEL_TOP,
                             AI_PANEL_BOTTOM - AI_PANEL_TOP)
 
 SLIDER_WIDTH = 180
-AI_SLIDER_Y_OFFSET = 8
+SLIDER_Y_OFFSET = 8
 
 # --- Footer actions, centred under both columns ---
 DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 7 * ROW_H
-RESET_ROW_Y = 516
-TURN_EDITOR_ROW_Y = 576
+DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
+RESET_ROW_Y = 562
+TURN_EDITOR_ROW_Y = 622
 
 # ==========================================
 # TOGGLES
@@ -79,6 +80,12 @@ TOGGLE_ROWS = [
 ]
 
 DAYS_PER_TURN_TOOLTIP = "Sets how many in-game days pass with each turn you take."
+
+DAMAGE_FLOOR_TOOLTIP = (
+    "How much damage a unit still deals at 0% health, as a share of its full "
+    "attack. A wounded unit's damage scales down linearly between this floor "
+    "and 100% as its health drops. 0% means a dying unit deals no damage at "
+    "all; 100% means health has no effect on damage.")
 
 # Slider stops for fog_of_war_strength, as (saved value, slider position).
 FOG_STRENGTH_STEPS = [("lite", 0.0), ("normal", 1.0), ("extreme", 2.0)]
@@ -116,6 +123,7 @@ class Scenario_Settings(GameState):
         defaults["ai_disabled"] = c.DEFAULT_AI_DISABLED
         defaults["turns_to_wait_before_war"] = c.TURNS_TO_WAIT_BEFORE_WAR
         defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
+        defaults["damage_at_zero_health"] = c.DAMAGE_AT_ZERO_HEALTH
         return defaults
 
     def info_button(self, x, y, tooltip_title, tooltip_text):
@@ -143,6 +151,9 @@ class Scenario_Settings(GameState):
             Button(LEFT_BTN_X, DAYS_PER_TURN_ROW_Y, "scenario_setting_button", "blue",
                    f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn, font_preset="button_small")
         )
+
+        self.elements.append(self.info_button(LEFT_INFO_X, DAMAGE_FLOOR_ROW_Y, "Wounded Damage Floor", DAMAGE_FLOOR_TOOLTIP))
+        self.elements.append(self.build_damage_floor_slider())
 
         self.elements.extend(self.build_ai_section())
 
@@ -197,7 +208,12 @@ class Scenario_Settings(GameState):
         ]
         return elements
 
-    def build_ai_slider(self, attr, y, key, default, max_value, label_for, cast):
+    def build_value_slider(self, x, y, attr, key, default, max_value, label_for, cast):
+        """A slider bound straight to a numeric scenario setting.
+
+        Shared by the AI sliders and any other numeric rule (e.g. the wounded
+        damage floor) so they save and relabel themselves the same way.
+        """
         value = float(self.settings.get(key, default))
 
         def on_slide(val):
@@ -205,11 +221,20 @@ class Scenario_Settings(GameState):
             getattr(self, attr).text = label_for(val)
             queries.save_scenario_settings(self.settings)
 
-        slider = Slider(AI_BTN_X, y + AI_SLIDER_Y_OFFSET, SLIDER_WIDTH,
+        slider = Slider(x, y + SLIDER_Y_OFFSET, SLIDER_WIDTH,
                         label_for(value), value, on_slide,
                         visual_max=max_value, allowed_max=max_value)
         setattr(self, attr, slider)
         return slider
+
+    def build_ai_slider(self, attr, y, key, default, max_value, label_for, cast):
+        return self.build_value_slider(AI_BTN_X, y, attr, key, default, max_value, label_for, cast)
+
+    def build_damage_floor_slider(self):
+        return self.build_value_slider(
+            LEFT_BTN_X, DAMAGE_FLOOR_ROW_Y, "damage_floor_slider", "damage_at_zero_health",
+            c.DAMAGE_AT_ZERO_HEALTH, 1.0,
+            lambda v: f"Damage at 0% HP: {v * 100:.0f}%", float)
 
     def toggle(self, key, default):
         queries.toggle_scenario_flag(self.settings, key, default)
