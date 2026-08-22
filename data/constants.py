@@ -1461,6 +1461,15 @@ AI_RESERVE_DEPTH = 2.0
 # the lane and is worse than a hurt one holding it.
 AI_ROTATE_HEALTH_FRACTION = 0.4
 
+# Same "wounded" line, spent on repairing instead of rotating: below this share
+# of health and out of combat, the AI sends a unit to repair -- see
+# ai_movement._assign_maintenance_orders. Matches AI_ROTATE_HEALTH_FRACTION by
+# default since it is the same judgement (a unit this hurt deals reduced
+# damage -- see combat_rules.health_damage_multiplier -- and is worth less in a
+# fight than it would be back at full health), kept as its own constant so the
+# two can be tuned apart.
+AI_REPAIR_HEALTH_FRACTION = 0.4
+
 # What a unit contributes, given how combat actually resolves:
 #  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
 #    ordinary one-enemy fight -- so offence is raw attack

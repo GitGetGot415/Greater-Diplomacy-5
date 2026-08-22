@@ -178,16 +178,21 @@ class OneVolleyPerNationTests(unittest.TestCase):
     def test_a_nation_deals_its_front_rank_s_attack_once(self):
         screen, prov, troops = five_nation_tile()
 
+        # Measured before combat lands, same as exchange() itself: health-based
+        # damage scaling (combat_rules.health_damage_multiplier) means a unit's
+        # volley depends on its health *going into* the fight, and process_combat
+        # is about to reduce that health as a side effect of applying the damage.
+        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        expected = sum(combat_rules.volley(side.front, battle.shares)
+                       for lane in battle.lanes
+                       for side in (lane.a, lane.b))
+
         combat_processor.process_combat(screen)
 
         # Every point of damage came from one front rank firing once, so the
         # total is the sum of those ranks and nothing more -- with a unit
         # holding two fronts counted once across both. Under the pair loop A
         # alone fired 200 of its 100.
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
-        expected = sum(combat_rules.volley(side.front, battle.shares)
-                       for lane in battle.lanes
-                       for side in (lane.a, lane.b))
         dealt = damage_taken([u for side in troops.values() for u in side])
         self.assertAlmostEqual(dealt, expected, places=6)
 
@@ -313,12 +318,16 @@ class BystanderTests(unittest.TestCase):
         screen, prov, troops = five_nation_tile()
 
         # E's unit has attack 999, far above anyone else on the tile.
-        combat_processor.process_combat(screen)
 
+        # Measured before combat lands -- see the note in
+        # test_a_nation_deals_its_front_rank_s_attack_once.
         battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
         expected = sum(combat_rules.volley(side.front, battle.shares)
                        for lane in battle.lanes
                        for side in (lane.a, lane.b))
+
+        combat_processor.process_combat(screen)
+
         dealt = damage_taken([u for side in troops.values() for u in side])
         self.assertAlmostEqual(dealt, expected, places=6)
         self.assertNotIn("E", [n for pair in lanes_of(screen, prov) for n in pair])

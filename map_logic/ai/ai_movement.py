@@ -936,6 +936,87 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 stacks[path[-1]] = stacks.get(path[-1], 0) + 1
 
 
+def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx):
+    """Sends wounded or idle units to repair or upgrade instead of a move order.
+
+    Mirrors what a human player would click in the orders panel. Two triggers:
+
+    - Wounded: below c.AI_REPAIR_HEALTH_FRACTION health and out of combat. A
+      unit this hurt deals reduced damage now (see
+      combat_rules.health_damage_multiplier), so it is worth less in the next
+      fight than the same unit at full health -- fixing it is worth the turn.
+    - Idle: sitting alone on a quiet defensive border with no battle nearby --
+      the exact condition _assign_unit_orders itself uses to decide a unit has
+      nothing to do and should stay put (see its `is_defensive_hold` check
+      below). A unit that was going to do nothing this turn anyway loses
+      nothing by upgrading instead, if research has unlocked a better version
+      of its type.
+
+    Chosen units are dropped from `units_info` in place, so _assign_unit_orders
+    never reassigns them a move order this turn. Repairing/upgrading only
+    blocks movement (c.ORDERS_BLOCKING_MOVEMENT) -- the unit is still standing
+    on its tile and still fights if it is attacked -- so this never actually
+    leaves a front unmanned, only unmoving for a turn.
+    """
+    unit_library = queries.get_unit_library()
+    tech_tree = queries.get_tech_tree()
+    nation = map_screen.nation_data.get(ai_name, {})
+    research = nation.get("research", {})
+    free_repairs = queries.get_scenario_flag(
+        "free_repairs", c.DEFAULT_FREE_REPAIRS, map_screen.scenario_settings)
+
+    peace_borders = ctx["peace_borders"]
+    coastal_borders = ctx["coastal_borders"]
+    war_borders = ctx["war_borders"]
+    active_battles = ctx["active_battles"]
+    target_assignments = ctx["target_assignments"]
+
+    remaining = []
+    for unit, prov in units_info:
+        curr_id = prov["id"]
+
+        if (queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+                or not queries.has_industry(prov)):
+            remaining.append((unit, prov))
+            continue
+
+        hp = unit.get("health", 0)
+        m_hp = unit.get("max_health", 1)
+        if hp < m_hp and hp / max(1.0, m_hp) < c.AI_REPAIR_HEALTH_FRACTION:
+            u_type = unit.get("original_type", unit.get("type", ""))
+            stats = unit_library.get(u_type, {})
+            if free_repairs:
+                costs = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+            else:
+                missing_pct = (m_hp - hp) / max(1, m_hp)
+                costs = {
+                    "cost_materials": int(stats.get("cost_materials", 0) * missing_pct),
+                    "cost_manpower": int(stats.get("cost_manpower", 0) * missing_pct),
+                    "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
+                }
+            if queries.can_afford(nation, costs):
+                queries.deduct_resources(nation, costs)
+                unit["order"] = {"type": "REPAIR", "turns_left": 1, "refund": costs}
+                continue
+
+        u_type = unit.get("type", "")
+        is_naval_combatant = queries.is_naval_unit(u_type) and not u_type.startswith("Convoy")
+        is_defensive_hold = (curr_id in peace_borders or curr_id in coastal_borders) and curr_id not in war_borders
+        is_near_battle = any(n in active_battles for n in prov.get("neighbors", ()))
+        is_idle = (not is_naval_combatant and is_defensive_hold and not is_near_battle
+                  and target_assignments.get(curr_id, 0) <= 1)
+
+        if is_idle:
+            target = queries.get_upgrade_target(u_type, research, unit_library, tech_tree)
+            if target:
+                unit["order"] = {"type": "UPGRADE", "turns_left": 1, "target_type": target, "refund": {}}
+                continue
+
+        remaining.append((unit, prov))
+
+    units_info[:] = remaining
+
+
 def _rotate_damaged_units(map_screen, ai_name, active_battles):
     """Pulls shot-up units out of the front rank when a fresh one can take the slot.
 
@@ -1105,6 +1186,7 @@ def _generate_unit_orders(map_screen):
             **assignments,
         }
 
+        _assign_maintenance_orders(map_screen, ai_name, units_info, ctx)
         _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
         _rotate_damaged_units(map_screen, ai_name, battles["active_battles"])
 
