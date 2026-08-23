@@ -77,7 +77,7 @@ SETTINGS_FIELDS = (
     _field("ai_turn_budget_seconds", "ai_turn_budget_seconds",
            lambda: c.DEFAULT_AI_TURN_BUDGET_SECONDS),
     _field("unit_art_style", "unit_art_style", lambda: c.DEFAULT_UNIT_ART_STYLE),
-    _field("map_navigation_mode", "map_navigation_mode", lambda: c.MAP_NAVIGATION_MODE),
+    _field("map_navigation_mode", "map_navigation_mode", lambda: c.DEFAULT_MAP_NAVIGATION_MODE),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

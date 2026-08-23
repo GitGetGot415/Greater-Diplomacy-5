@@ -342,6 +342,10 @@ class Settings(GameState):
         c.apply_runtime_settings({"drag_mouse_toggle": c.DEFAULT_MOUSE_BUTTON_TOGGLE})
         self.controller.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
 
+        self.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
+        c.apply_runtime_settings({"map_navigation_mode": c.DEFAULT_MAP_NAVIGATION_MODE})
+        self.controller.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
+
         for key in self.COLOR_FIELDS:
             self.reset_setting(key, refresh=False)
 

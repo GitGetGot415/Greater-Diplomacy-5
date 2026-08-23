@@ -199,8 +199,12 @@ CHECKERBOARD_WATER = False
 # their own explicit buttons. "PREEMPTIVE" is the newer behaviour: a click (or
 # a view-mode button) jumps straight into whatever screen the current view
 # mode implies. See ui/event_handler.py's navigate_view_mode. Defaults to
-# CLASSIC -- it is the behaviour the game shipped with the longest.
-MAP_NAVIGATION_MODE = "CLASSIC"
+# CLASSIC -- it is the behaviour the game shipped with the longest. Split from
+# its default the same way DRAG_MOUSE_BUTTON_TOGGLE is, so Settings' "Reset
+# Defaults" has a fixed value to reset back to rather than whatever this is
+# currently set to.
+DEFAULT_MAP_NAVIGATION_MODE = "CLASSIC"
+MAP_NAVIGATION_MODE = DEFAULT_MAP_NAVIGATION_MODE
 
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
