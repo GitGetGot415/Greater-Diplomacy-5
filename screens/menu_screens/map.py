@@ -94,17 +94,17 @@ def render_buttons(map_screen):
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
     map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
 
-    map_screen.btn_view_terrain = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Terrain", lambda: map_screen.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
-    map_screen.btn_view_political = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "green", "Political", lambda: map_screen.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
-    map_screen.btn_view_relations = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "green", "Relations", lambda: map_screen.set_map_layer("RELATIONS"), image=icons.get("relations"), show_text=False)
-    map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
-    map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
+    map_screen.btn_view_terrain = Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "green", "Terrain", lambda: map_screen.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
+    map_screen.btn_view_political = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "green", "Political", lambda: map_screen.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
+    map_screen.btn_view_relations = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "green", "Relations", lambda: map_screen.set_map_layer("RELATIONS"), image=icons.get("relations"), show_text=False)
+    map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
+    map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
 
-    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Resources", lambda: map_screen.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False)
-    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "red", "Blank", lambda: map_screen.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False)
-    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "red", "Units", lambda: map_screen.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False)
-    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "red", "Economy", lambda: map_screen.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False)
-    map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
+    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: map_screen.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False)
+    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: map_screen.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False)
+    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: map_screen.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False)
+    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: map_screen.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False)
+    map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
