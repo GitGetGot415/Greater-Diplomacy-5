@@ -30,7 +30,6 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering.country_names import update_country_centers as calc_country_centers
 from map_logic.setup import player_setup
 from screens.editor_screens import scripted_events_editor
-from screens.map_related_screens import battle_screen
 
 # ============================================================================ #
 #                                   LAYOUT                                     #
@@ -269,13 +268,16 @@ def render_buttons(map_screen):
     # ======================================================================== #
     diplo_x = DIPLO_BTN_X
 
-    # Domestic Set
-    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: map_screen.change_state("ORDERS"), image=icons.get("paper"), show_text=False)
+    # Domestic Set. Both route through navigate_view_mode rather than jumping
+    # straight to their screen, so clicking them also swaps the bottom-left
+    # view-mode row over to match (Units for either half of this shared slot,
+    # Economy for Production) instead of leaving it on whatever it last was.
+    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("paper"), show_text=False)
     # Shares BTN_ORDERS_Y with Give Orders: only one of the two is ever visible,
     # and on a tile that is fighting it is this one. The lane manager carries a
     # button back to Orders, so nothing there becomes unreachable.
-    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: battle_screen.open_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
-    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: map_screen.change_state_if_owned("PRODUCTION", requires_land=True), image=icons.get("industry"), show_text=False)
+    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("battle"), show_text=False)
+    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: event_handler.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
 
     # Foreign Set. Rows overlap deliberately -- only one of the buttons sharing
     # a row is ever visible at a time (e.g. Request vs Cancel Mil. Access).
