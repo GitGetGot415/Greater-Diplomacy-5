@@ -4,6 +4,7 @@ from map_logic.turn_processing import loading_screen
 from ui import minimap
 from data import queries
 from map_logic.diplomacy import faction_leadership
+from map_logic import politics
 import data.constants as c
 import ui_elements
 from map_logic.rendering.font_manager import fonts
@@ -349,3 +350,11 @@ def draw_badges(map_screen, surface):
 
         if incoming_claims > 0:
             draw_badge(map_screen.btn_gp_claims, incoming_claims)
+
+        # Which way the country is drifting politically, and only while it is
+        # actually going somewhere. politics.tick clears the direction on
+        # reaching either end of the axis, so "we have arrived" and "the player
+        # chose to hold" are one condition rather than two.
+        political_drift = politics.drift(map_screen.nation_data, map_screen.player_country)
+        if political_drift:
+            draw_badge(map_screen.btn_gp_politics, "<" if political_drift < 0 else ">")

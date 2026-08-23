@@ -1,6 +1,7 @@
 import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules, edit_province_ownership
+from map_logic import politics
 import random # Imported for the random tiebreaker
 from collections import namedtuple
 
@@ -82,6 +83,9 @@ def process_bombardments(map_screen):
             # back to attack for any family that doesn't define it).
             total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK))
                             * combat_rules.health_damage_multiplier(u) for u in guns)
+            # Barrages are already bucketed by who fired them, so the firing
+            # nation's political damage multiplier applies to the whole salvo.
+            total_atk *= politics.damage_multiplier(map_screen.nation_data, owner)
             apply_group_damage(total_atk, targets)
 
             for u in targets:
@@ -163,7 +167,8 @@ def process_pinning(map_screen):
                 for member in firing.members:
                     if not member.targets:
                         continue
-                    shot = combat_rules.volley(member.front, probe.shares)
+                    shot = combat_rules.volley(member.front, probe.shares,
+                                               map_screen.nation_data)
                     if receiving.side_index == CHARGE_SIDE:
                         share = shot / len(member.targets)
                         for target in member.targets:
@@ -267,7 +272,7 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
                 queries.revert_transport(u)
 
     # Measured before any of it lands, so the exchange is simultaneous.
-    for targets, total_atk in combat_rules.exchange(battle):
+    for targets, total_atk in combat_rules.exchange(battle, nation_data):
         apply_group_damage(total_atk, targets)
 
     # Only the front rank is in combat: a reserve rests and recovers morale
@@ -345,7 +350,7 @@ def process_combat(map_screen):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        for targets, total_atk in combat_rules.exchange(battle):
+        for targets, total_atk in combat_rules.exchange(battle, map_screen.nation_data):
             apply_group_damage(total_atk, targets)
 
         # Only the front rank is in combat: a reserve rests and recovers morale

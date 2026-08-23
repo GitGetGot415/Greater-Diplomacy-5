@@ -387,7 +387,8 @@ def _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
                                                            map_screen.nation_data):
                     # apply_group_damage splits a volley among the units it may
                     # legally hit, so this is the figure each of them eats.
-                    share = combat_rules.volley(member.front, battle.shares) / len(member.targets)
+                    share = combat_rules.volley(member.front, battle.shares,
+                                                map_screen.nation_data) / len(member.targets)
                     for target in member.targets:
                         incoming[id(target)] = incoming.get(id(target), 0.0) + share
 

@@ -83,6 +83,32 @@ class LeftBarLayoutTests(unittest.TestCase):
         self.assertIn(self.map.btn_gp_claims, elements,
                       "the Claims button is not visible during a game")
 
+    def test_politics_is_on_both_left_bars(self):
+        """It is the one tab that does two jobs on the same row.
+
+        A player steers their own country's axis; the editor authors where
+        every country starts on it. Row 12 is the only row free in both modes,
+        so a future button placed by hand there fails above rather than here.
+        """
+        for is_editor in (True, False):
+            elements = self.visible_left_bar(is_editor=is_editor)
+            self.assertIn(self.map.btn_gp_politics, elements,
+                          f"the Politics button is not visible (is_editor={is_editor})")
+
+    def test_the_camera_slider_label_clears_the_last_button(self):
+        """The Slider draws its text 25px above its track, outside its own rect.
+
+        assert_no_overlap compares rects, so the row the slider sits on has to
+        leave room for a label the rect does not describe -- which is why the
+        slider is on row 14 and not row 13 immediately under Politics.
+        """
+        label_top = self.map.slider_camera_tilt.rect.y - 25
+        for element in self.visible_left_bar(is_editor=False):
+            if element is self.map.slider_camera_tilt:
+                continue
+            self.assertLessEqual(element.rect.bottom, label_top,
+                                 f"{element.text!r} runs into the camera slider's label")
+
     def test_ai_personality_is_actually_on_screen_in_the_editor(self):
         elements = self.visible_left_bar(is_editor=True)
         self.assertIn(self.map.btn_ed_personality, elements,

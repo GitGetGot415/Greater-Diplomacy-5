@@ -306,6 +306,10 @@ def open_personality_editor(map_screen):
     """Opens a native screen to set what each AI nation is like."""
     _launch_editor_screen(map_screen, "Personality_List_Screen", needs_countries=True)
 
+def open_politics_editor(map_screen):
+    """Opens a native screen to set where each nation starts on the political axis."""
+    _launch_editor_screen(map_screen, "Politics_List_Screen", needs_countries=True)
+
 def open_edited_countries(map_screen):
     """Opens a full-screen sortable table of countries with edited properties."""
     from data.io import country_io

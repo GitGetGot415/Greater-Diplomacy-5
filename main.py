@@ -234,6 +234,7 @@ class Controller:
             "puppet": symbol_loader.get_symbol("Pawn", 2),
             "music": symbol_loader.get_symbol("Music", 1),
             "settings": symbol_loader.get_symbol("Gear", 1.0),
+            "tophat": symbol_loader.get_symbol("Tophat", 1.0),
             "names": symbol_loader.get_symbol("Text", 0.5),
             "paint": symbol_loader.get_symbol("Paint", 1.5),
             "brush": symbol_loader.get_symbol("Brush", 1.5),

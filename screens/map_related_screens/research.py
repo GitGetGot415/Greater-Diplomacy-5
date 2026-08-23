@@ -7,6 +7,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import symbol_loader
 from data import queries
 from ui.bars import ui_bars
+from map_logic import politics
 
 # ==========================================
 # LAYOUT
@@ -790,10 +791,15 @@ class Research_Screen(GameState):
         cost = self.active_modal["cost"]
         
         days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
-        pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+        pol_mult = politics.research_multiplier(self.map_screen.nation_data, self.subject)
+        pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
         
-        base_time = max(1, cost // max(1, pts_per_turn)) 
-        cost_txt = font_med.render(f"Base Research Cost: {queries.format_number(cost)} pts ({int(base_time)} turns)", True, c.COLOR_GOLD_HIGHLIGHT)
+        # pts_per_turn is 0 at the authoritarian end of the political axis, which
+        # is a project that never finishes rather than one that takes a very
+        # large number of turns -- say so instead of printing the number.
+        base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
+        time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "halted"
+        cost_txt = font_med.render(f"Base Research Cost: {queries.format_number(cost)} pts ({time_txt})", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(cost_txt, (panel_rect.x + MODAL_TEXT_X, panel_rect.y + MODAL_COST_Y))
 
         # --- AHEAD OF TIME SIMULATION ---
@@ -804,7 +810,7 @@ class Research_Screen(GameState):
         sim_year = current_exact_year
         pts_accumulated = 0
         
-        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
         year_inc = days_per_turn / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query
@@ -813,8 +819,23 @@ class Research_Screen(GameState):
             pts_accumulated += (base_pts_per_turn * mult)
             sim_year += year_inc
             actual_turns += 1
-            
-        if actual_turns > base_time:
+
+        # A fully authoritarian nation researches at 0x, so the loop runs out
+        # its cap instead of finishing. Saying "~500 turns" would be a lie of a
+        # different kind to the one this warning exists to prevent.
+        stalled = pts_accumulated < cost
+
+        if stalled:
+            warn_x = panel_rect.x + MODAL_TEXT_X
+            icon_h = max(16, font_small.get_height())
+            warn_icon = ui_elements.scale_icon(c.ICON_WARNING, icon_h)
+            if warn_icon:
+                surface.blit(warn_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
+                warn_x += icon_h + 5
+            warn_txt = font_small.render("Research is halted under the current political system.",
+                                         True, (255, 100, 100))
+            surface.blit(warn_txt, (warn_x, panel_rect.y + MODAL_WARNING_Y))
+        elif actual_turns > base_time:
             # --- MODIFIED WARNING LOGIC ---
             warn_x = panel_rect.x + MODAL_TEXT_X
             icon_h = max(16, font_small.get_height())
@@ -989,7 +1010,11 @@ class Research_Screen(GameState):
 
         # --- DYNAMIC OUTPUT CALCULATION ---
         days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
-        pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn)
+        # The political multiplier belongs in the headline figure, not only in
+        # the resolver: an authoritarian nation reading its unmodified output
+        # here would be told a number it never actually gets.
+        pol_mult = politics.research_multiplier(self.map_screen.nation_data, self.subject)
+        pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult)
         output_text = font.render(f"RESEARCH OUTPUT: {pts_per_turn} pts/turn", True, (0, 255, 255))
         surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
 

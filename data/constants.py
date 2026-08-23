@@ -1297,6 +1297,47 @@ AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
 
 # How each action reads in a prompt or an event log.
 # ==========================================
+# POLITICS (map_logic/politics.py, map_logic/ai/ai_politics.py)
+# ==========================================
+# One domestic axis, libertarian at the bottom and authoritarian at the top,
+# trading how hard a nation's armies hit against how fast it researches. A
+# nation moves one step per processed turn while a direction is selected, so
+# either extreme is ten turns away from the centre and twenty from the far end.
+
+POLITICS_MIN = -10              # fully libertarian
+POLITICS_MAX = 10               # fully authoritarian
+POLITICS_START = 0              # everyone begins centrist
+POLITICS_STEP = 1               # how far one processed turn moves the value
+
+# Both effects are linear in the value and meet at 1.0 in the centre.
+POLITICS_DAMAGE_SPAN = 0.3      # +/-30% damage dealt at the extremes (0.7x .. 1.3x)
+POLITICS_RESEARCH_SPAN = 1.0    # 2.0x research at min, 0.0x at max -- research really does stop
+
+# --- What the AI aims for (map_logic/ai/ai_politics.py) ---
+# The AI picks a target position on the axis and walks toward it, rather than
+# picking a direction and running to the wall. Two nations in the same war end
+# up in different places, and a nation that has arrived stops.
+#
+# The two bands deliberately do not span the whole axis: a country at peace is
+# not a country with no army, and a country winning a war has less reason to
+# centralise than one losing three.
+POLITICS_AI_WAR_BASE = 0.60     # at war and comfortably winning -> about +2
+POLITICS_AI_WAR_DANGER = 0.35   # ...rising to about +9 when it is going badly
+POLITICS_AI_PEACE_BASE = 0.40   # at peace beside a hostile giant -> about -2
+POLITICS_AI_PEACE_SAFETY = 0.25 # ...falling to about -7 when nobody nearby is a threat
+
+# How much of `danger` is "this war is going badly" versus "there are several of
+# them". Sums to 1.0.
+POLITICS_AI_W_LOSING = 0.65
+POLITICS_AI_W_LOAD = 0.35
+
+# Temperament, centred on 0.5 so an average nation contributes nothing. A
+# cautious country centralises sooner; so does a belligerent one, for the
+# opposite reason.
+POLITICS_AI_W_CAUTION = 0.10
+POLITICS_AI_W_AGGRO = 0.10
+
+# ==========================================
 # LLM DIRECTOR (map_logic/ai/ai_director.py)
 # ==========================================
 

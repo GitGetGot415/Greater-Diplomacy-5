@@ -3,7 +3,7 @@ import time
 from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
                           ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
-                          ai_personality, ai_prompts, ai_world)
+                          ai_personality, ai_politics, ai_prompts, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
 from data import queries
@@ -1192,6 +1192,13 @@ def _run_basic_proactive_ai(map_screen):
 
         _decrement_diplo_cooldowns(data)
         _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies)
+
+        # Domestic policy, above the Battle Royale early-out below: a nation
+        # still has an army to arm and factories to run in a world with no
+        # diplomacy in it. The player's own country is never in ai_nations, so
+        # this needs no gate of its own.
+        ai_politics.decide(world, ai_name, map_screen.nation_data,
+                           getattr(map_screen, "scenario_settings", None))
 
         # Battle Royale has no diplomacy to run, but the cooldown/access
         # upkeep above still applies to every nation -- this used to `return`

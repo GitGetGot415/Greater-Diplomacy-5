@@ -3,6 +3,7 @@ from map_logic.diplomacy import diplomacy_logic
 from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy,
                           ai_llm_runner, ai_world, automation_logic)
 from map_logic.turn_processing import combat_processor, movement_processor, economy_processor, research_processor
+from map_logic import politics
 import data.constants as c
 from data import queries
 
@@ -172,6 +173,12 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
 
     days_to_advance = queries.get_days_per_turn(map_screen.scenario_settings)
     map_screen.time_manager.process_time(days_to_advance)
+
+    # Before combat and before research, so the whole turn resolves under one
+    # political value rather than shooting under the old one and researching
+    # under the new. The direction was chosen last turn -- by the player in the
+    # Politics tab, by the AI in prepare_turn -- and this is where it lands.
+    politics.tick(map_screen)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
     movement_processor.process_conversions(map_screen)

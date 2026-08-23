@@ -1,5 +1,6 @@
 import data.constants as c
 from data import queries
+from map_logic import politics
 
 def process_national_research(map_screen):
     # Load template to know costs (REPLACED WITH CACHE)
@@ -31,7 +32,11 @@ def process_national_research(map_screen):
             target_year = years_array[target_index]
             
             multiplier = queries.get_research_multiplier(current_exact_year, target_year)
-            effective_points = base_points_per_turn * multiplier
+            # A libertarian nation researches faster and an authoritarian one
+            # slower -- at the far end, not at all, which is a stalled project
+            # rather than a guarded division.
+            effective_points = (base_points_per_turn * multiplier
+                                * politics.research_multiplier(map_screen.nation_data, country_name))
             # -----------------------------------
             
             # Use 'points_remaining' instead of 'days_remaining'

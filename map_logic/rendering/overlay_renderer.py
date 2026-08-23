@@ -47,8 +47,8 @@ def combat_strengths(sides, nation_data, friendly_nations):
         involved = True
         ours = mine[0]
         theirs = lane.b if ours is lane.a else lane.a
-        friendly_atk += combat_rules.volley(ours.front, battle.shares)
-        enemy_atk += combat_rules.volley(theirs.front, battle.shares)
+        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data)
+        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data)
 
     return friendly_atk, enemy_atk, involved
 

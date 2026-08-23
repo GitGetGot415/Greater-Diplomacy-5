@@ -27,3 +27,7 @@ from screens.editor_screens.personality_editor import (
     Personality_Edit_Screen,
     Personality_List_Screen,
 )
+from screens.editor_screens.politics_editor import (
+    Politics_Edit_Screen,
+    Politics_List_Screen,
+)

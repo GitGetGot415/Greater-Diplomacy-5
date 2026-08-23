@@ -49,7 +49,10 @@ VIEW_BTN_ROW2_Y = c.SCREEN_HEIGHT - 100
 LEFT_UI_BAR_X = 20
 LEFT_UI_BAR_STEP_Y = 35
 LEFT_UI_BAR_START_Y = 75
-CAMERA_TILT_SLIDER_ROW = 13
+# Row 14, not 13: the Slider draws its text label at rect.y - 25 (ui_elements),
+# which at row 13 lands inside the box of a row-12 button. The rects never
+# collide, so test_editor_menu_layout would not have caught it.
+CAMERA_TILT_SLIDER_ROW = 14
 CAMERA_TILT_SLIDER_WIDTH = 120
 
 # --- Bottom-right button strip (editor tools, turn controls) ---
@@ -230,6 +233,18 @@ def render_buttons(map_screen):
             map_screen.viewing_research_country = ""
             map_screen.change_state("RESEARCH")
 
+    def politics_callback():
+        """Steering your own axis, or authoring everyone's starting position.
+
+        Same split as research_callback: the map editor sets what a nation
+        *starts* at, a player picks which way their own country is heading.
+        """
+        if map_screen.is_editor or map_screen.player_country == "Spectator":
+            editor_menus.open_politics_editor(map_screen)
+        else:
+            sub_screen_opener("screens.map_related_screens.politics_screen",
+                              "Politics_Screen")()
+
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
@@ -252,6 +267,9 @@ def render_buttons(map_screen):
          lambda: player_diplomacy_actions.open_puppets_menu(map_screen)),
         ("btn_gp_automation", 11, "Automation", None,
          sub_screen_opener("screens.map_related_screens.automation_screen", "Automation_Screen")),
+        # Row 12 is the only row free in both modes -- the editor fills 1-11 too,
+        # just with a different set.
+        ("btn_gp_politics", 12, "Politics", "tophat", politics_callback),
     )
     for attr, row, label, icon_name, action in left_bar_buttons:
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * row,
@@ -368,7 +386,7 @@ def render_buttons(map_screen):
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
-        map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_go_orders, map_screen.btn_go_battle, map_screen.btn_go_production,
+        map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics, map_screen.btn_go_orders, map_screen.btn_go_battle, map_screen.btn_go_production,
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
         map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
@@ -485,7 +503,8 @@ def update_button_states(map_screen):
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
             map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
-            map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt
+            map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_politics,
+            map_screen.slider_camera_tilt
         ]
         for btn in ed_btns:
             btn.visible = True
@@ -536,7 +555,8 @@ def update_button_states(map_screen):
             map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
             map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
             map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
-            map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.slider_camera_tilt
+            map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics,
+            map_screen.slider_camera_tilt
         ]
 
         always_visible_btns = [map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt]

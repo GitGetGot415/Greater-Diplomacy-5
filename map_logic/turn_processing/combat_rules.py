@@ -67,6 +67,7 @@ this module is meant to be safe to import from anywhere.
 from collections import namedtuple
 
 import data.constants as c
+from map_logic import politics
 
 #: One nation's contribution to one side of one duel. `slots` is its share of
 #: the side's allowance; `front` fire and are fired at; `reserve` are present and
@@ -650,18 +651,26 @@ def health_defense_multiplier(unit):
     return floor + (1.0 - floor) * frac
 
 
-def volley(units, shares=None):
+def volley(units, shares=None, nation_data=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 
     `shares` is Battle.shares. Omitting it reads every unit as holding this
     front alone, which is what a caller measuring a hypothetical rank wants.
+
+    `nation_data` turns on the political damage multiplier, which is applied per
+    unit rather than to the total: a LaneMember's front is one nation's, but a
+    LaneSide's front is a whole coalition's, and the map's prediction bubbles
+    read the latter. Omitting it reads every unit as centrist, which is what a
+    caller comparing raw unit stats wants.
     """
     return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
                * health_damage_multiplier(u)
+               * (politics.damage_multiplier(nation_data, u.get("owner"))
+                  if nation_data else 1.0)
                for u in units)
 
 
-def exchange(battle):
+def exchange(battle, nation_data=None):
     """[(targets, total_attack)] for every nation in every lane.
 
     One shot per member rather than one per side, because a side is a coalition
@@ -678,7 +687,8 @@ def exchange(battle):
         for side in (lane.a, lane.b):
             for member in side.members:
                 if member.targets:
-                    shots.append((member.targets, volley(member.front, battle.shares)))
+                    shots.append((member.targets,
+                                  volley(member.front, battle.shares, nation_data)))
     return shots
 
 
