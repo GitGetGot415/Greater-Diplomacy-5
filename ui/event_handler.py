@@ -7,6 +7,7 @@ from map_logic.setup import player_setup
 from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
+from screens.map_related_screens import battle_screen
 
 # The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
 # Diplomatic Info and the production queue overlay. Each publishes a rect and a
@@ -369,3 +370,26 @@ def handle_map_events(map_screen, event):
 
             owner = map_screen.selected_province.get("owner")
             map_screen.mail_draft_text = queries.get_message_draft(map_screen.player_country, owner, map_screen.nation_data)
+
+            _jump_to_view_mode_screen(map_screen)
+
+
+def _jump_to_view_mode_screen(map_screen):
+    """UNITS/ECONOMY are the two view modes with one obvious next action, so
+    clicking a tile there skips the sidebar and opens straight into it --
+    Orders (or Battle, if the tile is actively fighting) for UNITS, Production
+    for ECONOMY. Mirrors what the corresponding province-panel button would do,
+    so it stays gated the same way (fog of war, ownership, tactical mode).
+    """
+    province = map_screen.selected_province
+    mode = map_screen.secondary_mode
+
+    if mode == "UNITS":
+        if not queries.is_province_visible(map_screen, province["id"]):
+            return
+        if queries.is_province_in_active_combat(province, map_screen.nation_data):
+            battle_screen.open_battle_screen(map_screen)
+        elif province.get("units"):
+            map_screen.change_state("ORDERS")
+    elif mode == "ECONOMY" and not map_screen.tactical_mode:
+        map_screen.change_state_if_owned("PRODUCTION", requires_land=True)

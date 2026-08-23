@@ -12,6 +12,11 @@ hanskolmer suggestions:
 - perhaps railroad guns could be a type of artillery
 - seperate artillery research section?
 
+- MAKE IT SO THAT YOU CAN JUST USE THE THING IN THE BOTTOM LEFT PART OF THE SCREEN (THE UI THERE) TO SWAP BETWEEN THE SCREENS
+- UNITS VIEW TO VIEW UNITS
+- ECON VIEW TO PRODUCE
+ETC ETC
+
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
 - color or colour???
