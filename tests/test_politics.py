@@ -261,6 +261,65 @@ class CombatDamageTests(unittest.TestCase):
         self.assertAlmostEqual(combat_rules.volley(units, None, nation_data), 130.0)
 
 
+class DisplayedDamageTests(unittest.TestCase):
+    """What the panels print is what the fight delivers.
+
+    The battle screen and the province sidebar both scale a unit's printed
+    attack by how wounded it is. They have to scale it by the owner's politics
+    too, or an authoritarian nation's roster advertises a number the resolver
+    will not produce -- which is the same class of bug as the research screen
+    quoting an unmodified pts/turn. One helper, read by both the screens and
+    the resolver, is what keeps them from drifting.
+    """
+
+    def test_it_stacks_on_top_of_the_health_penalty(self):
+        wounded = unit("A", attack=100, health=50000)
+        wounded["max_health"] = 100000
+        nation_data = {"A": {"political_value": c.POLITICS_MAX}}
+
+        self.assertAlmostEqual(combat_rules.health_damage_multiplier(wounded), 0.5)
+        self.assertAlmostEqual(
+            combat_rules.effective_damage_multiplier(wounded, nation_data), 0.5 * 1.3)
+
+    def test_it_runs_the_full_span(self):
+        healthy = unit("A", attack=100)
+        for value, expected in ((c.POLITICS_MIN, 0.7), (0, 1.0), (c.POLITICS_MAX, 1.3)):
+            nation_data = {"A": {"political_value": value}}
+            self.assertAlmostEqual(
+                combat_rules.effective_damage_multiplier(healthy, nation_data), expected)
+
+    def test_without_nation_data_it_is_the_bare_health_penalty(self):
+        """The panels that price a unit type, not this country's copy of one."""
+        wounded = unit("A", attack=100, health=50000)
+        wounded["max_health"] = 100000
+        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(wounded), 0.5)
+
+    def test_the_printed_figure_matches_what_the_turn_deals(self):
+        """The contract, end to end: one unit, one enemy, one exchange."""
+        for value in (c.POLITICS_MIN, 0, c.POLITICS_MAX):
+            screen, prov = two_nation_tile(a_value=value)
+            attacker = next(u for u in prov["units"] if u["owner"] == "A")
+            defenders = [u for u in prov["units"] if u["owner"] == "B"]
+
+            printed = (attacker["attack"]
+                       * combat_rules.effective_damage_multiplier(attacker, screen.nation_data))
+            combat_processor.process_combat(screen)
+
+            self.assertAlmostEqual(damage_taken(defenders), printed,
+                                   msg=f"panel and resolver disagree at {value:+d}")
+
+    def test_the_map_combat_bubble_reads_the_same_number(self):
+        from map_logic.rendering import overlay_renderer
+
+        for value, expected in ((c.POLITICS_MIN, 70.0), (0, 100.0), (c.POLITICS_MAX, 130.0)):
+            screen, _prov = two_nation_tile(a_value=value)
+            friendly, enemy, involved = overlay_renderer.combat_strengths(
+                [[unit("A"), unit("B")]], screen.nation_data, {"A"})
+            self.assertTrue(involved)
+            self.assertAlmostEqual(friendly, expected)
+            self.assertAlmostEqual(enemy, 100.0, msg="the enemy's own politics is unaffected")
+
+
 class BombardmentDamageTests(unittest.TestCase):
     def bombardment_damage(self, a_value):
         screen = StubMapScreen()

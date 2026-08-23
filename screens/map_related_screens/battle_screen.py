@@ -464,7 +464,11 @@ class Battle_Screen(ModalScreen):
                     surface.blit(note_surf, (rect.right - 8 - note_surf.get_width(), rect.y + 2))
 
                 stat_y = rect.y + 2 + small.get_height() + 2
-                dmg_mult = combat_rules.health_damage_multiplier(unit)
+                # Politics included: this row is a promise about what the unit
+                # will actually do this turn, and the resolver scales its shot
+                # by exactly this.
+                dmg_mult = combat_rules.effective_damage_multiplier(
+                    unit, self.map_screen.nation_data)
                 def_mult = combat_rules.health_defense_multiplier(unit)
                 end_x = draw_combat_stats(
                     surface, small, "", unit.get("attack", 0) * dmg_mult, unit.get("defense", 0) * def_mult,

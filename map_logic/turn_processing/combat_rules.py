@@ -651,6 +651,25 @@ def health_defense_multiplier(unit):
     return floor + (1.0 - floor) * frac
 
 
+def effective_damage_multiplier(unit, nation_data=None):
+    """Everything that scales one unit's damage: its wounds, then its politics.
+
+    The one figure a screen must print its attack through. Both callers below
+    -- the volley and the bombardment pass -- apply exactly this product, so a
+    unit panel scaling by health_damage_multiplier alone advertises a number
+    the fight will not produce. That drift is the whole reason this exists
+    rather than the two multipliers being multiplied at each of the five sites
+    that need them.
+
+    `nation_data` is optional because the callers that compare raw unit stats
+    -- what a factory would build, what a tech unlocks -- want the stat, not
+    this particular country's version of it. Omitting it reads as centrist.
+    """
+    political = (politics.damage_multiplier(nation_data, unit.get("owner"))
+                 if nation_data else 1.0)
+    return health_damage_multiplier(unit) * political
+
+
 def volley(units, shares=None, nation_data=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 
@@ -660,13 +679,10 @@ def volley(units, shares=None, nation_data=None):
     `nation_data` turns on the political damage multiplier, which is applied per
     unit rather than to the total: a LaneMember's front is one nation's, but a
     LaneSide's front is a whole coalition's, and the map's prediction bubbles
-    read the latter. Omitting it reads every unit as centrist, which is what a
-    caller comparing raw unit stats wants.
+    read the latter.
     """
     return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
-               * health_damage_multiplier(u)
-               * (politics.damage_multiplier(nation_data, u.get("owner"))
-                  if nation_data else 1.0)
+               * effective_damage_multiplier(u, nation_data)
                for u in units)
 
 

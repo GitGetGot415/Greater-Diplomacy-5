@@ -224,7 +224,7 @@ def draw_sidebar_info(map_screen, surface):
                     row_x += hp_surf.get_width() + 6
 
                     # Condensed, icon-based combat stats, matching the garrison list
-                    dmg_mult = combat_rules.health_damage_multiplier(u)
+                    dmg_mult = combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
                     def_mult = combat_rules.health_defense_multiplier(u)
                     draw_combat_stats(
                         surface, map_screen.small_font, "",
@@ -298,7 +298,7 @@ def draw_sidebar_info(map_screen, surface):
                     name_surf.get_height())
 
                 # Condensed, icon-based combat stats, matching the production tab's style
-                dmg_mult = combat_rules.health_damage_multiplier(u)
+                dmg_mult = combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
                     u.get("attack", 0) * dmg_mult, u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),

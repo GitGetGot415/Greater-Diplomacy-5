@@ -1,7 +1,6 @@
 import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules, edit_province_ownership
-from map_logic import politics
 import random # Imported for the random tiebreaker
 from collections import namedtuple
 
@@ -82,10 +81,8 @@ def process_bombardments(map_screen):
             # "bombard_attack" is a separate stat from melee "attack" (falls
             # back to attack for any family that doesn't define it).
             total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK))
-                            * combat_rules.health_damage_multiplier(u) for u in guns)
-            # Barrages are already bucketed by who fired them, so the firing
-            # nation's political damage multiplier applies to the whole salvo.
-            total_atk *= politics.damage_multiplier(map_screen.nation_data, owner)
+                            * combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
+                            for u in guns)
             apply_group_damage(total_atk, targets)
 
             for u in targets:
