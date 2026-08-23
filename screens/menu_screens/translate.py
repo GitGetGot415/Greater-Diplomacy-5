@@ -127,6 +127,17 @@ class Translate(GameState):
             os.makedirs(parent, exist_ok=True)
 
         ok, notes = run(path, destination)
+
+        # On the web the file has landed in a virtual filesystem the player
+        # cannot open, so the translation is not finished until the browser has
+        # it. Downloading is the only way out of a browser tab.
+        if ok and odtl.IS_WEB and self.direction == "TO_ODMAP":
+            if odtl.offer_download(destination, os.path.basename(destination)):
+                self.status = "Downloading " + os.path.basename(destination)
+                self.status_ok = True
+                self.notes = notes
+                self.refresh_ui()
+                return
         self.status = (f"Wrote {destination}" if ok
                        else f"Could not translate {name}: {notes[0] if notes else 'unknown error'}")
         self.status_ok = ok
@@ -179,6 +190,31 @@ class Translate(GameState):
         queries.ask_directory(self, "Select the Open Doctrines folder",
                               odtl.game_root(), picked)
 
+    def ask_for_upload(self):
+        """The browser's file picker, which is the only way a .odmap can reach
+        a tab. Nothing is returned here -- see _collect_upload()."""
+        if odtl.ask_for_upload():
+            self.status = "Choose a .odmap file..."
+            self.status_ok = True
+            self.notes = []
+            self.refresh_ui()
+
+    def _collect_upload(self):
+        """Picked files arrive whenever the browser has finished reading them,
+        so this is asked once a frame rather than waited on."""
+        landed = odtl.take_upload(self._translated_dir())
+        if not landed:
+            return
+        self.direction = "FROM_ODMAP"
+        self.status = "Added " + os.path.basename(landed) + " -- pick it below to convert it."
+        self.status_ok = True
+        self.notes = []
+        self.refresh_ui()
+
+    def update(self):
+        if odtl.IS_WEB:
+            self._collect_upload()
+
     def toggle_destination(self):
         self.send_to_od = not self.send_to_od
         self.refresh_ui()
@@ -224,10 +260,14 @@ class Translate(GameState):
                    ".odmap to GD5", lambda: self.set_direction("FROM_ODMAP")),
         ]
 
-        # Where it lands. Offered only in the outbound direction, and only
-        # after a search: before that the game has not looked at the disk and
-        # has nothing to offer.
-        if self.direction == "TO_ODMAP":
+        # A browser has no folders, so it gets the two things it does have:
+        # a download on the way out, and a file picker on the way in. The
+        # desktop's search-and-install controls below mean nothing here.
+        if odtl.IS_WEB:
+            self.elements.append(
+                Button(c.SCREEN_WIDTH - 230, 25, "medium", "light_blue",
+                       "Import .odmap...", self.ask_for_upload, font_preset="small"))
+        elif self.direction == "TO_ODMAP":
             if not self.searched_for_od:
                 self.elements.append(
                     Button(c.SCREEN_WIDTH - 230, 25, "medium", "light_blue",

@@ -32,6 +32,7 @@ abi_version() is checked either way, so a mismatch is refused rather than
 guessed at.
 """
 
+import base64
 import ctypes
 import datetime
 import json
@@ -399,6 +400,123 @@ def open_doctrines_maps_dir(directory):
         if os.path.isdir(os.path.join(data, "STDmaps")):
             return os.path.join(data, "custom_maps")
     return ""
+
+
+# ------------------------------------------------------------ the browser
+#
+# A browser has no folders. It will hand a page a FILE the player picked, and
+# it will accept a file the page hands back, and that is the whole of the
+# vocabulary -- which is why the desktop screen's "choose a folder" has no web
+# equivalent and why, without these two, a translated map on the web is written
+# into a virtual filesystem the player cannot reach.
+
+def _js():
+    """pygbag's handle on the real browser window, or None off the web."""
+    if not IS_WEB:
+        return None
+    try:
+        from platform import window
+        return window
+    except Exception:
+        return None
+
+
+def offer_download(path, suggested_name):
+    """Hand a finished file to the browser as a download.
+
+    Base64 because what crosses into JavaScript here is a string; a map is a
+    megabyte or two, which is well within what one eval can carry, and the
+    alternative is a shared memory view for a transfer that happens once when
+    a person presses a button.
+    """
+    window = _js()
+    if window is None:
+        return False
+    try:
+        with open(path, "rb") as handle:
+            payload = base64.b64encode(handle.read()).decode("ascii")
+    except OSError:
+        return False
+
+    safe = "".join(c for c in suggested_name if c.isalnum() or c in "._- ")
+    try:
+        window.eval(
+            "(function(b64,name){"
+            "var bin=atob(b64),n=bin.length,buf=new Uint8Array(n);"
+            "for(var i=0;i<n;i++)buf[i]=bin.charCodeAt(i);"
+            "var u=URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));"
+            "var a=document.createElement('a');a.href=u;a.download=name;"
+            "document.body.appendChild(a);a.click();document.body.removeChild(a);"
+            "URL.revokeObjectURL(u);"
+            "})(\"" + payload + "\",\"" + safe + "\")")
+        return True
+    except Exception:
+        return False
+
+
+def ask_for_upload():
+    """Open the browser's file picker for a .odmap.
+
+    Returns immediately -- the player has not chosen anything yet. The bytes
+    arrive later, and take_upload() below is how a screen collects them. That
+    split is not a style choice: a browser will not block on a file dialog, so
+    there is no version of this that can return a path.
+    """
+    window = _js()
+    if window is None:
+        return False
+    try:
+        window.eval(
+            "(function(){"
+            "window.__gd5_upload=null;"
+            "var i=document.createElement('input');i.type='file';i.accept='.odmap';"
+            "i.onchange=function(){"
+            "  var f=i.files[0]; if(!f)return;"
+            "  var r=new FileReader();"
+            "  r.onload=function(){"
+            "    var b=new Uint8Array(r.result),s='';"
+            "    for(var k=0;k<b.length;k++)s+=String.fromCharCode(b[k]);"
+            "    window.__gd5_upload={name:f.name,data:btoa(s)};"
+            "  };"
+            "  r.readAsArrayBuffer(f);"
+            "};"
+            "i.click();"
+            "})()")
+        return True
+    except Exception:
+        return False
+
+
+def take_upload(into_dir):
+    """Collect a file the player picked, if one has finished arriving.
+
+    Called once a frame by the screen. Returns the path written, or "" --
+    polling rather than a callback because the game loop is the only thread
+    there is, and a JavaScript callback cannot safely reach into it.
+    """
+    window = _js()
+    if window is None:
+        return ""
+    try:
+        pending = window.eval("window.__gd5_upload && JSON.stringify(window.__gd5_upload)")
+        if not pending:
+            return ""
+        window.eval("window.__gd5_upload=null")
+        item = json.loads(str(pending))
+    except Exception:
+        return ""
+
+    name = os.path.basename(str(item.get("name", "uploaded.odmap")))
+    if not name.lower().endswith(".odmap"):
+        name += ".odmap"
+    os.makedirs(into_dir, exist_ok=True)
+    destination = os.path.join(into_dir, name)
+    try:
+        with open(destination, "wb") as handle:
+            handle.write(base64.b64decode(item.get("data", "")))
+    except Exception:
+        return ""
+    return destination if looks_like_odmap(destination) else ""
 
 
 def looks_like_odmap(path):
