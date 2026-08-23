@@ -74,12 +74,15 @@ class Battle_Screen(ModalScreen):
     PAD = 16
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
 
-    def __init__(self, map_screen, province):
+    def __init__(self, map_screen, province, origin_screen=None):
         self.province = province
         # Both set before super(), because ModalScreen.__init__ asks for the
         # title and the title depends on whether any of these units are ours.
         self.map_screen = map_screen
         self.player = map_screen.player_country
+        # Whichever screen this battle was pushed over (Map, Orders or
+        # Production) -- see close_and_navigate.
+        self.origin_screen = origin_screen or map_screen
         super().__init__(map_screen, self.get_panel_title())
         # Hotseat and fog of war: the same rule the sidebar uses. A province you
         # cannot see is not one whose order of battle you get to read.
@@ -224,8 +227,19 @@ class Battle_Screen(ModalScreen):
 
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
+        self.close_and_navigate("ORDERS")
+
+    def close_and_navigate(self, state_name):
+        """Closes this modal and hands off to `state_name` on whichever screen
+        it was opened over -- Map by default, but Production or Orders when
+        this battle was reached from their own copy of the view-mode row.
+        Popping the modal alone would just resume that screen unchanged, which
+        is wrong for anything other than Map (already showing beneath), so the
+        request is forwarded on to it explicitly.
+        """
         self.done = True
-        self.map_screen.change_state("ORDERS")
+        if not (self.origin_screen is self.map_screen and state_name == "MAP"):
+            self.origin_screen.go_to(state_name)
 
     # ------------------------------------------------------------------ #
     #                              LAYOUT                                #
@@ -517,11 +531,11 @@ class Battle_Screen(ModalScreen):
         self.route_pane_scroll(event)
 
 
-def open_battle_screen(map_screen):
+def open_battle_screen(map_screen, origin_screen=None):
     """Opens the lane manager for the selected province."""
     from ui.screen_runner import _run_pygame_sub_screen
 
     province = map_screen.selected_province
     if not province:
         return
-    _run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province))
+    _run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province, origin_screen=origin_screen))

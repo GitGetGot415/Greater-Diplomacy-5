@@ -7,7 +7,8 @@ from data import queries
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
-from ui.bars import ui_bars, resource_hud
+from ui.bars import ui_bars, resource_hud, view_mode_buttons
+from ui import event_handler
 from map_logic.camera import camera_handler
 
 # ==========================================
@@ -150,6 +151,10 @@ class Orders_Screen(GameState):
                 self.map_screen.total_ui_h)
         super().exit_screen()
 
+    def handle_orders_key(self):
+        """Q. Same as clicking the Units button in the view-mode row."""
+        event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
+
     def select_unit(self, index):
         if getattr(self, "read_only", False):
             return
@@ -198,8 +203,11 @@ class Orders_Screen(GameState):
         return pygame.transform.smoothscale(icon, (max(1, int(w * ratio)), max(1, int(h * ratio))))
 
     def refresh_ui(self):
-        self.elements = [make_back_button(self.exit_screen, style="map")]
-        
+        self.view_mode_buttons = view_mode_buttons.build(
+            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+        view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
+        self.elements = [make_back_button(self.exit_screen, style="map"), *self.view_mode_buttons]
+
         units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
         player_research = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {})
@@ -1075,7 +1083,8 @@ class Orders_Screen(GameState):
                         # Use the owner's color to draw the cursor hover with correct alpha logic
                         overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha, force_visible=True)
 
-        resource_hud.draw_resource_bar(surface, self.map_screen)
+        resource_hud.draw_resource_bar(surface, self.map_screen,
+                                       start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
 
     def update(self):
         super().update()

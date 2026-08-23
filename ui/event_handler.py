@@ -371,25 +371,58 @@ def handle_map_events(map_screen, event):
             owner = map_screen.selected_province.get("owner")
             map_screen.mail_draft_text = queries.get_message_draft(map_screen.player_country, owner, map_screen.nation_data)
 
-            _jump_to_view_mode_screen(map_screen)
+            navigate_view_mode(map_screen, map_screen.secondary_mode)
 
 
-def _jump_to_view_mode_screen(map_screen):
-    """UNITS/ECONOMY are the two view modes with one obvious next action, so
-    clicking a tile there skips the sidebar and opens straight into it --
-    Orders (or Battle, if the tile is actively fighting) for UNITS, Production
-    for ECONOMY. Mirrors what the corresponding province-panel button would do,
-    so it stays gated the same way (fog of war, ownership, tactical mode).
+def navigate_view_mode(map_screen, mode, origin=None):
+    """Sets the map's view mode and, for UNITS/ECONOMY, jumps straight to
+    whatever screen that mode implies for the selected province: Orders (or
+    Battle, if the tile is fighting) for UNITS, Production for ECONOMY.
+    RESOURCES/BLANK have no screen of their own, so from anywhere but the map
+    itself they just land back on the plain province menu (the Map screen).
+
+    `origin` is whichever screen the click/keypress came from: the Map itself
+    (the default), or one of the screens layered over it (Orders, Production)
+    that carry their own copy of this same button row so switching view types
+    doesn't require backing out to the map first. Transitions are issued
+    against `origin`, not always `map_screen` -- flip_state only reacts to the
+    *currently active* screen's next_state/done, and while Orders or
+    Production is up, that isn't map_screen.
     """
+    origin = origin or map_screen
+    map_screen.set_view_mode(mode)
     province = map_screen.selected_province
-    mode = map_screen.secondary_mode
+
+    def to_map():
+        if origin is not map_screen:
+            origin.go_to("MAP")
+
+    def to(state_name):
+        if origin is map_screen:
+            map_screen.change_state(state_name)
+        else:
+            origin.go_to(state_name)
+
+    if not province:
+        to_map()
+        return
 
     if mode == "UNITS":
         if not queries.is_province_visible(map_screen, province["id"]):
+            to_map()
             return
         if queries.is_province_in_active_combat(province, map_screen.nation_data):
-            battle_screen.open_battle_screen(map_screen)
+            battle_screen.open_battle_screen(map_screen, origin_screen=origin)
         elif province.get("units"):
-            map_screen.change_state("ORDERS")
-    elif mode == "ECONOMY" and not map_screen.tactical_mode:
-        map_screen.change_state_if_owned("PRODUCTION", requires_land=True)
+            to("ORDERS")
+        else:
+            to_map()
+    elif mode == "ECONOMY":
+        owner = province.get("owner")
+        owned = owner == map_screen.player_country or map_screen.player_country == "Spectator"
+        if not map_screen.tactical_mode and owned and not queries.is_water_province(province):
+            to("PRODUCTION")
+        else:
+            to_map()
+    else:
+        to_map()

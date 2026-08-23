@@ -100,10 +100,14 @@ def render_buttons(map_screen):
     map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
     map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
 
-    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: map_screen.set_view_mode("RESOURCES"), image=icons.get("resource"), show_text=False)
-    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: map_screen.set_view_mode("BLANK"), image=icons.get("blank"), show_text=False)
-    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: map_screen.set_view_mode("UNITS"), image=icons.get("unit"), show_text=False)
-    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: map_screen.set_view_mode("ECONOMY"), image=icons.get("industry"), show_text=False)
+    # Clicking one of these while a tile is already selected jumps straight to
+    # that mode's screen for it (Orders/Battle for Units, Production for
+    # Economy) instead of just flipping the map overlay -- see
+    # ui.event_handler.navigate_view_mode.
+    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: event_handler.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
+    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: event_handler.navigate_view_mode(map_screen, "BLANK"), image=icons.get("blank"), show_text=False)
+    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
+    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: event_handler.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     # ==================================================================== #
@@ -1368,19 +1372,16 @@ class Map(GameState):
             self.deselect_province()
 
     def handle_orders_key(self):
-        """Q. Opens whichever of the two the button in that slot is offering.
+        """Q. Switches the province view to Units -- same as clicking that red
+        button -- which, with a tile already selected, jumps straight into
+        Orders or Battle for it.
 
         Not gated on owning anything here: both screens read a province you have
         no units in, and refuse to edit units you do not command.
         """
-        if not self.selected_province or self.selection_mode:
+        if self.selection_mode:
             return
-        if not queries.is_province_visible(self, self.selected_province["id"]):
-            return
-        if queries.is_province_in_active_combat(self.selected_province, self.nation_data):
-            battle_screen.open_battle_screen(self)
-        elif self.selected_province.get("units"):
-            self.change_state("ORDERS")
+        event_handler.navigate_view_mode(self, "UNITS")
 
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this

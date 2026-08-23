@@ -48,12 +48,17 @@ def draw_bottom_text(map_screen, surface):
         surface.blit(hud_font.render(text, True, color), (HUD_START_X + (i * HUD_SPACING), hud_y))
 
 
-def draw_resource_bar(surface, map_screen, target_nation=None):
+def draw_resource_bar(surface, map_screen, target_nation=None, start_x=None):
     """Draws the full-width resource bar pinned to the bottom of a sub-screen.
 
-    The Production, Orders and diplomacy overlay screens all show this exact
-    bar; keeping it here means a tweak to its height or spacing lands on all
-    three at once instead of the three copies drifting apart.
+    The Production and Orders screens both show this exact bar; keeping it
+    here means a tweak to its height or spacing lands on both at once instead
+    of the two copies drifting apart.
+
+    `start_x` overrides where the first resource is drawn -- Production and
+    Orders pass ui.bars.view_mode_buttons.RESOURCE_BAR_OFFSET_X so their copy
+    of the view-mode button row (drawn at the same bottom-left corner) doesn't
+    sit under the first entry or two.
     """
     bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - BAR_HEIGHT, c.SCREEN_WIDTH, BAR_HEIGHT)
     pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
@@ -61,8 +66,9 @@ def draw_resource_bar(surface, map_screen, target_nation=None):
 
     res_font = fonts.get("production_hud")
     resources = queries.get_resource_hud_strings(map_screen, include_net=False, target_nation=target_nation)
+    x0 = BAR_START_X if start_x is None else start_x
     for i, (text, color) in enumerate(resources):
         surface.blit(res_font.render(text, True, color),
-                     (BAR_START_X + (i * BAR_SPACING), bar_rect.y + BAR_TEXT_OFFSET_Y))
+                     (x0 + (i * BAR_SPACING), bar_rect.y + BAR_TEXT_OFFSET_Y))
 
     return bar_rect

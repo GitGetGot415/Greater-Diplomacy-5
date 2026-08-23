@@ -7,7 +7,8 @@ from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
 from map_logic.diplomacy import restrictions
-from ui.bars import resource_hud
+from ui.bars import resource_hud, view_mode_buttons
+from ui import event_handler
 
 # ==========================================
 # LAYOUT
@@ -134,6 +135,12 @@ class Production_Screen(GameState):
 
         super().handle_events(events)
 
+    def handle_orders_key(self):
+        """Q. Same as clicking the Units button in the view-mode row."""
+        if self.map_screen.tactical_mode:
+            return
+        event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
+
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
@@ -177,7 +184,10 @@ class Production_Screen(GameState):
 
     def refresh_ui(self):
         self.btn_back = make_back_button(self.exit_screen)
-        self.elements = [self.btn_back]
+        self.view_mode_buttons = view_mode_buttons.build(
+            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+        view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
+        self.elements = [self.btn_back, *self.view_mode_buttons]
 
         current_buildings = self.target_province.get("buildings", [])
         building_queue = self.target_province.get("building_queue", [])
@@ -911,7 +921,8 @@ class Production_Screen(GameState):
         owner_name = self.map_screen.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
         surface.blit(title_font.render(f"{owner_name} PRODUCTION", True, (255, 255, 255)), HEADER_TITLE_POS)
 
-        resource_hud.draw_resource_bar(surface, self.map_screen, target_nation=owner_nation)
+        resource_hud.draw_resource_bar(surface, self.map_screen, target_nation=owner_nation,
+                                       start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
 
         # Draw Queue (Returns hitbox rectangles for the event handler)
         self.cancel_hitboxes = recruit_ui.draw_recruitment_overlay(surface, self.target_province)
