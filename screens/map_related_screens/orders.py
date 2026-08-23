@@ -149,6 +149,12 @@ class Orders_Screen(GameState):
             camera_handler.center_camera_on_province(
                 self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
                 self.map_screen.total_ui_h)
+        # Back means leaving this province's screens entirely -- land on the
+        # bare map, not back on its province menu. (Resources/Blank in the
+        # view-mode row go through navigate_view_mode instead, which keeps
+        # the tile selected -- that's the "regular province menu" path.)
+        if self.map_screen:
+            self.map_screen.deselect_province()
         super().exit_screen()
 
     def handle_orders_key(self):

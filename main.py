@@ -672,6 +672,16 @@ class Controller:
             # dialogs took over instantly, within the same call, with no extra frame
             # of the screen underneath rendering first.
             top_modal = modal_stack.active()
+
+            # Same idea for an ordinary state switch: a button clicked just above
+            # (change_state/exit_screen/go_to) may have already marked active_state
+            # done. Flip now, in the same frame, so the screen being left never
+            # draws once more with post-click state (a newly selected province, a
+            # changed view mode) before the screen it is switching to appears.
+            if top_modal is None and self.active_state.done:
+                self.flip_state()
+                top_modal = modal_stack.active()
+
             if top_modal is not None:
                 top_modal.update()
                 top_modal.draw(self.screen)

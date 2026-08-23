@@ -122,6 +122,15 @@ class Production_Screen(GameState):
         self.artillery_mode = "normal"
         self.custom_artillery_modes = {}
 
+    def exit_screen(self):
+        # Back means leaving this province's screens entirely -- land on the
+        # bare map, not back on its province menu. (Resources/Blank in the
+        # view-mode row go through navigate_view_mode instead, which keeps
+        # the tile selected -- that's the "regular province menu" path.)
+        if self.map_screen:
+            self.map_screen.deselect_province()
+        super().exit_screen()
+
     def handle_events(self, events):
         # Override to block all interaction
         if self.map_screen.tactical_mode:
