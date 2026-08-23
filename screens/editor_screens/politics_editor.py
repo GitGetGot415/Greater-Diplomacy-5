@@ -93,9 +93,11 @@ class Politics_Edit_Screen(MapOverlayScreen):
         surface.blit(small.render("authoritarian", True, c.UI_TEXT_MUTED),
                      (self.slider.rect.right + 14, self.slider.rect.y - 2))
 
+        # The brighter of the palette's two shades: these are button fills, and
+        # the base one is chosen to sit under white text rather than to be it.
         reading = fonts.get("normal").render(
             "%s  (%+d)" % (politics.label(self.value), self.value),
-            True, c.COLOR_GOLD_HIGHLIGHT)
+            True, c.UI_COLORS[politics.palette(self.value)][1])
         surface.blit(reading, (p.centerx - reading.get_width() // 2, self.slider.rect.y + 50))
 
         effects = small.render(
@@ -136,7 +138,10 @@ class Politics_List_Screen(MapOverlayScreen):
             value = politics.value(self.map_screen.nation_data, cid)
             label = cid if value == c.POLITICS_START else "%s  (%+d %s)" % (
                 cid, value, politics.label(value))
-            btn = Button(row_x, y, "list_row", "blue" if value == c.POLITICS_START else "green",
+            # Colour is the ideology, not "has anybody edited this" -- the list
+            # then reads as a heat map of who has centralised, and an untouched
+            # map opens uniformly yellow because centrist *is* a position.
+            btn = Button(row_x, y, "list_row", politics.palette(value),
                          label, lambda cc=cid: self.edit(cc))
             btn.is_scrollable = True
             btn.click_guard = self.scroll_click_guard
@@ -151,7 +156,10 @@ class Politics_List_Screen(MapOverlayScreen):
     def draw_content(self, surface):
         p = self.panel_rect
         self.draw_panel(surface)
+        # Also publishes the track/handle rects handle_list_scroll drags by, so
+        # this is what makes the bar grabbable and not merely visible.
+        self.draw_list_scrollbar(surface, p.right - 15, p.y + 90, self.list_view_h)
         note = fonts.get("small").render(
-            "Unmarked nations start centrist. Left is libertarian, right authoritarian.",
+            "Blue libertarian, green liberal, yellow centrist, orange statist, red authoritarian.",
             True, c.UI_TEXT_MUTED)
         surface.blit(note, (p.x + 24, p.y + 58))

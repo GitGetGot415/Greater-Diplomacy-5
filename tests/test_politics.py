@@ -100,6 +100,40 @@ class MultiplierTests(unittest.TestCase):
         self.assertEqual(politics.drift(nation_data, "A"), 0)
 
 
+class BandTests(unittest.TestCase):
+    """The word and the colour are one statement, so they come from one table."""
+
+    def test_every_band_names_a_real_palette(self):
+        for _bound, label, palette in politics.BANDS:
+            self.assertIn(palette, c.UI_COLORS, f"{label} is painted in a colour that does not exist")
+
+    def test_the_axis_runs_light_blue_to_red(self):
+        self.assertEqual(
+            [politics.palette(v) for v in (-10, -5, 0, 5, 10)],
+            ["light_blue", "green", "yellow", "orange", "red"])
+
+    def test_an_untouched_country_is_yellow(self):
+        """A blank map opens all one colour, because centrist is a position."""
+        self.assertEqual(politics.palette(c.POLITICS_START), "yellow")
+        self.assertEqual(politics.palette(politics.value({"A": {}}, "A")), "yellow")
+
+    def test_the_label_and_the_palette_never_disagree(self):
+        expected = {"Libertarian": "light_blue", "Liberal": "green", "Centrist": "yellow",
+                    "Statist": "orange", "Authoritarian": "red"}
+        for value in range(c.POLITICS_MIN, c.POLITICS_MAX + 1):
+            self.assertEqual(politics.palette(value), expected[politics.label(value)])
+
+    def test_the_bands_still_say_what_they_always_said(self):
+        """Adding colour must not have moved a boundary."""
+        self.assertEqual([politics.label(v) for v in range(-10, 11)],
+                         ["Libertarian"] * 4 + ["Liberal"] * 4 + ["Centrist"] * 5
+                         + ["Statist"] * 4 + ["Authoritarian"] * 4)
+
+    def test_a_value_off_the_axis_is_still_painted(self):
+        self.assertEqual(politics.palette(999), "red")
+        self.assertEqual(politics.palette(-999), "light_blue")
+
+
 # ============================================================================ #
 #                                THE DRIFT                                     #
 # ============================================================================ #

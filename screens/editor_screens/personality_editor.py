@@ -156,6 +156,9 @@ class Personality_List_Screen(MapOverlayScreen):
     def draw_content(self, surface):
         p = self.panel_rect
         self.draw_panel(surface)
+        # Also publishes the track/handle rects handle_list_scroll drags by, so
+        # this is what makes the bar grabbable and not merely visible.
+        self.draw_list_scrollbar(surface, p.right - 15, p.y + 90, self.list_view_h)
         note = fonts.get("small").render(
             "Unmarked nations use procedural traits, seeded from the scenario.",
             True, c.UI_TEXT_MUTED)

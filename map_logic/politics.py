@@ -85,18 +85,43 @@ def research_multiplier(nation_data, nation):
     return 1.0 - c.POLITICS_RESEARCH_SPAN * _fraction(nation_data, nation)
 
 
+#: The axis carved into five named bands, libertarian first. Each entry is
+#: (highest value in the band, what to call it, its c.UI_COLORS palette name).
+#:
+#: One table rather than two, because the word and the colour are the same
+#: statement made twice: a screen that called a nation "Statist" and painted it
+#: red would be telling the reader two different things about one number. The
+#: centre band is yellow, so a map nobody has authored yet opens all one colour.
+BANDS = (
+    (-7, "Libertarian", "light_blue"),
+    (-3, "Liberal", "green"),
+    (2, "Centrist", "yellow"),
+    (6, "Statist", "orange"),
+    (c.POLITICS_MAX, "Authoritarian", "red"),
+)
+
+
+def band(political_value):
+    """The (bound, label, palette) entry a value falls in."""
+    v = clamp(political_value)
+    for entry in BANDS:
+        if v <= entry[0]:
+            return entry
+    return BANDS[-1]
+
+
 def label(political_value):
     """A short word for a position, for screens and tooltips."""
-    v = clamp(political_value)
-    if v <= -7:
-        return "Libertarian"
-    if v <= -3:
-        return "Liberal"
-    if v < 3:
-        return "Centrist"
-    if v < 7:
-        return "Statist"
-    return "Authoritarian"
+    return band(political_value)[1]
+
+
+def palette(political_value):
+    """The c.UI_COLORS name a position is drawn in.
+
+    Runs light blue -> green -> yellow -> orange -> red across the axis, so the
+    editor's country list reads as a heat map of who has centralised.
+    """
+    return band(political_value)[2]
 
 
 def at_limit(political_value):
