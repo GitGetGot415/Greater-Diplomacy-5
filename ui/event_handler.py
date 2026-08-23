@@ -371,15 +371,29 @@ def handle_map_events(map_screen, event):
             owner = map_screen.selected_province.get("owner")
             map_screen.mail_draft_text = queries.get_message_draft(map_screen.player_country, owner, map_screen.nation_data)
 
-            navigate_view_mode(map_screen, map_screen.secondary_mode)
+            # Classic: a click only ever opens the plain province menu -- see
+            # navigate_view_mode. Jumping straight into Orders/Battle/Production
+            # is a Preemptive-only shortcut.
+            if c.MAP_NAVIGATION_MODE != "CLASSIC":
+                navigate_view_mode(map_screen, map_screen.secondary_mode)
+
+
+def is_classic_navigation():
+    return c.MAP_NAVIGATION_MODE == "CLASSIC"
 
 
 def navigate_view_mode(map_screen, mode, origin=None):
-    """Sets the map's view mode and, for UNITS/ECONOMY, jumps straight to
-    whatever screen that mode implies for the selected province: Orders (or
+    """Sets the map's view mode and, in Preemptive navigation, jumps straight
+    to whatever screen that mode implies for the selected province: Orders (or
     Battle, if the tile is fighting) for UNITS, Production for ECONOMY.
     RESOURCES/BLANK have no screen of their own, so from anywhere but the map
     itself they just land back on the plain province menu (the Map screen).
+
+    In Classic navigation this only ever sets the view mode -- switching it
+    never changes which screen is showing, wherever the row that called this
+    is drawn (Map, Orders, Production, Battle). Orders/Battle/Production are
+    reached only through their own explicit buttons there -- see
+    go_to_orders_screen/go_to_battle_screen/go_to_production_screen below.
 
     `origin` is whichever screen the click/keypress came from: the Map itself
     (the default), or one of the screens layered over it (Orders, Production)
@@ -387,10 +401,13 @@ def navigate_view_mode(map_screen, mode, origin=None):
     doesn't require backing out to the map first. Transitions are issued
     against `origin`, not always `map_screen` -- flip_state only reacts to the
     *currently active* screen's next_state/done, and while Orders or
-    Production is up, that isn't map_screen.
+    Production is up, that isn't map_screen. Only reachable in Preemptive mode.
     """
-    origin = origin or map_screen
     map_screen.set_view_mode(mode)
+    if is_classic_navigation():
+        return
+
+    origin = origin or map_screen
     province = map_screen.selected_province
 
     def to_map():
@@ -433,3 +450,34 @@ def navigate_view_mode(map_screen, mode, origin=None):
             to_map()
     else:
         to_map()
+
+
+# The province-menu sidebar's three action buttons (Give Orders, Manage/View
+# Battle, Production). In Preemptive these route through navigate_view_mode,
+# same as the view-mode row, so clicking them also keeps it in sync. In
+# Classic they are the *only* way to reach these screens, and jump straight
+# there unconditionally -- there is no view mode to keep in sync with.
+
+def go_to_orders_screen(map_screen):
+    """Give Orders sidebar button."""
+    if is_classic_navigation():
+        map_screen.change_state("ORDERS")
+    else:
+        navigate_view_mode(map_screen, "UNITS")
+
+
+def go_to_battle_screen(map_screen):
+    """Manage/View Battle sidebar button -- shares its slot with Give Orders,
+    swapped in whenever the tile is fighting."""
+    if is_classic_navigation():
+        battle_screen.open_battle_screen(map_screen)
+    else:
+        navigate_view_mode(map_screen, "UNITS")
+
+
+def go_to_production_screen(map_screen):
+    """Production sidebar button."""
+    if is_classic_navigation():
+        map_screen.change_state_if_owned("PRODUCTION", requires_land=True)
+    else:
+        navigate_view_mode(map_screen, "ECONOMY")

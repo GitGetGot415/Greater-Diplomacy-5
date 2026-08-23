@@ -10,6 +10,7 @@ from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui import event_handler, sidebar_info
 from map_logic.camera import camera_handler
+from screens.map_related_screens import battle_screen
 
 # ==========================================
 # LAYOUT
@@ -95,6 +96,12 @@ class Orders_Screen(GameState):
         # before its first handoff is not a special case.
         self.read_only = False
 
+        # Classic navigation only: True when this screen was reached via
+        # Battle_Screen.go_to_orders, so Back should reopen the battle instead
+        # of landing on the plain province menu -- see start_with_province and
+        # exit_screen.
+        self.return_to_battle = False
+
         self.scroll_y = 0
         self.max_scroll_y = 0
         self.row_height = 80
@@ -108,6 +115,12 @@ class Orders_Screen(GameState):
         self.map_screen = map_ref
         self.scroll_y = 0
         self.bombarding_unit_index = None
+
+        # Consumed here rather than left set: only the handoff that actually
+        # requested it should be honoured, not whatever the flag happened to
+        # hold from an earlier visit.
+        self.return_to_battle = bool(getattr(map_ref, "pending_battle_return", False))
+        map_ref.pending_battle_return = False
 
         # Shift the camera left so this panel doesn't cover the unit it's showing orders for.
         camera_handler.center_camera_on_province(
@@ -149,20 +162,35 @@ class Orders_Screen(GameState):
             camera_handler.center_camera_on_province(
                 self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
                 self.map_screen.total_ui_h)
-        # Back means leaving this province's screens entirely -- land on the
-        # bare map, not back on its province menu. (Resources/Blank in the
-        # view-mode row go through navigate_view_mode instead, which keeps
-        # the tile selected -- that's the "regular province menu" path.)
+
+        if c.MAP_NAVIGATION_MODE == "CLASSIC":
+            if self.return_to_battle and self.map_screen:
+                # Reached from Battle's own "Unit Orders" button -- Back goes
+                # back to the battle, not the plain province menu.
+                battle_screen.open_battle_screen(self.map_screen)
+            # Classic: Back lands on the plain province menu, tile still
+            # selected. (The view-mode row only ever switches the map overlay
+            # in Classic -- see navigate_view_mode -- so this is the only path
+            # that leaves Orders at all.)
+            super().exit_screen()
+            return
+
+        # Preemptive: Back means leaving this province's screens entirely --
+        # land on the bare map, not back on its province menu. (Resources/Blank
+        # in the view-mode row go through navigate_view_mode instead, which
+        # keeps the tile selected -- that's the "regular province menu" path.)
         if self.map_screen:
             self.map_screen.deselect_province()
         super().exit_screen()
 
     def handle_orders_key(self):
-        """Q. Same as clicking the Units button in the view-mode row."""
+        """Q. Same as clicking the Units button in the view-mode row -- a pure
+        view-mode switch in Classic navigation, a screen jump in Preemptive."""
         event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
 
     def handle_economy_key(self):
-        """W. Same as clicking the Economy button in the view-mode row."""
+        """W. Same as clicking the Economy button in the view-mode row -- a pure
+        view-mode switch in Classic navigation, a screen jump in Preemptive."""
         event_handler.navigate_view_mode(self.map_screen, "ECONOMY", origin=self)
 
     def select_unit(self, index):

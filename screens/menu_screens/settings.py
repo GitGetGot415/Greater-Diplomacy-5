@@ -14,6 +14,7 @@ SETTINGS_FULLSCREEN_Y = 40
 SETTINGS_CHECKERBOARD_WATER_Y = 100
 SETTINGS_FPS_TOGGLE_Y = 160
 SETTINGS_DRAG_KEY_Y = 220
+SETTINGS_MAP_NAV_Y = 280
 SETTINGS_PLAYER_SLIDER_Y = 340
 SETTINGS_FPS_SLIDER_Y = 400
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -61,6 +62,9 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
+        Button(keybind_x, SETTINGS_MAP_NAV_Y, "medium", "purple",
+               f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
+               settings_screen.toggle_map_navigation_mode),
     ]
 
     # --- MASTER AI TOGGLE BUTTON ---
@@ -200,6 +204,7 @@ class Settings(GameState):
         self.ai_threads = self.controller.ai_threads
         self.show_fps = self.controller.show_fps
         self.checkerboard_water = self.controller.checkerboard_water
+        self.map_navigation_mode = self.controller.map_navigation_mode
 
         for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
             setattr(self, key, getattr(self.controller, key))
@@ -240,6 +245,17 @@ class Settings(GameState):
         self.checkerboard_water = not self.checkerboard_water
         self.controller.checkerboard_water = self.checkerboard_water
         c.apply_runtime_settings({"checkerboard_water": self.checkerboard_water})
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
+    def toggle_map_navigation_mode(self):
+        """Cycles between CLASSIC (click always opens the plain province menu;
+        the view-mode row only swaps the map overlay) and PREEMPTIVE (both of
+        those also jump straight into whatever screen the view mode implies).
+        See data.constants.MAP_NAVIGATION_MODE."""
+        self.map_navigation_mode = "PREEMPTIVE" if self.map_navigation_mode == "CLASSIC" else "CLASSIC"
+        self.controller.map_navigation_mode = self.map_navigation_mode
+        c.apply_runtime_settings({"map_navigation_mode": self.map_navigation_mode})
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 

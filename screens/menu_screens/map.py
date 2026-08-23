@@ -102,10 +102,11 @@ def render_buttons(map_screen):
     map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
     map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
 
-    # Clicking one of these while a tile is already selected jumps straight to
-    # that mode's screen for it (Orders/Battle for Units, Production for
-    # Economy) instead of just flipping the map overlay -- see
-    # ui.event_handler.navigate_view_mode.
+    # In Preemptive navigation, clicking one of these while a tile is already
+    # selected jumps straight to that mode's screen for it (Orders/Battle for
+    # Units, Production for Economy) instead of just flipping the map overlay.
+    # In Classic navigation it only ever flips the overlay. See
+    # ui.event_handler.navigate_view_mode / data.constants.MAP_NAVIGATION_MODE.
     map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: event_handler.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
     map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: event_handler.navigate_view_mode(map_screen, "BLANK"), image=icons.get("blank"), show_text=False)
     map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
@@ -286,16 +287,19 @@ def render_buttons(map_screen):
     # ======================================================================== #
     diplo_x = DIPLO_BTN_X
 
-    # Domestic Set. Both route through navigate_view_mode rather than jumping
-    # straight to their screen, so clicking them also swaps the bottom-left
-    # view-mode row over to match (Units for either half of this shared slot,
-    # Economy for Production) instead of leaving it on whatever it last was.
-    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("paper"), show_text=False)
+    # Domestic Set. In Preemptive navigation both route through
+    # navigate_view_mode rather than jumping straight to their screen, so
+    # clicking them also swaps the bottom-left view-mode row over to match
+    # (Units for either half of this shared slot, Economy for Production)
+    # instead of leaving it on whatever it last was. In Classic navigation they
+    # jump straight there unconditionally instead. See
+    # ui.event_handler.go_to_orders_screen/go_to_battle_screen/go_to_production_screen.
+    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: event_handler.go_to_orders_screen(map_screen), image=icons.get("paper"), show_text=False)
     # Shares BTN_ORDERS_Y with Give Orders: only one of the two is ever visible,
     # and on a tile that is fighting it is this one. The lane manager carries a
     # button back to Orders, so nothing there becomes unreachable.
-    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("battle"), show_text=False)
-    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: event_handler.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
+    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: event_handler.go_to_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
+    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: event_handler.go_to_production_screen(map_screen), image=icons.get("industry"), show_text=False)
 
     # Foreign Set. Rows overlap deliberately -- only one of the buttons sharing
     # a row is ever visible at a time (e.g. Request vs Cancel Mil. Access).
@@ -865,6 +869,12 @@ class Map(GameState):
         self.mail_draft_text = ""
         self.mail_input_active = False
 
+        # Classic navigation only: set by Battle_Screen.go_to_orders right
+        # before handing off to Orders, so Orders_Screen.start_with_province
+        # knows Back should reopen the battle instead of landing on the plain
+        # province menu -- see screens.map_related_screens.orders.exit_screen.
+        self.pending_battle_return = False
+
         # --- NEW REFRESH TRACKERS ---
         self.refresh_tasks_total = 0
         self.refresh_tasks_completed = 0
@@ -1394,9 +1404,9 @@ class Map(GameState):
             self.deselect_province()
 
     def handle_orders_key(self):
-        """Q. Switches the province view to Units -- same as clicking that red
-        button -- which, with a tile already selected, jumps straight into
-        Orders or Battle for it.
+        """Q. Same as clicking the Units button in the view-mode row: in
+        Preemptive navigation that also jumps straight into Orders or Battle
+        for the selected tile; in Classic it only switches the view mode.
 
         Not gated on owning anything here: both screens read a province you have
         no units in, and refuse to edit units you do not command.
@@ -1406,9 +1416,9 @@ class Map(GameState):
         event_handler.navigate_view_mode(self, "UNITS")
 
     def handle_economy_key(self):
-        """W. Switches the province view to Economy -- same as clicking that
-        button -- which, with an owned tile selected, jumps straight into
-        Production for it.
+        """W. Same as clicking the Economy button in the view-mode row: in
+        Preemptive navigation that also jumps straight into Production for the
+        selected tile; in Classic it only switches the view mode.
         """
         if self.selection_mode:
             return

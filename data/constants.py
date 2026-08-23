@@ -190,6 +190,18 @@ SHOW_FPS = False
 # expect it.
 CHECKERBOARD_WATER = False
 
+# How clicking a tile and switching the bottom-left view mode (Resources/
+# Blank/Units/Economy) behave on the map screen. "CLASSIC" is how the game
+# played before clicking ever jumped screens on its own: a tile click always
+# just opens the plain province menu, and the view-mode row (wherever it is
+# drawn -- Map, Orders, Production, Battle) only swaps the map overlay, never
+# the screen you're on -- Orders/Battle/Production are reached only through
+# their own explicit buttons. "PREEMPTIVE" is the newer behaviour: a click (or
+# a view-mode button) jumps straight into whatever screen the current view
+# mode implies. See ui/event_handler.py's navigate_view_mode. Defaults to
+# CLASSIC -- it is the behaviour the game shipped with the longest.
+MAP_NAVIGATION_MODE = "CLASSIC"
+
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
 # any other style (e.g. "hanskolmer") looks up a per-unit manifest under its
@@ -2030,6 +2042,7 @@ RUNTIME_SETTINGS = {
     "tournament_saves_dir": "TOURNAMENT_SAVES_DIR",
     "checkerboard_water": "CHECKERBOARD_WATER",
     "unit_art_style": "UNIT_ART_STYLE",
+    "map_navigation_mode": "MAP_NAVIGATION_MODE",
 }
 
 

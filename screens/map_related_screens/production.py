@@ -123,10 +123,18 @@ class Production_Screen(GameState):
         self.custom_artillery_modes = {}
 
     def exit_screen(self):
-        # Back means leaving this province's screens entirely -- land on the
-        # bare map, not back on its province menu. (Resources/Blank in the
-        # view-mode row go through navigate_view_mode instead, which keeps
-        # the tile selected -- that's the "regular province menu" path.)
+        if c.MAP_NAVIGATION_MODE == "CLASSIC":
+            # Classic: Back lands on the plain province menu, tile still
+            # selected. (The view-mode row only ever switches the map overlay
+            # in Classic -- see navigate_view_mode -- so this is the only path
+            # that leaves Production at all.)
+            super().exit_screen()
+            return
+
+        # Preemptive: Back means leaving this province's screens entirely --
+        # land on the bare map, not back on its province menu. (Resources/Blank
+        # in the view-mode row go through navigate_view_mode instead, which
+        # keeps the tile selected -- that's the "regular province menu" path.)
         if self.map_screen:
             self.map_screen.deselect_province()
         super().exit_screen()
@@ -145,13 +153,15 @@ class Production_Screen(GameState):
         super().handle_events(events)
 
     def handle_orders_key(self):
-        """Q. Same as clicking the Units button in the view-mode row."""
+        """Q. Same as clicking the Units button in the view-mode row -- a pure
+        view-mode switch in Classic navigation, a screen jump in Preemptive."""
         if self.map_screen.tactical_mode:
             return
         event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
 
     def handle_economy_key(self):
-        """W. Same as clicking the Economy button in the view-mode row."""
+        """W. Same as clicking the Economy button in the view-mode row -- a pure
+        view-mode switch in Classic navigation, a screen jump in Preemptive."""
         if self.map_screen.tactical_mode:
             return
         event_handler.navigate_view_mode(self.map_screen, "ECONOMY", origin=self)

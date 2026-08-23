@@ -233,19 +233,40 @@ class Battle_Screen(ModalScreen):
 
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
-        self.close_and_navigate("ORDERS")
+        if c.MAP_NAVIGATION_MODE == "CLASSIC":
+            # Classic: Orders is reached only through Map.change_state, not
+            # through navigate_view_mode/origin_screen -- see
+            # ui.event_handler.navigate_view_mode. Flagging the map screen here
+            # is how Orders_Screen.start_with_province learns Back should
+            # reopen this battle instead of landing on the plain province menu
+            # -- see its exit_screen.
+            self.map_screen.pending_battle_return = True
+            self.done = True
+            self.map_screen.change_state("ORDERS")
+        else:
+            self.close_and_navigate("ORDERS")
 
     def exit_screen(self):
-        """Closing the battle inspector -- the Close button, or Back/Esc --
-        always lands on the bare map with the tile deselected, matching what
-        Back does from Orders/Production. Popping the modal with the base
-        implementation would just resume whichever screen was underneath
-        (Production or Orders, if this battle was reached via their own copy
-        of the view-mode row) with the tile still selected; deselecting here
-        directly, rather than relying on origin_screen's own exit_screen (see
-        close_and_navigate, which forwards via go_to, not exit_screen), covers
-        every origin in one place, including Map itself.
+        """Closing the battle inspector -- the Close button, or Back/Esc.
+
+        Classic: just pops the modal. Battle is only ever opened here while
+        Map is the active state (either directly, or because Orders handed off
+        to MAP before reopening it -- see go_to_orders), so popping reveals Map
+        with the tile still selected, i.e. the plain province menu -- matching
+        what Back does from Orders/Production in Classic.
+
+        Preemptive: always lands on the bare map with the tile deselected,
+        matching what Back does from Orders/Production there. Popping the
+        modal with the base implementation would just resume whichever screen
+        was underneath (Production or Orders, if this battle was reached via
+        their own copy of the view-mode row) with the tile still selected;
+        deselecting here directly, rather than relying on origin_screen's own
+        exit_screen (see close_and_navigate, which forwards via go_to, not
+        exit_screen), covers every origin in one place, including Map itself.
         """
+        if c.MAP_NAVIGATION_MODE == "CLASSIC":
+            self.done = True
+            return
         if self.map_screen:
             self.map_screen.deselect_province()
         self.close_and_navigate("MAP")

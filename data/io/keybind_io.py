@@ -17,7 +17,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   deepseek_api_key="", kimi_api_key="",
                   deepseek_model=c.DEFAULT_DEEPSEEK_MODEL, kimi_model=c.DEFAULT_KIMI_MODEL,
                   ai_turn_budget_seconds=c.DEFAULT_AI_TURN_BUDGET_SECONDS,
-                  unit_art_style=c.DEFAULT_UNIT_ART_STYLE):
+                  unit_art_style=c.DEFAULT_UNIT_ART_STYLE,
+                  map_navigation_mode=c.MAP_NAVIGATION_MODE):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these
