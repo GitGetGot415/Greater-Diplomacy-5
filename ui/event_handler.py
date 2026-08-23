@@ -412,7 +412,13 @@ def navigate_view_mode(map_screen, mode, origin=None):
             to_map()
             return
         if queries.is_province_in_active_combat(province, map_screen.nation_data):
-            battle_screen.open_battle_screen(map_screen, origin_screen=origin)
+            # Battle carries its own copy of this row now too, so clicking
+            # Units there while the tile is still fighting must not stack a
+            # second modal on top of the one already showing it.
+            already_here = (isinstance(origin, battle_screen.Battle_Screen)
+                           and origin.province is province)
+            if not already_here:
+                battle_screen.open_battle_screen(map_screen, origin_screen=origin)
         else:
             # Orders_Screen already renders fine with nothing to show -- an
             # empty unit list just skips the panel -- so an empty tile still

@@ -34,7 +34,7 @@ from data import queries
 from map_logic.turn_processing import combat_rules
 from map_logic.rendering.font_manager import fonts
 from ui import flag_icons
-from ui.bars import ui_bars
+from ui.bars import ui_bars, view_mode_buttons
 from ui.modal_screen import ModalScreen
 from ui_elements import draw_combat_stats, draw_bombardment_stats
 
@@ -52,6 +52,12 @@ ROW_H = 42
 HEADER_H = 26
 #: Flags a lane row shows per side before it gives up and counts the rest.
 LANE_FLAGS_SHOWN = 3
+
+#: Room reserved at the very bottom of the panel for the shared view-mode
+#: button row (Resources/Blank/Units/Economy), which is drawn at the same
+#: screen-fixed y as every other screen's copy of it -- see refresh_ui and
+#: _layout, which both shrink to make room for it instead of drawing under it.
+VIEW_MODE_ROW_RESERVE = 40
 
 
 def side_name(side):
@@ -229,6 +235,30 @@ class Battle_Screen(ModalScreen):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
         self.close_and_navigate("ORDERS")
 
+    def exit_screen(self):
+        """Closing the battle inspector -- the Close button, or Back/Esc --
+        always lands on the bare map with the tile deselected, matching what
+        Back does from Orders/Production. Popping the modal with the base
+        implementation would just resume whichever screen was underneath
+        (Production or Orders, if this battle was reached via their own copy
+        of the view-mode row) with the tile still selected; deselecting here
+        directly, rather than relying on origin_screen's own exit_screen (see
+        close_and_navigate, which forwards via go_to, not exit_screen), covers
+        every origin in one place, including Map itself.
+        """
+        if self.map_screen:
+            self.map_screen.deselect_province()
+        self.close_and_navigate("MAP")
+
+    def go_to(self, state_name):
+        """Overridden so ui.event_handler.navigate_view_mode's generic
+        `origin.go_to(state_name)` (used for the shared view-mode button row
+        this screen now also carries) closes this modal and forwards on
+        correctly instead of just setting next_state, which nothing would
+        ever read -- see close_and_navigate.
+        """
+        self.close_and_navigate(state_name)
+
     def close_and_navigate(self, state_name):
         """Closes this modal and hands off to `state_name` on whichever screen
         it was opened over -- Map by default, but Production or Orders when
@@ -248,7 +278,7 @@ class Battle_Screen(ModalScreen):
     def _layout(self):
         p = self.panel_rect
         top = p.y + 64
-        view_h = p.bottom - 66 - top
+        view_h = p.bottom - 66 - VIEW_MODE_ROW_RESERVE - top
         col_w = (p.width - 2 * self.PAD - LANE_COL_W - 3 * 10) // 3
 
         x = p.x + self.PAD
@@ -274,7 +304,7 @@ class Battle_Screen(ModalScreen):
         self.row_paint = {}
         p = self.panel_rect
 
-        btn_y = p.bottom - 52
+        btn_y = p.bottom - 52 - VIEW_MODE_ROW_RESERVE
         self.elements.append(
             self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
         # Nothing to clear on a tile you command nothing on.
@@ -284,6 +314,15 @@ class Battle_Screen(ModalScreen):
                             self.clear_orders))
         self.elements.append(
             self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
+
+        # Deferred import: ui.event_handler imports this module at load time
+        # to open battles, so importing it back at module scope here would close
+        # a cycle.
+        from ui import event_handler
+        self.view_mode_buttons = view_mode_buttons.build(
+            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+        view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
+        self.elements.extend(self.view_mode_buttons)
 
         if not self.visible or not self.battle.lanes:
             return
