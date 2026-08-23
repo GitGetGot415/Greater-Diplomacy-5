@@ -413,10 +413,11 @@ def navigate_view_mode(map_screen, mode, origin=None):
             return
         if queries.is_province_in_active_combat(province, map_screen.nation_data):
             battle_screen.open_battle_screen(map_screen, origin_screen=origin)
-        elif province.get("units"):
-            to("ORDERS")
         else:
-            to_map()
+            # Orders_Screen already renders fine with nothing to show -- an
+            # empty unit list just skips the panel -- so an empty tile still
+            # opens it rather than bouncing back to the map.
+            to("ORDERS")
     elif mode == "ECONOMY":
         owner = province.get("owner")
         owned = owner == map_screen.player_country or map_screen.player_country == "Spectator"
