@@ -150,6 +150,12 @@ class Production_Screen(GameState):
             return
         event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
 
+    def handle_economy_key(self):
+        """W. Same as clicking the Economy button in the view-mode row."""
+        if self.map_screen.tactical_mode:
+            return
+        event_handler.navigate_view_mode(self.map_screen, "ECONOMY", origin=self)
+
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref

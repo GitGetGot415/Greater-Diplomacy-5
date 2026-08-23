@@ -5,6 +5,7 @@ from gameState import GameState
 import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
+from ui.bars import ui_bars
 
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 250
@@ -19,7 +20,7 @@ SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
 SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
 SETTINGS_UNIT_ART_GAP_X = 20
-SETTINGS_KEYBIND_ROWS_Y = (470, 530, 590)
+SETTINGS_KEYBINDS_Y = 470
 SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
 SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
 SETTINGS_AI_PROVIDER_START_X = 10
@@ -121,21 +122,11 @@ def render_settings_buttons(settings_screen):
                "Unit Art", settings_screen.open_unit_art),
     ])
 
-    # Rebindable keys: label shows the bound key, or the capture prompt while listening
-    keybind_rows = zip(SETTINGS_KEYBIND_ROWS_Y,
-                       (("FULLSCREEN", "Fullscreen", pygame.K_F11),
-                        ("BACK", "Back", pygame.K_ESCAPE),
-                        ("ORDERS", "Orders", pygame.K_q)))
-    for y, (action, label, default_key) in keybind_rows:
-        if settings_screen.listening_for == action:
-            text = "Press any key..."
-        else:
-            key_name = pygame.key.name(settings_screen.controller.keybinds.get(action, default_key)).upper()
-            text = f"{label} Key: {key_name}"
-        settings_screen.elements.append(
-            Button(keybind_x, y, "medium", "grey", text,
-                   lambda a=action: settings_screen.start_listening(a))
-        )
+    # Rebinding itself now lives on its own screen; this just links to it.
+    settings_screen.elements.append(
+        Button(keybind_x, SETTINGS_KEYBINDS_Y, "medium", "purple", "Keybinds",
+               settings_screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"))
+    )
 
     # Edit/Reset pair for each path and colour row, driven off the screen's own table
     for y, _kind, key, _label in settings_screen.PATH_ROWS:
@@ -195,7 +186,6 @@ class Settings(GameState):
         self.last_ai_mode = self.ai_mode if self.ai_mode != "OFF" else c.AI_MODE_REENABLE_FALLBACK
 
         self.fullscreen = False
-        self.listening_for = None
 
         # Mirror the controller's editable string state onto "<attr>_text" locals:
         # the API key / model name pair per provider, plus the path settings.
@@ -255,6 +245,9 @@ class Settings(GameState):
 
     def open_unit_art(self):
         self.go_to("UNIT_ART")
+
+    def open_keybinds(self):
+        self.go_to("KEYBINDS")
 
     def toggle_drag_button(self):
         """Cycles the dynamic mouse button configuration toggle value string."""
@@ -317,12 +310,9 @@ class Settings(GameState):
             self.last_ai_mode = self.ai_mode
             self.set_ai_mode("OFF")
 
-    def start_listening(self, action):
-        self.listening_for = action
-        self.refresh_ui()
-
     def reset_defaults(self):
-        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11}
+        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11,
+                        "ECONOMY": pygame.K_w}
         self.controller.keybinds = default_keys
         self.controller.target_fps = c.TARGET_FPS
 
@@ -412,13 +402,7 @@ class Settings(GameState):
             self.additional_events(event)
 
     def additional_events(self, event):
-        if self.listening_for and event.type == pygame.KEYDOWN:
-            self.controller.keybinds[self.listening_for] = event.key
-            self.save_and_go_back(execute_exit=False) # Silently save
-            self.listening_for = None
-            self.refresh_ui()
-
-        elif self.active_input and self.ai_mode != "OFF":
+        if self.active_input and self.ai_mode != "OFF":
             box_type = self.active_input.rsplit("_", 1)[-1]
             if box_type in self.AI_FIELD_SUFFIX:
                 limit = c.MAX_API_KEY_LENGTH if box_type == "KEY" else c.MAX_MODEL_NAME_LENGTH
@@ -490,9 +474,7 @@ class Settings(GameState):
             self.exit_screen()
 
     def handle_back_key(self):
-        # Ignore Escape while a key is being rebound; it belongs to the capture.
-        if not self.listening_for:
-            self.save_and_go_back()
+        self.save_and_go_back()
 
     def toggle_full(self):
         self.controller.toggle_fullscreen()

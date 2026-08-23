@@ -47,7 +47,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
-    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds
     global Translate
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
@@ -100,6 +100,7 @@ def _import_project_modules():
     from screens.menu_screens.view_assets import View_Assets
     from screens.menu_screens.mods import Mods
     from screens.menu_screens.unit_art import Unit_Art
+    from screens.menu_screens.keybinds import Keybinds
     from screens.map_related_screens.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
     from map_logic.rendering import symbol_loader
@@ -260,7 +261,8 @@ class Controller:
         default_keys = {
             "BACK": pygame.K_ESCAPE,
             "ORDERS": pygame.K_q,
-            "FULLSCREEN": pygame.K_F11
+            "FULLSCREEN": pygame.K_F11,
+            "ECONOMY": pygame.K_w
         }
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
@@ -311,6 +313,7 @@ class Controller:
             "LOAD_GAME": Load_Game(),
             "SETTINGS": Settings(self),
             "UNIT_ART": Unit_Art(self),
+            "KEYBINDS": Keybinds(self),
             "CREDITS": Credits(),
             "MUSIC_PLAYER": Music_Player(self),
             "VIEW_ASSETS": View_Assets(),
@@ -363,12 +366,12 @@ class Controller:
         if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
             if previous_state == self.states["MAP"]:
                 self.states[next_state_name].back_state = "MAP"
-            # Returning from a Settings sub-screen (e.g. Unit Art) isn't a
-            # fresh entry into Settings -- it must not overwrite the MAP/MENU
-            # back_state Settings already picked up when it was first opened,
-            # or Back from the sub-screen would dump the player at the menu
-            # even when they opened Settings from a live game.
-            elif previous_state is not self.states.get("UNIT_ART"):
+            # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
+            # isn't a fresh entry into Settings -- it must not overwrite the
+            # MAP/MENU back_state Settings already picked up when it was
+            # first opened, or Back from the sub-screen would dump the
+            # player at the menu even when they opened Settings from a live game.
+            elif previous_state not in (self.states.get("UNIT_ART"), self.states.get("KEYBINDS")):
                 self.states[next_state_name].back_state = "MENU"
 
         # 2. Map Persistence

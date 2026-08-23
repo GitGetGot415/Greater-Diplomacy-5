@@ -1385,6 +1385,15 @@ class Map(GameState):
             return
         event_handler.navigate_view_mode(self, "UNITS")
 
+    def handle_economy_key(self):
+        """W. Switches the province view to Economy -- same as clicking that
+        button -- which, with an owned tile selected, jumps straight into
+        Production for it.
+        """
+        if self.selection_mode:
+            return
+        event_handler.navigate_view_mode(self, "ECONOMY")
+
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this
         # background without running Map_Screen.update() first -- Orders_Screen,

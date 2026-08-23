@@ -161,6 +161,10 @@ class Orders_Screen(GameState):
         """Q. Same as clicking the Units button in the view-mode row."""
         event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
 
+    def handle_economy_key(self):
+        """W. Same as clicking the Economy button in the view-mode row."""
+        event_handler.navigate_view_mode(self.map_screen, "ECONOMY", origin=self)
+
     def select_unit(self, index):
         if getattr(self, "read_only", False):
             return
