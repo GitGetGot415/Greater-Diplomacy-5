@@ -21,7 +21,13 @@ STAGE_DIR = "web_stage"
 # main.py ships source (not a frozen binary) into the browser's virtual FS, so unlike
 # windows_compilation.py/macos_compilation.py this script also has to stage the first-party
 # Python packages themselves, not just data directories.
-SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py"]
+# libdragoman.so is the translation layer, and it is a FILE at the repository
+# root rather than a package, so it has to be named here or the browser build
+# stages everything except the one thing map_logic/odtl.py loads. That is
+# exactly what happened: the library was committed, the web build had no copy
+# of it, and the Translate screen reported it missing from web_stage/assets.
+SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
+                "libdragoman.so"]
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
 
@@ -52,6 +58,15 @@ def main():
         dst = os.path.join(STAGE_DIR, pkg)
         ignore_fn = data_pkg_ignore if pkg == "data" else pycache_ignore
         shutil.copytree(pkg, dst, ignore=ignore_fn)
+
+    # Staged, not merely present in the repository. A missing library here is a
+    # browser build whose Translate screen cannot work, and nothing later in
+    # this script would notice.
+    staged_lib = os.path.join(STAGE_DIR, "libdragoman.so")
+    if not os.path.exists(staged_lib):
+        print("ERROR: libdragoman.so was not staged, so the web build would have "
+              "no translation layer. Is it still in SOURCE_FILES?")
+        sys.exit(1)
 
     # 2. Copy asset/data dirs, reusing the same git-ignore-based filtering
     # windows_compilation.py uses so the web bundle's music/scenario footprint matches
