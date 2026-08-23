@@ -8,7 +8,7 @@ from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
-from ui import event_handler
+from ui import event_handler, sidebar_info
 from map_logic.camera import camera_handler
 
 # ==========================================
@@ -251,56 +251,38 @@ class Orders_Screen(GameState):
                 if is_tactical: btn_clear.disabled = True
                 self.elements.append(btn_clear)
 
+        # Read-only (a tile the player commands nothing on) skips the whole
+        # editable-row layout below -- it's drawn instead as a garrison/combat
+        # roster in additional_draw, matching the province sidebar's look.
         display_index = 0
         for i, unit in enumerate(units):
-            if not read_only and unit.get("owner") != self.map_screen.player_country:
+            if read_only:
                 continue
-                
+            if unit.get("owner") != self.map_screen.player_country:
+                continue
+
             is_tactical_other = is_tactical and unit is not self.map_screen.player_unit
-                
+
             y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
             y_pos = y_pos + UNIT_ICON_OFFSET_Y
-            
+
             if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
                 color = "blue" if self.selected_unit_index == i or self.selected_unit_index == "ALL" else "grey"
                 unit_name = unit["type"]
-                
+
                 # Fetch the icon using the symbol_loader (zoom 1.5 is a standard starting scale)
                 unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM,
                                                                     country=unit.get("owner")), "medium_square")
 
                 # Create the button with the icon and set show_text=False
-                if read_only:
-                    color = "grey"
                 btn_sel = Button(self.PANEL_X + UNIT_ICON_OFFSET_X, y_pos, "medium_square", color, "",
-                                lambda idx=i: self.select_unit(idx), 
-                                image=unit_icon, 
+                                lambda idx=i: self.select_unit(idx),
+                                image=unit_icon,
                                 show_text=False)
-                btn_sel.disabled = read_only
                 self.elements.append(btn_sel)
-                
+
                 order = unit.get("order", {})
                 order_type = order.get("type", "")
-
-                # Read-only: one row per unit saying whose it is and what it is
-                # doing, and not one button that would change any of it.
-                if read_only:
-                    owner_name = unit.get("owner", "Unknown")
-                    doing = order_type or "MOVE"
-                    if doing == "MOVE" and order.get("path"):
-                        doing = "MOVING"
-                    elif doing == "MOVE":
-                        doing = "HOLDING"
-                    btn_info = Button(self.PANEL_X + ACTION_START_OFFSET_X, y_pos,
-                                      "orders_panel", "grey",
-                                      f"{owner_name} - {doing}", lambda: None,
-                                      font_preset="normal")
-                    btn_info.disabled = True
-                    btn_info.is_scrollable = True
-                    btn_info.click_guard = row_guard
-                    self.elements.append(btn_info)
-                    display_index += 1
-                    continue
 
                 # Combat / Location checks
                 player_country = self.map_screen.player_country
@@ -691,13 +673,15 @@ class Orders_Screen(GameState):
                 mx, my = pygame.mouse.get_pos()
                 units = self.target_province.get("units", [])
 
-                if self.map_screen.tactical_mode:
-                    player_units = [u for u in units if u is self.map_screen.player_unit]
+                if getattr(self, "read_only", False):
+                    panel_has_content = bool(units)
+                elif self.map_screen.tactical_mode:
+                    panel_has_content = any(u is self.map_screen.player_unit for u in units)
                 else:
-                    player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
+                    panel_has_content = any(u.get("owner") == self.map_screen.player_country for u in units)
 
                 # Check for collision if units exist
-                if player_units:
+                if panel_has_content:
                     bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
                     if bg_rect.collidepoint(mx, my):
                         self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y", speed=WHEEL_SCROLL_STEP)
@@ -720,16 +704,18 @@ class Orders_Screen(GameState):
         # Define the panel area
         panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
         
-        # Camera Controls (Zooming and Panning) 
+        # Camera Controls (Zooming and Panning)
         on_ui = False
         units = self.target_province.get("units", [])
-        
-        if self.map_screen.tactical_mode:
-            player_units = [u for u in units if u is self.map_screen.player_unit]
+
+        if getattr(self, "read_only", False):
+            panel_has_content = bool(units)
+        elif self.map_screen.tactical_mode:
+            panel_has_content = any(u is self.map_screen.player_unit for u in units)
         else:
-            player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-            
-        if player_units:
+            panel_has_content = any(u.get("owner") == self.map_screen.player_country for u in units)
+
+        if panel_has_content:
             bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
             if bg_rect.collidepoint(mx, my):
                 on_ui = True
@@ -968,77 +954,104 @@ class Orders_Screen(GameState):
         
         # --- Draw Background Panel for Units ---
         units = self.target_province.get("units", [])
+        read_only = getattr(self, "read_only", False)
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-        
+
         # Dynamically fetch the player's color
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
-        
-        if player_units:
+
+        panel_has_content = bool(units) if read_only else bool(player_units)
+
+        if panel_has_content:
             bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-            
+
             ui_bars.draw_translucent_panel(surface, bg_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
                                            border_color=PANEL_BORDER_COLOR)
-            
+
             self.draw_list_scrollbar(surface, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top,
                                      self.panel_max_h, width=SCROLLBAR_WIDTH,
                                      limit_attr="max_scroll_y")
 
-        display_index = 0
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
             self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-        with ui_bars.clip_scroll_region(surface, content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
-            for i, unit in enumerate(units):
-                if unit.get("owner") != self.map_screen.player_country:
-                    continue
 
-                y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
+        if read_only:
+            # Viewing a tile the player holds nothing on: show the same
+            # garrison/combat roster as the province sidebar (see
+            # ui.sidebar_info.draw_unit_roster), anchored to this panel's
+            # usual left-hand spot instead of the sidebar's right-hand one.
+            is_visible = queries.is_province_visible(self.map_screen, self.target_province["id"])
+            visible_units = queries.filter_visible_units(
+                units, self.map_screen.player_country, self.target_province, self.map_screen.nation_data)
 
-                # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
-                if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
-                    hp = int(unit.get("health", 0))
-                    m_hp = int(unit.get("max_health", 0))
+            with ui_bars.clip_scroll_region(surface, content_rect,
+                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
+                end_y = sidebar_info.draw_unit_roster(
+                    self.map_screen, surface, self.target_province, visible_units, is_visible,
+                    self.PANEL_X, self.panel_top + self.scroll_y, self.PANEL_WIDTH)
 
-                    name_txt = unit.get("custom_name", unit.get("type", "Unit"))
-                    name_surf = small_font.render(name_txt, True, (255, 255, 255))
-                    surface.blit(name_surf, (self.PANEL_X + UNIT_NAME_OFFSET_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
+            # Rows are variable height (combat lanes, bombard lines, ...), so
+            # the scroll ceiling is re-derived from what actually got drawn
+            # this frame rather than a fixed row_height guess -- same as the
+            # sidebar does for its own copy of this list.
+            content_height = end_y - (self.panel_top + self.scroll_y)
+            self.max_scroll_y = min(0, self.panel_max_h - content_height)
+            self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
+        else:
+            display_index = 0
+            with ui_bars.clip_scroll_region(surface, content_rect,
+                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
+                for i, unit in enumerate(units):
+                    if unit.get("owner") != self.map_screen.player_country:
+                        continue
 
-                    stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
-                    txt_surf = small_font.render(stats_txt, True, c.UI_TEXT_LIGHT)
+                    y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
 
-                    surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
+                    # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
+                    if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
+                        hp = int(unit.get("health", 0))
+                        m_hp = int(unit.get("max_health", 0))
 
-                    if self.renaming_unit_index == i:
-                        # Buttons are built in refresh_ui() off a y_pos that includes
-                        # UNIT_ICON_OFFSET_Y; match that here so the box lines up with them.
-                        # Save Name sits at ACTION_COL_CONVERT while renaming (see refresh_ui);
-                        # keep the box glued to its right edge.
-                        box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + ACTION_COL_CONVERT + RENAME_BOX_GAP_X, y_pos + UNIT_ICON_OFFSET_Y, *RENAME_BOX_SIZE)
-                        # Only drawn while this row is being renamed, so always focused.
-                        draw_text_box(surface, box_rect, self.rename_text, active=True,
-                                      font=small_font, pad_x=5)
+                        name_txt = unit.get("custom_name", unit.get("type", "Unit"))
+                        name_surf = small_font.render(name_txt, True, (255, 255, 255))
+                        surface.blit(name_surf, (self.PANEL_X + UNIT_NAME_OFFSET_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
 
-                    order = unit.get("order", {})
-                    path = order.get("path", [])
+                        stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
+                        txt_surf = small_font.render(stats_txt, True, c.UI_TEXT_LIGHT)
 
-                    # An active path and an active barrage show the same footer
-                    # line plus a cancel box, so they share one draw call.
-                    if path:
-                        self.draw_order_footer(surface, small_font, i, y_pos,
-                                               f"PATH: {' -> '.join(map(str, path))}", (255, 255, 0))
+                        surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
 
-                        # Split draw using the helper function
-                        overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
+                        if self.renaming_unit_index == i:
+                            # Buttons are built in refresh_ui() off a y_pos that includes
+                            # UNIT_ICON_OFFSET_Y; match that here so the box lines up with them.
+                            # Save Name sits at ACTION_COL_CONVERT while renaming (see refresh_ui);
+                            # keep the box glued to its right edge.
+                            box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + ACTION_COL_CONVERT + RENAME_BOX_GAP_X, y_pos + UNIT_ICON_OFFSET_Y, *RENAME_BOX_SIZE)
+                            # Only drawn while this row is being renamed, so always focused.
+                            draw_text_box(surface, box_rect, self.rename_text, active=True,
+                                          font=small_font, pad_x=5)
 
-                    elif order.get("type") == "BOMBARD":
-                        target_id = order.get("target_id")
-                        self.draw_order_footer(surface, small_font, i, y_pos,
-                                               f"BOMBARDING: {target_id}", BOMBARD_TARGET_COLOR)
+                        order = unit.get("order", {})
+                        path = order.get("path", [])
 
-                        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                        overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
+                        # An active path and an active barrage show the same footer
+                        # line plus a cancel box, so they share one draw call.
+                        if path:
+                            self.draw_order_footer(surface, small_font, i, y_pos,
+                                                   f"PATH: {' -> '.join(map(str, path))}", (255, 255, 0))
 
-                display_index += 1
+                            # Split draw using the helper function
+                            overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
+
+                        elif order.get("type") == "BOMBARD":
+                            target_id = order.get("target_id")
+                            self.draw_order_footer(surface, small_font, i, y_pos,
+                                                   f"BOMBARDING: {target_id}", BOMBARD_TARGET_COLOR)
+
+                            bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                            overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
+
+                    display_index += 1
 
         # --- Bombardment Targeting Preview ---
         if self.bombarding_unit_index is not None and self.bombarding_unit_index < len(units):
