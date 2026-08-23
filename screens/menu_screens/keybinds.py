@@ -8,6 +8,7 @@ from data import queries
 KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
 KEYBINDS_ROW_START_Y = 150
 KEYBINDS_ROW_GAP_Y = 70
+KEYBINDS_RESET_GAP_Y = 30
 
 # (action, label, default key) -- every rebindable global action, in the
 # order they're listed on this screen.
@@ -51,6 +52,15 @@ class Keybinds(GameState):
                 Button(KEYBINDS_ROW_X, y, "medium", "grey", text, lambda a=action: self.start_listening(a))
             )
             y += KEYBINDS_ROW_GAP_Y
+
+        self.elements.append(
+            Button(KEYBINDS_ROW_X, y + KEYBINDS_RESET_GAP_Y, "medium", "red", "Reset Keybinds", self.reset_defaults)
+        )
+
+    def reset_defaults(self):
+        self.controller.keybinds = {action: default for action, _label, default in KEYBIND_ACTIONS}
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
 
     def additional_events(self, event):
         if self.listening_for and event.type == pygame.KEYDOWN:
