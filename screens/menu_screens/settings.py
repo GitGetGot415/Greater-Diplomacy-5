@@ -6,6 +6,7 @@ import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui.bars import ui_bars
+from ui import confirm_dialog
 
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 250
@@ -33,6 +34,44 @@ SETTINGS_CLEAR_BTN_GAP_X = 10
 SETTINGS_PATH_EDIT_OFFSET_X = -220
 SETTINGS_PATH_RESET_OFFSET_X = -110
 SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
+
+# Info ("?") buttons beside the Fullscreen..Map Navigation column -- same
+# small square and left-of-the-setting placement scenario_settings.py uses.
+SETTINGS_INFO_GAP_X = 10
+SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
+# Half the leftover height between a "medium" button (50px) and the smaller
+# "scenario_setting_info" square (32px), so the two line up on center.
+SETTINGS_INFO_Y_NUDGE = (c.SIZES["medium"][1] - c.SIZES["scenario_setting_info"][1]) // 2
+
+# (row Y, tooltip title, tooltip text) for each info button in that column, in
+# the same top-to-bottom order as the buttons themselves.
+SETTINGS_INFO_ROWS = (
+    (SETTINGS_FULLSCREEN_Y, "Toggle Fullscreen",
+     "Switches the game window between fullscreen and windowed mode."),
+    (SETTINGS_CHECKERBOARD_WATER_Y, "Checkerboard Water",
+     "Whether the map's ocean uses a slowly scrolling checkerboard pattern "
+     "instead of a flat fill color. Off by default since it can read as "
+     "unusual water for players who don't expect it."),
+    (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
+     "Displays a live frames-per-second counter on screen."),
+    (SETTINGS_DRAG_KEY_Y, "Drag Key",
+     "Which mouse button drags/pans the map camera: Right, Left, or Both. "
+     "Click to cycle through the three."),
+    (SETTINGS_MAP_NAV_Y, "Map Navigation",
+     "Classic: clicking a tile always opens the plain province menu, and the "
+     "Resources/Blank/Units/Economy row (wherever it's drawn) only switches "
+     "the map's view mode -- Orders, Battle and Production are reached only "
+     "through their own buttons. Preemptive: a click, or that row, jumps "
+     "straight into whichever of those screens the current view mode implies. "
+     "Click to switch between them."),
+)
+
+
+def info_button(x, y, tooltip_title, tooltip_text):
+    """A small "?" button that pops up a tooltip -- same shape scenario_settings
+    uses for its rows, reused here for the Settings/Keybinds screens' toggles."""
+    return Button(x, y + SETTINGS_INFO_Y_NUDGE, "scenario_setting_info", "light_blue", "?",
+                 lambda: confirm_dialog.show_info(tooltip_title, tooltip_text))
 
 
 def make_option_buttons(options, on_select, current, size="ai_opinion", color="blue", font_preset="small"):
@@ -66,6 +105,9 @@ def render_settings_buttons(settings_screen):
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
     ]
+    settings_screen.elements.extend(
+        info_button(SETTINGS_INFO_X, y, title, text) for y, title, text in SETTINGS_INFO_ROWS
+    )
 
     # --- MASTER AI TOGGLE BUTTON ---
     ai_is_on = settings_screen.ai_mode != "OFF"

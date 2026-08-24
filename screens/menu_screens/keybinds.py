@@ -3,6 +3,7 @@ from gameState import GameState
 from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
+from screens.menu_screens.settings import info_button
 
 # --- Keybinds screen layout ---
 KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
@@ -11,9 +12,19 @@ KEYBINDS_ROW_GAP_Y = 70
 KEYBINDS_RESET_GAP_Y = 30
 # The "change screen with this keybind" toggle sits directly right of the
 # keybind button, on the same row -- the keybind button itself stays exactly
-# where it already was.
+# where it already was. The info button sits right of that toggle in turn.
 KEYBINDS_TOGGLE_GAP_X = 10
 KEYBINDS_TOGGLE_X = KEYBINDS_ROW_X + c.SIZES["medium"][0] + KEYBINDS_TOGGLE_GAP_X
+KEYBINDS_TOGGLE_INFO_X = KEYBINDS_TOGGLE_X + c.SIZES["keybind_toggle"][0] + KEYBINDS_TOGGLE_GAP_X
+
+TOGGLE_INFO_TEXT = (
+    "When on, pressing this key also jumps straight to the screen its view "
+    "mode implies -- Orders (or Battle, if the tile is fighting) for the "
+    "Orders key, Production for the Production key -- instead of only "
+    "switching the map's view mode. Works independently of the Map "
+    "Navigation setting (Classic/Preemptive) in Settings: it jumps whenever "
+    "this is on, in either mode, and never jumps when it's off."
+)
 
 # (action, label, default key) -- every rebindable global action, in the
 # order they're listed on this screen.
@@ -69,6 +80,10 @@ class Keybinds(GameState):
                           "Change Screen With This Keybind",
                           lambda a=action: self.toggle_screen_change(a),
                           font_preset="tiny")
+                )
+                self.elements.append(
+                    info_button(KEYBINDS_TOGGLE_INFO_X, y, "Change Screen With This Keybind",
+                               TOGGLE_INFO_TEXT)
                 )
 
             y += KEYBINDS_ROW_GAP_Y
