@@ -177,6 +177,12 @@ CREDITS_DATA = [
                 "info": "Massive refactors to consolidate / organize code",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
+            },
+            {
+                "link_text": "dependabot",
+                "info": "Update dependencies for conversion between OpenDoctrines and GD5",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/dependabot"}]
             }
         ]
     }
