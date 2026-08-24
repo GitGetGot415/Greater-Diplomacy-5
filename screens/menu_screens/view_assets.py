@@ -31,6 +31,7 @@ IMAGE_EXTENSIONS = (".png",)
 TEXT_EXTENSIONS = (".txt",)
 VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS + TEXT_EXTENSIONS
 
+PREVIEW_BACKGROUND_COLOR = (60, 60, 75)
 
 def _truncate_text(text, font, max_width):
     """Kept as a local name; the implementation moved to ui/text_utils.py, whose
@@ -60,7 +61,7 @@ class TopBarOverlay:
     def draw(self, surface):
         pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, HEADER_H))
         pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, HEADER_H))
-        pygame.draw.rect(surface, (20, 20, 25), (PREVIEW_X, 0, PREVIEW_W, HEADER_H))
+        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, HEADER_H))
 
         pygame.draw.line(surface, (100, 100, 100), (FOLDER_PANE_W, 0), (FOLDER_PANE_W, c.SCREEN_HEIGHT), 2)
         pygame.draw.line(surface, (100, 100, 100), (PREVIEW_X, 0), (PREVIEW_X, c.SCREEN_HEIGHT), 2)
@@ -342,7 +343,7 @@ class View_Assets(ScrollPanes, GameState):
         # Pane backgrounds
         pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, c.SCREEN_HEIGHT))
         pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, c.SCREEN_HEIGHT))
-        pygame.draw.rect(surface, (20, 20, 25), (PREVIEW_X, 0, PREVIEW_W, c.SCREEN_HEIGHT))
+        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, c.SCREEN_HEIGHT))
 
         # --- Preview (majority of the screen, for high-quality viewing) ---
         center = (PREVIEW_X + PREVIEW_W // 2, HEADER_H + (c.SCREEN_HEIGHT - HEADER_H) // 2)
