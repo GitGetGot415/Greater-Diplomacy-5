@@ -399,7 +399,9 @@ def navigate_view_mode(map_screen, mode, origin=None):
     The Orders/Production keybinds jump independently of Classic/Preemptive --
     see handle_view_mode_keybind.
     """
+    origin = origin or map_screen
     map_screen.set_view_mode(mode)
+    _resync_view_mode_row(origin)
     if is_classic_navigation():
         return
     _jump_to_view_mode_screen(map_screen, mode, origin)
@@ -416,9 +418,28 @@ def handle_view_mode_keybind(map_screen, mode, action, origin=None):
     Preemptive one can still want them not to, without changing how a click or
     the view-mode row's own buttons behave.
     """
+    origin = origin or map_screen
     map_screen.set_view_mode(mode)
+    _resync_view_mode_row(origin)
     if queries.get_keybind_changes_screen(action):
         _jump_to_view_mode_screen(map_screen, mode, origin)
+
+
+def _resync_view_mode_row(origin):
+    """Rebuilds `origin`'s own elements right after its view mode changes.
+
+    Orders/Production/Battle each build their copy of the view-mode row once,
+    inside their own refresh_ui, and only re-sync the yellow "selected" border
+    (view_mode_buttons.sync_highlight) when that runs again -- unlike Map,
+    which re-reads secondary_mode fresh every frame in update_button_states.
+    Without this, clicking one of those buttons while staying on the same
+    screen (always true in Classic navigation; also true in Preemptive for the
+    "already on the screen this mode implies" cases in
+    _jump_to_view_mode_screen) changed the mode but left the highlight showing
+    whatever was selected when the screen last rebuilt. A no-op on Map itself,
+    whose refresh_ui does nothing -- it doesn't need this.
+    """
+    origin.refresh_ui()
 
 
 def _jump_to_view_mode_screen(map_screen, mode, origin=None):
