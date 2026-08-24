@@ -411,6 +411,25 @@ def get_keybind(action, default):
         return pygame.key.key_code(name)
     except Exception:
         return default
+
+_KEYBIND_CHANGES_SCREEN_KEYS = {
+    "ORDERS": "orders_key_changes_screen",
+    "ECONOMY": "economy_key_changes_screen",
+}
+
+def get_keybind_changes_screen(action):
+    """Whether the ORDERS/ECONOMY keybind also jumps straight to the screen
+    its view mode implies -- the small toggle beside that row on the Keybinds
+    screen. Independent of Settings' Classic/Preemptive map-navigation toggle
+    (see ui.event_handler.navigate_view_mode / handle_view_mode_keybind).
+    Reads straight from saved settings, same as get_keybind, since most
+    screens never get a controller reference wired up. Defaults on.
+    """
+    key = _KEYBIND_CHANGES_SCREEN_KEYS.get(action)
+    if key is None:
+        return False
+    return bool(get_settings().get(key, True))
+
 def get_unit_library(): return _load_cached_json("unit_library")
 def get_building_library(): return _load_cached_json("building_library")
 def get_tech_tree(): return _load_cached_json("tech_tree")

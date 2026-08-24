@@ -726,7 +726,12 @@ SIZES = {
     "checkbox_tool": (150, 32),
     # Editor forms (unit/country editors, turn overrides).
     "form_row": (420, 30),
-    "form_tool": (130, 32)
+    "form_tool": (130, 32),
+    # Keybinds screen: the small "change screen with this keybind" toggle
+    # beside the Orders/Production rows. Same height as "medium" (the keybind
+    # button itself) so the two line up; narrower, with small text, so the row
+    # doesn't visually dominate the screen.
+    "keybind_toggle": (240, 50),
 }
 
 COLOR_GOLD_HIGHLIGHT = (255, 215, 0)

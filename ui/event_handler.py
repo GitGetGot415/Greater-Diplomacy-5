@@ -395,18 +395,45 @@ def navigate_view_mode(map_screen, mode, origin=None):
     reached only through their own explicit buttons there -- see
     go_to_orders_screen/go_to_battle_screen/go_to_production_screen below.
 
+    This is for the view-mode row's own buttons (and a plain tile click) only.
+    The Orders/Production keybinds jump independently of Classic/Preemptive --
+    see handle_view_mode_keybind.
+    """
+    map_screen.set_view_mode(mode)
+    if is_classic_navigation():
+        return
+    _jump_to_view_mode_screen(map_screen, mode, origin)
+
+
+def handle_view_mode_keybind(map_screen, mode, action, origin=None):
+    """Q/W. Always sets the view mode; also jumps straight to the screen it
+    implies (Orders/Battle for UNITS, Production for ECONOMY) when the
+    Keybinds screen's "change screen with this keybind" toggle for `action`
+    ("ORDERS" or "ECONOMY") is on -- see queries.get_keybind_changes_screen.
+
+    Deliberately independent of Classic/Preemptive map navigation
+    (navigate_view_mode): a Classic player can still want Q/W to jump, and a
+    Preemptive one can still want them not to, without changing how a click or
+    the view-mode row's own buttons behave.
+    """
+    map_screen.set_view_mode(mode)
+    if queries.get_keybind_changes_screen(action):
+        _jump_to_view_mode_screen(map_screen, mode, origin)
+
+
+def _jump_to_view_mode_screen(map_screen, mode, origin=None):
+    """Shared by navigate_view_mode's Preemptive branch and by
+    handle_view_mode_keybind: jumps to whatever screen `mode` implies for the
+    selected province.
+
     `origin` is whichever screen the click/keypress came from: the Map itself
     (the default), or one of the screens layered over it (Orders, Production)
     that carry their own copy of this same button row so switching view types
     doesn't require backing out to the map first. Transitions are issued
     against `origin`, not always `map_screen` -- flip_state only reacts to the
     *currently active* screen's next_state/done, and while Orders or
-    Production is up, that isn't map_screen. Only reachable in Preemptive mode.
+    Production is up, that isn't map_screen.
     """
-    map_screen.set_view_mode(mode)
-    if is_classic_navigation():
-        return
-
     origin = origin or map_screen
     province = map_screen.selected_province
 

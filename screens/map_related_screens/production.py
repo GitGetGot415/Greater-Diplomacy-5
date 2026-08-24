@@ -153,18 +153,20 @@ class Production_Screen(GameState):
         super().handle_events(events)
 
     def handle_orders_key(self):
-        """Q. Same as clicking the Units button in the view-mode row -- a pure
-        view-mode switch in Classic navigation, a screen jump in Preemptive."""
+        """Q. Same as clicking the Units button in the view-mode row; also
+        jumps screens when the Keybinds screen's per-key toggle is on -- see
+        ui.event_handler.handle_view_mode_keybind."""
         if self.map_screen.tactical_mode:
             return
-        event_handler.navigate_view_mode(self.map_screen, "UNITS", origin=self)
+        event_handler.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
 
     def handle_economy_key(self):
-        """W. Same as clicking the Economy button in the view-mode row -- a pure
-        view-mode switch in Classic navigation, a screen jump in Preemptive."""
+        """W. Same as clicking the Economy button in the view-mode row; also
+        jumps screens when the Keybinds screen's per-key toggle is on -- see
+        ui.event_handler.handle_view_mode_keybind."""
         if self.map_screen.tactical_mode:
             return
-        event_handler.navigate_view_mode(self.map_screen, "ECONOMY", origin=self)
+        event_handler.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
 
     def start_with_province(self, province, map_ref):
         self.target_province = province

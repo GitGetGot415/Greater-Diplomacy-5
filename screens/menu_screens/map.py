@@ -1404,25 +1404,28 @@ class Map(GameState):
             self.deselect_province()
 
     def handle_orders_key(self):
-        """Q. Same as clicking the Units button in the view-mode row: in
-        Preemptive navigation that also jumps straight into Orders or Battle
-        for the selected tile; in Classic it only switches the view mode.
+        """Q. Sets the view mode to Units, same as clicking that button; also
+        jumps straight into Orders or Battle for the selected tile when the
+        Keybinds screen's "change screen with this keybind" toggle is on for
+        this key -- independent of Classic/Preemptive map navigation, see
+        ui.event_handler.handle_view_mode_keybind.
 
         Not gated on owning anything here: both screens read a province you have
         no units in, and refuse to edit units you do not command.
         """
         if self.selection_mode:
             return
-        event_handler.navigate_view_mode(self, "UNITS")
+        event_handler.handle_view_mode_keybind(self, "UNITS", "ORDERS")
 
     def handle_economy_key(self):
-        """W. Same as clicking the Economy button in the view-mode row: in
-        Preemptive navigation that also jumps straight into Production for the
-        selected tile; in Classic it only switches the view mode.
+        """W. Sets the view mode to Economy, same as clicking that button;
+        also jumps straight into Production for the selected tile when the
+        Keybinds screen's "change screen with this keybind" toggle is on for
+        this key -- see handle_orders_key.
         """
         if self.selection_mode:
             return
-        event_handler.navigate_view_mode(self, "ECONOMY")
+        event_handler.handle_view_mode_keybind(self, "ECONOMY", "ECONOMY")
 
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this
