@@ -2680,6 +2680,41 @@ def build_active_unit_counters(map_data):
     return unit_counters
 
 # i don't know if this would really count as a query...
+def load_transport(unit, target):
+    """Puts a unit aboard a Convoy or into a Truck, remembering what it was.
+
+    The mirror of revert_transport, and the other half of what used to live
+    inline in movement_processor.process_conversions -- pulled out so the
+    stranded-at-sea sweep can re-embark a unit without duplicating the stat
+    bookkeeping that makes the round trip lossless.
+    """
+    if target not in ("Convoy", "Truck"):
+        return
+
+    unit["original_type"] = unit["type"]
+    unit["original_speed"] = unit.get("speed", 1)
+    unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
+    unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
+    unit["original_defense"] = unit.get("defense", c.DEFAULT_UNIT_DEF)
+
+    pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
+
+    unit["type"] = f"{target} ({unit['type']})"
+    unit["speed"] = 1
+
+    if target == "Convoy":
+        unit["naval_unit"] = True
+        unit["max_health"] = c.CONVOY_MAX_HP
+        unit["attack"] = c.CONVOY_ATK
+        unit["defense"] = c.CONVOY_DEF
+    else:
+        unit["naval_unit"] = False
+        unit["max_health"] = c.TRUCK_MAX_HP
+        unit["attack"] = c.TRUCK_ATK
+        unit["defense"] = c.TRUCK_DEF
+
+    unit["health"] = unit["max_health"] * pct
+
 def revert_transport(unit):
     """Reverts a transport (like a Convoy) back to its original unit type."""
     if "original_type" not in unit:

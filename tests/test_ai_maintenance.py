@@ -267,9 +267,9 @@ class NotAtTheCostOfTheFrontTests(unittest.TestCase):
 class UpgradeReachabilityTests(unittest.TestCase):
     """An interior province is where the garrison with nothing to do lives."""
 
-    def upgrade(self, prov_id=1, **ctx_over):
+    def upgrade(self, prov_id=1, industry=True, **ctx_over):
         idle = unit(health=1000, u_type="Militia I")
-        prov = province(prov_id, [idle], industry=True)
+        prov = province(prov_id, [idle], industry=industry)
         provs = [prov]
 
         import data.queries as queries
@@ -288,6 +288,18 @@ class UpgradeReachabilityTests(unittest.TestCase):
 
     def test_a_war_border_does_not_upgrade(self):
         self.assertNotEqual(self.upgrade(war_borders={1})["order"]["type"], "UPGRADE")
+
+    def test_a_province_with_no_factory_does_not_upgrade(self):
+        """The player's orders panel greys the Upgrade button out as "Needs
+        Factory"; the AI used to ask nothing but whether the unit was idle.
+
+        In saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN two American
+        divisions re-equipped themselves to Infantry Type 1943 while adrift in
+        the sea off Spain -- no factory, no land, nothing but a quiet tile.
+        A haven is a factory tile of ours with no enemy standing on it, which
+        is the same pair of conditions the panel applies.
+        """
+        self.assertNotEqual(self.upgrade(industry=False)["order"]["type"], "UPGRADE")
 
     def test_a_tile_next_to_a_battle_does_not_upgrade(self):
         prov_neighbours = {"neighbors": [2]}

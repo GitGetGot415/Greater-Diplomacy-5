@@ -205,6 +205,10 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # Exile any units left standing on foreign soil without a legal right to be there
     movement_processor.process_stranded_units(map_screen)
 
+    # ...and re-embark anything left standing in the sea, which is the other way
+    # a unit ends the turn somewhere it could never legally have moved to.
+    movement_processor.process_beached_units(map_screen)
+
     # Re-sync the turn-start snapshot to the now-settled owner. It must stay stale
     # (pre-capture) through combat/stranding above so order-of-execution doesn't
     # give an advantage, but leaving it stale afterward makes can_land_units_enter

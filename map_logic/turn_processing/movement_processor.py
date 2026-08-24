@@ -62,9 +62,23 @@ def process_upgrades(map_screen):
     unit_library = queries.get_unit_library()
 
     for province in map_screen.map_data.values():
-        for unit in province.get("units", []):
+        if not province.get("units"):
+            continue
+
+        # Re-equipping needs the factory that was there when the order was
+        # given, and still is. A tile taken or razed while the work is under way
+        # cancels it rather than finishing somebody else's upgrade -- so no
+        # route to an UPGRADE order can outlive the rule the orders panel and
+        # the AI both issue it under. Upgrades are free, so nothing is refunded.
+        has_factory = queries.has_industry(province)
+
+        for unit in province["units"]:
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "UPGRADE":
+                if not has_factory:
+                    unit["order"] = {"type": "MOVE", "path": []}
+                    continue
+
                 order["turns_left"] -= 1
                 
                 if order["turns_left"] <= 0:
@@ -115,29 +129,7 @@ def process_conversions(map_screen):
                     target = order.get("to")
                     
                     if target in ["Convoy", "Truck"]:
-                        unit["original_type"] = unit["type"]
-                        unit["original_speed"] = unit.get("speed", 1)
-                        unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
-                        unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
-                        unit["original_defense"] = unit.get("defense", c.DEFAULT_UNIT_DEF)
-
-                        pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
-
-                        unit["type"] = f"{target} ({unit['type']})"
-                        unit["speed"] = 1
-
-                        if target == "Convoy":
-                            unit["naval_unit"] = True
-                            unit["max_health"] = c.CONVOY_MAX_HP
-                            unit["attack"] = c.CONVOY_ATK
-                            unit["defense"] = c.CONVOY_DEF
-                        else:
-                            unit["naval_unit"] = False
-                            unit["max_health"] = c.TRUCK_MAX_HP
-                            unit["attack"] = c.TRUCK_ATK
-                            unit["defense"] = c.TRUCK_DEF
-                            
-                        unit["health"] = unit["max_health"] * pct
+                        queries.load_transport(unit, target)
                     else:
                         queries.revert_transport(unit)
                         
@@ -443,6 +435,40 @@ def is_land_unit(unit, unit_library=None):
     library = unit_library if unit_library is not None else queries.get_unit_library()
     stats = library.get(unit.get("type", ""), {})
     return not (unit.get("naval_unit") or stats.get("naval_unit", False))
+
+
+def process_beached_units(map_screen):
+    """Puts anything that walks back aboard ship when it is found out at sea.
+
+    A land unit has no legal way into a water province -- can_land_units_enter
+    refuses one outright -- so a division standing in the ocean is always the
+    wreckage of a bug rather than a move somebody made, and the honest repair is
+    to put it back in the transport it must have been in to get there. It keeps
+    its move order: a convoy may sail into an adjacent land tile and unpacks on
+    arrival, so an invasion that was already under way still lands.
+
+    Written for saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN, where a
+    meeting engagement fought across a shoreline unpacked three convoys that
+    were still at sea (see combat_processor.resolve_meeting_engagement, now
+    fixed). This is the net under that: it heals the saves the old rule already
+    damaged, and closes off any other route to the same state.
+    """
+    unit_library = queries.get_unit_library()
+
+    for province in map_screen.map_data.values():
+        if not queries.is_water_province(province):
+            continue
+
+        for unit in province.get("units", []):
+            if not is_land_unit(unit, unit_library):
+                continue
+
+            # A Truck is a land transport, so it is caught by the same net.
+            # Unload it first rather than wrapping one carrier inside another.
+            if unit.get("type", "").startswith("Truck ("):
+                queries.revert_transport(unit)
+
+            queries.load_transport(unit, "Convoy")
 
 
 def process_stranded_units(map_screen):

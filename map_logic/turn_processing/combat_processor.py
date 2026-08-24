@@ -52,10 +52,18 @@ def process_bombardments(map_screen):
                 continue
 
             target_id = order.get("target_id")
-            bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+            u_type = unit.get("type", "")
+            bomb_range = queries.get_bombardment_range(u_type)
+
+            # A field gun has nothing to stand on out at sea. Asked of the unit
+            # rather than the tile because shore bombardment is a real order --
+            # Battleships, Dreadnoughts and Carriers are all in
+            # c.BOMBARDMENT_UNITS and fire from the water by design.
+            afloat = (queries.is_water_province(province)
+                      and not (unit.get("naval_unit") or queries.is_naval_unit(u_type)))
 
             # Drop the order if the gun can no longer make the shot
-            if (bomb_range <= 0
+            if (bomb_range <= 0 or afloat
                     or target_id not in queries.get_bombardment_targets(province, map_screen.id_to_province, bomb_range)):
                 unit["order"] = {"type": "MOVE", "path": []}
                 continue
@@ -261,10 +269,18 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
               for side in (lane.a, lane.b)
               for u in side.front + side.reserve}
 
-    # Unpack Convoys Caught in Land Engagements -- only those in the fight.
-    is_land_engagement = (not queries.is_water_province(prov1)) or (not queries.is_water_province(prov2))
-    if is_land_engagement:
-        for u in units1 + units2:
+    # Unpack Convoys Caught in Land Engagements -- only those in the fight, and
+    # only the ones actually standing on land. Each side is still in its own
+    # province here, so that is the tile that decides it. The old test asked
+    # whether *either* end of the swap was land, which unpacked a convoy at sea
+    # whenever the enemy came from the shore: that is how three loaded divisions
+    # became land units floating in the middle of province 620 in
+    # saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN, from where one of them
+    # went on to shell Spain. process_combat has always read it this way.
+    for side_units, side_prov in ((units1, prov1), (units2, prov2)):
+        if queries.is_water_province(side_prov):
+            continue
+        for u in side_units:
             if id(u) in fought and u.get("type", "").startswith("Convoy"):
                 queries.revert_transport(u)
 
@@ -410,15 +426,22 @@ def check_for_post_combat_captures(map_screen):
             continue
             
         # Ensure capturer is legally allowed to take the tile
-        valid_capturer_units = []
-        for u in units:
-            # You can't steal land from someone you are at peace with!
-            # However, if the land was captured THIS TURN, we evaluate based on the original owner
-            # to prevent order-of-execution advantages in movement processing.
-            eval_owner = turn_start_owner if current_owner != turn_start_owner else current_owner
-            
-            if eval_owner in c.OWNERLESS_OWNERS or queries.are_at_war(u["owner"], eval_owner, map_screen.nation_data):
-                valid_capturer_units.append(u)
+        # You can't steal land from someone you are at peace with! A tile that
+        # changed hands THIS TURN is judged against both the owner it started
+        # the turn with and the owner it has now, so neither claim is lost to
+        # order-of-execution in movement processing. Reading only the turn-start
+        # owner -- which is what this used to do -- threw away the second half:
+        # in saves/GERMAN TANK IN YUGOSLAVIA BUT NOT TAKEN, Yugoslavia retook
+        # province 818 from Italy during movement, so the German tank that then
+        # killed the garrison was judged against Italy, an ally, and could not
+        # take a tile it had just cleared of every defender.
+        claim_owners = {current_owner, turn_start_owner}
+        valid_capturer_units = [
+            u for u in units
+            if any(o in c.OWNERLESS_OWNERS
+                   or queries.are_at_war(u["owner"], o, map_screen.nation_data)
+                   for o in claim_owners)
+        ]
 
         if not valid_capturer_units:
             continue # No one here is legally allowed to capture the tile

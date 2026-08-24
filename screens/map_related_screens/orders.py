@@ -420,6 +420,13 @@ class Orders_Screen(GameState):
                     btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "red", "Cancel Bomb.", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
                 elif not queries.can_bombard(unit_name):
                     btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "grey", "No Bombard", lambda: None, font_preset="normal")
+                elif is_water and not is_naval:
+                    # A field gun has nothing to stand on out here, which
+                    # process_bombardments enforces. Only a save written before
+                    # that rule existed can still show this -- a land unit at
+                    # sea is unreachable now -- but while one can, the button
+                    # has to say so rather than take an order that never fires.
+                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "grey", "At Sea", lambda: None, font_preset="normal")
                 elif self.bombarding_unit_index == i:
                     btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "orange", "Pick Tile", lambda: self.cancel_bombard_targeting(), font_preset="normal")
                 else:
@@ -520,6 +527,13 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback("Cannot upgrade during combat!")
             return
 
+        # The button is already greyed out as "Needs Factory" without one; this
+        # is the same check standing behind it, so the rule holds whatever
+        # reaches this method.
+        if not queries.has_industry(self.target_province):
+            self.map_screen.show_feedback("Cannot upgrade without a factory!")
+            return
+
         units = self.target_province.get("units", [])
         if not (0 <= index < len(units)): return
 
@@ -558,7 +572,19 @@ class Orders_Screen(GameState):
             return
 
         unit = units[index]
-        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+        u_type = unit.get("type", "")
+
+        # The same rule process_bombardments applies: guns fire from land, and
+        # ships that carry them (Battleship, Dreadnought, Carrier) fire from the
+        # water by design.
+        if (queries.is_water_province(self.target_province)
+                and not (unit.get("naval_unit") or queries.is_naval_unit(u_type))):
+            self.map_screen.show_feedback("This unit cannot bombard from the water!")
+            self.bombarding_unit_index = None
+            self.refresh_ui()
+            return
+
+        bomb_range = queries.get_bombardment_range(u_type)
         in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province, bomb_range)
 
         if dest["id"] not in in_range:

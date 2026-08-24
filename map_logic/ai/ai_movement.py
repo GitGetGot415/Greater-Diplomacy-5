@@ -1156,7 +1156,16 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
         # to upgrade instead: process_upgrades carries health across as a
         # *percentage*, so it would spend the turn and still be wounded, only
         # now wounded as a more expensive type.
-        is_idle = (not is_naval_combatant and is_quiet and not is_near_battle
+        #
+        # A haven is a factory tile of ours with no enemy on it, which is
+        # exactly the pair of conditions the player's orders panel spells out as
+        # "Needs Factory" and "In Combat". The AI used to skip that half of the
+        # rule entirely and upgrade wherever a unit happened to be idle -- which
+        # is how two American divisions re-equipped themselves to Infantry Type
+        # 1943 while adrift in the sea off Spain in saves/HOW DO YOU LAUNCH
+        # ARTILLERY FROM THE OCEAN.
+        is_idle = (not is_naval_combatant and curr_id in havens
+                  and is_quiet and not is_near_battle
                   and not wants_repair
                   and target_assignments.get(curr_id, 0) <= 1)
 
