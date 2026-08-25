@@ -19,6 +19,7 @@ sys.path.insert and os.chdir at module scope.
 
 import ast
 import os
+import re
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,6 +72,44 @@ def _literal_lists(tree, names):
 def _parse(name):
     with open(os.path.join(SCRIPTS, name), encoding="utf-8") as fh:
         return ast.parse(fh.read())
+
+
+def _parse_path(path):
+    with open(path, encoding="utf-8") as fh:
+        return ast.parse(fh.read())
+
+
+def _sub_screen_opener_module_paths(tree):
+    """First-arg string literals passed to every sub_screen_opener() call."""
+    paths = []
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "sub_screen_opener" and node.args):
+            try:
+                paths.append(ast.literal_eval(node.args[0]))
+            except (ValueError, SyntaxError):
+                pass
+    return paths
+
+
+def _windows_pyinstaller_hidden_imports(tree):
+    """Module names passed via --hidden-import in windows_compilation's pyinstaller cmd.
+
+    Adjacent string literals inside the `cmd = (...)` parens are concatenated
+    by the parser itself, so this is a single string constant to literal_eval,
+    not a list of pieces to join.
+    """
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "cmd" for t in node.targets)):
+            continue
+        try:
+            cmd = ast.literal_eval(node.value)
+        except (ValueError, SyntaxError):
+            continue
+        if isinstance(cmd, str):
+            return re.findall(r"--hidden-import (\S+)", cmd)
+    return []
 
 
 def _for_loop_literal(tree, var_name):
@@ -135,6 +174,7 @@ class BuildManifestTests(unittest.TestCase):
         cls.html = _parse("html_compilation.py")
         cls.windows = _parse("windows_compilation.py")
         cls.setup = _parse("setup.py")
+        cls.map_screen = _parse_path(os.path.join(ROOT, "screens", "menu_screens", "map.py"))
 
     # --- web ---------------------------------------------------------------
 
@@ -164,6 +204,19 @@ class BuildManifestTests(unittest.TestCase):
         staged = set(_literal_lists(self.windows, {"dirs_to_copy"}).get("dirs_to_copy", []))
         roots = {p.split(".")[0] for p in first_party_packages()}
         self.assertEqual(roots - staged, set(), "windows_compilation.dirs_to_copy is incomplete")
+
+    def test_windows_hidden_imports_cover_sub_screen_opener(self):
+        """sub_screen_opener() (screens/menu_screens/map.py) late-imports a screen
+        via importlib.import_module() with a runtime string, which PyInstaller's
+        static analysis never sees -- each target needs its own --hidden-import
+        line in windows_compilation.py or the frozen exe raises ModuleNotFoundError
+        the moment that screen is opened, never at build time and never when
+        running from source. See the long comment above the pyinstaller cmd."""
+        needed = set(_sub_screen_opener_module_paths(self.map_screen))
+        declared = set(_windows_pyinstaller_hidden_imports(self.windows))
+        self.assertEqual(needed - declared, set(),
+                         "windows_compilation.py's pyinstaller --hidden-import list is "
+                         "missing these sub_screen_opener() targets")
 
     # --- macOS -------------------------------------------------------------
 

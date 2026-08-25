@@ -21,7 +21,8 @@ def main():
     # 1. Run pyinstaller
     print("Running PyInstaller...")
     # --hidden-import (one per module) below, not --collect-submodules: screens/menu_screens/map.py's
-    # sub_screen_opener() loads screens (automation_screen, declare_independence) via
+    # sub_screen_opener() loads screens (automation_screen, declare_independence,
+    # politics_screen) via
     # importlib.import_module(module_path) with module_path as a runtime string, so PyInstaller's
     # static analysis never sees the import and silently drops the module from the build -- it only
     # breaks in the compiled exe (ModuleNotFoundError), never when running from source.
@@ -43,6 +44,7 @@ def main():
            '--collect-all dragoman '
            '--hidden-import screens.map_related_screens.automation_screen '
            '--hidden-import screens.map_related_screens.declare_independence '
+           '--hidden-import screens.map_related_screens.politics_screen '
            '--add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py')
 
     result = subprocess.run(cmd, shell=True)
