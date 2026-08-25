@@ -118,6 +118,90 @@ def test_nothing_is_overwritten():
         shutil.rmtree(work, ignore_errors=True)
 
 
+class _RecordingWindow:
+    """Stands in for the browser. Records what was handed to eval, which is the
+    only thing these two tests care about."""
+
+    def __init__(self):
+        self.evals = []
+
+    def eval(self, source):
+        self.evals.append(source)
+        return ""
+
+
+def _with_fake_window():
+    window = _RecordingWindow()
+    odtl._js = lambda: window  # noqa: SLF001
+    return window
+
+
+def test_a_download_does_not_push_the_file_through_the_bridge():
+    """What crosses into JavaScript is a path, not a map.
+
+    This is the bug that froze the browser build: offer_download() base64'd the
+    whole .odmap into the eval string, so pressing Translate handed one to two
+    megabytes of text to the bridge in a single synchronous call. The
+    conversion that produces the map takes about two seconds; the tab stopped
+    answering for minutes. Nothing about the result was wrong -- the file was
+    correct and the JavaScript was valid -- so only a size check catches it.
+    """
+    original = odtl._js  # noqa: SLF001
+    work = tempfile.mkdtemp(prefix="odtl-download-")
+    try:
+        window = _with_fake_window()
+        big = os.path.join(work, "Some Map.odmap")
+        with open(big, "wb") as handle:
+            handle.write(b"PK\x03\x04" + os.urandom(2 * 1024 * 1024))
+
+        assert odtl.offer_download(big, "Some Map.odmap")
+        assert window.evals, "nothing was handed to the browser at all"
+        biggest = max(len(e) for e in window.evals)
+        # Generous: the call is a fixed snippet plus a path and a filename.
+        assert biggest < 4096, (
+            f"offer_download sent {biggest} characters across the bridge for a "
+            f"{os.path.getsize(big)} byte file -- the file itself is in there")
+        assert os.path.basename(big) in window.evals[0]
+    finally:
+        odtl._js = original  # noqa: SLF001
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def test_the_upload_poll_is_cheap_enough_to_run_every_frame():
+    """take_upload() is called once a frame for as long as the screen is open,
+    whether or not anybody pressed import, so what it asks the browser has to
+    stay small and must not carry a file back."""
+    original = odtl._js  # noqa: SLF001
+    work = tempfile.mkdtemp(prefix="odtl-upload-")
+    try:
+        window = _with_fake_window()
+        assert odtl.take_upload(work) == ""
+        assert window.evals, "the poll asked the browser nothing"
+        assert max(len(e) for e in window.evals) < 256
+
+        # And when a file has arrived, it arrives through the filesystem both
+        # sides share -- the poll still only carries its name.
+        source = _first_base_map()
+        if source:
+            landed = os.path.join(work, "landed.odmap")
+            assert odtl.to_odmap(source, landed)[0]
+            os.makedirs(odtl._UPLOAD_DIR, exist_ok=True)  # noqa: SLF001
+            shutil.copy2(landed, os.path.join(odtl._UPLOAD_DIR, "Picked.odmap"))  # noqa: SLF001
+
+            window = _with_fake_window()
+            window.eval = lambda source, w=window: (
+                w.evals.append(source) or ("Picked.odmap" if "__gd5_upload |" in source else ""))
+            into = os.path.join(work, "collected")
+            got = odtl.take_upload(into)
+            assert got and os.path.isfile(got), "a file that arrived was not collected"
+            assert odtl.looks_like_odmap(got)
+            assert max(len(e) for e in window.evals) < 256
+    finally:
+        odtl._js = original  # noqa: SLF001
+        shutil.rmtree(work, ignore_errors=True)
+        shutil.rmtree(odtl._UPLOAD_DIR, ignore_errors=True)  # noqa: SLF001
+
+
 if __name__ == "__main__":
     failures = 0
     for name, test in sorted(globals().items()):

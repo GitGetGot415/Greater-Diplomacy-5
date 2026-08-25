@@ -52,6 +52,10 @@ class Translate(GameState):
         self.notes = []
         self.status = ""
         self.status_ok = True
+        # Set when the player presses a map and cleared when update() runs
+        # it. See translate() for why it is not run on the spot.
+        self.pending = None
+        self.pending_drawn = False
         self.refresh_ui()
 
     # ------------------------------------------------------------------ data
@@ -87,6 +91,26 @@ class Translate(GameState):
     # ----------------------------------------------------------------- doing
 
     def translate(self, name, path):
+        """Asked for now, done once the message about it is on screen.
+
+        Converting the largest shipped map takes a little over two seconds
+        in the browser, and it is one uninterruptible call -- so running it
+        here, inside the click, leaves whatever was last drawn on screen
+        with no sign that anything is happening.
+
+        A frame is events, then update(), then draw(), so recording the
+        work is not enough on its own: update() would pick it up before
+        this frame had drawn anything. pending_drawn is what makes it wait
+        for the frame that actually paints "Translating ...".
+        """
+        self.pending = (name, path)
+        self.pending_drawn = False
+        self.status = "Translating " + name + "..."
+        self.status_ok = True
+        self.notes = []
+        self.refresh_ui()
+
+    def _run_translation(self, name, path):
         if not odtl.available():
             self.status = odtl.unavailable_reason() or "the translation layer is not available"
             self.status_ok = False
@@ -214,6 +238,13 @@ class Translate(GameState):
     def update(self):
         if odtl.IS_WEB:
             self._collect_upload()
+        if self.pending:
+            if not self.pending_drawn:
+                self.pending_drawn = True
+            else:
+                name, path = self.pending
+                self.pending = None
+                self._run_translation(name, path)
 
     def toggle_destination(self):
         self.send_to_od = not self.send_to_od
