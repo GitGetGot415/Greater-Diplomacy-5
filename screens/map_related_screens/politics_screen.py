@@ -113,6 +113,12 @@ class Politics_Screen(GameState):
         surface.blit(title_surf, (self.panel_rect.centerx - title_surf.get_width() // 2,
                                   self.panel_rect.y + 20))
 
+        subtitle_surf = fonts.get("small").render(
+            "Liberalising raises research speed but weakens army damage; "
+            "centralising does the reverse.", True, c.UI_TEXT_DIM)
+        surface.blit(subtitle_surf, (self.panel_rect.centerx - subtitle_surf.get_width() // 2,
+                                     self.panel_rect.y + 20 + title_surf.get_height() + 6))
+
         if not self.is_valid_player:
             msg = fonts.get("normal").render("Politics is not available in Spectator Mode.",
                                              True, (255, 150, 150))
