@@ -657,14 +657,23 @@ class Controller:
             # running their own nested blocking loop (see modal_stack.py's docstring
             # for why -- a nested loop never yields back to asyncio.sleep(0) below).
             top_modal = modal_stack.active()
+
+            # FULLSCREEN toggles the display itself, not an action routed to
+            # whichever screen currently owns events, so unlike BACK/ORDERS/ECONOMY
+            # below it has to work even while a modal (dialog, sub-screen) is on
+            # top -- gated on *that* screen's listening_for, same as modal_stack.push
+            # resolves the real screen out of a _ScreenModal wrapper.
+            listening_screen = self.active_state if top_modal is None else getattr(top_modal, "screen", top_modal)
+            for event in events:
+                if (event.type == pygame.KEYDOWN and not getattr(listening_screen, "listening_for", None)
+                        and event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11)):
+                    self.toggle_fullscreen()
+
             if top_modal is None:
                 # GLOBAL KEYBOARD HANDLING
                 for event in events:
                     if event.type == pygame.KEYDOWN and not getattr(self.active_state, "listening_for", None):
-                        if event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11):
-                            self.toggle_fullscreen()
-                        else:
-                            dispatch_global_keys(self.active_state, event)
+                        dispatch_global_keys(self.active_state, event)
 
                 self.active_state.handle_events(events)
             else:
