@@ -32,11 +32,11 @@ abi_version() is checked either way, so a mismatch is refused rather than
 guessed at.
 """
 
-import base64
 import ctypes
 import datetime
 import json
 import os
+import shutil
 import sys
 
 IS_WEB = sys.platform == "emscripten"
@@ -424,34 +424,44 @@ def _js():
 def offer_download(path, suggested_name):
     """Hand a finished file to the browser as a download.
 
-    Base64 because what crosses into JavaScript here is a string; a map is a
-    megabyte or two, which is well within what one eval can carry, and the
-    alternative is a shared memory view for a transfer that happens once when
-    a person presses a button.
+    The bytes do not cross into JavaScript. Python and the page share one
+    emscripten filesystem, so what crosses is the path -- a few dozen
+    characters -- and the page reads the file itself.
+
+    That is not a micro-optimisation. The first version of this base64-encoded
+    the whole map into the eval string, so every translation pushed one to two
+    megabytes of text through the Python-to-JavaScript bridge in a single
+    synchronous call, on the frame the player pressed the button. The
+    conversion that produces the map takes about two seconds for the largest
+    one shipped; the browser stopped answering for minutes.
     """
     window = _js()
     if window is None:
         return False
-    try:
-        with open(path, "rb") as handle:
-            payload = base64.b64encode(handle.read()).decode("ascii")
-    except OSError:
+    if not os.path.isfile(path):
         return False
 
     safe = "".join(c for c in suggested_name if c.isalnum() or c in "._- ")
     try:
         window.eval(
-            "(function(b64,name){"
-            "var bin=atob(b64),n=bin.length,buf=new Uint8Array(n);"
-            "for(var i=0;i<n;i++)buf[i]=bin.charCodeAt(i);"
+            "(function(p,name){"
+            "var buf=FS.readFile(p);"
             "var u=URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));"
             "var a=document.createElement('a');a.href=u;a.download=name;"
             "document.body.appendChild(a);a.click();document.body.removeChild(a);"
-            "URL.revokeObjectURL(u);"
-            "})(\"" + payload + "\",\"" + safe + "\")")
+            # Revoked on a timer rather than immediately: a browser that has not
+            # started reading the blob yet cancels the download if the URL goes
+            # away underneath it.
+            "setTimeout(function(){URL.revokeObjectURL(u)},60000);"
+            "})(" + json.dumps(path) + "," + json.dumps(safe) + ")")
         return True
     except Exception:
         return False
+
+
+# Where the page drops a file the player picked. Python reads it from here, so
+# the bytes never travel as a string.
+_UPLOAD_DIR = "/tmp/gd5_upload"
 
 
 def ask_for_upload():
@@ -467,21 +477,25 @@ def ask_for_upload():
         return False
     try:
         window.eval(
-            "(function(){"
+            "(function(dir){"
             "window.__gd5_upload=null;"
             "var i=document.createElement('input');i.type='file';i.accept='.odmap';"
             "i.onchange=function(){"
-            "  var f=i.files[0]; if(!f)return;"
-            "  var r=new FileReader();"
-            "  r.onload=function(){"
-            "    var b=new Uint8Array(r.result),s='';"
-            "    for(var k=0;k<b.length;k++)s+=String.fromCharCode(b[k]);"
-            "    window.__gd5_upload={name:f.name,data:btoa(s)};"
-            "  };"
-            "  r.readAsArrayBuffer(f);"
+            "var f=i.files[0];if(!f)return;"
+            "var r=new FileReader();"
+            "r.onload=function(){"
+            "try{FS.mkdir(dir)}catch(e){}"
+            # The page names the file; Python only ever sees a basename it
+            # re-checks, and the character class here is the same one the
+            # download side allows.
+            "var name=f.name.replace(/[^A-Za-z0-9._ -]/g,'_');"
+            "FS.writeFile(dir+'/'+name,new Uint8Array(r.result));"
+            "window.__gd5_upload=name;"
+            "};"
+            "r.readAsArrayBuffer(f);"
             "};"
             "i.click();"
-            "})()")
+            "})(" + json.dumps(_UPLOAD_DIR) + ")")
         return True
     except Exception:
         return False
@@ -490,32 +504,40 @@ def ask_for_upload():
 def take_upload(into_dir):
     """Collect a file the player picked, if one has finished arriving.
 
-    Called once a frame by the screen. Returns the path written, or "" --
-    polling rather than a callback because the game loop is the only thread
-    there is, and a JavaScript callback cannot safely reach into it.
+    Called once a frame by the screen, which is why what crosses the bridge
+    here is a filename and not a file: this runs sixty times a second for as
+    long as the Translate screen is open, whether or not anybody ever pressed
+    the import button.
     """
     window = _js()
     if window is None:
         return ""
     try:
-        pending = window.eval("window.__gd5_upload && JSON.stringify(window.__gd5_upload)")
-        if not pending:
-            return ""
-        window.eval("window.__gd5_upload=null")
-        item = json.loads(str(pending))
+        pending = window.eval("window.__gd5_upload || ''")
     except Exception:
         return ""
+    name = os.path.basename(str(pending or ""))
+    if not name:
+        return ""
+    try:
+        window.eval("window.__gd5_upload=null")
+    except Exception:
+        pass
 
-    name = os.path.basename(str(item.get("name", "uploaded.odmap")))
+    source = os.path.join(_UPLOAD_DIR, name)
     if not name.lower().endswith(".odmap"):
         name += ".odmap"
     os.makedirs(into_dir, exist_ok=True)
     destination = os.path.join(into_dir, name)
     try:
-        with open(destination, "wb") as handle:
-            handle.write(base64.b64decode(item.get("data", "")))
-    except Exception:
+        with open(source, "rb") as incoming, open(destination, "wb") as handle:
+            shutil.copyfileobj(incoming, handle)
+    except OSError:
         return ""
+    try:
+        os.remove(source)
+    except OSError:
+        pass
     return destination if looks_like_odmap(destination) else ""
 
 
