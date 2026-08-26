@@ -1955,6 +1955,10 @@ REBELLION_TERMS = [
 # Directories
 ASSETS_ROOT_DIR = "assets"
 ASSETS_DIR = "assets/images"
+# Factory and recruitment center building art, kept out of the flat
+# assets/images set since building names/levels multiply fast. Loaded into
+# the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
+BUILDINGS_DIR = "assets/buildings"
 # Alternate unit-art sets live in their own folder under here, named after the
 # style (e.g. assets/hanskolmer), each with its own unit_art.json manifest.
 UNIT_ART_STYLES_DIR = "assets"

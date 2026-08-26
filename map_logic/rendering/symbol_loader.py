@@ -91,6 +91,17 @@ def load_symbols():
             img = pygame.image.load(os.path.join(path, file)).convert_alpha()
             SYMBOLS[name] = img
 
+    # Factory/recruitment center building art lives in its own folder (see
+    # c.BUILDINGS_DIR) but still resolves through the same flat name->Surface
+    # map as everything above, since _resolve_against only ever looks names
+    # up in SYMBOLS -- it has no idea which folder a symbol came from.
+    if os.path.exists(c.BUILDINGS_DIR):
+        for file in os.listdir(c.BUILDINGS_DIR):
+            if file.endswith(".png"):
+                name = os.path.splitext(file)[0]
+                img = pygame.image.load(os.path.join(c.BUILDINGS_DIR, file)).convert_alpha()
+                SYMBOLS[name] = img
+
     for style in c.UNIT_ART_STYLES:
         if style != "classic":
             load_style_symbols(style)
