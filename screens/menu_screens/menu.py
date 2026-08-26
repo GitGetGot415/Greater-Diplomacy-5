@@ -116,8 +116,8 @@ class Menu(GameState):
         # Hildehrand stands to the right of the sign, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
         # pixel art stays crisp instead of blurring. The portrait is anchored
-        # by its BOTTOM-RIGHT corner rather than its center: every portrait
-        # grows up-and-left from this one fixed point, so a short/narrow
+        # by its BOTTOM-LEFT corner rather than its center: every portrait
+        # grows up-and-right from this one fixed point, so a short/narrow
         # image never looks like it's floating above the ground, and a
         # tall/wide one never sinks through the floor or gets cut off past
         # the edge of the screen.
@@ -125,7 +125,7 @@ class Menu(GameState):
         # --- EDIT THESE TWO NUMBERS TO MOVE HILDEHRAND ---
         hildehrand_anchor_x = c.SCREEN_WIDTH - 25   # distance from the right edge of the screen
         hildehrand_anchor_y = (c.SCREEN_HEIGHT // 2) + 120   # the "floor" line the feet rest on
-        self._hildehrand_anchor_bottomright = (hildehrand_anchor_x, hildehrand_anchor_y)
+        self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
         try:
@@ -138,8 +138,8 @@ class Menu(GameState):
             self.hildehrand_image = None
 
         self._hildehrand_draw_pos = (
-            self.hildehrand_image.get_rect(bottomright=self._hildehrand_anchor_bottomright).topleft
-            if self.hildehrand_image else self._hildehrand_anchor_bottomright
+            self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft).topleft
+            if self.hildehrand_image else self._hildehrand_anchor_bottomleft
         )
 
         try:
@@ -235,7 +235,7 @@ class Menu(GameState):
         # Positioned off the fixed anchor point, not the image itself, so it
         # never moves when a taller or shorter portrait gets picked.
         swap_btn_width = c.SIZES["swap_hildehrand"][0]
-        hildehrand_anchor_x, hildehrand_anchor_y = self._hildehrand_anchor_bottomright
+        hildehrand_anchor_x, hildehrand_anchor_y = self._hildehrand_anchor_bottomleft
         self.swap_hildehrand_btn = Button(
             1100,
             500,
@@ -386,7 +386,7 @@ class Menu(GameState):
             self._left_ground_draw_pos = (int(_lerp(start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
 
         if getattr(self, "hildehrand_image", None):
-            rest_rect = self.hildehrand_image.get_rect(bottomright=self._hildehrand_anchor_bottomright)
+            rest_rect = self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft)
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
             start_x = c.SCREEN_WIDTH + 40
