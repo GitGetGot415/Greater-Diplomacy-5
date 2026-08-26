@@ -98,33 +98,32 @@ class Menu(GameState):
 
         # Hildehrand stands to the right of the sign, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
-        # pixel art stays crisp instead of blurring. Every portrait choice
-        # shares a fixed anchor point so picking a different one never shifts
-        # layout.
-        self._hildehrand_anchor_centery = c.SCREEN_HEIGHT // 2
+        # pixel art stays crisp instead of blurring. The portrait is anchored
+        # by its BOTTOM-RIGHT corner rather than its center: every portrait
+        # grows up-and-left from this one fixed point, so a short/narrow
+        # image never looks like it's floating above the ground, and a
+        # tall/wide one never sinks through the floor or gets cut off past
+        # the edge of the screen.
+        #
+        # --- EDIT THESE TWO NUMBERS TO MOVE HILDEHRAND ---
+        hildehrand_anchor_x = c.SCREEN_WIDTH - 25   # distance from the right edge of the screen
+        hildehrand_anchor_y = (c.SCREEN_HEIGHT // 2) + 120   # the "floor" line the feet rest on
+        self._hildehrand_anchor_bottomright = (hildehrand_anchor_x, hildehrand_anchor_y)
+
         self.hildehrand_choice = queries.get_hildehrand_choice()
         try:
-            from ui.character_select_screen import CHARACTERS_DIR, max_portrait_size
+            from ui.character_select_screen import CHARACTERS_DIR
 
             self.hildehrand_image = _load_scaled_image(f"{CHARACTERS_DIR}/{self.hildehrand_choice}",
                                                         self.HILDEHRAND_SCALE)
-
-            # Sized against the biggest portrait in assets/characters/, not just
-            # the current pick, so choosing a different one from the picker never
-            # shifts the anchor or the button beneath it.
-            hild_max_width, self.hildehrand_height = max_portrait_size(self.HILDEHRAND_SCALE)
-
-            # Sit just right of the sign, but never spill past the screen edge.
-            desired_left = (self.sign_rect.right + 20) if self.sign_rect else (c.SCREEN_WIDTH - hild_max_width - 20)
-            hild_left = min(desired_left, c.SCREEN_WIDTH - hild_max_width - 10)
-            self._hildehrand_anchor_centerx = hild_left + hild_max_width // 2
         except Exception as e:
             print(f"Failed to load the Hildehrand image: {e}")
             self.hildehrand_image = None
-            self.hildehrand_height = 180
-            self._hildehrand_anchor_centerx = (self.sign_rect.right + 90) if self.sign_rect else (c.SCREEN_WIDTH - 150)
 
-        self._hildehrand_draw_pos = (self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery)
+        self._hildehrand_draw_pos = (
+            self.hildehrand_image.get_rect(bottomright=self._hildehrand_anchor_bottomright).topleft
+            if self.hildehrand_image else self._hildehrand_anchor_bottomright
+        )
 
         try:
             raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
@@ -215,10 +214,13 @@ class Menu(GameState):
 
         # Small button beneath Hildehrand that opens a picker for any portrait
         # under assets/characters/, not just Hildehrand's own F/M variants.
+        # Positioned off the fixed anchor point, not the image itself, so it
+        # never moves when a taller or shorter portrait gets picked.
         swap_btn_width = c.SIZES["swap_hildehrand"][0]
+        hildehrand_anchor_x, hildehrand_anchor_y = self._hildehrand_anchor_bottomright
         self.swap_hildehrand_btn = Button(
-            self._hildehrand_anchor_centerx - swap_btn_width // 2,
-            self._hildehrand_anchor_centery + self.hildehrand_height // 2 + 15,
+            1100,
+            500,
             "swap_hildehrand",
             "purple",
             "Choose Portrait",
@@ -361,7 +363,7 @@ class Menu(GameState):
                 self._ground_draw_pos = (int(_lerp(start_x, self.ground_rect.x, t)), self.ground_rect.y)
 
         if getattr(self, "hildehrand_image", None):
-            rest_rect = self.hildehrand_image.get_rect(center=(self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery))
+            rest_rect = self.hildehrand_image.get_rect(bottomright=self._hildehrand_anchor_bottomright)
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
             start_x = c.SCREEN_WIDTH + 40

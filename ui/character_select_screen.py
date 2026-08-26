@@ -46,21 +46,6 @@ def discover_character_images():
     return results
 
 
-def max_portrait_size(scale=1):
-    """The largest width and height among every portrait under
-    assets/characters/, scaled by `scale`. Used to size a fixed display
-    anchor that doesn't shift no matter which portrait ends up picked."""
-    max_w = max_h = 0
-    for rel in discover_character_images():
-        try:
-            w, h = pygame.image.load(f"{CHARACTERS_DIR}/{rel}").get_size()
-        except Exception:
-            continue
-        max_w = max(max_w, int(w * scale))
-        max_h = max(max_h, int(h * scale))
-    return max_w, max_h
-
-
 def _label_for(rel_path):
     parts = rel_path.split("/")
     parts[-1] = os.path.splitext(parts[-1])[0]
