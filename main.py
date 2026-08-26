@@ -288,7 +288,7 @@ class Controller:
         self.now_playing = "None"
         self.starting_song = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
-        
+
         self.load_music_data()
         # Browsers block audio until it starts from within a genuine user gesture
         # (per pygbag's own guidance: "remove startup sounds and/or wait for a
@@ -548,7 +548,7 @@ class Controller:
             return
             
         import random
-        
+
         # Check if we have more than one song and if the current song is in the playlist
         if len(self.playlist) > 1 and self.now_playing in self.playlist:
             # Create a temporary list of all songs EXCEPT the one that just played
@@ -557,35 +557,47 @@ class Controller:
         else:
             # Fallback for playlists with only 1 song, or if nothing is playing yet
             track = random.choice(self.playlist)
-            
+
         self.play_specific_song(track)
+
+    def _load_soloud_stream_unicode_safe(self, track_path):
+        # WavStream.load() passes the path through fopen() via the C runtime,
+        # which reads it in the OS ANSI codepage instead of UTF-8 on Windows --
+        # non-ASCII filenames/titles (e.g. Japanese) silently fail to open.
+        # Reading the bytes with Python (Unicode-path-safe) and streaming them
+        # in via load_mem() avoids that codepage round-trip.
+        import ctypes
+        with open(track_path, 'rb') as f:
+            data = f.read()
+        buf = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+        self.music_stream.load_mem(buf, len(data), aCopy=True, aTakeOwnership=False)
 
     def play_specific_song(self, track_path):
         try:
             # Fetch the defined start time, default to 0.0 if not listed
             start_time = self.track_start_times.get(track_path, 0.0)
-            
+
             if c.USE_SOLOUD:
                 if hasattr(self, 'music_handle') and self.music_handle is not None:
                     self.soloud.stop(self.music_handle)
-                    
-                self.music_stream.load(track_path)
+
+                self._load_soloud_stream_unicode_safe(track_path)
                 self.music_handle = self.soloud.play(self.music_stream)
-                
+
                 # Apply SoLoud Seek
                 if start_time > 0:
                     self.soloud.seek(self.music_handle, start_time)
-                
+
                 self.soloud.set_volume(self.music_handle, self.music_volume)
                 # Mathematical tweak to center speed variance directly on 0.5 input
-                speed_mult = 0.5 + self.music_pitch 
+                speed_mult = 0.5 + self.music_pitch
                 self.soloud.set_relative_play_speed(self.music_handle, speed_mult)
             else:
                 pygame.mixer.music.load(track_path)
                 # Apply Pygame Mixer Seek
                 pygame.mixer.music.play(start=start_time)
                 pygame.mixer.music.set_volume(self.music_volume)
-                
+
             self.now_playing = track_path
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
