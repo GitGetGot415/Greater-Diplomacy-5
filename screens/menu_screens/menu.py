@@ -62,7 +62,7 @@ class Menu(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (10, 10, 40) # Midnight Blue
+        self.bg_color = (20, 20, 80) # Blue
         # GameState.draw_background falls back to a checkerboard tinted to bg_color
 
         try:
@@ -75,7 +75,7 @@ class Menu(GameState):
             new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
             self.sign_image = pygame.transform.scale(raw_image, new_size)
             self.sign_rect = self.sign_image.get_rect()
-            self.sign_rect.right = c.SCREEN_WIDTH - 180
+            self.sign_rect.right = c.SCREEN_WIDTH - 50
             self.sign_rect.centery = (c.SCREEN_HEIGHT // 2) + 25
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
@@ -238,7 +238,7 @@ class Menu(GameState):
         swap_btn_width = c.SIZES["swap_hildehrand"][0]
         hildehrand_anchor_x, hildehrand_anchor_y = self._hildehrand_anchor_bottomleft
         self.swap_hildehrand_btn = Button(
-            1100,
+            50,
             500,
             "swap_hildehrand",
             "purple",
@@ -248,11 +248,11 @@ class Menu(GameState):
         )
         self.elements.append(self.swap_hildehrand_btn)
 
-        # These two sit on the right edge alongside Hildehrand/the sign, so
-        # they slide in from the right instead of joining the rise-from-bottom
-        # cascade below.
+        # These two skip the rise-from-bottom cascade below and instead slide
+        # in horizontally: the refresh button from the right, alongside the
+        # sign, and the portrait swap button from the left, alongside Hildehrand.
         self.refresh_btn._intro_from_right = True
-        self.swap_hildehrand_btn._intro_from_right = True
+        self.swap_hildehrand_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
         # screen start first, rows near the bottom start last.
@@ -394,13 +394,16 @@ class Menu(GameState):
             self._hildehrand_draw_pos = (int(_lerp(start_x, rest_rect.x, t)), rest_rect.y)
 
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
-        slide_start_x = c.SCREEN_WIDTH + 40
+        slide_start_x_right = c.SCREEN_WIDTH + 40
 
         for btn in self.elements:
             local_elapsed = elapsed - btn._intro_delay
             t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
             if getattr(btn, "_intro_from_right", False):
-                btn.rect.x = int(_lerp(slide_start_x, btn._intro_target_x, t))
+                btn.rect.x = int(_lerp(slide_start_x_right, btn._intro_target_x, t))
+            elif getattr(btn, "_intro_from_left", False):
+                slide_start_x_left = -btn.rect.width - 40
+                btn.rect.x = int(_lerp(slide_start_x_left, btn._intro_target_x, t))
             else:
                 btn.rect.y = int(_lerp(rise_start_y, btn._intro_target_y, t))
 
@@ -410,7 +413,7 @@ class Menu(GameState):
         v_y = c.SCREEN_HEIGHT - version_font.get_height() - 10
         local_elapsed = elapsed - self._version_text_intro_delay
         t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
-        self._version_draw_pos = (int(_lerp(slide_start_x, target_v_x, t)), v_y)
+        self._version_draw_pos = (int(_lerp(slide_start_x_right, target_v_x, t)), v_y)
 
         for item in self.bottom_texts:
             local_elapsed = elapsed - item["_intro_delay"]
