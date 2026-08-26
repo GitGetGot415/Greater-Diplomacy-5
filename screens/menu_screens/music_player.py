@@ -378,7 +378,7 @@ class Music_Player(ScrollPanes, GameState):
                 # When seeking from position 0, skip_distance == target, so
                 # mStreamPosition ends up correct.
                 self.controller.soloud.stop(self.controller.music_handle)
-                self.controller.music_stream.load(self.controller.now_playing)
+                self.controller._load_soloud_stream_unicode_safe(self.controller.now_playing)
                 self.controller.music_handle = self.controller.soloud.play(
                     self.controller.music_stream, aPaused=1
                 )
