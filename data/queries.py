@@ -509,10 +509,13 @@ def get_starting_song():
     return data.get("track") if isinstance(data, dict) else None
 
 def get_hildehrand_choice():
-    """Returns the remembered Hildehrand portrait variant ("F" or "M"), defaulting to "F"."""
+    """Returns the remembered menu portrait, as a path relative to
+    assets/characters/ (e.g. "Hildehrand/F/2.png"), defaulting to Hildehrand F/2
+    if unset or if the remembered file no longer exists."""
+    from ui.character_select_screen import DEFAULT_PORTRAIT, discover_character_images
     data = _load_cached_json("hildehrand_choice")
     variant = data.get("variant") if isinstance(data, dict) else None
-    return variant if variant in ("F", "M") else "F"
+    return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
 
 def get_time_appropriate_research(start_year):
     """Calculates time-appropriate research level mapping for a given start year."""
@@ -3372,6 +3375,14 @@ def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     from ui.color_picker_screen import ColorPickerScreen
     from ui.screen_runner import _run_pygame_sub_screen
     screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
+    _run_pygame_sub_screen(game_state, screen)
+
+def open_character_picker(game_state, current_path, on_confirm_callback):
+    """In-engine grid picker for choosing a character portrait: shows a
+    thumbnail for every image under assets/characters/."""
+    from ui.character_select_screen import CharacterSelectScreen
+    from ui.screen_runner import _run_pygame_sub_screen
+    screen = CharacterSelectScreen(game_state, current_path, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
 def open_file_browser(game_state, title, start_dir=None, mode="open_file", extensions=None,

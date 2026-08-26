@@ -699,6 +699,7 @@ SIZES = {
     "ai_opinion": (100, 30),
     "puppet_option": (100, 30),
     "swap_hildehrand": (120, 30),
+    "character_portrait_tile": (190, 190),
     "automation_option": (200, 30),
     "top_orders_panel_button": (90, 40),
     "orders_panel_button": (60, 40),

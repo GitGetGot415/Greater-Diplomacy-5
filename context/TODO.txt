@@ -8,6 +8,8 @@ hanskolmer suggestions:
 - temporarially rent out factories to other countries via trade?
 - ADD HER FLAGS
 
+REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
+
 - see if the tank production buttons can be compressed like infantry or artillery
 - perhaps railroad guns could be a type of artillery
 - seperate artillery research section?

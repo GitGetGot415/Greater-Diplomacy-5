@@ -23,6 +23,13 @@ def _ease_out_expo(t):
 def _lerp(a, b, t):
     return a + (b - a) * t
 
+def _load_scaled_image(path, factor):
+    """Loads a PNG and scales it by `factor` with nearest-neighbour scaling,
+    which keeps pixel art crisp instead of the blur smoothscale would add."""
+    raw = pygame.image.load(path).convert_alpha()
+    size = (int(raw.get_width() * factor), int(raw.get_height() * factor))
+    return pygame.transform.scale(raw, size)
+
 class Menu(GameState):
     # Intro animation timings, in ms. Title drops from above, sign slides in
     # from the right. Buttons/text rise straight up from below the screen;
@@ -34,6 +41,8 @@ class Menu(GameState):
     # Hildehrand slides in from the same edge as the sign, just slightly
     # after it, so the two don't read as one flat block arriving together.
     HILDEHRAND_INTRO_DELAY_MS = 150
+    # Nearest-neighbour upscale applied to whichever character portrait is picked.
+    HILDEHRAND_SCALE = 2
     BUTTON_INTRO_DURATION_MS = 500
     BUTTON_INTRO_CASCADE_MS = 650
     # How far below the screen bottom rows start from, so they're fully
@@ -89,32 +98,29 @@ class Menu(GameState):
 
         # Hildehrand stands to the right of the sign, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
-        # pixel art stays crisp instead of blurring. Both variants share a
-        # fixed anchor point so swapping between them never shifts layout.
+        # pixel art stays crisp instead of blurring. Every portrait choice
+        # shares a fixed anchor point so picking a different one never shifts
+        # layout.
         self._hildehrand_anchor_centery = c.SCREEN_HEIGHT // 2
-        self.hildehrand_variant = queries.get_hildehrand_choice()
+        self.hildehrand_choice = queries.get_hildehrand_choice()
         try:
-            hild_scale_factor = 2
+            from ui.character_select_screen import CHARACTERS_DIR, max_portrait_size
 
-            def _load_scaled(path, factor):
-                raw = pygame.image.load(path).convert_alpha()
-                size = (int(raw.get_width() * factor), int(raw.get_height() * factor))
-                return pygame.transform.scale(raw, size)
+            self.hildehrand_image = _load_scaled_image(f"{CHARACTERS_DIR}/{self.hildehrand_choice}",
+                                                        self.HILDEHRAND_SCALE)
 
-            self.hildehrand_images = {
-                "F": _load_scaled("assets/images/Hildehrand F.png", hild_scale_factor),
-                "M": _load_scaled("assets/images/Hildehrand M.png", hild_scale_factor),
-            }
-            hild_max_width = max(img.get_width() for img in self.hildehrand_images.values())
-            self.hildehrand_height = max(img.get_height() for img in self.hildehrand_images.values())
+            # Sized against the biggest portrait in assets/characters/, not just
+            # the current pick, so choosing a different one from the picker never
+            # shifts the anchor or the button beneath it.
+            hild_max_width, self.hildehrand_height = max_portrait_size(self.HILDEHRAND_SCALE)
 
             # Sit just right of the sign, but never spill past the screen edge.
             desired_left = (self.sign_rect.right + 20) if self.sign_rect else (c.SCREEN_WIDTH - hild_max_width - 20)
             hild_left = min(desired_left, c.SCREEN_WIDTH - hild_max_width - 10)
             self._hildehrand_anchor_centerx = hild_left + hild_max_width // 2
         except Exception as e:
-            print(f"Failed to load the Hildehrand images: {e}")
-            self.hildehrand_images = None
+            print(f"Failed to load the Hildehrand image: {e}")
+            self.hildehrand_image = None
             self.hildehrand_height = 180
             self._hildehrand_anchor_centerx = (self.sign_rect.right + 90) if self.sign_rect else (c.SCREEN_WIDTH - 150)
 
@@ -207,16 +213,16 @@ class Menu(GameState):
         )
         self.elements.append(self.refresh_btn)
 
-        # Small toggle button beneath Hildehrand, swapping between the F/M
-        # portraits.
+        # Small button beneath Hildehrand that opens a picker for any portrait
+        # under assets/characters/, not just Hildehrand's own F/M variants.
         swap_btn_width = c.SIZES["swap_hildehrand"][0]
         self.swap_hildehrand_btn = Button(
             self._hildehrand_anchor_centerx - swap_btn_width // 2,
             self._hildehrand_anchor_centery + self.hildehrand_height // 2 + 15,
             "swap_hildehrand",
             "purple",
-            "Swap Hildehrand",
-            self.toggle_hildehrand,
+            "Choose Portrait",
+            self.open_hildehrand_picker,
             font_preset="small",
         )
         self.elements.append(self.swap_hildehrand_btn)
@@ -253,9 +259,19 @@ class Menu(GameState):
         if not IS_WEB:
             threading.Thread(target=self.check_version, daemon=True).start()
 
-    def toggle_hildehrand(self):
-        self.hildehrand_variant = "M" if self.hildehrand_variant == "F" else "F"
-        queries.save_cached_json("hildehrand_choice", {"variant": self.hildehrand_variant})
+    def open_hildehrand_picker(self):
+        queries.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
+
+    def _set_hildehrand_choice(self, rel_path):
+        from ui.character_select_screen import CHARACTERS_DIR
+        try:
+            image = _load_scaled_image(f"{CHARACTERS_DIR}/{rel_path}", self.HILDEHRAND_SCALE)
+        except Exception as e:
+            print(f"Failed to load the Hildehrand image: {e}")
+            return
+        self.hildehrand_choice = rel_path
+        self.hildehrand_image = image
+        queries.save_cached_json("hildehrand_choice", {"variant": rel_path})
 
     def trigger_version_check(self):
         if IS_WEB:
@@ -344,9 +360,8 @@ class Menu(GameState):
             if self.ground_rect:
                 self._ground_draw_pos = (int(_lerp(start_x, self.ground_rect.x, t)), self.ground_rect.y)
 
-        if getattr(self, "hildehrand_images", None):
-            img = self.hildehrand_images[self.hildehrand_variant]
-            rest_rect = img.get_rect(center=(self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery))
+        if getattr(self, "hildehrand_image", None):
+            rest_rect = self.hildehrand_image.get_rect(center=(self._hildehrand_anchor_centerx, self._hildehrand_anchor_centery))
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
             start_x = c.SCREEN_WIDTH + 40
@@ -387,8 +402,8 @@ class Menu(GameState):
         if getattr(self, "sign_image", None):
             surface.blit(self.sign_image, self._sign_draw_pos)
 
-        if getattr(self, "hildehrand_images", None):
-            surface.blit(self.hildehrand_images[self.hildehrand_variant], self._hildehrand_draw_pos)
+        if getattr(self, "hildehrand_image", None):
+            surface.blit(self.hildehrand_image, self._hildehrand_draw_pos)
 
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
