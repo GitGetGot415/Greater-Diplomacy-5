@@ -81,20 +81,37 @@ class Menu(GameState):
             self.sign_image = None
             self.sign_rect = None
 
-        # The ground sits directly beneath the sign's post, scaled the same
-        # as the sign so the pixel art matches, and rides along with the
+        # The right ground sits directly beneath the sign's post, scaled the
+        # same as the sign so the pixel art matches, and rides along with the
         # sign's slide-in as a single unit rather than animating on its own.
         try:
-            raw_ground = pygame.image.load("assets/images/The Ground.png").convert_alpha()
+            raw_ground = pygame.image.load("assets/images/Right Ground.png").convert_alpha()
             ground_size = (int(raw_ground.get_width() * scale_factor), int(raw_ground.get_height() * scale_factor))
-            self.ground_image = pygame.transform.scale(raw_ground, ground_size)
-            self.ground_rect = self.ground_image.get_rect()
-            self.ground_rect.left = 900
-            self.ground_rect.top = 460
+            self.right_ground_image = pygame.transform.scale(raw_ground, ground_size)
+            self.right_ground_rect = self.right_ground_image.get_rect()
+            self.right_ground_rect.left = 900
+            self.right_ground_rect.top = 460
         except Exception as e:
-            print(f"Failed to load the ground image: {e}")
-            self.ground_image = None
-            self.ground_rect = None
+            print(f"Failed to load the right ground image: {e}")
+            self.right_ground_image = None
+            self.right_ground_rect = None
+
+        # The left ground is the same prop mirrored onto the left side of the
+        # screen, sliding in from the left independently of the sign. Mirrored
+        # off the right ground's own left-edge distance so the two sit
+        # symmetrically either side of the screen's centre.
+        try:
+            raw_left_ground = pygame.image.load("assets/images/Left Ground.png").convert_alpha()
+            left_ground_size = (int(raw_left_ground.get_width() * scale_factor),
+                                int(raw_left_ground.get_height() * scale_factor))
+            self.left_ground_image = pygame.transform.scale(raw_left_ground, left_ground_size)
+            self.left_ground_rect = self.left_ground_image.get_rect()
+            self.left_ground_rect.right = c.SCREEN_WIDTH - 900
+            self.left_ground_rect.top = 460
+        except Exception as e:
+            print(f"Failed to load the left ground image: {e}")
+            self.left_ground_image = None
+            self.left_ground_rect = None
 
         # Hildehrand stands to the right of the sign, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
@@ -145,7 +162,8 @@ class Menu(GameState):
         self.intro_start_ticks = pygame.time.get_ticks()
         self._title_draw_pos = self.title_rect.topleft if self.title_rect else (0, 0)
         self._sign_draw_pos = self.sign_rect.topleft if self.sign_rect else (0, 0)
-        self._ground_draw_pos = self.ground_rect.topleft if self.ground_rect else (0, 0)
+        self._right_ground_draw_pos = self.right_ground_rect.topleft if self.right_ground_rect else (0, 0)
+        self._left_ground_draw_pos = self.left_ground_rect.topleft if self.left_ground_rect else (0, 0)
 
         # (y offset from centre, label, colour, icon, destination state) — one row
         # per menu entry, so adding a screen is a single line here.
@@ -359,8 +377,13 @@ class Menu(GameState):
             start_x = c.SCREEN_WIDTH + 40
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
-            if self.ground_rect:
-                self._ground_draw_pos = (int(_lerp(start_x, self.ground_rect.x, t)), self.ground_rect.y)
+            if self.right_ground_rect:
+                self._right_ground_draw_pos = (int(_lerp(start_x, self.right_ground_rect.x, t)), self.right_ground_rect.y)
+
+        if self.left_ground_rect:
+            t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
+            start_x = -self.left_ground_rect.width - 40
+            self._left_ground_draw_pos = (int(_lerp(start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
 
         if getattr(self, "hildehrand_image", None):
             rest_rect = self.hildehrand_image.get_rect(bottomright=self._hildehrand_anchor_bottomright)
@@ -398,8 +421,11 @@ class Menu(GameState):
         if getattr(self, "title_image", None):
             surface.blit(self.title_image, self._title_draw_pos)
 
-        if getattr(self, "ground_image", None):
-            surface.blit(self.ground_image, self._ground_draw_pos)
+        if getattr(self, "right_ground_image", None):
+            surface.blit(self.right_ground_image, self._right_ground_draw_pos)
+
+        if getattr(self, "left_ground_image", None):
+            surface.blit(self.left_ground_image, self._left_ground_draw_pos)
 
         if getattr(self, "sign_image", None):
             surface.blit(self.sign_image, self._sign_draw_pos)
