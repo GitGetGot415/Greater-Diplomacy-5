@@ -38,8 +38,9 @@ class Menu(GameState):
     # takes BUTTON_INTRO_DURATION_MS to arrive.
     TITLE_INTRO_MS = 900
     SIGN_INTRO_MS = 900
-    # Hildehrand slides in from the same edge as the sign, just slightly
-    # after it, so the two don't read as one flat block arriving together.
+    # Hildehrand slides in from the left, just slightly after the sign starts
+    # sliding in from the right, so the two don't read as one flat block
+    # arriving together.
     HILDEHRAND_INTRO_DELAY_MS = 150
     # Nearest-neighbour upscale applied to whichever character portrait is picked.
     HILDEHRAND_SCALE = 2
@@ -113,7 +114,7 @@ class Menu(GameState):
             self.left_ground_image = None
             self.left_ground_rect = None
 
-        # Hildehrand stands to the right of the sign, scaled the same
+        # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
         # pixel art stays crisp instead of blurring. The portrait is anchored
         # by its BOTTOM-LEFT corner rather than its center: every portrait
@@ -123,7 +124,7 @@ class Menu(GameState):
         # the edge of the screen.
         #
         # --- EDIT THESE TWO NUMBERS TO MOVE HILDEHRAND ---
-        hildehrand_anchor_x = c.SCREEN_WIDTH - 25   # distance from the right edge of the screen
+        hildehrand_anchor_x = 25   # distance from the left edge of the screen
         hildehrand_anchor_y = (c.SCREEN_HEIGHT // 2) + 120   # the "floor" line the feet rest on
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
@@ -389,7 +390,7 @@ class Menu(GameState):
             rest_rect = self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft)
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
-            start_x = c.SCREEN_WIDTH + 40
+            start_x = -rest_rect.width - 40
             self._hildehrand_draw_pos = (int(_lerp(start_x, rest_rect.x, t)), rest_rect.y)
 
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
