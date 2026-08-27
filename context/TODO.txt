@@ -10,6 +10,8 @@ hanskolmer suggestions:
 
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
+- make it so you can put in a custom character when choosing a portrait in the menu screen
+
 - see if the tank production buttons can be compressed like infantry or artillery
 - perhaps railroad guns could be a type of artillery
 - seperate artillery research section?
