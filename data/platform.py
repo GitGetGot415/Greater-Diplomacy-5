@@ -304,7 +304,11 @@ def _persisted_roots():
     # Lazy import: data.constants imports IS_WEB from this module, so this
     # module can't import data.constants back at top level.
     import data.constants as c
-    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR)
+    # Also lazy: ui.character_select_screen isn't otherwise on this module's
+    # import graph, and doesn't need to be at module scope just for this path.
+    from ui.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
+    custom_characters_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
+    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR, custom_characters_dir)
 
 
 async def restore_persisted_dir(root):

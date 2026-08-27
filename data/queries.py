@@ -3734,6 +3734,40 @@ def import_mod_file(game_state, on_success=None):
     open_file_browser(game_state, "Select Mod (.py) File", downloads_dir(),
                       extensions=[".py"], on_result=_after_pick)
 
+def import_character_portrait(game_state, on_success=None):
+    """Prompts for an image file (starting in Downloads) and copies it into
+    assets/characters/Custom/, where the portrait picker's discover_character_images()
+    picks it up like any curated portrait. Unlike import_mod_file, this needs no
+    trust warning first -- an image can't run code, it can only be displayed.
+
+    on_success, if given, is called with the new portrait's path relative to
+    CHARACTERS_DIR (e.g. "Custom/photo.png").
+    """
+    from ui import confirm_dialog
+    from ui.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR, IMAGE_EXTENSIONS
+
+    custom_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
+
+    def _after_pick(file_path):
+        if not file_path:
+            return
+        target_name = os.path.basename(file_path)
+        os.makedirs(custom_dir, exist_ok=True)
+        dest = os.path.join(custom_dir, target_name)
+        if os.path.exists(dest):
+            stem, ext = os.path.splitext(target_name)
+            dest = os.path.join(custom_dir, f"{stem}_imported{ext}")
+        try:
+            shutil.copy2(file_path, dest)
+            sync_persisted_dir(custom_dir)
+            if on_success:
+                on_success(f"{CUSTOM_SUBDIR}/{os.path.basename(dest)}")
+        except Exception as e:
+            confirm_dialog.show_error("Import Error", str(e))
+
+    open_file_browser(game_state, "Select a Portrait Image", downloads_dir(),
+                      extensions=list(IMAGE_EXTENSIONS), on_result=_after_pick)
+
 def ask_directory(game_state, title, initialdir, on_result):
     """Native folder picker; answers on_result with the chosen path, or None if cancelled."""
     open_file_browser(game_state, title, initialdir, mode="select_folder", on_result=on_result)
