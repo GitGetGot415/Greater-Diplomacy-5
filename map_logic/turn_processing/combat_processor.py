@@ -17,14 +17,20 @@ CHARGE_SIDE = 1
 
 
 def apply_group_damage(total_atk, target_units, defense_bonus_fn=None):
-    """Distributes attack among targets after their defense and fort bonuses."""
+    """Distributes attack after health-scaled unit defense and flat bonuses.
+
+    Fortification defense is a property of the tile, not the individual unit,
+    so it must not be reduced when a unit is wounded.  The callback remains
+    generic because it is also useful for other tile-wide defensive effects.
+    """
     if not target_units: return
     # Simple distribution: Divide total attack by number of units
     damage_per_unit = total_atk / len(target_units)
     
     for u in target_units:
         defense_bonus = defense_bonus_fn(u) if defense_bonus_fn else 0
-        defense = (u.get("defense", 0) + defense_bonus) * combat_rules.health_defense_multiplier(u)
+        defense = (u.get("defense", 0) * combat_rules.health_defense_multiplier(u)
+                   + defense_bonus)
         actual_dmg = max(0, damage_per_unit - defense)
         
         if actual_dmg > 0:
@@ -80,9 +86,29 @@ def process_bombardments(map_screen):
         if not target_prov: continue
 
         for owner, guns in guns_by_owner.items():
+            # A land artillery order against an enemy fort damages the fort
+            # itself, even when the tile currently has no units to hit.  Each
+            # artillery unit has its own BOMBARD order, so each one can remove
+            # one level; damage stops naturally at level 0.
+            target_owner = target_prov.get("owner")
+            fort_hits = 0
+            if (target_owner and queries.are_at_war(owner, target_owner,
+                                                     map_screen.nation_data)):
+                fort_hits = sum(
+                    not (gun.get("naval_unit")
+                         or queries.is_naval_unit(gun.get("type", "")))
+                    for gun in guns
+                )
+
             targets = [u for u in target_prov.get("units", [])
                        if queries.are_at_war(owner, u.get("owner"), map_screen.nation_data)]
             if not targets:
+                # A valid bombardment can hit an empty fort tile, so apply its
+                # fort damage even when there are no enemy units to receive
+                # the volley.
+                for _ in range(fort_hits):
+                    queries.damage_fort(
+                        target_prov, map_screen.nation_data, map_screen.map_data)
                 continue
 
             # Every gun that aimed here contributes; unlike a stack fight this
@@ -98,6 +124,12 @@ def process_bombardments(map_screen):
                 lambda unit, province=target_prov: queries.get_fort_defense_bonus(
                     province, unit, map_screen.nation_data, combat_active=True),
             )
+
+            # Resolve the fort damage after this volley has been calculated so
+            # the fort's current level protects against the shells that hit it.
+            for _ in range(fort_hits):
+                queries.damage_fort(
+                    target_prov, map_screen.nation_data, map_screen.map_data)
 
             for u in targets:
                 u["_in_combat_this_turn"] = True

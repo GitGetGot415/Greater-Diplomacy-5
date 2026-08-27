@@ -495,9 +495,10 @@ class Battle_Screen(ModalScreen):
                     self.province, unit, self.map_screen.nation_data, combat_active=True)
                 end_x = draw_combat_stats(
                     surface, small, "", unit.get("attack", 0) * dmg_mult,
-                    (unit.get("defense", 0) + fort_defense) * def_mult,
+                    unit.get("defense", 0) * def_mult,
                     int(unit.get("health", 0)), unit.get("speed", 0),
-                    rect.x + 10, stat_y, (200, 200, 200), labeled=False)
+                    rect.x + 10, stat_y, (200, 200, 200),
+                    labeled=False, defense_bonus=fort_defense)
 
                 stats = library.get(unit.get("type", ""), {})
                 if "bombard_attack" in stats:

@@ -1064,6 +1064,45 @@ def get_fort_level(province):
             level = max(level, int(match.group(1)))
     return level
 
+def damage_fort(province, nation_data, map_data=None):
+    """Removes one fort level and cancels/refunds queued fort upgrades.
+
+    The queue belongs to the province, while its construction cost was paid by
+    the current tile owner.  Queue entries record the exact amount paid, so
+    using ``refund_queue_item`` also keeps old saves and any applicable cost
+    modifiers correct.
+
+    Returns the new fort level, or ``None`` when the province had no fort.
+    """
+    current_level = get_fort_level(province)
+    if current_level <= 0:
+        return None
+
+    province["buildings"] = [
+        b_name for b_name in province.get("buildings", [])
+        if not re.fullmatch(r"Fort Lvl (\d+)", b_name)
+    ]
+    if current_level > 1:
+        province["buildings"].append(f"Fort Lvl {current_level - 1}")
+
+    queue = province.get("building_queue", [])
+    if queue:
+        owner = province.get("owner")
+        owner_data = nation_data.get(owner, {}) if owner else {}
+        kept_queue = []
+        cancelled = False
+        for item in queue:
+            if (item.get("order_type") == "BUILDING"
+                    and re.fullmatch(r"Fort Lvl (\d+)", item.get("item_name", ""))):
+                refund_queue_item(owner_data, item, owner, map_data)
+                cancelled = True
+            else:
+                kept_queue.append(item)
+        if cancelled:
+            province["building_queue"] = kept_queue
+
+    return current_level - 1
+
 def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
     """Returns the fort defense bonus for a unit defending this province.
 

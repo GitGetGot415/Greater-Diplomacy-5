@@ -140,8 +140,11 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                     province, u, map_screen.nation_data, combat_active=is_combat)
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
-                    u.get("attack", 0) * dmg_mult, (u.get("defense", 0) + fort_defense) * def_mult, int(u.get("health", 0)), u.get("speed", 0),
-                    row_x, current_y, (200, 200, 200), labeled=False
+                    u.get("attack", 0) * dmg_mult,
+                    u.get("defense", 0) * def_mult,
+                    int(u.get("health", 0)), u.get("speed", 0),
+                    row_x, current_y, (200, 200, 200), labeled=False,
+                    defense_bonus=fort_defense
                 )
 
                 current_y += 20

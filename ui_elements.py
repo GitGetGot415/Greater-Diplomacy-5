@@ -568,29 +568,36 @@ def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, 
                           icon_size=16, icon_gap=4,
                           empty_text="None" if is_yield else "Free")
 
-def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color, labeled=True):
+def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color,
+                      labeled=True, defense_bonus=0):
     """Attack/defense/health/speed row.
 
-    Defense is hidden entirely when 0, the same way a free resource cost is
-    hidden in draw_resource_string, rather than showing "DEF: 0" noise.
+    Defense is hidden entirely when both base defense and its optional tile
+    bonus are 0, the same way a free resource cost is hidden in
+    draw_resource_string.  A tile bonus is shown separately as ``base + bonus``
+    (for example ``0 + 50`` for infantry on a level-5 fort).
     `labeled=False` drops the "ATK:"-style prefixes and shows bare numbers
     next to each icon, for compact single-line layouts.
     """
+    defense_text = queries.format_number(df)
+    if defense_bonus:
+        defense_text += f" + {queries.format_number(defense_bonus)}"
+
     if labeled:
         stats = [
             (c.ICON_ATTACK, f"ATK: {queries.format_number(atk)}"),
-            (c.ICON_DEFENSE, f"DEF: {queries.format_number(df)}"),
+            (c.ICON_DEFENSE, f"DEF: {defense_text}"),
             (c.ICON_HEALTH, f"HP: {queries.format_number(hp)}"),
             (c.ICON_SPEED, f"SPD: {queries.format_number(spd)}"),
         ]
     else:
         stats = [
             (c.ICON_ATTACK, queries.format_number(atk)),
-            (c.ICON_DEFENSE, queries.format_number(df)),
+            (c.ICON_DEFENSE, defense_text),
             (c.ICON_HEALTH, queries.format_number(hp)),
             (c.ICON_SPEED, queries.format_number(spd)),
         ]
-    if not df:
+    if not df and not defense_bonus:
         stats.pop(1)
     return draw_icon_row(surface, font, base_text, stats, x, y, color)
 
