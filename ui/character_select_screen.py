@@ -32,7 +32,13 @@ DEFAULT_PORTRAIT = "Hildehrand/F/2.png"
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
 
 _DIGIT_RE = re.compile(r"(\d+)")
-_CUSTOM_PREFIX = f"{CUSTOM_SUBDIR}/"
+# Lower-cased for the comparison in is_custom_portrait() below: Windows'
+# filesystem is case-insensitive, so os.walk() can (and, on at least one
+# real machine, does) hand back the on-disk folder as "custom" even though
+# it was created by writing to a path spelled "Custom" -- a case-sensitive
+# prefix check against CUSTOM_SUBDIR would then silently fail to recognise
+# a real custom portrait as custom at all.
+_CUSTOM_PREFIX_LOWER = f"{CUSTOM_SUBDIR.lower()}/"
 
 
 def _natural_key(path):
@@ -42,8 +48,10 @@ def _natural_key(path):
 
 
 def is_custom_portrait(rel_path):
-    """True for anything imported via the "+ Add New" tile (assets/characters/custom/...)."""
-    return rel_path.replace(os.sep, "/").startswith(_CUSTOM_PREFIX)
+    """True for anything imported via the "+ Add New" tile (assets/characters/Custom/...).
+
+    Compares case-insensitively -- see the _CUSTOM_PREFIX_LOWER comment above."""
+    return rel_path.replace(os.sep, "/").lower().startswith(_CUSTOM_PREFIX_LOWER)
 
 
 def discover_character_images():
@@ -68,6 +76,11 @@ def discover_character_images():
 
 def _label_for(rel_path):
     parts = rel_path.split("/")
+    # The "Custom" folder itself is just where imported portraits live, not
+    # part of anyone's name -- drop it so a custom tile reads e.g. "Photo"
+    # instead of "Custom Photo".
+    if is_custom_portrait(rel_path):
+        parts = parts[1:]
     parts[-1] = os.path.splitext(parts[-1])[0]
     return " ".join(parts)
 
