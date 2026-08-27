@@ -14,3 +14,5 @@ also, if you edit anything, don't forget to also update relevant information
 for example, if you edit how damage works (maybe make units deal less damage in certain situations), make sure the ui also accounts for this, so you don't have a situation where it says a unit deals some value of damage but in actuality it deals something else entirely
 
 and don't forget to also update the compilation scripts (windows_compilation.py, macos_compilation.py, html_compilation.py) if you added a new python file or something
+
+IMPORTANT: NEVER COMMIT ANYTHING TO MAIN WITHOUT EXPLICITLY ASKING THE USER BEFOREHAND

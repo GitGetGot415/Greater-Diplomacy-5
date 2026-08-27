@@ -31,6 +31,7 @@ web_stage
 tournament_saves
 scenarios/map_editor
 main.spec
+mods
 
 *.pyc
 !countries_data.json
@@ -40,5 +41,6 @@ main.spec
 !historical_leaders_DEFAULT.json
 !ai_responses.json
 !building_data.json
+
 # Maps written by the Translate screen -- generated, not source.
 translated/
