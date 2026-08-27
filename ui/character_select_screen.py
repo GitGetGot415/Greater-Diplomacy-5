@@ -227,7 +227,8 @@ class CharacterSelectScreen(ModalScreen):
     def _portrait_tile(self, rel_path, x, y, font):
         tile_w, _tile_h = c.SIZES["character_portrait_tile"]
         label = text_utils.fit_text(_label_for(rel_path), font, self.LABEL_MAX_WIDTH)
-        btn = Button(x, y, "character_portrait_tile", "blue", label,
+        tile_color = "purple" if is_custom_portrait(rel_path) else "blue"
+        btn = Button(x, y, "character_portrait_tile", tile_color, label,
                     lambda p=rel_path: self.select(p), image=self._thumbnail(rel_path),
                     show_text=True, layout="vertical", font_preset="small")
         btn.is_selected = (rel_path == self.current_path)
