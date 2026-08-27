@@ -491,8 +491,11 @@ class Battle_Screen(ModalScreen):
                 dmg_mult = combat_rules.effective_damage_multiplier(
                     unit, self.map_screen.nation_data)
                 def_mult = combat_rules.health_defense_multiplier(unit)
+                fort_defense = queries.get_fort_defense_bonus(
+                    self.province, unit, self.map_screen.nation_data, combat_active=True)
                 end_x = draw_combat_stats(
-                    surface, small, "", unit.get("attack", 0) * dmg_mult, unit.get("defense", 0) * def_mult,
+                    surface, small, "", unit.get("attack", 0) * dmg_mult,
+                    (unit.get("defense", 0) + fort_defense) * def_mult,
                     int(unit.get("health", 0)), unit.get("speed", 0),
                     rect.x + 10, stat_y, (200, 200, 200), labeled=False)
 

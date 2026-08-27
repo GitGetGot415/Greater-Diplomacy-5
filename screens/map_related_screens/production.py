@@ -230,7 +230,7 @@ class Production_Screen(GameState):
         x_pos = LIST_X
 
         # --- BUILDING LOGIC ---
-        bldg_groups = {"Other": ["industry"], "Recruitment": ["recruitment"]}
+        bldg_groups = {"Other": ["industry", "fortification"], "Recruitment": ["recruitment"]}
         
         is_core = queries.has_core(owner_nation, self.target_province)
         

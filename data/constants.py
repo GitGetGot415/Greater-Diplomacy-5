@@ -327,6 +327,12 @@ BASIC_FACTORY_BASE_COST_X = 10000
 BASIC_FACTORY_COST_MULTIPLIER = 1000
 BASIC_FACTORY_TURNS = 20
 
+# Forts are available independently of the research tree.  Their level is
+# also the amount of defense they provide to friendly units during combat on
+# the tile.
+FORT_MAX_LEVEL = 20
+FORT_DEFENSE_PER_LEVEL = 10
+
 # ==========================================
 # ECONOMY SCREEN
 # ==========================================

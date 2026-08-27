@@ -224,6 +224,7 @@ def process_queues(map_screen):
                         is_industrial = "Workshop" in b_name or "Factory" in b_name
                         is_refinery = "Refinery" in b_name
                         is_recruitment = "Recruitment" in b_name
+                        is_fort = "Fort Lvl" in b_name
                         
                         new_buildings = []
                         for b in province.get("buildings", []):
@@ -233,6 +234,8 @@ def process_queues(map_screen):
                             if is_refinery and "Refinery" in b:
                                 keep = False
                             if is_recruitment and "Recruitment" in b:
+                                keep = False
+                            if is_fort and "Fort Lvl" in b:
                                 keep = False
                             
                             if keep:

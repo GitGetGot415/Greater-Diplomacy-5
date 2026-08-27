@@ -16,14 +16,15 @@ MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
 CHARGE_SIDE = 1
 
 
-def apply_group_damage(total_atk, target_units):
-    """Distributes total attack among target units, reduced by their individual defense."""
+def apply_group_damage(total_atk, target_units, defense_bonus_fn=None):
+    """Distributes attack among targets after their defense and fort bonuses."""
     if not target_units: return
     # Simple distribution: Divide total attack by number of units
     damage_per_unit = total_atk / len(target_units)
     
     for u in target_units:
-        defense = u.get("defense", 0) * combat_rules.health_defense_multiplier(u)
+        defense_bonus = defense_bonus_fn(u) if defense_bonus_fn else 0
+        defense = (u.get("defense", 0) + defense_bonus) * combat_rules.health_defense_multiplier(u)
         actual_dmg = max(0, damage_per_unit - defense)
         
         if actual_dmg > 0:
@@ -91,7 +92,12 @@ def process_bombardments(map_screen):
             total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK))
                             * combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
                             for u in guns)
-            apply_group_damage(total_atk, targets)
+            apply_group_damage(
+                total_atk,
+                targets,
+                lambda unit, province=target_prov: queries.get_fort_defense_bonus(
+                    province, unit, map_screen.nation_data, combat_active=True),
+            )
 
             for u in targets:
                 u["_in_combat_this_turn"] = True
@@ -194,7 +200,12 @@ def process_pinning(map_screen):
         if not attackers_survive:
             # 1. Attackers are obliterated. Apply their pitiful damage to the defenders.
             for targets, total_atk in shots_at_defenders:
-                apply_group_damage(total_atk, targets)
+                apply_group_damage(
+                    total_atk,
+                    targets,
+                    lambda unit, province=dest_prov: queries.get_fort_defense_bonus(
+                        province, unit, map_screen.nation_data, combat_active=True),
+                )
 
             for lane in probe.lanes:
                 for u in lane.a.front + lane.b.front:
@@ -364,7 +375,12 @@ def process_combat(map_screen):
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
         for targets, total_atk in combat_rules.exchange(battle, map_screen.nation_data):
-            apply_group_damage(total_atk, targets)
+            apply_group_damage(
+                total_atk,
+                targets,
+                lambda unit, province=province: queries.get_fort_defense_bonus(
+                    province, unit, map_screen.nation_data, combat_active=True),
+            )
 
         # Only the front rank is in combat: a reserve rests and recovers morale
         # while the units ahead of it bleed, which is the pressure to rotate.

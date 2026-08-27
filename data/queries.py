@@ -1055,6 +1055,40 @@ def get_building_required_tech(b_name):
         return "recruitment_buildings", int(b_name.split()[-1])
     return None, 0
 
+def get_fort_level(province):
+    """Returns the highest completed fort level on a province, if any."""
+    level = 0
+    for b_name in province.get("buildings", []):
+        match = re.fullmatch(r"Fort Lvl (\d+)", b_name)
+        if match:
+            level = max(level, int(match.group(1)))
+    return level
+
+def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
+    """Returns the fort defense bonus for a unit defending this province.
+
+    Forts protect the province owner and nations in the owner's faction.  The
+    bonus only exists while the tile is under attack; callers such as
+    bombardment can pass ``combat_active=True`` because the attacker is not
+    physically present in the province.
+    """
+    level = get_fort_level(province)
+    if level <= 0:
+        return 0
+
+    if combat_active is None:
+        combat_active = is_province_in_active_combat(province, nation_data)
+    if not combat_active:
+        return 0
+
+    tile_owner = province.get("owner")
+    unit_owner = unit.get("owner")
+    if (not tile_owner or
+            (unit_owner != tile_owner and
+             not are_in_same_faction(tile_owner, unit_owner, nation_data))):
+        return 0
+    return level * c.FORT_DEFENSE_PER_LEVEL
+
 def get_tech_unlocks(tech_key, level):
     """Returns a list of strings detailing what this tech unlocks."""
     unlocks = []

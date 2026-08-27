@@ -337,13 +337,17 @@ BUILDING_STAT_KEYS = ["time", "group", "cost_materials", "cost_manpower",
 
 
 class BuildingChain:
-    def __init__(self, base_name, base_stats, base_req, level_prefix, count, stats):
+    def __init__(self, base_name, base_stats, base_req, level_prefix, count, stats,
+                 skip_generated_base=False):
         self.base_name = base_name
         self.base_stats = base_stats
         self.base_req = base_req
         self.level_prefix = level_prefix
         self.count = count
         self.stats = stats
+        # Some chains use a numbered first level as their base entry.  Avoid
+        # emitting that same name a second time from the generated sequence.
+        self.skip_generated_base = skip_generated_base
 
     def entries(self):
         base_entry = {"time": self.base_stats["time"], "group": self.base_stats["group"],
@@ -355,6 +359,8 @@ class BuildingChain:
         prev_name = self.base_name
         for n in range(1, self.count + 1):
             name = f"{self.level_prefix} {n}"
+            if self.skip_generated_base and name == self.base_name:
+                continue
 
             def val(key):
                 gen = self.stats[key]
@@ -402,6 +408,25 @@ BUILDING_CHAINS = [
             "time": const(6), "group": const("recruitment"), "cost_materials": const(5000),
             "cost_manpower": const(0), "cost_fuel": const(0), "prod_materials": const(0),
             "prod_manpower": lambda n: 100 * n, "prod_fuel": const(0),
+        },
+    ),
+    BuildingChain(
+        base_name="Fort Lvl 1",
+        base_req=None,
+        base_stats={
+            "time": 1, "group": "fortification", "cost_materials": 6000,
+            "cost_manpower": 0, "cost_fuel": 0, "prod_materials": 0,
+            "prod_manpower": 0, "prod_fuel": 0,
+        },
+        level_prefix="Fort Lvl",
+        count=c.FORT_MAX_LEVEL,
+        skip_generated_base=True,
+        stats={
+            "time": const(1), "group": const("fortification"),
+            "cost_materials": lambda n: 5000 + (1000 * n),
+            "cost_manpower": const(0), "cost_fuel": const(0),
+            "prod_materials": const(0), "prod_manpower": const(0),
+            "prod_fuel": const(0),
         },
     ),
 ]

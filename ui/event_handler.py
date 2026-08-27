@@ -221,6 +221,7 @@ def handle_map_events(map_screen, event):
                             # Logic: Workshops/Factories are in the same "industrial" category
                             is_industrial = "Workshop" in map_screen.brush_building or "Factory" in map_screen.brush_building
                             is_recruitment = "Recruitment" in map_screen.brush_building
+                            is_fort = "Fort Lvl" in map_screen.brush_building
     
                             new_list = []
                             for b in current_buildings:
@@ -232,6 +233,8 @@ def handle_map_events(map_screen, event):
                                 if "Refinery" in map_screen.brush_building and "Refinery" in b:
                                     keep = False
                                 if is_recruitment and "Recruitment" in b:
+                                    keep = False
+                                if is_fort and "Fort Lvl" in b:
                                     keep = False
     
                                 if keep: new_list.append(b)

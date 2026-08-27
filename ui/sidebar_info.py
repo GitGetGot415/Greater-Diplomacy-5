@@ -136,9 +136,11 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 # Condensed, icon-based combat stats, matching the garrison list
                 dmg_mult = combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
                 def_mult = combat_rules.health_defense_multiplier(u)
+                fort_defense = queries.get_fort_defense_bonus(
+                    province, u, map_screen.nation_data, combat_active=is_combat)
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
-                    u.get("attack", 0) * dmg_mult, u.get("defense", 0) * def_mult, int(u.get("health", 0)), u.get("speed", 0),
+                    u.get("attack", 0) * dmg_mult, (u.get("defense", 0) + fort_defense) * def_mult, int(u.get("health", 0)), u.get("speed", 0),
                     row_x, current_y, (200, 200, 200), labeled=False
                 )
 

@@ -720,8 +720,8 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
 
 def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_library):
     """Section: EVALUATE CONSTRUCTION LOGIC -- if the AI has an excess hoard
-    of materials, invests it back into the next industry/recruitment building
-    tier it has the tech and a free build slot for, one per turn."""
+    of materials, invests it back into the next industry/recruitment/fort
+    building tier it has available and a free build slot for, one per turn."""
     if data.get("materials", 0) <= c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
         return
 
@@ -730,6 +730,7 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
     # Fetch the dynamic lists
     industry_b_list = [b for b, d in building_library.items() if d.get("group") == "industry"]
     recruit_b_list = [b for b, d in building_library.items() if d.get("group") == "recruitment"]
+    fort_b_list = [b for b, d in building_library.items() if d.get("group") == "fortification"]
 
     # Sort provinces by queue length to spread out construction
     my_provs.sort(key=lambda p: len(p.get("building_queue", [])))
@@ -743,14 +744,14 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
         queue = prov.get("building_queue", [])
 
         # Double check the queue so it doesn't build two at once in the same province
-        if any(q.get("group") in ["industry", "recruitment"] for q in queue):
+        if any(q.get("group") in ["industry", "recruitment", "fortification"] for q in queue):
             continue
 
         target_bldg = None
         has_factory = queries.has_basic_factory(prov)
 
         # Expand AI's building options dynamically based on the tile's current capacity
-        groups_to_check = [industry_b_list]
+        groups_to_check = [industry_b_list, fort_b_list]
         if has_factory:
             groups_to_check.extend([recruit_b_list])
 

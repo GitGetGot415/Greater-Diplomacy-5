@@ -511,9 +511,29 @@ def draw_overlay_content(map_screen, surface):
                         lvl = 1 if rem >= 17 else 2 if rem >= 13 else 3 if rem >= 9 else 4 if rem >= 5 else 5
                         buildings.append(f"Workshop Lvl {lvl}")
 
-                    # Sort buildings to ensure recruitment centers render on top
+                    # Forts form the bottom layer, with factories/workshops in
+                    # the middle and recruitment centers on top.  The sprites
+                    # share a visual baseline even though fort sprites grow in
+                    # height with their level.
                     b_lib = queries.get_building_library()
-                    buildings = sorted(buildings, key=lambda b: 1 if b_lib.get(b, {}).get("group") == "recruitment" else 0)
+                    layer_order = {"fortification": 0, "industry": 1, "recruitment": 2}
+                    buildings = sorted(
+                        buildings,
+                        key=lambda b: layer_order.get(b_lib.get(b, {}).get("group"), 1),
+                    )
+
+                    # Match the baseline to the exact factory sprite that the
+                    # existing centered-building path uses, including zoom and
+                    # optional tilt rounding.
+                    building_zoom = map_screen.camera.zoom * c.BUILDING_ICON_SCALE
+                    reference_symbol = symbol_loader.get_symbol("Factory Lvl 1", building_zoom)
+                    if reference_symbol:
+                        reference_symbol = map_utils.apply_tilt(
+                            reference_symbol, map_screen.camera.tilt_factor,
+                            c.APPLY_TILT_TO_OVERLAYS)
+                        building_bottom = sy + (reference_symbol.get_height() + 1) // 2
+                    else:
+                        building_bottom = sy
                     
                     for i, b_name in enumerate(buildings):
 
@@ -522,27 +542,37 @@ def draw_overlay_content(map_screen, surface):
                         offset_y = 0
                         
                         sym_name = b_name
-                        symbol = symbol_loader.get_symbol(sym_name, map_screen.camera.zoom * c.BUILDING_ICON_SCALE)
+                        symbol = symbol_loader.get_symbol(sym_name, building_zoom)
                         
                         if symbol:
                             symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
-                            # Center the symbol based on the calculated sx/sy
+                            # Existing factory/recruitment sprites are centered
+                            # on the tile.  Fort sprites use their bottom edge
+                            # as the same baseline as those 19px-high sprites,
+                            # keeping the fort visually underneath them.
                             draw_x = sx + offset_x - (symbol.get_width() // 2)
-                            draw_y = sy + offset_y - (symbol.get_height() // 2)
+                            if b_lib.get(b_name, {}).get("group") == "fortification":
+                                draw_y = building_bottom + offset_y - symbol.get_height()
+                            else:
+                                draw_y = sy + offset_y - (symbol.get_height() // 2)
                             surface.blit(symbol, (draw_x, draw_y))
                         else:
                             # Fallback colored squares for different types
                             color = (150, 150, 150) # Grey for workshop
                             if "Factory" in b_name: color = (100, 100, 200) # Blue-ish for factory
                             if "Refinery" in b_name: color = (200, 100, 100) # Red-ish for refinery
+                            if "Fort" in b_name: color = (120, 120, 120) # Grey for fort
                             
                             w_scaled = int(12 * map_screen.camera.zoom)
                             h_scaled = int(12 * map_screen.camera.zoom * (map_screen.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                             
                             # Center the rect using the same logic
+                            fallback_y = (building_bottom + offset_y - h_scaled
+                                          if b_lib.get(b_name, {}).get("group") == "fortification"
+                                          else sy + offset_y - (h_scaled // 2))
                             rect = pygame.Rect(
                                 sx + offset_x - (w_scaled // 2), 
-                                sy + offset_y - (h_scaled // 2), 
+                                fallback_y,
                                 w_scaled, 
                                 h_scaled
                             )
