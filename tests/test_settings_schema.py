@@ -181,6 +181,12 @@ class RuntimeMirrorTests(unittest.TestCase):
 
 
 class KeybindIoTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import pygame
+
+        pygame.init()
+
     def test_load_settings_returns_the_documented_shape(self):
         from data.io import keybind_io
         import pygame
@@ -189,6 +195,18 @@ class KeybindIoTests(unittest.TestCase):
         self.assertEqual(len(result), settings_schema.TUPLE_LENGTH)
         self.assertIsInstance(result[0], dict)
         self.assertIn("BACK", result[0])
+
+    def test_older_keybind_map_gets_new_action_default(self):
+        """Adding an action must not require players to delete old settings."""
+        from data.io import keybind_io
+        import pygame
+
+        defaults = {"BACK": pygame.K_ESCAPE, "CLEAR_ORDERS": pygame.K_DELETE}
+        loaded = keybind_io._load_keybinds(
+            {"keybinds": {"BACK": pygame.key.name(pygame.K_q)}}, defaults)
+
+        self.assertEqual(loaded["BACK"], pygame.K_q)
+        self.assertEqual(loaded["CLEAR_ORDERS"], pygame.K_DELETE)
 
     def test_defaults_track_the_runtime_constants(self):
         """Several defaults live on data.constants and are overwritten at

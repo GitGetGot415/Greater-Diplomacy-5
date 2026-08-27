@@ -26,13 +26,14 @@ TOGGLE_INFO_TEXT = (
     "this is on, in either mode, and never jumps when it's off."
 )
 
-# (action, label, default key) -- every rebindable global action, in the
+# (action, label, default key) -- every rebindable keyboard action, in the
 # order they're listed on this screen.
 KEYBIND_ACTIONS = (
     ("FULLSCREEN", "Fullscreen", pygame.K_F11),
     ("BACK", "Back", pygame.K_ESCAPE),
     ("ORDERS", "Orders", pygame.K_q),
     ("ECONOMY", "Production", pygame.K_w),
+    ("CLEAR_ORDERS", "Clear Orders", pygame.K_DELETE),
 )
 
 #: Actions that carry the "change screen with this keybind" toggle -- the two

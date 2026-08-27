@@ -263,7 +263,8 @@ class Controller:
             "BACK": pygame.K_ESCAPE,
             "ORDERS": pygame.K_q,
             "FULLSCREEN": pygame.K_F11,
-            "ECONOMY": pygame.K_w
+            "ECONOMY": pygame.K_w,
+            "CLEAR_ORDERS": pygame.K_DELETE,
         }
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
@@ -671,7 +672,8 @@ class Controller:
             top_modal = modal_stack.active()
 
             # FULLSCREEN toggles the display itself, not an action routed to
-            # whichever screen currently owns events, so unlike BACK/ORDERS/ECONOMY
+            # whichever screen currently owns events, so unlike
+            # BACK/ORDERS/ECONOMY/CLEAR_ORDERS
             # below it has to work even while a modal (dialog, sub-screen) is on
             # top -- gated on *that* screen's listening_for, same as modal_stack.push
             # resolves the real screen out of a _ScreenModal wrapper.

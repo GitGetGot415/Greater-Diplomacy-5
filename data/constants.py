@@ -701,9 +701,10 @@ SIZES = {
     "swap_hildehrand": (120, 30),
     "character_portrait_tile": (190, 190),
     "automation_option": (200, 30),
-    "top_orders_panel_button": (90, 40),
-    "orders_panel_button": (60, 40),
-    "orders_panel_button_2": (60, 40),
+    # Compact Orders roster: two header controls and six icon commands per row.
+    "orders_header_button": (112, 30),
+    "orders_clear_button": (190, 30),
+    "orders_action_icon": (28, 28),
     "left_ui_bar": (120, 50),
     "song": (700, 30),
     "asset_folder": (200, 36),

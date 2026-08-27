@@ -44,7 +44,7 @@ class _ScreenModal:
 
     def handle_events(self, events):
         for event in events:
-            # Mirrors the main loop so these screens get BACK/ORDERS for free.
+            # Mirrors the main loop so screens get rebindable actions for free.
             dispatch_global_keys(self.screen, event)
         self.screen.handle_events(events)
 

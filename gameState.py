@@ -16,10 +16,11 @@ def resolve_keybind(state, action, default):
     return queries.get_keybind(action, default)
 
 def dispatch_global_keys(state, event):
-    """Routes BACK/ORDERS/ECONOMY presses to a state's handlers.
+    """Routes rebindable key presses to a state's matching handlers.
 
     Shared by the main loop and the blocking sub-screen loop so no individual
-    screen has to re-resolve the keybinds itself.
+    screen has to re-resolve the keybinds itself. Screen-specific actions are
+    harmless elsewhere because their handler is optional.
     """
     if event.type != pygame.KEYDOWN or getattr(state, "listening_for", None):
         return
@@ -31,6 +32,9 @@ def dispatch_global_keys(state, event):
     elif event.key == resolve_keybind(state, "ECONOMY", pygame.K_w):
         if hasattr(state, "handle_economy_key"):
             state.handle_economy_key()
+    elif event.key == resolve_keybind(state, "CLEAR_ORDERS", pygame.K_DELETE):
+        if hasattr(state, "handle_clear_orders_key"):
+            state.handle_clear_orders_key()
 
 class ScreenLayer:
     """A pseudo-element that defers its drawing to one of its screen's methods.

@@ -371,7 +371,7 @@ class Settings(GameState):
 
     def reset_defaults(self):
         default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11,
-                        "ECONOMY": pygame.K_w}
+                        "ECONOMY": pygame.K_w, "CLEAR_ORDERS": pygame.K_DELETE}
         self.controller.keybinds = default_keys
         self.controller.target_fps = c.TARGET_FPS
 

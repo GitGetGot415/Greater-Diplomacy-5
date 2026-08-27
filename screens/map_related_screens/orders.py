@@ -1,9 +1,10 @@
 import pygame
 import data.constants as c
 from gameState import GameState, resolve_keybind
-from ui_elements import Button, process_text_input, make_back_button, draw_text_box
+from ui_elements import Button, process_text_input, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from ui.text_utils import fit_text
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
@@ -13,50 +14,61 @@ from map_logic.camera import camera_handler
 from screens.map_related_screens import battle_screen
 
 # ==========================================
-# LAYOUT
+# COMPACT ORDERS PANEL LAYOUT
 # ==========================================
 
-TOP_BTN_ROW_Y = 90
-TOP_BTN_OFFSET_X = 20
-TOP_BTN_STEP_X = 100
+# The reference layout gets its density from a shallow command header and one
+# narrow roster row per unit. Commands stay on their unit's row, so none of the
+# existing per-unit semantics need to become ambiguous batch actions when
+# Select All is active.
+PANEL_Y = 5
+PANEL_HEIGHT = c.SCREEN_HEIGHT - 70
+PANEL_INSET = 8
+HEADER_TITLE_OFFSET_Y = 7
+HEADER_META_OFFSET_Y = 36
+TOP_BTN_ROW_OFFSET_Y = 57
+HEADER_HELP_OFFSET_Y = 91
+LIST_TOP_OFFSET_Y = 110
 
-# Per-unit row: icon button on the left, then the action buttons.
-UNIT_ICON_OFFSET_X = 20
-UNIT_ROW_TEXT_OFFSET_Y = -5
-UNIT_NAME_OFFSET_X = 10
-UNIT_STATS_OFFSET_X = 80
-UNIT_STATS_OFFSET_Y = 15
-UNIT_ICON_OFFSET_Y = 15
+TOP_BTN_GAP_X = 6
 
-# X of each action button, measured from ACTION_START_OFFSET_X. Every entry after
-# the first is an "orders_panel_button_2"; the conversion button is the wider
-# "orders_panel_button", which is why the first gap is bigger than the rest.
-ACTION_START_OFFSET_X = 200
+UNIT_ROW_X_OFFSET = 4
+UNIT_ICON_OFFSET_X = 7
+UNIT_ICON_OFFSET_Y = 4
+UNIT_NAME_OFFSET_X = 46
+UNIT_NAME_OFFSET_Y = 1
+UNIT_STATUS_OFFSET_Y = 20
+UNIT_HEALTH_BAR_OFFSET_Y = 35
+UNIT_HEALTH_BAR_HEIGHT = 3
+
+# Six tightly packed icon commands: convert, disband, repair, rename, upgrade,
+# bombard. Their full live status is shown in the header when hovered.
+ACTION_START_OFFSET_X = 242
+ACTION_BUTTON_STEP_X = 28
+ACTION_BUTTON_OFFSET_Y = 6
 ACTION_COL_CONVERT = 0
-ACTION_COL_DISBAND = 60
-ACTION_COL_REPAIR = 120
-ACTION_COL_RENAME = 180
-ACTION_COL_UPGRADE = 240
-ACTION_COL_BOMBARD = 300
+ACTION_COL_DISBAND = 1
+ACTION_COL_REPAIR = 2
+ACTION_COL_RENAME = 3
+ACTION_COL_UPGRADE = 4
+ACTION_COL_BOMBARD = 5
+ACTION_ICON_ZOOM = 0.65
 
-# Inline rename box, anchored 80px right of wherever the rename button currently sits
-# (its column moves to ACTION_COL_CONVERT while actively renaming).
-RENAME_BOX_GAP_X = 80
-RENAME_BOX_SIZE = (240, 25)
+RENAME_BOX_OFFSET_X = UNIT_NAME_OFFSET_X
+RENAME_BOX_OFFSET_Y = 7
+RENAME_BOX_SIZE = (ACTION_START_OFFSET_X - UNIT_NAME_OFFSET_X - 8, 26)
 
-# Path / bombardment footer inside a unit row.
-PATH_TEXT_OFFSET_X = 60
-PATH_ROW_OFFSET_Y = -20
-CANCEL_BOX_OFFSET_X = 20
-CANCEL_BOX_OFFSET_Y = -25
-CANCEL_BOX_SIZE = 25
+# The final slim column cancels whatever order the row currently carries,
+# including movement (which has no dedicated command glyph of its own).
+CANCEL_BOX_GAP_X = 2
+CANCEL_BOX_OFFSET_Y = 11
+CANCEL_BOX_SIZE = 16
 
 # Both map panels share the HUD palette; the values used to be typed out
 # separately here and in the other panel's module.
 PANEL_BG_COLOR = c.HUD_PANEL_BG
 PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
-SCROLLBAR_OFFSET_X = -10
-SCROLLBAR_WIDTH = 10
+SCROLLBAR_WIDTH = 8
 
 TARGET_MARKER_RADIUS = 12
 TARGET_MARKER_THICKNESS = 3
@@ -68,14 +80,29 @@ WHEEL_SCROLL_STEP = 30
 UNIT_ICON_ZOOM = 1.5
 
 
+class _OrdersRowHitbox(Button):
+    """Invisible clickable area covering a row's unit art and text.
+
+    The action glyphs occupy the rest of the row and do not overlap this rect,
+    so selecting a unit and issuing one of its commands remain separate clicks.
+    It inherits Button's press/click/sound handling while leaving the dense row
+    rendering to Orders_Screen.additional_draw.
+    """
+
+    def __init__(self, rect, callback):
+        super().__init__(rect.x, rect.y, "tiny_square", "grey", "", callback,
+                         show_text=False)
+        self.rect = pygame.Rect(rect)
+
+    def draw(self, surface):
+        pass
+
+
 class Orders_Screen(GameState):
     back_state = "MAP"
     PANEL_X = 10
-    # Wide enough to cover the whole button row (Bombard is the rightmost),
-    # so clicking a button never doubles as a click on the map underneath.
-    PANEL_WIDTH = 570
+    PANEL_WIDTH = 440
     PANEL_TRANSPARENCY = 255
-    bottom_vanish_y = 20
 
     def __init__(self):
         super().__init__()
@@ -83,6 +110,9 @@ class Orders_Screen(GameState):
         self.map_screen = None
         self.selected_unit_index = None
         self.cancel_rects = []
+        self.action_buttons = []
+        self.unit_row_icons = {}
+        self.action_icons = {}
 
         self.renaming_unit_index = None
         self.rename_text = ""
@@ -104,9 +134,10 @@ class Orders_Screen(GameState):
 
         self.scroll_y = 0
         self.max_scroll_y = 0
-        self.row_height = 80
-        self.panel_top = 180
-        self.panel_max_h = 420
+        self.row_height = 40
+        self.panel_rect = pygame.Rect(self.PANEL_X, PANEL_Y, self.PANEL_WIDTH, PANEL_HEIGHT)
+        self.panel_top = PANEL_Y + LIST_TOP_OFFSET_Y
+        self.panel_max_h = self.panel_rect.bottom - self.panel_top
         
         self.unit_library = queries.get_unit_library()
 
@@ -115,6 +146,8 @@ class Orders_Screen(GameState):
         self.map_screen = map_ref
         self.scroll_y = 0
         self.bombarding_unit_index = None
+        self.renaming_unit_index = None
+        self.rename_text = ""
 
         # Consumed here rather than left set: only the handoff that actually
         # requested it should be honoured, not whatever the flag happened to
@@ -195,6 +228,21 @@ class Orders_Screen(GameState):
         ui.event_handler.handle_view_mode_keybind."""
         event_handler.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
 
+    def handle_clear_orders_key(self):
+        """Runs the same action as the Clear Orders button.
+
+        The shortcut is deliberately unavailable everywhere the button is:
+        foreign/read-only rosters and tactical mode. A key press also belongs
+        to the rename field while that field is active, even if the player has
+        rebound Clear Orders to a printable character.
+        """
+        if (self.renaming_unit_index is not None
+                or getattr(self, "read_only", False)
+                or not self.map_screen
+                or self.map_screen.tactical_mode):
+            return
+        self.clear_all_orders()
+
     def select_unit(self, index):
         if getattr(self, "read_only", False):
             return
@@ -242,214 +290,276 @@ class Orders_Screen(GameState):
         ratio = min(box_w / w, box_h / h)
         return pygame.transform.smoothscale(icon, (max(1, int(w * ratio)), max(1, int(h * ratio))))
 
+    def _get_action_icon(self, name):
+        """Returns one cached command glyph fitted to a compact action cell."""
+        if name not in self.action_icons:
+            icon = symbol_loader.get_symbol(name, zoom=ACTION_ICON_ZOOM)
+            self.action_icons[name] = self.fit_icon(icon, "orders_action_icon", padding=5)
+        return self.action_icons[name]
+
+    def _add_action_button(self, unit_index, row_y, slot, color, help_text,
+                           callback, icon_name, row_guard, *, enabled=True):
+        x = self.PANEL_X + ACTION_START_OFFSET_X + (slot * ACTION_BUTTON_STEP_X)
+        button = Button(x, row_y + ACTION_BUTTON_OFFSET_Y, "orders_action_icon",
+                        color, "", callback, image=self._get_action_icon(icon_name),
+                        show_text=False)
+        button.help_text = help_text
+        button.unit_index = unit_index
+        button.action_slot = slot
+        button.is_scrollable = True
+        button.click_guard = row_guard
+        if not enabled:
+            button.apply_state(enabled=False)
+        self.elements.append(button)
+        self.action_buttons.append(button)
+        return button
+
+    def _build_unit_action_buttons(self, index, unit, row_y, row_guard,
+                                   in_combat, is_water, is_coastal,
+                                   is_factory, player_research):
+        """Builds the six HOI-style icon commands for one visible roster row."""
+        unit_name = unit.get("type", "")
+        order = unit.get("order", {})
+        if not isinstance(order, dict):
+            order = {}
+        order_type = order.get("type", "")
+        is_convoy = unit_name.startswith("Convoy")
+        is_truck = unit_name.startswith("Truck")
+        is_naval = queries.is_naval_unit(unit_name)
+        is_tactical = self.map_screen.tactical_mode
+        buttons = []
+
+        def add(slot, color, help_text, callback, icon_name, enabled=True):
+            button = self._add_action_button(
+                index, row_y, slot, color, help_text, callback, icon_name,
+                row_guard, enabled=enabled)
+            buttons.append(button)
+            return button
+
+        # Convert between land, convoy, truck and ship forms.
+        if is_convoy:
+            convert_icon = "Unconvoying"
+        elif is_truck:
+            convert_icon = "Untrucking"
+        elif is_naval:
+            convert_icon = "Trucking"
+        else:
+            convert_icon = "Convoying"
+
+        if order_type == "CONVERT":
+            btn_conv = add(ACTION_COL_CONVERT, "red", "Cancel conversion",
+                           lambda idx=index: self.cancel_unit_order(idx), convert_icon)
+        elif in_combat:
+            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
+                           lambda: None, convert_icon, enabled=False)
+        elif is_convoy:
+            if not is_water:
+                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert convoy to land unit",
+                               lambda idx=index: self.convert_unit(idx), convert_icon)
+            else:
+                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: convoy needs land",
+                               lambda: None, convert_icon, enabled=False)
+        elif is_truck:
+            if is_coastal or is_water:
+                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert truck to ship",
+                               lambda idx=index: self.convert_unit(idx), convert_icon)
+            else:
+                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
+                               lambda: None, convert_icon, enabled=False)
+        elif not is_naval:
+            if is_coastal or is_water:
+                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert land unit to convoy",
+                               lambda idx=index: self.convert_unit(idx), convert_icon)
+            else:
+                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
+                               lambda: None, convert_icon, enabled=False)
+        elif player_research.get("trucks", 0) < 1:
+            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires Trucks research",
+                           lambda: None, convert_icon, enabled=False)
+        elif is_coastal or not is_water:
+            btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert ship to truck",
+                           lambda idx=index: self.convert_unit(idx), convert_icon)
+        else:
+            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
+                           lambda: None, convert_icon, enabled=False)
+
+        if order_type == "DISBAND":
+            btn_disband = add(ACTION_COL_DISBAND, "red", "Cancel disband order",
+                              lambda idx=index: self.cancel_unit_order(idx), "Disbanding")
+        elif is_tactical and unit is self.map_screen.player_unit:
+            btn_disband = add(ACTION_COL_DISBAND, "grey", "Disband: unavailable in tactical mode",
+                              lambda: None, "Disbanding", enabled=False)
+        else:
+            btn_disband = add(ACTION_COL_DISBAND, "red", "Disband unit",
+                              lambda idx=index: self.disband_unit(idx), "Disbanding")
+
+        hp = int(unit.get("health", 0))
+        max_hp = int(unit.get("max_health", 1))
+        if order_type == "REPAIR":
+            btn_repair = add(ACTION_COL_REPAIR, "orange", "Cancel repair order",
+                             lambda idx=index: self.cancel_unit_order(idx), "Repairing")
+        elif hp >= max_hp:
+            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unit is at full HP",
+                             lambda: None, "Repairing", enabled=False)
+        elif in_combat:
+            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unavailable in combat",
+                             lambda: None, "Repairing", enabled=False)
+        elif not is_factory:
+            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: requires a factory",
+                             lambda: None, "Repairing", enabled=False)
+        else:
+            btn_repair = add(ACTION_COL_REPAIR, "green", "Repair unit",
+                             lambda idx=index: self.repair_unit(idx), "Repairing")
+
+        if self.renaming_unit_index == index:
+            btn_rename = add(ACTION_COL_CONVERT, "green", "Save unit name (Enter)",
+                             lambda idx=index: self.save_unit_name(idx), "Text")
+        else:
+            btn_rename = add(ACTION_COL_RENAME, "blue", "Rename unit",
+                             lambda idx=index: self.start_renaming(idx), "Text")
+
+        if order_type == "UPGRADE":
+            btn_upgrade = add(ACTION_COL_UPGRADE, "red", "Cancel upgrade order",
+                              lambda idx=index: self.cancel_unit_order(idx), "Upgrading")
+        else:
+            upgrade_target = queries.get_upgrade_target(
+                unit_name, player_research, self.unit_library, queries.get_tech_tree())
+            if not upgrade_target:
+                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: maximum level reached",
+                                  lambda: None, "Upgrading", enabled=False)
+            elif in_combat:
+                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: unavailable in combat",
+                                  lambda: None, "Upgrading", enabled=False)
+            elif not is_factory:
+                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: requires a factory",
+                                  lambda: None, "Upgrading", enabled=False)
+            else:
+                btn_upgrade = add(
+                    ACTION_COL_UPGRADE, "orange", f"Upgrade to {upgrade_target}",
+                    lambda idx=index, target=upgrade_target: self.upgrade_unit(idx, target),
+                    "Upgrading")
+
+        if order_type == "BOMBARD":
+            btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
+                              lambda idx=index: self.cancel_unit_order(idx),
+                              "Bombardment Arrows")
+        elif not queries.can_bombard(unit_name):
+            btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: unit has no bombardment",
+                              lambda: None, "Bombardment Arrows", enabled=False)
+        elif is_water and not is_naval:
+            btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: land guns cannot fire at sea",
+                              lambda: None, "Bombardment Arrows", enabled=False)
+        elif self.bombarding_unit_index == index:
+            btn_bombard = add(ACTION_COL_BOMBARD, "orange", "Choose target (click to cancel)",
+                              self.cancel_bombard_targeting, "Bombardment Arrows")
+        else:
+            btn_bombard = add(ACTION_COL_BOMBARD, "yellow", "Choose bombardment target",
+                              lambda idx=index: self.start_bombard_targeting(idx),
+                              "Bombardment Arrows")
+
+        if is_tactical and unit is not self.map_screen.player_unit:
+            for button in buttons:
+                button.apply_state(enabled=False)
+                button.help_text = "Tactical mode: this is not your unit"
+
+        # Rename gets the name field and one Save glyph to itself. This is the
+        # compact counterpart of the old row hiding its other five buttons.
+        if self.renaming_unit_index == index:
+            for button in buttons:
+                if button is not btn_rename:
+                    button.apply_state(visible=False)
+
     def refresh_ui(self):
         self.view_mode_buttons = view_mode_buttons.build(
             lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
-        self.elements = [make_back_button(self.exit_screen, style="map"), *self.view_mode_buttons]
+
+        close_button = Button(self.panel_rect.right - 38, self.panel_rect.y + 7,
+                              "tiny_square", "red", "X", self.exit_screen,
+                              font_preset="tiny")
+        self.elements = [*self.view_mode_buttons, close_button]
+        self.action_buttons = []
+        self.unit_row_icons = {}
 
         units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
-        player_research = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {})
-
-        # Display all units owned by the player, regardless of mode -- or
-        # everybody's, when none of them are ours and this is a read-only look.
+        player_country = self.map_screen.player_country
+        player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
         read_only = getattr(self, "read_only", False)
-        player_units = [u for u in units
-                        if read_only or u.get("owner") == self.map_screen.player_country]
-        
-        total_content_h = len(player_units) * self.row_height
-        self.max_scroll_y = min(0, self.panel_max_h - total_content_h - 20)
+        display_units = units if read_only else [
+            unit for unit in units if unit.get("owner") == player_country]
 
-        self.scroll_content_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
+        total_content_h = len(display_units) * self.row_height
+        self.max_scroll_y = min(0, self.panel_max_h - total_content_h)
+        self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
+        self.scroll_content_rect = pygame.Rect(
+            self.PANEL_X + 2, self.panel_top,
+            self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
         row_guard = self.content_hover_guard()
 
-        # --- Select All & Clear Orders Buttons ---
-        if player_units and not read_only:
-            if len(player_units) > 1:
-                all_color = "grey" if is_tactical else ("blue" if self.selected_unit_index == "ALL" else "grey")
-                btn_all = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", all_color, "Select All", lambda: self.select_unit("ALL"), font_preset="normal")
-                if is_tactical: btn_all.disabled = True
+        if display_units and not read_only:
+            button_x = self.PANEL_X + PANEL_INSET
+            if len(display_units) > 1:
+                all_color = "grey" if is_tactical else (
+                    "blue" if self.selected_unit_index == "ALL" else "grey")
+                btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
+                                 "orders_header_button", all_color, "Select All",
+                                 lambda: self.select_unit("ALL"), font_preset="tiny")
+                btn_all.disabled = is_tactical
+                btn_all.is_selected = self.selected_unit_index == "ALL" and not is_tactical
                 self.elements.append(btn_all)
+                button_x = btn_all.rect.right + TOP_BTN_GAP_X
 
-                btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X + TOP_BTN_STEP_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
-                if is_tactical: btn_clear.disabled = True
-                self.elements.append(btn_clear)
-            else:
-                # If there's only 1 unit, just put the clear orders button where select all would have been
-                btn_clear = Button(self.PANEL_X + TOP_BTN_OFFSET_X, TOP_BTN_ROW_Y, "top_orders_panel_button", "red", "Clear Orders", self.clear_all_orders, font_preset="normal")
-                if is_tactical: btn_clear.disabled = True
-                self.elements.append(btn_clear)
+            clear_key = pygame.key.name(
+                resolve_keybind(self, "CLEAR_ORDERS", pygame.K_DELETE)).upper()
+            btn_clear = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
+                               "orders_clear_button", "red",
+                               f"Clear Orders [{clear_key}]", self.clear_all_orders,
+                               font_preset="tiny")
+            btn_clear.disabled = is_tactical
+            self.elements.append(btn_clear)
 
-        # Read-only (a tile the player commands nothing on) skips the whole
-        # editable-row layout below -- it's drawn instead as a garrison/combat
-        # roster in additional_draw, matching the province sidebar's look.
+        if read_only:
+            return
+
+        in_combat = queries.is_nation_in_combat_here(
+            player_country, self.target_province, self.map_screen.nation_data)
+        is_water = queries.is_water_province(self.target_province)
+        is_coastal = self.target_province.get("is_coastal", False)
+        is_factory = queries.has_industry(self.target_province)
+
         display_index = 0
-        for i, unit in enumerate(units):
-            if read_only:
-                continue
-            if unit.get("owner") != self.map_screen.player_country:
+        for index, unit in enumerate(units):
+            if unit.get("owner") != player_country:
                 continue
 
-            is_tactical_other = is_tactical and unit is not self.map_screen.player_unit
+            row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
+            row_rect = pygame.Rect(
+                self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
+                self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
+                self.row_height)
 
-            y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
-            y_pos = y_pos + UNIT_ICON_OFFSET_Y
+            if row_rect.colliderect(self.scroll_content_rect):
+                hitbox = _OrdersRowHitbox(
+                    pygame.Rect(row_rect.x, row_rect.y,
+                                ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
+                                self.row_height),
+                    lambda idx=index: self.select_unit(idx))
+                hitbox.is_scrollable = True
+                hitbox.click_guard = row_guard
+                if is_tactical and unit is not self.map_screen.player_unit:
+                    hitbox.disabled = True
+                self.elements.append(hitbox)
 
-            if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
-                color = "blue" if self.selected_unit_index == i or self.selected_unit_index == "ALL" else "grey"
-                unit_name = unit["type"]
+                unit_name = unit.get("type", "")
+                icon = symbol_loader.get_symbol(
+                    unit_name, zoom=UNIT_ICON_ZOOM, country=unit.get("owner"))
+                self.unit_row_icons[index] = self.fit_icon(
+                    icon, "small_square", padding=8)
 
-                # Fetch the icon using the symbol_loader (zoom 1.5 is a standard starting scale)
-                unit_icon = self.fit_icon(symbol_loader.get_symbol(unit_name, zoom=UNIT_ICON_ZOOM,
-                                                                    country=unit.get("owner")), "medium_square")
-
-                # Create the button with the icon and set show_text=False
-                btn_sel = Button(self.PANEL_X + UNIT_ICON_OFFSET_X, y_pos, "medium_square", color, "",
-                                lambda idx=i: self.select_unit(idx),
-                                image=unit_icon,
-                                show_text=False)
-                self.elements.append(btn_sel)
-
-                order = unit.get("order", {})
-                order_type = order.get("type", "")
-
-                # Combat / Location checks
-                player_country = self.map_screen.player_country
-                in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
-                is_water = queries.is_water_province(self.target_province)
-                is_coastal = self.target_province.get("is_coastal", False)
-                
-                is_convoy = unit_name.startswith("Convoy")
-                is_truck = unit_name.startswith("Truck")
-                is_naval = queries.is_naval_unit(unit_name)
-
-                x_pos = self.PANEL_X + ACTION_START_OFFSET_X
-
-                # 2. Inline Convoy Conversion Button
-                if order_type == "CONVERT":
-                    btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "red", "Cancel Conversion", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                elif in_combat:
-                    btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "In Combat", lambda: None, font_preset="normal")
-                elif is_convoy:
-                    if not is_water:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "blue", "To Land", lambda idx=i: self.convert_unit(idx), font_preset="normal")
-                    else:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Need Land", lambda: None, font_preset="normal")
-                elif is_truck:
-                    if is_coastal or is_water:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "blue", "To Ship", lambda idx=i: self.convert_unit(idx), font_preset="normal")
-                    else:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Coast", lambda: None, font_preset="normal")
-                elif not is_naval:
-                    if is_coastal or is_water:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "blue", "To Convoy", lambda idx=i: self.convert_unit(idx), font_preset="normal")
-                    else:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Coast", lambda: None, font_preset="normal")
-                else: # is_naval
-                    if player_research.get("trucks", 0) < 1:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Trucks", lambda: None, font_preset="normal")
-                    elif is_coastal or not is_water:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "blue", "To Truck", lambda idx=i: self.convert_unit(idx), font_preset="normal")
-                    else:
-                        btn_conv = Button(x_pos + ACTION_COL_CONVERT, y_pos, "orders_panel_button", "grey", "Req Coast", lambda: None, font_preset="normal")
-                
-                self.elements.append(btn_conv)
-
-                # 3. Inline Disband Button
-                if order_type == "DISBAND":
-                    btn_disband = Button(x_pos + ACTION_COL_DISBAND, y_pos, "orders_panel_button_2", "red", "Cancel Disband", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                else:
-                    if is_tactical and unit is self.map_screen.player_unit:
-                        btn_disband = Button(x_pos + ACTION_COL_DISBAND, y_pos, "orders_panel_button_2", "grey", "Cannot Disband", lambda: None, font_preset="normal")
-                    else:
-                        btn_disband = Button(x_pos + ACTION_COL_DISBAND, y_pos, "orders_panel_button_2", "red", "Disband", lambda idx=i: self.disband_unit(idx), font_preset="normal")
-                
-                self.elements.append(btn_disband)
-
-                hp = int(unit.get("health", 0))
-                m_hp = int(unit.get("max_health", 1))
-                is_factory = queries.has_industry(self.target_province)
-
-                if order_type == "REPAIR":
-                    btn_repair = Button(x_pos + ACTION_COL_REPAIR, y_pos, "orders_panel_button_2", "orange", "Cancel Repair", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                elif hp < m_hp:
-                    if in_combat:
-                        btn_repair = Button(x_pos + ACTION_COL_REPAIR, y_pos, "orders_panel_button_2", "grey", "In Combat", lambda: None, font_preset="normal")
-                    elif is_factory:
-                        btn_repair = Button(x_pos + ACTION_COL_REPAIR, y_pos, "orders_panel_button_2", "green", "Repair", lambda idx=i: self.repair_unit(idx), font_preset="normal")
-                    else:
-                        btn_repair = Button(x_pos + ACTION_COL_REPAIR, y_pos, "orders_panel_button_2", "grey", "Needs Factory", lambda: None, font_preset="normal")
-                else:
-                    btn_repair = Button(x_pos + ACTION_COL_REPAIR, y_pos, "orders_panel_button_2", "grey", "Full HP", lambda: None, font_preset="normal")
-
-                self.elements.append(btn_repair)
-
-                if self.renaming_unit_index == i:
-                    # Slide over to the convert button's column (which is hidden while
-                    # renaming) so Save Name / the text box aren't crammed at the edge.
-                    rename_col = ACTION_COL_CONVERT
-                    btn_rename = Button(x_pos + rename_col, y_pos, "orders_panel_button_2", "green", "Save Name", lambda idx=i: self.save_unit_name(idx), font_preset="normal")
-                else:
-                    rename_col = ACTION_COL_RENAME
-                    btn_rename = Button(x_pos + rename_col, y_pos, "orders_panel_button_2", "blue", "Rename", lambda idx=i: self.start_renaming(idx), font_preset="normal")
-
-                self.elements.append(btn_rename)
-
-                # Upgrade Button Logic
-                if order_type == "UPGRADE":
-                    btn_upgrade = Button(x_pos + ACTION_COL_UPGRADE, y_pos, "orders_panel_button_2", "red", "Cancel Upgrade", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                else:
-                    upgrade_target = queries.get_upgrade_target(unit_name, self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("research", {}), self.unit_library, queries.get_tech_tree())
-                    if upgrade_target:
-                        if in_combat:
-                            btn_upgrade = Button(x_pos + ACTION_COL_UPGRADE, y_pos, "orders_panel_button_2", "grey", "In Combat", lambda: None, font_preset="normal")
-                        elif is_factory:
-                            btn_upgrade = Button(x_pos + ACTION_COL_UPGRADE, y_pos, "orders_panel_button_2", "orange", "Upgrade", lambda idx=i, tgt=upgrade_target: self.upgrade_unit(idx, tgt), font_preset="normal")
-                        else:
-                            btn_upgrade = Button(x_pos + ACTION_COL_UPGRADE, y_pos, "orders_panel_button_2", "grey", "Needs Factory", lambda: None, font_preset="normal")
-                    else:
-                        btn_upgrade = Button(x_pos + ACTION_COL_UPGRADE, y_pos, "orders_panel_button_2", "grey", "Max Level", lambda: None, font_preset="normal")
-
-                self.elements.append(btn_upgrade)
-
-                # Bombardment Button Logic
-                # Every unit shows the button so the option is discoverable; only the
-                # classes in c.BOMBARDMENT_UNITS (artillery) get a live one.
-                if order_type == "BOMBARD":
-                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "red", "Cancel Bomb.", lambda idx=i: self.cancel_unit_order(idx), font_preset="normal")
-                elif not queries.can_bombard(unit_name):
-                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "grey", "No Bombard", lambda: None, font_preset="normal")
-                elif is_water and not is_naval:
-                    # A field gun has nothing to stand on out here, which
-                    # process_bombardments enforces. Only a save written before
-                    # that rule existed can still show this -- a land unit at
-                    # sea is unreachable now -- but while one can, the button
-                    # has to say so rather than take an order that never fires.
-                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "grey", "At Sea", lambda: None, font_preset="normal")
-                elif self.bombarding_unit_index == i:
-                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "orange", "Pick Tile", lambda: self.cancel_bombard_targeting(), font_preset="normal")
-                else:
-                    btn_bombard = Button(x_pos + ACTION_COL_BOMBARD, y_pos, "orders_panel_button_2", "yellow", "Bombard", lambda idx=i: self.start_bombard_targeting(idx), font_preset="normal")
-
-                if not queries.can_bombard(unit_name):
-                    btn_bombard.disabled = True
-
-                self.elements.append(btn_bombard)
-
-                if is_tactical_other:
-                    for b in [btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_upgrade, btn_bombard]:
-                        b.apply_state(enabled=False)
-
-                # While this unit is being renamed, hide the other action buttons so the
-                # inline name box has a clear row to itself instead of overlapping them.
-                if self.renaming_unit_index == i:
-                    for b in (btn_conv, btn_disband, btn_repair, btn_upgrade, btn_bombard):
-                        b.apply_state(visible=False)
-
-                for b in (btn_sel, btn_conv, btn_disband, btn_repair, btn_rename, btn_upgrade, btn_bombard):
-                    b.is_scrollable = True
-                    b.click_guard = row_guard
+                self._build_unit_action_buttons(
+                    index, unit, row_y, row_guard, in_combat, is_water,
+                    is_coastal, is_factory, player_research)
 
             display_index += 1
 
@@ -667,6 +777,7 @@ class Orders_Screen(GameState):
     def clear_all_orders(self):
         units = self.target_province.get("units", [])
         cleared_any = False
+        cancelled_targeting = self.bombarding_unit_index is not None
         self.bombarding_unit_index = None
 
         for unit in units:
@@ -685,11 +796,16 @@ class Orders_Screen(GameState):
                     
         if cleared_any:
             self.map_screen.show_feedback("All orders cleared")
+        if cleared_any or cancelled_targeting:
             self.refresh_ui()
 
     def handle_back_key(self):
-        # Escape drops a pending bombardment target before it leaves the screen.
-        if self.bombarding_unit_index is not None:
+        # Inline editing and bombardment targeting each consume Escape before
+        # it is allowed to close the whole panel.
+        if self.renaming_unit_index is not None:
+            self.renaming_unit_index = None
+            self.refresh_ui()
+        elif self.bombarding_unit_index is not None:
             self.cancel_bombard_targeting()
         else:
             self.exit_screen()
@@ -725,22 +841,10 @@ class Orders_Screen(GameState):
 
             # --- Handle Mousewheel Scrolling ---
             if event.type == pygame.MOUSEWHEEL:
-                # Only scroll if mouse is over the orders panel
-                mx, my = pygame.mouse.get_pos()
-                units = self.target_province.get("units", [])
-
-                if getattr(self, "read_only", False):
-                    panel_has_content = bool(units)
-                elif self.map_screen.tactical_mode:
-                    panel_has_content = any(u is self.map_screen.player_unit for u in units)
-                else:
-                    panel_has_content = any(u.get("owner") == self.map_screen.player_country for u in units)
-
-                # Check for collision if units exist
-                if panel_has_content:
-                    bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-                    if bg_rect.collidepoint(mx, my):
-                        self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y", speed=WHEEL_SCROLL_STEP)
+                # The header stays fixed; only the roster viewport takes the wheel.
+                if self.scroll_content_rect.collidepoint(pygame.mouse.get_pos()):
+                    self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y",
+                                   speed=WHEEL_SCROLL_STEP)
 
             super().handle_events([event])
             self.additional_events(event)
@@ -756,25 +860,11 @@ class Orders_Screen(GameState):
 
         mx, my = pygame.mouse.get_pos()
 
-        # --- Block clicks inside the Orders Panel ---
-        # Define the panel area
-        panel_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-        
-        # Camera Controls (Zooming and Panning)
-        on_ui = False
-        units = self.target_province.get("units", [])
-
-        if getattr(self, "read_only", False):
-            panel_has_content = bool(units)
-        elif self.map_screen.tactical_mode:
-            panel_has_content = any(u is self.map_screen.player_unit for u in units)
-        else:
-            panel_has_content = any(u.get("owner") == self.map_screen.player_country for u in units)
-
-        if panel_has_content:
-            bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-            if bg_rect.collidepoint(mx, my):
-                on_ui = True
+        # The entire compact panel is UI, including its fixed header. Keeping
+        # one rect for drawing, clipping and input prevents map clicks leaking
+        # through a gap between the controls and roster.
+        panel_rect = self.panel_rect
+        on_ui = panel_rect.collidepoint(mx, my)
                 
         # Pass scroll and pan events to your centralized map camera
         if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
@@ -947,16 +1037,183 @@ class Orders_Screen(GameState):
             
         return True
 
-    def draw_order_footer(self, surface, font, unit_index, y_pos, text, color):
-        """Draws a unit row's order line (path or barrage) and its cancel box."""
-        footer_y = y_pos + self.row_height
-        surface.blit(font.render(text, True, color), (self.PANEL_X + PATH_TEXT_OFFSET_X, footer_y + PATH_ROW_OFFSET_Y))
+    def _order_summary(self, unit_index, unit):
+        """Short status text and color for a compact roster row."""
+        if self.bombarding_unit_index == unit_index:
+            return "Choose bombard target", BOMBARD_TARGET_COLOR
 
-        cancel_rect = pygame.Rect(self.PANEL_X + CANCEL_BOX_OFFSET_X, footer_y + CANCEL_BOX_OFFSET_Y, CANCEL_BOX_SIZE, CANCEL_BOX_SIZE)
-        pygame.draw.rect(surface, (150, 0, 0), cancel_rect)
-        x_label = font.render("X", True, (255, 255, 255))
-        surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
-        self.cancel_rects.append((cancel_rect, unit_index))
+        order = unit.get("order", {})
+        if not isinstance(order, dict) or not order:
+            return "Ready", c.UI_TEXT_MUTED
+
+        path = order.get("path", [])
+        if path:
+            step_word = "step" if len(path) == 1 else "steps"
+            return f"Move: {len(path)} {step_word} to P{path[-1]}", (255, 225, 80)
+
+        order_type = order.get("type", "")
+        turns = order.get("turns_left")
+        turn_suffix = f" | {turns}t" if turns is not None else ""
+        if order_type == "MOVE":
+            return "Move: choose destination", (255, 225, 80)
+        if order_type == "BOMBARD":
+            return f"Bombard: P{order.get('target_id', '?')}", BOMBARD_TARGET_COLOR
+        if order_type == "CONVERT":
+            return f"Convert to {order.get('to', '?')}{turn_suffix}", (100, 180, 255)
+        if order_type == "UPGRADE":
+            return f"Upgrade to {order.get('target_type', '?')}{turn_suffix}", (255, 170, 70)
+        if order_type == "REPAIR":
+            return f"Repairing{turn_suffix}", (100, 255, 120)
+        if order_type == "DISBAND":
+            return f"Disbanding{turn_suffix}", (255, 100, 100)
+        if order_type:
+            return order_type.title(), c.UI_TEXT_LIGHT
+        return "Order queued", c.UI_TEXT_LIGHT
+
+    def _draw_unit_row(self, surface, unit_index, unit, row_y, display_index,
+                       owner_color, small_font, tiny_font):
+        """Draws one 40px roster row underneath its transparent hitbox/icons."""
+        row_rect = pygame.Rect(
+            self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
+            self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
+            self.row_height)
+        selected = self.selected_unit_index in (unit_index, "ALL")
+        tactical_other = (self.map_screen.tactical_mode
+                          and unit is not self.map_screen.player_unit)
+
+        if selected:
+            row_color = (45, 68, 68)
+        elif display_index % 2:
+            row_color = (37, 40, 46)
+        else:
+            row_color = (29, 32, 38)
+        pygame.draw.rect(surface, row_color, row_rect)
+        pygame.draw.rect(surface,
+                         c.COLOR_GOLD_HIGHLIGHT if selected else (62, 66, 74),
+                         row_rect, 1)
+
+        strip_color = owner_color if selected else tuple(max(35, channel // 2)
+                                                          for channel in owner_color)
+        pygame.draw.rect(surface, strip_color,
+                         (row_rect.x, row_rect.y, 4, row_rect.height))
+
+        icon_box = pygame.Rect(
+            self.PANEL_X + UNIT_ICON_OFFSET_X, row_y + UNIT_ICON_OFFSET_Y,
+            32, 32)
+        pygame.draw.rect(surface, (20, 22, 26), icon_box)
+        pygame.draw.rect(surface, (90, 95, 105), icon_box, 1)
+        icon = self.unit_row_icons.get(unit_index)
+        if icon:
+            surface.blit(icon, icon.get_rect(center=icon_box.center))
+
+        name_x = self.PANEL_X + UNIT_NAME_OFFSET_X
+        action_x = self.PANEL_X + ACTION_START_OFFSET_X
+        text_width = action_x - name_x - 7
+
+        if self.renaming_unit_index == unit_index:
+            box_rect = pygame.Rect(
+                self.PANEL_X + RENAME_BOX_OFFSET_X,
+                row_y + RENAME_BOX_OFFSET_Y,
+                *RENAME_BOX_SIZE)
+            draw_text_box(surface, box_rect, self.rename_text, active=True,
+                          font=tiny_font, pad_x=5)
+        else:
+            name_color = c.UI_TEXT_MUTED if tactical_other else (245, 245, 245)
+            name = fit_text(
+                unit.get("custom_name", unit.get("type", "Unit")),
+                small_font, text_width)
+            name_surf = small_font.render(name, True, name_color)
+            surface.blit(name_surf,
+                         (name_x, row_y + UNIT_NAME_OFFSET_Y))
+
+            try:
+                hp = float(unit.get("health", 0))
+                max_hp = max(1.0, float(unit.get("max_health", 1)))
+            except (TypeError, ValueError):
+                hp, max_hp = 0.0, 1.0
+            hp_ratio = max(0.0, min(1.0, hp / max_hp))
+            summary, summary_color = self._order_summary(unit_index, unit)
+            status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}",
+                              tiny_font, text_width)
+            surface.blit(tiny_font.render(status, True, summary_color),
+                         (name_x, row_y + UNIT_STATUS_OFFSET_Y))
+
+            bar_rect = pygame.Rect(name_x, row_y + UNIT_HEALTH_BAR_OFFSET_Y,
+                                   text_width, UNIT_HEALTH_BAR_HEIGHT)
+            pygame.draw.rect(surface, (65, 25, 25), bar_rect)
+            if hp_ratio > 0:
+                if hp_ratio > 0.6:
+                    health_color = (50, 175, 70)
+                elif hp_ratio > 0.3:
+                    health_color = (205, 155, 40)
+                else:
+                    health_color = (195, 55, 45)
+                fill_rect = bar_rect.copy()
+                fill_rect.width = max(1, int(bar_rect.width * hp_ratio))
+                pygame.draw.rect(surface, health_color, fill_rect)
+
+        order = unit.get("order")
+        has_order = isinstance(order, dict) and bool(order)
+        if has_order and not self._command_blocked_silent(unit):
+            cancel_x = (self.PANEL_X + ACTION_START_OFFSET_X
+                        + (6 * ACTION_BUTTON_STEP_X) + CANCEL_BOX_GAP_X)
+            cancel_rect = pygame.Rect(cancel_x, row_y + CANCEL_BOX_OFFSET_Y,
+                                      CANCEL_BOX_SIZE, CANCEL_BOX_SIZE)
+            pygame.draw.rect(surface, (145, 25, 25), cancel_rect)
+            pygame.draw.rect(surface, (230, 120, 120), cancel_rect, 1)
+            x_label = tiny_font.render("X", True, (255, 255, 255))
+            surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
+            self.cancel_rects.append((cancel_rect, unit_index))
+
+    def _draw_panel_header(self, surface, units, player_units, read_only):
+        title_font = fonts.get("heading2")
+        tiny_font = fonts.get("tiny")
+        title = fit_text(f"ORDERS | PROVINCE {self.target_province['id']}",
+                         title_font, self.PANEL_WIDTH - 62)
+        surface.blit(title_font.render(title, True, (255, 255, 255)),
+                     (self.PANEL_X + PANEL_INSET,
+                      PANEL_Y + HEADER_TITLE_OFFSET_Y))
+
+        if read_only:
+            meta = f"READ ONLY | {len(units)} unit{'s' if len(units) != 1 else ''}"
+        elif self.selected_unit_index == "ALL":
+            meta = f"{len(player_units)} UNITS | ALL SELECTED"
+        elif isinstance(self.selected_unit_index, int):
+            meta = f"{len(player_units)} UNITS | 1 SELECTED"
+        else:
+            meta = f"{len(player_units)} UNIT{'S' if len(player_units) != 1 else ''}"
+        surface.blit(tiny_font.render(meta, True, c.UI_TEXT_LIGHT),
+                     (self.PANEL_X + PANEL_INSET,
+                      PANEL_Y + HEADER_META_OFFSET_Y))
+
+        mouse_pos = pygame.mouse.get_pos()
+        help_text = None
+        if self.scroll_content_rect.collidepoint(mouse_pos):
+            for button in self.action_buttons:
+                if button.visible and button.rect.collidepoint(mouse_pos):
+                    help_text = button.help_text
+                    break
+
+        if help_text is None:
+            if self.renaming_unit_index is not None:
+                help_text = "Type a name | Enter saves | Esc cancels"
+            elif self.bombarding_unit_index is not None:
+                help_text = "Click a highlighted province to set the bombardment target"
+            elif read_only:
+                help_text = "Intelligence view: orders cannot be changed here"
+            elif not player_units:
+                help_text = "No commandable units in this province"
+            else:
+                help_text = "Hover a command icon for details | click unit art/name to select"
+
+        help_text = fit_text(help_text, tiny_font, self.PANEL_WIDTH - (PANEL_INSET * 2))
+        surface.blit(tiny_font.render(help_text, True, c.UI_TEXT_MUTED),
+                     (self.PANEL_X + PANEL_INSET,
+                      PANEL_Y + HEADER_HELP_OFFSET_Y))
+
+        pygame.draw.line(surface, (80, 85, 95),
+                         (self.PANEL_X + 1, self.panel_top - 1),
+                         (self.panel_rect.right - 1, self.panel_top - 1), 1)
 
     def draw_target_markers(self, surface, origin_node, prov_ids, color):
         """Rings every tile the player is currently allowed to click (move steps or bombard targets)."""
@@ -997,39 +1254,55 @@ class Orders_Screen(GameState):
         if not self.map_screen or not self.target_province:
             return
 
-        self.map_screen.draw_clean_map_background(surface)
+        # Orders owns the top-left command panel, so the map's large nation
+        # flag is intentionally suppressed for this embedded draw only. The
+        # independent flag guard leaves the country/date text behavior alone.
+        previous_hide_flag = getattr(self.map_screen, "hide_flag", False)
+        self.map_screen.hide_flag = True
+        try:
+            self.map_screen.draw_clean_map_background(surface)
+        finally:
+            self.map_screen.hide_flag = previous_hide_flag
 
         province_select.draw_province_select(self.map_screen, surface)
 
         self.cancel_rects = []
-        
-        font = fonts.get("heading1")
-        small_font = fonts.get("normal")
-        
-        ui_bars.draw_centered_title(surface, f"Orders: Province {self.target_province['id']}", c.TOP_BAR_UI_CENTER_Y)
-        
-        # --- Draw Background Panel for Units ---
+        small_font = fonts.get("small")
+        tiny_font = fonts.get("tiny")
+
         units = self.target_province.get("units", [])
         read_only = getattr(self, "read_only", False)
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-
-        # Dynamically fetch the player's color
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
 
-        panel_has_content = bool(units) if read_only else bool(player_units)
+        # Force the selected province's orders through fog-of-war before the
+        # opaque roster is painted, so arrows stay visible on the map without
+        # ever drawing across the panel itself.
+        if not read_only:
+            for unit in player_units:
+                order = unit.get("order", {})
+                if not isinstance(order, dict):
+                    continue
+                path = order.get("path", [])
+                if path:
+                    overlay_renderer.draw_split_movement_path(
+                        surface, self.map_screen, self.target_province, path,
+                        unit.get("speed", 1), owner_color, force_visible=True)
+                elif order.get("type") == "BOMBARD":
+                    target_id = order.get("target_id")
+                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                    overlay_renderer.draw_bombardment_arrow(
+                        surface, self.map_screen, self.target_province, target_id,
+                        bomb_range, force_visible=True)
 
-        if panel_has_content:
-            bg_rect = pygame.Rect(self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
-
-            ui_bars.draw_translucent_panel(surface, bg_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
-                                           border_color=PANEL_BORDER_COLOR)
-
-            self.draw_list_scrollbar(surface, self.PANEL_X + SCROLLBAR_OFFSET_X, self.panel_top,
-                                     self.panel_max_h, width=SCROLLBAR_WIDTH,
-                                     limit_attr="max_scroll_y")
+        ui_bars.draw_translucent_panel(
+            surface, self.panel_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
+            border_color=PANEL_BORDER_COLOR, radius=3)
+        self._draw_panel_header(surface, units, player_units, read_only)
 
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
-            self.PANEL_X, self.panel_top, self.PANEL_WIDTH, self.panel_max_h)
+            self.PANEL_X + 2, self.panel_top,
+            self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
 
         if read_only:
             # Viewing a tile the player holds nothing on: show the same
@@ -1044,7 +1317,8 @@ class Orders_Screen(GameState):
                                             draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
                 end_y = sidebar_info.draw_unit_roster(
                     self.map_screen, surface, self.target_province, visible_units, is_visible,
-                    self.PANEL_X, self.panel_top + self.scroll_y, self.PANEL_WIDTH)
+                    self.PANEL_X + 2, self.panel_top + self.scroll_y,
+                    self.PANEL_WIDTH - SCROLLBAR_WIDTH - 4)
 
             # Rows are variable height (combat lanes, bombard lines, ...), so
             # the scroll ceiling is re-derived from what actually got drawn
@@ -1062,52 +1336,20 @@ class Orders_Screen(GameState):
                         continue
 
                     y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
-
-                    # Replaced the hardcoded '20' with 'self.row_height' to match refresh_ui
-                    if self.panel_top - 10 < y_pos < self.panel_top + self.panel_max_h - self.bottom_vanish_y:
-                        hp = int(unit.get("health", 0))
-                        m_hp = int(unit.get("max_health", 0))
-
-                        name_txt = unit.get("custom_name", unit.get("type", "Unit"))
-                        name_surf = small_font.render(name_txt, True, (255, 255, 255))
-                        surface.blit(name_surf, (self.PANEL_X + UNIT_NAME_OFFSET_X, y_pos + UNIT_ROW_TEXT_OFFSET_Y))
-
-                        stats_txt = f"HP: {queries.format_number(hp)}/{queries.format_number(m_hp)}"
-                        txt_surf = small_font.render(stats_txt, True, c.UI_TEXT_LIGHT)
-
-                        surface.blit(txt_surf, (self.PANEL_X + UNIT_STATS_OFFSET_X, y_pos + UNIT_STATS_OFFSET_Y))
-
-                        if self.renaming_unit_index == i:
-                            # Buttons are built in refresh_ui() off a y_pos that includes
-                            # UNIT_ICON_OFFSET_Y; match that here so the box lines up with them.
-                            # Save Name sits at ACTION_COL_CONVERT while renaming (see refresh_ui);
-                            # keep the box glued to its right edge.
-                            box_rect = pygame.Rect(self.PANEL_X + ACTION_START_OFFSET_X + ACTION_COL_CONVERT + RENAME_BOX_GAP_X, y_pos + UNIT_ICON_OFFSET_Y, *RENAME_BOX_SIZE)
-                            # Only drawn while this row is being renamed, so always focused.
-                            draw_text_box(surface, box_rect, self.rename_text, active=True,
-                                          font=small_font, pad_x=5)
-
-                        order = unit.get("order", {})
-                        path = order.get("path", [])
-
-                        # An active path and an active barrage show the same footer
-                        # line plus a cancel box, so they share one draw call.
-                        if path:
-                            self.draw_order_footer(surface, small_font, i, y_pos,
-                                                   f"PATH: {' -> '.join(map(str, path))}", (255, 255, 0))
-
-                            # Split draw using the helper function
-                            overlay_renderer.draw_split_movement_path(surface, self.map_screen, self.target_province, path, unit.get("speed", 1), owner_color, force_visible=True)
-
-                        elif order.get("type") == "BOMBARD":
-                            target_id = order.get("target_id")
-                            self.draw_order_footer(surface, small_font, i, y_pos,
-                                                   f"BOMBARDING: {target_id}", BOMBARD_TARGET_COLOR)
-
-                            bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                            overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, target_id, bomb_range, force_visible=True)
+                    row_rect = pygame.Rect(
+                        self.PANEL_X + UNIT_ROW_X_OFFSET, y_pos,
+                        self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
+                        self.row_height)
+                    if row_rect.colliderect(content_rect):
+                        self._draw_unit_row(
+                            surface, i, unit, y_pos, display_index,
+                            owner_color, small_font, tiny_font)
 
                     display_index += 1
+
+        self.draw_list_scrollbar(
+            surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
+            self.panel_max_h, width=SCROLLBAR_WIDTH, limit_attr="max_scroll_y")
 
         # --- Bombardment Targeting Preview ---
         if self.bombarding_unit_index is not None and self.bombarding_unit_index < len(units):

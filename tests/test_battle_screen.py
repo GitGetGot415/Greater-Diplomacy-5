@@ -11,6 +11,7 @@ raising in the middle of a turn.
 import os
 import sys
 import unittest
+from unittest import mock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -486,6 +487,150 @@ class ReadOnlyOrdersTests(BattleScreenTestCase):
 
         self.assertFalse(screen.read_only)
         self.assertIsNotNone(screen.selected_unit_index)
+
+
+class OrdersScreenRegressionTests(BattleScreenTestCase):
+    """The compact Orders roster and its screen-specific Clear shortcut."""
+
+    def orders_screen(self, player=None):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        self.map.player_country = self.a if player is None else player
+        screen = Orders_Screen()
+        screen.start_with_province(self.province, self.map)
+        return screen
+
+    def preserve_materials(self, nation):
+        before = nation.get("materials", 0)
+        self.addCleanup(nation.__setitem__, "materials", before)
+        return before
+
+    def test_clear_orders_key_refunds_only_owned_orders(self):
+        mine = next(unit for unit in self.province["units"]
+                    if unit["owner"] == self.a)
+        foreign = next(unit for unit in self.province["units"]
+                       if unit["owner"] != self.a)
+        mine["order"] = {
+            "type": "REPAIR",
+            "refund": {"cost_materials": 17, "cost_manpower": 0,
+                       "cost_fuel": 0},
+        }
+        foreign_order = {"type": "MOVE", "path": [self.province["id"]]}
+        foreign["order"] = foreign_order
+        nation = self.map.nation_data[self.a]
+        materials_before = self.preserve_materials(nation)
+
+        screen = self.orders_screen()
+        screen.bombarding_unit_index = self.province["units"].index(mine)
+        screen.handle_clear_orders_key()
+
+        self.assertNotIn("order", mine)
+        self.assertIs(foreign["order"], foreign_order)
+        self.assertEqual(nation["materials"], materials_before + 17)
+        self.assertIsNone(screen.bombarding_unit_index)
+
+    def test_clear_orders_key_is_ignored_while_renaming(self):
+        index, unit = next((index, unit)
+                           for index, unit in enumerate(self.province["units"])
+                           if unit["owner"] == self.a)
+        order = {
+            "type": "REPAIR",
+            "refund": {"cost_materials": 11, "cost_manpower": 0,
+                       "cost_fuel": 0},
+        }
+        unit["order"] = order
+        nation = self.map.nation_data[self.a]
+        materials_before = self.preserve_materials(nation)
+        screen = self.orders_screen()
+        screen.start_renaming(index)
+
+        screen.handle_clear_orders_key()
+
+        self.assertIs(unit["order"], order)
+        self.assertEqual(nation["materials"], materials_before)
+        self.assertEqual(screen.renaming_unit_index, index)
+
+    def test_clear_orders_key_is_ignored_on_a_read_only_roster(self):
+        outsider = next(nation for nation in self.map.nation_data
+                        if queries.is_playable(nation, self.map.nation_data)
+                        and nation not in (self.a, self.b, self.x, self.y))
+        unit = self.province["units"][0]
+        order = {"type": "MOVE", "path": [self.province["id"]]}
+        unit["order"] = order
+        screen = self.orders_screen(outsider)
+
+        screen.handle_clear_orders_key()
+
+        self.assertTrue(screen.read_only)
+        self.assertIs(unit["order"], order)
+
+    def test_clear_orders_key_is_ignored_in_tactical_mode(self):
+        unit = next(unit for unit in self.province["units"]
+                    if unit["owner"] == self.a)
+        order = {
+            "type": "REPAIR",
+            "refund": {"cost_materials": 13, "cost_manpower": 0,
+                       "cost_fuel": 0},
+        }
+        unit["order"] = order
+        nation = self.map.nation_data[self.a]
+        materials_before = self.preserve_materials(nation)
+        self.map.tactical_mode = True
+        self.map.player_unit = unit
+        self.addCleanup(setattr, self.map, "tactical_mode", False)
+        self.addCleanup(setattr, self.map, "player_unit", None)
+        screen = self.orders_screen()
+
+        screen.handle_clear_orders_key()
+
+        self.assertIs(unit["order"], order)
+        self.assertEqual(nation["materials"], materials_before)
+
+    def test_compact_rows_have_six_actions_and_stay_inside_the_panel(self):
+        owned_indices = [index for index, unit in enumerate(self.province["units"])
+                         if unit["owner"] == self.a]
+        for index in owned_indices:
+            self.province["units"][index]["order"] = {
+                "type": "MOVE", "path": []}
+
+        screen = self.orders_screen()
+        screen.draw(self.surface)
+
+        visible_indices = set(screen.unit_row_icons)
+        self.assertEqual(visible_indices, set(owned_indices))
+        self.assertEqual(len(screen.action_buttons), len(visible_indices) * 6)
+        self.assertLessEqual(screen.row_height, 80 * 0.75)
+        self.assertLessEqual(screen.PANEL_WIDTH, 570 * 0.85)
+
+        for index in visible_indices:
+            with self.subTest(unit_index=index):
+                buttons = [button for button in screen.action_buttons
+                           if button.unit_index == index]
+                self.assertEqual(len(buttons), 6)
+                self.assertEqual({button.action_slot for button in buttons}, set(range(6)))
+                for button in buttons:
+                    self.assertTrue(screen.panel_rect.contains(button.rect))
+                    self.assertTrue(screen.scroll_content_rect.contains(button.rect))
+
+        cancel_by_index = {index: rect for rect, index in screen.cancel_rects}
+        self.assertEqual(len(screen.cancel_rects), len(visible_indices))
+        self.assertEqual(set(cancel_by_index), visible_indices)
+        for rect in cancel_by_index.values():
+            self.assertTrue(screen.panel_rect.contains(rect))
+            self.assertTrue(screen.scroll_content_rect.contains(rect))
+
+    def test_drawing_orders_suppresses_only_its_embedded_map_flag(self):
+        from ui.bars import flag_renderer
+
+        screen = self.orders_screen()
+        self.map.hide_flag = False
+        with mock.patch.object(
+                flag_renderer.queries, "decode_b64_to_surf",
+                wraps=flag_renderer.queries.decode_b64_to_surf) as decode:
+            screen.draw(self.surface)
+
+        decode.assert_not_called()
+        self.assertFalse(self.map.hide_flag)
 
 
 class ButtonSwapTests(BattleScreenTestCase):

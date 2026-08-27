@@ -8,6 +8,9 @@ checked any of that before this file existed.
 """
 
 import unittest
+from unittest import mock
+
+import pygame
 
 from tests import app_harness
 
@@ -70,6 +73,52 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_active_state_is_the_menu(self):
         self.assertIs(self.controller.active_state, self.controller.states["MENU"])
+
+    def test_clear_orders_keybind_is_available_by_default(self):
+        from screens.menu_screens.keybinds import KEYBIND_ACTIONS
+
+        defaults = {action: default for action, _label, default in KEYBIND_ACTIONS}
+        self.assertEqual(defaults["CLEAR_ORDERS"], pygame.K_DELETE)
+        self.assertIn("CLEAR_ORDERS", self.controller.keybinds)
+
+
+class GlobalKeyDispatchTests(unittest.TestCase):
+    class State:
+        listening_for = None
+
+        def __init__(self):
+            self.cleared = 0
+
+        def handle_back_key(self):
+            pass
+
+        def handle_clear_orders_key(self):
+            self.cleared += 1
+
+    def test_clear_orders_key_routes_to_optional_screen_handler(self):
+        from gameState import dispatch_global_keys
+
+        state = self.State()
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
+        with mock.patch("gameState.queries.get_keybind",
+                        side_effect=lambda _action, default: default):
+            dispatch_global_keys(state, event)
+
+        self.assertEqual(state.cleared, 1)
+
+    def test_clear_orders_key_honours_rebinding(self):
+        from gameState import dispatch_global_keys
+
+        state = self.State()
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_x)
+
+        def binding(action, default):
+            return pygame.K_x if action == "CLEAR_ORDERS" else default
+
+        with mock.patch("gameState.queries.get_keybind", side_effect=binding):
+            dispatch_global_keys(state, event)
+
+        self.assertEqual(state.cleared, 1)
 
 
 if __name__ == "__main__":

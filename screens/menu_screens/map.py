@@ -814,6 +814,9 @@ class Map(GameState):
        # --- UI DISPLAY OVERRIDES ---
         self.hide_raised_rect = False
         self.hide_top_info = False
+        # Separate from hide_top_info so map-layered panels can suppress only
+        # the large top-left flag without also removing the country/date text.
+        self.hide_flag = False
         self.hide_tooltip = False
         self.hide_resource_hud = False
         self.hide_minimap = False
