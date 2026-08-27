@@ -126,9 +126,11 @@ def _entry(filename):
 
 
 def is_mod_enabled(filename):
-    # A mod dropped in by hand, with no entry yet, defaults to enabled --
-    # matches the old drop-in-and-go behavior for anyone not using the UI.
-    return _entry(filename).get("enabled", True)
+    # A mod dropped in by hand, with no entry yet, defaults to disabled --
+    # a mod silently patching game files the moment its file appears is
+    # surprising behavior; it should have to be turned on explicitly via
+    # the Mods screen.
+    return _entry(filename).get("enabled", False)
 
 
 def is_mod_sandboxed(filename):
