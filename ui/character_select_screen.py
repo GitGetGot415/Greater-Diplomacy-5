@@ -139,6 +139,14 @@ class CharacterSelectScreen(ModalScreen):
 
     def start_delete_custom(self, rel_path):
         self.deleting_item = rel_path
+        # The X sits inside scroll_content_rect, so this very click can arm a
+        # content-drag on mouse-down. additional_events then blocks mouse
+        # events -- including the matching mouse-up -- while the confirm
+        # popup is open, so without this the drag is left stuck armed and the
+        # next mouse move free-scrolls the grid with no button held. Same
+        # fix GameState.cancel_active_drags() exists for: a covering screen
+        # stealing that mouse-up.
+        self.cancel_active_drags()
         self.refresh_ui()
 
     def cancel_delete_custom(self):
