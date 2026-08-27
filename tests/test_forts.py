@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries
+from map_logic.rendering import overlay_renderer
 from map_logic.turn_processing import combat_processor
 
 
@@ -78,6 +79,19 @@ class FortTests(unittest.TestCase):
                 province, defender, nations, combat_active=True),
         )
         self.assertEqual(target["health"], 99700)
+
+    def test_fort_alignment_scales_with_camera_zoom(self):
+        class Camera:
+            zoom = 2.0
+
+        class MapScreen:
+            camera = Camera()
+
+        map_screen = MapScreen()
+        self.assertEqual(overlay_renderer.fort_horizontal_alignment(map_screen), 1)
+
+        map_screen.camera.zoom = c.MAX_CAMERA_ZOOM
+        self.assertEqual(overlay_renderer.fort_horizontal_alignment(map_screen), 8)
 
 
 if __name__ == "__main__":
