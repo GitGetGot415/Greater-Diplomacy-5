@@ -1,8 +1,26 @@
 #!/usr/bin/env bash
 
-# This script lives in compilation_scripts/, but venv/requirements.txt/main.py are all
-# at the project root, so hop up one level from this script's own directory.
-cd "$(dirname "$0")/.." || exit 1
+# This script normally lives in compilation_scripts/, with venv/requirements.txt/main.py
+# at the project root one level up. But if someone moves/copies this script to the
+# project root itself (e.g. for easier double-clicking), going up a level would land
+# one folder too high. So check both spots and use whichever actually has main.py.
+SCRIPT_DIR="$(dirname "$0")"
+if [ -f "$SCRIPT_DIR/../main.py" ]; then
+    cd "$SCRIPT_DIR/.." || exit 1
+elif [ -f "$SCRIPT_DIR/main.py" ]; then
+    cd "$SCRIPT_DIR" || exit 1
+else
+    echo "============================================================"
+    echo "ERROR: Could not find main.py near this script."
+    echo "============================================================"
+    echo "This script expects to be inside the \"compilation_scripts\" folder"
+    echo "of the Greater Diplomacy 5 project, with main.py one level up."
+    echo ""
+    echo "Please make sure you kept the full project folder intact and run"
+    echo "this script from its original location inside compilation_scripts."
+    echo "============================================================"
+    exit 1
+fi
 
 echo "Starting Greater Diplomacy 5..."
 
