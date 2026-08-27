@@ -648,7 +648,7 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
 
 
 class ButtonSwapTests(BattleScreenTestCase):
-    """Manage Battle takes Give Orders' slot exactly while the tile is fighting."""
+    """Orders remains the map entry point, including while the tile fights."""
 
     def visible_pair(self):
         from screens.menu_screens import map as map_module
@@ -661,16 +661,16 @@ class ButtonSwapTests(BattleScreenTestCase):
         map_module.set_orders_or_battle(self.map, set_btn, True)
         return shown[id(self.map.btn_go_orders)], shown[id(self.map.btn_go_battle)]
 
-    def test_a_fighting_tile_shows_the_battle_button(self):
-        self.assertEqual(self.visible_pair(), (False, True))
+    def test_a_fighting_tile_still_shows_the_orders_button(self):
+        self.assertEqual(self.visible_pair(), (True, False))
 
     def test_a_quiet_tile_shows_give_orders(self):
         self.province["units"] = [
             queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
         self.assertEqual(self.visible_pair(), (True, False))
 
-    def test_a_battle_you_are_not_in_still_offers_the_button(self):
-        """Reading somebody else's front is how you find out it is collapsing."""
+    def test_a_battle_you_are_not_in_still_offers_orders(self):
+        """Reading somebody else's front is available through Orders too."""
         self.map.player_country = next(
             n for n in self.map.nation_data
             if queries.is_playable(n, self.map.nation_data)
@@ -684,7 +684,62 @@ class ButtonSwapTests(BattleScreenTestCase):
             enabled[id(btn)] = (visible, is_enabled)
 
         map_module.set_orders_or_battle(self.map, set_btn, False)
-        self.assertEqual(enabled[id(self.map.btn_go_battle)], (True, True))
+        self.assertEqual(enabled[id(self.map.btn_go_orders)], (True, True))
+        self.assertEqual(enabled[id(self.map.btn_go_battle)], (False, False))
+
+    def test_orders_screen_offers_battle_button_for_a_fighting_tile(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+
+        labels = [getattr(el, "text", "") for el in orders.elements]
+        self.assertIn("Manage Battle", labels)
+
+    def test_orders_opens_battle_with_itself_as_the_return_screen(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        with mock.patch.object(battle_screen, "open_battle_screen") as open_battle:
+            orders.go_to_battle()
+
+        open_battle.assert_called_once_with(self.map, origin_screen=orders)
+
+    def test_closing_battle_modal_reveals_its_orders_screen(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        battle = battle_screen.Battle_Screen(
+            self.map, self.province, origin_screen=orders)
+
+        battle.exit_screen()
+
+        self.assertTrue(battle.done)
+        self.assertFalse(orders.done)
+        self.assertIs(self.map.selected_province, self.province)
+
+    def test_preemptive_fighting_tile_enters_orders_before_battle(self):
+        from ui import event_handler
+
+        old_navigation = c.MAP_NAVIGATION_MODE
+        old_done = self.map.done
+        old_next_state = self.map.next_state
+        old_secondary_mode = self.map.secondary_mode
+        self.addCleanup(setattr, c, "MAP_NAVIGATION_MODE", old_navigation)
+        self.addCleanup(setattr, self.map, "done", old_done)
+        self.addCleanup(setattr, self.map, "next_state", old_next_state)
+        self.addCleanup(setattr, self.map, "secondary_mode", old_secondary_mode)
+
+        c.MAP_NAVIGATION_MODE = "PREEMPTIVE"
+        self.map.done = False
+        self.map.next_state = None
+        with mock.patch.object(event_handler, "_resync_view_mode_row"):
+            event_handler.navigate_view_mode(self.map, "UNITS")
+
+        self.assertTrue(self.map.done)
+        self.assertEqual(self.map.next_state, "ORDERS")
 
 
 if __name__ == "__main__":

@@ -60,10 +60,11 @@ SETTINGS_INFO_ROWS = (
     (SETTINGS_MAP_NAV_Y, "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "
-     "the map's view mode. Orders/Battle and Production are reached only "
-     "through their own buttons. \n"
+     "the map's view mode. Orders and Production are reached only through "
+     "their own buttons; Battle is opened from Orders. \n"
      "Preemptive: a click jumps "
-     "straight into whatever screens the current view mode implies. "
+     "straight into the screen the current view mode implies (Orders for "
+     "Units, including a fighting tile). "
      "Click to switch between them."),
 )
 

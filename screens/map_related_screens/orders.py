@@ -126,12 +126,6 @@ class Orders_Screen(GameState):
         # before its first handoff is not a special case.
         self.read_only = False
 
-        # Classic navigation only: True when this screen was reached via
-        # Battle_Screen.go_to_orders, so Back should reopen the battle instead
-        # of landing on the plain province menu -- see start_with_province and
-        # exit_screen.
-        self.return_to_battle = False
-
         self.scroll_y = 0
         self.max_scroll_y = 0
         self.row_height = 40
@@ -148,12 +142,6 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.renaming_unit_index = None
         self.rename_text = ""
-
-        # Consumed here rather than left set: only the handoff that actually
-        # requested it should be honoured, not whatever the flag happened to
-        # hold from an earlier visit.
-        self.return_to_battle = bool(getattr(map_ref, "pending_battle_return", False))
-        map_ref.pending_battle_return = False
 
         # Shift the camera left so this panel doesn't cover the unit it's showing orders for.
         camera_handler.center_camera_on_province(
@@ -197,10 +185,6 @@ class Orders_Screen(GameState):
                 self.map_screen.total_ui_h)
 
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
-            if self.return_to_battle and self.map_screen:
-                # Reached from Battle's own "Unit Orders" button -- Back goes
-                # back to the battle, not the plain province menu.
-                battle_screen.open_battle_screen(self.map_screen)
             # Classic: Back lands on the plain province menu, tile still
             # selected. (The view-mode row only ever switches the map overlay
             # in Classic -- see navigate_view_mode -- so this is the only path
@@ -215,6 +199,16 @@ class Orders_Screen(GameState):
         if self.map_screen:
             self.map_screen.deselect_province()
         super().exit_screen()
+
+    def go_to_battle(self):
+        """Opens the battle inspector without leaving this Orders screen."""
+        if not self.map_screen or not self.target_province:
+            return
+        if not queries.is_province_in_active_combat(
+                self.target_province, self.map_screen.nation_data):
+            self.refresh_ui()
+            return
+        battle_screen.open_battle_screen(self.map_screen, origin_screen=self)
 
     def handle_orders_key(self):
         """Q. Same as clicking the Units button in the view-mode row; also
@@ -501,6 +495,20 @@ class Orders_Screen(GameState):
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
         player_units = [u for u in units if u.get("owner") == player_country]
         rows = self._visible_rows()
+
+        # Battle is deliberately a child of Orders.  Keep this available for
+        # observers as well as participants: a read-only Orders view can still
+        # inspect the fight, but no unit commands are enabled there.
+        in_battle = queries.is_province_in_active_combat(
+            self.target_province, self.map_screen.nation_data)
+        if in_battle:
+            battle_label = "Manage Battle" if player_units else "View Battle"
+            battle_button = Button(
+                self.panel_rect.right - PANEL_INSET - 112,
+                PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
+                "orders_header_button", "red", battle_label,
+                self.go_to_battle, font_preset="tiny")
+            self.elements.append(battle_button)
 
         total_content_h = len(rows) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h)
@@ -1418,4 +1426,3 @@ class Orders_Screen(GameState):
         # even when the Orders screen is the active state
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
-

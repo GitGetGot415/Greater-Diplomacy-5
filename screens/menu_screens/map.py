@@ -103,8 +103,8 @@ def render_buttons(map_screen):
     map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
 
     # In Preemptive navigation, clicking one of these while a tile is already
-    # selected jumps straight to that mode's screen for it (Orders/Battle for
-    # Units, Production for Economy) instead of just flipping the map overlay.
+    # selected jumps straight to that mode's screen for it (Orders for Units,
+    # Production for Economy) instead of just flipping the map overlay.
     # In Classic navigation it only ever flips the overlay. See
     # ui.event_handler.navigate_view_mode / data.constants.MAP_NAVIGATION_MODE.
     map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: event_handler.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
@@ -293,11 +293,11 @@ def render_buttons(map_screen):
     # (Units for either half of this shared slot, Economy for Production)
     # instead of leaving it on whatever it last was. In Classic navigation they
     # jump straight there unconditionally instead. See
-    # ui.event_handler.go_to_orders_screen/go_to_battle_screen/go_to_production_screen.
+    # ui.event_handler.go_to_orders_screen/go_to_production_screen.
     map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: event_handler.go_to_orders_screen(map_screen), image=icons.get("paper"), show_text=False)
-    # Shares BTN_ORDERS_Y with Give Orders: only one of the two is ever visible,
-    # and on a tile that is fighting it is this one. The lane manager carries a
-    # button back to Orders, so nothing there becomes unreachable.
+    # Retained as a compatibility object for old callers/layout code. It is
+    # never exposed: a fighting tile enters Orders first, where the lane
+    # manager can be opened after the player has access to all order controls.
     map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: event_handler.go_to_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
     map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: event_handler.go_to_production_screen(map_screen), image=icons.get("industry"), show_text=False)
 
@@ -410,12 +410,11 @@ def render_buttons(map_screen):
 # ============================================================================ #
 
 def set_orders_or_battle(map_screen, set_btn, has_player_units):
-    """One slot, two buttons: Manage Battle takes over while the tile is fighting.
+    """Shows the Orders entry point for both quiet and contested tiles.
 
-    They share BTN_ORDERS_Y deliberately -- a tile is either being fought over or
-    it is not, and the lane manager is the thing you want on it when it is. What
-    the swap costs is Disband/Repair/Bombard and retreat orders, so the battle
-    screen carries a button through to Orders rather than stranding them.
+    Battle management lives inside Orders now, alongside Disband/Repair/
+    Bombard and retreat orders, so selecting a contested tile never skips the
+    order controls.
 
     Neither needs units of your own to open, and Orders needs no units at all
     -- an empty tile just opens it blank. Somebody else's battle is worth
@@ -425,15 +424,13 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
     """
     province = map_screen.selected_province
     visible = queries.is_province_visible(map_screen, province["id"])
-    in_battle = visible and queries.is_province_in_active_combat(province,
-                                                                 map_screen.nation_data)
-
-    label = "Manage Battle" if has_player_units else "View Battle"
-    set_btn(map_screen.btn_go_battle, in_battle, visible, label, "red")
 
     orders_label = "Give Orders" if has_player_units else "View Units"
-    set_btn(map_screen.btn_go_orders, not in_battle, visible,
+    set_btn(map_screen.btn_go_orders, visible, visible,
             orders_label, "blue" if has_player_units else "grey")
+    # Kept as a compatibility object for saved layouts and callers, but no
+    # longer exposed: the Orders screen owns the Battle handoff.
+    set_btn(map_screen.btn_go_battle, False, False, "Battle", "red")
 
 
 def update_button_states(map_screen):
@@ -871,12 +868,6 @@ class Map(GameState):
         self.visible_provinces = None
         self.mail_draft_text = ""
         self.mail_input_active = False
-
-        # Classic navigation only: set by Battle_Screen.go_to_orders right
-        # before handing off to Orders, so Orders_Screen.start_with_province
-        # knows Back should reopen the battle instead of landing on the plain
-        # province menu -- see screens.map_related_screens.orders.exit_screen.
-        self.pending_battle_return = False
 
         # --- NEW REFRESH TRACKERS ---
         self.refresh_tasks_total = 0

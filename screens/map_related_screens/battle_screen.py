@@ -19,12 +19,13 @@ live:
 Both are written straight onto the unit dict, where combat_rules.build_battle is
 the only thing that reads them back. That is deliberate: a second store for
 "who is fighting whom" is how the four callers of the old firing_lines drifted
-apart in the first place.
+apart in the first place. The screen is opened from Orders and closes back to
+that Orders screen so battle inspection never strands the order controls.
 
 A ModalScreen rather than a registered state, because it is an inspector rather
-than a mode -- see the class docstring. It is launched by the map button that
-replaces Give Orders while a tile is fighting, and carries a button back to the
-Orders screen so bombardment and retreat stay reachable mid-battle.
+than a mode -- see the class docstring. It is launched from the Orders screen,
+whose controls remain one step away so bombardment and retreat stay reachable
+mid-battle.
 """
 
 import pygame
@@ -86,8 +87,8 @@ class Battle_Screen(ModalScreen):
         # title and the title depends on whether any of these units are ours.
         self.map_screen = map_screen
         self.player = map_screen.player_country
-        # Whichever screen this battle was pushed over (Map, Orders or
-        # Production) -- see close_and_navigate.
+        # The screen this battle was pushed over, normally Orders -- see
+        # close_and_navigate.
         self.origin_screen = origin_screen or map_screen
         super().__init__(map_screen, self.get_panel_title())
         # Hotseat and fog of war: the same rule the sidebar uses. A province you
@@ -233,43 +234,26 @@ class Battle_Screen(ModalScreen):
 
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
-        if c.MAP_NAVIGATION_MODE == "CLASSIC":
-            # Classic: Orders is reached only through Map.change_state, not
-            # through navigate_view_mode/origin_screen -- see
-            # ui.event_handler.navigate_view_mode. Flagging the map screen here
-            # is how Orders_Screen.start_with_province learns Back should
-            # reopen this battle instead of landing on the plain province menu
-            # -- see its exit_screen.
-            self.map_screen.pending_battle_return = True
+        # When the inspector was opened from Orders, popping the modal reveals
+        # the existing Orders screen. Keep the handoff for legacy/direct opens
+        # too, so every route still reaches Orders before anything else.
+        if self.origin_screen is not self.map_screen:
             self.done = True
-            self.map_screen.change_state("ORDERS")
         else:
             self.close_and_navigate("ORDERS")
 
     def exit_screen(self):
         """Closing the battle inspector -- the Close button, or Back/Esc.
 
-        Classic: just pops the modal. Battle is only ever opened here while
-        Map is the active state (either directly, or because Orders handed off
-        to MAP before reopening it -- see go_to_orders), so popping reveals Map
-        with the tile still selected, i.e. the plain province menu -- matching
-        what Back does from Orders/Production in Classic.
-
-        Preemptive: always lands on the bare map with the tile deselected,
-        matching what Back does from Orders/Production there. Popping the
-        modal with the base implementation would just resume whichever screen
-        was underneath (Production or Orders, if this battle was reached via
-        their own copy of the view-mode row) with the tile still selected;
-        deselecting here directly, rather than relying on origin_screen's own
-        exit_screen (see close_and_navigate, which forwards via go_to, not
-        exit_screen), covers every origin in one place, including Map itself.
+        The battle inspector is opened from Orders. Popping the modal therefore
+        reveals the same Orders screen in both navigation modes, preserving its
+        selected unit, scroll position, and order controls. A legacy direct map
+        opener is forwarded into Orders as well.
         """
-        if c.MAP_NAVIGATION_MODE == "CLASSIC":
+        if self.origin_screen is not self.map_screen:
             self.done = True
             return
-        if self.map_screen:
-            self.map_screen.deselect_province()
-        self.close_and_navigate("MAP")
+        self.close_and_navigate("ORDERS")
 
     def go_to(self, state_name):
         """Overridden so ui.event_handler.navigate_view_mode's generic
@@ -282,11 +266,9 @@ class Battle_Screen(ModalScreen):
 
     def close_and_navigate(self, state_name):
         """Closes this modal and hands off to `state_name` on whichever screen
-        it was opened over -- Map by default, but Production or Orders when
-        this battle was reached from their own copy of the view-mode row.
-        Popping the modal alone would just resume that screen unchanged, which
-        is wrong for anything other than Map (already showing beneath), so the
-        request is forwarded on to it explicitly.
+        it was opened over. The ordinary battle-close path only marks this
+        modal done, so Orders can resume unchanged; explicit view-mode changes
+        use this forwarding path to switch the underlying screen as requested.
         """
         self.done = True
         if not (self.origin_screen is self.map_screen and state_name == "MAP"):

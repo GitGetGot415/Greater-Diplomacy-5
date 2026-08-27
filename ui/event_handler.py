@@ -375,7 +375,7 @@ def handle_map_events(map_screen, event):
             map_screen.mail_draft_text = queries.get_message_draft(map_screen.player_country, owner, map_screen.nation_data)
 
             # Classic: a click only ever opens the plain province menu -- see
-            # navigate_view_mode. Jumping straight into Orders/Battle/Production
+            # navigate_view_mode. Jumping straight into Orders/Production
             # is a Preemptive-only shortcut.
             if c.MAP_NAVIGATION_MODE != "CLASSIC":
                 navigate_view_mode(map_screen, map_screen.secondary_mode)
@@ -387,16 +387,16 @@ def is_classic_navigation():
 
 def navigate_view_mode(map_screen, mode, origin=None):
     """Sets the map's view mode and, in Preemptive navigation, jumps straight
-    to whatever screen that mode implies for the selected province: Orders (or
-    Battle, if the tile is fighting) for UNITS, Production for ECONOMY.
+    to whatever screen that mode implies for the selected province: Orders for
+    UNITS, Production for ECONOMY.  Orders is always the entry point for a
+    fighting tile; it offers the Battle screen from there.
     RESOURCES/BLANK have no screen of their own, so from anywhere but the map
     itself they just land back on the plain province menu (the Map screen).
 
     In Classic navigation this only ever sets the view mode -- switching it
     never changes which screen is showing, wherever the row that called this
-    is drawn (Map, Orders, Production, Battle). Orders/Battle/Production are
-    reached only through their own explicit buttons there -- see
-    go_to_orders_screen/go_to_battle_screen/go_to_production_screen below.
+    is drawn (Map, Orders, Production, Battle). Orders and Production are
+    reached through their own explicit buttons; Battle is reached from Orders.
 
     This is for the view-mode row's own buttons (and a plain tile click) only.
     The Orders/Production keybinds jump independently of Classic/Preemptive --
@@ -412,7 +412,7 @@ def navigate_view_mode(map_screen, mode, origin=None):
 
 def handle_view_mode_keybind(map_screen, mode, action, origin=None):
     """Q/W. Always sets the view mode; also jumps straight to the screen it
-    implies (Orders/Battle for UNITS, Production for ECONOMY) when the
+    implies (Orders for UNITS, Production for ECONOMY) when the
     Keybinds screen's "change screen with this keybind" toggle for `action`
     ("ORDERS" or "ECONOMY") is on -- see queries.get_keybind_changes_screen.
 
@@ -480,13 +480,17 @@ def _jump_to_view_mode_screen(map_screen, mode, origin=None):
             to_map()
             return
         if queries.is_province_in_active_combat(province, map_screen.nation_data):
-            # Battle carries its own copy of this row now too, so clicking
-            # Units there while the tile is still fighting must not stack a
-            # second modal on top of the one already showing it.
-            already_here = (isinstance(origin, battle_screen.Battle_Screen)
-                           and origin.province is province)
-            if not already_here:
-                battle_screen.open_battle_screen(map_screen, origin_screen=origin)
+            # Orders is the single entry point for every fighting tile.  The
+            # Orders panel contains the explicit handoff to the lane manager,
+            # so bombardment, retreat, and battle controls all live together.
+            # Clicking Units while already there is a no-op rather than a
+            # self-transition that would reset the selected unit and scroll.
+            # The imports are deferred here because Orders imports this module
+            # for its view-mode row. Both screens already exist by the time a
+            # user can click this control.
+            from screens.map_related_screens.orders import Orders_Screen
+            if not isinstance(origin, (Orders_Screen, battle_screen.Battle_Screen)):
+                to("ORDERS")
         else:
             # Orders_Screen already renders fine with nothing to show -- an
             # empty unit list just skips the panel -- so an empty tile still
@@ -503,11 +507,9 @@ def _jump_to_view_mode_screen(map_screen, mode, origin=None):
         to_map()
 
 
-# The province-menu sidebar's three action buttons (Give Orders, Manage/View
-# Battle, Production). In Preemptive these route through navigate_view_mode,
-# same as the view-mode row, so clicking them also keeps it in sync. In
-# Classic they are the *only* way to reach these screens, and jump straight
-# there unconditionally -- there is no view mode to keep in sync with.
+# The province-menu sidebar's action buttons (Give/View Orders, Production).
+# Battle management is intentionally reached from Orders, so the map never
+# skips over the order controls on a contested tile.
 
 def go_to_orders_screen(map_screen):
     """Give Orders sidebar button."""
@@ -518,12 +520,8 @@ def go_to_orders_screen(map_screen):
 
 
 def go_to_battle_screen(map_screen):
-    """Manage/View Battle sidebar button -- shares its slot with Give Orders,
-    swapped in whenever the tile is fighting."""
-    if is_classic_navigation():
-        battle_screen.open_battle_screen(map_screen)
-    else:
-        navigate_view_mode(map_screen, "UNITS")
+    """Legacy callback: route the map's old battle action through Orders."""
+    go_to_orders_screen(map_screen)
 
 
 def go_to_production_screen(map_screen):
