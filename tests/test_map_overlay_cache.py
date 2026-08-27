@@ -11,10 +11,10 @@ is a function of its key. That is what these pin:
 
   - a symbol name resolves to the same file every time, so the regex walk over
     every loaded symbol can be memoised (it was 40% of a frame on its own)
-  - a scaled symbol depends on nothing but its name, colour, alpha and size, so
+  - a scaled symbol depends on nothing but its name, color, alpha and size, so
     it can be shared -- which means callers must not mutate it, and the four
     that used to call set_alpha on the result now ask for the alpha instead
-  - a unit box depends on nothing but the flag colour, the unit type, the count,
+  - a unit box depends on nothing but the flag color, the unit type, the count,
     whether it is the tactical player's own, and its size
 """
 
@@ -60,7 +60,7 @@ class SymbolCacheTests(unittest.TestCase):
         second = symbol_loader.get_symbol(self.name, 2.0001)
         self.assertIs(first, second)
 
-    def test_colour_is_part_of_the_key(self):
+    def test_color_is_part_of_the_key(self):
         red = symbol_loader.get_symbol(self.name, 2.0, color=(255, 0, 0))
         blue = symbol_loader.get_symbol(self.name, 2.0, color=(0, 0, 255))
         self.assertIsNot(red, blue)
@@ -129,7 +129,7 @@ class UnitBoxCacheTests(unittest.TestCase):
     def test_the_count_is_drawn_on_it_so_it_is_part_of_the_key(self):
         self.assertIsNot(self.box(count=3), self.box(count=4))
 
-    def test_so_is_the_nation_colour(self):
+    def test_so_is_the_nation_color(self):
         self.assertIsNot(self.box(), self.box(border_color=(30, 30, 200)))
 
     def test_so_is_the_tactical_inversion(self):

@@ -96,7 +96,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def test_color_picker_screen(self):
         from ui.color_picker_screen import ColorPickerScreen
-        self.exercise(ColorPickerScreen(self.map, "Colour", (120, 40, 200), lambda _v: None))
+        self.exercise(ColorPickerScreen(self.map, "Color", (120, 40, 200), lambda _v: None))
 
     def test_file_browser_screen(self):
         from ui.file_browser_screen import FileBrowserScreen

@@ -43,7 +43,7 @@ def variant_block_width(count):
 
 INFANTRY_MODE_BLOCK_WIDTH = variant_block_width(INFANTRY_MODE_COUNT)
 
-# Coloured section panels drawn behind each group of rows
+# Colored section panels drawn behind each group of rows
 PANEL_X = 30
 PANEL_WIDTH = 750
 PANEL_PAD_TOP = 15
@@ -64,8 +64,8 @@ CLICK_GUARD_BOTTOM = c.SCREEN_HEIGHT - resource_hud.BAR_HEIGHT
 SCROLL_WHEEL_STEP = 50
 SCROLL_LERP = 0.15
 
-# --- Section panels: (attr prefix, label, fill, border, text colour) ---
-# Each entry paints one coloured block behind its rows. Adding a section means
+# --- Section panels: (attr prefix, label, fill, border, text color) ---
+# Each entry paints one colored block behind its rows. Adding a section means
 # adding a row here plus the matching self.<prefix>_start_y / _end_y markers.
 SECTION_PANELS = [
     ("admin",    "ADMINISTRATION",     (40, 20, 60), (150, 100, 200), (200, 150, 255)),

@@ -88,10 +88,10 @@ def research_multiplier(nation_data, nation):
 #: The axis carved into five named bands, libertarian first. Each entry is
 #: (highest value in the band, what to call it, its c.UI_COLORS palette name).
 #:
-#: One table rather than two, because the word and the colour are the same
+#: One table rather than two, because the word and the color are the same
 #: statement made twice: a screen that called a nation "Statist" and painted it
 #: red would be telling the reader two different things about one number. The
-#: centre band is yellow, so a map nobody has authored yet opens all one colour.
+#: centre band is yellow, so a map nobody has authored yet opens all one color.
 BANDS = (
     (-7, "Libertarian", "light_blue"),
     (-3, "Liberal", "green"),

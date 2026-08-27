@@ -19,7 +19,7 @@ _DIALOG_OVERLAY_ALPHA = 180
 
 
 def _lighten(color, amount=40):
-    """Hover tint for a solid-coloured action button."""
+    """Hover tint for a solid-colored action button."""
     return tuple(min(255, channel + amount) for channel in color)
 
 

@@ -15,4 +15,6 @@ for example, if you edit how damage works (maybe make units deal less damage in 
 
 and don't forget to also update the compilation scripts (windows_compilation.py, macos_compilation.py, html_compilation.py) if you added a new python file or something
 
+Use `color` consistently in identifiers, UI copy, comments, and documentation.
+
 IMPORTANT: NEVER COMMIT ANYTHING TO MAIN WITHOUT EXPLICITLY ASKING THE USER BEFOREHAND

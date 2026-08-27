@@ -374,14 +374,14 @@ class Battle_Screen(ModalScreen):
         shape for it well before the names stopped fitting in the column.
         """
         rect = self.regions[PANE_LANES]
-        # Every lane is selectable; the player's are picked out in colour so a
+        # Every lane is selectable; the player's are picked out in color so a
         # crowded tile still reads at a glance.
         mine = {id(lane) for lane in self.my_lanes()}
         self.row_paint[PANE_LANES] = []
         for i, y in self.pane_rows(PANE_LANES, len(self.battle.lanes), rect.y, rect.height):
             lane = self.battle.lanes[i]
-            colour = "blue" if id(lane) in mine else "grey"
-            btn = self.button(rect.x, y, LANE_COL_W, colour, "",
+            color = "blue" if id(lane) in mine else "grey"
+            btn = self.button(rect.x, y, LANE_COL_W, color, "",
                               lambda idx=i: self._select(idx))
             btn.is_selected = (i == self.selected_lane)
             self.add_pane_row(PANE_LANES, btn)

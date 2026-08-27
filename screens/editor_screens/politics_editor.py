@@ -138,7 +138,7 @@ class Politics_List_Screen(MapOverlayScreen):
             value = politics.value(self.map_screen.nation_data, cid)
             label = cid if value == c.POLITICS_START else "%s  (%+d %s)" % (
                 cid, value, politics.label(value))
-            # Colour is the ideology, not "has anybody edited this" -- the list
+            # Color is the ideology, not "has anybody edited this" -- the list
             # then reads as a heat map of who has centralised, and an untouched
             # map opens uniformly yellow because centrist *is* a position.
             btn = Button(row_x, y, "list_row", politics.palette(value),

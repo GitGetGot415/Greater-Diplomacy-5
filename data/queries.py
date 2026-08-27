@@ -473,7 +473,7 @@ def apply_historical_leader_timeline(nation_data, year, month, day):
     independently to the latest entry (at or before the date) that actually
     set it, so a later entry can change just the leader without blanking out
     an earlier entry's name/adjective/color/flag/portrait. A country with no
-    colour (or flag, or portrait) set on any applicable entry keeps whatever
+    color (or flag, or portrait) set on any applicable entry keeps whatever
     it already had.
     """
     timeline = get_historical_leader_timeline()
@@ -3773,7 +3773,7 @@ def ask_directory(game_state, title, initialdir, on_result):
     open_file_browser(game_state, title, initialdir, mode="select_folder", on_result=on_result)
 
 def ask_color(game_state, title, initial, on_result):
-    """Native colour picker; answers on_result with an (r, g, b) tuple, or None if cancelled."""
+    """Native color picker; answers on_result with an (r, g, b) tuple, or None if cancelled."""
     from ui.color_picker_screen import ColorPickerScreen
     from ui.screen_runner import _run_pygame_sub_screen
     result = {}

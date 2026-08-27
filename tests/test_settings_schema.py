@@ -81,8 +81,8 @@ class RoundTripTests(unittest.TestCase):
         binds = {"BACK": 27}
         self.assertIs(settings_schema.to_tuple(self.sample(), binds)[0], binds)
 
-    def test_colours_come_back_as_tuples(self):
-        """JSON has no tuple type, so a colour saved as a list has to be
+    def test_colors_come_back_as_tuples(self):
+        """JSON has no tuple type, so a color saved as a list has to be
         coerced or it stops comparing equal to the constants."""
         values = settings_schema.from_json_dict({"ocean_light_color": [4, 5, 6]})
         self.assertEqual(values["ocean_light_color"], (4, 5, 6))

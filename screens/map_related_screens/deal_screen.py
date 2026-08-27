@@ -1004,14 +1004,14 @@ class Deal_Screen(MapOverlayScreen):
         return f"Peace Terms: {self.target_nation}"
 
     def preview_map(self):
-        """The map this deal starts from: the parties in colour, the rest grey.
+        """The map this deal starts from: the parties in color, the rest grey.
 
         The *baseline* only, not the baseline plus the current picks. Both would
         be more literal, and it would cost a full sweep of the province-id map --
         145ms measured on the 1939 scenario -- on every province clicked. The
         picks are drawn over the top as highlights instead, which also reads
         better: a ring in demand-green says which way a province is moving, where
-        repainting it in its new owner's colour only says it became a different
+        repainting it in its new owner's color only says it became a different
         shade of blue.
 
         Built on first draw rather than in _refresh_readouts, so a keystroke
@@ -1038,10 +1038,10 @@ class Deal_Screen(MapOverlayScreen):
         self._draw_recipient_list(surface)
 
     def _draw_preview_map(self, surface):
-        """Paints the parties in their colours and everyone else grey, on the
+        """Paints the parties in their colors and everyone else grey, on the
         map this treaty starts from.
 
-        The builder drew the ordinary political map with coloured blobs on the
+        The builder drew the ordinary political map with colored blobs on the
         picked provinces, so a peace with no demands looked like the front line
         -- when what it actually restores is the pre-war border. The one thing a
         player needs before deciding what to demand is what happens if they
@@ -1128,7 +1128,7 @@ class Deal_Screen(MapOverlayScreen):
                           active=self.active_input == key, font=label, pad_x=5)
 
     def _notice(self):
-        """(sentence, colour) for the one-line status row, or None.
+        """(sentence, color) for the one-line status row, or None.
 
         Ordered by how much it matters that the player reads it: a number that
         will not be sent as typed first, then whatever they are in the middle of

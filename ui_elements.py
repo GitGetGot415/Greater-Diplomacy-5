@@ -125,9 +125,9 @@ class Button:
     # ------------------------------------------------------------------ #
 
     def set_palette(self, color_preset):
-        """Recolours the button from a c.UI_COLORS preset name.
+        """Recolors the button from a c.UI_COLORS preset name.
 
-        Always the way to change a button's colour: it keeps base, hover and
+        Always the way to change a button's color: it keeps base, hover and
         pressed shades in step, which hand-assigning `.color`/`.hover_color`
         at the call site did not.
         """
@@ -135,7 +135,7 @@ class Button:
         self.set_colors(base, hover)
 
     def set_colors(self, base, hover=None):
-        """Recolours the button from raw RGB values (palette swatches, etc.)."""
+        """Recolors the button from raw RGB values (palette swatches, etc.)."""
         self.color = base
         self.hover_color = base if hover is None else hover
         self.pressed_color = tuple(max(0, ch - 40) for ch in base[:3])
@@ -143,7 +143,7 @@ class Button:
     def apply_state(self, visible=None, enabled=None, text=None, color=None):
         """Updates the per-frame dynamic bits of a button in one call.
 
-        Passing `enabled=False` greys the button out, which is why colour and
+        Passing `enabled=False` greys the button out, which is why color and
         enabled-ness are set together rather than by separate assignments.
         """
         if visible is not None:
@@ -374,7 +374,7 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
 
     Nine screens carried their own copy of these four steps, between them using
     six different fills and four different borders for the same widget. The
-    colours come from the shared palette now. `font` stays a parameter because
+    colors come from the shared palette now. `font` stays a parameter because
     the boxes genuinely differ in size, from the unit-rename strip to the
     faction title bar.
 

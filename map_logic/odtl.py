@@ -7,7 +7,7 @@ the rest of GD5 needs to know about it.
 
 WHAT CROSSES, AND WHAT DOES NOT
 
-Provinces, borders, owners, nations with their colours and flags, alliances
+Provinces, borders, owners, nations with their colors and flags, alliances
 and wars, the date, and events as far as the two scripting systems overlap.
 
 The conversion is lossy in both directions, and the losses are not the same

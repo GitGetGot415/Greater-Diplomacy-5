@@ -3,11 +3,11 @@ import pygame
 import data.constants as c
 
 def avoid_chroma(color):
-    """Nudges a nation colour off the chroma key used as the map's colorkey.
+    """Nudges a nation color off the chroma key used as the map's colorkey.
 
     A nation painted in exactly COLOR_CHROMA_PINK would be punched out as
     transparent when the political map is blitted, so shift it by one bit of
-    red. Called wherever a nation colour reaches a surface -- conquest,
+    red. Called wherever a nation color reaches a surface -- conquest,
     core painting and the blended multi-core average all need the same guard.
     """
     if tuple(color) == c.COLOR_CHROMA_PINK:

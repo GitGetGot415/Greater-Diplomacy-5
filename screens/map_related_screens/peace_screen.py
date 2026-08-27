@@ -133,7 +133,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
 
 
 def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline=None):
-    """Paints the map as the deal would leave it, colouring only its signatories.
+    """Paints the map as the deal would leave it, coloring only its signatories.
 
     `baseline` is deal.baseline_owners -- the map the treaty starts from, which
     for a peace is the pre-war border rather than the front line.

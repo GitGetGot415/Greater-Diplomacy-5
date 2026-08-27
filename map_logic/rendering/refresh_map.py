@@ -16,7 +16,7 @@ _SHADE_LUT = np.stack([(np.arange(256) * f).astype(np.uint8) for f in _SHADE_FAC
 def compute_shading_levels(owner_2d, water_ids):
     """Works out which shading band every pixel falls in.
 
-    Depends only on how tiles are grouped by owner, never on the colours drawn
+    Depends only on how tiles are grouped by owner, never on the colors drawn
     on top -- which is what lets _build_map_surface reuse one result across the
     map modes that group tiles the same way.
     """
@@ -165,7 +165,7 @@ def _build_map_surface(map_screen, get_owner_and_color):
     
     return new_surf
 
-#: Colour for a tile nobody owns, in every map mode that draws one.
+#: Color for a tile nobody owns, in every map mode that draws one.
 UNOWNED_COLOR = (255, 255, 255)
 
 
@@ -305,7 +305,7 @@ BYSTANDER_COLOR = (100, 100, 100)
 
 
 def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
-    """The map as a treaty would leave it, with only its signatories coloured in.
+    """The map as a treaty would leave it, with only its signatories colored in.
 
     Returns a surface; unlike its neighbours it is not cached on the map screen,
     because it belongs to one open screen and one particular set of terms.
@@ -315,8 +315,8 @@ def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
     scattering of dots among two hundred countries painted exactly as they always
     are, which tells you where a treaty bites but nothing about who it is
     between. This is the Faction Territories treatment instead: the parties in
-    their own colours, everyone else flattened to grey, and the provinces the
-    treaty moves already painted in the colour of whoever is about to own them.
+    their own colors, everyone else flattened to grey, and the provinces the
+    treaty moves already painted in the color of whoever is about to own them.
 
     `transfers` is deal.tile_transfers -- the same dict deal_effects acts on --
     and `baseline` is deal.baseline_owners, the map underneath it if the treaty

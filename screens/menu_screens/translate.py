@@ -403,8 +403,8 @@ class Translate(GameState):
         if not self.status:
             return
         x = self.LIST_WIDTH + 40
-        colour = (120, 220, 150) if self.status_ok else (240, 130, 130)
-        fonts.draw_text_with_shadow(surface, self.status[:70], x, y, "small", colour)
+        color = (120, 220, 150) if self.status_ok else (240, 130, 130)
+        fonts.draw_text_with_shadow(surface, self.status[:70], x, y, "small", color)
         y += 22
 
         if self.notes:

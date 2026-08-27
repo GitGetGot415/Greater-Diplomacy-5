@@ -16,8 +16,6 @@ REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
-- color or colour???
-
 - combat width research? (ie increase combat width)
 - if multiple units are on a tile, controlled by multiple countries, fighting on the same side, then whatever
 country has the highest combat width level researched, that's the increase that will be implemented

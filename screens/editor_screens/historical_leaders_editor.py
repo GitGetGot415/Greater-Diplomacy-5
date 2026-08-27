@@ -191,7 +191,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             entry = _new_entry()
             entry["name"] = base.get("name", self.active_country)
             entry["adjective"] = base.get("adjective", "")
-            # Colour/flag/portrait all start unset (None) rather than
+            # Color/flag/portrait all start unset (None) rather than
             # pre-filled from the country's current appearance -- existing
             # countries keep whatever they already have until someone
             # deliberately opens the swatch and picks something for this entry.

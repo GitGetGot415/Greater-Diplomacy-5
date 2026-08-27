@@ -45,7 +45,7 @@ def _show_message_standalone(title, message, tk_parent, kind, on_result):
 def show_message(title, message, tk_parent=None, kind="info", on_result=None):
     """Drop-in replacement for messagebox.showinfo / showwarning / showerror.
 
-    `kind` picks the accent colour: "info", "success", "warning", or "error".
+    `kind` picks the accent color: "info", "success", "warning", or "error".
     on_result, if given, is called (with no arguments) once the user dismisses it.
     """
     surface = pygame.display.get_surface()

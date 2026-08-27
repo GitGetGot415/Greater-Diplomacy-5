@@ -101,11 +101,11 @@ class MultiplierTests(unittest.TestCase):
 
 
 class BandTests(unittest.TestCase):
-    """The word and the colour are one statement, so they come from one table."""
+    """The word and the color are one statement, so they come from one table."""
 
     def test_every_band_names_a_real_palette(self):
         for _bound, label, palette in politics.BANDS:
-            self.assertIn(palette, c.UI_COLORS, f"{label} is painted in a colour that does not exist")
+            self.assertIn(palette, c.UI_COLORS, f"{label} is painted in a color that does not exist")
 
     def test_the_axis_runs_light_blue_to_red(self):
         self.assertEqual(
@@ -113,7 +113,7 @@ class BandTests(unittest.TestCase):
             ["light_blue", "green", "yellow", "orange", "red"])
 
     def test_an_untouched_country_is_yellow(self):
-        """A blank map opens all one colour, because centrist is a position."""
+        """A blank map opens all one color, because centrist is a position."""
         self.assertEqual(politics.palette(c.POLITICS_START), "yellow")
         self.assertEqual(politics.palette(politics.value({"A": {}}, "A")), "yellow")
 
@@ -124,7 +124,7 @@ class BandTests(unittest.TestCase):
             self.assertEqual(politics.palette(value), expected[politics.label(value)])
 
     def test_the_bands_still_say_what_they_always_said(self):
-        """Adding colour must not have moved a boundary."""
+        """Adding color must not have moved a boundary."""
         self.assertEqual([politics.label(v) for v in range(-10, 11)],
                          ["Libertarian"] * 4 + ["Liberal"] * 4 + ["Centrist"] * 5
                          + ["Statist"] * 4 + ["Authoritarian"] * 4)

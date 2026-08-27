@@ -444,7 +444,7 @@ class _CondRow:
 
 class _ActRow:
     """One action. `field` is the single message store the original kept in msg_var:
-    the colour string and the image base64 live in it too, and the entry is simply
+    the color string and the image base64 live in it too, and the entry is simply
     not shown for the action types that write it through a picker instead."""
     def __init__(self, data=None):
         data = data or {}
@@ -863,10 +863,10 @@ class _EventEditScreen(_ModalScreen):
         """
         if kind == "color":
             try:
-                colour = tuple(int(v) for v in payload.split(","))[:3]
+                color = tuple(int(v) for v in payload.split(","))[:3]
             except (ValueError, AttributeError):
-                colour = (128, 128, 128)
-            pygame.draw.rect(surface, colour if len(colour) == 3 else (128, 128, 128), rect)
+                color = (128, 128, 128)
+            pygame.draw.rect(surface, color if len(color) == 3 else (128, 128, 128), rect)
             pygame.draw.rect(surface, (255, 255, 255), rect, 1)
             return
 
@@ -1064,11 +1064,11 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
                               lambda: self.open_event(None), preset="medium")
         self.elements.append(add_btn)
 
-        for x_off, width, colour, label, cb in ((210, 110, "orange", "Edit", self.edit_event),
+        for x_off, width, color, label, cb in ((210, 110, "orange", "Edit", self.edit_event),
                                                 (330, 60, "light_blue", "^", lambda: self.move_event(-1)),
                                                 (398, 60, "light_blue", "v", lambda: self.move_event(1))):
-            btn = self.button(self.events_x + x_off, btn_y, width, colour, label, cb, preset="medium")
-            btn.apply_state(enabled=has_sel, color=colour)
+            btn = self.button(self.events_x + x_off, btn_y, width, color, label, cb, preset="medium")
+            btn.apply_state(enabled=has_sel, color=color)
             self.elements.append(btn)
 
         remove_btn = self.button(p.right - self.PAD - 160, btn_y, 160, "red", "Remove",

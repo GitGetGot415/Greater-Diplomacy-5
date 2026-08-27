@@ -253,8 +253,8 @@ class Claims_Screen(MapOverlayScreen):
         return self.map_screen.nation_colors.get(tag, (255, 255, 255))
 
     def _panel_sections(self):
-        """The panel's contents, as a list of (header, header colour, rows,
-        empty-state text) where each row is (text, colour).
+        """The panel's contents, as a list of (header, header color, rows,
+        empty-state text) where each row is (text, color).
 
         Drawing and scroll measurement both walk this one list. They used to be
         a drawing loop and a parallel `40 + len(...) * 25` expression sitting

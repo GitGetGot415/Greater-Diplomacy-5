@@ -180,7 +180,7 @@ def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_wid
     """The standard modal panel: filled box, border, and a centred title.
 
     Every modal screen repeated this same three-step sequence with its own
-    slightly different colours and title offset. Defaults come from the shared
+    slightly different colors and title offset. Defaults come from the shared
     palette so they all land on one look; the arguments stay for the screens
     that genuinely need something else.
     """

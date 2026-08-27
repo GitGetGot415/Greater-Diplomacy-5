@@ -51,7 +51,7 @@ class TableScreen(GameState):
         #: one is given, so the economy and expenses tables are unaffected.
         self.on_row_click = on_row_click
         #: Optional callback taking the row dict and returning a background
-        #: colour, or None to leave the row striped as usual. Tables that pass
+        #: color, or None to leave the row striped as usual. Tables that pass
         #: nothing are drawn exactly as before.
         self.row_tint = row_tint
         #: (rect, row) for every row actually drawn last frame. Culled rows are

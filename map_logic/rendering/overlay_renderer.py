@@ -17,7 +17,7 @@ def combat_strengths(sides, nation_data, friendly_nations):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
     Read off combat_rules.build_battle, the same rule the turn resolver fights
-    by, so the bubble's colour cannot promise a result the turn will not
+    by, so the bubble's color cannot promise a result the turn will not
     produce. Lanes make this arithmetic honest for free: only the lanes a
     friendly nation actually stands in count, and only the front ranks in them,
     because that is exactly who will trade fire. The version this replaced had
@@ -637,7 +637,7 @@ def _cache_box(key, build):
     return box
 
 
-#: The border + colourised symbol art for one (unit type, nation colour,
+#: The border + colorized symbol art for one (unit type, nation color,
 #: inverted) combination, before the per-turn unit count is drawn on top.
 #: Unlike UNIT_BOXES this key excludes `count` and `size` -- a stack's count
 #: changes almost every turn on an active front, which used to invalidate the
@@ -688,7 +688,7 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
 
 
 def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
-    """One nation's box: its colour, the unit it leads with, and how many.
+    """One nation's box: its color, the unit it leads with, and how many.
 
     Drawn at UNIT_BOX_WIDTH x UNIT_BOX_HEIGHT and supersampled down to `size`,
     which is what keeps it crisp at any zoom. `inverted` is the tactical-mode

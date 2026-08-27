@@ -511,7 +511,7 @@ class VerdictTests(DealScreenTestCase):
 
 
 class ProjectedMapTests(DealScreenTestCase):
-    """The treaty preview colours the countries in the deal and greys the rest.
+    """The treaty preview colors the countries in the deal and greys the rest.
 
     It used to draw an ellipse over the ordinary political map for each province
     that changed hands -- a scattering of dots among two hundred countries
@@ -614,7 +614,7 @@ class ProjectedMapTests(DealScreenTestCase):
             refresh_map._build_map_surface = original
 
         # The clause hands one of the player's provinces to the enemy; the
-        # preview has to show it in the enemy's colour, not the player's.
+        # preview has to show it in the enemy's color, not the player's.
         self.assertEqual(self.map.id_to_province[wanted].get("owner"), self.player,
                          "nothing has actually changed hands yet")
         self.assertEqual(painted[wanted][0], self.enemy)

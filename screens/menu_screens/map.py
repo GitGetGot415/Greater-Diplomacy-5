@@ -249,7 +249,7 @@ def render_buttons(map_screen):
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
-    # The left-hand bar: one column, one size, one colour, one row per entry.
+    # The left-hand bar: one column, one size, one color, one row per entry.
     # Claims and Puppets route everyone to the native Pygame screen so they can
     # see the map highlights.
     left_bar_buttons = (
@@ -469,7 +469,7 @@ def update_button_states(map_screen):
 
         return
 
-    # Shorthand for the per-frame visible/enabled/text/colour updates below
+    # Shorthand for the per-frame visible/enabled/text/color updates below
     def set_btn(btn, visible, enabled, text, color="green"):
         if btn:
             btn.apply_state(visible=visible, enabled=enabled, text=text, color=color)

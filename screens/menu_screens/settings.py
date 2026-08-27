@@ -175,7 +175,7 @@ def render_settings_buttons(settings_screen):
                settings_screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"))
     )
 
-    # Edit/Reset pair for each path and colour row, driven off the screen's own table
+    # Edit/Reset pair for each path and color row, driven off the screen's own table
     for y, _kind, key, _label in settings_screen.PATH_ROWS:
         settings_screen.elements.extend([
             Button(SETTINGS_PATH_BOX_X + SETTINGS_PATH_EDIT_OFFSET_X, y, "small", "blue", "Edit", lambda k=key: settings_screen.edit_setting(k)),
@@ -202,7 +202,7 @@ class Settings(GameState):
         "ocean_dark_color":  ("OCEAN_DARK_BLUE",  "DEFAULT_OCEAN_DARK_BLUE",  "Select Zoom-Out Water Color"),
     }
 
-    # (y, kind, key, label) for the path/colour block in the middle of the screen.
+    # (y, kind, key, label) for the path/color block in the middle of the screen.
     # Shared by additional_draw here and by the Edit/Reset button rows in
     # render_settings_buttons above so the two cannot drift out of alignment.
     PATH_ROWS = [
@@ -396,11 +396,11 @@ class Settings(GameState):
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
-    #                     PATH & COLOUR PREFERENCES                      #
+    #                     PATH & COLOR PREFERENCES                       #
     # ------------------------------------------------------------------ #
 
     def apply_setting(self, key, value, refresh=True):
-        """Stores a path/colour on the screen, the controller and constants at once.
+        """Stores a path/color on the screen, the controller and constants at once.
 
         All three had to be written together for the change to take effect, and
         forgetting one was the failure mode of the per-setting methods this
@@ -415,7 +415,7 @@ class Settings(GameState):
             self.refresh_ui()
 
     def edit_setting(self, key):
-        """Opens the native picker for a path or colour setting."""
+        """Opens the native picker for a path or color setting."""
         current = getattr(self, key)
 
         def on_chosen(chosen):
@@ -430,7 +430,7 @@ class Settings(GameState):
             queries.ask_color(self, title, current, on_chosen)
 
     def reset_setting(self, key, refresh=True):
-        """Restores a path or colour setting to its shipped default."""
+        """Restores a path or color setting to its shipped default."""
         if key in self.DIR_FIELDS:
             default = self.DIR_FIELDS[key][1]
         else:
@@ -493,7 +493,7 @@ class Settings(GameState):
         font = fonts.get("normal")
         x = self.dir_box_x
 
-        # --- PATH BOXES & WATER COLOUR SWATCHES (Middle Top) ---
+        # --- PATH BOXES & WATER COLOR SWATCHES (Middle Top) ---
         for y, kind, key, label in self.PATH_ROWS:
             value = getattr(self, key)
 
@@ -501,7 +501,7 @@ class Settings(GameState):
                 surface.blit(font.render(label, True, (100, 100, 100)), (x, y - 20))
                 self.draw_text_field(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
             else:
-                # Colour rows label to the right of the row and show a swatch
+                # Color rows label to the right of the row and show a swatch
                 surface.blit(font.render(label, True, (100, 100, 100)), (x, y + 10))
                 swatch = pygame.Rect(x + self.DIR_BOX_W - self.COLOR_BOX_W, y,
                                      self.COLOR_BOX_W, self.DIR_BOX_H)

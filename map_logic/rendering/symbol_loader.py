@@ -596,10 +596,10 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     # Colorize and cache if a color is requested. Kept separate from the scaled
     # cache: colorizing is the expensive half and is worth keeping across zooms.
     if color:
-        colour_key = (img_key, color)
-        if colour_key not in COLORED_SYMBOLS:
-            COLORED_SYMBOLS[colour_key] = colorize_red_image(base_img, color)
-        target_img = COLORED_SYMBOLS[colour_key]
+        color_key = (img_key, color)
+        if color_key not in COLORED_SYMBOLS:
+            COLORED_SYMBOLS[color_key] = colorize_red_image(base_img, color)
+        target_img = COLORED_SYMBOLS[color_key]
     else:
         target_img = base_img
 

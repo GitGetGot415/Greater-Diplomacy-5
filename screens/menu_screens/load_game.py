@@ -13,7 +13,7 @@ class Load_Game(FolderListState):
 
     ROW_HEIGHT = 40
     ROW_TOP = 120
-    # (x, size preset, colour, label, handler name) for the buttons on every save row.
+    # (x, size preset, color, label, handler name) for the buttons on every save row.
     # A None label falls back to the folder name.
     ROW_BUTTONS = [
         (20, "save_file", "blue", None, "load_specific_save"),

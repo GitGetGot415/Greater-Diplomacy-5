@@ -166,7 +166,7 @@ class Menu(GameState):
         self._right_ground_draw_pos = self.right_ground_rect.topleft if self.right_ground_rect else (0, 0)
         self._left_ground_draw_pos = self.left_ground_rect.topleft if self.left_ground_rect else (0, 0)
 
-        # (y offset from centre, label, colour, icon, destination state) — one row
+        # (y offset from centre, label, color, icon, destination state) — one row
         # per menu entry, so adding a screen is a single line here.
         # A tenth row did not fit: at the old offsets it landed on top of the
         # Github and Discord links below. The whole column moves up 25 to make
