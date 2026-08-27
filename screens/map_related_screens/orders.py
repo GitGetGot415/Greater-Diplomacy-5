@@ -549,8 +549,10 @@ class Orders_Screen(GameState):
                 continue
 
             unit_name = unit.get("type", "")
+            unit_owner = unit.get("owner")
+            row_owner_color = self.map_screen.nation_colors.get(unit_owner, (200, 200, 200))
             icon = symbol_loader.get_symbol(
-                unit_name, zoom=UNIT_ICON_ZOOM, country=unit.get("owner"))
+                unit_name, zoom=UNIT_ICON_ZOOM, color=row_owner_color, country=unit_owner)
             self.unit_row_icons[index] = self.fit_icon(
                 icon, "small_square", padding=8)
 
