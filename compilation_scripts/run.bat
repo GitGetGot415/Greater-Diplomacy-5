@@ -1,8 +1,27 @@
 @echo off
 title Starting Greater Diplomacy 5...
 
-:: This script lives in compilation_scripts/, but venv/requirements.txt/main.py are all
-:: at the project root, so hop up one level from this script's own directory.
+:: This script normally lives in compilation_scripts/, with venv/requirements.txt/main.py
+:: at the project root one level up. But if someone moves/copies this .bat to the
+:: project root itself (e.g. for easier double-clicking), going up a level would land
+:: one folder too high. So check both spots and use whichever actually has main.py.
+if exist "%~dp0..\main.py" (
+    cd /d "%~dp0.."
+) else if exist "%~dp0main.py" (
+    cd /d "%~dp0"
+) else (
+    echo ============================================================
+    echo ERROR: Could not find main.py near this script.
+    echo ============================================================
+    echo This script expects to be inside the "compilation_scripts" folder
+    echo of the Greater Diplomacy 5 project, with main.py one level up.
+    echo.
+    echo Please make sure you kept the full project folder intact and run
+    echo this script from its original location inside compilation_scripts.
+    echo ============================================================
+    pause
+    exit /b 1
+)
 cd /d "%~dp0.."
 
 :: 1. Check if virtual environment already exists
