@@ -596,13 +596,20 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         screen = self.orders_screen()
         screen.draw(self.surface)
 
+        # The roster lists every unit fog of war lets the player see on this
+        # tile, not just their own -- so at least one foreign row that still
+        # fits inside the (unscrolled) viewport is expected alongside all of
+        # the player's own rows.
         visible_indices = set(screen.unit_row_icons)
-        self.assertEqual(visible_indices, set(owned_indices))
-        self.assertEqual(len(screen.action_buttons), len(visible_indices) * 6)
+        self.assertTrue(set(owned_indices).issubset(visible_indices))
+        foreign_visible = visible_indices - set(owned_indices)
+        self.assertTrue(foreign_visible)
+
+        self.assertEqual(len(screen.action_buttons), len(owned_indices) * 6)
         self.assertLessEqual(screen.row_height, 80 * 0.75)
         self.assertLessEqual(screen.PANEL_WIDTH, 570 * 0.85)
 
-        for index in visible_indices:
+        for index in owned_indices:
             with self.subTest(unit_index=index):
                 buttons = [button for button in screen.action_buttons
                            if button.unit_index == index]
@@ -612,9 +619,16 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
                     self.assertTrue(screen.panel_rect.contains(button.rect))
                     self.assertTrue(screen.scroll_content_rect.contains(button.rect))
 
+        # A foreign unit's row is shown, but carries no command buttons of
+        # its own -- that's the part of the roster the player can't touch.
+        for index in foreign_visible:
+            with self.subTest(foreign_unit_index=index):
+                self.assertFalse(
+                    [b for b in screen.action_buttons if b.unit_index == index])
+
         cancel_by_index = {index: rect for rect, index in screen.cancel_rects}
-        self.assertEqual(len(screen.cancel_rects), len(visible_indices))
-        self.assertEqual(set(cancel_by_index), visible_indices)
+        self.assertEqual(len(screen.cancel_rects), len(owned_indices))
+        self.assertEqual(set(cancel_by_index), set(owned_indices))
         for rect in cancel_by_index.values():
             self.assertTrue(screen.panel_rect.contains(rect))
             self.assertTrue(screen.scroll_content_rect.contains(rect))

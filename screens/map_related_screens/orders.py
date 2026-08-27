@@ -9,7 +9,7 @@ from map_logic.rendering import symbol_loader
 from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
-from ui import event_handler, sidebar_info
+from ui import event_handler
 from map_logic.camera import camera_handler
 from screens.map_related_screens import battle_screen
 
@@ -457,17 +457,31 @@ class Orders_Screen(GameState):
                               lambda idx=index: self.start_bombard_targeting(idx),
                               "Bombardment Arrows")
 
-        if is_tactical and unit is not self.map_screen.player_unit:
-            for button in buttons:
-                button.apply_state(enabled=False)
-                button.help_text = "Tactical mode: this is not your unit"
-
         # Rename gets the name field and one Save glyph to itself. This is the
         # compact counterpart of the old row hiding its other five buttons.
         if self.renaming_unit_index == index:
             for button in buttons:
                 if button is not btn_rename:
                     button.apply_state(visible=False)
+
+    def _visible_rows(self):
+        """(index, unit) pairs to list on the roster: every unit fog of war
+        lets the player see on this tile. A tile fully hidden by fog still
+        lists the player's own units on it -- never hidden from their owner
+        -- but nothing belonging to anyone else.
+        """
+        units = self.target_province.get("units", [])
+        player_country = self.map_screen.player_country
+        is_visible = queries.is_province_visible(
+            self.map_screen, self.target_province["id"])
+        if not is_visible:
+            return [(i, u) for i, u in enumerate(units)
+                   if u.get("owner") == player_country]
+
+        visible = queries.filter_visible_units(
+            units, player_country, self.target_province, self.map_screen.nation_data)
+        visible_ids = {id(u) for u in visible}
+        return [(i, u) for i, u in enumerate(units) if id(u) in visible_ids]
 
     def refresh_ui(self):
         self.view_mode_buttons = view_mode_buttons.build(
@@ -485,11 +499,10 @@ class Orders_Screen(GameState):
         is_tactical = self.map_screen.tactical_mode
         player_country = self.map_screen.player_country
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
-        read_only = getattr(self, "read_only", False)
-        display_units = units if read_only else [
-            unit for unit in units if unit.get("owner") == player_country]
+        player_units = [u for u in units if u.get("owner") == player_country]
+        rows = self._visible_rows()
 
-        total_content_h = len(display_units) * self.row_height
+        total_content_h = len(rows) * self.row_height
         self.max_scroll_y = min(0, self.panel_max_h - total_content_h)
         self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
         self.scroll_content_rect = pygame.Rect(
@@ -497,9 +510,9 @@ class Orders_Screen(GameState):
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
         row_guard = self.content_hover_guard()
 
-        if display_units and not read_only:
+        if player_units:
             button_x = self.PANEL_X + PANEL_INSET
-            if len(display_units) > 1:
+            if len(player_units) > 1:
                 all_color = "grey" if is_tactical else (
                     "blue" if self.selected_unit_index == "ALL" else "grey")
                 btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
@@ -519,49 +532,49 @@ class Orders_Screen(GameState):
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
 
-        if read_only:
-            return
-
         in_combat = queries.is_nation_in_combat_here(
             player_country, self.target_province, self.map_screen.nation_data)
         is_water = queries.is_water_province(self.target_province)
         is_coastal = self.target_province.get("is_coastal", False)
         is_factory = queries.has_industry(self.target_province)
 
-        display_index = 0
-        for index, unit in enumerate(units):
-            if unit.get("owner") != player_country:
-                continue
-
+        for display_index, (index, unit) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
             row_rect = pygame.Rect(
                 self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
                 self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
                 self.row_height)
 
-            if row_rect.colliderect(self.scroll_content_rect):
-                hitbox = _OrdersRowHitbox(
-                    pygame.Rect(row_rect.x, row_rect.y,
-                                ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
-                                self.row_height),
-                    lambda idx=index: self.select_unit(idx))
-                hitbox.is_scrollable = True
-                hitbox.click_guard = row_guard
-                if is_tactical and unit is not self.map_screen.player_unit:
-                    hitbox.disabled = True
-                self.elements.append(hitbox)
+            if not row_rect.colliderect(self.scroll_content_rect):
+                continue
 
-                unit_name = unit.get("type", "")
-                icon = symbol_loader.get_symbol(
-                    unit_name, zoom=UNIT_ICON_ZOOM, country=unit.get("owner"))
-                self.unit_row_icons[index] = self.fit_icon(
-                    icon, "small_square", padding=8)
+            unit_name = unit.get("type", "")
+            icon = symbol_loader.get_symbol(
+                unit_name, zoom=UNIT_ICON_ZOOM, country=unit.get("owner"))
+            self.unit_row_icons[index] = self.fit_icon(
+                icon, "small_square", padding=8)
 
-                self._build_unit_action_buttons(
-                    index, unit, row_y, row_guard, in_combat, is_water,
-                    is_coastal, is_factory, player_research)
+            # Not this player's unit, or (Tactical Mode) one of their own
+            # units that isn't the one they're piloting -- still listed with
+            # its icon/name/health, just nothing to click and no command
+            # column to the right of it.
+            selectable = (unit.get("owner") == player_country
+                         and not self._command_blocked_silent(unit))
+            if not selectable:
+                continue
 
-            display_index += 1
+            hitbox = _OrdersRowHitbox(
+                pygame.Rect(row_rect.x, row_rect.y,
+                            ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
+                            self.row_height),
+                lambda idx=index: self.select_unit(idx))
+            hitbox.is_scrollable = True
+            hitbox.click_guard = row_guard
+            self.elements.append(hitbox)
+
+            self._build_unit_action_buttons(
+                index, unit, row_y, row_guard, in_combat, is_water,
+                is_coastal, is_factory, player_research)
 
     def start_renaming(self, index):
         units = self.target_province.get("units", [])
@@ -1077,9 +1090,9 @@ class Orders_Screen(GameState):
             self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
             self.row_height)
-        selected = self.selected_unit_index in (unit_index, "ALL")
-        tactical_other = (self.map_screen.tactical_mode
-                          and unit is not self.map_screen.player_unit)
+        is_own = unit.get("owner") == self.map_screen.player_country
+        selectable = is_own and not self._command_blocked_silent(unit)
+        selected = selectable and self.selected_unit_index in (unit_index, "ALL")
 
         if selected:
             row_color = (45, 68, 68)
@@ -1092,8 +1105,9 @@ class Orders_Screen(GameState):
                          c.COLOR_GOLD_HIGHLIGHT if selected else (62, 66, 74),
                          row_rect, 1)
 
-        strip_color = owner_color if selected else tuple(max(35, channel // 2)
-                                                          for channel in owner_color)
+        row_owner_color = self.map_screen.nation_colors.get(unit.get("owner"), owner_color)
+        strip_color = row_owner_color if selected else tuple(max(35, channel // 2)
+                                                              for channel in row_owner_color)
         pygame.draw.rect(surface, strip_color,
                          (row_rect.x, row_rect.y, 4, row_rect.height))
 
@@ -1118,7 +1132,7 @@ class Orders_Screen(GameState):
             draw_text_box(surface, box_rect, self.rename_text, active=True,
                           font=tiny_font, pad_x=5)
         else:
-            name_color = c.UI_TEXT_MUTED if tactical_other else (245, 245, 245)
+            name_color = (245, 245, 245) if selectable else c.UI_TEXT_MUTED
             name = fit_text(
                 unit.get("custom_name", unit.get("type", "Unit")),
                 small_font, text_width)
@@ -1132,7 +1146,16 @@ class Orders_Screen(GameState):
             except (TypeError, ValueError):
                 hp, max_hp = 0.0, 1.0
             hp_ratio = max(0.0, min(1.0, hp / max_hp))
-            summary, summary_color = self._order_summary(unit_index, unit)
+            if is_own:
+                # A foreign unit's order (where it's headed, what it's doing)
+                # is never shown -- that would leak private intel the player
+                # has no business seeing. Its owner is fair game, same as the
+                # map/sidebar already reveal.
+                summary, summary_color = self._order_summary(unit_index, unit)
+            else:
+                owner_id = unit.get("owner", "Unknown")
+                summary = self.map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
+                summary_color = c.UI_TEXT_MUTED
             status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}",
                               tiny_font, text_width)
             surface.blit(tiny_font.render(status, True, summary_color),
@@ -1154,7 +1177,7 @@ class Orders_Screen(GameState):
 
         order = unit.get("order")
         has_order = isinstance(order, dict) and bool(order)
-        if has_order and not self._command_blocked_silent(unit):
+        if is_own and has_order and not self._command_blocked_silent(unit):
             cancel_x = (self.PANEL_X + ACTION_START_OFFSET_X
                         + (6 * ACTION_BUTTON_STEP_X) + CANCEL_BOX_GAP_X)
             cancel_rect = pygame.Rect(cancel_x, row_y + CANCEL_BOX_OFFSET_Y,
@@ -1165,7 +1188,7 @@ class Orders_Screen(GameState):
             surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
             self.cancel_rects.append((cancel_rect, unit_index))
 
-    def _draw_panel_header(self, surface, units, player_units, read_only):
+    def _draw_panel_header(self, surface, rows, player_units, read_only):
         title_font = fonts.get("heading2")
         tiny_font = fonts.get("tiny")
         title = fit_text(f"ORDERS | PROVINCE {self.target_province['id']}",
@@ -1175,7 +1198,7 @@ class Orders_Screen(GameState):
                       PANEL_Y + HEADER_TITLE_OFFSET_Y))
 
         if read_only:
-            meta = f"READ ONLY | {len(units)} unit{'s' if len(units) != 1 else ''}"
+            meta = f"READ ONLY | {len(rows)} unit{'s' if len(rows) != 1 else ''}"
         elif self.selected_unit_index == "ALL":
             meta = f"{len(player_units)} UNITS | ALL SELECTED"
         elif isinstance(self.selected_unit_index, int):
@@ -1274,67 +1297,49 @@ class Orders_Screen(GameState):
         read_only = getattr(self, "read_only", False)
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
+        rows = self._visible_rows()
 
         # Force the selected province's orders through fog-of-war before the
         # opaque roster is painted, so arrows stay visible on the map without
         # ever drawing across the panel itself.
-        if not read_only:
-            for unit in player_units:
-                order = unit.get("order", {})
-                if not isinstance(order, dict):
-                    continue
-                path = order.get("path", [])
-                if path:
-                    overlay_renderer.draw_split_movement_path(
-                        surface, self.map_screen, self.target_province, path,
-                        unit.get("speed", 1), owner_color, force_visible=True)
-                elif order.get("type") == "BOMBARD":
-                    target_id = order.get("target_id")
-                    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                    overlay_renderer.draw_bombardment_arrow(
-                        surface, self.map_screen, self.target_province, target_id,
-                        bomb_range, force_visible=True)
+        for unit in player_units:
+            order = unit.get("order", {})
+            if not isinstance(order, dict):
+                continue
+            path = order.get("path", [])
+            if path:
+                overlay_renderer.draw_split_movement_path(
+                    surface, self.map_screen, self.target_province, path,
+                    unit.get("speed", 1), owner_color, force_visible=True)
+            elif order.get("type") == "BOMBARD":
+                target_id = order.get("target_id")
+                bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                overlay_renderer.draw_bombardment_arrow(
+                    surface, self.map_screen, self.target_province, target_id,
+                    bomb_range, force_visible=True)
 
         ui_bars.draw_translucent_panel(
             surface, self.panel_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
             border_color=PANEL_BORDER_COLOR, radius=3)
-        self._draw_panel_header(surface, units, player_units, read_only)
+        self._draw_panel_header(surface, rows, player_units, read_only)
 
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
             self.PANEL_X + 2, self.panel_top,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
 
-        if read_only:
-            # Viewing a tile the player holds nothing on: show the same
-            # garrison/combat roster as the province sidebar (see
-            # ui.sidebar_info.draw_unit_roster), anchored to this panel's
-            # usual left-hand spot instead of the sidebar's right-hand one.
-            is_visible = queries.is_province_visible(self.map_screen, self.target_province["id"])
-            visible_units = queries.filter_visible_units(
-                units, self.map_screen.player_country, self.target_province, self.map_screen.nation_data)
-
-            with ui_bars.clip_scroll_region(surface, content_rect,
-                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
-                end_y = sidebar_info.draw_unit_roster(
-                    self.map_screen, surface, self.target_province, visible_units, is_visible,
-                    self.PANEL_X + 2, self.panel_top + self.scroll_y,
-                    self.PANEL_WIDTH - SCROLLBAR_WIDTH - 4)
-
-            # Rows are variable height (combat lanes, bombard lines, ...), so
-            # the scroll ceiling is re-derived from what actually got drawn
-            # this frame rather than a fixed row_height guess -- same as the
-            # sidebar does for its own copy of this list.
-            content_height = end_y - (self.panel_top + self.scroll_y)
-            self.max_scroll_y = min(0, self.panel_max_h - content_height)
-            self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
-        else:
-            display_index = 0
-            with ui_bars.clip_scroll_region(surface, content_rect,
-                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
-                for i, unit in enumerate(units):
-                    if unit.get("owner") != self.map_screen.player_country:
-                        continue
-
+        # One roster, always: every unit fog of war lets the player see on
+        # this tile gets a row (icon/name/health). Only rows for units the
+        # player can actually command -- built in refresh_ui -- carry a
+        # selection hitbox and the command column to their right.
+        with ui_bars.clip_scroll_region(surface, content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
+            if not rows:
+                is_visible = queries.is_province_visible(self.map_screen, self.target_province["id"])
+                empty_text = "(Hidden by Fog of War)" if not is_visible else "(No units here)"
+                surface.blit(tiny_font.render(empty_text, True, c.UI_TEXT_MUTED),
+                             (self.PANEL_X + PANEL_INSET, self.panel_top + self.scroll_y))
+            else:
+                for display_index, (index, unit) in enumerate(rows):
                     y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
                     row_rect = pygame.Rect(
                         self.PANEL_X + UNIT_ROW_X_OFFSET, y_pos,
@@ -1342,10 +1347,8 @@ class Orders_Screen(GameState):
                         self.row_height)
                     if row_rect.colliderect(content_rect):
                         self._draw_unit_row(
-                            surface, i, unit, y_pos, display_index,
+                            surface, index, unit, y_pos, display_index,
                             owner_color, small_font, tiny_font)
-
-                    display_index += 1
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
