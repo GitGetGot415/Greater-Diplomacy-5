@@ -23,6 +23,7 @@ assets/music/*
 !assets/music/Greater Diplomacy 5/
 
 context/combined_scripts.txt
+assets/characters/custom
 
 build
 dist

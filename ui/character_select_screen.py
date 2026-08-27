@@ -42,7 +42,7 @@ def _natural_key(path):
 
 
 def is_custom_portrait(rel_path):
-    """True for anything imported via the "+ Add New" tile (assets/characters/Custom/...)."""
+    """True for anything imported via the "+ Add New" tile (assets/characters/custom/...)."""
     return rel_path.replace(os.sep, "/").startswith(_CUSTOM_PREFIX)
 
 
@@ -114,7 +114,7 @@ class CharacterSelectScreen(ModalScreen):
 
     def add_custom_portrait(self):
         """Opens a file picker (starting in Downloads) and copies whatever
-        image is chosen into assets/characters/Custom/, then refreshes the
+        image is chosen into assets/characters/custom/, then refreshes the
         grid so it shows up right away -- no confirm dialog, since unlike a
         mod import this can't run any code, it's just a picture."""
         from data import queries

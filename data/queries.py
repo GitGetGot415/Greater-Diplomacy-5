@@ -3736,7 +3736,7 @@ def import_mod_file(game_state, on_success=None):
 
 def import_character_portrait(game_state, on_success=None):
     """Prompts for an image file (starting in Downloads) and copies it into
-    assets/characters/Custom/, where the portrait picker's discover_character_images()
+    assets/characters/custom/, where the portrait picker's discover_character_images()
     picks it up like any curated portrait. Unlike import_mod_file, this needs no
     trust warning first -- an image can't run code, it can only be displayed.
 
