@@ -92,6 +92,58 @@ def combat_outlook_color(sides, nation_data, friendly_nations):
     return (255, 255, 0)
 
 
+def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
+    """Estimate future volleys until a battle has no hostile lane remaining.
+
+    This is deliberately a small, non-mutating simulation of the resolver:
+    it rebuilds lanes after every simultaneous exchange, applies the same
+    grouped damage function, and includes a province's fort defense when one
+    is supplied.  ``None`` means the current rules produce a stalemate (or the
+    estimate would exceed the safety limit), which the bubble displays as ``?``.
+    """
+    simulated_sides = [
+        [dict(unit) for unit in side if unit.get("health", 0) > 0]
+        for side in sides
+    ]
+
+    def defense_bonus(unit):
+        if province is None:
+            return 0
+        return queries.get_fort_defense_bonus(
+            province, unit, nation_data, combat_active=True)
+
+    for turns in range(max_turns + 1):
+        battle = combat_rules.build_battle(simulated_sides, nation_data)
+        if not battle.lanes:
+            return turns
+
+        exchanges = list(combat_rules.exchange(battle, nation_data))
+        if not exchanges:
+            return None
+
+        health_before = sum(
+            max(0, float(unit.get("health", 0)))
+            for side in simulated_sides for unit in side
+        )
+        for targets, total_attack in exchanges:
+            combat_processor.apply_group_damage(
+                total_attack, targets, defense_bonus)
+
+        for index, side in enumerate(simulated_sides):
+            simulated_sides[index] = [
+                unit for unit in side if unit.get("health", 0) > 0
+            ]
+
+        health_after = sum(
+            max(0, float(unit.get("health", 0)))
+            for side in simulated_sides for unit in side
+        )
+        if health_after >= health_before:
+            return None
+
+    return None
+
+
 def _combat_friendly_nations(map_screen):
     player = map_screen.player_country
     if player in (None, "", "Spectator", "Editor") or getattr(map_screen, "is_editor", False):
@@ -137,6 +189,8 @@ def combat_bubble_records(map_screen):
                     None, player, map_screen.nation_data, midpoint=True),
                 "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
                 "potential": True,
+                "estimated_turns": estimated_combat_turns(
+                    sides, map_screen.nation_data),
                 "unit_ids": {id(unit) for side in sides for unit in side},
                 # A predicted meeting is drawn at a virtual location. The
                 # movers remain visible on their endpoint tiles until combat
@@ -164,6 +218,8 @@ def combat_bubble_records(map_screen):
                 province, player, map_screen.nation_data),
             "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
             "potential": not actual_battle,
+            "estimated_turns": estimated_combat_turns(
+                sides, map_screen.nation_data, province=province),
             "unit_ids": battle_unit_ids,
             # Incoming attackers belong to the predicted fight, but are still
             # physically on their origin tiles. Only units currently on the
@@ -190,6 +246,8 @@ def combat_bubble_records(map_screen):
                 None, player, map_screen.nation_data, midpoint=True),
             "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
             "potential": False,
+            "estimated_turns": estimated_combat_turns(
+                sides, map_screen.nation_data),
             "unit_ids": {id(unit) for unit in units},
             "hidden_unit_ids": {id(unit) for unit in units},
             "edge_pair": edge["pair"],
@@ -203,6 +261,34 @@ def _combat_bubble_symbol(record, zoom):
     alpha = 128 if record.get("potential") else 255
     return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
                                     color=record["color"], alpha=alpha)
+
+
+def _draw_combat_bubble_turns(surface, rect, bubble, record):
+    """Draw the estimated remaining turns at the bubble's visual center."""
+    turns = record.get("estimated_turns")
+    label = "?" if turns is None else str(max(0, int(turns)))
+    text = fonts.get("tiny").render(label, True, (255, 255, 255))
+
+    # Bubble art is intentionally small. Scale the label to the central area so
+    # two-digit estimates remain legible without spilling over the outline.
+    max_width = max(1, int(bubble.get_width() * 0.68))
+    max_height = max(1, int(bubble.get_height() * 0.68))
+    scale = min(1.0, max_width / text.get_width(),
+                max_height / text.get_height())
+    if scale < 1.0:
+        text = pygame.transform.smoothscale(
+            text, (max(1, int(text.get_width() * scale)),
+                   max(1, int(text.get_height() * scale))))
+
+    alpha = 128 if record.get("potential") else 255
+    text.set_alpha(alpha)
+    shadow = text.copy()
+    shadow.fill((0, 0, 0, alpha), special_flags=pygame.BLEND_RGBA_MULT)
+
+    text_pos = text.get_rect(center=rect.center)
+    shadow_pos = text_pos.move(1, 1)
+    surface.blit(shadow, shadow_pos)
+    surface.blit(text, text_pos)
 
 
 def _combat_bubble_key(record):
@@ -269,6 +355,7 @@ def _draw_combat_bubble(surface, map_screen, record):
             if _combat_bubble_is_hovered(map_screen, record):
                 bubble = _highlight_combat_bubble(bubble)
             surface.blit(bubble, rect)
+            _draw_combat_bubble_turns(surface, rect, bubble, record)
 
 
 def draw_combat_bubbles(map_screen, surface, records=None):
