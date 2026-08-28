@@ -987,7 +987,7 @@ MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 # Total units that fire on one tile, across every lane. Not per nation: the
 # number this replaced was applied per nation column, so five countries on a
 # tile fired five times twelve.
-COMBAT_WIDTH = 24
+COMBAT_WIDTH = 16
 # 12
 # 16
 # 18
