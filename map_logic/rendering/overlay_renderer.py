@@ -20,7 +20,6 @@ COMBAT_BUBBLE_ASSETS = {
     queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
     queries.COMBAT_LOCATION_MIDPOINT: "Midpoint Bubble",
 }
-POTENTIAL_BUBBLE_ASSET = "Potential Bubble"
 # Bubble art is intentionally compact so it does not hide the unit/order
 # information around the tile.  The hit test below uses the image alpha mask,
 # so there is no separate square padding to make the clickable area larger than
@@ -169,7 +168,8 @@ def combat_bubble_records(map_screen):
             # Incoming attackers belong to the predicted fight, but are still
             # physically on their origin tiles. Only units currently on the
             # battle tile are hidden under its bubble.
-            "hidden_unit_ids": battle_unit_ids & current_unit_ids,
+            "hidden_unit_ids": (set() if not actual_battle
+                                else battle_unit_ids & current_unit_ids),
             "orders_province_id": province["id"],
         })
 
@@ -199,10 +199,10 @@ def combat_bubble_records(map_screen):
 
 
 def _combat_bubble_symbol(record, zoom):
-    asset = (POTENTIAL_BUBBLE_ASSET if record.get("potential")
-             else COMBAT_BUBBLE_ASSETS[record["category"]])
+    asset = COMBAT_BUBBLE_ASSETS[record["category"]]
+    alpha = 128 if record.get("potential") else 255
     return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
-                                    color=record["color"])
+                                    color=record["color"], alpha=alpha)
 
 
 def _combat_bubble_key(record):
