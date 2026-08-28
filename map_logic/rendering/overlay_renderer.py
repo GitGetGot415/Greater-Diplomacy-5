@@ -4,7 +4,7 @@ import data.constants as c
 from data import queries
 from map_logic.rendering import map_utils, symbol_loader
 from map_logic.rendering.font_manager import fonts
-from map_logic.turn_processing import combat_rules
+from map_logic.turn_processing import combat_processor, combat_rules
 
 #: How far outside the viewport a province centre may sit and still be drawn.
 #: A province is culled by its centre, but what hangs off it is much bigger than
@@ -450,7 +450,8 @@ def draw_overlay_content(map_screen, surface):
                     # province visibility and per-submarine visibility are
                     # separate layers.
                     visible_units = queries.filter_visible_units(
-                        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+                        queries.units_on_province(province), map_screen.player_country,
+                        province, map_screen.nation_data)
 
                     if visible_units:
                         draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
@@ -653,6 +654,9 @@ def draw_overlay_content(map_screen, surface):
                                     pygame.draw.rect(surface, (255, 255, 255), rect, 1)
                                     current_x += w_scaled + icon_spacing
 
+    if map_screen.secondary_mode == "UNITS":
+        draw_edge_battles(map_screen, surface)
+
 #: Composed unit boxes, keyed by everything that is drawn into one. Building a
 #: box means a fresh surface, a colorized symbol, two font renders and a
 #: supersampled downscale, and a zoomed-out map asks for a few hundred of them a
@@ -805,12 +809,16 @@ def unknown_box(size):
     return _cache_box(("?", (), 0, False, size), build)
 
 
-def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
+def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
+                   units=None, units_are_visible=False):
     # Filtered up front: a lone hidden submarine must not even trip the "?"
     # partial-fog blip, or its position leaks through despite being otherwise
     # invisible to anyone who isn't allied or already fighting it.
-    units = queries.filter_visible_units(
-        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+    if units is None:
+        units = queries.units_on_province(province)
+    if not units_are_visible:
+        units = queries.filter_visible_units(
+            units, map_screen.player_country, province, map_screen.nation_data)
     if not units:
         return
 
@@ -886,6 +894,64 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False):
 
         # Move the offset down for the next owner's box in the stack
         current_sy += scaled_h + gap
+
+
+def draw_edge_battles(map_screen, surface):
+    """Paint every persistent battle at its clickable midpoint marker."""
+    visible = getattr(map_screen, "visible_provinces", None)
+    partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
+    player = map_screen.player_country
+    friendly = queries.get_all_friendly_nations(player, map_screen.nation_data)
+    radius = max(12, int(14 * map_screen.camera.zoom))
+    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+
+    for record in combat_processor.edge_battles(map_screen):
+        first_id, second_id = record["pair"]
+        full = visible is None or first_id in visible or second_id in visible
+        partly_seen = first_id in partial or second_id in partial
+        own_unit = any(u.get("owner") in friendly
+                       for u in record["side1"] + record["side2"])
+        if not (full or partly_seen or own_unit):
+            continue
+
+        first = map_screen.id_to_province[first_id]
+        second = map_screen.id_to_province[second_id]
+        shown = []
+        for units, province in ((record["side1"], first), (record["side2"], second)):
+            endpoint_seen = visible is None or province["id"] in visible
+            if endpoint_seen:
+                shown.extend(queries.filter_visible_units(
+                    units, player, province, map_screen.nation_data))
+            else:
+                # A player always sees their own forces even if their endpoint
+                # is otherwise fogged; enemy identities remain hidden.
+                shown.extend(u for u in units if u.get("owner") in friendly)
+
+        world = combat_processor.edge_battle_midpoint(map_screen, record)
+        friendly_atk, enemy_atk, involved = combat_strengths(
+            [record["side1"], record["side2"]], map_screen.nation_data, friendly)
+        color = ((150, 150, 150) if not involved else
+                 (0, 220, 90) if friendly_atk > enemy_atk else
+                 (220, 70, 70) if enemy_atk > friendly_atk else (235, 205, 60))
+
+        for offset in offsets:
+            sx, sy = queries.world_to_screen(world, map_screen, offset)
+            sx, sy = int(sx), int(sy)
+            if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
+                    and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+                continue
+            pygame.draw.circle(surface, (18, 18, 18), (sx, sy), radius + 3)
+            pygame.draw.circle(surface, color, (sx, sy), radius, max(2, int(2 * map_screen.camera.zoom)))
+            symbol = symbol_loader.get_symbol("Attack", max(0.55, map_screen.camera.zoom * 0.8),
+                                              color=color)
+            if symbol:
+                symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor,
+                                               c.APPLY_TILT_TO_OVERLAYS)
+                surface.blit(symbol, symbol.get_rect(center=(sx, sy)))
+            if shown:
+                draw_unit_icon(map_screen, surface, sx, sy - radius - 8, first,
+                               is_partial=not full and not own_unit,
+                               units=shown, units_are_visible=True)
     
 def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_color, force_visible=False):
     """Standardized helper to draw multi-segment movement paths with queued opacity."""

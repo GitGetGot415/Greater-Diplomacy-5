@@ -47,7 +47,7 @@ def draw_tooltip(map_screen, surface):
         # "something is here" partial-fog hint, or its position leaks through
         # the "?" blip despite being otherwise invisible.
         visible_units = queries.filter_visible_units(
-            prov.get("units", []), map_screen.player_country, prov, map_screen.nation_data)
+            queries.units_on_province(prov), map_screen.player_country, prov, map_screen.nation_data)
         if not is_visible:
             if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and visible_units:
                 lines.append("- ? (Unknown Units)")

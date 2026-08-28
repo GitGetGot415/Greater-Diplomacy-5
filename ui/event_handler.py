@@ -1,6 +1,6 @@
 import pygame
 from map_logic.rendering import map_utils
-from map_logic.turn_processing import edit_province_ownership
+from map_logic.turn_processing import combat_processor, edit_province_ownership
 import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic.setup import player_setup
@@ -320,6 +320,26 @@ def handle_map_events(map_screen, event):
                 else:
                     player_setup.select_player_country(map_screen, map_screen.hovered_province)
         return
+
+    # Midpoint battles are virtual map locations, so their marker must win the
+    # click before the id-map resolves the province underneath it.  They open a
+    # dedicated battle/retreat panel rather than pretending one endpoint owns
+    # the troops in the middle.
+    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+            and not map_screen.viewing_ai_moves):
+        edge_battle = combat_processor.edge_battle_at_screen_pos(map_screen, event.pos)
+        if edge_battle is not None and map_screen.visible_provinces is not None:
+            visible_end = any(province_id in map_screen.visible_provinces
+                              for province_id in edge_battle["pair"])
+            friendly = queries.get_all_friendly_nations(
+                map_screen.player_country, map_screen.nation_data)
+            own_unit = any(unit.get("owner") in friendly
+                           for unit in edge_battle["side1"] + edge_battle["side2"])
+            if not visible_end and not own_unit:
+                edge_battle = None
+        if edge_battle is not None:
+            battle_screen.open_edge_battle_screen(map_screen, edge_battle)
+            return
 
     # --- Direct Map Message Editing ---
     # Moved ABOVE the "STANDARD GAME SELECTION" return block!

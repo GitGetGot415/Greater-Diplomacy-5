@@ -138,6 +138,8 @@ def draw_map_screen(map_screen, surface):
     if map_screen.secondary_mode == "UNITS":
         for province in map_screen.map_data.values():
             for unit in province.get("units", []):
+                if queries.is_unit_in_edge_battle(unit):
+                    continue
                 order = unit.get("order")
                 if not order:
                     continue

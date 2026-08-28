@@ -154,7 +154,7 @@ class Orders_Screen(GameState):
             self.map_screen.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
 
         # --- Auto-select logic ---
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
 
         # A province you command nothing in is still worth reading -- what is
         # standing on the front you are about to walk into, and what orders it
@@ -499,7 +499,7 @@ class Orders_Screen(GameState):
         lists the player's own units on it -- never hidden from their owner
         -- but nothing belonging to anyone else.
         """
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         player_country = self.map_screen.player_country
         is_visible = queries.is_province_visible(
             self.map_screen, self.target_province["id"])
@@ -524,7 +524,7 @@ class Orders_Screen(GameState):
         self.action_buttons = []
         self.unit_row_icons = {}
 
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         is_tactical = self.map_screen.tactical_mode
         player_country = self.map_screen.player_country
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
@@ -623,7 +623,7 @@ class Orders_Screen(GameState):
                 is_coastal, is_factory, player_research)
 
     def start_renaming(self, index):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
@@ -632,7 +632,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def save_unit_name(self, index):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
@@ -649,7 +649,7 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback("Cannot repair during combat!")
             return
 
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if not (0 <= index < len(units)): return
 
         unit = units[index]
@@ -703,7 +703,7 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback("Cannot upgrade without a factory!")
             return
 
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if not (0 <= index < len(units)): return
 
         unit = units[index]
@@ -720,7 +720,7 @@ class Orders_Screen(GameState):
 
     def start_bombard_targeting(self, index):
         """Arms a gun and waits for the player to click the tile it should shell."""
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if not (0 <= index < len(units)): return
 
         if self._command_blocked(units[index]):
@@ -735,7 +735,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def set_bombard_target(self, index, dest):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if not (0 <= index < len(units)):
             self.bombarding_unit_index = None
             return
@@ -767,7 +767,7 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def disband_unit(self, index):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if 0 <= index < len(units):
             unit = units[index]
             if self._command_blocked(unit):
@@ -785,7 +785,7 @@ class Orders_Screen(GameState):
             return
         # -----------------------------------------------------
 
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if 0 <= index < len(units):
             unit = units[index]
             if self._command_blocked(unit):
@@ -815,7 +815,7 @@ class Orders_Screen(GameState):
             self.refresh_ui()
 
     def cancel_unit_order(self, index):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
@@ -834,7 +834,7 @@ class Orders_Screen(GameState):
                 self.refresh_ui()
 
     def clear_all_orders(self):
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         cleared_any = False
         cancelled_targeting = self.bombarding_unit_index is not None
         self.bombarding_unit_index = None
@@ -988,7 +988,7 @@ class Orders_Screen(GameState):
             dest = queries.get_clicked_province(event.pos, self.map_screen)
             if not dest: return
 
-            units = self.target_province.get("units", [])
+            units = queries.units_on_province(self.target_province)
 
             if self.selected_unit_index == "ALL":
                 target_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
@@ -1350,7 +1350,7 @@ class Orders_Screen(GameState):
         small_font = fonts.get("small")
         tiny_font = fonts.get("tiny")
 
-        units = self.target_province.get("units", [])
+        units = queries.units_on_province(self.target_province)
         read_only = getattr(self, "read_only", False)
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))

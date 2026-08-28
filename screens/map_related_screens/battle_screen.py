@@ -32,7 +32,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules
+from map_logic.turn_processing import combat_processor, combat_rules
 from map_logic.rendering.font_manager import fonts
 from ui import flag_icons
 from ui.bars import ui_bars, view_mode_buttons
@@ -83,8 +83,12 @@ class Battle_Screen(ModalScreen):
     PAD = 16
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
 
-    def __init__(self, map_screen, province, origin_screen=None, embedded_rect=None):
-        self.province = province
+    def __init__(self, map_screen, province=None, origin_screen=None, embedded_rect=None,
+                 edge_battle=None):
+        self.edge_battle = edge_battle
+        self.edge_pair = edge_battle["pair"] if edge_battle is not None else None
+        self.province = province or (map_screen.id_to_province[edge_battle["pair"][0]]
+                                     if edge_battle else None)
         # Both set before super(), because ModalScreen.__init__ asks for the
         # title and the title depends on whether any of these units are ours.
         self.map_screen = map_screen
@@ -99,7 +103,11 @@ class Battle_Screen(ModalScreen):
             self.panel_rect = pygame.Rect(embedded_rect)
         # Hotseat and fog of war: the same rule the Orders panel uses. A province you
         # cannot see is not one whose order of battle you get to read.
-        self.visible = queries.is_province_visible(map_screen, province["id"])
+        if edge_battle:
+            self.visible = any(queries.is_province_visible(map_screen, province_id)
+                               for province_id in edge_battle["pair"])
+        else:
+            self.visible = queries.is_province_visible(map_screen, self.province["id"])
         self.selected_lane = 0
         self.regions = {}
         # {pane: [(rect, payload)]}, filled by refresh_ui and read by the
@@ -115,8 +123,18 @@ class Battle_Screen(ModalScreen):
     def rebuild(self):
         """Re-reads the battle. Called after every change, so slot counts and
         lane membership update as the player edits rather than on close."""
-        self.battle = combat_rules.build_battle(
-            [self.province.get("units", [])], self.map_screen.nation_data)
+        if self.edge_pair is not None:
+            self.edge_battle = combat_processor.find_edge_battle(
+                self.map_screen, self.edge_pair)
+            if self.edge_battle is None:
+                self.battle = combat_rules.build_battle([[], []], self.map_screen.nation_data)
+            else:
+                self.battle = combat_rules.build_battle(
+                    [self.edge_battle["side1"], self.edge_battle["side2"]],
+                    self.map_screen.nation_data)
+        else:
+            self.battle = combat_rules.build_battle(
+                [queries.units_on_province(self.province)], self.map_screen.nation_data)
         if self.selected_lane >= len(self.battle.lanes):
             self.selected_lane = 0
 
@@ -160,11 +178,19 @@ class Battle_Screen(ModalScreen):
         otherwise the one screen you open in the middle of a battle is the one
         that hands you the whole army back.
         """
-        mine = [u for u in self.province.get("units", [])
+        mine = [u for u in self.units()
                 if u.get("owner") == self.player]
         if self.map_screen.tactical_mode:
             return [u for u in mine if u is self.map_screen.player_unit]
         return mine
+
+    def units(self):
+        """Every unit represented by this battle, real tile or virtual edge."""
+        if self.edge_pair is not None:
+            if self.edge_battle is None:
+                return []
+            return self.edge_battle["side1"] + self.edge_battle["side2"]
+        return queries.units_on_province(self.province)
 
     def can_command(self, unit):
         """Whether this particular unit takes orders from the player."""
@@ -197,7 +223,7 @@ class Battle_Screen(ModalScreen):
         mine = self.bench()
         commanded = {id(u) for u in mine}
 
-        rest = [u for u in self.province.get("units", [])
+        rest = [u for u in self.units()
                 if u.get("owner") in side.nations
                 and id(u) not in seated and id(u) not in commanded]
         # Grouped by nation so the flags read as blocks; sorted() is stable, so
@@ -238,8 +264,21 @@ class Battle_Screen(ModalScreen):
             unit.pop("combat_stance", None)
         self.refresh_ui()
 
+    def request_retreat(self, unit):
+        """An edge fighter can only withdraw to the province it departed."""
+        if not self.can_command(unit) or not combat_processor.request_edge_retreat(unit):
+            return
+        origin_id = unit[combat_processor.EDGE_BATTLE_KEY]["origin_id"]
+        self.map_screen.show_feedback(f"{unit.get('type', 'Unit')} will retreat to Province {origin_id}.")
+        self.refresh_ui()
+
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
+        if self.edge_pair is not None:
+            # The midpoint panel has its own individual retreat controls and
+            # none of the ordinary province orders are legal from there.
+            self.exit_screen()
+            return
         if self.embedded:
             self.exit_screen()
             return
@@ -258,6 +297,9 @@ class Battle_Screen(ModalScreen):
         only the right-hand pane and preserves the left panel. A legacy direct
         map opener is still forwarded into Orders.
         """
+        if self.edge_pair is not None:
+            self.done = True
+            return
         if self.embedded:
             self.done = True
             close_panel = getattr(self.origin_screen, "close_battle_panel", None)
@@ -329,6 +371,30 @@ class Battle_Screen(ModalScreen):
                 self.button(p.right - self.PAD - 130, btn_y, 130,
                             "red", "Close Battle", self.exit_screen))
         else:
+            if self.edge_pair is not None:
+                if self.my_units():
+                    self.elements.append(
+                        self.button(p.x + self.PAD, btn_y, 150, "orange", "Clear Lane Orders",
+                                    self.clear_orders))
+                self.elements.append(
+                    self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
+                self.view_mode_buttons = []
+                if not self.visible or not self.battle.lanes:
+                    return
+                self._lane_rows()
+                lane, near, far = self.current()
+                self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
+                self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
+                if self.is_mine(near):
+                    self._unit_rows(PANE_RESERVE, self.side_bench(near), lane,
+                                    editable=True, is_bench=True)
+                elif self.is_mine(far):
+                    self._unit_rows(PANE_RESERVE, self.side_bench(far), lane,
+                                    editable=True, is_bench=True)
+                else:
+                    self._unit_rows(PANE_RESERVE, list(near.reserve) + list(far.reserve),
+                                    lane, editable=False)
+                return
             self.elements.append(
                 self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
             # Nothing to clear on a tile you command nothing on.
@@ -404,16 +470,17 @@ class Battle_Screen(ModalScreen):
             held = unit.get("combat_stance") == "RESERVE"
             can_edit = editable and self.can_command(unit)
 
+            row_width = rect.width - 78 if self.edge_pair is not None and can_edit else rect.width
             if not can_edit:
-                btn = self.button(rect.x, y, rect.width, "grey", "", lambda: None)
+                btn = self.button(rect.x, y, row_width, "grey", "", lambda: None)
                 btn.disabled = True
                 note = ""
             elif is_bench:
-                btn = self.button(rect.x, y, rect.width, "orange" if held else "green", "",
+                btn = self.button(rect.x, y, row_width, "orange" if held else "green", "",
                                   lambda u=unit, l=lane: self.send_to_lane(u, l))
                 note = f"{'HELD  ' if held else ''}->  lane {lane.index + 1}"
             else:
-                btn = self.button(rect.x, y, rect.width, "blue", "",
+                btn = self.button(rect.x, y, row_width, "blue", "",
                                   lambda u=unit: self.toggle_stance(u))
                 # A held unit reaches the front rank whenever nobody else can
                 # take the slot, so this pane has to be able to say so -- an
@@ -426,6 +493,12 @@ class Battle_Screen(ModalScreen):
             btn.height = self.ROW_HEIGHT
             self.add_pane_row(pane, btn)
             self.row_paint[pane].append((btn.rect, (unit, note)))
+            if self.edge_pair is not None and can_edit:
+                retreat = self.button(rect.right - 72, y, 72, "red", "Retreat",
+                                      lambda u=unit: self.request_retreat(u))
+                retreat.rect.height = self.ROW_HEIGHT
+                retreat.height = self.ROW_HEIGHT
+                self.add_pane_row(pane, retreat)
 
     # -- painting -------------------------------------------------------- #
 
@@ -533,7 +606,7 @@ class Battle_Screen(ModalScreen):
                 dmg_mult = combat_rules.effective_damage_multiplier(
                     unit, self.map_screen.nation_data)
                 def_mult = combat_rules.health_defense_multiplier(unit)
-                fort_defense = queries.get_fort_defense_bonus(
+                fort_defense = 0 if self.edge_pair is not None else queries.get_fort_defense_bonus(
                     self.province, unit, self.map_screen.nation_data, combat_active=True)
                 stat_entries = get_combat_stat_entries(
                     unit.get("attack", 0) * dmg_mult,
@@ -575,6 +648,10 @@ class Battle_Screen(ModalScreen):
         return "  +  ".join(f"{m.nation} {len(m.front)}/{m.slots}" for m in side.members)
 
     def get_panel_title(self):
+        if self.edge_pair is not None:
+            first, second = self.edge_pair
+            verb = "Manage" if self.my_units() else "View"
+            return f"{verb} Edge Battle - Provinces {first} - {second}"
         owner = self.province.get("owner", "Unclaimed")
         verb = "Manage" if self.my_units() else "View"
         return f"{verb} Battle - Province {self.province.get('id')} ({owner})"
@@ -588,7 +665,10 @@ class Battle_Screen(ModalScreen):
             return
 
         if not self.battle.lanes:
-            self.label(surface, "No lanes here -- nobody on this tile is fighting anybody.",
+            empty_message = ("This midpoint battle has ended."
+                             if self.edge_pair is not None
+                             else "No lanes here -- nobody on this tile is fighting anybody.")
+            self.label(surface, empty_message,
                        (p.x + self.PAD, self.list_top), preset="normal")
             return
 
@@ -679,3 +759,13 @@ def open_battle_screen(map_screen, origin_screen=None):
     if not province:
         return
     _run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province, origin_screen=origin_screen))
+
+
+def open_edge_battle_screen(map_screen, edge_battle):
+    """Open the standalone command/inspection panel for one midpoint battle."""
+    from ui.screen_runner import _run_pygame_sub_screen
+
+    _run_pygame_sub_screen(
+        map_screen,
+        Battle_Screen(map_screen, origin_screen=map_screen, edge_battle=edge_battle),
+    )

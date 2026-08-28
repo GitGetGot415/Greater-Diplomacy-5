@@ -2,7 +2,7 @@
 import heapq
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules
+from map_logic.turn_processing import combat_processor, combat_rules
 
 def build_neighbor_index(id_to_province):
     """Maps each tile to its neighbours that actually exist on the map.
@@ -223,6 +223,12 @@ def _reset_orders_and_collect_units(map_screen, ai_nations):
         nation_units[ai_name] = []
 
         for unit, prov in units:
+            # The unit is physically stored on its departure tile for saves and
+            # upkeep, but its move queue is the direction it will resume after
+            # winning an edge battle.  Do not erase or reassign it as a normal
+            # province garrison.
+            if combat_processor.is_edge_battle_unit(unit):
+                continue
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") in c.MULTI_TURN_ORDER_TYPES:
                 continue  # Already committed; leave it be and do not re-task it.
@@ -404,6 +410,48 @@ def _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
     seated = {id(u) for u in ours}
     return not any(id(u) not in seated and u.get("owner") in friendly_nations
                    for u in units)
+
+
+def _edge_battle_is_lost(map_screen, ai_name, record, friendly_nations):
+    """The lane-based rout test for one persistent midpoint battle."""
+    units = record["side1"] + record["side2"]
+    battle = combat_rules.build_battle(
+        [record["side1"], record["side2"]], map_screen.nation_data)
+    ours, incoming = [], {}
+    for lane in battle.lanes:
+        for side in (lane.a, lane.b):
+            for member in side.members:
+                if member.nation in friendly_nations:
+                    ours.extend(member.front)
+                elif member.targets and queries.are_at_war(ai_name, member.nation,
+                                                           map_screen.nation_data):
+                    share = (combat_rules.volley(member.front, battle.shares,
+                                                  map_screen.nation_data)
+                             / len(member.targets))
+                    for target in member.targets:
+                        incoming[id(target)] = incoming.get(id(target), 0.0) + share
+    if not ours or not incoming:
+        return False
+    for unit in ours:
+        taken = max(0.0, incoming.get(id(unit), 0.0) - unit.get("defense", c.DEFAULT_UNIT_DEF))
+        if taken < unit.get("health", 1):
+            return False
+    seated = {id(unit) for unit in ours}
+    return not any(id(unit) not in seated and unit.get("owner") in friendly_nations
+                   for unit in units)
+
+
+def _order_edge_retreats(map_screen, ai_nations):
+    """Queue individual AI withdrawals without treating an edge as a tile."""
+    for record in combat_processor.edge_battles(map_screen):
+        owners = {unit.get("owner") for unit in record["side1"] + record["side2"]}
+        for ai_name in owners.intersection(ai_nations):
+            friendly = queries.get_all_friendly_nations(ai_name, map_screen.nation_data)
+            if not _edge_battle_is_lost(map_screen, ai_name, record, friendly):
+                continue
+            for unit in record["side1"] + record["side2"]:
+                if unit.get("owner") == ai_name:
+                    combat_processor.request_edge_retreat(unit)
 
 
 def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations, unsafe_waters, all_enemy_coasts, enemy_coastal_waters):
@@ -1297,6 +1345,7 @@ def _generate_unit_orders(map_screen):
     allowed_prov_ids_cache, water_ids, neighbor_ids = _build_shared_pathing_caches(map_screen)
 
     nation_units, nation_provs = _reset_orders_and_collect_units(map_screen, ai_nations)
+    _order_edge_retreats(map_screen, set(ai_nations))
 
     # Every tile somebody is fighting over this turn, pooled across nations so
     # the anti-swap pass at the end can leave relief traffic alone.

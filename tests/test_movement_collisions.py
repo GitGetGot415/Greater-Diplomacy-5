@@ -30,7 +30,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from map_logic.turn_processing import movement_processor
+from data import queries
+from map_logic.turn_processing import combat_processor, movement_processor
 
 
 class StubMapScreen:
@@ -115,6 +116,25 @@ class MidTurnSwapTests(unittest.TestCase):
         self.assertNotIn(unit_a, screen.id_to_province["p3"]["units"])
         self.assertNotIn(unit_b, screen.id_to_province["p2"]["units"])
 
+    def test_a_decisive_multi_speed_swap_keeps_the_winner_moving(self):
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        unit_a = make_unit("A", ["p2", "p3", "p4"], speed=3, attack=2000)
+        unit_b = make_unit("B", ["p3", "p2"], speed=2, attack=0)
+        screen.add_province("p1", "A", units=[unit_a])
+        screen.add_province("p2", "A")
+        screen.add_province("p3", "B")
+        p4 = screen.add_province("p4", "B", units=[unit_b])
+
+        movement_processor.process_movement(screen)
+
+        self.assertNotIn(unit_b, p4["units"])
+        self.assertNotIn("_edge_battle", unit_a)
+        self.assertEqual(unit_a["_current_province_id"], "p4")
+        self.assertIn(unit_a, p4["units"])
+
 
 class FinishedMoverVisibilityTests(unittest.TestCase):
     def test_a_finished_mover_still_blocks_a_later_arrival(self):
@@ -139,6 +159,110 @@ class FinishedMoverVisibilityTests(unittest.TestCase):
         self.assertIn(unit_c, c2["units"], "the finished unit should still be resting in c2")
         self.assertIn(unit_d, c2["units"], "the arriving unit should have stopped alongside it, not through it")
         self.assertEqual(c2["owner"], "A", "an enemy present should block the capture, not just the advance")
+
+
+class PersistentEdgeBattleTests(unittest.TestCase):
+    """Head-on movement becomes one saved midpoint battle, not a bounce."""
+
+    def build(self, a_units=1, a_attack=100, b_attack=100):
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        a = [make_unit("A", ["p2"], attack=a_attack) for _ in range(a_units)]
+        b = make_unit("B", ["p1"], attack=b_attack)
+        p1 = screen.add_province("p1", "A", units=a)
+        p2 = screen.add_province("p2", "B", units=[b])
+        return screen, p1, p2, a, b
+
+    def start(self, screen):
+        combat_processor.process_meeting_engagements(screen)
+        movement_processor.process_movement(screen)
+
+    def test_survivors_remain_in_a_persistent_midpoint_battle(self):
+        screen, p1, p2, a, b = self.build()
+
+        self.start(screen)
+
+        self.assertIn("_edge_battle", a[0])
+        self.assertIn("_edge_battle", b)
+        self.assertEqual(a[0]["_edge_battle"]["origin_id"], "p1")
+        self.assertEqual(b["_edge_battle"]["origin_id"], "p2")
+        self.assertIn(a[0], p1["units"])
+        self.assertIn(b, p2["units"])
+        self.assertEqual([], queries.units_on_province(p1))
+        first_health = (a[0]["health"], b["health"])
+
+        self.start(screen)
+
+        self.assertLess(a[0]["health"], first_health[0])
+        self.assertLess(b["health"], first_health[1])
+        self.assertIn("_edge_battle", a[0])
+        self.assertIn("_edge_battle", b)
+
+    def test_winner_resumes_its_original_movement_queue(self):
+        screen, _p1, p2, a, b = self.build(a_attack=2000, b_attack=0)
+        p3 = screen.add_province("p3", "B")
+        a[0]["speed"] = 2
+        a[0]["order"]["path"].append("p3")
+
+        self.start(screen)
+
+        self.assertNotIn(b, p2["units"])
+        self.assertNotIn("_edge_battle", a[0])
+        self.assertNotIn(a[0], p2["units"])
+        self.assertIn(a[0], p3["units"])
+        self.assertEqual(a[0]["order"]["path"], [])
+
+    def test_war_ending_releases_both_sides_to_their_existing_orders(self):
+        screen, p1, p2, a, b = self.build()
+        self.start(screen)
+        screen.nation_data["A"]["at_war_with"] = []
+        screen.nation_data["B"]["at_war_with"] = []
+        screen.nation_data["A"]["military_access"] = ["B"]
+        screen.nation_data["B"]["military_access"] = ["A"]
+
+        self.start(screen)
+
+        self.assertNotIn("_edge_battle", a[0])
+        self.assertNotIn("_edge_battle", b)
+        self.assertIn(a[0], p2["units"])
+        self.assertIn(b, p1["units"])
+
+    def test_a_noncombatant_crossing_the_same_edge_keeps_moving(self):
+        screen, p1, p2, a, b = self.build()
+        screen.add_nation("C", at_war_with=[])
+        screen.nation_data["B"]["allied_with"] = ["C"]
+        screen.nation_data["C"]["allied_with"] = ["B"]
+        bystander = make_unit("C", ["p2"])
+        p1["units"].append(bystander)
+
+        self.start(screen)
+
+        self.assertIn("_edge_battle", a[0])
+        self.assertIn("_edge_battle", b)
+        self.assertNotIn("_edge_battle", bystander)
+        self.assertIn(bystander, p2["units"])
+
+    def test_individual_retreat_leaves_other_fighters_midpoint_and_restarts_on_origin(self):
+        screen, p1, _p2, a, b = self.build(a_units=2)
+        self.start(screen)
+
+        self.assertTrue(combat_processor.request_edge_retreat(a[0]))
+        self.start(screen)
+
+        self.assertNotIn("_edge_battle", a[0])
+        self.assertEqual(a[0]["order"]["path"], [])
+        self.assertIn("_edge_battle", a[1], "the unretreated unit should hold the edge")
+        self.assertIn("_edge_battle", b, "the enemy should keep fighting the remaining unit")
+
+        self.assertTrue(combat_processor.request_edge_retreat(a[1]))
+        self.start(screen)
+        combat_processor.process_combat(screen)
+
+        self.assertNotIn("_edge_battle", b)
+        self.assertIn(a[0], p1["units"])
+        self.assertIn(a[1], p1["units"])
+        self.assertIn(b, p1["units"], "the advancing enemy should meet the retreating units at their origin")
 
 
 if __name__ == "__main__":

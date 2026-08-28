@@ -739,7 +739,9 @@ def nation_front_capacity(nation, province, nation_data, width=None):
     width fairly against allies who are actually here; it only stops our own
     absence from being the thing that makes the tile look full.
     """
-    battle = build_battle([list(province.get("units", ()))], nation_data, width,
+    from data import queries
+
+    battle = build_battle([queries.units_on_province(province)], nation_data, width,
                           full_rank_for=nation)
     return slots_held(battle, nation) or c.LANE_SLOTS_TYPICAL
 
@@ -750,8 +752,12 @@ def movers_into(province, dest_id, visible_to=None):
     Only MOVE orders carry a path, so testing for one is the same as testing
     the order type; both call sites did it one way or the other.
     """
+    from data import queries
+
     movers = []
     for unit in province.get("units", []):
+        if queries.is_unit_in_edge_battle(unit):
+            continue
         order = unit.get("order") or {}
         path = order.get("path")
         if not path or path[0] != dest_id:
@@ -774,6 +780,8 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
     incoming = {}
     for province in map_data.values():
         for unit in province.get("units", []):
+            if queries.is_unit_in_edge_battle(unit):
+                continue
             order = unit.get("order") or {}
             if order.get("type") != "MOVE" or not order.get("path"):
                 continue

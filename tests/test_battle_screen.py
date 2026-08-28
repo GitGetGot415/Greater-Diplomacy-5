@@ -21,7 +21,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules
+from map_logic.turn_processing import combat_processor, combat_rules
 from screens.map_related_screens import battle_screen
 from tests import app_harness
 
@@ -165,6 +165,42 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertFalse(screen.visible)
         # Nothing but the footer buttons: no lane rows, no unit rows.
         self.assertFalse([el for el in screen.elements if getattr(el, "pane", None)])
+
+    def test_midpoint_battle_marker_panel_and_retreat_are_available(self):
+        """The virtual location has its own lane panel and saved retreat flag."""
+        other = next(p for p in self.map.map_data.values()
+                     if p is not self.province and not queries.is_water_province(p))
+        original_here = self.province["units"]
+        original_other = other.get("units", [])
+        self.addCleanup(self.province.__setitem__, "units", original_here)
+        self.addCleanup(other.__setitem__, "units", original_other)
+
+        ours = queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())
+        enemy = queries.create_unit_dict("Infantry", self.x, queries.get_unit_library())
+        ours["order"] = {"type": "MOVE", "path": [other["id"]]}
+        enemy["order"] = {"type": "MOVE", "path": [self.province["id"]]}
+        ours[combat_processor.EDGE_BATTLE_KEY] = {
+            "origin_id": self.province["id"], "destination_id": other["id"]}
+        enemy[combat_processor.EDGE_BATTLE_KEY] = {
+            "origin_id": other["id"], "destination_id": self.province["id"]}
+        self.province["units"] = [ours]
+        other["units"] = [enemy]
+
+        record = combat_processor.edge_battles(self.map)[0]
+        midpoint = combat_processor.edge_battle_midpoint(self.map, record)
+        marker_pos = queries.world_to_screen(midpoint, self.map)
+        self.assertEqual(combat_processor.edge_battle_at_screen_pos(self.map, marker_pos)["pair"],
+                         record["pair"])
+
+        screen = battle_screen.Battle_Screen(self.map, edge_battle=record)
+        screen.draw(self.surface)
+        self.assertTrue(screen.battle.lanes)
+        self.assertTrue(screen.can_command(ours))
+
+        screen.request_retreat(ours)
+        self.assertTrue(ours[combat_processor.EDGE_BATTLE_KEY]["retreat"])
+        self.assertIn(combat_processor.EDGE_BATTLE_KEY,
+                      queries.build_save_dict(self.map)["provinces"][self.province["json_key"]]["units"][0])
 
 
 class LaneOrderTests(BattleScreenTestCase):

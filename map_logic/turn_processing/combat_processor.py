@@ -11,6 +11,12 @@ from collections import namedtuple
 #: edge without a war of their own.
 MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
 
+#: Saved directly on a unit rather than in a transient map-level table.  Units
+#: stay in their departure province's ``units`` list for upkeep, save/history,
+#: and national accounting, while all movement/combat/rendering code treats
+#: this tag as their real location being the midpoint of the two provinces.
+EDGE_BATTLE_KEY = "_edge_battle"
+
 #: Which side of the suicide-charge probe in process_pinning is the charge. The
 #: garrison is handed in first, so it is side 0 and the charge is side 1.
 CHARGE_SIDE = 1
@@ -40,6 +46,240 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None):
             
         u["health"] -= actual_dmg
 
+
+def is_edge_battle_unit(unit):
+    """Compatibility wrapper for callers that already depend on this module."""
+    return queries.is_unit_in_edge_battle(unit)
+
+
+def _edge_pair_key(first_id, second_id):
+    """A stable pair key even for maps that mix numeric and string ids."""
+    return tuple(sorted((first_id, second_id), key=lambda value: (type(value).__name__, str(value))))
+
+
+def edge_battles(map_screen):
+    """Live virtual battles, grouped from their unit-level saved metadata.
+
+    Each item contains the endpoint pair and the units marching in both
+    directions.  Keeping this derived means a normal save already contains all
+    required state and a load never has to reconstruct object references.
+    """
+    grouped = {}
+    for province in map_screen.map_data.values():
+        for unit in province.get("units", []):
+            tag = unit.get(EDGE_BATTLE_KEY)
+            if not isinstance(tag, dict):
+                continue
+            origin_id = tag.get("origin_id")
+            destination_id = tag.get("destination_id")
+            if (origin_id != province.get("id")
+                    or destination_id not in map_screen.id_to_province
+                    or destination_id == origin_id):
+                continue
+            pair = _edge_pair_key(origin_id, destination_id)
+            record = grouped.setdefault(pair, {
+                "pair": pair,
+                "side1": [],
+                "side2": [],
+            })
+            if origin_id == pair[0] and destination_id == pair[1]:
+                record["side1"].append(unit)
+            elif origin_id == pair[1] and destination_id == pair[0]:
+                record["side2"].append(unit)
+    return list(grouped.values())
+
+
+def find_edge_battle(map_screen, pair):
+    """Returns the live record for ``pair`` or ``None`` when it has settled."""
+    wanted = _edge_pair_key(*pair)
+    return next((record for record in edge_battles(map_screen)
+                 if record["pair"] == wanted), None)
+
+
+def edge_battle_midpoint(map_screen, record):
+    """World-space midpoint for a virtual battle, respecting wrapped maps."""
+    first = map_screen.id_to_province[record["pair"][0]]["center"]
+    second = map_screen.id_to_province[record["pair"][1]]["center"]
+    first_x, first_y = first
+    second_x, second_y = second
+    if getattr(map_screen, "loop_map", False):
+        half = map_screen.map_w / 2
+        delta = ((second_x - first_x + half) % map_screen.map_w) - half
+        return ((first_x + delta / 2) % map_screen.map_w, (first_y + second_y) / 2)
+    return ((first_x + second_x) / 2, (first_y + second_y) / 2)
+
+
+def edge_battle_at_screen_pos(map_screen, screen_pos):
+    """The visible midpoint marker hit by a map click, if any.
+
+    This lives beside the midpoint calculation so drawing and input cannot drift
+    apart when camera tilt or wrapped-map coordinates are involved.
+    """
+    sx, sy = screen_pos
+    radius = max(18, int(18 * map_screen.camera.zoom))
+    offsets = (0, -map_screen.map_w, map_screen.map_w) if map_screen.loop_map else (0,)
+    for record in edge_battles(map_screen):
+        world = edge_battle_midpoint(map_screen, record)
+        for offset in offsets:
+            marker_x = (world[0] + offset - map_screen.camera.pos.x) * map_screen.camera.zoom
+            marker_y = ((world[1] - map_screen.camera.pos.y) * map_screen.camera.zoom
+                        * map_screen.camera.tilt_factor + map_screen.top_ui_height)
+            if (marker_x - sx) ** 2 + (marker_y - sy) ** 2 <= radius ** 2:
+                return record
+    return None
+
+
+def _tag_edge_units(units, origin_id, destination_id, fought):
+    for unit in units:
+        if id(unit) in fought and unit.get("health", 0) > 0:
+            unit[EDGE_BATTLE_KEY] = {
+                "origin_id": origin_id,
+                "destination_id": destination_id,
+            }
+
+
+def _clear_edge_tag(unit):
+    unit.pop(EDGE_BATTLE_KEY, None)
+
+
+def _prune_dead(provinces):
+    for province in provinces:
+        province["units"] = [u for u in province.get("units", [])
+                              if u.get("health", 0) > 0]
+
+
+def _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data):
+    """One simultaneous, fort-less exchange between two directions of travel.
+
+    The old direct-swap resolver and persistent midpoint battles both use this
+    exact primitive.  Locking/freezing and where survivors stand are policy
+    decisions made by their callers, not part of how a volley is calculated.
+    """
+    battle = combat_rules.build_battle([units1, units2], nation_data)
+    fought = {id(u)
+              for lane in battle.lanes
+              for side in (lane.a, lane.b)
+              for u in side.front + side.reserve}
+
+    # A convoy's origin side decides whether it is on land.  This keeps the
+    # established coast-swap rule: a sea convoy stays loaded even when the
+    # opposing army marched from shore.
+    for side_units, side_prov in ((units1, prov1), (units2, prov2)):
+        if queries.is_water_province(side_prov):
+            continue
+        for unit in side_units:
+            if id(unit) in fought and unit.get("type", "").startswith("Convoy"):
+                queries.revert_transport(unit)
+
+    for targets, total_atk in combat_rules.exchange(battle, nation_data):
+        apply_group_damage(total_atk, targets)
+
+    for lane in battle.lanes:
+        for unit in lane.a.front + lane.b.front:
+            unit["_in_combat_this_turn"] = True
+
+    return MeetingResult(
+        [u for u in units1 if u.get("health", 0) > 0],
+        [u for u in units2 if u.get("health", 0) > 0],
+        fought,
+    )
+
+
+def _release_edge_battle(record):
+    """Places a settled edge battle's survivors back on their normal paths."""
+    for unit in record["side1"] + record["side2"]:
+        _clear_edge_tag(unit)
+
+
+def _settle_edge_battle(map_screen, record):
+    """Release survivors once an edge no longer contains a hostile lane."""
+    current = find_edge_battle(map_screen, record["pair"])
+    if current is None:
+        return True
+    battle = combat_rules.build_battle(
+        [current["side1"], current["side2"]], map_screen.nation_data)
+    if battle.lanes:
+        return False
+    _release_edge_battle(current)
+    return True
+
+
+def start_edge_battle(prov1, prov2, units1, units2, nation_data, map_screen=None):
+    """Create and immediately fight a virtual battle between two provinces.
+
+    Only units in an actual lane are tagged.  Fellow travellers who are neutral
+    to the enemy keep marching, exactly as before.  If the opening volley clears
+    a direction, its opponent is immediately released to finish its existing
+    movement order during this same turn.
+    """
+    result = _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data)
+    _prune_dead((prov1, prov2))
+    _tag_edge_units(result.survivors1, prov1["id"], prov2["id"], result.fought)
+    _tag_edge_units(result.survivors2, prov2["id"], prov1["id"], result.fought)
+    if map_screen is not None:
+        record = find_edge_battle(map_screen, (prov1["id"], prov2["id"]))
+        if record is not None:
+            _settle_edge_battle(map_screen, record)
+        else:
+            # Mid-turn swaps happen while movers are temporarily outside their
+            # province lists.  The derived record is therefore unavailable
+            # until movement syncs them back at the end of this sub-step.  A
+            # decisive exchange must still release its winner immediately so
+            # it can spend any remaining speed right now.
+            temporary = {
+                "side1": [u for u in result.survivors1 if is_edge_battle_unit(u)],
+                "side2": [u for u in result.survivors2 if is_edge_battle_unit(u)],
+            }
+            if not combat_rules.build_battle(
+                    [temporary["side1"], temporary["side2"]], nation_data).lanes:
+                _release_edge_battle(temporary)
+    return result
+
+
+def request_edge_retreat(unit):
+    """Queue one midpoint fighter's only legal withdrawal: back to its origin."""
+    tag = unit.get(EDGE_BATTLE_KEY)
+    if not isinstance(tag, dict):
+        return False
+    tag["retreat"] = True
+    return True
+
+
+def process_edge_battles(map_screen):
+    """Apply withdrawals, then fight every pre-existing midpoint battle once.
+
+    Retreats happen before that turn's exchange, matching ordinary province
+    combat where a valid withdrawal moves away before the end-of-turn melee.
+    A retreat clears that unit's queue so two sides choosing to withdraw do not
+    instantly issue the same head-on order again next turn.
+    """
+    for record in edge_battles(map_screen):
+        for unit in record["side1"] + record["side2"]:
+            tag = unit.get(EDGE_BATTLE_KEY, {})
+            if not tag.get("retreat"):
+                continue
+            _clear_edge_tag(unit)
+            order = unit.get("order")
+            if isinstance(order, dict):
+                order["type"] = "MOVE"
+                order["path"] = []
+            unit.pop("lane_target", None)
+            unit.pop("combat_stance", None)
+
+        # A withdrawal or a diplomacy change can end the engagement before a
+        # volley is due.  Re-read it from unit tags rather than trusting the
+        # record captured before we changed those tags.
+        current = find_edge_battle(map_screen, record["pair"])
+        if current is None or _settle_edge_battle(map_screen, current):
+            continue
+
+        first = map_screen.id_to_province[current["pair"][0]]
+        second = map_screen.id_to_province[current["pair"][1]]
+        _resolve_meeting_exchange(first, second, current["side1"], current["side2"],
+                                  map_screen.nation_data)
+        _prune_dead((first, second))
+        _settle_edge_battle(map_screen, current)
+
 def process_bombardments(map_screen):
     """Resolves artillery fire on nearby tiles.
 
@@ -54,6 +294,8 @@ def process_bombardments(map_screen):
 
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if is_edge_battle_unit(unit):
+                continue
             order = unit.get("order")
             if not isinstance(order, dict) or order.get("type") != "BOMBARD":
                 continue
@@ -100,7 +342,7 @@ def process_bombardments(map_screen):
                     for gun in guns
                 )
 
-            targets = [u for u in target_prov.get("units", [])
+            targets = [u for u in queries.units_on_province(target_prov)
                        if queries.are_at_war(owner, u.get("owner"), map_screen.nation_data)]
             if not targets:
                 # A valid bombardment can hit an empty fort tile, so apply its
@@ -148,6 +390,8 @@ def process_pinning(map_screen):
     incoming_attacks = {}
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if is_edge_battle_unit(unit):
+                continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
@@ -163,7 +407,7 @@ def process_pinning(map_screen):
         dest_prov = map_screen.id_to_province.get(dest_id)
         if not dest_prov: continue
         
-        defenders = dest_prov.get("units", [])
+        defenders = queries.units_on_province(dest_prov)
         if not defenders: continue
         
         tile_owner = dest_prov.get("owner", "Unclaimed")
@@ -259,6 +503,8 @@ def process_pinning(map_screen):
     # --- STANDARD PINNING LOGIC ---
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if is_edge_battle_unit(unit):
+                continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
@@ -279,71 +525,15 @@ def process_pinning(map_screen):
                         order["path"] = []
 
 def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
-    """Fights one meeting engagement: units1 (crossing into prov2) against
-    units2 (crossing into prov1). Removes the dead from their provinces and
-    combat-locks survivors only when both sides have survivors -- a one-sided
-    result leaves the winners free to keep advancing this turn.
+    """Legacy one-volley swap API, kept for callers and older saves/tests.
 
-    The two sides are gathered by direction of travel, not by flag, so either
-    of them can hold several nations at once and not all of them are in the
-    fight. Who duels whom is combat_rules.build_battle's answer, the same one
-    the tile fight uses, with the clash's two directions of travel as its two
-    sides -- so a lane always crosses the divide, and a nation crossing
-    alongside a belligerent without a war of its own is neither shot at nor
-    stopped.
-
-    Shared by the turn-start pass (combat_processor.process_meeting_engagements,
-    using combat_rules.find_meeting_pairs) and the mid-movement pass
-    (movement_processor.process_movement), since a swap is the same fight
-    whichever step of the turn it happens on.
-
-    Returns a MeetingResult. `survivors1`/`survivors2` are every living unit on
-    each side, bystanders included -- the movement pass subtracts them from what
-    it handed in to find the dead. `fought` is the id()s of the units that were
-    actually in a firing line, which is what the callers gate "stop here" on.
+    Persistent midpoint battles call :func:`start_edge_battle`; this wrapper
+    deliberately preserves the former one-turn lock behaviour while sharing
+    the same lane, convoy, damage, and morale exchange primitive.
     """
-    battle = combat_rules.build_battle([units1, units2], nation_data)
-
-    # Front *and* reserve. `fought` is what stops a unit here, and a reserve that
-    # walked on through the tile its own army is fighting over would be absurd --
-    # it is in the battle, it just is not in the front rank of it.
-    fought = {id(u)
-              for lane in battle.lanes
-              for side in (lane.a, lane.b)
-              for u in side.front + side.reserve}
-
-    # Unpack Convoys Caught in Land Engagements -- only those in the fight, and
-    # only the ones actually standing on land. Each side is still in its own
-    # province here, so that is the tile that decides it. The old test asked
-    # whether *either* end of the swap was land, which unpacked a convoy at sea
-    # whenever the enemy came from the shore: that is how three loaded divisions
-    # became land units floating in the middle of province 620 in
-    # saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN, from where one of them
-    # went on to shell Spain. process_combat has always read it this way.
-    for side_units, side_prov in ((units1, prov1), (units2, prov2)):
-        if queries.is_water_province(side_prov):
-            continue
-        for u in side_units:
-            if id(u) in fought and u.get("type", "").startswith("Convoy"):
-                queries.revert_transport(u)
-
-    # Measured before any of it lands, so the exchange is simultaneous.
-    for targets, total_atk in combat_rules.exchange(battle, nation_data):
-        apply_group_damage(total_atk, targets)
-
-    # Only the front rank is in combat: a reserve rests and recovers morale
-    # while the units ahead of it bleed, which is the pressure to rotate.
-    for lane in battle.lanes:
-        for u in lane.a.front + lane.b.front:
-            u["_in_combat_this_turn"] = True
-
-    surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
-    surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
-
-    # Only lock them in combat if the enemy survived -- and only the ones who
-    # were fighting. A bystander crossing at the same moment walks on.
-    fighters1 = [u for u in surviving_units1 if id(u) in fought]
-    fighters2 = [u for u in surviving_units2 if id(u) in fought]
+    result = _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data)
+    fighters1 = [u for u in result.survivors1 if id(u) in result.fought]
+    fighters2 = [u for u in result.survivors2 if id(u) in result.fought]
 
     if fighters2:
         for u in fighters1:
@@ -352,20 +542,20 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
         for u in fighters2:
             u["_combat_locked"] = True
 
-    prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
-    prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
-
-    return MeetingResult(surviving_units1, surviving_units2, fought)
+    _prune_dead((prov1, prov2))
+    return result
 
 def process_meeting_engagements(map_screen):
-    """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
-    # Which tiles swapped garrisons is decided by combat_rules, the same rule
-    # the prediction bubbles are drawn from. The sides are read per pair, as we
-    # get to them: a unit killed in one engagement must not still be counted in
-    # the next engagement its province takes part in.
+    """Resolve existing midpoint battles, then start any new head-on clashes."""
+    process_edge_battles(map_screen)
+
+    # Which tiles swap garrisons is decided by combat_rules, the same rule the
+    # prediction bubbles are drawn from.  Newly created edge fights are read
+    # fresh per pair so a casualty in one cannot join another edge this turn.
     for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
-        resolve_meeting_engagement(prov1, prov2, units1, units2, map_screen.nation_data)
+        start_edge_battle(prov1, prov2, units1, units2, map_screen.nation_data,
+                          map_screen=map_screen)
 
 def process_combat(map_screen):
     """Fights everyone sharing a province, lane by lane.
@@ -388,7 +578,7 @@ def process_combat(map_screen):
     ships are not scuttled by other people's war.
     """
     for province in map_screen.map_data.values():
-        units = province.get("units", [])
+        units = queries.units_on_province(province)
         if len(units) < 2:
             continue
 
@@ -422,7 +612,8 @@ def process_combat(map_screen):
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]
-        province["units"] = surviving_units
+        edge_units = [u for u in province.get("units", []) if is_edge_battle_unit(u)]
+        province["units"] = edge_units + surviving_units
 
         # Wipe queues and destroy misplaced naval units ONLY if combat is still ongoing
         if battle.lanes:
@@ -448,7 +639,7 @@ def process_combat(map_screen):
                     u["health"] = 0
 
             # Filter dead ships out
-            province["units"] = [u for u in surviving_units if u.get("health", 0) > 0]
+            province["units"] = edge_units + [u for u in surviving_units if u.get("health", 0) > 0]
 
 def check_for_post_combat_captures(map_screen):
     """Assigns province ownership to units standing in an undefended enemy province."""
@@ -456,7 +647,7 @@ def check_for_post_combat_captures(map_screen):
         if queries.is_water_province(province):
             continue
 
-        units = province.get("units", [])
+        units = queries.units_on_province(province)
         if not units:
             continue
             

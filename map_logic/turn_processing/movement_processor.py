@@ -147,7 +147,7 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     walked, so the ordinary "defenders present" check never sees them either.
 
     Re-runs the same swap check for the units about to take this step, and
-    resolves any hits with the shared combat_processor.resolve_meeting_engagement.
+    creates the same persistent midpoint battle used at turn start.
     Returns moving_units with anyone killed in the process removed.
     """
     eligible = [
@@ -165,7 +165,7 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     for u in eligible:
         origin = u["_current_province_id"]
         dest = u["order"]["path"][0]
-        edge = tuple(sorted([origin, dest]))
+        edge = combat_processor._edge_pair_key(origin, dest)
         if edge in seen_edges:
             continue
 
@@ -186,22 +186,19 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
-        result = combat_processor.resolve_meeting_engagement(
-            prov1, prov2, units1, units2, map_screen.nation_data)
+        result = combat_processor.start_edge_battle(
+            prov1, prov2, units1, units2, map_screen.nation_data,
+            map_screen=map_screen)
         survivors = result.survivors1 + result.survivors2
         survivor_ids = {id(m) for m in survivors}
         dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
 
-        # A mutual standoff digs both sides in for the rest of this turn; a
-        # one-sided win leaves the winners free to keep advancing. Only the
-        # units that were actually in the battle are held -- somebody crossing
-        # the same edge without a war of their own keeps marching.
+        # A surviving edge battle holds only the actual combatants.  Neutral
+        # fellow travellers keep walking, while a one-sided winner had its tag
+        # released by start_edge_battle and may still spend this sub-step moving
+        # into the enemy's origin.
         for m in survivors:
-            m.pop("_combat_locked", None)
-        fighters1 = [m for m in result.survivors1 if id(m) in result.fought]
-        fighters2 = [m for m in result.survivors2 if id(m) in result.fought]
-        if fighters1 and fighters2:
-            for m in fighters1 + fighters2:
+            if id(m) in result.fought and combat_processor.is_edge_battle_unit(m):
                 m["_skip_remaining_steps"] = True
 
     if not dead_ids:
@@ -213,6 +210,11 @@ def process_movement(map_screen):
     for province in map_screen.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
+            # A midpoint fighter remains serialized/accounted for on its origin
+            # tile but cannot also be selected as an ordinary mover.
+            if combat_processor.is_edge_battle_unit(unit):
+                units_to_keep.append(unit)
+                continue
             
             # --- Check and clear the combat lock flag ---
             if unit.pop("_combat_locked", False):
@@ -298,8 +300,10 @@ def process_movement(map_screen):
 
             # Check for existing defenders before moving
             # We look for units belonging to anyone NOT the mover and NOT an ally
-            defenders = [u for u in target_prov.get("units", []) 
-                        if u["owner"] != unit["owner"] and u["owner"] not in player_data.get("allied_with", [])]
+            defenders = [u for u in target_prov.get("units", [])
+                         if not combat_processor.is_edge_battle_unit(u)
+                         and u["owner"] != unit["owner"]
+                         and u["owner"] not in player_data.get("allied_with", [])]
 
             if is_naval and not is_convoy:
                 can_enter = True # Naval rules already handled above
@@ -449,8 +453,8 @@ def process_beached_units(map_screen):
 
     Written for saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN, where a
     meeting engagement fought across a shoreline unpacked three convoys that
-    were still at sea (see combat_processor.resolve_meeting_engagement, now
-    fixed). This is the net under that: it heals the saves the old rule already
+    were still at sea (see combat_processor._resolve_meeting_exchange). This
+    is the net under that: it heals the saves the old rule already
     damaged, and closes off any other route to the same state.
     """
     unit_library = queries.get_unit_library()
@@ -460,6 +464,8 @@ def process_beached_units(map_screen):
             continue
 
         for unit in province.get("units", []):
+            if combat_processor.is_edge_battle_unit(unit):
+                continue
             if not is_land_unit(unit, unit_library):
                 continue
 
@@ -493,6 +499,8 @@ def process_stranded_units(map_screen):
 
         stranded = []
         for unit in units:
+            if combat_processor.is_edge_battle_unit(unit):
+                continue
             unit_owner = unit.get("owner")
             if not unit_owner or unit_owner == owner or unit_owner in c.UNPLAYABLE_NATIONS:
                 continue

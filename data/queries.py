@@ -673,7 +673,7 @@ def are_at_war(nation_a, nation_b, nation_data):
 
 def is_province_in_active_combat(province, nation_data):
     """Returns True if ANY units from mutually hostile nations occupy this province."""
-    units = province.get("units", [])
+    units = units_on_province(province)
     if len(units) < 2:
         return False
         
@@ -682,9 +682,27 @@ def is_province_in_active_combat(province, nation_data):
     # Optimized check using itertools
     return any(are_at_war(o1, o2, nation_data) for o1, o2 in itertools.combinations(owners_present, 2))
 
+
+def is_unit_in_edge_battle(unit):
+    """Whether ``unit`` is fighting on the edge between two provinces.
+
+    Edge battles deliberately leave their units in their departure province's
+    list.  That keeps saves, upkeep, national unit counts, and every map-wide
+    accounting pass correct without inventing a real province.  Callers that
+    care where a unit is physically standing (combat, bombardment, rendering,
+    or ordinary movement) must use this small shared test to leave those units
+    at the virtual midpoint instead.
+    """
+    return isinstance(unit.get("_edge_battle"), dict)
+
+
+def units_on_province(province):
+    """The units actually occupying ``province``, excluding midpoint fighters."""
+    return [u for u in province.get("units", []) if not is_unit_in_edge_battle(u)]
+
 def is_nation_in_combat_here(nation, province, nation_data):
     """Returns True if the specified nation has units in the province that are actively engaged with enemy units."""
-    units = province.get("units", [])
+    units = units_on_province(province)
     enemies = get_enemies(nation, nation_data)
     return any(u.get("owner") in enemies for u in units)
 
@@ -2812,7 +2830,7 @@ def revert_transport(unit):
 
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""
-    return any(u.get("owner") == nation for u in province.get("units", []))
+    return any(u.get("owner") == nation for u in units_on_province(province))
 
 def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
@@ -2899,6 +2917,8 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
+            if is_unit_in_edge_battle(u):
+                continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 if visible_to is not None and u.get("owner") not in visible_to:
@@ -2910,7 +2930,7 @@ def get_combat_predictions(map_screen):
     # 3. Find Province Clashes (Static Defenders vs Incoming Attackers)
     for prov in map_data.values():
         prov_id = prov["id"]
-        defenders = sub_visible(prov.get("units", []), prov)
+        defenders = sub_visible(units_on_province(prov), prov)
         attackers = [u for u, o in incoming.get(prov_id, [])]
         
         forces_by_owner = {}

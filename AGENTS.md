@@ -18,3 +18,5 @@ and don't forget to also update the compilation scripts (windows_compilation.py,
 use `color` (NOT `colour`) consistently in identifiers, UI copy, comments, and documentation.
 
 IMPORTANT: NEVER COMMIT ANYTHING TO MAIN WITHOUT EXPLICITLY ASKING THE USER BEFOREHAND
+
+if you feel like it's nessecary, make a seperate branch and then commit each change you make there

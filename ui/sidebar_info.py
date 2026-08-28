@@ -259,7 +259,7 @@ def draw_sidebar_info(map_screen, surface):
     # Submarines we're not allied with and aren't currently fighting stay off
     # this list entirely -- same rule the map icons and tooltip follow.
     units = queries.filter_visible_units(
-        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+        queries.units_on_province(province), map_screen.player_country, province, map_screen.nation_data)
     
     # 3. Resolve Display Name for the Owner
     owner_data = map_screen.nation_data.get(owner_id, {})
