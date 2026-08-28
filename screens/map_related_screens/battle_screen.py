@@ -264,21 +264,8 @@ class Battle_Screen(ModalScreen):
             unit.pop("combat_stance", None)
         self.refresh_ui()
 
-    def request_retreat(self, unit):
-        """An edge fighter can only withdraw to the province it departed."""
-        if not self.can_command(unit) or not combat_processor.request_edge_retreat(unit):
-            return
-        origin_id = unit[combat_processor.EDGE_BATTLE_KEY]["origin_id"]
-        self.map_screen.show_feedback(f"{unit.get('type', 'Unit')} will retreat to Province {origin_id}.")
-        self.refresh_ui()
-
     def go_to_orders(self):
-        """Bombard and retreat live in Orders, and both matter mid-battle."""
-        if self.edge_pair is not None:
-            # The midpoint panel has its own individual retreat controls and
-            # none of the ordinary province orders are legal from there.
-            self.exit_screen()
-            return
+        """Return to the regular unit-order panel."""
         if self.embedded:
             self.exit_screen()
             return
@@ -297,9 +284,6 @@ class Battle_Screen(ModalScreen):
         only the right-hand pane and preserves the left panel. A legacy direct
         map opener is still forwarded into Orders.
         """
-        if self.edge_pair is not None:
-            self.done = True
-            return
         if self.embedded:
             self.done = True
             close_panel = getattr(self.origin_screen, "close_battle_panel", None)
@@ -371,30 +355,6 @@ class Battle_Screen(ModalScreen):
                 self.button(p.right - self.PAD - 130, btn_y, 130,
                             "red", "Close Battle", self.exit_screen))
         else:
-            if self.edge_pair is not None:
-                if self.my_units():
-                    self.elements.append(
-                        self.button(p.x + self.PAD, btn_y, 150, "orange", "Clear Lane Orders",
-                                    self.clear_orders))
-                self.elements.append(
-                    self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
-                self.view_mode_buttons = []
-                if not self.visible or not self.battle.lanes:
-                    return
-                self._lane_rows()
-                lane, near, far = self.current()
-                self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
-                self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
-                if self.is_mine(near):
-                    self._unit_rows(PANE_RESERVE, self.side_bench(near), lane,
-                                    editable=True, is_bench=True)
-                elif self.is_mine(far):
-                    self._unit_rows(PANE_RESERVE, self.side_bench(far), lane,
-                                    editable=True, is_bench=True)
-                else:
-                    self._unit_rows(PANE_RESERVE, list(near.reserve) + list(far.reserve),
-                                    lane, editable=False)
-                return
             self.elements.append(
                 self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
             # Nothing to clear on a tile you command nothing on.
@@ -470,17 +430,16 @@ class Battle_Screen(ModalScreen):
             held = unit.get("combat_stance") == "RESERVE"
             can_edit = editable and self.can_command(unit)
 
-            row_width = rect.width - 78 if self.edge_pair is not None and can_edit else rect.width
             if not can_edit:
-                btn = self.button(rect.x, y, row_width, "grey", "", lambda: None)
+                btn = self.button(rect.x, y, rect.width, "grey", "", lambda: None)
                 btn.disabled = True
                 note = ""
             elif is_bench:
-                btn = self.button(rect.x, y, row_width, "orange" if held else "green", "",
+                btn = self.button(rect.x, y, rect.width, "orange" if held else "green", "",
                                   lambda u=unit, l=lane: self.send_to_lane(u, l))
                 note = f"{'HELD  ' if held else ''}->  lane {lane.index + 1}"
             else:
-                btn = self.button(rect.x, y, row_width, "blue", "",
+                btn = self.button(rect.x, y, rect.width, "blue", "",
                                   lambda u=unit: self.toggle_stance(u))
                 # A held unit reaches the front rank whenever nobody else can
                 # take the slot, so this pane has to be able to say so -- an
@@ -493,12 +452,6 @@ class Battle_Screen(ModalScreen):
             btn.height = self.ROW_HEIGHT
             self.add_pane_row(pane, btn)
             self.row_paint[pane].append((btn.rect, (unit, note)))
-            if self.edge_pair is not None and can_edit:
-                retreat = self.button(rect.right - 72, y, 72, "red", "Retreat",
-                                      lambda u=unit: self.request_retreat(u))
-                retreat.rect.height = self.ROW_HEIGHT
-                retreat.height = self.ROW_HEIGHT
-                self.add_pane_row(pane, retreat)
 
     # -- painting -------------------------------------------------------- #
 
@@ -651,7 +604,7 @@ class Battle_Screen(ModalScreen):
         if self.edge_pair is not None:
             first, second = self.edge_pair
             verb = "Manage" if self.my_units() else "View"
-            return f"{verb} Edge Battle - Provinces {first} - {second}"
+            return f"{verb} Battle - Midpoint {first} - {second}"
         owner = self.province.get("owner", "Unclaimed")
         verb = "Manage" if self.my_units() else "View"
         return f"{verb} Battle - Province {self.province.get('id')} ({owner})"
@@ -762,10 +715,10 @@ def open_battle_screen(map_screen, origin_screen=None):
 
 
 def open_edge_battle_screen(map_screen, edge_battle):
-    """Open the standalone command/inspection panel for one midpoint battle."""
+    """Compatibility opener: midpoint battles use the regular Orders UI."""
     from ui.screen_runner import _run_pygame_sub_screen
+    from screens.map_related_screens.orders import Orders_Screen
 
-    _run_pygame_sub_screen(
-        map_screen,
-        Battle_Screen(map_screen, origin_screen=map_screen, edge_battle=edge_battle),
-    )
+    orders = Orders_Screen()
+    if orders.start_with_edge_battle(edge_battle["pair"], map_screen):
+        _run_pygame_sub_screen(map_screen, orders)

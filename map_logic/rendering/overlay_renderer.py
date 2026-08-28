@@ -902,7 +902,7 @@ def draw_edge_battles(map_screen, surface):
     partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
     player = map_screen.player_country
     friendly = queries.get_all_friendly_nations(player, map_screen.nation_data)
-    radius = max(12, int(14 * map_screen.camera.zoom))
+    radius = max(7, int(8 * map_screen.camera.zoom))
     offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
 
     for record in combat_processor.edge_battles(map_screen):
@@ -940,10 +940,21 @@ def draw_edge_battles(map_screen, surface):
             if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
                     and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
                 continue
-            pygame.draw.circle(surface, (18, 18, 18), (sx, sy), radius + 3)
-            pygame.draw.circle(surface, color, (sx, sy), radius, max(2, int(2 * map_screen.camera.zoom)))
-            symbol = symbol_loader.get_symbol("Attack", max(0.55, map_screen.camera.zoom * 0.8),
-                                              color=color)
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            hovered = ((mouse_x - sx) ** 2 + (mouse_y - sy) ** 2
+                       <= (radius + 4) ** 2)
+            marker_size = 2 * (radius + 7)
+            marker = pygame.Surface((marker_size, marker_size), pygame.SRCALPHA)
+            marker_center = (marker_size // 2, marker_size // 2)
+            pygame.draw.circle(marker, (*color, 60), marker_center, radius)
+            pygame.draw.circle(marker, (*color, 205), marker_center, radius,
+                               max(1, int(map_screen.camera.zoom)))
+            if hovered:
+                pygame.draw.circle(marker, (255, 255, 255, 235), marker_center,
+                                   radius + 4, max(1, int(2 * map_screen.camera.zoom)))
+            surface.blit(marker, (sx - marker_center[0], sy - marker_center[1]))
+            symbol = symbol_loader.get_symbol("Attack", max(0.35, map_screen.camera.zoom * 0.5),
+                                              color=(255, 255, 255) if hovered else color)
             if symbol:
                 symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor,
                                                c.APPLY_TILT_TO_OVERLAYS)

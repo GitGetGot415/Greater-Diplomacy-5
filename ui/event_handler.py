@@ -322,9 +322,9 @@ def handle_map_events(map_screen, event):
         return
 
     # Midpoint battles are virtual map locations, so their marker must win the
-    # click before the id-map resolves the province underneath it.  They open a
-    # dedicated battle/retreat panel rather than pretending one endpoint owns
-    # the troops in the middle.
+    # click before the id-map resolves the province underneath it.  The normal
+    # Orders screen receives the pair as a temporary UI context; it then shows
+    # the ordinary roster and lane manager rather than a bespoke battle panel.
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
             and not map_screen.viewing_ai_moves):
         edge_battle = combat_processor.edge_battle_at_screen_pos(map_screen, event.pos)
@@ -338,7 +338,8 @@ def handle_map_events(map_screen, event):
             if not visible_end and not own_unit:
                 edge_battle = None
         if edge_battle is not None:
-            battle_screen.open_edge_battle_screen(map_screen, edge_battle)
+            map_screen.pending_edge_battle_pair = edge_battle["pair"]
+            map_screen.change_state("ORDERS")
             return
 
     # --- Direct Map Message Editing ---

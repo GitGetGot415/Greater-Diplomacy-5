@@ -116,7 +116,9 @@ def edge_battle_at_screen_pos(map_screen, screen_pos):
     apart when camera tilt or wrapped-map coordinates are involved.
     """
     sx, sy = screen_pos
-    radius = max(18, int(18 * map_screen.camera.zoom))
+    # Keep the target comfortably clickable without turning the midpoint into
+    # another province-sized map object.  Rendering uses the same base size.
+    radius = max(10, int(10 * map_screen.camera.zoom))
     offsets = (0, -map_screen.map_w, map_screen.map_w) if map_screen.loop_map else (0,)
     for record in edge_battles(map_screen):
         world = edge_battle_midpoint(map_screen, record)

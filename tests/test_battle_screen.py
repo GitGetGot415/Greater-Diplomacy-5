@@ -192,12 +192,20 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertEqual(combat_processor.edge_battle_at_screen_pos(self.map, marker_pos)["pair"],
                          record["pair"])
 
-        screen = battle_screen.Battle_Screen(self.map, edge_battle=record)
-        screen.draw(self.surface)
-        self.assertTrue(screen.battle.lanes)
-        self.assertTrue(screen.can_command(ours))
+        from screens.map_related_screens.orders import Orders_Screen
 
-        screen.request_retreat(ours)
+        previous_selected = self.map.selected_province
+        self.addCleanup(setattr, self.map, "selected_province", previous_selected)
+        self.map.selected_province = None
+        orders = Orders_Screen()
+        self.assertTrue(orders.start_with_edge_battle(record["pair"], self.map))
+        orders.open_battle_panel()
+        orders.draw(self.surface)
+        self.assertTrue(orders.battle_screen.battle.lanes)
+        self.assertIn(ours, orders._units())
+        self.assertFalse(hasattr(orders.battle_screen, "request_retreat"))
+
+        self.assertTrue(orders._order_edge_move([ours], self.province))
         self.assertTrue(ours[combat_processor.EDGE_BATTLE_KEY]["retreat"])
         self.assertIn(combat_processor.EDGE_BATTLE_KEY,
                       queries.build_save_dict(self.map)["provinces"][self.province["json_key"]]["units"][0])

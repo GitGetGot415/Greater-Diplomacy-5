@@ -349,6 +349,12 @@ class Controller:
             map_ref = self.states["MAP"]
             if next_state_name == "EDIT_COUNTRY":
                 self.states["EDIT_COUNTRY"].start_editor(map_ref)
+            elif next_state_name == "ORDERS" and getattr(map_ref, "pending_edge_battle_pair", None):
+                edge_pair = map_ref.pending_edge_battle_pair
+                del map_ref.pending_edge_battle_pair
+                if not self.states["ORDERS"].start_with_edge_battle(edge_pair, map_ref):
+                    if map_ref.selected_province:
+                        self.states["ORDERS"].start_with_province(map_ref.selected_province, map_ref)
             elif map_ref.selected_province:
                 self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)
         
