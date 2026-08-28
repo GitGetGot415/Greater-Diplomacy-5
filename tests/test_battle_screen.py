@@ -126,6 +126,17 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
         self.assertGreater(final_y, 10)
 
+    def test_unit_side_heading_uses_column_width_for_flags(self):
+        from types import SimpleNamespace
+
+        screen = self.screen()
+        side = SimpleNamespace(nations=[self.a, self.b, self.x, self.y])
+        rect = pygame.Rect(0, 100, 184, 100)
+        with mock.patch.object(screen, "_paint_side_flags") as paint_flags:
+            screen._paint_side_heading(self.surface, rect, side, "1/5")
+
+        self.assertEqual(paint_flags.call_args.kwargs["max_flags"], 4)
+
     def test_selecting_the_other_lane_repaints(self):
         screen = self.screen()
         self.assertGreater(len(screen.battle.lanes), 1)

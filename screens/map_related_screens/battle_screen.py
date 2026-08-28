@@ -452,17 +452,18 @@ class Battle_Screen(ModalScreen):
                                  True, c.UI_TEXT_MUTED)
             surface.blit(tally, (rect.right - 10 - tally.get_width(), top))
 
-    def _paint_side_flags(self, surface, side, x, rect, font):
+    def _paint_side_flags(self, surface, side, x, rect, font,
+                          max_flags=LANE_FLAGS_SHOWN):
         """A side's flags in a row, counting the overflow rather than truncating.
 
         A coalition of six will not fit in the column, and a truncated list of
         flags is worse than a short one with a number: it looks like the whole
         side is two nations.
         """
-        for nation in side.nations[:LANE_FLAGS_SHOWN]:
+        for nation in side.nations[:max_flags]:
             x = flag_icons.draw_flag_centered(surface, nation, self.map_screen.nation_data,
                                               x, rect.y, rect.height)
-        extra = len(side.nations) - LANE_FLAGS_SHOWN
+        extra = len(side.nations) - max_flags
         if extra > 0:
             more = font.render(f"+{extra}", True, c.UI_TEXT_MUTED)
             surface.blit(more, (x, rect.y + (rect.height - font.get_height()) // 2))
@@ -473,9 +474,19 @@ class Battle_Screen(ModalScreen):
         """Paints a side's flags and front count above its unit column."""
         header_rect = pygame.Rect(rect.x, rect.y - HEADER_H, rect.width, HEADER_H)
         small = fonts.get("small")
-        self._paint_side_flags(surface, side, header_rect.x, header_rect, small)
-
         count_surf = small.render(count_text, True, c.UI_TEXT_DIM)
+        available_width = max(1, header_rect.width - count_surf.get_width() - 8)
+        flag_step = flag_icons.ROW_FLAG_SIZE[0] + 6
+        max_flags = len(side.nations)
+        while max_flags > 1:
+            extra = len(side.nations) - max_flags
+            extra_width = small.size(f"+{extra}")[0] + 6 if extra else 0
+            if max_flags * flag_step + extra_width <= available_width:
+                break
+            max_flags -= 1
+        self._paint_side_flags(
+            surface, side, header_rect.x, header_rect, small,
+            max_flags=max(1, max_flags))
         surface.blit(
             count_surf,
             count_surf.get_rect(midright=(header_rect.right, header_rect.centery)))
