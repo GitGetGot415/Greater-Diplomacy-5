@@ -304,6 +304,27 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertIsNone(overlay_renderer.combat_bubble_at_screen_pos(
             self.map, position))
 
+    def test_combat_bubbles_render_during_ai_moves_but_remain_unclickable(self):
+        from map_logic.rendering import overlay_renderer
+
+        previous_mode = self.map.secondary_mode
+        previous_ai_moves = self.map.viewing_ai_moves
+        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
+        self.addCleanup(setattr, self.map, "viewing_ai_moves", previous_ai_moves)
+        self.map.secondary_mode = "UNITS"
+        self.map.viewing_ai_moves = True
+
+        records = overlay_renderer.combat_bubble_records(self.map)
+        with mock.patch.object(overlay_renderer, "_draw_combat_bubble") as draw:
+            returned = overlay_renderer.draw_combat_bubbles(
+                self.map, self.surface, records)
+
+        self.assertEqual(returned, records)
+        self.assertEqual(draw.call_count, len(records))
+        position = queries.world_to_screen(records[0]["center"], self.map)
+        self.assertIsNone(overlay_renderer.combat_bubble_at_screen_pos(
+            self.map, position))
+
 
 class LaneOrderTests(BattleScreenTestCase):
     def test_sending_a_unit_to_a_lane_is_read_back_by_the_resolver(self):

@@ -369,8 +369,7 @@ def _draw_combat_bubble(surface, map_screen, record):
 
 def draw_combat_bubbles(map_screen, surface, records=None):
     """Draw asset-backed combat bubbles and return their shared records."""
-    if (map_screen.viewing_ai_moves
-            or map_screen.secondary_mode != "UNITS"):
+    if map_screen.secondary_mode != "UNITS":
         return []
     records = combat_bubble_records(map_screen) if records is None else records
     for record in records:
