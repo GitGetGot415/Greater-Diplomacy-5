@@ -137,7 +137,6 @@ def draw_map_screen(map_screen, surface):
     # blitted after this loop so an arrow ending at a fight cannot cover it.
     combat_records = overlay_renderer.draw_overlay_content(
         map_screen, surface, draw_combat=False)
-    combat_unit_colors = overlay_renderer.combat_bubble_unit_colors(combat_records)
     
     if map_screen.secondary_mode == "UNITS":
         for province in map_screen.map_data.values():
@@ -157,16 +156,12 @@ def draw_map_screen(map_screen, surface):
 
                     is_tactical = map_screen.tactical_mode and map_screen.player_unit
                     force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
-                    if map_screen.viewing_ai_moves:
-                        path = path[:unit.get("speed", 1)]
-                    if path:
-                        owner_color = combat_unit_colors.get(
-                            id(unit), map_screen.nation_colors.get(owner, (255, 255, 0)))
-                        preview_tag = dict(tag)
-                        preview_tag["retreat_path"] = path
-                        overlay_renderer.draw_edge_movement_path(
-                            surface, map_screen, preview_tag, unit.get("speed", 1),
-                            owner_color, force_visible=force_vis)
+                    preview_tag = dict(tag)
+                    preview_tag["retreat_path"] = path
+                    owner_color = map_screen.nation_colors.get(owner, (255, 255, 0))
+                    overlay_renderer.draw_edge_movement_path(
+                        surface, map_screen, preview_tag, unit.get("speed", 1),
+                        owner_color, force_visible=force_vis)
                     continue
                 order = unit.get("order")
                 if not order:
@@ -192,11 +187,9 @@ def draw_map_screen(map_screen, surface):
                     target_id = order.get("target_id")
                     if target_id is not None:
                         bomb_range = queries.get_bombardment_range(unit.get("type", ""))
-                        arrow_color = combat_unit_colors.get(
-                            id(unit), map_screen.nation_colors.get(owner, (255, 255, 0)))
                         overlay_renderer.draw_bombardment_arrow(
                             surface, map_screen, province, target_id, bomb_range,
-                            force_visible=force_vis, color=arrow_color)
+                            force_visible=force_vis)
 
                 elif order.get("type") == "MOVE":
                     path = order.get("path", [])
@@ -211,9 +204,8 @@ def draw_map_screen(map_screen, surface):
                                 continue
 
                         # Dynamically pull the color of the unit's owner (fallback to yellow)
-                        owner_color = combat_unit_colors.get(
-                            id(unit), map_screen.nation_colors.get(
-                                unit.get("owner", "Unclaimed"), (255, 255, 0)))
+                        owner_color = map_screen.nation_colors.get(
+                            unit.get("owner", "Unclaimed"), (255, 255, 0))
 
                         overlay_renderer.draw_split_movement_path(surface, map_screen, province, path, speed, owner_color, force_visible=force_vis)
 

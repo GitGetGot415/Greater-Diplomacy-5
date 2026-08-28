@@ -20,6 +20,7 @@ COMBAT_BUBBLE_ASSETS = {
     queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
     queries.COMBAT_LOCATION_MIDPOINT: "Midpoint Bubble",
 }
+POTENTIAL_BUBBLE_ASSET = "Potential Bubble"
 # Bubble art is intentionally compact so it does not hide the unit/order
 # information around the tile.  The hit test below uses the image alpha mask,
 # so there is no separate square padding to make the clickable area larger than
@@ -136,7 +137,12 @@ def combat_bubble_records(map_screen):
                 "category": queries.get_combat_location_category(
                     None, player, map_screen.nation_data, midpoint=True),
                 "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+                "potential": True,
                 "unit_ids": {id(unit) for side in sides for unit in side},
+                # A predicted meeting is drawn at a virtual location. The
+                # movers remain visible on their endpoint tiles until combat
+                # actually starts.
+                "hidden_unit_ids": set(),
                 # A predicted meeting has no virtual roster yet.  Its nearest
                 # useful Orders screen is the endpoint the local side departed.
                 "orders_province_id": pair[own_side],
@@ -147,6 +153,10 @@ def combat_bubble_records(map_screen):
         if not _combat_is_visible(map_screen, [province["id"]]):
             continue
         sides = [[unit for units in prediction["forces"].values() for unit in units]]
+        current_unit_ids = {id(unit) for unit in queries.units_on_province(province)}
+        battle_unit_ids = {id(unit) for side in sides for unit in side}
+        actual_battle = queries.is_province_in_active_combat(
+            province, map_screen.nation_data)
         records.append({
             "kind": "province",
             "province_id": province["id"],
@@ -154,7 +164,12 @@ def combat_bubble_records(map_screen):
             "category": queries.get_combat_location_category(
                 province, player, map_screen.nation_data),
             "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
-            "unit_ids": {id(unit) for side in sides for unit in side},
+            "potential": not actual_battle,
+            "unit_ids": battle_unit_ids,
+            # Incoming attackers belong to the predicted fight, but are still
+            # physically on their origin tiles. Only units currently on the
+            # battle tile are hidden under its bubble.
+            "hidden_unit_ids": battle_unit_ids & current_unit_ids,
             "orders_province_id": province["id"],
         })
 
@@ -174,7 +189,9 @@ def combat_bubble_records(map_screen):
             "category": queries.get_combat_location_category(
                 None, player, map_screen.nation_data, midpoint=True),
             "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+            "potential": False,
             "unit_ids": {id(unit) for unit in units},
+            "hidden_unit_ids": {id(unit) for unit in units},
             "edge_pair": edge["pair"],
         })
 
@@ -182,7 +199,8 @@ def combat_bubble_records(map_screen):
 
 
 def _combat_bubble_symbol(record, zoom):
-    asset = COMBAT_BUBBLE_ASSETS[record["category"]]
+    asset = (POTENTIAL_BUBBLE_ASSET if record.get("potential")
+             else COMBAT_BUBBLE_ASSETS[record["category"]])
     return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
                                     color=record["color"])
 
@@ -213,6 +231,21 @@ def _highlight_combat_bubble(bubble):
     if len(outline) > 1:
         pygame.draw.lines(highlighted, (255, 255, 255, 255), True, outline, 1)
     return highlighted
+
+
+def _combat_bubble_hit_mask(bubble):
+    """Return a shaped hit mask, including the inside of hollow bubble art."""
+    mask = pygame.mask.from_surface(bubble)
+    center = (bubble.get_width() // 2, bubble.get_height() // 2)
+    if mask.get_at(center):
+        return mask
+
+    # Potential Bubble is an outlined circle. Its transparent centre is still
+    # part of the circular button, while its transparent corners are not.
+    fill_surface = pygame.Surface(bubble.get_size(), pygame.SRCALPHA)
+    bounds = mask.get_bounding_rects()[0]
+    pygame.draw.ellipse(fill_surface, (255, 255, 255, 255), bounds)
+    return pygame.mask.from_surface(fill_surface)
 
 
 def _combat_bubble_instances(map_screen, record):
@@ -264,18 +297,10 @@ def combat_bubble_at_screen_pos(map_screen, screen_pos):
                 continue
             local_x = click_x - rect.x
             local_y = click_y - rect.y
-            if pygame.mask.from_surface(bubble).get_at((local_x, local_y)):
+            if _combat_bubble_hit_mask(bubble).get_at((local_x, local_y)):
                 return record
     return None
 
-
-def combat_bubble_unit_colors(records):
-    """Map units represented by bubbles to the bubble's outcome color."""
-    return {
-        unit_id: record["color"]
-        for record in records
-        for unit_id in record["unit_ids"]
-    }
 
 def status_icon(map_screen, name):
     """A faded, tilted overlay badge -- training, disbanding, converting, building.
@@ -316,8 +341,7 @@ def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0,
             pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*map_screen.camera.zoom)))
 
 def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
-                           bomb_range=1, alpha=255, force_visible=False,
-                           color=None):
+                           bomb_range=1, alpha=255, force_visible=False):
     """Draws a barrage sprite pointing from a gun's tile at the tile it is shelling.
 
     Movement uses a Line/Circle/Triangle chain because a path has many hops;
@@ -336,10 +360,8 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
             return
 
     cam = map_screen.camera
-    arrow_color = color if color is not None else (255, 200, 0)
     icon_name = queries.get_bombardment_arrow_icon(bomb_range)
-    arrow_img = symbol_loader.get_symbol(
-        icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE, color=arrow_color)
+    arrow_img = symbol_loader.get_symbol(icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
 
     p1 = list(start_province["center"])
     p2 = list(target_prov["center"])
@@ -372,8 +394,9 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
             surface.blit(rotated, rotated.get_rect(center=mid))
         else:
             # Fallback until the barrage sprite is present in assets/images
-            pygame.draw.line(surface, arrow_color, start_pos, end_pos,
+            pygame.draw.line(surface, (255, 200, 0), start_pos, end_pos,
                              max(2, int(3 * cam.zoom)))
+
 
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
@@ -528,13 +551,10 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     # --- Render Combat Prediction Bubbles ---
     combat_records = []
     combat_unit_ids = set()
-    combat_province_ids = set()
     if map_screen.secondary_mode == "UNITS":
         combat_records = combat_bubble_records(map_screen)
         combat_unit_ids = {unit_id for record in combat_records
-                           for unit_id in record["unit_ids"]}
-        combat_province_ids = {record["province_id"] for record in combat_records
-                               if record["kind"] == "province"}
+                           for unit_id in record.get("hidden_unit_ids", set())}
     # ---------------------------------------------
 
     for color_key, province in map_screen.map_data.items():
@@ -575,12 +595,6 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
 
                 # --- UNIT VIEW ---
                 if map_screen.secondary_mode == "UNITS":
-                    # A province fight is represented by its combat bubble,
-                    # not a stack beneath it.  Meeting fighters are hidden by
-                    # identity instead, leaving uninvolved units on either
-                    # endpoint visible as normal.
-                    if province["id"] in combat_province_ids:
-                        continue
                     # .get, like every other read of this key below it. A
                     # province dict is not guaranteed to carry one -- the editor
                     # and the map tools both build provinces without it.
