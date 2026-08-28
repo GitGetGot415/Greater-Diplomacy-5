@@ -37,7 +37,8 @@ from map_logic.rendering.font_manager import fonts
 from ui import flag_icons
 from ui.bars import ui_bars, view_mode_buttons
 from ui.modal_screen import ModalScreen
-from ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
+                          get_bombardment_stat_entries)
 from ui.text_utils import fit_text
 
 #: Panes, left to right. Lane list, then the selected lane's three columns.
@@ -46,14 +47,18 @@ PANE_FRONT = "front"
 PANE_ENEMY = "enemy"
 PANE_RESERVE = "reserve"
 
-LANE_COL_W = 250
-#: Two lines: the unit and its flag, then its stats. The Orders panel shows the
-#: same stats on the same icons, and a lane manager that showed less than the
-#: panel it opens from would be the wrong way round.
-ROW_H = 42
+# Keep the lane list readable while giving each of the three unit columns more
+# horizontal room in the compact right-hand panel.
+LANE_COL_W = 200
+#: Lane rows stay compact; only the unit/info rows need the extra height below.
+LANE_ROW_H = 42
+#: The unit and its flag, health, and up to three wrapped stat lines. The
+#: Orders panel shows the same stats on the same icons.
+ROW_H = 78
 HEADER_H = 26
-#: Flags a lane row shows per side before it gives up and counts the rest.
-LANE_FLAGS_SHOWN = 3
+#: Flags a lane row shows per side before it gives up and counts the rest. Two
+#: keeps the compact lane button's flags and combat tally inside its width.
+LANE_FLAGS_SHOWN = 2
 
 #: Room reserved at the very bottom of the panel for the shared view-mode
 #: button row (Resources/Blank/Units/Economy), which is drawn at the same
@@ -384,11 +389,14 @@ class Battle_Screen(ModalScreen):
         # crowded tile still reads at a glance.
         mine = {id(lane) for lane in self.my_lanes()}
         self.row_paint[PANE_LANES] = []
-        for i, y in self.pane_rows(PANE_LANES, len(self.battle.lanes), rect.y, rect.height):
+        for i, y in self.pane_rows(PANE_LANES, len(self.battle.lanes), rect.y,
+                                   rect.height, row_h=LANE_ROW_H):
             lane = self.battle.lanes[i]
             color = "blue" if id(lane) in mine else "grey"
             btn = self.button(rect.x, y, LANE_COL_W, color, "",
                               lambda idx=i: self._select(idx))
+            btn.rect.height = LANE_ROW_H
+            btn.height = LANE_ROW_H
             btn.is_selected = (i == self.selected_lane)
             self.add_pane_row(PANE_LANES, btn)
             self.row_paint[PANE_LANES].append((btn.rect, lane))
@@ -417,6 +425,10 @@ class Battle_Screen(ModalScreen):
                 # honest [Hold] on a unit that is already held reads as if the
                 # flag had not stuck.
                 note = "[Release]" if held else "[Hold]"
+            # The default list-row button is shorter than the wrapped content
+            # row. Match its hitbox/background to the full painted row.
+            btn.rect.height = self.ROW_HEIGHT
+            btn.height = self.ROW_HEIGHT
             self.add_pane_row(pane, btn)
             self.row_paint[pane].append((btn.rect, (unit, note)))
 
@@ -479,11 +491,18 @@ class Battle_Screen(ModalScreen):
                                                   rect.x + 6, rect.y + 2, small.get_height())
 
                 dim = owner != self.player or not self.can_command(unit)
-                name = queries.get_condensed_unit_name(unit.get("type", "Unit"))
+                hp_surf = small.render(queries.format_health_percent(unit), True, c.UI_TEXT_MUTED)
+                note_width = 0
+                if note:
+                    note_width = small.size(note)[0]
+                name_width = max(
+                    1, rect.right - 8 - note_width - x - hp_surf.get_width() - 4)
+                name = fit_text(
+                    queries.get_condensed_unit_name(unit.get("type", "Unit")),
+                    small, name_width)
                 name_surf = small.render(name, True,
                                          c.UI_TEXT_MUTED if dim else c.UI_TEXT_LIGHT)
                 surface.blit(name_surf, (x, rect.y + 2))
-                hp_surf = small.render(queries.format_health_percent(unit), True, c.UI_TEXT_MUTED)
                 surface.blit(hp_surf, (x + name_surf.get_width() + 4, rect.y + 2))
 
                 if note:
@@ -499,20 +518,21 @@ class Battle_Screen(ModalScreen):
                 def_mult = combat_rules.health_defense_multiplier(unit)
                 fort_defense = queries.get_fort_defense_bonus(
                     self.province, unit, self.map_screen.nation_data, combat_active=True)
-                end_x = draw_combat_stats(
-                    surface, small, "", unit.get("attack", 0) * dmg_mult,
+                stat_entries = get_combat_stat_entries(
+                    unit.get("attack", 0) * dmg_mult,
                     unit.get("defense", 0) * def_mult,
                     int(unit.get("health", 0)), unit.get("speed", 0),
-                    rect.x + 10, stat_y, (200, 200, 200),
                     labeled=False, defense_bonus=fort_defense)
-
                 stats = library.get(unit.get("type", ""), {})
                 if "bombard_attack" in stats:
-                    draw_bombardment_stats(
-                        surface, small,
+                    stat_entries.extend(get_bombardment_stat_entries(
                         unit.get("bombard_attack", stats.get("bombard_attack", 0)) * dmg_mult,
                         unit.get("bombard_range", stats.get("bombard_range", 0)),
-                        end_x, stat_y, (200, 200, 200), base_text="", labeled=False)
+                        labeled=False))
+                draw_wrapped_icon_row(
+                    surface, small, stat_entries, rect.x + 10, stat_y,
+                    (200, 200, 200), rect.width - 20,
+                    line_height=small.get_height())
         return paint
 
     def draw_elements(self, surface):

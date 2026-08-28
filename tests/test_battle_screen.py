@@ -112,6 +112,20 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(orders.battle_screen.embedded)
         self.assertGreater(orders.battle_screen.panel_rect.x, orders.panel_rect.right)
 
+    def test_narrow_unit_stat_rows_wrap_complete_entries(self):
+        from map_logic.rendering.font_manager import fonts
+        from ui_elements import draw_wrapped_icon_row
+
+        font = fonts.get("small")
+        with mock.patch("ui_elements.scale_icon", return_value=None):
+            _, final_y = draw_wrapped_icon_row(
+                self.surface, font,
+                [("Attack", "100"), ("Defense", "0 + 50"),
+                 ("Health", "100"), ("Speed", "1")],
+                10, 10, (200, 200, 200), max_width=100)
+
+        self.assertGreater(final_y, 10)
+
     def test_selecting_the_other_lane_repaints(self):
         screen = self.screen()
         self.assertGreater(len(screen.battle.lanes), 1)
@@ -307,6 +321,14 @@ class SideReserveTests(BattleScreenTestCase):
         _lane, near, far = screen.current()
         listed = {id(u) for _rect, (u, _note)
                   in screen.row_paint[battle_screen.PANE_RESERVE]}
+        # Taller rows can require scrolling before every reserve entry is
+        # visible; verify the bottom of the pane is reachable too.
+        reserve_limit = screen.pane_scroll_limit(battle_screen.PANE_RESERVE)
+        if reserve_limit < 0:
+            screen._scroll_reserve = reserve_limit
+            screen.refresh_ui()
+            listed.update(id(u) for _rect, (u, _note)
+                          in screen.row_paint[battle_screen.PANE_RESERVE])
 
         self.assertEqual(listed, {id(u) for u in list(near.reserve) + list(far.reserve)})
 

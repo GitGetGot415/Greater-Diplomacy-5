@@ -546,6 +546,71 @@ def draw_icon_row(surface, font, base_text, entries, x, y, color,
 
     return curr_x
 
+def draw_wrapped_icon_row(surface, font, entries, x, y, color, max_width,
+                          line_height=None, icon_size=None, icon_gap=4):
+    """Draws an icon/value row that wraps complete entries to new lines.
+
+    Unlike character-wrapping text, an icon and its value always stay together.
+    The returned position is the end of the final line, which is useful to
+    callers that want to place another label after the wrapped content.
+    """
+    line_height = font.get_height() if line_height is None else line_height
+    end_x = x
+    end_y = y
+    line_end = x + max(1, max_width)
+    size = max(16, font.get_height()) if icon_size is None else icon_size
+
+    for icon_name, display_text in entries:
+        icon_surf = scale_icon(icon_name, size)
+        value_surf = font.render(f"{display_text}   ", True, color)
+        entry_width = value_surf.get_width()
+        if icon_surf:
+            entry_width += size + icon_gap
+
+        if end_x > x and end_x + entry_width > line_end:
+            end_x = x
+            end_y += line_height
+
+        if icon_surf:
+            surface.blit(icon_surf, (end_x, end_y + 2))
+            end_x += size + icon_gap
+        surface.blit(value_surf, (end_x, end_y))
+        end_x += value_surf.get_width()
+
+    return end_x, end_y
+
+def get_combat_stat_entries(atk, df, hp, spd, labeled=True, defense_bonus=0):
+    """Builds the same combat-stat entries used by ``draw_combat_stats``."""
+    defense_text = queries.format_number(df)
+    if defense_bonus:
+        defense_text += f" + {queries.format_number(defense_bonus)}"
+
+    if labeled:
+        stats = [
+            (c.ICON_ATTACK, f"ATK: {queries.format_number(atk)}"),
+            (c.ICON_DEFENSE, f"DEF: {defense_text}"),
+            (c.ICON_HEALTH, f"HP: {queries.format_number(hp)}"),
+            (c.ICON_SPEED, f"SPD: {queries.format_number(spd)}"),
+        ]
+    else:
+        stats = [
+            (c.ICON_ATTACK, queries.format_number(atk)),
+            (c.ICON_DEFENSE, defense_text),
+            (c.ICON_HEALTH, queries.format_number(hp)),
+            (c.ICON_SPEED, queries.format_number(spd)),
+        ]
+    if not df and not defense_bonus:
+        stats.pop(1)
+    return stats
+
+def get_bombardment_stat_entries(dmg, rng, labeled=True):
+    """Builds the entries used by ``draw_bombardment_stats``."""
+    if labeled:
+        return [(c.ICON_BOMBARDMENT, f"DMG: {queries.format_number(dmg)}"),
+                (c.ICON_BOMBARD_RANGE, f"RNG: {queries.format_number(rng)}")]
+    return [(c.ICON_BOMBARDMENT, queries.format_number(dmg)),
+            (c.ICON_BOMBARD_RANGE, queries.format_number(rng))]
+
 def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
     """Material/manpower/fuel row. Zero-valued resources are left out entirely."""
     entries = []
@@ -579,35 +644,13 @@ def draw_combat_stats(surface, font, base_text, atk, df, hp, spd, x, y, color,
     `labeled=False` drops the "ATK:"-style prefixes and shows bare numbers
     next to each icon, for compact single-line layouts.
     """
-    defense_text = queries.format_number(df)
-    if defense_bonus:
-        defense_text += f" + {queries.format_number(defense_bonus)}"
-
-    if labeled:
-        stats = [
-            (c.ICON_ATTACK, f"ATK: {queries.format_number(atk)}"),
-            (c.ICON_DEFENSE, f"DEF: {defense_text}"),
-            (c.ICON_HEALTH, f"HP: {queries.format_number(hp)}"),
-            (c.ICON_SPEED, f"SPD: {queries.format_number(spd)}"),
-        ]
-    else:
-        stats = [
-            (c.ICON_ATTACK, queries.format_number(atk)),
-            (c.ICON_DEFENSE, defense_text),
-            (c.ICON_HEALTH, queries.format_number(hp)),
-            (c.ICON_SPEED, queries.format_number(spd)),
-        ]
-    if not df and not defense_bonus:
-        stats.pop(1)
+    stats = get_combat_stat_entries(atk, df, hp, spd, labeled, defense_bonus)
     return draw_icon_row(surface, font, base_text, stats, x, y, color)
 
 def draw_bombardment_stats(surface, font, dmg, rng, x, y, color, base_text="Bombardment:   ", labeled=True):
     """Bombardment damage/range row.
     Caller is responsible for only calling this for units that can bombard."""
-    if labeled:
-        entries = [(c.ICON_BOMBARDMENT, f"DMG: {queries.format_number(dmg)}"), (c.ICON_BOMBARD_RANGE, f"RNG: {queries.format_number(rng)}")]
-    else:
-        entries = [(c.ICON_BOMBARDMENT, queries.format_number(dmg)), (c.ICON_BOMBARD_RANGE, queries.format_number(rng))]
+    entries = get_bombardment_stat_entries(dmg, rng, labeled)
     return draw_icon_row(surface, font, base_text, entries, x, y, color)
 
 def draw_time_stat(surface, font, turns, x, y, color, icon_name="Clock"):
